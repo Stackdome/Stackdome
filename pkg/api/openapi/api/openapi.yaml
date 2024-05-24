@@ -1,0 +1,258 @@
+openapi: 3.0.0
+info:
+  description: api-server
+  title: api-server
+  version: 0.0.1
+servers:
+- url: /
+paths:
+  /api/v1/user:
+    post:
+      description: Create a new user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: User created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: User already exists
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      summary: Create new user
+  /api/v1/user/{id}:
+    get:
+      description: Get a user
+      parameters:
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: User fetched successfully
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Auth token is invalid
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthorized to perform operation
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a user
+  /api/v1/auth/login:
+    post:
+      description: Authenticate user and generate an access token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: Successful login
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid credentials
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      summary: User login
+components:
+  parameters:
+    id:
+      description: The id of record
+      explode: false
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+      style: simple
+  schemas:
+    User:
+      example:
+        role: role
+        name: name
+        organisation: organisation
+        id: id
+        email: email
+        username: username
+      properties:
+        id:
+          description: User's ID
+          type: string
+        name:
+          description: User's name
+          type: string
+        username:
+          description: User's username
+          type: string
+        email:
+          description: User's email address
+          format: email
+          type: string
+        organisation:
+          description: User's organisation
+          type: string
+        role:
+          description: User's role
+          type: string
+      type: object
+    UserCreateRequest:
+      example:
+        password: password
+        name: name
+        organisation: organisation
+        email: email
+        username: username
+      properties:
+        name:
+          description: User's name
+          type: string
+        username:
+          description: User's username
+          type: string
+        email:
+          description: User's email address
+          format: email
+          type: string
+        password:
+          description: Users desired password
+          type: string
+        organisation:
+          description: User's organisation
+          type: string
+      required:
+      - email
+      - name
+      - password
+      type: object
+    LoginRequest:
+      example:
+        password: password
+        email: email
+      properties:
+        email:
+          description: User's email
+          type: string
+        password:
+          description: User's password
+          format: password
+          type: string
+      required:
+      - email
+      - password
+      type: object
+    LoginResponse:
+      example:
+        expiresIn: 0
+        token: token
+      properties:
+        token:
+          description: Access token for authenticated requests
+          type: string
+        expiresIn:
+          description: Token expiration time in seconds
+          type: integer
+      type: object
+    Error:
+      allOf:
+      - $ref: '#/components/schemas/ObjectReference'
+      - $ref: '#/components/schemas/Error_allOf'
+    ErrorList:
+      allOf:
+      - $ref: '#/components/schemas/List'
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Error'
+          type: array
+      type: object
+    List:
+      properties:
+        kind:
+          type: string
+        page:
+          type: integer
+        size:
+          type: integer
+        total:
+          type: integer
+      required:
+      - items
+      - kind
+      - page
+      - size
+      - total
+      type: object
+    ObjectReference:
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+        href:
+          type: string
+      type: object
+    Error_allOf:
+      properties:
+        code:
+          type: string
+        reason:
+          type: string
+        operation_id:
+          type: string
+      type: object
