@@ -6,6 +6,7 @@ api/openapi.yaml
 api_default.go
 client.go
 configuration.go
+docs/Cluster.md
 docs/DefaultApi.md
 docs/Error.md
 docs/ErrorAllOf.md
@@ -19,6 +20,7 @@ docs/UserCreateRequest.md
 git_push.sh
 go.mod
 go.sum
+model_cluster.go
 model_error.go
 model_error_all_of.go
 model_error_list.go

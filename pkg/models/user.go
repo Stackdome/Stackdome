@@ -12,14 +12,14 @@ const (
 	PlatformAdminRole     Role = "PlatformAdmin"
 )
 
-// User struct represents the user model
 type User struct {
-	ID           string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	Name         string
-	Email        string `gorm:"unique"`
-	Password     string
-	Organisation string
-	Role         Role
+	ID             string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Name           string
+	Email          string `gorm:"unique"`
+	Password       string
+	Organisation   string
+	Role           Role
+	OrganisationID string
 }

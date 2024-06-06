@@ -26,7 +26,7 @@ var _ UserService = &usersService{}
 
 func NewUserService(spec UserServiceSpec) UserService {
 	return &usersService{
-		store: pgstore.NewUserStore(
+		userStore: pgstore.NewUserStore(
 			pgstore.UserStoreSpec{
 				SessionFactory: spec.SessionFactory,
 			},
@@ -43,13 +43,13 @@ type UserServiceSpec struct {
 }
 
 type usersService struct {
-	store        stores.UserStore
+	userStore    stores.UserStore
 	logger       logger.Logger
 	jwtSecretKey string
 }
 
 func (u usersService) Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError) {
-	return u.store.GetByID(ctx, ID)
+	return u.userStore.GetByID(ctx, ID)
 }
 
 func (u usersService) Create(ctx context.Context, user *models.User) (*models.User, *errors.ServiceError) {
@@ -62,11 +62,14 @@ func (u usersService) Create(ctx context.Context, user *models.User) (*models.Us
 	if len(user.Role) == 0 {
 		user.Role = models.UserRole
 	}
-	return u.store.Create(ctx, user)
+	if len(user.OrganisationID) == 0 {
+		user.OrganisationID = models.DefaultOrgName
+	}
+	return u.userStore.Create(ctx, user)
 }
 
 func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequest) (*openapi.LoginResponse, *errors.ServiceError) {
-	userInDB, err := u.store.GetByEmail(ctx, loginRequest.GetEmail())
+	userInDB, err := u.userStore.GetByEmail(ctx, loginRequest.GetEmail())
 	if err != nil {
 		return nil, err
 	}

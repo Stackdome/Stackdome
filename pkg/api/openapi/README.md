@@ -79,12 +79,18 @@ All URIs are relative to *http://localhost*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *DefaultApi* | [**ApiV1AuthLoginPost**](docs/DefaultApi.md#apiv1authloginpost) | **Post** /api/v1/auth/login | User login
+*DefaultApi* | [**ApiV1ClustersGet**](docs/DefaultApi.md#apiv1clustersget) | **Get** /api/v1/clusters | Get all clusters
+*DefaultApi* | [**ApiV1ClustersIdDelete**](docs/DefaultApi.md#apiv1clustersiddelete) | **Delete** /api/v1/clusters/{id} | Delete a cluster
+*DefaultApi* | [**ApiV1ClustersIdGet**](docs/DefaultApi.md#apiv1clustersidget) | **Get** /api/v1/clusters/{id} | Get a cluster by ID
+*DefaultApi* | [**ApiV1ClustersIdPut**](docs/DefaultApi.md#apiv1clustersidput) | **Put** /api/v1/clusters/{id} | Update a cluster
+*DefaultApi* | [**ApiV1ClustersPost**](docs/DefaultApi.md#apiv1clusterspost) | **Post** /api/v1/clusters | Create a new cluster
 *DefaultApi* | [**ApiV1UserIdGet**](docs/DefaultApi.md#apiv1useridget) | **Get** /api/v1/user/{id} | Get a user
 *DefaultApi* | [**ApiV1UserPost**](docs/DefaultApi.md#apiv1userpost) | **Post** /api/v1/user | Create new user
 
 
 ## Documentation For Models
 
+ - [Cluster](docs/Cluster.md)
  - [Error](docs/Error.md)
  - [ErrorAllOf](docs/ErrorAllOf.md)
  - [ErrorList](docs/ErrorList.md)
