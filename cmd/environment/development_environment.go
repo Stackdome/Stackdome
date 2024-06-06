@@ -43,6 +43,15 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 	return nil
 }
 
+func (d *developmentEnvironment) InitDatabase(ctx context.Context) error {
+	d.Config.ReadEnvironmentVariables()
+	if err := d.Config.ReadConfigFiles(); err != nil {
+		return err
+	}
+	d.DBSession = db.NewSessionFactory(d.Config.Database)
+	return nil
+}
+
 func (d *developmentEnvironment) loadSevices(logger logger.Logger) Services {
 	return Services{
 		UserService: services.NewUserService(services.UserServiceSpec{

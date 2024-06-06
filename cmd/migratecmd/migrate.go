@@ -27,7 +27,7 @@ func NewMigrateCommand() *cobra.Command {
 }
 
 func runMigrate(env environment.EnvImpl) {
-	if err := env.Init(context.Background()); err != nil {
+	if err := env.InitDatabase(context.Background()); err != nil {
 		glog.Exitf("Unable to initialize environment: %s", err.Error())
 	}
 	db.Migrate(env.Environment().DBSession.New(context.Background()))

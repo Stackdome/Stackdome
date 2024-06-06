@@ -11,6 +11,7 @@ import (
 
 type EnvImpl interface {
 	Init(context.Context) error
+	InitDatabase(context.Context) error
 	AddFlags(flags *pflag.FlagSet) error
 	Environment() *Env
 }
