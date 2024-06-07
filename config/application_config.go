@@ -10,12 +10,30 @@ import (
 )
 
 const (
-	JWT_SECRET_ENV string = "JWT_KEY"
+	JWT_SECRET_ENV       string = "JWT_KEY"
+	DEFAULT_ORG_NAME_ENV string = "DEFAULT_ORG_NAME"
+	DEFAULT_DOMAIN       string = "DEFAULT_DOMAIN"
 )
 
 type ApplicationConfig struct {
-	Server   *ServerConfig   `json:"server"`
-	Database *DatabaseConfig `json:"database"`
+	Server                *ServerConfig   `json:"server"`
+	Database              *DatabaseConfig `json:"database"`
+	ClusterConfigFilePath string
+	ClusterConfig         *ClusterConfig
+	DefaultOrganisation   *OrganisationConfig
+}
+
+type OrganisationConfig struct {
+	Name       string
+	DomainName string
+}
+
+type ClusterConfig struct {
+	Name           string `yaml:"name"`
+	ClusterURL     string `yaml:"cluster_url"`
+	ClusterCAData  string `yaml:"cluster_ca_data"`
+	ClientCertData string `yaml:"client_cert_data"`
+	ClientKeyData  string `yaml:"client_key_data"`
 }
 
 type DatabaseConfig struct {
@@ -39,15 +57,20 @@ type DBConnectionConfig struct {
 
 func NewApplicationConfig() *ApplicationConfig {
 	return &ApplicationConfig{
-		Server:   NewServerConfig(),
-		Database: NewDatabaseConfig(),
+		Server:              NewServerConfig(),
+		Database:            NewDatabaseConfig(),
+		ClusterConfig:       &ClusterConfig{},
+		DefaultOrganisation: &OrganisationConfig{},
 	}
 }
 
 func (c *ApplicationConfig) AddFlags(flagset *pflag.FlagSet) {
 	flagset.AddGoFlagSet(flag.CommandLine)
+	flagset.StringVar(&c.ClusterConfigFilePath, "cluster-config-file", c.ClusterConfigFilePath, "cluster config file path")
 	c.Server.AddFlags(flagset)
 	c.Database.AddFlags(flagset)
+	c.ClusterConfig.AddFlags(flagset)
+	c.DefaultOrganisation.AddFlags(flagset)
 }
 
 type ServerConfig struct {
@@ -86,6 +109,19 @@ func (c *DatabaseConfig) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&c.MaxOpenConnections, "db-max-open-connections", c.MaxOpenConnections, "Maximum open DB connections for this instance")
 }
 
+func (c *ClusterConfig) AddFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&c.Name, "cluster-name", c.Name, "Name of the cluster")
+	fs.StringVar(&c.ClusterURL, "cluster-url", c.ClusterURL, "cluster api server url")
+	fs.StringVar(&c.ClusterCAData, "cluster-ca-data", c.ClusterCAData, "CA data of the cluster")
+	fs.StringVar(&c.ClientCertData, "cluster-client-cert", c.ClientCertData, "client cert data")
+	fs.StringVar(&c.ClientKeyData, "cluster-client-key", c.ClientKeyData, "client key data")
+}
+
+func (c *OrganisationConfig) AddFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&c.Name, "default-org-name", c.Name, "Name of the default organisation")
+	fs.StringVar(&c.DomainName, "default-domain", c.DomainName, "Domain name for the default organisation")
+}
+
 func (c *DatabaseConfig) ConnectionString(withSSL bool) string {
 	return c.ConnectionStringWithName(c.Name, withSSL)
 }
@@ -108,6 +144,42 @@ func (c *DatabaseConfig) ConnectionStringWithName(name string, withSSL bool) str
 }
 
 func (a *ApplicationConfig) ReadConfigFiles() error {
+	if len(a.Database.DatabaseConfigFile) != 0 {
+		data, err := os.ReadFile(a.Database.DatabaseConfigFile)
+		if err != nil {
+			return fmt.Errorf("error reading YAML file: %v", err)
+		}
+
+		var config DBConnectionConfig
+		err = yaml.UnmarshalStrict(data, &config)
+		if err != nil {
+			return fmt.Errorf("error unmarshalling DB config YAML: %v", err)
+		}
+		a.Database.DBConnectionConfig = config
+
+	}
+	if len(a.ClusterConfigFilePath) != 0 {
+		clusterData, err := os.ReadFile(a.ClusterConfigFilePath)
+		if err != nil {
+			return fmt.Errorf("error reading cluster config YAML file: %v", err)
+		}
+		var clusterConfig ClusterConfig
+		if err := yaml.UnmarshalStrict(clusterData, &clusterConfig); err != nil {
+			return err
+		}
+		a.ClusterConfig = &clusterConfig
+	}
+	if len(a.Server.JwtSecret) == 0 {
+		data, err := os.ReadFile(a.Server.JwtSecretFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to read jwt secret from file '%s'. Error: %w", a.Server.JwtSecretFilePath, err)
+		}
+		a.Server.JwtSecret = string(data)
+	}
+	return nil
+}
+
+func (a *ApplicationConfig) ReadDBConfigFiles() error {
 	data, err := os.ReadFile(a.Database.DatabaseConfigFile)
 	if err != nil {
 		return fmt.Errorf("error reading YAML file: %v", err)
@@ -119,14 +191,6 @@ func (a *ApplicationConfig) ReadConfigFiles() error {
 		return fmt.Errorf("error unmarshalling DB config YAML: %v", err)
 	}
 	a.Database.DBConnectionConfig = config
-
-	if len(a.Server.JwtSecret) == 0 {
-		data, err := os.ReadFile(a.Server.JwtSecretFilePath)
-		if err != nil {
-			return fmt.Errorf("failed to read jwt secret from file '%s'. Error: %w", a.Server.JwtSecretFilePath, err)
-		}
-		a.Server.JwtSecret = string(data)
-	}
 	return nil
 }
 
@@ -134,6 +198,16 @@ func (a *ApplicationConfig) ReadEnvironmentVariables() {
 	secret, found := os.LookupEnv(JWT_SECRET_ENV)
 	if found {
 		a.Server.JwtSecret = secret
+	}
+
+	defaultOrg, found := os.LookupEnv(DEFAULT_ORG_NAME_ENV)
+	if found {
+		a.DefaultOrganisation.Name = defaultOrg
+	}
+
+	defaultDomainName, found := os.LookupEnv(DEFAULT_DOMAIN)
+	if found {
+		a.DefaultOrganisation.DomainName = defaultDomainName
 	}
 }
 

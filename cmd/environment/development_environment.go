@@ -2,12 +2,21 @@ package environment
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ashishmax31/soradev-api-server/config"
 	"github.com/ashishmax31/soradev-api-server/pkg/db"
+	"github.com/ashishmax31/soradev-api-server/pkg/errors"
 	"github.com/ashishmax31/soradev-api-server/pkg/logger"
+	"github.com/ashishmax31/soradev-api-server/pkg/models"
 	"github.com/ashishmax31/soradev-api-server/pkg/services"
+	"github.com/ashishmax31/soradev-api-server/pkg/stores/pgstore"
 	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	workspacev1alpha1 "soradev.io/cluster-agent/api/v1alpha1"
 )
 
 type developmentEnvironment struct {
@@ -39,14 +48,110 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 	}
 	logger := logger.NewLogger(ctx)
 	d.DBSession = db.NewSessionFactory(d.Config.Database)
+
+	if err := d.initializeDefaultOrgAndCluster(ctx); err != nil {
+		return err
+	}
+	if err := d.initializeClients(ctx); err != nil {
+		return err
+	}
 	d.Services = d.loadSevices(logger)
+	return nil
+}
+
+func (d *developmentEnvironment) initializeClients(ctx context.Context) error {
+	clusterClient, err := initializeClusterClient(d.Config.ClusterConfig)
+	if err != nil {
+		return err
+	}
+	d.Clients = Clients{
+		DefaultClusterClient: clusterClient,
+	}
+	return nil
+}
+
+func initializeClusterClient(cfg *config.ClusterConfig) (client.Client, error) {
+	restConfig := &rest.Config{
+		Host: cfg.ClusterURL,
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData:   []byte(cfg.ClusterCAData),
+			CertData: []byte(cfg.ClientCertData),
+			KeyData:  []byte(cfg.ClientKeyData),
+		},
+	}
+	scheme := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+
+	if err := workspacev1alpha1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	clientset, err := client.New(restConfig, client.Options{
+		Scheme: scheme,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return clientset, nil
+}
+
+func (d *developmentEnvironment) initializeDefaultOrgAndCluster(ctx context.Context) error {
+	clusterStore := pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+
+	orgStore := pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+
+	if _, err := orgStore.GetDefaultOrg(ctx); err != nil {
+		if err.Code == errors.ErrorNotFound {
+			desiredOrg := &models.Organisation{
+				Name:       d.Config.DefaultOrganisation.Name,
+				DomainName: d.Config.DefaultOrganisation.DomainName,
+				Default:    true,
+			}
+			if _, err := orgStore.Create(ctx, desiredOrg); err != nil {
+				return fmt.Errorf("failed to create default org: %w", err)
+			}
+
+		} else {
+			return err
+		}
+	}
+
+	defaultOrg, err := orgStore.GetDefaultOrg(ctx)
+	if err != nil {
+		return err
+	}
+
+	if _, err := clusterStore.GetDefaultCluster(ctx); err != nil {
+		if err.Code == errors.ErrorNotFound {
+			desiredCluster := &models.Cluster{
+				OrganisationID: defaultOrg.ID,
+				Name:           d.Config.ClusterConfig.Name,
+				ClusterURL:     d.Config.ClusterConfig.ClusterURL,
+				ClusterCAData:  d.Config.ClusterConfig.ClusterCAData,
+				ClientCertData: d.Config.ClusterConfig.ClientCertData,
+				ClientKeyData:  d.Config.ClusterConfig.ClientKeyData,
+				Default:        true,
+			}
+			if _, err := clusterStore.Create(ctx, desiredCluster); err != nil {
+				return fmt.Errorf("failed to create default cluster: %w", err)
+			}
+		} else {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (d *developmentEnvironment) InitDatabase(ctx context.Context) error {
 	d.Config.ReadEnvironmentVariables()
-	if err := d.Config.ReadConfigFiles(); err != nil {
-		return err
+	if err := d.Config.ReadDBConfigFiles(); err != nil {
+		return fmt.Errorf("failed to read DB config file: %w", err)
 	}
 	d.DBSession = db.NewSessionFactory(d.Config.Database)
 	return nil

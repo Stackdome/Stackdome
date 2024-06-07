@@ -8,10 +8,14 @@ import (
 )
 
 func createUserAndOrganisationTable() *gormigrate.Migration {
+
 	type Organisation struct {
-		CreatedAt time.Time
-		UpdatedAt time.Time
-		ID        string `gorm:"primary_key"`
+		CreatedAt  time.Time
+		UpdatedAt  time.Time
+		ID         int `gorm:"primary_key;autoIncrement"`
+		Name       string
+		DomainName string // TLD + SLD. Ex: example.test
+		Default    bool
 	}
 
 	type User struct {
@@ -23,7 +27,7 @@ func createUserAndOrganisationTable() *gormigrate.Migration {
 		Password       string
 		Organisation   string
 		Role           string
-		OrganisationID string
+		OrganisationID int
 	}
 
 	return &gormigrate.Migration{
@@ -34,20 +38,6 @@ func createUserAndOrganisationTable() *gormigrate.Migration {
 			}
 			if err := tx.Migrator().AutoMigrate(&Organisation{}); err != nil {
 				return err
-			}
-
-			var count int64
-			if err := tx.Model(&Organisation{}).Where("id = ?", "Default").Count(&count).Error; err != nil {
-				return err
-			}
-
-			if count == 0 {
-				defaultOrg := &Organisation{
-					ID: "Default",
-				}
-				if err := tx.Create(defaultOrg).Error; err != nil {
-					return err
-				}
 			}
 
 			if err := tx.Exec(`ALTER TABLE users ADD FOREIGN KEY (organisation_id) REFERENCES organisations(id) ON DELETE CASCADE;`).Error; err != nil {

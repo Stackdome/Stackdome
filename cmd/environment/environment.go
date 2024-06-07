@@ -7,6 +7,7 @@ import (
 	"github.com/ashishmax31/soradev-api-server/pkg/db"
 	"github.com/ashishmax31/soradev-api-server/pkg/services"
 	"github.com/spf13/pflag"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type EnvImpl interface {
@@ -21,6 +22,11 @@ type Env struct {
 	Services  Services
 	DBSession db.SessionFactory
 	Config    *config.ApplicationConfig
+	Clients   Clients
+}
+
+type Clients struct {
+	DefaultClusterClient client.Client
 }
 
 type Database struct {
