@@ -62,9 +62,6 @@ func (u usersService) Create(ctx context.Context, user *models.User) (*models.Us
 	if len(user.Role) == 0 {
 		user.Role = models.UserRole
 	}
-	if len(user.OrganisationID) == 0 {
-		user.OrganisationID = models.DefaultOrgName
-	}
 	return u.userStore.Create(ctx, user)
 }
 

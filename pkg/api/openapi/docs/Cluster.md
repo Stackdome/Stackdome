@@ -8,8 +8,8 @@ Name | Type | Description | Notes
 **Name** | Pointer to **string** |  | [optional] 
 **OrganisationId** | Pointer to **string** |  | [optional] 
 **Default** | Pointer to **bool** |  | [optional] 
-**ClusterURL** | Pointer to **string** |  | [optional] 
-**ClusterCAData** | Pointer to **string** |  | [optional] 
+**ClusterUrl** | Pointer to **string** |  | [optional] 
+**ClusterCaData** | Pointer to **string** |  | [optional] 
 **ClientCertData** | Pointer to **string** |  | [optional] 
 **ClientKeyData** | Pointer to **string** |  | [optional] 
 
@@ -132,55 +132,55 @@ SetDefault sets Default field to given value.
 
 HasDefault returns a boolean if a field has been set.
 
-### GetClusterURL
+### GetClusterUrl
 
-`func (o *Cluster) GetClusterURL() string`
+`func (o *Cluster) GetClusterUrl() string`
 
-GetClusterURL returns the ClusterURL field if non-nil, zero value otherwise.
+GetClusterUrl returns the ClusterUrl field if non-nil, zero value otherwise.
 
-### GetClusterURLOk
+### GetClusterUrlOk
 
-`func (o *Cluster) GetClusterURLOk() (*string, bool)`
+`func (o *Cluster) GetClusterUrlOk() (*string, bool)`
 
-GetClusterURLOk returns a tuple with the ClusterURL field if it's non-nil, zero value otherwise
+GetClusterUrlOk returns a tuple with the ClusterUrl field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetClusterURL
+### SetClusterUrl
 
-`func (o *Cluster) SetClusterURL(v string)`
+`func (o *Cluster) SetClusterUrl(v string)`
 
-SetClusterURL sets ClusterURL field to given value.
+SetClusterUrl sets ClusterUrl field to given value.
 
-### HasClusterURL
+### HasClusterUrl
 
-`func (o *Cluster) HasClusterURL() bool`
+`func (o *Cluster) HasClusterUrl() bool`
 
-HasClusterURL returns a boolean if a field has been set.
+HasClusterUrl returns a boolean if a field has been set.
 
-### GetClusterCAData
+### GetClusterCaData
 
-`func (o *Cluster) GetClusterCAData() string`
+`func (o *Cluster) GetClusterCaData() string`
 
-GetClusterCAData returns the ClusterCAData field if non-nil, zero value otherwise.
+GetClusterCaData returns the ClusterCaData field if non-nil, zero value otherwise.
 
-### GetClusterCADataOk
+### GetClusterCaDataOk
 
-`func (o *Cluster) GetClusterCADataOk() (*string, bool)`
+`func (o *Cluster) GetClusterCaDataOk() (*string, bool)`
 
-GetClusterCADataOk returns a tuple with the ClusterCAData field if it's non-nil, zero value otherwise
+GetClusterCaDataOk returns a tuple with the ClusterCaData field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetClusterCAData
+### SetClusterCaData
 
-`func (o *Cluster) SetClusterCAData(v string)`
+`func (o *Cluster) SetClusterCaData(v string)`
 
-SetClusterCAData sets ClusterCAData field to given value.
+SetClusterCaData sets ClusterCaData field to given value.
 
-### HasClusterCAData
+### HasClusterCaData
 
-`func (o *Cluster) HasClusterCAData() bool`
+`func (o *Cluster) HasClusterCaData() bool`
 
-HasClusterCAData returns a boolean if a field has been set.
+HasClusterCaData returns a boolean if a field has been set.
 
 ### GetClientCertData
 

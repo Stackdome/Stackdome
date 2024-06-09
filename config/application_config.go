@@ -112,9 +112,6 @@ func (c *DatabaseConfig) AddFlags(fs *pflag.FlagSet) {
 func (c *ClusterConfig) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&c.Name, "cluster-name", c.Name, "Name of the cluster")
 	fs.StringVar(&c.ClusterURL, "cluster-url", c.ClusterURL, "cluster api server url")
-	fs.StringVar(&c.ClusterCAData, "cluster-ca-data", c.ClusterCAData, "CA data of the cluster")
-	fs.StringVar(&c.ClientCertData, "cluster-client-cert", c.ClientCertData, "client cert data")
-	fs.StringVar(&c.ClientKeyData, "cluster-client-key", c.ClientKeyData, "client key data")
 }
 
 func (c *OrganisationConfig) AddFlags(fs *pflag.FlagSet) {
@@ -165,7 +162,7 @@ func (a *ApplicationConfig) ReadConfigFiles() error {
 		}
 		var clusterConfig ClusterConfig
 		if err := yaml.UnmarshalStrict(clusterData, &clusterConfig); err != nil {
-			return err
+			return fmt.Errorf("failed to unmarshal cluster config yaml: %s", err)
 		}
 		a.ClusterConfig = &clusterConfig
 	}

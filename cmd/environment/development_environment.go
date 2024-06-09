@@ -2,6 +2,7 @@ package environment
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/ashishmax31/soradev-api-server/config"
@@ -62,7 +63,7 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 func (d *developmentEnvironment) initializeClients(ctx context.Context) error {
 	clusterClient, err := initializeClusterClient(d.Config.ClusterConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to intialize cluster client: %w", err)
 	}
 	d.Clients = Clients{
 		DefaultClusterClient: clusterClient,
@@ -71,12 +72,24 @@ func (d *developmentEnvironment) initializeClients(ctx context.Context) error {
 }
 
 func initializeClusterClient(cfg *config.ClusterConfig) (client.Client, error) {
+	cadata, err := base64.StdEncoding.DecodeString(cfg.ClusterCAData)
+	if err != nil {
+		return nil, err
+	}
+	clientCert, err := base64.StdEncoding.DecodeString(cfg.ClientCertData)
+	if err != nil {
+		return nil, err
+	}
+	clientKey, err := base64.StdEncoding.DecodeString(cfg.ClientKeyData)
+	if err != nil {
+		return nil, err
+	}
 	restConfig := &rest.Config{
 		Host: cfg.ClusterURL,
 		TLSClientConfig: rest.TLSClientConfig{
-			CAData:   []byte(cfg.ClusterCAData),
-			CertData: []byte(cfg.ClientCertData),
-			KeyData:  []byte(cfg.ClientKeyData),
+			CAData:   cadata,
+			CertData: clientCert,
+			KeyData:  clientKey,
 		},
 	}
 	scheme := runtime.NewScheme()
@@ -132,9 +145,9 @@ func (d *developmentEnvironment) initializeDefaultOrgAndCluster(ctx context.Cont
 				OrganisationID: defaultOrg.ID,
 				Name:           d.Config.ClusterConfig.Name,
 				ClusterURL:     d.Config.ClusterConfig.ClusterURL,
-				ClusterCAData:  d.Config.ClusterConfig.ClusterCAData,
-				ClientCertData: d.Config.ClusterConfig.ClientCertData,
-				ClientKeyData:  d.Config.ClusterConfig.ClientKeyData,
+				ClusterCAData:  string(d.Config.ClusterConfig.ClusterCAData),
+				ClientCertData: string(d.Config.ClusterConfig.ClientCertData),
+				ClientKeyData:  string(d.Config.ClusterConfig.ClientKeyData),
 				Default:        true,
 			}
 			if _, err := clusterStore.Create(ctx, desiredCluster); err != nil {
@@ -163,6 +176,11 @@ func (d *developmentEnvironment) loadSevices(logger logger.Logger) Services {
 			SessionFactory: d.DBSession,
 			Logger:         logger,
 			JwtSecretKey:   d.Config.Server.JwtSecret,
+		}),
+		WorkspaceProvisionRequestService: services.NewWorkspaceProvisionRequestService(services.WorkspaceProvisionRequestServiceSpec{
+			SessionFactory: d.DBSession,
+			Logger:         logger,
+			ClusterClient:  d.Clients.DefaultClusterClient,
 		}),
 	}
 }

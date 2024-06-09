@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ashishmax31/soradev-api-server/cmd/environment"
+	"github.com/ashishmax31/soradev-api-server/pkg/auth"
 	"github.com/golang/glog"
 )
 
@@ -56,7 +57,16 @@ func NewAPIServer(env environment.EnvImpl) Server {
 }
 
 func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.EnvImpl) http.Handler {
-	return mainHandler
+	authenticationHandler := NewAuthSelectHandler(AuthSelectorHandlerSpec{
+		MainHandler: mainHandler,
+		PublicPaths: []string{
+			"^/api/v1/users",
+			"^/api/v1/auth",
+		},
+		DefaultAuthHandler: auth.NewJwtAuthHandler(mainHandler, []byte(env.Environment().Config.Server.JwtSecret)),
+	})
+
+	return authenticationHandler
 }
 
 // Serve start the blocking call to Serve.

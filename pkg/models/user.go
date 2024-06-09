@@ -21,5 +21,5 @@ type User struct {
 	Password       string
 	Organisation   string
 	Role           Role
-	OrganisationID string
+	OrganisationID int
 }

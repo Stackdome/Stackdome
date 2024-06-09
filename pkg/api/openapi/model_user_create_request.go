@@ -26,17 +26,20 @@ type UserCreateRequest struct {
 	Password string `json:"password"`
 	// User's organisation
 	Organisation *string `json:"organisation,omitempty"`
+	// OrganisationID
+	OrganisationId int32 `json:"organisation_id"`
 }
 
 // NewUserCreateRequest instantiates a new UserCreateRequest object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewUserCreateRequest(name string, email string, password string) *UserCreateRequest {
+func NewUserCreateRequest(name string, email string, password string, organisationId int32) *UserCreateRequest {
 	this := UserCreateRequest{}
 	this.Name = name
 	this.Email = email
 	this.Password = password
+	this.OrganisationId = organisationId
 	return &this
 }
 
@@ -184,6 +187,30 @@ func (o *UserCreateRequest) SetOrganisation(v string) {
 	o.Organisation = &v
 }
 
+// GetOrganisationId returns the OrganisationId field value
+func (o *UserCreateRequest) GetOrganisationId() int32 {
+	if o == nil {
+		var ret int32
+		return ret
+	}
+
+	return o.OrganisationId
+}
+
+// GetOrganisationIdOk returns a tuple with the OrganisationId field value
+// and a boolean to check if the value has been set.
+func (o *UserCreateRequest) GetOrganisationIdOk() (*int32, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.OrganisationId, true
+}
+
+// SetOrganisationId sets field value
+func (o *UserCreateRequest) SetOrganisationId(v int32) {
+	o.OrganisationId = v
+}
+
 func (o UserCreateRequest) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -200,6 +227,9 @@ func (o UserCreateRequest) MarshalJSON() ([]byte, error) {
 	}
 	if o.Organisation != nil {
 		toSerialize["organisation"] = o.Organisation
+	}
+	if true {
+		toSerialize["organisation_id"] = o.OrganisationId
 	}
 	return json.Marshal(toSerialize)
 }

@@ -9,12 +9,13 @@ Name | Type | Description | Notes
 **Email** | **string** | User&#39;s email address | 
 **Password** | **string** | Users desired password | 
 **Organisation** | Pointer to **string** | User&#39;s organisation | [optional] 
+**OrganisationId** | **int32** | OrganisationID | 
 
 ## Methods
 
 ### NewUserCreateRequest
 
-`func NewUserCreateRequest(name string, email string, password string, ) *UserCreateRequest`
+`func NewUserCreateRequest(name string, email string, password string, organisationId int32, ) *UserCreateRequest`
 
 NewUserCreateRequest instantiates a new UserCreateRequest object
 This constructor will assign default values to properties that have it defined,
@@ -138,6 +139,26 @@ SetOrganisation sets Organisation field to given value.
 `func (o *UserCreateRequest) HasOrganisation() bool`
 
 HasOrganisation returns a boolean if a field has been set.
+
+### GetOrganisationId
+
+`func (o *UserCreateRequest) GetOrganisationId() int32`
+
+GetOrganisationId returns the OrganisationId field if non-nil, zero value otherwise.
+
+### GetOrganisationIdOk
+
+`func (o *UserCreateRequest) GetOrganisationIdOk() (*int32, bool)`
+
+GetOrganisationIdOk returns a tuple with the OrganisationId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetOrganisationId
+
+`func (o *UserCreateRequest) SetOrganisationId(v int32)`
+
+SetOrganisationId sets OrganisationId field to given value.
+
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

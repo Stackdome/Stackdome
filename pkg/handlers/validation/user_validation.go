@@ -19,6 +19,25 @@ func ValidateUserCreate(in *openapi.UserCreateRequest) Validate {
 	})
 }
 
+func ValidateWorkspaceProvisionRequest(in *openapi.WorkspaceProvisionRequest) Validate {
+	return ValidateAll([]Validate{
+		validateEmpty(in, "Id", "id"),
+		validateEmpty(in, "OrgId", "orgId"),
+		validateEmpty(in, "UserId", "userId"),
+		validateNotEmpty(in, "SshPublicKey", "sshPublicKey"),
+	})
+}
+
+func ValidateWorkspaceProvisionRequestStatusUpdate(in *openapi.WorkspaceProvisionRequest) Validate {
+	return ValidateAll([]Validate{
+		validateEmpty(in, "Id", "id"),
+		validateEmpty(in, "OrgId", "orgId"),
+		validateEmpty(in, "UserId", "userId"),
+		validateEmpty(in, "SshPublicKey", "sshPublicKey"),
+		validateNotEmpty(in, "Status", "status"),
+	})
+}
+
 func ValidateUserLogin(in *openapi.LoginRequest) Validate {
 	return ValidateAll([]Validate{
 		validateNotEmpty(in, "Email", "email"),

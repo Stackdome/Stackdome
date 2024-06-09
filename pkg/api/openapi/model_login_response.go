@@ -19,7 +19,7 @@ type LoginResponse struct {
 	// Access token for authenticated requests
 	Token *string `json:"token,omitempty"`
 	// Token expiration time in seconds
-	ExpiresIn *int32 `json:"expiresIn,omitempty"`
+	ExpiresIn *int32 `json:"expires_in,omitempty"`
 }
 
 // NewLoginResponse instantiates a new LoginResponse object
@@ -109,7 +109,7 @@ func (o LoginResponse) MarshalJSON() ([]byte, error) {
 		toSerialize["token"] = o.Token
 	}
 	if o.ExpiresIn != nil {
-		toSerialize["expiresIn"] = o.ExpiresIn
+		toSerialize["expires_in"] = o.ExpiresIn
 	}
 	return json.Marshal(toSerialize)
 }

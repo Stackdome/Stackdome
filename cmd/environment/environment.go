@@ -34,5 +34,6 @@ type Database struct {
 }
 
 type Services struct {
-	UserService services.UserService
+	UserService                      services.UserService
+	WorkspaceProvisionRequestService services.WorkspaceProvisionRequestService
 }

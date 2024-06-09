@@ -4,7 +4,7 @@ info:
   version: 0.0.1
   description: api-server
 paths:
-  /api/v1/user:
+  /api/v1/users:
     post:
       summary: Create new user
       description: Create a new user
@@ -39,7 +39,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/user/{id}:
+  /api/v1/users/{id}:
     get:
       security:
         - Bearer: []
@@ -101,6 +101,93 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/workspace-provision-requests:
+    post:
+      summary: Create a new workpace provision request object
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceProvisionRequest'
+      responses:
+        '201':
+          description: WorkspaceProvisionRequest added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceProvisionRequest'
+        '400':
+          description: Invalid request payload
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+  /api/v1/workspace-provision-requests/{id}:
+    get:
+      summary: Get a workspace provision request object by ID
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: WorkspaceProvisionRequest details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceProvisionRequest'
+        '401':
+          description: Unauthorized
+        '404':
+          description: WorkspaceProvisionRequest object not found
+        '500':
+          description: Internal server error
+    put:
+      summary: Update a WorkspaceProvisionRequest
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceProvisionRequest'
+      responses:
+        '200':
+          description: WorkspaceProvisionRequest updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceProvisionRequest'
+        '400':
+          description: Invalid request payload
+        '401':
+          description: Unauthorized
+        '404':
+          description: WorkspaceProvisionRequest not found
+        '500':
+          description: Internal server error
+
+    delete:
+      summary: Delete a WorkspaceProvisionRequest
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: WorkspaceProvisionRequest deleted successfully
+        '401':
+          description: Unauthorized
+        '404':
+          description: WorkspaceProvisionRequest not found
+        '500':
+          description: Internal server error
   /api/v1/clusters:
     post:
       summary: Create a new cluster
@@ -241,12 +328,16 @@ components:
         role:
           type: string
           description: User's role
+        organisation_id:
+          type: integer
+          description: OrganisationID
     UserCreateRequest:
       type: object
       required:
       - name
       - email
       - password
+      - organisation_id
       properties:
         name:
           type: string
@@ -264,6 +355,9 @@ components:
         organisation:
           type: string
           description: User's organisation
+        organisation_id:
+          type: integer
+          description: OrganisationID
     LoginRequest:
       type: object
       required:
@@ -283,9 +377,73 @@ components:
         token:
           type: string
           description: Access token for authenticated requests
-        expiresIn:
+        expires_in:
           type: integer
           description: Token expiration time in seconds
+    ProvisionRequestStatus:
+      type: object
+      properties:
+        status_condition:
+          $ref: '#/components/schemas/ProvisionRequestStatusCondition'
+        message:
+          type: string
+    ProvisionRequestStatusCondition:
+      type: string
+      enum:
+        - Pending
+        - Completed
+        - Error
+    WorkspaceProvisionRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+        org_id:
+          type: integer
+        ssh_public_key:
+          type: string
+        status:
+          $ref: '#/components/schemas/WorkspaceProvisionRequestStatus'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - ssh_public_key
+    WorkspaceProvisionRequestStatus:
+      type: object
+      properties:
+        workspace_namespace:
+          type: string
+          nullable: true
+        workspace_service_accountname:
+          type: string
+          nullable: true
+        workspace_serviceaccount_token:
+          type: string
+          nullable: true
+        storageserver_sshusername:
+          type: string
+          nullable: true
+        cluster_ca_cert:
+          type: string
+          nullable: true
+        cluster_url:
+          type: string
+          nullable: true
+        status_condition:
+          $ref: '#/components/schemas/ProvisionRequestStatusCondition'
+          nullable: true
+        message:
+          type: string
+          nullable: true
+      required:
+        - status
     Cluster:
       type: object
       properties:
@@ -297,13 +455,13 @@ components:
           type: string
         default:
           type: boolean
-        clusterURL:
+        cluster_url:
           type: string
-        clusterCAData:
+        cluster_ca_data:
           type: string
-        clientCertData:
+        client_cert_data:
           type: string
-        clientKeyData:
+        client_key_data:
           type: string
     Error:
       allOf:

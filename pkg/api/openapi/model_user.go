@@ -28,6 +28,8 @@ type User struct {
 	Organisation *string `json:"organisation,omitempty"`
 	// User's role
 	Role *string `json:"role,omitempty"`
+	// OrganisationID
+	OrganisationId *int32 `json:"organisation_id,omitempty"`
 }
 
 // NewUser instantiates a new User object
@@ -239,6 +241,38 @@ func (o *User) SetRole(v string) {
 	o.Role = &v
 }
 
+// GetOrganisationId returns the OrganisationId field value if set, zero value otherwise.
+func (o *User) GetOrganisationId() int32 {
+	if o == nil || o.OrganisationId == nil {
+		var ret int32
+		return ret
+	}
+	return *o.OrganisationId
+}
+
+// GetOrganisationIdOk returns a tuple with the OrganisationId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *User) GetOrganisationIdOk() (*int32, bool) {
+	if o == nil || o.OrganisationId == nil {
+		return nil, false
+	}
+	return o.OrganisationId, true
+}
+
+// HasOrganisationId returns a boolean if a field has been set.
+func (o *User) HasOrganisationId() bool {
+	if o != nil && o.OrganisationId != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetOrganisationId gets a reference to the given int32 and assigns it to the OrganisationId field.
+func (o *User) SetOrganisationId(v int32) {
+	o.OrganisationId = &v
+}
+
 func (o User) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Id != nil {
@@ -258,6 +292,9 @@ func (o User) MarshalJSON() ([]byte, error) {
 	}
 	if o.Role != nil {
 		toSerialize["role"] = o.Role
+	}
+	if o.OrganisationId != nil {
+		toSerialize["organisation_id"] = o.OrganisationId
 	}
 	return json.Marshal(toSerialize)
 }

@@ -84,8 +84,12 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1ClustersIdGet**](docs/DefaultApi.md#apiv1clustersidget) | **Get** /api/v1/clusters/{id} | Get a cluster by ID
 *DefaultApi* | [**ApiV1ClustersIdPut**](docs/DefaultApi.md#apiv1clustersidput) | **Put** /api/v1/clusters/{id} | Update a cluster
 *DefaultApi* | [**ApiV1ClustersPost**](docs/DefaultApi.md#apiv1clusterspost) | **Post** /api/v1/clusters | Create a new cluster
-*DefaultApi* | [**ApiV1UserIdGet**](docs/DefaultApi.md#apiv1useridget) | **Get** /api/v1/user/{id} | Get a user
-*DefaultApi* | [**ApiV1UserPost**](docs/DefaultApi.md#apiv1userpost) | **Post** /api/v1/user | Create new user
+*DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
+*DefaultApi* | [**ApiV1UsersPost**](docs/DefaultApi.md#apiv1userspost) | **Post** /api/v1/users | Create new user
+*DefaultApi* | [**ApiV1WorkspaceProvisionRequestsIdDelete**](docs/DefaultApi.md#apiv1workspaceprovisionrequestsiddelete) | **Delete** /api/v1/workspace-provision-requests/{id} | Delete a WorkspaceProvisionRequest
+*DefaultApi* | [**ApiV1WorkspaceProvisionRequestsIdGet**](docs/DefaultApi.md#apiv1workspaceprovisionrequestsidget) | **Get** /api/v1/workspace-provision-requests/{id} | Get a workspace provision request object by ID
+*DefaultApi* | [**ApiV1WorkspaceProvisionRequestsIdPut**](docs/DefaultApi.md#apiv1workspaceprovisionrequestsidput) | **Put** /api/v1/workspace-provision-requests/{id} | Update a WorkspaceProvisionRequest
+*DefaultApi* | [**ApiV1WorkspaceProvisionRequestsPost**](docs/DefaultApi.md#apiv1workspaceprovisionrequestspost) | **Post** /api/v1/workspace-provision-requests | Create a new workpace provision request object
 
 
 ## Documentation For Models
@@ -98,8 +102,12 @@ Class | Method | HTTP request | Description
  - [LoginRequest](docs/LoginRequest.md)
  - [LoginResponse](docs/LoginResponse.md)
  - [ObjectReference](docs/ObjectReference.md)
+ - [ProvisionRequestStatus](docs/ProvisionRequestStatus.md)
+ - [ProvisionRequestStatusCondition](docs/ProvisionRequestStatusCondition.md)
  - [User](docs/User.md)
  - [UserCreateRequest](docs/UserCreateRequest.md)
+ - [WorkspaceProvisionRequest](docs/WorkspaceProvisionRequest.md)
+ - [WorkspaceProvisionRequestStatus](docs/WorkspaceProvisionRequestStatus.md)
 
 
 ## Documentation For Authorization

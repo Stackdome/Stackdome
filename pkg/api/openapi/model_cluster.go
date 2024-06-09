@@ -20,10 +20,10 @@ type Cluster struct {
 	Name           *string `json:"name,omitempty"`
 	OrganisationId *string `json:"organisation_id,omitempty"`
 	Default        *bool   `json:"default,omitempty"`
-	ClusterURL     *string `json:"clusterURL,omitempty"`
-	ClusterCAData  *string `json:"clusterCAData,omitempty"`
-	ClientCertData *string `json:"clientCertData,omitempty"`
-	ClientKeyData  *string `json:"clientKeyData,omitempty"`
+	ClusterUrl     *string `json:"cluster_url,omitempty"`
+	ClusterCaData  *string `json:"cluster_ca_data,omitempty"`
+	ClientCertData *string `json:"client_cert_data,omitempty"`
+	ClientKeyData  *string `json:"client_key_data,omitempty"`
 }
 
 // NewCluster instantiates a new Cluster object
@@ -171,68 +171,68 @@ func (o *Cluster) SetDefault(v bool) {
 	o.Default = &v
 }
 
-// GetClusterURL returns the ClusterURL field value if set, zero value otherwise.
-func (o *Cluster) GetClusterURL() string {
-	if o == nil || o.ClusterURL == nil {
+// GetClusterUrl returns the ClusterUrl field value if set, zero value otherwise.
+func (o *Cluster) GetClusterUrl() string {
+	if o == nil || o.ClusterUrl == nil {
 		var ret string
 		return ret
 	}
-	return *o.ClusterURL
+	return *o.ClusterUrl
 }
 
-// GetClusterURLOk returns a tuple with the ClusterURL field value if set, nil otherwise
+// GetClusterUrlOk returns a tuple with the ClusterUrl field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *Cluster) GetClusterURLOk() (*string, bool) {
-	if o == nil || o.ClusterURL == nil {
+func (o *Cluster) GetClusterUrlOk() (*string, bool) {
+	if o == nil || o.ClusterUrl == nil {
 		return nil, false
 	}
-	return o.ClusterURL, true
+	return o.ClusterUrl, true
 }
 
-// HasClusterURL returns a boolean if a field has been set.
-func (o *Cluster) HasClusterURL() bool {
-	if o != nil && o.ClusterURL != nil {
+// HasClusterUrl returns a boolean if a field has been set.
+func (o *Cluster) HasClusterUrl() bool {
+	if o != nil && o.ClusterUrl != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetClusterURL gets a reference to the given string and assigns it to the ClusterURL field.
-func (o *Cluster) SetClusterURL(v string) {
-	o.ClusterURL = &v
+// SetClusterUrl gets a reference to the given string and assigns it to the ClusterUrl field.
+func (o *Cluster) SetClusterUrl(v string) {
+	o.ClusterUrl = &v
 }
 
-// GetClusterCAData returns the ClusterCAData field value if set, zero value otherwise.
-func (o *Cluster) GetClusterCAData() string {
-	if o == nil || o.ClusterCAData == nil {
+// GetClusterCaData returns the ClusterCaData field value if set, zero value otherwise.
+func (o *Cluster) GetClusterCaData() string {
+	if o == nil || o.ClusterCaData == nil {
 		var ret string
 		return ret
 	}
-	return *o.ClusterCAData
+	return *o.ClusterCaData
 }
 
-// GetClusterCADataOk returns a tuple with the ClusterCAData field value if set, nil otherwise
+// GetClusterCaDataOk returns a tuple with the ClusterCaData field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *Cluster) GetClusterCADataOk() (*string, bool) {
-	if o == nil || o.ClusterCAData == nil {
+func (o *Cluster) GetClusterCaDataOk() (*string, bool) {
+	if o == nil || o.ClusterCaData == nil {
 		return nil, false
 	}
-	return o.ClusterCAData, true
+	return o.ClusterCaData, true
 }
 
-// HasClusterCAData returns a boolean if a field has been set.
-func (o *Cluster) HasClusterCAData() bool {
-	if o != nil && o.ClusterCAData != nil {
+// HasClusterCaData returns a boolean if a field has been set.
+func (o *Cluster) HasClusterCaData() bool {
+	if o != nil && o.ClusterCaData != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetClusterCAData gets a reference to the given string and assigns it to the ClusterCAData field.
-func (o *Cluster) SetClusterCAData(v string) {
-	o.ClusterCAData = &v
+// SetClusterCaData gets a reference to the given string and assigns it to the ClusterCaData field.
+func (o *Cluster) SetClusterCaData(v string) {
+	o.ClusterCaData = &v
 }
 
 // GetClientCertData returns the ClientCertData field value if set, zero value otherwise.
@@ -313,17 +313,17 @@ func (o Cluster) MarshalJSON() ([]byte, error) {
 	if o.Default != nil {
 		toSerialize["default"] = o.Default
 	}
-	if o.ClusterURL != nil {
-		toSerialize["clusterURL"] = o.ClusterURL
+	if o.ClusterUrl != nil {
+		toSerialize["cluster_url"] = o.ClusterUrl
 	}
-	if o.ClusterCAData != nil {
-		toSerialize["clusterCAData"] = o.ClusterCAData
+	if o.ClusterCaData != nil {
+		toSerialize["cluster_ca_data"] = o.ClusterCaData
 	}
 	if o.ClientCertData != nil {
-		toSerialize["clientCertData"] = o.ClientCertData
+		toSerialize["client_cert_data"] = o.ClientCertData
 	}
 	if o.ClientKeyData != nil {
-		toSerialize["clientKeyData"] = o.ClientKeyData
+		toSerialize["client_key_data"] = o.ClientKeyData
 	}
 	return json.Marshal(toSerialize)
 }
