@@ -2,5 +2,5 @@ package openapi
 
 import _ "embed"
 
-//go:embed api-server.yaml
+//go:embed stackdome_api.yaml
 var OpenAPISpec []byte

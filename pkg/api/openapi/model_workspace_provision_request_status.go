@@ -16,14 +16,14 @@ import (
 
 // WorkspaceProvisionRequestStatus struct for WorkspaceProvisionRequestStatus
 type WorkspaceProvisionRequestStatus struct {
-	WorkspaceNamespace           NullableString                   `json:"workspace_namespace,omitempty"`
-	WorkspaceServiceAccountname  NullableString                   `json:"workspace_service_accountname,omitempty"`
-	WorkspaceServiceaccountToken NullableString                   `json:"workspace_serviceaccount_token,omitempty"`
-	ClusterCaCert                NullableString                   `json:"cluster_ca_cert,omitempty"`
-	ClusterUrl                   NullableString                   `json:"cluster_url,omitempty"`
-	Domain                       NullableString                   `json:"domain,omitempty"`
-	StatusCondition              *ProvisionRequestStatusCondition `json:"status_condition,omitempty"`
-	Message                      NullableString                   `json:"message,omitempty"`
+	WorkspaceNamespace           NullableString `json:"workspace_namespace,omitempty"`
+	WorkspaceServiceAccountname  NullableString `json:"workspace_service_accountname,omitempty"`
+	WorkspaceServiceaccountToken NullableString `json:"workspace_serviceaccount_token,omitempty"`
+	ClusterCaCert                NullableString `json:"cluster_ca_cert,omitempty"`
+	ClusterUrl                   NullableString `json:"cluster_url,omitempty"`
+	Domain                       NullableString `json:"domain,omitempty"`
+	State                        NullableString `json:"state,omitempty"`
+	Message                      NullableString `json:"message,omitempty"`
 }
 
 // NewWorkspaceProvisionRequestStatus instantiates a new WorkspaceProvisionRequestStatus object
@@ -301,36 +301,47 @@ func (o *WorkspaceProvisionRequestStatus) UnsetDomain() {
 	o.Domain.Unset()
 }
 
-// GetStatusCondition returns the StatusCondition field value if set, zero value otherwise.
-func (o *WorkspaceProvisionRequestStatus) GetStatusCondition() ProvisionRequestStatusCondition {
-	if o == nil || o.StatusCondition == nil {
-		var ret ProvisionRequestStatusCondition
+// GetState returns the State field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *WorkspaceProvisionRequestStatus) GetState() string {
+	if o == nil || o.State.Get() == nil {
+		var ret string
 		return ret
 	}
-	return *o.StatusCondition
+	return *o.State.Get()
 }
 
-// GetStatusConditionOk returns a tuple with the StatusCondition field value if set, nil otherwise
+// GetStateOk returns a tuple with the State field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *WorkspaceProvisionRequestStatus) GetStatusConditionOk() (*ProvisionRequestStatusCondition, bool) {
-	if o == nil || o.StatusCondition == nil {
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *WorkspaceProvisionRequestStatus) GetStateOk() (*string, bool) {
+	if o == nil {
 		return nil, false
 	}
-	return o.StatusCondition, true
+	return o.State.Get(), o.State.IsSet()
 }
 
-// HasStatusCondition returns a boolean if a field has been set.
-func (o *WorkspaceProvisionRequestStatus) HasStatusCondition() bool {
-	if o != nil && o.StatusCondition != nil {
+// HasState returns a boolean if a field has been set.
+func (o *WorkspaceProvisionRequestStatus) HasState() bool {
+	if o != nil && o.State.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetStatusCondition gets a reference to the given ProvisionRequestStatusCondition and assigns it to the StatusCondition field.
-func (o *WorkspaceProvisionRequestStatus) SetStatusCondition(v ProvisionRequestStatusCondition) {
-	o.StatusCondition = &v
+// SetState gets a reference to the given NullableString and assigns it to the State field.
+func (o *WorkspaceProvisionRequestStatus) SetState(v string) {
+	o.State.Set(&v)
+}
+
+// SetStateNil sets the value for State to be an explicit nil
+func (o *WorkspaceProvisionRequestStatus) SetStateNil() {
+	o.State.Set(nil)
+}
+
+// UnsetState ensures that no value is present for State, not even an explicit nil
+func (o *WorkspaceProvisionRequestStatus) UnsetState() {
+	o.State.Unset()
 }
 
 // GetMessage returns the Message field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -396,8 +407,8 @@ func (o WorkspaceProvisionRequestStatus) MarshalJSON() ([]byte, error) {
 	if o.Domain.IsSet() {
 		toSerialize["domain"] = o.Domain.Get()
 	}
-	if o.StatusCondition != nil {
-		toSerialize["status_condition"] = o.StatusCondition
+	if o.State.IsSet() {
+		toSerialize["state"] = o.State.Get()
 	}
 	if o.Message.IsSet() {
 		toSerialize["message"] = o.Message.Get()

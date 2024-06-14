@@ -41,8 +41,8 @@ func PresentWorkspaceProvisionRequestStatus(in *models.WorkspaceProvisionRequest
 	if in.Domain != nil {
 		res.SetDomain(*in.Domain)
 	}
-	if len(in.StatusCondition) != 0 {
-		res.SetStatusCondition(openapi.ProvisionRequestStatusCondition(in.StatusCondition))
+	if len(in.State) != 0 {
+		res.SetState(string(in.State))
 	}
 	if len(in.Message) != 0 {
 		res.SetMessage(in.Message)
@@ -60,9 +60,6 @@ func ConvertWorkspaceProvisionRequest(in *openapi.WorkspaceProvisionRequest) *mo
 			WorkspaceNamespace:           in.Status.WorkspaceNamespace.Get(),
 			WorkspaceServiceAccountName:  in.Status.WorkspaceServiceAccountname.Get(),
 			WorkspaceServiceAccountToken: in.Status.WorkspaceServiceaccountToken.Get(),
-		}
-		if in.Status.StatusCondition != nil {
-			status.StatusCondition = string(*in.Status.StatusCondition)
 		}
 		if in.Status.Message.IsSet() {
 			status.Message = in.Status.GetMessage()

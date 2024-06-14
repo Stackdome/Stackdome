@@ -6,29 +6,26 @@ import (
 
 	"github.com/ashishmax31/soradev-api-server/pkg/logger"
 	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // BaseWorker implements generic functionalities for a worker.
 // Actual workers types are supposed to embed this type in them.
 type BaseWorker struct {
-	Queue         workqueue.RateLimitingInterface
-	WorkerName    string
-	WorkerError   WorkerError
-	logger        logger.Logger
-	Env           string
-	ClusterClient client.Client
+	Queue       workqueue.RateLimitingInterface
+	WorkerName  string
+	WorkerError WorkerError
+	logger      logger.Logger
+	Env         string
 }
 
-func NewBaseWorker(workerName string, env string, clusterClient client.Client) BaseWorker {
+func NewBaseWorker(workerName string, env string) BaseWorker {
 	return BaseWorker{
 		WorkerName:  workerName,
 		logger:      logger.NewLoggerWithPrefix(context.Background(), workerName),
 		WorkerError: NewWorkerError(workerName),
 		Queue: workqueue.NewNamedRateLimitingQueue(
 			workqueue.DefaultControllerRateLimiter(), workerName),
-		Env:           env,
-		ClusterClient: clusterClient,
+		Env: env,
 	}
 }
 

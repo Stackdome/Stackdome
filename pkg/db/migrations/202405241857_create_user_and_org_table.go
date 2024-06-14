@@ -20,6 +20,7 @@ func createUserAndOrganisationTable() *gormigrate.Migration {
 
 	type User struct {
 		ID             string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
+		InternalID     int    `gorm:"autoIncrement"`
 		CreatedAt      time.Time
 		UpdatedAt      time.Time
 		Name           string

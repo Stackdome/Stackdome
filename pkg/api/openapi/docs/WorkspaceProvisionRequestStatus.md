@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 **ClusterCaCert** | Pointer to **NullableString** |  | [optional] 
 **ClusterUrl** | Pointer to **NullableString** |  | [optional] 
 **Domain** | Pointer to **NullableString** |  | [optional] 
-**StatusCondition** | Pointer to [**ProvisionRequestStatusCondition**](ProvisionRequestStatusCondition.md) |  | [optional] 
+**State** | Pointer to **NullableString** |  | [optional] 
 **Message** | Pointer to **NullableString** |  | [optional] 
 
 ## Methods
@@ -242,31 +242,41 @@ HasDomain returns a boolean if a field has been set.
 `func (o *WorkspaceProvisionRequestStatus) UnsetDomain()`
 
 UnsetDomain ensures that no value is present for Domain, not even an explicit nil
-### GetStatusCondition
+### GetState
 
-`func (o *WorkspaceProvisionRequestStatus) GetStatusCondition() ProvisionRequestStatusCondition`
+`func (o *WorkspaceProvisionRequestStatus) GetState() string`
 
-GetStatusCondition returns the StatusCondition field if non-nil, zero value otherwise.
+GetState returns the State field if non-nil, zero value otherwise.
 
-### GetStatusConditionOk
+### GetStateOk
 
-`func (o *WorkspaceProvisionRequestStatus) GetStatusConditionOk() (*ProvisionRequestStatusCondition, bool)`
+`func (o *WorkspaceProvisionRequestStatus) GetStateOk() (*string, bool)`
 
-GetStatusConditionOk returns a tuple with the StatusCondition field if it's non-nil, zero value otherwise
+GetStateOk returns a tuple with the State field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetStatusCondition
+### SetState
 
-`func (o *WorkspaceProvisionRequestStatus) SetStatusCondition(v ProvisionRequestStatusCondition)`
+`func (o *WorkspaceProvisionRequestStatus) SetState(v string)`
 
-SetStatusCondition sets StatusCondition field to given value.
+SetState sets State field to given value.
 
-### HasStatusCondition
+### HasState
 
-`func (o *WorkspaceProvisionRequestStatus) HasStatusCondition() bool`
+`func (o *WorkspaceProvisionRequestStatus) HasState() bool`
 
-HasStatusCondition returns a boolean if a field has been set.
+HasState returns a boolean if a field has been set.
 
+### SetStateNil
+
+`func (o *WorkspaceProvisionRequestStatus) SetStateNil(b bool)`
+
+ SetStateNil sets the value for State to be an explicit nil
+
+### UnsetState
+`func (o *WorkspaceProvisionRequestStatus) UnsetState()`
+
+UnsetState ensures that no value is present for State, not even an explicit nil
 ### GetMessage
 
 `func (o *WorkspaceProvisionRequestStatus) GetMessage() string`

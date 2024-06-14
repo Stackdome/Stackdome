@@ -2,12 +2,12 @@ package models
 
 import "time"
 
-type ProvisionRequestStatusCondition string
+type ProvisionRequestState string
 
 const (
-	ProvisionRequestPending   ProvisionRequestStatusCondition = "Pending"
-	ProvisionRequestCompleted ProvisionRequestStatusCondition = "Completed"
-	ProvisionRequestError     ProvisionRequestStatusCondition = "Error"
+	ProvisionRequestPending   ProvisionRequestState = "Pending"
+	ProvisionRequestCompleted ProvisionRequestState = "Success"
+	ProvisionRequestError     ProvisionRequestState = "Error"
 )
 
 type WorkspaceProvisionRequestStatus struct {
@@ -18,7 +18,7 @@ type WorkspaceProvisionRequestStatus struct {
 	ClusterCACert                *string
 	ClusterUrl                   *string
 	Domain                       *string
-	StatusCondition              string
+	State                        ProvisionRequestState
 	Message                      string
 }
 

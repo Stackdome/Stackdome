@@ -9,7 +9,7 @@ import (
 
 type ClusterStore interface {
 	Create(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError)
-	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
+	GetClusterForOrg(ctx context.Context, orgID int) (*models.Cluster, *errors.ServiceError)
 	GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError

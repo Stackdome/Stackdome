@@ -448,19 +448,6 @@ components:
           description: Token expiration time in seconds
           type: integer
       type: object
-    ProvisionRequestStatus:
-      properties:
-        status_condition:
-          $ref: '#/components/schemas/ProvisionRequestStatusCondition'
-        message:
-          type: string
-      type: object
-    ProvisionRequestStatusCondition:
-      enum:
-      - Pending
-      - Completed
-      - Error
-      type: string
     WorkspaceProvisionRequest:
       example:
         ssh_public_key: ssh_public_key
@@ -476,7 +463,7 @@ components:
           workspace_serviceaccount_token: workspace_serviceaccount_token
           cluster_ca_cert: cluster_ca_cert
           domain: domain
-          status_condition: null
+          state: state
           message: message
       properties:
         id:
@@ -507,7 +494,7 @@ components:
         workspace_serviceaccount_token: workspace_serviceaccount_token
         cluster_ca_cert: cluster_ca_cert
         domain: domain
-        status_condition: null
+        state: state
         message: message
       properties:
         workspace_namespace:
@@ -528,8 +515,9 @@ components:
         domain:
           nullable: true
           type: string
-        status_condition:
-          $ref: '#/components/schemas/ProvisionRequestStatusCondition'
+        state:
+          nullable: true
+          type: string
         message:
           nullable: true
           type: string

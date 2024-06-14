@@ -14,6 +14,7 @@ const (
 
 type User struct {
 	ID             string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
+	InternalID     int
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	Name           string

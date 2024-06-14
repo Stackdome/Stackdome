@@ -1,8 +1,8 @@
 openapi: 3.0.0
 info:
-  title: api-server
+  title: stackdome-api-server
   version: 0.0.1
-  description: api-server
+  description: stackdome-api-server
 paths:
   /api/v1/users:
     post:
@@ -380,19 +380,6 @@ components:
         expires_in:
           type: integer
           description: Token expiration time in seconds
-    ProvisionRequestStatus:
-      type: object
-      properties:
-        status_condition:
-          $ref: '#/components/schemas/ProvisionRequestStatusCondition'
-        message:
-          type: string
-    ProvisionRequestStatusCondition:
-      type: string
-      enum:
-        - Pending
-        - Completed
-        - Error
     WorkspaceProvisionRequest:
       type: object
       properties:
@@ -436,8 +423,8 @@ components:
         domain:
           type: string
           nullable: true
-        status_condition:
-          $ref: '#/components/schemas/ProvisionRequestStatusCondition'
+        state:
+          type: string
           nullable: true
         message:
           type: string

@@ -15,8 +15,6 @@ docs/List.md
 docs/LoginRequest.md
 docs/LoginResponse.md
 docs/ObjectReference.md
-docs/ProvisionRequestStatus.md
-docs/ProvisionRequestStatusCondition.md
 docs/User.md
 docs/UserCreateRequest.md
 docs/WorkspaceProvisionRequest.md
@@ -32,8 +30,6 @@ model_list.go
 model_login_request.go
 model_login_response.go
 model_object_reference.go
-model_provision_request_status.go
-model_provision_request_status_condition.go
 model_user.go
 model_user_create_request.go
 model_workspace_provision_request.go

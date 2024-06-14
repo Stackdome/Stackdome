@@ -102,8 +102,6 @@ Class | Method | HTTP request | Description
  - [LoginRequest](docs/LoginRequest.md)
  - [LoginResponse](docs/LoginResponse.md)
  - [ObjectReference](docs/ObjectReference.md)
- - [ProvisionRequestStatus](docs/ProvisionRequestStatus.md)
- - [ProvisionRequestStatusCondition](docs/ProvisionRequestStatusCondition.md)
  - [User](docs/User.md)
  - [UserCreateRequest](docs/UserCreateRequest.md)
  - [WorkspaceProvisionRequest](docs/WorkspaceProvisionRequest.md)
