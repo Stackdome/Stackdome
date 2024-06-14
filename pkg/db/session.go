@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/ashishmax31/soradev-api-server/config"
+	"github.com/ashishmax31/stackdome-api-server/config"
 	"gorm.io/gorm"
 )
 

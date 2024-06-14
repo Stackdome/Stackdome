@@ -1,5 +1,5 @@
 host: localhost
 port: 5432
-name: soradev
+name: stackdome
 username: postgres
 password: foobar-bizz-buzz

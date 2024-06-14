@@ -3,8 +3,8 @@ package servecmd
 import (
 	"context"
 
-	"github.com/ashishmax31/soradev-api-server/cmd/environment"
-	"github.com/ashishmax31/soradev-api-server/cmd/server"
+	"github.com/ashishmax31/stackdome-api-server/cmd/environment"
+	"github.com/ashishmax31/stackdome-api-server/cmd/server"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )
@@ -35,6 +35,6 @@ func runServe(env environment.EnvImpl) {
 		apiserver := server.NewAPIServer(env)
 		apiserver.Start()
 	}()
-	
+
 	select {}
 }

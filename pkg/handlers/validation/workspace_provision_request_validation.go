@@ -1,6 +1,6 @@
 package validation
 
-import "github.com/ashishmax31/soradev-api-server/pkg/api/openapi"
+import "github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 
 func ValidateWorkspaceProvisionRequest(in *openapi.WorkspaceProvisionRequest) Validate {
 	return ValidateAll([]Validate{

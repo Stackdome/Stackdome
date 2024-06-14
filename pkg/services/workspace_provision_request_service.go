@@ -3,12 +3,13 @@ package services
 import (
 	"context"
 
-	"github.com/ashishmax31/soradev-api-server/pkg/db"
-	"github.com/ashishmax31/soradev-api-server/pkg/errors"
-	"github.com/ashishmax31/soradev-api-server/pkg/logger"
-	"github.com/ashishmax31/soradev-api-server/pkg/models"
-	"github.com/ashishmax31/soradev-api-server/pkg/stores"
-	"github.com/ashishmax31/soradev-api-server/pkg/stores/pgstore"
+	"github.com/ashishmax31/stackdome-api-server/pkg/db"
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -30,21 +31,24 @@ func NewWorkspaceProvisionRequestService(spec WorkspaceProvisionRequestServiceSp
 			SessionFactory:              spec.SessionFactory,
 			ProvisionRequestStatusStore: pgstore.NewWorkspaceProvisionRequestStatusStore(),
 		}),
-		logger:        spec.Logger,
-		clusterClient: spec.ClusterClient,
+		logger:                spec.Logger,
+		clusterClient:         spec.ClusterClient,
+		backgroundJobEnqueuer: spec.BackgroundJobEnqueuer,
 	}
 }
 
 type WorkspaceProvisionRequestServiceSpec struct {
-	SessionFactory db.SessionFactory
-	Logger         logger.Logger
-	ClusterClient  client.Client
+	SessionFactory        db.SessionFactory
+	Logger                logger.Logger
+	ClusterClient         client.Client
+	BackgroundJobEnqueuer workermanager.BackgroundJobEnqueuer
 }
 
 type workspaceProvisionRequestService struct {
 	wsProvisionRequestStore stores.WorkspaceProvisionRequestStore
 	logger                  logger.Logger
 	clusterClient           client.Client
+	backgroundJobEnqueuer   workermanager.BackgroundJobEnqueuer
 }
 
 func (s *workspaceProvisionRequestService) Get(ctx context.Context, ID string) (*models.WorkspaceProvisionRequest, *errors.ServiceError) {
@@ -67,10 +71,15 @@ func (s *workspaceProvisionRequestService) InternalList(ctx context.Context, que
 
 func (s *workspaceProvisionRequestService) Create(ctx context.Context, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError) {
 	spec.Status = nil
+	spec.State = models.ProvisionRequestPending
+	spec.Message = "Pending object creation in cluster."
 	request, err := s.wsProvisionRequestStore.Create(ctx, spec)
 	if err != nil {
 		s.logger.Errorf("failed to create workspace provision request: %v", err)
 		return nil, err
+	}
+	if err := s.backgroundJobEnqueuer.Enqueue(request); err != nil {
+		return nil, errors.GeneralError("failed to enqueue background job: %s", err.Error())
 	}
 	return request, nil
 }
@@ -80,6 +89,9 @@ func (s *workspaceProvisionRequestService) Update(ctx context.Context, id string
 	if err != nil {
 		s.logger.Errorf("failed to update workspace provision request: %v", err)
 		return nil, err
+	}
+	if err := s.backgroundJobEnqueuer.Enqueue(request); err != nil {
+		return nil, errors.GeneralError("failed to enqueue background job: %s", err.Error())
 	}
 	return request, nil
 }

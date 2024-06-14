@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/ashishmax31/soradev-api-server/pkg/errors"
-	"github.com/ashishmax31/soradev-api-server/pkg/models"
-	workerlib "github.com/ashishmax31/soradev-api-server/pkg/worker"
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	workerlib "github.com/ashishmax31/stackdome-api-server/pkg/worker"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"

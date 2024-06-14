@@ -3,8 +3,8 @@ package migratecmd
 import (
 	"context"
 
-	"github.com/ashishmax31/soradev-api-server/cmd/environment"
-	"github.com/ashishmax31/soradev-api-server/pkg/db"
+	"github.com/ashishmax31/stackdome-api-server/cmd/environment"
+	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )

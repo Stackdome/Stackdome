@@ -3,16 +3,16 @@ package main
 import (
 	"flag"
 
-	"github.com/ashishmax31/soradev-api-server/cmd/migratecmd"
-	"github.com/ashishmax31/soradev-api-server/cmd/servecmd"
+	"github.com/ashishmax31/stackdome-api-server/cmd/migratecmd"
+	"github.com/ashishmax31/stackdome-api-server/cmd/servecmd"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:  "soradev-server",
-		Long: "soradev-server",
+		Use:  "stackdome-server",
+		Long: "stackdome-server",
 	}
 
 	// Always log to stderr by default

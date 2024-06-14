@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/ashishmax31/soradev-api-server/pkg/errors"
-	"github.com/ashishmax31/soradev-api-server/pkg/handlers/validation"
-	"github.com/ashishmax31/soradev-api-server/pkg/logger"
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/handlers/validation"
+	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 )
 
 type handlerConfig struct {

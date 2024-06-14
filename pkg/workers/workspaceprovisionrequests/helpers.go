@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ashishmax31/soradev-api-server/pkg/errors"
-	"github.com/ashishmax31/soradev-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
 func WorkspaceNamespaceFor(user *models.User) string {

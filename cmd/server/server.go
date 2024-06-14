@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ashishmax31/soradev-api-server/cmd/environment"
-	"github.com/ashishmax31/soradev-api-server/pkg/auth"
+	"github.com/ashishmax31/stackdome-api-server/cmd/environment"
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/golang/glog"
 )
 

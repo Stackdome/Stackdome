@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ashishmax31/soradev-api-server/pkg/logger"
-	workerlib "github.com/ashishmax31/soradev-api-server/pkg/worker"
+	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	workerlib "github.com/ashishmax31/stackdome-api-server/pkg/worker"
 )
 
 // TODO: set a reasonable value for this based on metrics and testing.

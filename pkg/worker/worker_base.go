@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ashishmax31/soradev-api-server/pkg/logger"
+	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"k8s.io/client-go/util/workqueue"
 )
 

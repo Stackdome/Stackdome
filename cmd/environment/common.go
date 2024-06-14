@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	EnvironmentStringKey = "SORADEV_ENV"
+	EnvironmentStringKey = "STACKDOME_ENV"
 	DEVELOPMENT_ENV      = "DEVELOPMENT"
 	PRODUCTION_ENV       = "PRODUCTION"
 	TESTING_ENV          = "TESTING"

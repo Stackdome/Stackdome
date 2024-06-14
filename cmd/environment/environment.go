@@ -3,9 +3,9 @@ package environment
 import (
 	"context"
 
-	"github.com/ashishmax31/soradev-api-server/config"
-	"github.com/ashishmax31/soradev-api-server/pkg/db"
-	"github.com/ashishmax31/soradev-api-server/pkg/services"
+	"github.com/ashishmax31/stackdome-api-server/config"
+	"github.com/ashishmax31/stackdome-api-server/pkg/db"
+	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/spf13/pflag"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

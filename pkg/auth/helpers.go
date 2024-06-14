@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ashishmax31/soradev-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 )
-
-
 
 func handleError(w http.ResponseWriter, code errors.ServiceErrorCode, reason string) {
 	err := errors.New(code, reason)

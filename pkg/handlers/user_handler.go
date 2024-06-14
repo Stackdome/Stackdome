@@ -3,11 +3,11 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/ashishmax31/soradev-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/soradev-api-server/pkg/errors"
-	"github.com/ashishmax31/soradev-api-server/pkg/handlers/validation"
-	"github.com/ashishmax31/soradev-api-server/pkg/presenters"
-	"github.com/ashishmax31/soradev-api-server/pkg/services"
+	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/handlers/validation"
+	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
+	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/gorilla/mux"
 )
 

@@ -1,4 +1,4 @@
-module github.com/ashishmax31/soradev-api-server
+module github.com/ashishmax31/stackdome-api-server
 
 go 1.22.0
 

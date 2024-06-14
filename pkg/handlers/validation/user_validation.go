@@ -1,8 +1,8 @@
 package validation
 
 import (
-	"github.com/ashishmax31/soradev-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/soradev-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 )
 
 func ValidateUserCreate(in *openapi.UserCreateRequest) Validate {

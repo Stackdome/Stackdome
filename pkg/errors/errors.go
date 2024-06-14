@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ashishmax31/soradev-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/golang/glog"
 )
 

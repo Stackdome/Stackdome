@@ -3,8 +3,8 @@ package workspaceprovisionrequests
 import (
 	"time"
 
-	"github.com/ashishmax31/soradev-api-server/pkg/services"
-	workerlib "github.com/ashishmax31/soradev-api-server/pkg/worker"
+	"github.com/ashishmax31/stackdome-api-server/pkg/services"
+	workerlib "github.com/ashishmax31/stackdome-api-server/pkg/worker"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

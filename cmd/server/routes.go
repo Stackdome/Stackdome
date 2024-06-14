@@ -3,9 +3,9 @@ package server
 import (
 	"net/http"
 
-	"github.com/ashishmax31/soradev-api-server/pkg/api"
-	"github.com/ashishmax31/soradev-api-server/pkg/auth"
-	"github.com/ashishmax31/soradev-api-server/pkg/handlers"
+	"github.com/ashishmax31/stackdome-api-server/pkg/api"
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
+	"github.com/ashishmax31/stackdome-api-server/pkg/handlers"
 	"github.com/gorilla/mux"
 )
 
