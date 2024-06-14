@@ -7,9 +7,9 @@ Name | Type | Description | Notes
 **WorkspaceNamespace** | Pointer to **NullableString** |  | [optional] 
 **WorkspaceServiceAccountname** | Pointer to **NullableString** |  | [optional] 
 **WorkspaceServiceaccountToken** | Pointer to **NullableString** |  | [optional] 
-**StorageserverSshusername** | Pointer to **NullableString** |  | [optional] 
 **ClusterCaCert** | Pointer to **NullableString** |  | [optional] 
 **ClusterUrl** | Pointer to **NullableString** |  | [optional] 
+**Domain** | Pointer to **NullableString** |  | [optional] 
 **StatusCondition** | Pointer to [**ProvisionRequestStatusCondition**](ProvisionRequestStatusCondition.md) |  | [optional] 
 **Message** | Pointer to **NullableString** |  | [optional] 
 
@@ -137,41 +137,6 @@ HasWorkspaceServiceaccountToken returns a boolean if a field has been set.
 `func (o *WorkspaceProvisionRequestStatus) UnsetWorkspaceServiceaccountToken()`
 
 UnsetWorkspaceServiceaccountToken ensures that no value is present for WorkspaceServiceaccountToken, not even an explicit nil
-### GetStorageserverSshusername
-
-`func (o *WorkspaceProvisionRequestStatus) GetStorageserverSshusername() string`
-
-GetStorageserverSshusername returns the StorageserverSshusername field if non-nil, zero value otherwise.
-
-### GetStorageserverSshusernameOk
-
-`func (o *WorkspaceProvisionRequestStatus) GetStorageserverSshusernameOk() (*string, bool)`
-
-GetStorageserverSshusernameOk returns a tuple with the StorageserverSshusername field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetStorageserverSshusername
-
-`func (o *WorkspaceProvisionRequestStatus) SetStorageserverSshusername(v string)`
-
-SetStorageserverSshusername sets StorageserverSshusername field to given value.
-
-### HasStorageserverSshusername
-
-`func (o *WorkspaceProvisionRequestStatus) HasStorageserverSshusername() bool`
-
-HasStorageserverSshusername returns a boolean if a field has been set.
-
-### SetStorageserverSshusernameNil
-
-`func (o *WorkspaceProvisionRequestStatus) SetStorageserverSshusernameNil(b bool)`
-
- SetStorageserverSshusernameNil sets the value for StorageserverSshusername to be an explicit nil
-
-### UnsetStorageserverSshusername
-`func (o *WorkspaceProvisionRequestStatus) UnsetStorageserverSshusername()`
-
-UnsetStorageserverSshusername ensures that no value is present for StorageserverSshusername, not even an explicit nil
 ### GetClusterCaCert
 
 `func (o *WorkspaceProvisionRequestStatus) GetClusterCaCert() string`
@@ -242,6 +207,41 @@ HasClusterUrl returns a boolean if a field has been set.
 `func (o *WorkspaceProvisionRequestStatus) UnsetClusterUrl()`
 
 UnsetClusterUrl ensures that no value is present for ClusterUrl, not even an explicit nil
+### GetDomain
+
+`func (o *WorkspaceProvisionRequestStatus) GetDomain() string`
+
+GetDomain returns the Domain field if non-nil, zero value otherwise.
+
+### GetDomainOk
+
+`func (o *WorkspaceProvisionRequestStatus) GetDomainOk() (*string, bool)`
+
+GetDomainOk returns a tuple with the Domain field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetDomain
+
+`func (o *WorkspaceProvisionRequestStatus) SetDomain(v string)`
+
+SetDomain sets Domain field to given value.
+
+### HasDomain
+
+`func (o *WorkspaceProvisionRequestStatus) HasDomain() bool`
+
+HasDomain returns a boolean if a field has been set.
+
+### SetDomainNil
+
+`func (o *WorkspaceProvisionRequestStatus) SetDomainNil(b bool)`
+
+ SetDomainNil sets the value for Domain to be an explicit nil
+
+### UnsetDomain
+`func (o *WorkspaceProvisionRequestStatus) UnsetDomain()`
+
+UnsetDomain ensures that no value is present for Domain, not even an explicit nil
 ### GetStatusCondition
 
 `func (o *WorkspaceProvisionRequestStatus) GetStatusCondition() ProvisionRequestStatusCondition`

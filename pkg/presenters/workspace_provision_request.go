@@ -38,8 +38,8 @@ func PresentWorkspaceProvisionRequestStatus(in *models.WorkspaceProvisionRequest
 	if in.WorkspaceServiceAccountToken != nil {
 		res.SetWorkspaceServiceaccountToken(*in.WorkspaceServiceAccountToken)
 	}
-	if in.WorkspaceStorageServerSshUsername != nil {
-		res.SetStorageserverSshusername(*in.WorkspaceStorageServerSshUsername)
+	if in.Domain != nil {
+		res.SetDomain(*in.Domain)
 	}
 	if len(in.StatusCondition) != 0 {
 		res.SetStatusCondition(openapi.ProvisionRequestStatusCondition(in.StatusCondition))
@@ -55,12 +55,11 @@ func ConvertWorkspaceProvisionRequest(in *openapi.WorkspaceProvisionRequest) *mo
 	res.SshPublicKey = in.GetSshPublicKey()
 	if in.Status != nil {
 		status := &models.WorkspaceProvisionRequestStatus{
-			ClusterCACert:                     in.Status.ClusterCaCert.Get(),
-			ClusterUrl:                        in.Status.ClusterUrl.Get(),
-			WorkspaceNamespace:                in.Status.WorkspaceNamespace.Get(),
-			WorkspaceServiceAccountName:       in.Status.WorkspaceServiceAccountname.Get(),
-			WorkspaceStorageServerSshUsername: in.Status.StorageserverSshusername.Get(),
-			WorkspaceServiceAccountToken:      in.Status.WorkspaceServiceaccountToken.Get(),
+			ClusterCACert:                in.Status.ClusterCaCert.Get(),
+			ClusterUrl:                   in.Status.ClusterUrl.Get(),
+			WorkspaceNamespace:           in.Status.WorkspaceNamespace.Get(),
+			WorkspaceServiceAccountName:  in.Status.WorkspaceServiceAccountname.Get(),
+			WorkspaceServiceAccountToken: in.Status.WorkspaceServiceaccountToken.Get(),
 		}
 		if in.Status.StatusCondition != nil {
 			status.StatusCondition = string(*in.Status.StatusCondition)

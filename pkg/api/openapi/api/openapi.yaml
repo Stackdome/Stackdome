@@ -472,10 +472,10 @@ components:
         status:
           workspace_namespace: workspace_namespace
           cluster_url: cluster_url
-          storageserver_sshusername: storageserver_sshusername
           workspace_service_accountname: workspace_service_accountname
           workspace_serviceaccount_token: workspace_serviceaccount_token
           cluster_ca_cert: cluster_ca_cert
+          domain: domain
           status_condition: null
           message: message
       properties:
@@ -503,10 +503,10 @@ components:
       example:
         workspace_namespace: workspace_namespace
         cluster_url: cluster_url
-        storageserver_sshusername: storageserver_sshusername
         workspace_service_accountname: workspace_service_accountname
         workspace_serviceaccount_token: workspace_serviceaccount_token
         cluster_ca_cert: cluster_ca_cert
+        domain: domain
         status_condition: null
         message: message
       properties:
@@ -519,13 +519,13 @@ components:
         workspace_serviceaccount_token:
           nullable: true
           type: string
-        storageserver_sshusername:
-          nullable: true
-          type: string
         cluster_ca_cert:
           nullable: true
           type: string
         cluster_url:
+          nullable: true
+          type: string
+        domain:
           nullable: true
           type: string
         status_condition:

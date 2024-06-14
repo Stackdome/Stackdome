@@ -82,6 +82,7 @@ func (s *workspaceProvisionRequestService) UpdateStatus(ctx context.Context, id 
 	return request, nil
 }
 
+
 func (s *workspaceProvisionRequestService) Delete(ctx context.Context, ID string) *errors.ServiceError {
 	err := s.wsProvisionRequestStore.Delete(ctx, ID)
 	if err != nil {

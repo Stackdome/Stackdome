@@ -427,13 +427,13 @@ components:
         workspace_serviceaccount_token:
           type: string
           nullable: true
-        storageserver_sshusername:
-          type: string
-          nullable: true
         cluster_ca_cert:
           type: string
           nullable: true
         cluster_url:
+          type: string
+          nullable: true
+        domain:
           type: string
           nullable: true
         status_condition:

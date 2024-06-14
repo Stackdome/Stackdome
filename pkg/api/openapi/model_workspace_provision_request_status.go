@@ -19,9 +19,9 @@ type WorkspaceProvisionRequestStatus struct {
 	WorkspaceNamespace           NullableString                   `json:"workspace_namespace,omitempty"`
 	WorkspaceServiceAccountname  NullableString                   `json:"workspace_service_accountname,omitempty"`
 	WorkspaceServiceaccountToken NullableString                   `json:"workspace_serviceaccount_token,omitempty"`
-	StorageserverSshusername     NullableString                   `json:"storageserver_sshusername,omitempty"`
 	ClusterCaCert                NullableString                   `json:"cluster_ca_cert,omitempty"`
 	ClusterUrl                   NullableString                   `json:"cluster_url,omitempty"`
+	Domain                       NullableString                   `json:"domain,omitempty"`
 	StatusCondition              *ProvisionRequestStatusCondition `json:"status_condition,omitempty"`
 	Message                      NullableString                   `json:"message,omitempty"`
 }
@@ -172,49 +172,6 @@ func (o *WorkspaceProvisionRequestStatus) UnsetWorkspaceServiceaccountToken() {
 	o.WorkspaceServiceaccountToken.Unset()
 }
 
-// GetStorageserverSshusername returns the StorageserverSshusername field value if set, zero value otherwise (both if not set or set to explicit null).
-func (o *WorkspaceProvisionRequestStatus) GetStorageserverSshusername() string {
-	if o == nil || o.StorageserverSshusername.Get() == nil {
-		var ret string
-		return ret
-	}
-	return *o.StorageserverSshusername.Get()
-}
-
-// GetStorageserverSshusernameOk returns a tuple with the StorageserverSshusername field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-// NOTE: If the value is an explicit nil, `nil, true` will be returned
-func (o *WorkspaceProvisionRequestStatus) GetStorageserverSshusernameOk() (*string, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return o.StorageserverSshusername.Get(), o.StorageserverSshusername.IsSet()
-}
-
-// HasStorageserverSshusername returns a boolean if a field has been set.
-func (o *WorkspaceProvisionRequestStatus) HasStorageserverSshusername() bool {
-	if o != nil && o.StorageserverSshusername.IsSet() {
-		return true
-	}
-
-	return false
-}
-
-// SetStorageserverSshusername gets a reference to the given NullableString and assigns it to the StorageserverSshusername field.
-func (o *WorkspaceProvisionRequestStatus) SetStorageserverSshusername(v string) {
-	o.StorageserverSshusername.Set(&v)
-}
-
-// SetStorageserverSshusernameNil sets the value for StorageserverSshusername to be an explicit nil
-func (o *WorkspaceProvisionRequestStatus) SetStorageserverSshusernameNil() {
-	o.StorageserverSshusername.Set(nil)
-}
-
-// UnsetStorageserverSshusername ensures that no value is present for StorageserverSshusername, not even an explicit nil
-func (o *WorkspaceProvisionRequestStatus) UnsetStorageserverSshusername() {
-	o.StorageserverSshusername.Unset()
-}
-
 // GetClusterCaCert returns the ClusterCaCert field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *WorkspaceProvisionRequestStatus) GetClusterCaCert() string {
 	if o == nil || o.ClusterCaCert.Get() == nil {
@@ -299,6 +256,49 @@ func (o *WorkspaceProvisionRequestStatus) SetClusterUrlNil() {
 // UnsetClusterUrl ensures that no value is present for ClusterUrl, not even an explicit nil
 func (o *WorkspaceProvisionRequestStatus) UnsetClusterUrl() {
 	o.ClusterUrl.Unset()
+}
+
+// GetDomain returns the Domain field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *WorkspaceProvisionRequestStatus) GetDomain() string {
+	if o == nil || o.Domain.Get() == nil {
+		var ret string
+		return ret
+	}
+	return *o.Domain.Get()
+}
+
+// GetDomainOk returns a tuple with the Domain field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *WorkspaceProvisionRequestStatus) GetDomainOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Domain.Get(), o.Domain.IsSet()
+}
+
+// HasDomain returns a boolean if a field has been set.
+func (o *WorkspaceProvisionRequestStatus) HasDomain() bool {
+	if o != nil && o.Domain.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetDomain gets a reference to the given NullableString and assigns it to the Domain field.
+func (o *WorkspaceProvisionRequestStatus) SetDomain(v string) {
+	o.Domain.Set(&v)
+}
+
+// SetDomainNil sets the value for Domain to be an explicit nil
+func (o *WorkspaceProvisionRequestStatus) SetDomainNil() {
+	o.Domain.Set(nil)
+}
+
+// UnsetDomain ensures that no value is present for Domain, not even an explicit nil
+func (o *WorkspaceProvisionRequestStatus) UnsetDomain() {
+	o.Domain.Unset()
 }
 
 // GetStatusCondition returns the StatusCondition field value if set, zero value otherwise.
@@ -387,14 +387,14 @@ func (o WorkspaceProvisionRequestStatus) MarshalJSON() ([]byte, error) {
 	if o.WorkspaceServiceaccountToken.IsSet() {
 		toSerialize["workspace_serviceaccount_token"] = o.WorkspaceServiceaccountToken.Get()
 	}
-	if o.StorageserverSshusername.IsSet() {
-		toSerialize["storageserver_sshusername"] = o.StorageserverSshusername.Get()
-	}
 	if o.ClusterCaCert.IsSet() {
 		toSerialize["cluster_ca_cert"] = o.ClusterCaCert.Get()
 	}
 	if o.ClusterUrl.IsSet() {
 		toSerialize["cluster_url"] = o.ClusterUrl.Get()
+	}
+	if o.Domain.IsSet() {
+		toSerialize["domain"] = o.Domain.Get()
 	}
 	if o.StatusCondition != nil {
 		toSerialize["status_condition"] = o.StatusCondition

@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/golang/glog"
 )
@@ -18,6 +19,7 @@ type Logger interface {
 var _ Logger = &logger{}
 
 type logger struct {
+	prefix  string
 	context context.Context
 }
 
@@ -25,29 +27,45 @@ type logger struct {
 func NewLogger(ctx context.Context) Logger {
 	logger := &logger{
 		context: ctx,
+		prefix:  "",
 	}
 	return logger
 }
 
-func (l *logger) Infof(format string, args ...interface{}) {
-	glog.Infof(format, args...)
+func NewLoggerWithPrefix(ctx context.Context, prefix string) Logger {
+	logger := &logger{
+		context: ctx,
+		prefix:  prefix,
+	}
+	return logger
+}
+
+func (l *logger) WithPrefix(input string) string {
+	if len(l.prefix) > 0 {
+		return fmt.Sprintf("%s: %s", l.prefix, input)
+	}
+	return input
+}
+
+func (l *logger) Infof(message string, args ...interface{}) {
+	glog.Infof(l.WithPrefix(message), args...)
 }
 
 func (l *logger) Info(message string) {
-	glog.Infof(message)
+	glog.Infof(l.WithPrefix(message))
 }
 
 func (l *logger) Warning(message string) {
-	glog.Warningf(message)
+	glog.Warningf(l.WithPrefix(message))
 }
 
 func (l *logger) Error(message string) {
-	glog.Errorf(message)
+	glog.Errorf(l.WithPrefix(message))
 }
 func (l *logger) Errorf(message string, args ...any) {
-	glog.Errorf(message, args...)
+	glog.Errorf(l.WithPrefix(message), args...)
 }
 
 func (l *logger) Fatal(message string) {
-	glog.Fatalf(message)
+	glog.Fatalf(l.WithPrefix(message))
 }

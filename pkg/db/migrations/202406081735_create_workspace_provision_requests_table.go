@@ -9,15 +9,15 @@ import (
 
 func createWorkspaceProvisionRequestTables() *gormigrate.Migration {
 	type WorkspaceProvisionRequestStatus struct {
-		WorkspaceProvisionRequestID       string `gorm:"primary_key"`
-		WorkspaceNamespace                *string
-		WorkspaceServiceAccountName       *string
-		WorkspaceServiceAccountToken      *string
-		WorkspaceStorageServerSshUsername *string
-		ClusterCACert                     *string
-		ClusterUrl                        *string
-		StatusCondition                   string
-		Message                           string
+		WorkspaceProvisionRequestID  string `gorm:"primary_key"`
+		WorkspaceNamespace           *string
+		WorkspaceServiceAccountName  *string
+		WorkspaceServiceAccountToken *string
+		ClusterCACert                *string
+		Domain                       *string
+		ClusterUrl                   *string
+		StatusCondition              string
+		Message                      string
 	}
 
 	type WorkspaceProvisionRequest struct {
