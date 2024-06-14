@@ -14,6 +14,7 @@ import (
 
 type WorkspaceProvisionRequestService interface {
 	Get(ctx context.Context, ID string) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
+	InternalList(ctx context.Context, query string, args ...any) ([]*models.WorkspaceProvisionRequest, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
 	Update(ctx context.Context, ID string, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
@@ -53,6 +54,15 @@ func (s *workspaceProvisionRequestService) Get(ctx context.Context, ID string) (
 		return nil, err
 	}
 	return request, nil
+}
+
+func (s *workspaceProvisionRequestService) InternalList(ctx context.Context, query string, args ...any) ([]*models.WorkspaceProvisionRequest, *errors.ServiceError) {
+	requests, err := s.wsProvisionRequestStore.InternalList(ctx, query, args...)
+	if err != nil {
+		s.logger.Errorf("failed to internal list workspace provision requests: %v", err)
+		return nil, err
+	}
+	return requests, nil
 }
 
 func (s *workspaceProvisionRequestService) Create(ctx context.Context, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError) {

@@ -394,6 +394,12 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/WorkspaceProvisionRequestStatus'
+        state:
+          type: string
+          nullable: true
+        message:
+          type: string
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -423,14 +429,6 @@ components:
         domain:
           type: string
           nullable: true
-        state:
-          type: string
-          nullable: true
-        message:
-          type: string
-          nullable: true
-      required:
-        - status
     Cluster:
       type: object
       properties:

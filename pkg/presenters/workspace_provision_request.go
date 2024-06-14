@@ -14,6 +14,8 @@ func PresentWorkspaceProvisionRequest(in *models.WorkspaceProvisionRequest) open
 	res.SetUserId(in.UserID)
 	res.SetSshPublicKey(in.SshPublicKey)
 	res.SetStatus(PresentWorkspaceProvisionRequestStatus(in.Status))
+	res.SetState(string(in.State))
+	res.SetMessage(in.Message)
 	return res
 }
 
@@ -41,12 +43,6 @@ func PresentWorkspaceProvisionRequestStatus(in *models.WorkspaceProvisionRequest
 	if in.Domain != nil {
 		res.SetDomain(*in.Domain)
 	}
-	if len(in.State) != 0 {
-		res.SetState(string(in.State))
-	}
-	if len(in.Message) != 0 {
-		res.SetMessage(in.Message)
-	}
 	return res
 }
 
@@ -60,9 +56,6 @@ func ConvertWorkspaceProvisionRequest(in *openapi.WorkspaceProvisionRequest) *mo
 			WorkspaceNamespace:           in.Status.WorkspaceNamespace.Get(),
 			WorkspaceServiceAccountName:  in.Status.WorkspaceServiceAccountname.Get(),
 			WorkspaceServiceAccountToken: in.Status.WorkspaceServiceaccountToken.Get(),
-		}
-		if in.Status.Message.IsSet() {
-			status.Message = in.Status.GetMessage()
 		}
 		res.Status = status
 	}

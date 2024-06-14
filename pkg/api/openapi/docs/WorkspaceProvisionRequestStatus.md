@@ -10,8 +10,6 @@ Name | Type | Description | Notes
 **ClusterCaCert** | Pointer to **NullableString** |  | [optional] 
 **ClusterUrl** | Pointer to **NullableString** |  | [optional] 
 **Domain** | Pointer to **NullableString** |  | [optional] 
-**State** | Pointer to **NullableString** |  | [optional] 
-**Message** | Pointer to **NullableString** |  | [optional] 
 
 ## Methods
 
@@ -242,76 +240,6 @@ HasDomain returns a boolean if a field has been set.
 `func (o *WorkspaceProvisionRequestStatus) UnsetDomain()`
 
 UnsetDomain ensures that no value is present for Domain, not even an explicit nil
-### GetState
-
-`func (o *WorkspaceProvisionRequestStatus) GetState() string`
-
-GetState returns the State field if non-nil, zero value otherwise.
-
-### GetStateOk
-
-`func (o *WorkspaceProvisionRequestStatus) GetStateOk() (*string, bool)`
-
-GetStateOk returns a tuple with the State field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetState
-
-`func (o *WorkspaceProvisionRequestStatus) SetState(v string)`
-
-SetState sets State field to given value.
-
-### HasState
-
-`func (o *WorkspaceProvisionRequestStatus) HasState() bool`
-
-HasState returns a boolean if a field has been set.
-
-### SetStateNil
-
-`func (o *WorkspaceProvisionRequestStatus) SetStateNil(b bool)`
-
- SetStateNil sets the value for State to be an explicit nil
-
-### UnsetState
-`func (o *WorkspaceProvisionRequestStatus) UnsetState()`
-
-UnsetState ensures that no value is present for State, not even an explicit nil
-### GetMessage
-
-`func (o *WorkspaceProvisionRequestStatus) GetMessage() string`
-
-GetMessage returns the Message field if non-nil, zero value otherwise.
-
-### GetMessageOk
-
-`func (o *WorkspaceProvisionRequestStatus) GetMessageOk() (*string, bool)`
-
-GetMessageOk returns a tuple with the Message field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetMessage
-
-`func (o *WorkspaceProvisionRequestStatus) SetMessage(v string)`
-
-SetMessage sets Message field to given value.
-
-### HasMessage
-
-`func (o *WorkspaceProvisionRequestStatus) HasMessage() bool`
-
-HasMessage returns a boolean if a field has been set.
-
-### SetMessageNil
-
-`func (o *WorkspaceProvisionRequestStatus) SetMessageNil(b bool)`
-
- SetMessageNil sets the value for Message to be an explicit nil
-
-### UnsetMessage
-`func (o *WorkspaceProvisionRequestStatus) UnsetMessage()`
-
-UnsetMessage ensures that no value is present for Message, not even an explicit nil
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

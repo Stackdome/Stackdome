@@ -34,7 +34,7 @@ func (w *workspaceProvisionRequestReconcileWorker) Execute(ctx context.Context, 
 		return workerlib.Result{}, err
 	}
 
-	desiredClusterObject, err := w.desiredWPRObjectInCluster(ctx, provisionRequest, user)
+	desiredClusterObject, err := w.desiredWPRObjectInCluster(user)
 	if err != nil {
 		return workerlib.Result{}, err
 	}
@@ -47,8 +47,8 @@ func (w *workspaceProvisionRequestReconcileWorker) Execute(ctx context.Context, 
 			if createErr != nil {
 				return workerlib.Result{}, w.WorkerError.NewError("failed to create workspace provision request object in cluster: %s", createErr.Error())
 			}
-			provisionRequest.Status.State = models.ProvisionRequestPending
-			provisionRequest.Status.Message = "Object Created in cluster"
+			provisionRequest.State = models.ProvisionRequestPending
+			provisionRequest.Message = "Object Created in cluster"
 			return workerlib.Result{RequeueAfter: time.Second * 2}, w.wprService.InternalUpdateStatus(ctx, provisionRequest.ID, provisionRequest)
 		}
 		return workerlib.Result{}, w.WorkerError.NewError("failed to get wpr object from cluster: %s", err)
@@ -85,13 +85,12 @@ func (w *workspaceProvisionRequestReconcileWorker) Execute(ctx context.Context, 
 	provisionRequest.Status.WorkspaceServiceAccountName = existingClusterObject.Status.ServiceAccountName
 	provisionRequest.Status.WorkspaceServiceAccountToken = existingClusterObject.Status.ServiceAccountToken
 	provisionRequest.Status.WorkspaceNamespace = existingClusterObject.Status.Namespace
-	provisionRequest.Status.State = models.ProvisionRequestCompleted
-	provisionRequest.Status.Message = "Provision Completed"
+	provisionRequest.State = models.ProvisionRequestCompleted
+	provisionRequest.Message = "Provision Completed"
 	return workerlib.Result{}, w.wprService.InternalUpdateStatus(ctx, provisionRequest.ID, provisionRequest)
 }
 
-func (w *workspaceProvisionRequestReconcileWorker) desiredWPRObjectInCluster(
-	ctx context.Context, wpr *models.WorkspaceProvisionRequest, user *models.User) (*workspacev1alpha1.WorkspaceConfiguration, *errors.ServiceError) {
+func (w *workspaceProvisionRequestReconcileWorker) desiredWPRObjectInCluster(user *models.User) (*workspacev1alpha1.WorkspaceConfiguration, *errors.ServiceError) {
 	return &workspacev1alpha1.WorkspaceConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: WPRClusterObjectName(user),
@@ -104,5 +103,9 @@ func (w *workspaceProvisionRequestReconcileWorker) desiredWPRObjectInCluster(
 }
 
 func (w *workspaceProvisionRequestReconcileWorker) GetInput(ctx context.Context) ([]workerlib.Operand, *errors.ServiceError) {
-	return nil, nil
+	res, err := w.wprService.InternalList(ctx, "state NOT IN ?", []models.ProvisionRequestState{models.ProvisionRequestCompleted})
+	if err != nil {
+		return nil, err
+	}
+	return workerlib.ToOperandList(res), nil
 }

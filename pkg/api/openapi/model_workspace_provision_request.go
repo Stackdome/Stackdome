@@ -1,7 +1,7 @@
 /*
-api-server
+stackdome-api-server
 
-api-server
+stackdome-api-server
 
 API version: 0.0.1
 */
@@ -22,6 +22,8 @@ type WorkspaceProvisionRequest struct {
 	OrgId        *int32                           `json:"org_id,omitempty"`
 	SshPublicKey string                           `json:"ssh_public_key"`
 	Status       *WorkspaceProvisionRequestStatus `json:"status,omitempty"`
+	State        NullableString                   `json:"state,omitempty"`
+	Message      NullableString                   `json:"message,omitempty"`
 	CreatedAt    *time.Time                       `json:"created_at,omitempty"`
 	UpdatedAt    *time.Time                       `json:"updated_at,omitempty"`
 }
@@ -196,6 +198,92 @@ func (o *WorkspaceProvisionRequest) SetStatus(v WorkspaceProvisionRequestStatus)
 	o.Status = &v
 }
 
+// GetState returns the State field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *WorkspaceProvisionRequest) GetState() string {
+	if o == nil || o.State.Get() == nil {
+		var ret string
+		return ret
+	}
+	return *o.State.Get()
+}
+
+// GetStateOk returns a tuple with the State field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *WorkspaceProvisionRequest) GetStateOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.State.Get(), o.State.IsSet()
+}
+
+// HasState returns a boolean if a field has been set.
+func (o *WorkspaceProvisionRequest) HasState() bool {
+	if o != nil && o.State.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetState gets a reference to the given NullableString and assigns it to the State field.
+func (o *WorkspaceProvisionRequest) SetState(v string) {
+	o.State.Set(&v)
+}
+
+// SetStateNil sets the value for State to be an explicit nil
+func (o *WorkspaceProvisionRequest) SetStateNil() {
+	o.State.Set(nil)
+}
+
+// UnsetState ensures that no value is present for State, not even an explicit nil
+func (o *WorkspaceProvisionRequest) UnsetState() {
+	o.State.Unset()
+}
+
+// GetMessage returns the Message field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *WorkspaceProvisionRequest) GetMessage() string {
+	if o == nil || o.Message.Get() == nil {
+		var ret string
+		return ret
+	}
+	return *o.Message.Get()
+}
+
+// GetMessageOk returns a tuple with the Message field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *WorkspaceProvisionRequest) GetMessageOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Message.Get(), o.Message.IsSet()
+}
+
+// HasMessage returns a boolean if a field has been set.
+func (o *WorkspaceProvisionRequest) HasMessage() bool {
+	if o != nil && o.Message.IsSet() {
+		return true
+	}
+
+	return false
+}
+
+// SetMessage gets a reference to the given NullableString and assigns it to the Message field.
+func (o *WorkspaceProvisionRequest) SetMessage(v string) {
+	o.Message.Set(&v)
+}
+
+// SetMessageNil sets the value for Message to be an explicit nil
+func (o *WorkspaceProvisionRequest) SetMessageNil() {
+	o.Message.Set(nil)
+}
+
+// UnsetMessage ensures that no value is present for Message, not even an explicit nil
+func (o *WorkspaceProvisionRequest) UnsetMessage() {
+	o.Message.Unset()
+}
+
 // GetCreatedAt returns the CreatedAt field value if set, zero value otherwise.
 func (o *WorkspaceProvisionRequest) GetCreatedAt() time.Time {
 	if o == nil || o.CreatedAt == nil {
@@ -276,6 +364,12 @@ func (o WorkspaceProvisionRequest) MarshalJSON() ([]byte, error) {
 	}
 	if o.Status != nil {
 		toSerialize["status"] = o.Status
+	}
+	if o.State.IsSet() {
+		toSerialize["state"] = o.State.Get()
+	}
+	if o.Message.IsSet() {
+		toSerialize["message"] = o.Message.Get()
 	}
 	if o.CreatedAt != nil {
 		toSerialize["created_at"] = o.CreatedAt

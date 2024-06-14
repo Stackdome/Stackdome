@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
-  description: api-server
-  title: api-server
+  description: stackdome-api-server
+  title: stackdome-api-server
   version: 0.0.1
 servers:
 - url: /
@@ -456,6 +456,8 @@ components:
         org_id: 0
         created_at: 2000-01-23T04:56:07.000+00:00
         id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        state: state
+        message: message
         status:
           workspace_namespace: workspace_namespace
           cluster_url: cluster_url
@@ -463,8 +465,6 @@ components:
           workspace_serviceaccount_token: workspace_serviceaccount_token
           cluster_ca_cert: cluster_ca_cert
           domain: domain
-          state: state
-          message: message
       properties:
         id:
           format: uuid
@@ -477,6 +477,12 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/WorkspaceProvisionRequestStatus'
+        state:
+          nullable: true
+          type: string
+        message:
+          nullable: true
+          type: string
         created_at:
           format: date-time
           type: string
@@ -494,8 +500,6 @@ components:
         workspace_serviceaccount_token: workspace_serviceaccount_token
         cluster_ca_cert: cluster_ca_cert
         domain: domain
-        state: state
-        message: message
       properties:
         workspace_namespace:
           nullable: true
@@ -515,14 +519,6 @@ components:
         domain:
           nullable: true
           type: string
-        state:
-          nullable: true
-          type: string
-        message:
-          nullable: true
-          type: string
-      required:
-      - status
       type: object
     Cluster:
       example:

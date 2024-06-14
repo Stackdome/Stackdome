@@ -1,7 +1,7 @@
 /*
-api-server
+stackdome-api-server
 
-api-server
+stackdome-api-server
 
 API version: 0.0.1
 */
@@ -41,7 +41,7 @@ var (
 	xmlCheck  = regexp.MustCompile(`(?i:(?:application|text)/xml)`)
 )
 
-// APIClient manages communication with the api-server API v0.0.1
+// APIClient manages communication with the stackdome-api-server API v0.0.1
 // In most cases there should be only one, shared, APIClient.
 type APIClient struct {
 	cfg    *Configuration

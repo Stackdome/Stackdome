@@ -18,8 +18,6 @@ type WorkspaceProvisionRequestStatus struct {
 	ClusterCACert                *string
 	ClusterUrl                   *string
 	Domain                       *string
-	State                        ProvisionRequestState
-	Message                      string
 }
 
 type WorkspaceProvisionRequest struct {
@@ -30,4 +28,6 @@ type WorkspaceProvisionRequest struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	Status         *WorkspaceProvisionRequestStatus `gorm:"foreignkey:WorkspaceProvisionRequestID;references:ID"`
+	State          ProvisionRequestState
+	Message        string
 }

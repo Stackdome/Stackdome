@@ -16,8 +16,6 @@ func createWorkspaceProvisionRequestTables() *gormigrate.Migration {
 		ClusterCACert                *string
 		Domain                       *string
 		ClusterUrl                   *string
-		StatusCondition              string
-		Message                      string
 	}
 
 	type WorkspaceProvisionRequest struct {
@@ -25,6 +23,8 @@ func createWorkspaceProvisionRequestTables() *gormigrate.Migration {
 		UserID         string
 		OrganisationID int
 		SshPublicKey   string
+		State          string
+		Message        string
 		CreatedAt      time.Time
 		UpdatedAt      time.Time
 		Status         WorkspaceProvisionRequestStatus `gorm:"foreignkey:WorkspaceProvisionRequestID;references:ID;constraint:OnDelete:CASCADE"`

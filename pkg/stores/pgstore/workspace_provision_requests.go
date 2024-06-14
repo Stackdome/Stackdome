@@ -50,6 +50,17 @@ func (w *wsProvisionRequestStore) GetByID(ctx context.Context, id string) (*mode
 	}
 	return &res, nil
 }
+func (w *wsProvisionRequestStore) InternalList(ctx context.Context, query string, args ...any) ([]*models.WorkspaceProvisionRequest, *errors.ServiceError) {
+	grm := w.sessionFactory.New(ctx)
+	var requests []*models.WorkspaceProvisionRequest
+	if err := grm.Model(&models.WorkspaceProvisionRequest{}).
+		Preload(clause.Associations).
+		Where(query, args...).
+		Find(&requests).Error; err != nil {
+		return nil, errors.GeneralError("failed to fetch workspace provision requests: %s", err.Error())
+	}
+	return requests, nil
+}
 
 func (w *wsProvisionRequestStore) GetByUserID(ctx context.Context, userID string) (*models.WorkspaceProvisionRequest, *errors.ServiceError) {
 	grm := w.sessionFactory.New(ctx)
