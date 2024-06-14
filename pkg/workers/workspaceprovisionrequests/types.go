@@ -48,7 +48,7 @@ type workspaceProvisionRequestReconcileWorker struct {
 	workerlib.BaseWorker
 }
 
-func NewAddonVersionWorker(spec WorkspaceProvisionRequestReconcileWorkerSpec) *workspaceProvisionRequestReconcileWorker {
+func NewWorkspaceProvisionRequestWorker(spec WorkspaceProvisionRequestReconcileWorkerSpec) *workspaceProvisionRequestReconcileWorker {
 	a := &workspaceProvisionRequestReconcileWorker{
 		BaseWorker:          workerlib.NewBaseWorker(WorkspaceProvisionRequestReconcileWorker, spec.Env),
 		clusterClient:       spec.ClusterClient,

@@ -49,7 +49,7 @@ func (w *workspaceProvisionRequestReconcileWorker) Execute(ctx context.Context, 
 			}
 			provisionRequest.State = models.ProvisionRequestPending
 			provisionRequest.Message = "Object Created in cluster"
-			return workerlib.Result{RequeueAfter: time.Second * 2}, w.wprService.InternalUpdateStatus(ctx, provisionRequest.ID, provisionRequest)
+			return workerlib.Result{RequeueAfter: time.Second * 2}, w.wprService.InternalUpdate(ctx, provisionRequest.ID, provisionRequest)
 		}
 		return workerlib.Result{}, w.WorkerError.NewError("failed to get wpr object from cluster: %s", err)
 	}
@@ -78,7 +78,9 @@ func (w *workspaceProvisionRequestReconcileWorker) Execute(ctx context.Context, 
 	if err != nil {
 		return workerlib.Result{}, err
 	}
-
+	if provisionRequest.Status == nil {
+		provisionRequest.Status = &models.WorkspaceProvisionRequestStatus{}
+	}
 	provisionRequest.Status.ClusterCACert = &cluster.ClusterCAData
 	provisionRequest.Status.ClusterUrl = &cluster.ClusterURL
 	provisionRequest.Status.Domain = &organisation.DomainName
@@ -87,7 +89,7 @@ func (w *workspaceProvisionRequestReconcileWorker) Execute(ctx context.Context, 
 	provisionRequest.Status.WorkspaceNamespace = existingClusterObject.Status.Namespace
 	provisionRequest.State = models.ProvisionRequestCompleted
 	provisionRequest.Message = "Provision Completed"
-	return workerlib.Result{}, w.wprService.InternalUpdateStatus(ctx, provisionRequest.ID, provisionRequest)
+	return workerlib.Result{}, w.wprService.InternalUpdate(ctx, provisionRequest.ID, provisionRequest)
 }
 
 func (w *workspaceProvisionRequestReconcileWorker) desiredWPRObjectInCluster(user *models.User) (*workspacev1alpha1.WorkspaceConfiguration, *errors.ServiceError) {
@@ -107,5 +109,9 @@ func (w *workspaceProvisionRequestReconcileWorker) GetInput(ctx context.Context)
 	if err != nil {
 		return nil, err
 	}
-	return workerlib.ToOperandList(res), nil
+	var candidates []*models.WorkspaceProvisionRequest
+	for _, item := range res {
+		candidates = append(candidates, item)
+	}
+	return workerlib.ToOperandList(candidates...), nil
 }

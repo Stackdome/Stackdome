@@ -36,7 +36,6 @@ func (s apiServer) routes() *mux.Router {
 	workspaceProvisionRequestRouter.HandleFunc("", wprHandler.Create).Methods(http.MethodPost)
 	workspaceProvisionRequestRouter.HandleFunc("/{id}", wprHandler.Get).Methods(http.MethodGet)
 	workspaceProvisionRequestRouter.HandleFunc("/{id}", wprHandler.Update).Methods(http.MethodPut)
-	workspaceProvisionRequestRouter.HandleFunc("/{id}/update-status", wprHandler.UpdateStatus).Methods(http.MethodPatch)
 	workspaceProvisionRequestRouter.HandleFunc("/{id}", wprHandler.Delete).Methods(http.MethodDelete)
 	return mainRouter
 }

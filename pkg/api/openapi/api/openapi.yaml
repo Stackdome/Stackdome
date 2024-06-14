@@ -478,10 +478,8 @@ components:
         status:
           $ref: '#/components/schemas/WorkspaceProvisionRequestStatus'
         state:
-          nullable: true
           type: string
         message:
-          nullable: true
           type: string
         created_at:
           format: date-time

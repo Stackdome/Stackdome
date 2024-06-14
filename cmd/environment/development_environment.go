@@ -12,6 +12,8 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
+	wprworker "github.com/ashishmax31/stackdome-api-server/pkg/workers/workspaceprovisionrequests"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -56,8 +58,30 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 	if err := d.initializeClients(ctx); err != nil {
 		return err
 	}
+
+	d.WorkerManager = workermanager.NewWorkerManager(workermanager.WorkerManagerSpec{
+		Environment: d.Env.Name,
+	})
+
 	d.Services = d.loadSevices(logger)
+
+	d.createAndRegisterWorkers()
+	if err := d.WorkerManager.Start(ctx); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (d *developmentEnvironment) createAndRegisterWorkers() {
+	wprWorker := wprworker.NewWorkspaceProvisionRequestWorker(wprworker.WorkspaceProvisionRequestReconcileWorkerSpec{
+		ClusterClient:       d.Clients.DefaultClusterClient,
+		Env:                 d.Env.Name,
+		WPRService:          d.Services.WorkspaceProvisionRequestService,
+		UserService:         d.Services.UserService,
+		OrganisationService: d.Services.OrganisationService,
+		ClusterService:      d.Services.ClusterService,
+	})
+	d.WorkerManager.RegisterWorker(wprWorker, &models.WorkspaceProvisionRequest{})
 }
 
 func (d *developmentEnvironment) initializeClients(ctx context.Context) error {
@@ -178,9 +202,18 @@ func (d *developmentEnvironment) loadSevices(logger logger.Logger) Services {
 			JwtSecretKey:   d.Config.Server.JwtSecret,
 		}),
 		WorkspaceProvisionRequestService: services.NewWorkspaceProvisionRequestService(services.WorkspaceProvisionRequestServiceSpec{
+			SessionFactory:        d.DBSession,
+			Logger:                logger,
+			ClusterClient:         d.Clients.DefaultClusterClient,
+			BackgroundJobEnqueuer: d.WorkerManager,
+		}),
+		OrganisationService: services.NewOrganisationService(services.OrganisationServiceSpec{
 			SessionFactory: d.DBSession,
 			Logger:         logger,
-			ClusterClient:  d.Clients.DefaultClusterClient,
+		}),
+		ClusterService: services.NewClusterService(services.ClusterServiceSpec{
+			SessionFactory: d.DBSession,
+			Logger:         logger,
 		}),
 	}
 }

@@ -18,8 +18,8 @@ type WorkspaceProvisionRequestService interface {
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.WorkspaceProvisionRequest, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
 	Update(ctx context.Context, ID string, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
-	UpdateStatus(ctx context.Context, ID string, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
-	InternalUpdateStatus(ctx context.Context, ID string, spec *models.WorkspaceProvisionRequest) *errors.ServiceError
+	UpdateStatus(ctx context.Context, ID string, spec *models.WorkspaceProvisionRequestStatus) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
+	InternalUpdate(ctx context.Context, ID string, spec *models.WorkspaceProvisionRequest) *errors.ServiceError
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 }
 
@@ -96,7 +96,7 @@ func (s *workspaceProvisionRequestService) Update(ctx context.Context, id string
 	return request, nil
 }
 
-func (s *workspaceProvisionRequestService) UpdateStatus(ctx context.Context, id string, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError) {
+func (s *workspaceProvisionRequestService) UpdateStatus(ctx context.Context, id string, spec *models.WorkspaceProvisionRequestStatus) (*models.WorkspaceProvisionRequest, *errors.ServiceError) {
 	request, err := s.wsProvisionRequestStore.PatchStatus(ctx, id, spec)
 	if err != nil {
 		s.logger.Errorf("failed to update workspace provision request: %v", err)
@@ -105,10 +105,10 @@ func (s *workspaceProvisionRequestService) UpdateStatus(ctx context.Context, id 
 	return request, nil
 }
 
-func (s *workspaceProvisionRequestService) InternalUpdateStatus(ctx context.Context, id string, spec *models.WorkspaceProvisionRequest) *errors.ServiceError {
-	_, err := s.wsProvisionRequestStore.PatchStatus(ctx, id, spec)
+func (s *workspaceProvisionRequestService) InternalUpdate(ctx context.Context, id string, spec *models.WorkspaceProvisionRequest) *errors.ServiceError {
+	_, err := s.wsProvisionRequestStore.Update(ctx, id, spec)
 	if err != nil {
-		s.logger.Errorf("failed to update workspace provision request status: %v", err)
+		s.logger.Errorf("failed to update workspace provision request: %v", err)
 		return err
 	}
 	return nil

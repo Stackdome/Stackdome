@@ -16,7 +16,7 @@ func WorkspaceNamespaceFor(user *models.User) string {
 func WPRClusterObjectName(user *models.User) string {
 	sanitizedName := sanitizeName(user.Name)
 
-	objectName := fmt.Sprintf("%s-%d", sanitizedName, user.InternalID)
+	objectName := fmt.Sprintf("%s-%d", sanitizedName, user.GetInternalID())
 	// Ensure the object name meets the Kubernetes requirements
 	return truncateObjectName(objectName)
 }

@@ -22,8 +22,8 @@ type WorkspaceProvisionRequest struct {
 	OrgId        *int32                           `json:"org_id,omitempty"`
 	SshPublicKey string                           `json:"ssh_public_key"`
 	Status       *WorkspaceProvisionRequestStatus `json:"status,omitempty"`
-	State        NullableString                   `json:"state,omitempty"`
-	Message      NullableString                   `json:"message,omitempty"`
+	State        *string                          `json:"state,omitempty"`
+	Message      *string                          `json:"message,omitempty"`
 	CreatedAt    *time.Time                       `json:"created_at,omitempty"`
 	UpdatedAt    *time.Time                       `json:"updated_at,omitempty"`
 }
@@ -198,90 +198,68 @@ func (o *WorkspaceProvisionRequest) SetStatus(v WorkspaceProvisionRequestStatus)
 	o.Status = &v
 }
 
-// GetState returns the State field value if set, zero value otherwise (both if not set or set to explicit null).
+// GetState returns the State field value if set, zero value otherwise.
 func (o *WorkspaceProvisionRequest) GetState() string {
-	if o == nil || o.State.Get() == nil {
+	if o == nil || o.State == nil {
 		var ret string
 		return ret
 	}
-	return *o.State.Get()
+	return *o.State
 }
 
 // GetStateOk returns a tuple with the State field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *WorkspaceProvisionRequest) GetStateOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.State == nil {
 		return nil, false
 	}
-	return o.State.Get(), o.State.IsSet()
+	return o.State, true
 }
 
 // HasState returns a boolean if a field has been set.
 func (o *WorkspaceProvisionRequest) HasState() bool {
-	if o != nil && o.State.IsSet() {
+	if o != nil && o.State != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetState gets a reference to the given NullableString and assigns it to the State field.
+// SetState gets a reference to the given string and assigns it to the State field.
 func (o *WorkspaceProvisionRequest) SetState(v string) {
-	o.State.Set(&v)
+	o.State = &v
 }
 
-// SetStateNil sets the value for State to be an explicit nil
-func (o *WorkspaceProvisionRequest) SetStateNil() {
-	o.State.Set(nil)
-}
-
-// UnsetState ensures that no value is present for State, not even an explicit nil
-func (o *WorkspaceProvisionRequest) UnsetState() {
-	o.State.Unset()
-}
-
-// GetMessage returns the Message field value if set, zero value otherwise (both if not set or set to explicit null).
+// GetMessage returns the Message field value if set, zero value otherwise.
 func (o *WorkspaceProvisionRequest) GetMessage() string {
-	if o == nil || o.Message.Get() == nil {
+	if o == nil || o.Message == nil {
 		var ret string
 		return ret
 	}
-	return *o.Message.Get()
+	return *o.Message
 }
 
 // GetMessageOk returns a tuple with the Message field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *WorkspaceProvisionRequest) GetMessageOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.Message == nil {
 		return nil, false
 	}
-	return o.Message.Get(), o.Message.IsSet()
+	return o.Message, true
 }
 
 // HasMessage returns a boolean if a field has been set.
 func (o *WorkspaceProvisionRequest) HasMessage() bool {
-	if o != nil && o.Message.IsSet() {
+	if o != nil && o.Message != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetMessage gets a reference to the given NullableString and assigns it to the Message field.
+// SetMessage gets a reference to the given string and assigns it to the Message field.
 func (o *WorkspaceProvisionRequest) SetMessage(v string) {
-	o.Message.Set(&v)
-}
-
-// SetMessageNil sets the value for Message to be an explicit nil
-func (o *WorkspaceProvisionRequest) SetMessageNil() {
-	o.Message.Set(nil)
-}
-
-// UnsetMessage ensures that no value is present for Message, not even an explicit nil
-func (o *WorkspaceProvisionRequest) UnsetMessage() {
-	o.Message.Unset()
+	o.Message = &v
 }
 
 // GetCreatedAt returns the CreatedAt field value if set, zero value otherwise.
@@ -365,11 +343,11 @@ func (o WorkspaceProvisionRequest) MarshalJSON() ([]byte, error) {
 	if o.Status != nil {
 		toSerialize["status"] = o.Status
 	}
-	if o.State.IsSet() {
-		toSerialize["state"] = o.State.Get()
+	if o.State != nil {
+		toSerialize["state"] = o.State
 	}
-	if o.Message.IsSet() {
-		toSerialize["message"] = o.Message.Get()
+	if o.Message != nil {
+		toSerialize["message"] = o.Message
 	}
 	if o.CreatedAt != nil {
 		toSerialize["created_at"] = o.CreatedAt

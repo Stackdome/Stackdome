@@ -17,7 +17,7 @@ import (
 const MaxOperandRequeue = math.MaxInt32
 
 type WorkerManager interface {
-	Run(ctx context.Context) error
+	Start(ctx context.Context) error
 	Find(operand interface{}) workerlib.Worker
 	RegisterWorker(worker workerlib.Worker, operand interface{})
 	Stop(drain bool)
@@ -41,7 +41,7 @@ type serviceWorkerManager struct {
 	stopChan          chan struct{}
 }
 
-func NewServiceWorkerManager(spec WorkerManagerSpec) *serviceWorkerManager {
+func NewWorkerManager(spec WorkerManagerSpec) *serviceWorkerManager {
 	workerMgr := &serviceWorkerManager{
 		environment:       spec.Environment,
 		registeredWorkers: make(map[reflect.Type]workerlib.Worker),
@@ -52,7 +52,7 @@ func NewServiceWorkerManager(spec WorkerManagerSpec) *serviceWorkerManager {
 func (s *serviceWorkerManager) RegisterWorker(worker workerlib.Worker, operand interface{}) {
 	s.registeredWorkers[reflect.TypeOf(operand)] = worker
 }
-func (s *serviceWorkerManager) Run(ctx context.Context) error {
+func (s *serviceWorkerManager) Start(ctx context.Context) error {
 	if len(s.registeredWorkers) == 0 {
 		return errors.New("no workers registered under the worker manager")
 	}

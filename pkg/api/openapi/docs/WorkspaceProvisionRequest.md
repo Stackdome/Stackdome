@@ -9,8 +9,8 @@ Name | Type | Description | Notes
 **OrgId** | Pointer to **int32** |  | [optional] 
 **SshPublicKey** | **string** |  | 
 **Status** | Pointer to [**WorkspaceProvisionRequestStatus**](WorkspaceProvisionRequestStatus.md) |  | [optional] 
-**State** | Pointer to **NullableString** |  | [optional] 
-**Message** | Pointer to **NullableString** |  | [optional] 
+**State** | Pointer to **string** |  | [optional] 
+**Message** | Pointer to **string** |  | [optional] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] 
 **UpdatedAt** | Pointer to **time.Time** |  | [optional] 
 
@@ -178,16 +178,6 @@ SetState sets State field to given value.
 
 HasState returns a boolean if a field has been set.
 
-### SetStateNil
-
-`func (o *WorkspaceProvisionRequest) SetStateNil(b bool)`
-
- SetStateNil sets the value for State to be an explicit nil
-
-### UnsetState
-`func (o *WorkspaceProvisionRequest) UnsetState()`
-
-UnsetState ensures that no value is present for State, not even an explicit nil
 ### GetMessage
 
 `func (o *WorkspaceProvisionRequest) GetMessage() string`
@@ -213,16 +203,6 @@ SetMessage sets Message field to given value.
 
 HasMessage returns a boolean if a field has been set.
 
-### SetMessageNil
-
-`func (o *WorkspaceProvisionRequest) SetMessageNil(b bool)`
-
- SetMessageNil sets the value for Message to be an explicit nil
-
-### UnsetMessage
-`func (o *WorkspaceProvisionRequest) UnsetMessage()`
-
-UnsetMessage ensures that no value is present for Message, not even an explicit nil
 ### GetCreatedAt
 
 `func (o *WorkspaceProvisionRequest) GetCreatedAt() time.Time`

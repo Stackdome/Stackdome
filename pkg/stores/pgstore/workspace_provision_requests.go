@@ -90,22 +90,35 @@ func (w *wsProvisionRequestStore) Update(ctx context.Context, id string, spec *m
 		return nil, err
 	}
 
-	grm := w.sessionFactory.New(ctx)
+	tx := w.sessionFactory.New(ctx).Begin()
 
-	if err := grm.Model(&existingObj).Updates(map[string]interface{}{"ssh_public_key": spec.SshPublicKey}).Error; err != nil {
+	if err := tx.Model(&existingObj).Updates(map[string]interface{}{"ssh_public_key": spec.SshPublicKey, "state": spec.State, "message": spec.Message}).Error; err != nil {
+		tx.Rollback()
 		return nil, errors.GeneralError("failed to update object: %s", err.Error())
 	}
+
+	if spec.Status != nil {
+		spec.Status.WorkspaceProvisionRequestID = id
+		if _, err := w.statusStore.Upsert(tx, spec.Status); err != nil {
+			tx.Rollback()
+			return nil, errors.GeneralError("failed to update object: %s", err.Error())
+		}
+	}
+	tx.Commit()
 	return w.GetByID(ctx, id)
 }
 
-func (w *wsProvisionRequestStore) PatchStatus(ctx context.Context, id string, in *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError) {
+func (w *wsProvisionRequestStore) PatchStatus(ctx context.Context, id string, status *models.WorkspaceProvisionRequestStatus) (*models.WorkspaceProvisionRequest, *errors.ServiceError) {
 	_, err := w.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	grm := w.sessionFactory.New(ctx)
-	in.Status.WorkspaceProvisionRequestID = id
-	if _, err := w.statusStore.Upsert(grm, in.Status); err != nil {
+	if status == nil {
+		return nil, errors.GeneralError("status is nil")
+	}
+	status.WorkspaceProvisionRequestID = id
+	if _, err := w.statusStore.Upsert(grm, status); err != nil {
 		return nil, err
 	}
 	return w.GetByID(ctx, id)

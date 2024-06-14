@@ -112,30 +112,3 @@ func (a provisionRequestHandler) Delete(w http.ResponseWriter, r *http.Request) 
 	}
 	handleDelete(w, r, cfg, http.StatusNoContent)
 }
-
-func (a provisionRequestHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
-	var wpr openapi.WorkspaceProvisionRequest
-	cfg := &handlerConfig{
-		&wpr,
-		validation.ValidateWorkspaceProvisionRequestStatusUpdate(&wpr),
-		func() (_ interface{}, returnErr *errors.ServiceError) {
-			id := mux.Vars(r)["id"]
-			ctx := r.Context()
-			convertedObject := presenters.ConvertWorkspaceProvisionRequest(&wpr)
-			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
-			if err != nil {
-				return nil, errors.Unauthorized("failed to fetch user")
-			}
-			convertedObject.OrganisationID = currentUser.OrganisationID
-			convertedObject.UserID = currentUser.ID
-			obj, serr := a.provisionRequestService.UpdateStatus(ctx, id, convertedObject)
-			if serr != nil {
-				return nil, serr
-			}
-
-			return presenters.PresentWorkspaceProvisionRequest(obj), nil
-		},
-		handleError,
-	}
-	handle(w, r, cfg, http.StatusCreated)
-}

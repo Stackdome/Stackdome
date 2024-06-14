@@ -14,6 +14,6 @@ type WorkspaceProvisionRequestStore interface {
 	GetByUserID(ctx context.Context, userID string) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
 	ListByOrgID(ctx context.Context, userID string) ([]*models.WorkspaceProvisionRequest, *errors.ServiceError)
 	Update(ctx context.Context, id string, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
-	PatchStatus(ctx context.Context, id string, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
+	PatchStatus(ctx context.Context, id string, spec *models.WorkspaceProvisionRequestStatus) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
 	Delete(ctx context.Context, id string) *errors.ServiceError
 }
