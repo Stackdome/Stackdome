@@ -14,9 +14,22 @@ func PresentWorkspaceProvisionRequest(in *models.WorkspaceProvisionRequest) open
 	res.SetUserId(in.UserID)
 	res.SetSshPublicKey(in.SshPublicKey)
 	res.SetStatus(PresentWorkspaceProvisionRequestStatus(in.Status))
-	res.SetState(string(in.State))
+	res.SetState(PresentWPRState(in.State))
 	res.SetMessage(in.Message)
 	return res
+}
+
+func PresentWPRState(in models.ProvisionRequestState) openapi.WorkspaceProvisionRequestState {
+	switch in {
+	case models.ProvisionRequestCompleted:
+		return openapi.COMPLETED
+	case models.ProvisionRequestPending:
+		return openapi.PENDING
+	case models.ProvisionRequestError:
+		return openapi.ERROR
+	default:
+		return openapi.PENDING
+	}
 }
 
 func PresentWorkspaceProvisionRequestStatus(in *models.WorkspaceProvisionRequestStatus) openapi.WorkspaceProvisionRequestStatus {

@@ -22,7 +22,7 @@ type WorkspaceProvisionRequest struct {
 	OrgId        *int32                           `json:"org_id,omitempty"`
 	SshPublicKey string                           `json:"ssh_public_key"`
 	Status       *WorkspaceProvisionRequestStatus `json:"status,omitempty"`
-	State        *string                          `json:"state,omitempty"`
+	State        *WorkspaceProvisionRequestState  `json:"state,omitempty"`
 	Message      *string                          `json:"message,omitempty"`
 	CreatedAt    *time.Time                       `json:"created_at,omitempty"`
 	UpdatedAt    *time.Time                       `json:"updated_at,omitempty"`
@@ -199,9 +199,9 @@ func (o *WorkspaceProvisionRequest) SetStatus(v WorkspaceProvisionRequestStatus)
 }
 
 // GetState returns the State field value if set, zero value otherwise.
-func (o *WorkspaceProvisionRequest) GetState() string {
+func (o *WorkspaceProvisionRequest) GetState() WorkspaceProvisionRequestState {
 	if o == nil || o.State == nil {
-		var ret string
+		var ret WorkspaceProvisionRequestState
 		return ret
 	}
 	return *o.State
@@ -209,7 +209,7 @@ func (o *WorkspaceProvisionRequest) GetState() string {
 
 // GetStateOk returns a tuple with the State field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *WorkspaceProvisionRequest) GetStateOk() (*string, bool) {
+func (o *WorkspaceProvisionRequest) GetStateOk() (*WorkspaceProvisionRequestState, bool) {
 	if o == nil || o.State == nil {
 		return nil, false
 	}
@@ -225,8 +225,8 @@ func (o *WorkspaceProvisionRequest) HasState() bool {
 	return false
 }
 
-// SetState gets a reference to the given string and assigns it to the State field.
-func (o *WorkspaceProvisionRequest) SetState(v string) {
+// SetState gets a reference to the given WorkspaceProvisionRequestState and assigns it to the State field.
+func (o *WorkspaceProvisionRequest) SetState(v WorkspaceProvisionRequestState) {
 	o.State = &v
 }
 

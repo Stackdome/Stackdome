@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/handlers/validation"
 	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
@@ -33,6 +34,24 @@ func (a usersHandler) Get(w http.ResponseWriter, r *http.Request) {
 			id := mux.Vars(r)["id"]
 
 			result, err := a.userService.Get(ctx, id)
+			if err != nil {
+				return nil, err
+			}
+			return presenters.PresentUser(result), nil
+		},
+	}
+	handleGet(w, r, cfg)
+}
+
+func (a usersHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (_ interface{}, returnErr *errors.ServiceError) {
+			ctx := r.Context()
+			currentUser, ctxerr := auth.GetCurrentUserFromCtx(ctx)
+			if ctxerr != nil {
+				return nil, errors.Unauthorized("failed to fetch user")
+			}
+			result, err := a.userService.Get(ctx, currentUser.ID)
 			if err != nil {
 				return nil, err
 			}

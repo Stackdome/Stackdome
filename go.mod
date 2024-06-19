@@ -1,8 +1,6 @@
 module github.com/ashishmax31/stackdome-api-server
 
-go 1.22.0
-
-toolchain go1.22.4
+go 1.22.4
 
 require (
 	github.com/go-gormigrate/gormigrate/v2 v2.1.2

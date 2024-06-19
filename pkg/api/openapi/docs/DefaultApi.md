@@ -11,7 +11,9 @@ Method | HTTP request | Description
 [**ApiV1ClustersIdPut**](DefaultApi.md#ApiV1ClustersIdPut) | **Put** /api/v1/clusters/{id} | Update a cluster
 [**ApiV1ClustersPost**](DefaultApi.md#ApiV1ClustersPost) | **Post** /api/v1/clusters | Create a new cluster
 [**ApiV1UsersIdGet**](DefaultApi.md#ApiV1UsersIdGet) | **Get** /api/v1/users/{id} | Get a user
+[**ApiV1UsersMeGet**](DefaultApi.md#ApiV1UsersMeGet) | **Get** /api/v1/users/me | Get a the current authenticated user
 [**ApiV1UsersPost**](DefaultApi.md#ApiV1UsersPost) | **Post** /api/v1/users | Create new user
+[**ApiV1WorkspaceProvisionRequestsCurrentGet**](DefaultApi.md#ApiV1WorkspaceProvisionRequestsCurrentGet) | **Get** /api/v1/workspace-provision-requests/current | Get the current users workspace provision request object.
 [**ApiV1WorkspaceProvisionRequestsIdDelete**](DefaultApi.md#ApiV1WorkspaceProvisionRequestsIdDelete) | **Delete** /api/v1/workspace-provision-requests/{id} | Delete a WorkspaceProvisionRequest
 [**ApiV1WorkspaceProvisionRequestsIdGet**](DefaultApi.md#ApiV1WorkspaceProvisionRequestsIdGet) | **Get** /api/v1/workspace-provision-requests/{id} | Get a workspace provision request object by ID
 [**ApiV1WorkspaceProvisionRequestsIdPut**](DefaultApi.md#ApiV1WorkspaceProvisionRequestsIdPut) | **Put** /api/v1/workspace-provision-requests/{id} | Update a WorkspaceProvisionRequest
@@ -482,6 +484,67 @@ No authorization required
 [[Back to README]](../README.md)
 
 
+## ApiV1UsersMeGet
+
+> User ApiV1UsersMeGet(ctx).Execute()
+
+Get a the current authenticated user
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1UsersMeGet(context.Background()).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1UsersMeGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1UsersMeGet`: User
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1UsersMeGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+This endpoint does not need any parameter.
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1UsersMeGetRequest struct via the builder pattern
+
+
+### Return type
+
+[**User**](User.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## ApiV1UsersPost
 
 > User ApiV1UsersPost(ctx).UserCreateRequest(userCreateRequest).Execute()
@@ -541,6 +604,65 @@ No authorization required
 ### HTTP request headers
 
 - **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1WorkspaceProvisionRequestsCurrentGet
+
+> WorkspaceProvisionRequest ApiV1WorkspaceProvisionRequestsCurrentGet(ctx).Execute()
+
+Get the current users workspace provision request object.
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceProvisionRequestsCurrentGet(context.Background()).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceProvisionRequestsCurrentGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1WorkspaceProvisionRequestsCurrentGet`: WorkspaceProvisionRequest
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1WorkspaceProvisionRequestsCurrentGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+This endpoint does not need any parameter.
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1WorkspaceProvisionRequestsCurrentGetRequest struct via the builder pattern
+
+
+### Return type
+
+[**WorkspaceProvisionRequest**](WorkspaceProvisionRequest.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)

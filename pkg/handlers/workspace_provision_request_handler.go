@@ -43,6 +43,24 @@ func (a provisionRequestHandler) Get(w http.ResponseWriter, r *http.Request) {
 	handleGet(w, r, cfg)
 }
 
+func (a provisionRequestHandler) Current(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (_ interface{}, returnErr *errors.ServiceError) {
+			ctx := r.Context()
+			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
+			if err != nil {
+				return nil, errors.Unauthorized("failed to fetch current user")
+			}
+			obj, serr := a.provisionRequestService.GetProvisionRequestForUser(ctx, currentUser.ID)
+			if serr != nil {
+				return nil, serr
+			}
+			return presenters.PresentWorkspaceProvisionRequest(obj), nil
+		},
+	}
+	handleGet(w, r, cfg)
+}
+
 func (a provisionRequestHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var wpr openapi.WorkspaceProvisionRequest
 	cfg := &handlerConfig{
@@ -53,7 +71,7 @@ func (a provisionRequestHandler) Create(w http.ResponseWriter, r *http.Request) 
 			convertedObject := presenters.ConvertWorkspaceProvisionRequest(&wpr)
 			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
 			if err != nil {
-				return nil, errors.Unauthorized("failed to fetch user from handler")
+				return nil, errors.Unauthorized("failed to fetch user")
 			}
 			convertedObject.OrganisationID = currentUser.OrganisationID
 			convertedObject.UserID = currentUser.ID
@@ -100,12 +118,15 @@ func (a provisionRequestHandler) Delete(w http.ResponseWriter, r *http.Request) 
 	cfg := &handlerConfig{
 		Action: func() (_ interface{}, returnErr *errors.ServiceError) {
 			ctx := r.Context()
-
+			_, err := auth.GetCurrentUserFromCtx(ctx)
+			if err != nil {
+				return nil, errors.Unauthorized("failed to fetch user")
+			}
 			id := mux.Vars(r)["id"]
 
-			err := a.provisionRequestService.Delete(ctx, id)
-			if err != nil {
-				return nil, err
+			serr := a.provisionRequestService.Delete(ctx, id)
+			if serr != nil {
+				return nil, serr
 			}
 			return nil, nil
 		},

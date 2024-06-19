@@ -26,7 +26,11 @@ func (s apiServer) routes() *mux.Router {
 	apiV1Router := mainRouter.PathPrefix("/api/v1").Subrouter()
 	userRouter := apiV1Router.PathPrefix("/users").Subrouter()
 	userRouter.HandleFunc("", userHandler.Create).Methods(http.MethodPost)
-	userRouter.HandleFunc("/{id}", userHandler.Get).Methods(http.MethodGet)
+
+	authenticatedUserRouter := userRouter.NewRoute().Subrouter()
+	authenticatedUserRouter.Use(authenticationMiddleware.AuthenticateUser)
+	authenticatedUserRouter.HandleFunc("/me", userHandler.GetCurrentUser).Methods(http.MethodGet)
+	authenticatedUserRouter.HandleFunc("/{id}", userHandler.Get).Methods(http.MethodGet)
 
 	authenticationRouter := apiV1Router.PathPrefix("/auth").Subrouter()
 	authenticationRouter.HandleFunc("/login", userHandler.Login).Methods(http.MethodPost)
@@ -34,6 +38,7 @@ func (s apiServer) routes() *mux.Router {
 	workspaceProvisionRequestRouter := apiV1Router.PathPrefix("/workspace-provision-requests").Subrouter()
 	workspaceProvisionRequestRouter.Use(authenticationMiddleware.AuthenticateUser)
 	workspaceProvisionRequestRouter.HandleFunc("", wprHandler.Create).Methods(http.MethodPost)
+	workspaceProvisionRequestRouter.HandleFunc("/current", wprHandler.Current).Methods(http.MethodGet)
 	workspaceProvisionRequestRouter.HandleFunc("/{id}", wprHandler.Get).Methods(http.MethodGet)
 	workspaceProvisionRequestRouter.HandleFunc("/{id}", wprHandler.Update).Methods(http.MethodPut)
 	workspaceProvisionRequestRouter.HandleFunc("/{id}", wprHandler.Delete).Methods(http.MethodDelete)

@@ -72,6 +72,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/users/me:
+    get:
+      security:
+        - Bearer: []
+      summary: Get a the current authenticated user
+      description: Get a the current authenticated user
+      responses:
+        '200':
+          description: User fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Auth token is invalid
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthorized to perform operation
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/auth/login:
     post:
       summary: User login
@@ -123,6 +154,24 @@ paths:
           description: Invalid request payload
         '401':
           description: Unauthorized
+        '500':
+          description: Internal server error
+  /api/v1/workspace-provision-requests/current:
+    get:
+      summary: Get the current users workspace provision request object.
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: WorkspaceProvisionRequest details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceProvisionRequest'
+        '401':
+          description: Unauthorized
+        '404':
+          description: WorkspaceProvisionRequest object not found
         '500':
           description: Internal server error
   /api/v1/workspace-provision-requests/{id}:
@@ -395,7 +444,7 @@ components:
         status:
           $ref: '#/components/schemas/WorkspaceProvisionRequestStatus'
         state:
-          type: string
+          $ref: '#/components/schemas/WorkspaceProvisionRequestState'
         message:
           type: string
         created_at:
@@ -406,6 +455,12 @@ components:
           format: date-time
       required:
         - ssh_public_key
+    WorkspaceProvisionRequestState:
+      type: string
+      enum:
+      - Completed
+      - Error
+      - Pending
     WorkspaceProvisionRequestStatus:
       type: object
       properties:

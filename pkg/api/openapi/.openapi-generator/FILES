@@ -18,6 +18,7 @@ docs/ObjectReference.md
 docs/User.md
 docs/UserCreateRequest.md
 docs/WorkspaceProvisionRequest.md
+docs/WorkspaceProvisionRequestState.md
 docs/WorkspaceProvisionRequestStatus.md
 git_push.sh
 go.mod
@@ -33,6 +34,7 @@ model_object_reference.go
 model_user.go
 model_user_create_request.go
 model_workspace_provision_request.go
+model_workspace_provision_request_state.go
 model_workspace_provision_request_status.go
 response.go
 utils.go

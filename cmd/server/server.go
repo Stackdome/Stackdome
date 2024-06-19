@@ -60,7 +60,7 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 	authenticationHandler := NewAuthSelectHandler(AuthSelectorHandlerSpec{
 		MainHandler: mainHandler,
 		PublicPaths: []string{
-			"^/api/v1/users",
+			"^/api/v1/users$",
 			"^/api/v1/auth",
 		},
 		DefaultAuthHandler: auth.NewJwtAuthHandler(mainHandler, []byte(env.Environment().Config.Server.JwtSecret)),

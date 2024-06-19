@@ -6,7 +6,7 @@ type ProvisionRequestState string
 
 const (
 	ProvisionRequestPending   ProvisionRequestState = "Pending"
-	ProvisionRequestCompleted ProvisionRequestState = "Success"
+	ProvisionRequestCompleted ProvisionRequestState = "Completed"
 	ProvisionRequestError     ProvisionRequestState = "Error"
 )
 

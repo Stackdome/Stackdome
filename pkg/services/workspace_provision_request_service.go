@@ -15,6 +15,7 @@ import (
 
 type WorkspaceProvisionRequestService interface {
 	Get(ctx context.Context, ID string) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
+	GetProvisionRequestForUser(ctx context.Context, userID string) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.WorkspaceProvisionRequest, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
 	Update(ctx context.Context, ID string, spec *models.WorkspaceProvisionRequest) (*models.WorkspaceProvisionRequest, *errors.ServiceError)
@@ -53,6 +54,14 @@ type workspaceProvisionRequestService struct {
 
 func (s *workspaceProvisionRequestService) Get(ctx context.Context, ID string) (*models.WorkspaceProvisionRequest, *errors.ServiceError) {
 	request, err := s.wsProvisionRequestStore.GetByID(ctx, ID)
+	if err != nil {
+		s.logger.Errorf("failed to get workspace provision request: %v", err)
+		return nil, err
+	}
+	return request, nil
+}
+func (s *workspaceProvisionRequestService) GetProvisionRequestForUser(ctx context.Context, userID string) (*models.WorkspaceProvisionRequest, *errors.ServiceError) {
+	request, err := s.wsProvisionRequestStore.GetByUserID(ctx, userID)
 	if err != nil {
 		s.logger.Errorf("failed to get workspace provision request: %v", err)
 		return nil, err

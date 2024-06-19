@@ -9,7 +9,7 @@ Name | Type | Description | Notes
 **OrgId** | Pointer to **int32** |  | [optional] 
 **SshPublicKey** | **string** |  | 
 **Status** | Pointer to [**WorkspaceProvisionRequestStatus**](WorkspaceProvisionRequestStatus.md) |  | [optional] 
-**State** | Pointer to **string** |  | [optional] 
+**State** | Pointer to [**WorkspaceProvisionRequestState**](WorkspaceProvisionRequestState.md) |  | [optional] 
 **Message** | Pointer to **string** |  | [optional] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] 
 **UpdatedAt** | Pointer to **time.Time** |  | [optional] 
@@ -155,20 +155,20 @@ HasStatus returns a boolean if a field has been set.
 
 ### GetState
 
-`func (o *WorkspaceProvisionRequest) GetState() string`
+`func (o *WorkspaceProvisionRequest) GetState() WorkspaceProvisionRequestState`
 
 GetState returns the State field if non-nil, zero value otherwise.
 
 ### GetStateOk
 
-`func (o *WorkspaceProvisionRequest) GetStateOk() (*string, bool)`
+`func (o *WorkspaceProvisionRequest) GetStateOk() (*WorkspaceProvisionRequestState, bool)`
 
 GetStateOk returns a tuple with the State field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetState
 
-`func (o *WorkspaceProvisionRequest) SetState(v string)`
+`func (o *WorkspaceProvisionRequest) SetState(v WorkspaceProvisionRequestState)`
 
 SetState sets State field to given value.
 
