@@ -29,11 +29,10 @@ type OrganisationConfig struct {
 }
 
 type ClusterConfig struct {
-	Name           string `yaml:"name"`
-	ClusterURL     string `yaml:"cluster_url"`
-	ClusterCAData  string `yaml:"cluster_ca_data"`
-	ClientCertData string `yaml:"client_cert_data"`
-	ClientKeyData  string `yaml:"client_key_data"`
+	Name          string `yaml:"name"`
+	ClusterURL    string `yaml:"cluster_url"`
+	ClusterCAData string `yaml:"cluster_ca_data"`
+	Token         string `yaml:"token"`
 }
 
 type DatabaseConfig struct {

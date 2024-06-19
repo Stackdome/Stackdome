@@ -13,6 +13,5 @@ type Cluster struct {
 	Default        bool
 	ClusterURL     string `gorm:"not null;check:cluster_url <> ''"`
 	ClusterCAData  string `gorm:"not null;check:cluster_ca_data <> ''"`
-	ClientCertData string `gorm:"not null;check:client_cert_data <> ''"`
-	ClientKeyData  string `gorm:"not null;check:client_key_data <> ''"`
+	Token          string `gorm:"not null;check:token <> ''"`
 }

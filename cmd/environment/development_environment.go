@@ -100,20 +100,16 @@ func initializeClusterClient(cfg *config.ClusterConfig) (client.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	clientCert, err := base64.StdEncoding.DecodeString(cfg.ClientCertData)
+	token, err := base64.StdEncoding.DecodeString(cfg.Token)
 	if err != nil {
 		return nil, err
 	}
-	clientKey, err := base64.StdEncoding.DecodeString(cfg.ClientKeyData)
-	if err != nil {
-		return nil, err
-	}
+
 	restConfig := &rest.Config{
-		Host: cfg.ClusterURL,
+		Host:        cfg.ClusterURL,
+		BearerToken: string(token),
 		TLSClientConfig: rest.TLSClientConfig{
-			CAData:   cadata,
-			CertData: clientCert,
-			KeyData:  clientKey,
+			CAData: cadata,
 		},
 	}
 	scheme := runtime.NewScheme()
@@ -170,8 +166,7 @@ func (d *developmentEnvironment) initializeDefaultOrgAndCluster(ctx context.Cont
 				Name:           d.Config.ClusterConfig.Name,
 				ClusterURL:     d.Config.ClusterConfig.ClusterURL,
 				ClusterCAData:  string(d.Config.ClusterConfig.ClusterCAData),
-				ClientCertData: string(d.Config.ClusterConfig.ClientCertData),
-				ClientKeyData:  string(d.Config.ClusterConfig.ClientKeyData),
+				Token:          string(d.Config.ClusterConfig.Token),
 				Default:        true,
 			}
 			if _, err := clusterStore.Create(ctx, desiredCluster); err != nil {
