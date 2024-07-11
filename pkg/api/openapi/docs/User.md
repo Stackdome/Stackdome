@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 **Email** | Pointer to **string** | User&#39;s email address | [optional] 
 **Organisation** | Pointer to **string** | User&#39;s organisation | [optional] 
 **Role** | Pointer to **string** | User&#39;s role | [optional] 
-**OrganisationId** | Pointer to **int32** | OrganisationID | [optional] 
+**OrganisationId** | Pointer to **string** | OrganisationID | [optional] 
 
 ## Methods
 
@@ -183,20 +183,20 @@ HasRole returns a boolean if a field has been set.
 
 ### GetOrganisationId
 
-`func (o *User) GetOrganisationId() int32`
+`func (o *User) GetOrganisationId() string`
 
 GetOrganisationId returns the OrganisationId field if non-nil, zero value otherwise.
 
 ### GetOrganisationIdOk
 
-`func (o *User) GetOrganisationIdOk() (*int32, bool)`
+`func (o *User) GetOrganisationIdOk() (*string, bool)`
 
 GetOrganisationIdOk returns a tuple with the OrganisationId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetOrganisationId
 
-`func (o *User) SetOrganisationId(v int32)`
+`func (o *User) SetOrganisationId(v string)`
 
 SetOrganisationId sets OrganisationId field to given value.
 

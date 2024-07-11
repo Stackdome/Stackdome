@@ -152,50 +152,90 @@ func (a *DefaultApiService) ApiV1AuthLoginPostExecute(r ApiApiV1AuthLoginPostReq
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-type ApiApiV1ClustersGetRequest struct {
-	ctx        context.Context
-	ApiService *DefaultApiService
+type ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest struct {
+	ctx           context.Context
+	ApiService    *DefaultApiService
+	id            string
+	limit         *int32
+	offset        *int32
+	workspaceName *string
+	state         *string
 }
 
-func (r ApiApiV1ClustersGetRequest) Execute() ([]Cluster, *http.Response, error) {
-	return r.ApiService.ApiV1ClustersGetExecute(r)
+func (r ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest) Limit(limit int32) ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest {
+	r.limit = &limit
+	return r
+}
+
+func (r ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest) Offset(offset int32) ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest {
+	r.offset = &offset
+	return r
+}
+
+func (r ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest) WorkspaceName(workspaceName string) ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest {
+	r.workspaceName = &workspaceName
+	return r
+}
+
+func (r ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest) State(state string) ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest {
+	r.state = &state
+	return r
+}
+
+func (r ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest) Execute() (*ApiV1OrganizationsIdWorkspaceStoragesGet200Response, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsIdWorkspaceStoragesGetExecute(r)
 }
 
 /*
-ApiV1ClustersGet Get all clusters
+ApiV1OrganizationsIdWorkspaceStoragesGet List all WorkspaceStorage objects for an organization
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
-	@return ApiApiV1ClustersGetRequest
+	@param id
+	@return ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest
 */
-func (a *DefaultApiService) ApiV1ClustersGet(ctx context.Context) ApiApiV1ClustersGetRequest {
-	return ApiApiV1ClustersGetRequest{
+func (a *DefaultApiService) ApiV1OrganizationsIdWorkspaceStoragesGet(ctx context.Context, id string) ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest {
+	return ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest{
 		ApiService: a,
 		ctx:        ctx,
+		id:         id,
 	}
 }
 
 // Execute executes the request
 //
-//	@return []Cluster
-func (a *DefaultApiService) ApiV1ClustersGetExecute(r ApiApiV1ClustersGetRequest) ([]Cluster, *http.Response, error) {
+//	@return ApiV1OrganizationsIdWorkspaceStoragesGet200Response
+func (a *DefaultApiService) ApiV1OrganizationsIdWorkspaceStoragesGetExecute(r ApiApiV1OrganizationsIdWorkspaceStoragesGetRequest) (*ApiV1OrganizationsIdWorkspaceStoragesGet200Response, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodGet
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue []Cluster
+		localVarReturnValue *ApiV1OrganizationsIdWorkspaceStoragesGet200Response
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1ClustersGet")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsIdWorkspaceStoragesGet")
 	if err != nil {
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/clusters"
+	localVarPath := localBasePath + "/api/v1/organizations/{id}/workspace-storages"
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 
+	if r.limit != nil {
+		localVarQueryParams.Add("limit", parameterToString(*r.limit, ""))
+	}
+	if r.offset != nil {
+		localVarQueryParams.Add("offset", parameterToString(*r.offset, ""))
+	}
+	if r.workspaceName != nil {
+		localVarQueryParams.Add("workspaceName", parameterToString(*r.workspaceName, ""))
+	}
+	if r.state != nil {
+		localVarQueryParams.Add("state", parameterToString(*r.state, ""))
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 
@@ -250,25 +290,31 @@ func (a *DefaultApiService) ApiV1ClustersGetExecute(r ApiApiV1ClustersGetRequest
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-type ApiApiV1ClustersIdDeleteRequest struct {
-	ctx        context.Context
-	ApiService *DefaultApiService
-	id         string
+type ApiApiV1OrganizationsIdWorkspaceStoragesPostRequest struct {
+	ctx              context.Context
+	ApiService       *DefaultApiService
+	id               string
+	workspaceStorage *WorkspaceStorage
 }
 
-func (r ApiApiV1ClustersIdDeleteRequest) Execute() (*http.Response, error) {
-	return r.ApiService.ApiV1ClustersIdDeleteExecute(r)
+func (r ApiApiV1OrganizationsIdWorkspaceStoragesPostRequest) WorkspaceStorage(workspaceStorage WorkspaceStorage) ApiApiV1OrganizationsIdWorkspaceStoragesPostRequest {
+	r.workspaceStorage = &workspaceStorage
+	return r
+}
+
+func (r ApiApiV1OrganizationsIdWorkspaceStoragesPostRequest) Execute() (*WorkspaceStorage, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsIdWorkspaceStoragesPostExecute(r)
 }
 
 /*
-ApiV1ClustersIdDelete Delete a cluster
+ApiV1OrganizationsIdWorkspaceStoragesPost Create a new WorkspaceStorage object
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param id The id of record
-	@return ApiApiV1ClustersIdDeleteRequest
+	@return ApiApiV1OrganizationsIdWorkspaceStoragesPostRequest
 */
-func (a *DefaultApiService) ApiV1ClustersIdDelete(ctx context.Context, id string) ApiApiV1ClustersIdDeleteRequest {
-	return ApiApiV1ClustersIdDeleteRequest{
+func (a *DefaultApiService) ApiV1OrganizationsIdWorkspaceStoragesPost(ctx context.Context, id string) ApiApiV1OrganizationsIdWorkspaceStoragesPostRequest {
+	return ApiApiV1OrganizationsIdWorkspaceStoragesPostRequest{
 		ApiService: a,
 		ctx:        ctx,
 		id:         id,
@@ -276,19 +322,130 @@ func (a *DefaultApiService) ApiV1ClustersIdDelete(ctx context.Context, id string
 }
 
 // Execute executes the request
-func (a *DefaultApiService) ApiV1ClustersIdDeleteExecute(r ApiApiV1ClustersIdDeleteRequest) (*http.Response, error) {
+//
+//	@return WorkspaceStorage
+func (a *DefaultApiService) ApiV1OrganizationsIdWorkspaceStoragesPostExecute(r ApiApiV1OrganizationsIdWorkspaceStoragesPostRequest) (*WorkspaceStorage, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *WorkspaceStorage
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsIdWorkspaceStoragesPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{id}/workspace-storages"
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.workspaceStorage == nil {
+		return localVarReturnValue, nil, reportError("workspaceStorage is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.workspaceStorage
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdDeleteRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdDeleteRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdWorkspaceStoragesIdDeleteExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdWorkspaceStoragesIdDelete Delete a WorkspaceStorage object
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId
+	@param id
+	@return ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdDeleteRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesIdDelete(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdDeleteRequest {
+	return ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdDeleteRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesIdDeleteExecute(r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdDeleteRequest) (*http.Response, error) {
 	var (
 		localVarHTTPMethod = http.MethodDelete
 		localVarPostBody   interface{}
 		formFiles          []formFile
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1ClustersIdDelete")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdWorkspaceStoragesIdDelete")
 	if err != nil {
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/clusters/{id}"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/workspace-storages/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -340,48 +497,52 @@ func (a *DefaultApiService) ApiV1ClustersIdDeleteExecute(r ApiApiV1ClustersIdDel
 	return localVarHTTPResponse, nil
 }
 
-type ApiApiV1ClustersIdGetRequest struct {
+type ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdGetRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
+	orgId      string
 	id         string
 }
 
-func (r ApiApiV1ClustersIdGetRequest) Execute() (*Cluster, *http.Response, error) {
-	return r.ApiService.ApiV1ClustersIdGetExecute(r)
+func (r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdGetRequest) Execute() (*WorkspaceStorage, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdWorkspaceStoragesIdGetExecute(r)
 }
 
 /*
-ApiV1ClustersIdGet Get a cluster by ID
+ApiV1OrganizationsOrgIdWorkspaceStoragesIdGet Get a specific WorkspaceStorage object
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
-	@param id The id of record
-	@return ApiApiV1ClustersIdGetRequest
+	@param orgId
+	@param id
+	@return ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdGetRequest
 */
-func (a *DefaultApiService) ApiV1ClustersIdGet(ctx context.Context, id string) ApiApiV1ClustersIdGetRequest {
-	return ApiApiV1ClustersIdGetRequest{
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesIdGet(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdGetRequest {
+	return ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdGetRequest{
 		ApiService: a,
 		ctx:        ctx,
+		orgId:      orgId,
 		id:         id,
 	}
 }
 
 // Execute executes the request
 //
-//	@return Cluster
-func (a *DefaultApiService) ApiV1ClustersIdGetExecute(r ApiApiV1ClustersIdGetRequest) (*Cluster, *http.Response, error) {
+//	@return WorkspaceStorage
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesIdGetExecute(r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdGetRequest) (*WorkspaceStorage, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodGet
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue *Cluster
+		localVarReturnValue *WorkspaceStorage
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1ClustersIdGet")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdWorkspaceStoragesIdGet")
 	if err != nil {
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/clusters/{id}"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/workspace-storages/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -442,61 +603,65 @@ func (a *DefaultApiService) ApiV1ClustersIdGetExecute(r ApiApiV1ClustersIdGetReq
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-type ApiApiV1ClustersIdPutRequest struct {
-	ctx        context.Context
-	ApiService *DefaultApiService
-	id         string
-	cluster    *Cluster
+type ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdPutRequest struct {
+	ctx              context.Context
+	ApiService       *DefaultApiService
+	orgId            string
+	id               string
+	workspaceStorage *WorkspaceStorage
 }
 
-func (r ApiApiV1ClustersIdPutRequest) Cluster(cluster Cluster) ApiApiV1ClustersIdPutRequest {
-	r.cluster = &cluster
+func (r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdPutRequest) WorkspaceStorage(workspaceStorage WorkspaceStorage) ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdPutRequest {
+	r.workspaceStorage = &workspaceStorage
 	return r
 }
 
-func (r ApiApiV1ClustersIdPutRequest) Execute() (*Cluster, *http.Response, error) {
-	return r.ApiService.ApiV1ClustersIdPutExecute(r)
+func (r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdPutRequest) Execute() (*WorkspaceStorage, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdWorkspaceStoragesIdPutExecute(r)
 }
 
 /*
-ApiV1ClustersIdPut Update a cluster
+ApiV1OrganizationsOrgIdWorkspaceStoragesIdPut Update a WorkspaceStorage object
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
-	@param id The id of record
-	@return ApiApiV1ClustersIdPutRequest
+	@param orgId
+	@param id
+	@return ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdPutRequest
 */
-func (a *DefaultApiService) ApiV1ClustersIdPut(ctx context.Context, id string) ApiApiV1ClustersIdPutRequest {
-	return ApiApiV1ClustersIdPutRequest{
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesIdPut(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdPutRequest {
+	return ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdPutRequest{
 		ApiService: a,
 		ctx:        ctx,
+		orgId:      orgId,
 		id:         id,
 	}
 }
 
 // Execute executes the request
 //
-//	@return Cluster
-func (a *DefaultApiService) ApiV1ClustersIdPutExecute(r ApiApiV1ClustersIdPutRequest) (*Cluster, *http.Response, error) {
+//	@return WorkspaceStorage
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesIdPutExecute(r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdPutRequest) (*WorkspaceStorage, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodPut
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue *Cluster
+		localVarReturnValue *WorkspaceStorage
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1ClustersIdPut")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdWorkspaceStoragesIdPut")
 	if err != nil {
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/clusters/{id}"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/workspace-storages/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
-	if r.cluster == nil {
-		return localVarReturnValue, nil, reportError("cluster is required and must be specified")
+	if r.workspaceStorage == nil {
+		return localVarReturnValue, nil, reportError("workspaceStorage is required and must be specified")
 	}
 
 	// to determine the Content-Type header
@@ -517,116 +682,7 @@ func (a *DefaultApiService) ApiV1ClustersIdPutExecute(r ApiApiV1ClustersIdPutReq
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = r.cluster
-	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
-	if err != nil {
-		return localVarReturnValue, nil, err
-	}
-
-	localVarHTTPResponse, err := a.client.callAPI(req)
-	if err != nil || localVarHTTPResponse == nil {
-		return localVarReturnValue, localVarHTTPResponse, err
-	}
-
-	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
-	localVarHTTPResponse.Body.Close()
-	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
-	if err != nil {
-		return localVarReturnValue, localVarHTTPResponse, err
-	}
-
-	if localVarHTTPResponse.StatusCode >= 300 {
-		newErr := &GenericOpenAPIError{
-			body:  localVarBody,
-			error: localVarHTTPResponse.Status,
-		}
-		return localVarReturnValue, localVarHTTPResponse, newErr
-	}
-
-	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		newErr := &GenericOpenAPIError{
-			body:  localVarBody,
-			error: err.Error(),
-		}
-		return localVarReturnValue, localVarHTTPResponse, newErr
-	}
-
-	return localVarReturnValue, localVarHTTPResponse, nil
-}
-
-type ApiApiV1ClustersPostRequest struct {
-	ctx        context.Context
-	ApiService *DefaultApiService
-	cluster    *Cluster
-}
-
-func (r ApiApiV1ClustersPostRequest) Cluster(cluster Cluster) ApiApiV1ClustersPostRequest {
-	r.cluster = &cluster
-	return r
-}
-
-func (r ApiApiV1ClustersPostRequest) Execute() (*Cluster, *http.Response, error) {
-	return r.ApiService.ApiV1ClustersPostExecute(r)
-}
-
-/*
-ApiV1ClustersPost Create a new cluster
-
-	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
-	@return ApiApiV1ClustersPostRequest
-*/
-func (a *DefaultApiService) ApiV1ClustersPost(ctx context.Context) ApiApiV1ClustersPostRequest {
-	return ApiApiV1ClustersPostRequest{
-		ApiService: a,
-		ctx:        ctx,
-	}
-}
-
-// Execute executes the request
-//
-//	@return Cluster
-func (a *DefaultApiService) ApiV1ClustersPostExecute(r ApiApiV1ClustersPostRequest) (*Cluster, *http.Response, error) {
-	var (
-		localVarHTTPMethod  = http.MethodPost
-		localVarPostBody    interface{}
-		formFiles           []formFile
-		localVarReturnValue *Cluster
-	)
-
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1ClustersPost")
-	if err != nil {
-		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
-	}
-
-	localVarPath := localBasePath + "/api/v1/clusters"
-
-	localVarHeaderParams := make(map[string]string)
-	localVarQueryParams := url.Values{}
-	localVarFormParams := url.Values{}
-	if r.cluster == nil {
-		return localVarReturnValue, nil, reportError("cluster is required and must be specified")
-	}
-
-	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{"application/json"}
-
-	// set Content-Type header
-	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
-	if localVarHTTPContentType != "" {
-		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
-	}
-
-	// to determine the Accept header
-	localVarHTTPHeaderAccepts := []string{"application/json"}
-
-	// set Accept header
-	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
-	if localVarHTTPHeaderAccept != "" {
-		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
-	}
-	// body params
-	localVarPostBody = r.cluster
+	localVarPostBody = r.workspaceStorage
 	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
 	if err != nil {
 		return localVarReturnValue, nil, err

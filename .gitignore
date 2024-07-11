@@ -2,4 +2,5 @@
 .idea
 .vscode
 cluster_config.yaml
+database.yaml
 bin/

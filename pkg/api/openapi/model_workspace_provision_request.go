@@ -19,7 +19,7 @@ import (
 type WorkspaceProvisionRequest struct {
 	Id           *string                          `json:"id,omitempty"`
 	UserId       *string                          `json:"user_id,omitempty"`
-	OrgId        *int32                           `json:"org_id,omitempty"`
+	OrgId        *string                          `json:"org_id,omitempty"`
 	SshPublicKey string                           `json:"ssh_public_key"`
 	Status       *WorkspaceProvisionRequestStatus `json:"status,omitempty"`
 	State        *WorkspaceProvisionRequestState  `json:"state,omitempty"`
@@ -111,9 +111,9 @@ func (o *WorkspaceProvisionRequest) SetUserId(v string) {
 }
 
 // GetOrgId returns the OrgId field value if set, zero value otherwise.
-func (o *WorkspaceProvisionRequest) GetOrgId() int32 {
+func (o *WorkspaceProvisionRequest) GetOrgId() string {
 	if o == nil || o.OrgId == nil {
-		var ret int32
+		var ret string
 		return ret
 	}
 	return *o.OrgId
@@ -121,7 +121,7 @@ func (o *WorkspaceProvisionRequest) GetOrgId() int32 {
 
 // GetOrgIdOk returns a tuple with the OrgId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *WorkspaceProvisionRequest) GetOrgIdOk() (*int32, bool) {
+func (o *WorkspaceProvisionRequest) GetOrgIdOk() (*string, bool) {
 	if o == nil || o.OrgId == nil {
 		return nil, false
 	}
@@ -137,8 +137,8 @@ func (o *WorkspaceProvisionRequest) HasOrgId() bool {
 	return false
 }
 
-// SetOrgId gets a reference to the given int32 and assigns it to the OrgId field.
-func (o *WorkspaceProvisionRequest) SetOrgId(v int32) {
+// SetOrgId gets a reference to the given string and assigns it to the OrgId field.
+func (o *WorkspaceProvisionRequest) SetOrgId(v string) {
 	o.OrgId = &v
 }
 

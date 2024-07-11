@@ -6,7 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** |  | [optional] 
 **UserId** | Pointer to **string** |  | [optional] 
-**OrgId** | Pointer to **int32** |  | [optional] 
+**OrgId** | Pointer to **string** |  | [optional] 
 **SshPublicKey** | **string** |  | 
 **Status** | Pointer to [**WorkspaceProvisionRequestStatus**](WorkspaceProvisionRequestStatus.md) |  | [optional] 
 **State** | Pointer to [**WorkspaceProvisionRequestState**](WorkspaceProvisionRequestState.md) |  | [optional] 
@@ -85,20 +85,20 @@ HasUserId returns a boolean if a field has been set.
 
 ### GetOrgId
 
-`func (o *WorkspaceProvisionRequest) GetOrgId() int32`
+`func (o *WorkspaceProvisionRequest) GetOrgId() string`
 
 GetOrgId returns the OrgId field if non-nil, zero value otherwise.
 
 ### GetOrgIdOk
 
-`func (o *WorkspaceProvisionRequest) GetOrgIdOk() (*int32, bool)`
+`func (o *WorkspaceProvisionRequest) GetOrgIdOk() (*string, bool)`
 
 GetOrgIdOk returns a tuple with the OrgId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetOrgId
 
-`func (o *WorkspaceProvisionRequest) SetOrgId(v int32)`
+`func (o *WorkspaceProvisionRequest) SetOrgId(v string)`
 
 SetOrgId sets OrgId field to given value.
 

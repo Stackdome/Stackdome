@@ -29,7 +29,7 @@ type User struct {
 	// User's role
 	Role *string `json:"role,omitempty"`
 	// OrganisationID
-	OrganisationId *int32 `json:"organisation_id,omitempty"`
+	OrganisationId *string `json:"organisation_id,omitempty"`
 }
 
 // NewUser instantiates a new User object
@@ -242,9 +242,9 @@ func (o *User) SetRole(v string) {
 }
 
 // GetOrganisationId returns the OrganisationId field value if set, zero value otherwise.
-func (o *User) GetOrganisationId() int32 {
+func (o *User) GetOrganisationId() string {
 	if o == nil || o.OrganisationId == nil {
-		var ret int32
+		var ret string
 		return ret
 	}
 	return *o.OrganisationId
@@ -252,7 +252,7 @@ func (o *User) GetOrganisationId() int32 {
 
 // GetOrganisationIdOk returns a tuple with the OrganisationId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *User) GetOrganisationIdOk() (*int32, bool) {
+func (o *User) GetOrganisationIdOk() (*string, bool) {
 	if o == nil || o.OrganisationId == nil {
 		return nil, false
 	}
@@ -268,8 +268,8 @@ func (o *User) HasOrganisationId() bool {
 	return false
 }
 
-// SetOrganisationId gets a reference to the given int32 and assigns it to the OrganisationId field.
-func (o *User) SetOrganisationId(v int32) {
+// SetOrganisationId gets a reference to the given string and assigns it to the OrganisationId field.
+func (o *User) SetOrganisationId(v string) {
 	o.OrganisationId = &v
 }
 

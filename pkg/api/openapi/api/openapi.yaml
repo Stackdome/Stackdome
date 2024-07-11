@@ -266,52 +266,112 @@ paths:
       security:
       - Bearer: []
       summary: Update a WorkspaceProvisionRequest
-  /api/v1/clusters:
+  /api/v1/organizations/{id}/workspace-storages:
     get:
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 20
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: workspaceName
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: state
+        required: false
+        schema:
+          enum:
+          - Pending
+          - Creating
+          - Created
+          - Failed
+          type: string
+        style: form
       responses:
         "200":
           content:
             application/json:
               schema:
-                items:
-                  $ref: '#/components/schemas/Cluster'
-                type: array
-          description: List of clusters
+                $ref: '#/components/schemas/_api_v1_organizations__id__workspace_storages_get_200_response'
+          description: Successful operation
         "401":
           description: Unauthorized
+        "403":
+          description: Forbidden
         "500":
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get all clusters
+      summary: List all WorkspaceStorage objects for an organization
     post:
+      parameters:
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Cluster'
+              $ref: '#/components/schemas/WorkspaceStorage'
         required: true
       responses:
         "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Cluster'
-          description: Cluster added successfully
+                $ref: '#/components/schemas/WorkspaceStorage'
+          description: WorkspaceStorage created successfully
         "400":
           description: Invalid request payload
         "401":
           description: Unauthorized
+        "403":
+          description: Forbidden
         "500":
           description: Internal server error
       security:
       - Bearer: []
-      summary: Create a new cluster
-  /api/v1/clusters/{id}:
+      summary: Create a new WorkspaceStorage object
+  /api/v1/organizations/{org_id}/workspace-storages/{id}:
     delete:
       parameters:
-      - description: The id of record
-        explode: false
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
         in: path
         name: id
         required: true
@@ -320,20 +380,28 @@ paths:
         style: simple
       responses:
         "204":
-          description: Cluster deleted successfully
+          description: WorkspaceStorage deleted successfully
+        "404":
+          description: WorkspaceStorage not found
         "401":
           description: Unauthorized
-        "404":
-          description: Cluster not found
+        "403":
+          description: Forbidden
         "500":
           description: Internal server error
       security:
       - Bearer: []
-      summary: Delete a cluster
+      summary: Delete a WorkspaceStorage object
     get:
       parameters:
-      - description: The id of record
-        explode: false
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
         in: path
         name: id
         required: true
@@ -345,21 +413,29 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Cluster'
-          description: Cluster details
+                $ref: '#/components/schemas/WorkspaceStorage'
+          description: Successful operation
+        "404":
+          description: WorkspaceStorage not found
         "401":
           description: Unauthorized
-        "404":
-          description: Cluster not found
+        "403":
+          description: Forbidden
         "500":
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a cluster by ID
+      summary: Get a specific WorkspaceStorage object
     put:
       parameters:
-      - description: The id of record
-        explode: false
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
         in: path
         name: id
         required: true
@@ -370,26 +446,28 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Cluster'
+              $ref: '#/components/schemas/WorkspaceStorage'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Cluster'
-          description: Cluster updated successfully
+                $ref: '#/components/schemas/WorkspaceStorage'
+          description: WorkspaceStorage updated successfully
         "400":
           description: Invalid request payload
+        "404":
+          description: WorkspaceStorage not found
         "401":
           description: Unauthorized
-        "404":
-          description: Cluster not found
+        "403":
+          description: Forbidden
         "500":
           description: Internal server error
       security:
       - Bearer: []
-      summary: Update a cluster
+      summary: Update a WorkspaceStorage object
 components:
   parameters:
     id:
@@ -404,7 +482,7 @@ components:
   schemas:
     User:
       example:
-        organisation_id: 0
+        organisation_id: organisation_id
         role: role
         name: name
         organisation: organisation
@@ -433,11 +511,11 @@ components:
           type: string
         organisation_id:
           description: OrganisationID
-          type: integer
+          type: string
       type: object
     UserCreateRequest:
       example:
-        organisation_id: 0
+        organisation_id: organisation_id
         password: password
         name: name
         organisation: organisation
@@ -462,7 +540,7 @@ components:
           type: string
         organisation_id:
           description: OrganisationID
-          type: integer
+          type: string
       required:
       - email
       - name
@@ -502,7 +580,7 @@ components:
         ssh_public_key: ssh_public_key
         updated_at: 2000-01-23T04:56:07.000+00:00
         user_id: user_id
-        org_id: 0
+        org_id: org_id
         created_at: 2000-01-23T04:56:07.000+00:00
         id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         state: null
@@ -521,7 +599,7 @@ components:
         user_id:
           type: string
         org_id:
-          type: integer
+          type: string
         ssh_public_key:
           type: string
         status:
@@ -574,15 +652,6 @@ components:
           type: string
       type: object
     Cluster:
-      example:
-        cluster_url: cluster_url
-        cluster_ca_data: cluster_ca_data
-        organisation_id: organisation_id
-        default: true
-        name: name
-        client_cert_data: client_cert_data
-        client_key_data: client_key_data
-        id: id
       properties:
         id:
           type: string
@@ -600,6 +669,499 @@ components:
           type: string
         client_key_data:
           type: string
+      type: object
+    WorkspaceStorage:
+      additionalProperties: false
+      example:
+        organisation_id: organisation_id
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        name: name
+        namespace: namespace
+        volumes:
+        - name: name
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          id: id
+          spec:
+            storage_class: storage_class
+            size: size
+            sync_before_use: true
+            source:
+              local_source:
+                path: path
+                sync: true
+              build_source:
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              source_type: null
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            phase: phase
+            build_artifact_syncs:
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 0
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 0
+              status: status
+        - name: name
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          id: id
+          spec:
+            storage_class: storage_class
+            size: size
+            sync_before_use: true
+            source:
+              local_source:
+                path: path
+                sync: true
+              build_source:
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              source_type: null
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            phase: phase
+            build_artifact_syncs:
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 0
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 0
+              status: status
+        annotations:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
+        state: null
+        ssh_config:
+          public_key: public_key
+        labels:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        status:
+          phase: phase
+          storage_server_service_name: storage_server_service_name
+          conditions:
+          - reason: reason
+            last_transition_time: 2000-01-23T04:56:07.000+00:00
+            type: type
+            message: message
+            observed_generation: 0
+            status: status
+          - reason: reason
+            last_transition_time: 2000-01-23T04:56:07.000+00:00
+            type: type
+            message: message
+            observed_generation: 0
+            status: status
+      properties:
+        id:
+          readOnly: true
+          type: string
+        organisation_id:
+          readOnly: true
+          type: string
+        name:
+          type: string
+        namespace:
+          type: string
+        labels:
+          items:
+            $ref: '#/components/schemas/Label'
+          type: array
+        annotations:
+          items:
+            $ref: '#/components/schemas/Annotation'
+          type: array
+        ssh_config:
+          $ref: '#/components/schemas/SSHConfig'
+        volumes:
+          items:
+            $ref: '#/components/schemas/Volume'
+          type: array
+        status:
+          $ref: '#/components/schemas/WorkspaceStorageStatus'
+        state:
+          $ref: '#/components/schemas/WorkspaceStorageState'
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+        updated_at:
+          format: date-time
+          readOnly: true
+          type: string
+      required:
+      - name
+      - namespace
+      - ssh_config
+      - volumes
+      type: object
+    WorkspaceStorageState:
+      enum:
+      - StoragePending
+      - StorageCreating
+      - StorageCreated
+      - StorageReady
+      - StorageFailed
+      type: string
+    Volume:
+      additionalProperties: false
+      example:
+        name: name
+        annotations:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        id: id
+        spec:
+          storage_class: storage_class
+          size: size
+          sync_before_use: true
+          source:
+            local_source:
+              path: path
+              sync: true
+            build_source:
+            - destination_path: destination_path
+              resource_ref: resource_ref
+              source_path: source_path
+            - destination_path: destination_path
+              resource_ref: resource_ref
+              source_path: source_path
+            source_type: null
+        labels:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        status:
+          phase: phase
+          build_artifact_syncs:
+          - build_id: build_id
+            resource_name: resource_name
+            status: status
+          - build_id: build_id
+            resource_name: resource_name
+            status: status
+          conditions:
+          - reason: reason
+            last_transition_time: 2000-01-23T04:56:07.000+00:00
+            type: type
+            message: message
+            observed_generation: 0
+            status: status
+          - reason: reason
+            last_transition_time: 2000-01-23T04:56:07.000+00:00
+            type: type
+            message: message
+            observed_generation: 0
+            status: status
+      properties:
+        id:
+          readOnly: true
+          type: string
+        name:
+          type: string
+        labels:
+          items:
+            $ref: '#/components/schemas/Label'
+          type: array
+        annotations:
+          items:
+            $ref: '#/components/schemas/Annotation'
+          type: array
+        spec:
+          $ref: '#/components/schemas/WorkspaceVolumeSpec'
+        status:
+          $ref: '#/components/schemas/VolumeStatus'
+      required:
+      - name
+      - spec
+      type: object
+    SSHConfig:
+      additionalProperties: false
+      example:
+        public_key: public_key
+      properties:
+        public_key:
+          description: The SSH public key in OpenSSH format
+          type: string
+      required:
+      - public_key
+      type: object
+    WorkspaceVolumeSpec:
+      additionalProperties: false
+      example:
+        storage_class: storage_class
+        size: size
+        sync_before_use: true
+        source:
+          local_source:
+            path: path
+            sync: true
+          build_source:
+          - destination_path: destination_path
+            resource_ref: resource_ref
+            source_path: source_path
+          - destination_path: destination_path
+            resource_ref: resource_ref
+            source_path: source_path
+          source_type: null
+      properties:
+        size:
+          type: string
+        storage_class:
+          type: string
+        sync_before_use:
+          type: boolean
+        source:
+          $ref: '#/components/schemas/VolumeSource'
+      required:
+      - size
+      type: object
+    VolumeSource:
+      additionalProperties: false
+      example:
+        local_source:
+          path: path
+          sync: true
+        build_source:
+        - destination_path: destination_path
+          resource_ref: resource_ref
+          source_path: source_path
+        - destination_path: destination_path
+          resource_ref: resource_ref
+          source_path: source_path
+        source_type: null
+      properties:
+        source_type:
+          $ref: '#/components/schemas/VolumeSourceTypes'
+        local_source:
+          $ref: '#/components/schemas/LocalSource'
+        build_source:
+          items:
+            $ref: '#/components/schemas/BuildArtifact'
+          type: array
+      required:
+      - source_type
+      type: object
+    VolumeSourceTypes:
+      enum:
+      - Local
+      - BuildArtifact
+      type: string
+    LocalSource:
+      example:
+        path: path
+        sync: true
+      properties:
+        path:
+          type: string
+        sync:
+          type: boolean
+      required:
+      - path
+      - sync
+      type: object
+    BuildArtifact:
+      example:
+        destination_path: destination_path
+        resource_ref: resource_ref
+        source_path: source_path
+      properties:
+        resource_ref:
+          type: string
+        source_path:
+          type: string
+        destination_path:
+          type: string
+      required:
+      - destination_path
+      - resource_ref
+      - source_path
+      type: object
+    WorkspaceStorageStatus:
+      example:
+        phase: phase
+        storage_server_service_name: storage_server_service_name
+        conditions:
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 0
+          status: status
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 0
+          status: status
+      properties:
+        conditions:
+          items:
+            $ref: '#/components/schemas/Condition'
+          type: array
+        phase:
+          type: string
+        storage_server_service_name:
+          type: string
+      type: object
+    VolumeStatus:
+      example:
+        phase: phase
+        build_artifact_syncs:
+        - build_id: build_id
+          resource_name: resource_name
+          status: status
+        - build_id: build_id
+          resource_name: resource_name
+          status: status
+        conditions:
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 0
+          status: status
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 0
+          status: status
+      properties:
+        conditions:
+          items:
+            $ref: '#/components/schemas/Condition'
+          type: array
+        phase:
+          type: string
+        build_artifact_syncs:
+          items:
+            $ref: '#/components/schemas/BuildArtifactSyncInfo'
+          type: array
+      type: object
+    BuildArtifactSyncInfo:
+      example:
+        build_id: build_id
+        resource_name: resource_name
+        status: status
+      properties:
+        resource_name:
+          type: string
+        build_id:
+          type: string
+        status:
+          type: string
+      type: object
+    Condition:
+      additionalProperties: false
+      example:
+        reason: reason
+        last_transition_time: 2000-01-23T04:56:07.000+00:00
+        type: type
+        message: message
+        observed_generation: 0
+        status: status
+      properties:
+        type:
+          type: string
+        status:
+          type: string
+        observed_generation:
+          type: integer
+        last_transition_time:
+          format: date-time
+          type: string
+        reason:
+          type: string
+        message:
+          type: string
+      type: object
+    Label:
+      additionalProperties: false
+      example:
+        value: value
+        key: key
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+      required:
+      - key
+      - value
+      type: object
+    Annotation:
+      example:
+        value: value
+        key: key
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+      required:
+      - key
+      - value
       type: object
     Error:
       allOf:
@@ -640,6 +1202,290 @@ components:
         href:
           type: string
       type: object
+    _api_v1_organizations__id__workspace_storages_get_200_response:
+      example:
+        total: 6
+        items:
+        - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          name: name
+          namespace: namespace
+          volumes:
+          - name: name
+            annotations:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            id: id
+            spec:
+              storage_class: storage_class
+              size: size
+              sync_before_use: true
+              source:
+                local_source:
+                  path: path
+                  sync: true
+                build_source:
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                source_type: null
+            labels:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            status:
+              phase: phase
+              build_artifact_syncs:
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              conditions:
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 0
+                status: status
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 0
+                status: status
+          - name: name
+            annotations:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            id: id
+            spec:
+              storage_class: storage_class
+              size: size
+              sync_before_use: true
+              source:
+                local_source:
+                  path: path
+                  sync: true
+                build_source:
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                source_type: null
+            labels:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            status:
+              phase: phase
+              build_artifact_syncs:
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              conditions:
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 0
+                status: status
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 0
+                status: status
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          state: null
+          ssh_config:
+            public_key: public_key
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            phase: phase
+            storage_server_service_name: storage_server_service_name
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 0
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 0
+              status: status
+        - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          name: name
+          namespace: namespace
+          volumes:
+          - name: name
+            annotations:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            id: id
+            spec:
+              storage_class: storage_class
+              size: size
+              sync_before_use: true
+              source:
+                local_source:
+                  path: path
+                  sync: true
+                build_source:
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                source_type: null
+            labels:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            status:
+              phase: phase
+              build_artifact_syncs:
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              conditions:
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 0
+                status: status
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 0
+                status: status
+          - name: name
+            annotations:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            id: id
+            spec:
+              storage_class: storage_class
+              size: size
+              sync_before_use: true
+              source:
+                local_source:
+                  path: path
+                  sync: true
+                build_source:
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                source_type: null
+            labels:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            status:
+              phase: phase
+              build_artifact_syncs:
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              conditions:
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 0
+                status: status
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 0
+                status: status
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          state: null
+          ssh_config:
+            public_key: public_key
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            phase: phase
+            storage_server_service_name: storage_server_service_name
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 0
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 0
+              status: status
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/WorkspaceStorage'
+          type: array
+        total:
+          type: integer
+      type: object
     Error_allOf:
       properties:
         code:
@@ -649,3 +1495,8 @@ components:
         operation_id:
           type: string
       type: object
+  securitySchemes:
+    Bearer:
+      bearerFormat: JWT
+      scheme: bearer
+      type: http

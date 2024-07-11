@@ -79,11 +79,11 @@ All URIs are relative to *http://localhost*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *DefaultApi* | [**ApiV1AuthLoginPost**](docs/DefaultApi.md#apiv1authloginpost) | **Post** /api/v1/auth/login | User login
-*DefaultApi* | [**ApiV1ClustersGet**](docs/DefaultApi.md#apiv1clustersget) | **Get** /api/v1/clusters | Get all clusters
-*DefaultApi* | [**ApiV1ClustersIdDelete**](docs/DefaultApi.md#apiv1clustersiddelete) | **Delete** /api/v1/clusters/{id} | Delete a cluster
-*DefaultApi* | [**ApiV1ClustersIdGet**](docs/DefaultApi.md#apiv1clustersidget) | **Get** /api/v1/clusters/{id} | Get a cluster by ID
-*DefaultApi* | [**ApiV1ClustersIdPut**](docs/DefaultApi.md#apiv1clustersidput) | **Put** /api/v1/clusters/{id} | Update a cluster
-*DefaultApi* | [**ApiV1ClustersPost**](docs/DefaultApi.md#apiv1clusterspost) | **Post** /api/v1/clusters | Create a new cluster
+*DefaultApi* | [**ApiV1OrganizationsIdWorkspaceStoragesGet**](docs/DefaultApi.md#apiv1organizationsidworkspacestoragesget) | **Get** /api/v1/organizations/{id}/workspace-storages | List all WorkspaceStorage objects for an organization
+*DefaultApi* | [**ApiV1OrganizationsIdWorkspaceStoragesPost**](docs/DefaultApi.md#apiv1organizationsidworkspacestoragespost) | **Post** /api/v1/organizations/{id}/workspace-storages | Create a new WorkspaceStorage object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesiddelete) | **Delete** /api/v1/organizations/{org_id}/workspace-storages/{id} | Delete a WorkspaceStorage object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidget) | **Get** /api/v1/organizations/{org_id}/workspace-storages/{id} | Get a specific WorkspaceStorage object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidput) | **Put** /api/v1/organizations/{org_id}/workspace-storages/{id} | Update a WorkspaceStorage object
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
 *DefaultApi* | [**ApiV1UsersMeGet**](docs/DefaultApi.md#apiv1usersmeget) | **Get** /api/v1/users/me | Get a the current authenticated user
 *DefaultApi* | [**ApiV1UsersPost**](docs/DefaultApi.md#apiv1userspost) | **Post** /api/v1/users | Create new user
@@ -96,24 +96,51 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [Annotation](docs/Annotation.md)
+ - [ApiV1OrganizationsIdWorkspaceStoragesGet200Response](docs/ApiV1OrganizationsIdWorkspaceStoragesGet200Response.md)
+ - [BuildArtifact](docs/BuildArtifact.md)
+ - [BuildArtifactSyncInfo](docs/BuildArtifactSyncInfo.md)
  - [Cluster](docs/Cluster.md)
+ - [Condition](docs/Condition.md)
  - [Error](docs/Error.md)
  - [ErrorAllOf](docs/ErrorAllOf.md)
  - [ErrorList](docs/ErrorList.md)
+ - [Label](docs/Label.md)
  - [List](docs/List.md)
+ - [LocalSource](docs/LocalSource.md)
  - [LoginRequest](docs/LoginRequest.md)
  - [LoginResponse](docs/LoginResponse.md)
  - [ObjectReference](docs/ObjectReference.md)
+ - [SSHConfig](docs/SSHConfig.md)
  - [User](docs/User.md)
  - [UserCreateRequest](docs/UserCreateRequest.md)
+ - [Volume](docs/Volume.md)
+ - [VolumeSource](docs/VolumeSource.md)
+ - [VolumeSourceTypes](docs/VolumeSourceTypes.md)
+ - [VolumeStatus](docs/VolumeStatus.md)
  - [WorkspaceProvisionRequest](docs/WorkspaceProvisionRequest.md)
  - [WorkspaceProvisionRequestState](docs/WorkspaceProvisionRequestState.md)
  - [WorkspaceProvisionRequestStatus](docs/WorkspaceProvisionRequestStatus.md)
+ - [WorkspaceStorage](docs/WorkspaceStorage.md)
+ - [WorkspaceStorageState](docs/WorkspaceStorageState.md)
+ - [WorkspaceStorageStatus](docs/WorkspaceStorageStatus.md)
+ - [WorkspaceVolumeSpec](docs/WorkspaceVolumeSpec.md)
 
 
 ## Documentation For Authorization
 
- Endpoints do not require authorization.
+
+
+### Bearer
+
+- **Type**: HTTP Bearer token authentication
+
+Example
+
+```golang
+auth := context.WithValue(context.Background(), sw.ContextAccessToken, "BEARER_TOKEN_STRING")
+r, err := client.Service.Operation(auth, args)
+```
 
 
 ## Documentation for Utility Methods

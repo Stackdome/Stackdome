@@ -27,14 +27,14 @@ type UserCreateRequest struct {
 	// User's organisation
 	Organisation *string `json:"organisation,omitempty"`
 	// OrganisationID
-	OrganisationId int32 `json:"organisation_id"`
+	OrganisationId string `json:"organisation_id"`
 }
 
 // NewUserCreateRequest instantiates a new UserCreateRequest object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewUserCreateRequest(name string, email string, password string, organisationId int32) *UserCreateRequest {
+func NewUserCreateRequest(name string, email string, password string, organisationId string) *UserCreateRequest {
 	this := UserCreateRequest{}
 	this.Name = name
 	this.Email = email
@@ -188,9 +188,9 @@ func (o *UserCreateRequest) SetOrganisation(v string) {
 }
 
 // GetOrganisationId returns the OrganisationId field value
-func (o *UserCreateRequest) GetOrganisationId() int32 {
+func (o *UserCreateRequest) GetOrganisationId() string {
 	if o == nil {
-		var ret int32
+		var ret string
 		return ret
 	}
 
@@ -199,7 +199,7 @@ func (o *UserCreateRequest) GetOrganisationId() int32 {
 
 // GetOrganisationIdOk returns a tuple with the OrganisationId field value
 // and a boolean to check if the value has been set.
-func (o *UserCreateRequest) GetOrganisationIdOk() (*int32, bool) {
+func (o *UserCreateRequest) GetOrganisationIdOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -207,7 +207,7 @@ func (o *UserCreateRequest) GetOrganisationIdOk() (*int32, bool) {
 }
 
 // SetOrganisationId sets field value
-func (o *UserCreateRequest) SetOrganisationId(v int32) {
+func (o *UserCreateRequest) SetOrganisationId(v string) {
 	o.OrganisationId = v
 }
 

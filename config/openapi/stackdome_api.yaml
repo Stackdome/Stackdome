@@ -237,115 +237,188 @@ paths:
           description: WorkspaceProvisionRequest not found
         '500':
           description: Internal server error
-  /api/v1/clusters:
+  /api/v1/organizations/{id}/workspace-storages:
     post:
-      summary: Create a new cluster
+      summary: Create a new WorkspaceStorage object
       security:
-        - Bearer: []
+      - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Cluster'
+              $ref: '#/components/schemas/WorkspaceStorage'
       responses:
         '201':
-          description: Cluster added successfully
+          description: WorkspaceStorage created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Cluster'
+                $ref: '#/components/schemas/WorkspaceStorage'
         '400':
           description: Invalid request payload
         '401':
           description: Unauthorized
+        '403':
+          description: Forbidden
         '500':
           description: Internal server error
-
     get:
-      summary: Get all clusters
-      security:
-        - Bearer: []
-      responses:
-        '200':
-          description: List of clusters
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Cluster'
-        '401':
-          description: Unauthorized
-        '500':
-          description: Internal server error
-
-  /api/v1/clusters/{id}:
-    get:
-      summary: Get a cluster by ID
+      summary: List all WorkspaceStorage objects for an organization
       security:
         - Bearer: []
       parameters:
-        - $ref: '#/components/parameters/id'
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: workspaceName
+          schema:
+            type: string
+        - in: query
+          name: state
+          schema:
+            type: string
+            enum: [Pending, Creating, Created, Failed]
       responses:
         '200':
-          description: Cluster details
+          description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Cluster'
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkspaceStorage'
+                  total:
+                    type: integer
         '401':
           description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+
+  /api/v1/organizations/{org_id}/workspace-storages/{id}:
+    get:
+      summary: Get a specific WorkspaceStorage object
+      security:
+        - Bearer: []
+      parameters:
+        - in: path
+          name: org_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceStorage'
         '404':
-          description: Cluster not found
+          description: WorkspaceStorage not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
         '500':
           description: Internal server error
-
     put:
-      summary: Update a cluster
+      summary: Update a WorkspaceStorage object
       security:
         - Bearer: []
       parameters:
-        - $ref: '#/components/parameters/id'
+        - in: path
+          name: org_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Cluster'
+              $ref: '#/components/schemas/WorkspaceStorage'
       responses:
         '200':
-          description: Cluster updated successfully
+          description: WorkspaceStorage updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Cluster'
+                $ref: '#/components/schemas/WorkspaceStorage'
         '400':
           description: Invalid request payload
+        '404':
+          description: WorkspaceStorage not found
         '401':
           description: Unauthorized
-        '404':
-          description: Cluster not found
+        '403':
+          description: Forbidden
         '500':
           description: Internal server error
-
+    
     delete:
-      summary: Delete a cluster
+      summary: Delete a WorkspaceStorage object
       security:
         - Bearer: []
       parameters:
-        - $ref: '#/components/parameters/id'
+        - in: path
+          name: org_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
       responses:
         '204':
-          description: Cluster deleted successfully
+          description: WorkspaceStorage deleted successfully
+        '404':
+          description: WorkspaceStorage not found
         '401':
           description: Unauthorized
-        '404':
-          description: Cluster not found
+        '403':
+          description: Forbidden
         '500':
           description: Internal server error
 
+
 components:
+  securitySchemes:
+    Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   parameters:
     id:
       name: id
@@ -378,7 +451,7 @@ components:
           type: string
           description: User's role
         organisation_id:
-          type: integer
+          type: string
           description: OrganisationID
     UserCreateRequest:
       type: object
@@ -405,7 +478,7 @@ components:
           type: string
           description: User's organisation
         organisation_id:
-          type: integer
+          type: string
           description: OrganisationID
     LoginRequest:
       type: object
@@ -438,7 +511,7 @@ components:
         user_id:
           type: string
         org_id:
-          type: integer
+          type: string
         ssh_public_key:
           type: string
         status:
@@ -500,6 +573,233 @@ components:
         client_cert_data:
           type: string
         client_key_data:
+          type: string
+    WorkspaceStorage:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - namespace
+        - ssh_config
+        - volumes
+      properties:
+        id:
+          type: string
+          readOnly: true
+        organisation_id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+        namespace:
+          type: string
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+        annotations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Annotation'
+        ssh_config:
+          $ref: '#/components/schemas/SSHConfig'
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Volume'
+        status:
+          $ref: '#/components/schemas/WorkspaceStorageStatus'
+          readOnly: true
+        state:
+          $ref: '#/components/schemas/WorkspaceStorageState'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+
+    WorkspaceStorageState:
+      type: string
+      enum:
+      - StoragePending
+      - StorageCreating
+      - StorageCreated
+      - StorageReady
+      - StorageFailed
+    Volume:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - spec
+      properties:
+        id: 
+          type: string
+          readOnly: true
+        name:
+          type: string
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+        annotations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Annotation'
+        spec:
+          $ref: '#/components/schemas/WorkspaceVolumeSpec'
+        status:
+          $ref: '#/components/schemas/VolumeStatus'
+          readOnly: true
+
+    SSHConfig:
+      type: object
+      additionalProperties: false
+      required:
+        - public_key
+      properties:
+        public_key:
+          type: string
+          description: The SSH public key in OpenSSH format
+    
+    WorkspaceVolumeSpec:
+          type: object
+          required:
+            - size
+          additionalProperties: false
+          properties:
+            size:
+              type: string
+            storage_class:
+              type: string
+            sync_before_use:
+              type: boolean
+            source:
+              $ref: '#/components/schemas/VolumeSource'
+    VolumeSource:
+      type: object
+      required:
+        - source_type
+      additionalProperties: false
+      properties:
+        source_type:
+          $ref: '#/components/schemas/VolumeSourceTypes'
+        local_source:
+          $ref: '#/components/schemas/LocalSource'
+        build_source:
+          type: array
+          items:
+            $ref: '#/components/schemas/BuildArtifact'
+
+    VolumeSourceTypes:
+      type: string
+      enum:
+      - Local
+      - BuildArtifact
+
+    LocalSource:
+      type: object
+      required:
+        - path
+        - sync
+      properties:
+        path:
+          type: string
+        sync:
+          type: boolean
+
+    BuildArtifact:
+      type: object
+      required:
+        - resource_ref
+        - source_path
+        - destination_path
+      properties:
+        resource_ref:
+          type: string
+        source_path:
+          type: string
+        destination_path:
+          type: string
+
+    WorkspaceStorageStatus:
+      type: object
+      properties:
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Condition'
+        phase:
+          type: string
+        storage_server_service_name:
+          type: string
+
+    VolumeStatus:
+      type: object
+      properties:
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Condition'
+        phase:
+          type: string
+        build_artifact_syncs:
+          type: array
+          items:
+            $ref: '#/components/schemas/BuildArtifactSyncInfo'
+
+    BuildArtifactSyncInfo:
+      type: object
+      properties:
+        resource_name:
+          type: string
+        build_id:
+          type: string
+        status:
+          type: string
+
+    Condition:
+      type: object
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+        status:
+          type: string
+        observed_generation:
+          type: integer
+        last_transition_time:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        message:
+          type: string
+    Label:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - value
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+    
+    Annotation:
+      type: object
+      required:
+        - key
+        - value
+      properties:
+        key:
+          type: string
+        value:
           type: string
     Error:
       allOf:
