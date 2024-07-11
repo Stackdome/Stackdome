@@ -11,7 +11,7 @@ const (
 type Organisation struct {
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
-	ID         int `gorm:"primary_key;autoIncrement"`
+	ID         string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 	Name       string
 	DomainName string // TLD + SLD. Ex: example.test
 	Default    bool

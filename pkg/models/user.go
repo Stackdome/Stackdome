@@ -22,7 +22,7 @@ type User struct {
 	Password       string
 	Organisation   string
 	Role           Role
-	OrganisationID int
+	OrganisationID string
 }
 
 func (u *User) GetInternalID() int {

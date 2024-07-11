@@ -8,7 +8,9 @@ import (
 )
 
 func Migrate(g2 *gorm.DB) {
-	m := gormigrate.New(g2, gormigrate.DefaultOptions, migrations.MigrationList)
+	options := gormigrate.DefaultOptions
+	options.UseTransaction = true
+	m := gormigrate.New(g2, options, migrations.MigrationList)
 	if err := m.Migrate(); err != nil {
 		glog.Fatalf("Could not migrate: %v", err)
 	}

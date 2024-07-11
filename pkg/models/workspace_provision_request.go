@@ -23,7 +23,7 @@ type WorkspaceProvisionRequestStatus struct {
 type WorkspaceProvisionRequest struct {
 	ID             string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 	UserID         string
-	OrganisationID int
+	OrganisationID string
 	SshPublicKey   string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time

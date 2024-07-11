@@ -46,13 +46,13 @@ func (d dbClusterStore) Get(ctx context.Context, id string) (*models.Cluster, *e
 	return &res, nil
 }
 
-func (d dbClusterStore) GetClusterForOrg(ctx context.Context, orgID int) (*models.Cluster, *errors.ServiceError) {
+func (d dbClusterStore) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var res models.Cluster
 	err := grm.Model(&models.Cluster{}).Where("organisation_id = ?", orgID).First(&res).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errors.NotFound("cluster for organisation '%d' not found", orgID)
+			return nil, errors.NotFound("cluster for organisation '%s' not found", orgID)
 		}
 		return nil, errors.GeneralError("failed to fetch cluster: %s", err.Error())
 	}

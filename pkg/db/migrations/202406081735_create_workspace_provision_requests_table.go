@@ -21,7 +21,7 @@ func createWorkspaceProvisionRequestTables() *gormigrate.Migration {
 	type WorkspaceProvisionRequest struct {
 		ID             string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 		UserID         string
-		OrganisationID int
+		OrganisationID string
 		SshPublicKey   string
 		State          string
 		Message        string

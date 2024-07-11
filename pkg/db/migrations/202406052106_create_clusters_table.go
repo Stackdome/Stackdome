@@ -10,7 +10,7 @@ import (
 func createClustersTable() *gormigrate.Migration {
 	type Cluster struct {
 		ID             string `gorm:"primary_key;default:gen_random_uuid()"`
-		OrganisationID int    `gorm:"unique;not null"`
+		OrganisationID string
 		Name           string `gorm:"not null;check:name <> ''"`
 		CreatedAt      time.Time
 		UpdatedAt      time.Time
