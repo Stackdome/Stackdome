@@ -40,4 +40,5 @@ type Services struct {
 	WorkspaceProvisionRequestService services.WorkspaceProvisionRequestService
 	OrganisationService              services.OrganisationService
 	ClusterService                   services.ClusterService
+	WorkspaceStorageService          services.WorkspaceStorageService
 }

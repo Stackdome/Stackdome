@@ -12,7 +12,7 @@ func PresentUser(in *models.User) openapi.User {
 	res.SetId(in.ID)
 	res.SetName(in.Name)
 	res.SetRole(string(in.Role))
-	res.SetOrganisationId(int32(in.OrganisationID))
+	res.SetOrganisationId(in.OrganisationID)
 	return res
 }
 
@@ -22,7 +22,7 @@ func ConvertUser(in *openapi.UserCreateRequest) *models.User {
 		Email:          in.Email,
 		Organisation:   in.GetOrganisation(),
 		Password:       in.GetPassword(),
-		OrganisationID: int(in.GetOrganisationId()),
+		OrganisationID: in.GetOrganisationId(),
 	}
 	return res
 }

@@ -14,8 +14,8 @@ import (
 type OrganisationService interface {
 	GetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
-	Get(ctx context.Context, ID int) (*models.Organisation, *errors.ServiceError)
-	Delete(ctx context.Context, ID int) *errors.ServiceError
+	Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError)
+	Delete(ctx context.Context, ID string) *errors.ServiceError
 }
 
 type organisationService struct {
@@ -55,7 +55,7 @@ func (s *organisationService) Create(ctx context.Context, spec *models.Organisat
 	return org, nil
 }
 
-func (s *organisationService) Get(ctx context.Context, ID int) (*models.Organisation, *errors.ServiceError) {
+func (s *organisationService) Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError) {
 	org, err := s.organisationStore.Get(ctx, ID)
 	if err != nil {
 		s.logger.Errorf("failed to get organisation: %v", err)
@@ -64,7 +64,7 @@ func (s *organisationService) Get(ctx context.Context, ID int) (*models.Organisa
 	return org, nil
 }
 
-func (s *organisationService) Delete(ctx context.Context, ID int) *errors.ServiceError {
+func (s *organisationService) Delete(ctx context.Context, ID string) *errors.ServiceError {
 	err := s.organisationStore.Delete(ctx, ID)
 	if err != nil {
 		s.logger.Errorf("failed to delete organisation: %v", err)

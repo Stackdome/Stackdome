@@ -12,7 +12,7 @@ import (
 )
 
 type ClusterService interface {
-	GetClusterForOrg(ctx context.Context, orgID int) (*models.Cluster, *errors.ServiceError)
+	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
 	GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 }
@@ -36,7 +36,7 @@ type ClusterServiceSpec struct {
 	Logger         logger.Logger
 }
 
-func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID int) (*models.Cluster, *errors.ServiceError) {
+func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
 	cluster, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
 	if err != nil {
 		s.logger.Errorf("failed to get cluster for org: %v", err)

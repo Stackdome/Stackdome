@@ -9,7 +9,7 @@ func PresentWorkspaceProvisionRequest(in *models.WorkspaceProvisionRequest) open
 	res := openapi.WorkspaceProvisionRequest{}
 	res.SetCreatedAt(in.CreatedAt)
 	res.SetUpdatedAt(in.UpdatedAt)
-	res.SetOrgId(int32(in.OrganisationID))
+	res.SetOrgId(in.OrganisationID)
 	res.SetId(in.ID)
 	res.SetUserId(in.UserID)
 	res.SetSshPublicKey(in.SshPublicKey)

@@ -82,7 +82,7 @@ type ServerConfig struct {
 func NewServerConfig() *ServerConfig {
 	return &ServerConfig{
 		Hostname:    "",
-		BindAddress: "localhost:8000",
+		BindAddress: "0.0.0.0:8000",
 	}
 }
 

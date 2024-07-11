@@ -21,12 +21,16 @@ func (s apiServer) routes() *mux.Router {
 		WorkspaceProvisionRequestService: services.WorkspaceProvisionRequestService,
 	})
 
+	storageHandler := handlers.NewWorkspaceStorageHandler(handlers.WorkspaceStorageHandlerSpec{
+		WorkspaceStorageService: services.WorkspaceStorageService,
+	})
+
 	authenticationMiddleware := auth.NewAuthMiddleware(services.UserService)
 
 	apiV1Router := mainRouter.PathPrefix("/api/v1").Subrouter()
 	userRouter := apiV1Router.PathPrefix("/users").Subrouter()
 	userRouter.HandleFunc("", userHandler.Create).Methods(http.MethodPost)
-
+	organizationsRouter := apiV1Router.PathPrefix("/organizations").Subrouter()
 	authenticatedUserRouter := userRouter.NewRoute().Subrouter()
 	authenticatedUserRouter.Use(authenticationMiddleware.AuthenticateUser)
 	authenticatedUserRouter.HandleFunc("/me", userHandler.GetCurrentUser).Methods(http.MethodGet)
@@ -42,5 +46,13 @@ func (s apiServer) routes() *mux.Router {
 	workspaceProvisionRequestRouter.HandleFunc("/{id}", wprHandler.Get).Methods(http.MethodGet)
 	workspaceProvisionRequestRouter.HandleFunc("/{id}", wprHandler.Update).Methods(http.MethodPut)
 	workspaceProvisionRequestRouter.HandleFunc("/{id}", wprHandler.Delete).Methods(http.MethodDelete)
+
+	workspaceStorageRouter := organizationsRouter.PathPrefix("/{org_id}/workspace-storages").Subrouter()
+	workspaceStorageRouter.Use(authenticationMiddleware.AuthenticateUser)
+	workspaceStorageRouter.HandleFunc("", storageHandler.Create).Methods(http.MethodPost)
+	workspaceStorageRouter.HandleFunc("/current", storageHandler.ListByUser).Methods(http.MethodGet)
+	workspaceStorageRouter.HandleFunc("/{id}", storageHandler.GetByID).Methods(http.MethodGet)
+	workspaceStorageRouter.HandleFunc("/{id}", storageHandler.Update).Methods(http.MethodPut)
+	workspaceStorageRouter.HandleFunc("/{id}", storageHandler.Delete).Methods(http.MethodDelete)
 	return mainRouter
 }

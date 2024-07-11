@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	workspacev1alpha1 "soradev.io/cluster-agent/api/v1alpha1"
 )
@@ -52,10 +53,11 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 	logger := logger.NewLogger(ctx)
 	d.DBSession = db.NewSessionFactory(d.Config.Database)
 
-	if err := d.initializeDefaultOrgAndCluster(ctx); err != nil {
+	if err := d.initializeClients(ctx); err != nil {
 		return err
 	}
-	if err := d.initializeClients(ctx); err != nil {
+
+	if err := d.initializeDefaultOrgAndCluster(ctx); err != nil {
 		return err
 	}
 
@@ -101,6 +103,11 @@ func initializeClusterClient(cfg *config.ClusterConfig) (client.Client, error) {
 		return nil, err
 	}
 	token, err := base64.StdEncoding.DecodeString(cfg.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = certutil.NewPoolFromBytes(cadata)
 	if err != nil {
 		return nil, err
 	}
@@ -210,13 +217,16 @@ func (d *developmentEnvironment) loadSevices(logger logger.Logger) Services {
 			SessionFactory: d.DBSession,
 			Logger:         logger,
 		}),
+		WorkspaceStorageService: services.NewWorkspaceStorageService(services.WorkspaceStorageServiceSpec{
+			SessionFactory: d.DBSession,
+			Logger:         logger,
+		}),
 	}
 }
 
 func (d *developmentEnvironment) defaultFlags() map[string]string {
 	return map[string]string{
 		"v":                      "10",
-		"api-server-hostname":    "localhost",
-		"api-server-bindaddress": "localhost:8000",
+		"api-server-bindaddress": "0.0.0.0:8000",
 	}
 }

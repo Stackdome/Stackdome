@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/cmd/environment"
+	"github.com/ashishmax31/stackdome-api-server/config/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/golang/glog"
 )
@@ -35,6 +36,10 @@ func NewAPIServer(env environment.EnvImpl) Server {
 	s := &apiServer{environment: env}
 
 	mainRouter := s.routes()
+
+	openapi, err := NewOpenAPIMiddleWare(openapi.OpenAPISpec)
+	check(err, "Unable to create openapi spec middleware")
+	mainRouter.Use(openapi.Middleware)
 
 	// referring to the router as type http.Handler allows us to add middleware via more handlers
 	var mainHandler http.Handler = mainRouter
@@ -73,7 +78,6 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 // Useful for breaking up ListenAndServer (Start) when you require the server to be listening before continuing
 func (s apiServer) Serve(listener net.Listener) {
 	var err error
-
 	glog.Infof("Serving without TLS at %s", s.env().Environment().Config.Server.BindAddress)
 	err = s.httpServer.Serve(listener)
 
