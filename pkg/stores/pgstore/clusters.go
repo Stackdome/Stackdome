@@ -33,6 +33,18 @@ func (d dbClusterStore) Create(ctx context.Context, cluster *models.Cluster) (*m
 	return d.Get(ctx, cluster.ID)
 }
 
+func (d dbClusterStore) PersistManagerState(ctx context.Context, id string, running bool) *errors.ServiceError {
+	grm := d.sessionFactory.New(ctx)
+	err := grm.Model(&models.Cluster{}).Where("id = ?", id).Update("manager_running", running).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.NotFound("cluster with id '%s' not found", id)
+		}
+		return errors.GeneralError("failed to update cluster: %s", err.Error())
+	}
+	return nil
+}
+
 func (d dbClusterStore) Get(ctx context.Context, id string) (*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var res models.Cluster

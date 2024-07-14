@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+const (
+	WorkspaceStorageIDLabel = "workspacestorage.stackdome.io/id"
+	WorkspaceVolumeIDLabel  = "workspacevolume.stackdome.io/id"
+)
+
 type WorkspaceStorageState string
 
 const (
@@ -33,6 +38,14 @@ type WorkspaceStorage struct {
 	DeletionTimeStamp *time.Time              `json:"deletion_timestamp"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+}
+
+func (w *WorkspaceStorage) SetState(state WorkspaceStorageState) bool {
+	if w.State == state {
+		return false
+	}
+	w.State = state
+	return true
 }
 
 type SSHConfig struct {
@@ -81,10 +94,11 @@ func (b *BuildArtifactSources) Scan(value interface{}) error {
 }
 
 type VolumeStatus struct {
-	ObservedGeneration int64                   `json:"observed_generation"`
-	Conditions         []Condition             `json:"conditions"`
-	Phase              string                  `json:"phase"`
-	BuildArtifactSyncs []BuildArtifactSyncInfo `json:"build_artifact_syncs,omitempty"`
+	ObservedGeneration     int64                   `json:"observed_generation"`
+	Conditions             []Condition             `json:"conditions"`
+	Phase                  string                  `json:"phase"`
+	BuildArtifactSyncs     []BuildArtifactSyncInfo `json:"build_artifact_syncs,omitempty"`
+	LastObservedStatusHash string                  `json:"last_observed_status_hash,omitempty"`
 }
 
 func (v VolumeStatus) Value() (driver.Value, error) {
@@ -133,6 +147,7 @@ type WorkspaceStorageStatus struct {
 	Conditions               []Condition `json:"conditions"`
 	Phase                    string      `json:"phase"`
 	StorageServerServiceName string      `json:"storage_server_service_name"`
+	LastObservedStatusHash   string      `json:"last_observed_status_hash,omitempty"`
 }
 
 func (s WorkspaceStorageStatus) Value() (driver.Value, error) {

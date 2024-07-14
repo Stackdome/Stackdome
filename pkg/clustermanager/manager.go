@@ -21,6 +21,7 @@ import (
 	workspacev1alpha1 "soradev.io/cluster-agent/api/v1alpha1"
 )
 
+// ClusterManager defines the interface for managing clusters
 type ClusterManager interface {
 	RegisterCluster(cluster *models.Cluster) error
 	GetClient(clusterID string) (client.Client, error)
@@ -28,70 +29,106 @@ type ClusterManager interface {
 	UnregisterCluster(clusterID string) error
 	Start(ctx context.Context)
 	Stop(ctx context.Context) error
-	Running() bool
-	IsManagerForClusterRunning(clusterID string) (bool, error)
+	IsRunning() bool
 }
 
+// Controller defines the interface for controllers that can be added to a manager
 type Controller interface {
 	AddToManager(manager ctrl.Manager) error
 }
 
-type DBClusterStateAccessor interface {
-	IsManagerForClusterRunning(ctx context.Context, clusterID string) (bool, error)
-	PersistManagerState(ctx context.Context, clusterID string, running bool) error
+// ClusterControl represents a control structure for a single cluster
+type ClusterControl struct {
+	cluster     *models.Cluster
+	clusterID   string
+	client      client.Client
+	serviceID   suture.ServiceToken
+	controllers []Controller
 }
 
-type clusterCtrl struct {
-	clusterStateAccessor DBClusterStateAccessor
-	cluster              *models.Cluster
-	clusterID            string
-	manager              ctrl.Manager
-	client               client.Client
-	serviceID            suture.ServiceToken
-}
-
-type clusterManager struct {
-	sync.RWMutex
+// ClusterManagerImpl implements the ClusterManager interface
+type ClusterManagerImpl struct {
+	mu                    sync.RWMutex
 	supervisor            *suture.Supervisor
-	dbStateAccessor       DBClusterStateAccessor
 	leadershipFlag        *leadership.Flag
-	registeredClusters    map[string]*clusterCtrl
+	registeredClusters    map[string]*ClusterControl
 	controllersToRegister []Controller
 	supervisorCancelFn    context.CancelFunc
-	supervisiorErr        error
-	supervisiorRunning    bool
+	supervisorErr         error
+	isRunning             bool
 }
 
-func (c *clusterCtrl) Serve(ctx context.Context) error {
-	c.clusterStateAccessor.PersistManagerState(ctx, c.clusterID, true)
-	err := c.manager.Start(ctx)
-	c.clusterStateAccessor.PersistManagerState(ctx, c.clusterID, false)
-	return err
+func (cc *ClusterControl) Serve(ctx context.Context) error {
+	mgr, err := cc.createManager()
+	if err != nil {
+		return err
+	}
+	if err := mgr.Start(ctx); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (c *clusterCtrl) String() string {
-	return fmt.Sprintf("clusterCtrl for cluster %s", c.clusterID)
+func (cc *ClusterControl) createManager() (ctrl.Manager, error) {
+	restConfig, err := createRestConfig(cc.cluster)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create rest config: %w", err)
+	}
+
+	scheme, err := createScheme()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create scheme: %w", err)
+	}
+
+	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
+		Scheme:         scheme,
+		Metrics:        metricsserver.Options{BindAddress: "0"},
+		LeaderElection: false,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create manager: %w", err)
+	}
+	if err := cc.registerControllers(mgr); err != nil {
+		return nil, fmt.Errorf("failed to register controllers: %w", err)
+	}
+	return mgr, nil
 }
 
-type ClusterManagerSpec struct {
-	LeadershipFlag       *leadership.Flag
-	ClusterStateAccessor DBClusterStateAccessor
+func (cc *ClusterControl) registerControllers(manager ctrl.Manager) error {
+	for _, controller := range cc.controllers {
+		if err := controller.AddToManager(manager); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func NewClusterManager(spec ClusterManagerSpec) ClusterManager {
-	return &clusterManager{
-		dbStateAccessor:    spec.ClusterStateAccessor,
-		leadershipFlag:     spec.LeadershipFlag,
-		registeredClusters: make(map[string]*clusterCtrl),
-		supervisor:         suture.NewSimple("cluster-manager"),
+func (cc *ClusterControl) String() string {
+	return fmt.Sprintf("supervisor for cluster %s", cc.clusterID)
+}
+
+// ClusterManagerConfig holds configuration for creating a new ClusterManager
+type ClusterManagerConfig struct {
+	LeadershipFlag        *leadership.Flag
+	ControllersToRegister []Controller
+}
+
+// NewClusterManager creates a new ClusterManager instance
+func NewClusterManager(config ClusterManagerConfig) ClusterManager {
+	return &ClusterManagerImpl{
+		leadershipFlag:        config.LeadershipFlag,
+		controllersToRegister: config.ControllersToRegister,
+		registeredClusters:    make(map[string]*ClusterControl),
+		supervisor:            suture.NewSimple("cluster-manager"),
 	}
 }
 
-func (cm *clusterManager) RegisterCluster(cluster *models.Cluster) error {
-	cm.Lock()
-	defer cm.Unlock()
+// RegisterCluster registers a new cluster with the manager
+func (cm *ClusterManagerImpl) RegisterCluster(cluster *models.Cluster) error {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
 
-	if _, ok := cm.registeredClusters[cluster.ID]; ok {
+	if _, exists := cm.registeredClusters[cluster.ID]; exists {
 		return nil
 	}
 
@@ -99,34 +136,22 @@ func (cm *clusterManager) RegisterCluster(cluster *models.Cluster) error {
 	if err != nil {
 		return fmt.Errorf("failed to create rest config for cluster %s: %w", cluster.ID, err)
 	}
+
 	scheme, err := createScheme()
 	if err != nil {
 		return fmt.Errorf("failed to create scheme for cluster %s: %w", cluster.ID, err)
 	}
+
 	client, err := createUncachedClient(restConfig, scheme)
 	if err != nil {
 		return fmt.Errorf("failed to create client for cluster %s: %w", cluster.ID, err)
 	}
 
-	manager, err := ctrl.NewManager(restConfig, ctrl.Options{
-		Scheme:         scheme,
-		Metrics:        metricsserver.Options{BindAddress: "0"},
-		LeaderElection: false,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create manager for cluster %s: %w", cluster.ID, err)
-	}
-
-	if err := cm.registerControllers(manager); err != nil {
-		return fmt.Errorf("failed to register controllers for cluster %s: %w", cluster.ID, err)
-	}
-
-	clusterCtrl := &clusterCtrl{
-		clusterStateAccessor: cm.dbStateAccessor,
-		cluster:              cluster,
-		clusterID:            cluster.ID,
-		client:               client,
-		manager:              manager,
+	clusterCtrl := &ClusterControl{
+		cluster:     cluster,
+		clusterID:   cluster.ID,
+		client:      client,
+		controllers: cm.controllersToRegister,
 	}
 
 	serviceID := cm.supervisor.Add(clusterCtrl)
@@ -135,9 +160,10 @@ func (cm *clusterManager) RegisterCluster(cluster *models.Cluster) error {
 	return nil
 }
 
-func (cm *clusterManager) GetClient(clusterID string) (client.Client, error) {
-	cm.RLock()
-	defer cm.RUnlock()
+// GetClient retrieves the client for a given cluster
+func (cm *ClusterManagerImpl) GetClient(clusterID string) (client.Client, error) {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
 
 	clusterCtrl, ok := cm.registeredClusters[clusterID]
 	if !ok {
@@ -146,32 +172,19 @@ func (cm *clusterManager) GetClient(clusterID string) (client.Client, error) {
 	return clusterCtrl.client, nil
 }
 
-func (cm *clusterManager) IsClusterRegistered(clusterID string) bool {
-	cm.RLock()
-	defer cm.RUnlock()
+// IsClusterRegistered checks if a cluster is registered
+func (cm *ClusterManagerImpl) IsClusterRegistered(clusterID string) bool {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
 
 	_, ok := cm.registeredClusters[clusterID]
 	return ok
 }
 
-func (cm *clusterManager) IsManagerForClusterRunning(clusterID string) (bool, error) {
-	cm.RLock()
-	defer cm.RUnlock()
-
-	_, ok := cm.registeredClusters[clusterID]
-	if !ok {
-		return false, nil
-	}
-	running, err := cm.dbStateAccessor.IsManagerForClusterRunning(context.Background(), clusterID)
-	if err != nil {
-		return false, fmt.Errorf("failed to get manager state for cluster %s: %w", clusterID, err)
-	}
-	return running, nil
-}
-
-func (cm *clusterManager) UnregisterCluster(clusterID string) error {
-	cm.Lock()
-	defer cm.Unlock()
+// UnregisterCluster removes a cluster from the manager
+func (cm *ClusterManagerImpl) UnregisterCluster(clusterID string) error {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
 
 	clusterCtrl, ok := cm.registeredClusters[clusterID]
 	if !ok {
@@ -185,87 +198,83 @@ func (cm *clusterManager) UnregisterCluster(clusterID string) error {
 	return nil
 }
 
-func (cm *clusterManager) Start(ctx context.Context) {
-	go cm.start(ctx)
+// Start begins the cluster manager operations
+func (cm *ClusterManagerImpl) Start(ctx context.Context) {
+	go cm.run(ctx)
 }
 
-func (cm *clusterManager) start(ctx context.Context) error {
-	wait.PollUntilContextCancel(ctx, time.Second*30, true, func(ctx context.Context) (bool, error) {
+func (cm *ClusterManagerImpl) run(ctx context.Context) {
+	if err := wait.PollUntilContextCancel(ctx, 30*time.Second, true, func(ctx context.Context) (bool, error) {
 		return cm.leadershipFlag.Raised(), nil
-	})
+	}); err != nil {
+		cm.supervisorErr = fmt.Errorf("leadership poll failed: %w", err)
+		return
+	}
+
 	childCtx, cancelFn := context.WithCancel(ctx)
 	cm.supervisorCancelFn = cancelFn
-	cm.supervisiorRunning = true
-	defer func() {
-		cm.supervisiorRunning = false
+	cm.isRunning = true
+	defer func() { cm.isRunning = false }()
+	// Cancel the context when the parent context is done
+	go func() {
+		<-ctx.Done()
+		cancelFn()
 	}()
 	if err := cm.supervisor.Serve(childCtx); err != nil {
-		cm.supervisiorErr = err
+		cm.supervisorErr = err
 	}
-	return cm.supervisiorErr
 }
 
-func (cm *clusterManager) Stop(ctx context.Context) error {
-	cm.supervisorCancelFn()
-	return nil
-}
-
-func (cm *clusterManager) Running() bool {
-	return cm.supervisiorRunning
-}
-
-func (cm *clusterManager) registerControllers(manager ctrl.Manager) error {
-	for _, controller := range cm.controllersToRegister {
-		if err := controller.AddToManager(manager); err != nil {
-			return err
-		}
+// Stop halts the cluster manager operations
+func (cm *ClusterManagerImpl) Stop(ctx context.Context) error {
+	if cm.supervisorCancelFn != nil {
+		cm.supervisorCancelFn()
 	}
 	return nil
+}
+
+// IsRunning checks if the cluster manager is currently running
+func (cm *ClusterManagerImpl) IsRunning() bool {
+	return cm.isRunning
 }
 
 func createRestConfig(cluster *models.Cluster) (*rest.Config, error) {
 	cadata, err := base64.StdEncoding.DecodeString(cluster.ClusterCAData)
 	if err != nil {
-		return nil, err
-	}
-	token, err := base64.StdEncoding.DecodeString(cluster.Token)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode cluster CA data: %w", err)
 	}
 
-	_, err = certutil.NewPoolFromBytes(cadata)
+	token, err := base64.StdEncoding.DecodeString(cluster.Token)
 	if err != nil {
+		return nil, fmt.Errorf("failed to decode cluster token: %w", err)
+	}
+
+	if _, err := certutil.NewPoolFromBytes(cadata); err != nil {
 		return nil, fmt.Errorf("failed to parse cluster CA data: %w", err)
 	}
 
-	restConfig := &rest.Config{
+	return &rest.Config{
 		Host:        cluster.ClusterURL,
 		BearerToken: string(token),
 		TLSClientConfig: rest.TLSClientConfig{
 			CAData: cadata,
 		},
-	}
-	return restConfig, nil
+	}, nil
 }
 
 func createScheme() (*runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to add client-go scheme: %w", err)
 	}
 
 	if err := workspacev1alpha1.AddToScheme(scheme); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to add workspace v1alpha1 scheme: %w", err)
 	}
+
 	return scheme, nil
 }
 
 func createUncachedClient(restConfig *rest.Config, scheme *runtime.Scheme) (client.Client, error) {
-	clientset, err := client.New(restConfig, client.Options{
-		Scheme: scheme,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return clientset, nil
+	return client.New(restConfig, client.Options{Scheme: scheme})
 }

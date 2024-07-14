@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-gormigrate/gormigrate/v2"
@@ -42,35 +43,34 @@ func createWorkspaceStorageAndVolumeTables() *gormigrate.Migration {
 		ID: "202407101703",
 		Migrate: func(tx *gorm.DB) error {
 			if err := tx.Migrator().AutoMigrate(&WorkspaceStorage{}, &Volume{}); err != nil {
-				return err
+				return fmt.Errorf("error running workspace storage and volume migration 202407101703: %w", err)
 			}
 
 			if err := tx.Exec("ALTER TABLE volumes ADD FOREIGN KEY (workspace_storage_id) REFERENCES workspace_storages(id) ON DELETE CASCADE").Error; err != nil {
-				return err
+				return fmt.Errorf("error adding foreign key to volumes table 202407101703: %w", err)
 			}
 
 			if err := tx.Exec("CREATE INDEX IF NOT EXISTS idx_workspace_storage_organisation_id ON workspace_storages(organisation_id)").Error; err != nil {
-				return err
+				return fmt.Errorf("error creating index on workspace_storages table 202407101703: %w", err)
 			}
 			if err := tx.Exec("CREATE INDEX IF NOT EXISTS idx_volume_workspace_storage_id ON volumes(workspace_storage_id)").Error; err != nil {
-				return err
+				return fmt.Errorf("error creating index on volumes table 202407101703: %w", err)
 			}
 			if err := tx.Exec(`ALTER TABLE workspace_storages ADD FOREIGN KEY (user_id) REFERENCES users(id)`).Error; err != nil {
-				return err
+				return fmt.Errorf("error adding foreign key to workspace_storages table 202407101703: %w", err)
 			}
 
 			// Add foreign key for organisations
 			if err := tx.Exec(`ALTER TABLE workspace_storages ADD FOREIGN KEY (organisation_id) REFERENCES organisations(id)`).Error; err != nil {
-				return err
+				return fmt.Errorf("error adding foreign key to workspace_storages table 202407101703: %w", err)
 			}
 
-			if err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_workspace_storages_user_id ON workspace_storages(user_id)
-			`).Error; err != nil {
-				return err
+			if err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_workspace_storages_user_id ON workspace_storages(user_id)`).Error; err != nil {
+				return fmt.Errorf("error creating index on workspace_storages table 202407101703: %w", err)
 			}
 
 			if err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_workspace_storages_organisation_id ON workspace_storages(organisation_id)`).Error; err != nil {
-				return err
+				return fmt.Errorf("error creating index on workspace_storages table 202407101703: %w", err)
 			}
 
 			return nil

@@ -7,4 +7,5 @@ var MigrationList = []*gormigrate.Migration{
 	createClustersTable(),
 	createWorkspaceProvisionRequestTables(),
 	createWorkspaceStorageAndVolumeTables(),
+	addManagerRunningColumnToCluster(),
 }

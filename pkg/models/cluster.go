@@ -14,4 +14,5 @@ type Cluster struct {
 	ClusterURL     string `gorm:"not null;check:cluster_url <> ''"`
 	ClusterCAData  string `gorm:"not null;check:cluster_ca_data <> ''"`
 	Token          string `gorm:"not null;check:token <> ''"`
+	ManagerRunning bool
 }

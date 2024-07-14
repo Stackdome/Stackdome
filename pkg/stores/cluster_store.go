@@ -12,5 +12,6 @@ type ClusterStore interface {
 	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
 	GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
+	PersistManagerState(ctx context.Context, ID string, running bool) *errors.ServiceError
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 }

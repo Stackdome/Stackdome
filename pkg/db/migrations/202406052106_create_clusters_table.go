@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-gormigrate/gormigrate/v2"
@@ -24,10 +25,10 @@ func createClustersTable() *gormigrate.Migration {
 		ID: "202406052106",
 		Migrate: func(tx *gorm.DB) error {
 			if err := tx.Migrator().AutoMigrate(&Cluster{}); err != nil {
-				return err
+				return fmt.Errorf("error running cluster migration 202406052106: %w", err)
 			}
 			if err := tx.Exec(`ALTER TABLE clusters ADD FOREIGN KEY (organisation_id) REFERENCES organisations(id) ON DELETE CASCADE;`).Error; err != nil {
-				return err
+				return fmt.Errorf("error adding foreign key to clusters table 202406052106: %w", err)
 			}
 			return nil
 		},

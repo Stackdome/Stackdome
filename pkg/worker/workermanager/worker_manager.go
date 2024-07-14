@@ -135,7 +135,7 @@ func (s *serviceWorkerManager) populateWorkerQueue(ctx context.Context, worker w
 	worker.Logger().Infof("populating queue once for worker: %s", worker.Name())
 	operandList, err := worker.GetInput(ctx)
 	if err != nil {
-		worker.Logger().Error(fmt.Sprintf("failed to populate queue for worker: %v", err))
+		worker.Logger().Errorf("failed to populate queue for worker: %v", err)
 		return
 	}
 	for _, operand := range operandList {
@@ -152,7 +152,7 @@ func (s *serviceWorkerManager) processNextWorkItemForWorker(ctx context.Context,
 	defer worker.WorkQueue().Done(operand)
 	switch {
 	case err != nil:
-		worker.Logger().Error(fmt.Sprintf("reconcile error: %v", err))
+		worker.Logger().Errorf("reconcile error: %v", err)
 		if worker.WorkQueue().NumRequeues(operand) <= MaxOperandRequeue {
 			worker.WorkQueue().AddRateLimited(operand)
 		}
@@ -182,7 +182,7 @@ func (s *serviceWorkerManager) startPeriodicWorkEnqueue(ctx context.Context,
 		case <-ticker.C:
 			operandList, err := s.getWorkerInput(ctx, worker)
 			if err != nil {
-				worker.Logger().Error(fmt.Sprintf("failed to perform periodic reconcile: %v", err))
+				worker.Logger().Errorf("failed to perform periodic reconcile: %v", err)
 				continue
 			}
 			for _, operand := range operandList {

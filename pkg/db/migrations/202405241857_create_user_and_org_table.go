@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-gormigrate/gormigrate/v2"
@@ -34,14 +35,14 @@ func createUserAndOrganisationTable() *gormigrate.Migration {
 		ID: "202405241857",
 		Migrate: func(tx *gorm.DB) error {
 			if err := tx.Migrator().AutoMigrate(&User{}); err != nil {
-				return err
+				return fmt.Errorf("error running user migration 202405241857: %w", err)
 			}
 			if err := tx.Migrator().AutoMigrate(&Organisation{}); err != nil {
-				return err
+				return fmt.Errorf("error running organisation migration 202405241857: %w", err)
 			}
 
 			if err := tx.Exec(`ALTER TABLE users ADD FOREIGN KEY (organisation_id) REFERENCES organisations(id) ON DELETE CASCADE;`).Error; err != nil {
-				return err
+				return fmt.Errorf("error adding foreign key to users table 202405241857: %w", err)
 			}
 			return nil
 		},

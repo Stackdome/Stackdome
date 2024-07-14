@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ashishmax31/stackdome-api-server/config"
+	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
@@ -19,12 +20,13 @@ type EnvImpl interface {
 }
 
 type Env struct {
-	Name          string
-	Services      Services
-	DBSession     db.SessionFactory
-	Config        *config.ApplicationConfig
-	Clients       Clients
-	WorkerManager workermanager.WorkerManager
+	Name           string
+	Services       Services
+	DBSession      db.SessionFactory
+	Config         *config.ApplicationConfig
+	Clients        Clients
+	WorkerManager  workermanager.WorkerManager
+	ClusterManager clustermanager.ClusterManager
 }
 
 type Clients struct {
@@ -41,4 +43,5 @@ type Services struct {
 	OrganisationService              services.OrganisationService
 	ClusterService                   services.ClusterService
 	WorkspaceStorageService          services.WorkspaceStorageService
+	WorkspaceVolumeService           services.VolumeService
 }

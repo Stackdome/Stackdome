@@ -114,12 +114,12 @@ func (v *volumeStore) Create(ctx context.Context, spec *models.Volume) (*models.
 	if err := v.sessionFactory.New(ctx).Create(&spec).Error; err != nil {
 		return nil, errors.GeneralError("failed to create volume: %s", err.Error())
 	}
-	return v.GetByID(ctx, spec.ID)
+	return v.GetByID(ctx, spec.ID, spec.WorkspaceStorageID)
 }
 
-func (v *volumeStore) GetByID(ctx context.Context, id string) (*models.Volume, *errors.ServiceError) {
+func (v *volumeStore) GetByID(ctx context.Context, id string, workspaceStorageID string) (*models.Volume, *errors.ServiceError) {
 	var res models.Volume
-	if err := v.sessionFactory.New(ctx).Where("id = ?", id).First(&res).Error; err != nil {
+	if err := v.sessionFactory.New(ctx).Where("id = ? AND workspace_storage_id = ?", id, workspaceStorageID).First(&res).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NotFound("volume with id '%s' not found", id)
 		}
@@ -128,22 +128,15 @@ func (v *volumeStore) GetByID(ctx context.Context, id string) (*models.Volume, *
 	return &res, nil
 }
 
-func (v *volumeStore) Update(ctx context.Context, id string, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	if err := v.sessionFactory.New(ctx).Model(&models.Volume{}).Where("id = ?", id).Updates(spec).Error; err != nil {
+func (v *volumeStore) Update(ctx context.Context, id string, workspaceStorageID string, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
+	if err := v.sessionFactory.New(ctx).Model(&models.Volume{}).Where("id = ? AND workspace_storage_id = ?", id, workspaceStorageID).Updates(spec).Error; err != nil {
 		return nil, errors.GeneralError("failed to update volume: %s", err.Error())
 	}
-	return v.GetByID(ctx, id)
+	return v.GetByID(ctx, id, workspaceStorageID)
 }
 
-func (v *volumeStore) UpsertStatus(ctx context.Context, id string, status *models.VolumeStatus) (*models.Volume, *errors.ServiceError) {
-	if err := v.sessionFactory.New(ctx).Model(&models.Volume{}).Where("id = ?", id).Update("volume_status", status).Error; err != nil {
-		return nil, errors.GeneralError("failed to update volume status: %s", err.Error())
-	}
-	return v.GetByID(ctx, id)
-}
-
-func (v *volumeStore) Delete(ctx context.Context, id string) *errors.ServiceError {
-	if err := v.sessionFactory.New(ctx).Delete(&models.Volume{}, "id = ?", id).Error; err != nil {
+func (v *volumeStore) Delete(ctx context.Context, id string, workspaceStorageID string) *errors.ServiceError {
+	if err := v.sessionFactory.New(ctx).Delete(&models.Volume{}, "id = ? AND workspace_storage_id = ?", id, workspaceStorageID).Error; err != nil {
 		return errors.GeneralError("failed to delete volume: %s", err.Error())
 	}
 	return nil
@@ -153,14 +146,6 @@ func (v *volumeStore) GetByWorkspaceStorageID(ctx context.Context, workspaceStor
 	var res []*models.Volume
 	if err := v.sessionFactory.New(ctx).Where("workspace_storage_id = ?", workspaceStorageID).Find(&res).Error; err != nil {
 		return nil, errors.GeneralError("failed to fetch volumes for workspace storage: %s", err.Error())
-	}
-	return res, nil
-}
-
-func (v *volumeStore) ListByIDs(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError) {
-	var res []*models.Volume
-	if err := v.sessionFactory.New(ctx).Where("id IN ?", ids).Find(&res).Error; err != nil {
-		return nil, errors.GeneralError("failed to list volumes by IDs: %s", err.Error())
 	}
 	return res, nil
 }

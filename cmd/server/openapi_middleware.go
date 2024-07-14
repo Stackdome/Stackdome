@@ -84,7 +84,7 @@ func handleError(ctx context.Context, w http.ResponseWriter, code errors.Service
 	if err.HttpCode >= 400 && err.HttpCode <= 499 {
 		log.Infof(err.Error())
 	} else {
-		log.Error(err.Error())
+		log.Errorf(err.Error())
 	}
 
 	writeJSONResponse(w, err.HttpCode, err.AsOpenapiError())

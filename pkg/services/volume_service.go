@@ -12,11 +12,10 @@ import (
 )
 
 type VolumeService interface {
-	Get(ctx context.Context, ID string) (*models.Volume, *errors.ServiceError)
+	Get(ctx context.Context, ID string, workspaceStorageID string) (*models.Volume, *errors.ServiceError)
 	GetByWorkspaceStorageID(ctx context.Context, workspaceStorageID string) ([]*models.Volume, *errors.ServiceError)
-	UpdateStatus(ctx context.Context, ID string, status *models.VolumeStatus) (*models.Volume, *errors.ServiceError)
-	Delete(ctx context.Context, ID string) *errors.ServiceError
-	ListByIDs(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError)
+	Update(ctx context.Context, ID string, workspaceStorageID string, spec *models.Volume) (*models.Volume, *errors.ServiceError)
+	Delete(ctx context.Context, ID string, workspaceStorageID string) *errors.ServiceError
 }
 
 type VolumeServiceSpec struct {
@@ -38,8 +37,8 @@ type volumeService struct {
 	logger      logger.Logger
 }
 
-func (s *volumeService) Get(ctx context.Context, ID string) (*models.Volume, *errors.ServiceError) {
-	volume, err := s.volumeStore.GetByID(ctx, ID)
+func (s *volumeService) Get(ctx context.Context, ID string, wsID string) (*models.Volume, *errors.ServiceError) {
+	volume, err := s.volumeStore.GetByID(ctx, ID, wsID)
 	if err != nil {
 		s.logger.Errorf("failed to get volume: %v", err)
 		return nil, err
@@ -65,8 +64,8 @@ func (s *volumeService) Create(ctx context.Context, spec *models.Volume) (*model
 	return volume, nil
 }
 
-func (s *volumeService) Update(ctx context.Context, ID string, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	volume, err := s.volumeStore.Update(ctx, ID, spec)
+func (s *volumeService) Update(ctx context.Context, ID string, workspaceStorageID string, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
+	volume, err := s.volumeStore.Update(ctx, ID, workspaceStorageID, spec)
 	if err != nil {
 		s.logger.Errorf("failed to update volume: %v", err)
 		return nil, err
@@ -74,29 +73,11 @@ func (s *volumeService) Update(ctx context.Context, ID string, spec *models.Volu
 	return volume, nil
 }
 
-func (s *volumeService) UpdateStatus(ctx context.Context, ID string, status *models.VolumeStatus) (*models.Volume, *errors.ServiceError) {
-	volume, err := s.volumeStore.UpsertStatus(ctx, ID, status)
-	if err != nil {
-		s.logger.Errorf("failed to update volume status: %v", err)
-		return nil, err
-	}
-	return volume, nil
-}
-
-func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceError {
-	err := s.volumeStore.Delete(ctx, ID)
+func (s *volumeService) Delete(ctx context.Context, ID string, workspaceStorageID string) *errors.ServiceError {
+	err := s.volumeStore.Delete(ctx, ID, workspaceStorageID)
 	if err != nil {
 		s.logger.Errorf("failed to delete volume: %v", err)
 		return err
 	}
 	return nil
-}
-
-func (s *volumeService) ListByIDs(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError) {
-	volumes, err := s.volumeStore.ListByIDs(ctx, ids)
-	if err != nil {
-		s.logger.Errorf("failed to list volumes by IDs: %v", err)
-		return nil, err
-	}
-	return volumes, nil
 }

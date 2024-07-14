@@ -6,6 +6,9 @@ import (
 	"fmt"
 
 	"github.com/ashishmax31/stackdome-api-server/config"
+	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
+	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspacestorage"
+	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspacevolume"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -14,6 +17,9 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
 	wprworker "github.com/ashishmax31/stackdome-api-server/pkg/workers/workspaceprovisionrequests"
+	"github.com/google/uuid"
+
+	"github.com/openshift-online/ocm-sdk-go/leadership"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -57,8 +63,15 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 		return err
 	}
 
-	if err := d.initializeDefaultOrgAndCluster(ctx); err != nil {
-		return err
+	uuid := uuid.New().String()
+
+	leadershipFlag, err := leadership.NewFlag().
+		Process(uuid).
+		Name("stackdome-api-server").
+		Handle(d.DBSession.DirectDB()).
+		Logger(logger).Build(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create leadership flag: %w", err)
 	}
 
 	d.WorkerManager = workermanager.NewWorkerManager(workermanager.WorkerManagerSpec{
@@ -67,8 +80,31 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 
 	d.Services = d.loadSevices(logger)
 
+	d.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
+		LeadershipFlag: leadershipFlag,
+		ControllersToRegister: []clustermanager.Controller{
+			workspacestorage.NewWorskspaceStorageReconciler(workspacestorage.WorskspaceStorageReconcilerSpec{
+				Log:                     logger,
+				WorkspaceStorageService: d.Services.WorkspaceStorageService,
+				VolumeService:           d.Services.WorkspaceVolumeService,
+				Env:                     d.Env.Name,
+			}),
+			workspacevolume.NewWorkspaceVolumeReconciler(workspacevolume.WorkspaceVolumeReconcilerSpec{
+				Log:                     logger,
+				WorkspaceStorageService: d.Services.WorkspaceStorageService,
+				VolumeService:           d.Services.WorkspaceVolumeService,
+				Env:                     d.Env.Name,
+			}),
+		},
+	})
+
 	d.createAndRegisterWorkers()
 	if err := d.WorkerManager.Start(ctx); err != nil {
+		return err
+	}
+	d.ClusterManager.Start(ctx)
+
+	if err := d.initializeDefaultOrgAndCluster(ctx); err != nil {
 		return err
 	}
 	return nil
@@ -184,7 +220,13 @@ func (d *developmentEnvironment) initializeDefaultOrgAndCluster(ctx context.Cont
 		}
 	}
 
-	return nil
+	// Temporary:
+	cluster, err := clusterStore.GetDefaultCluster(ctx)
+	if err != nil {
+		return err
+	}
+
+	return d.ClusterManager.RegisterCluster(cluster)
 }
 
 func (d *developmentEnvironment) InitDatabase(ctx context.Context) error {

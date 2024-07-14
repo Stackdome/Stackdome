@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Condition struct {
@@ -51,4 +53,19 @@ func (a *Annotations) Scan(value interface{}) error {
 		return errors.New("type assertion to []byte for Annotations failed")
 	}
 	return json.Unmarshal(v, &a)
+}
+
+func ConvertConditions(k8sconditions []metav1.Condition) []Condition {
+	conditions := make([]Condition, len(k8sconditions))
+	for i := range conditions {
+		conditions[i] = Condition{
+			Type:               k8sconditions[i].Type,
+			Status:             string(k8sconditions[i].Status),
+			ObservedGeneration: int32(k8sconditions[i].ObservedGeneration),
+			LastTransitionTime: k8sconditions[i].LastTransitionTime.Time,
+			Reason:             k8sconditions[i].Reason,
+			Message:            k8sconditions[i].Message,
+		}
+	}
+	return conditions
 }

@@ -31,7 +31,6 @@ type WorskspaceStorageReconciler struct {
 }
 
 type WorskspaceStorageReconcilerSpec struct {
-	Client                  client.Client
 	Log                     logger.Logger
 	WorkspaceStorageService services.WorkspaceStorageService
 	VolumeService           services.VolumeService
@@ -40,7 +39,6 @@ type WorskspaceStorageReconcilerSpec struct {
 
 func NewWorskspaceStorageReconciler(spec WorskspaceStorageReconcilerSpec) *WorskspaceStorageReconciler {
 	return &WorskspaceStorageReconciler{
-		Client:                  spec.Client,
 		Log:                     spec.Log,
 		WorkspaceStorageService: spec.WorkspaceStorageService,
 		VolumeService:           spec.VolumeService,
@@ -49,6 +47,7 @@ func NewWorskspaceStorageReconciler(spec WorskspaceStorageReconcilerSpec) *Worsk
 }
 
 func (w *WorskspaceStorageReconciler) AddToManager(manager manager.Manager) error {
+	w.Client = manager.GetClient()
 	controller, err := controller.New("workspace-storage-controller", manager, controller.Options{
 		Reconciler: w,
 	})

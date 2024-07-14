@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-gormigrate/gormigrate/v2"
@@ -34,7 +35,7 @@ func createWorkspaceProvisionRequestTables() *gormigrate.Migration {
 		ID: "202406081735",
 		Migrate: func(tx *gorm.DB) error {
 			if err := tx.Migrator().AutoMigrate(&WorkspaceProvisionRequest{}, &WorkspaceProvisionRequestStatus{}); err != nil {
-				return err
+				return fmt.Errorf("error running workspace provision request migration 202406081735: %w", err)
 			}
 			return nil
 		},
