@@ -8,15 +8,15 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/config"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspacestorage"
+	workspaceusercontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceuser"
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspacevolume"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
+	"github.com/ashishmax31/stackdome-api-server/pkg/services/clusterresource"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
-	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
-	wprworker "github.com/ashishmax31/stackdome-api-server/pkg/workers/workspaceprovisionrequests"
 	"github.com/google/uuid"
 
 	"github.com/openshift-online/ocm-sdk-go/leadership"
@@ -64,7 +64,6 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 	}
 
 	uuid := uuid.New().String()
-
 	leadershipFlag, err := leadership.NewFlag().
 		Process(uuid).
 		Name("stackdome-api-server").
@@ -74,12 +73,7 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 		return fmt.Errorf("failed to create leadership flag: %w", err)
 	}
 
-	d.WorkerManager = workermanager.NewWorkerManager(workermanager.WorkerManagerSpec{
-		Environment: d.Env.Name,
-	})
-
 	d.Services = d.loadSevices(logger)
-
 	d.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
 		LeadershipFlag: leadershipFlag,
 		ControllersToRegister: []clustermanager.Controller{
@@ -95,31 +89,28 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 				VolumeService:           d.Services.WorkspaceVolumeService,
 				Env:                     d.Env.Name,
 			}),
+			workspaceusercontroller.NewWorkspaceUserReconciler(workspaceusercontroller.WorkspaceUserReconcilerSpec{
+				Log:                  logger,
+				WorkspaceUserService: d.Services.WorkspaceUserService,
+				ClusterService:       d.Services.ClusterService,
+				Env:                  d.Env.Name,
+			}),
 		},
 	})
 
-	d.createAndRegisterWorkers()
-	if err := d.WorkerManager.Start(ctx); err != nil {
-		return err
-	}
+	workspaceUserClusterResourceService := clusterresource.NewWorkspaceUserClusterResourceService(clusterresource.WorkspaceUserClusterResourceServiceSpec{
+		ClusterManager: d.ClusterManager,
+		Logger:         logger,
+		ClusterService: d.Services.ClusterService,
+		UserService:    d.Services.UserService,
+	})
+	d.Services.WorkspaceUserService.InjectClusterResourceService(workspaceUserClusterResourceService)
 	d.ClusterManager.Start(ctx)
 
 	if err := d.initializeDefaultOrgAndCluster(ctx); err != nil {
 		return err
 	}
 	return nil
-}
-
-func (d *developmentEnvironment) createAndRegisterWorkers() {
-	wprWorker := wprworker.NewWorkspaceProvisionRequestWorker(wprworker.WorkspaceProvisionRequestReconcileWorkerSpec{
-		ClusterClient:       d.Clients.DefaultClusterClient,
-		Env:                 d.Env.Name,
-		WPRService:          d.Services.WorkspaceProvisionRequestService,
-		UserService:         d.Services.UserService,
-		OrganisationService: d.Services.OrganisationService,
-		ClusterService:      d.Services.ClusterService,
-	})
-	d.WorkerManager.RegisterWorker(wprWorker, &models.WorkspaceProvisionRequest{})
 }
 
 func (d *developmentEnvironment) initializeClients(ctx context.Context) error {
@@ -245,12 +236,7 @@ func (d *developmentEnvironment) loadSevices(logger logger.Logger) Services {
 			Logger:         logger,
 			JwtSecretKey:   d.Config.Server.JwtSecret,
 		}),
-		WorkspaceProvisionRequestService: services.NewWorkspaceProvisionRequestService(services.WorkspaceProvisionRequestServiceSpec{
-			SessionFactory:        d.DBSession,
-			Logger:                logger,
-			ClusterClient:         d.Clients.DefaultClusterClient,
-			BackgroundJobEnqueuer: d.WorkerManager,
-		}),
+
 		OrganisationService: services.NewOrganisationService(services.OrganisationServiceSpec{
 			SessionFactory: d.DBSession,
 			Logger:         logger,
@@ -258,6 +244,19 @@ func (d *developmentEnvironment) loadSevices(logger logger.Logger) Services {
 		ClusterService: services.NewClusterService(services.ClusterServiceSpec{
 			SessionFactory: d.DBSession,
 			Logger:         logger,
+		}),
+		WorkspaceUserService: services.NewWorkspaceUserService(services.WorkspaceUserServiceSpec{
+			SessionFactory: d.DBSession,
+			Logger:         logger,
+			ClusterService: services.NewClusterService(services.ClusterServiceSpec{
+				SessionFactory: d.DBSession,
+				Logger:         logger,
+			}),
+			UserService: services.NewUserService(services.UserServiceSpec{
+				SessionFactory: d.DBSession,
+				Logger:         logger,
+				JwtSecretKey:   d.Config.Server.JwtSecret,
+			}),
 		}),
 		WorkspaceStorageService: services.NewWorkspaceStorageService(services.WorkspaceStorageServiceSpec{
 			SessionFactory: d.DBSession,

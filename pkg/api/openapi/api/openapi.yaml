@@ -141,21 +141,21 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: Internal server error
       summary: User login
-  /api/v1/workspace-provision-requests:
+  /api/v1/workspace-users:
     post:
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkspaceProvisionRequest'
+              $ref: '#/components/schemas/WorkspaceUser'
         required: true
       responses:
         "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceProvisionRequest'
-          description: WorkspaceProvisionRequest added successfully
+                $ref: '#/components/schemas/WorkspaceUser'
+          description: WorkspaceUser object added successfully
         "400":
           description: Invalid request payload
         "401":
@@ -164,30 +164,11 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Create a new workpace provision request object
-  /api/v1/workspace-provision-requests/current:
-    get:
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkspaceProvisionRequest'
-          description: WorkspaceProvisionRequest details
-        "401":
-          description: Unauthorized
-        "404":
-          description: WorkspaceProvisionRequest object not found
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Get the current users workspace provision request object.
-  /api/v1/workspace-provision-requests/{id}:
+      summary: Create a new workspace user object.
+  /api/v1/workspace-users/{id}:
     delete:
       parameters:
-      - description: The id of record
-        explode: false
+      - explode: false
         in: path
         name: id
         required: true
@@ -196,20 +177,19 @@ paths:
         style: simple
       responses:
         "204":
-          description: WorkspaceProvisionRequest deleted successfully
+          description: WorkspaceUser deleted successfully
         "401":
           description: Unauthorized
         "404":
-          description: WorkspaceProvisionRequest not found
+          description: WorkspaceUser not found
         "500":
           description: Internal server error
       security:
       - Bearer: []
-      summary: Delete a WorkspaceProvisionRequest
+      summary: Delete a WorkspaceUser
     get:
       parameters:
-      - description: The id of record
-        explode: false
+      - explode: false
         in: path
         name: id
         required: true
@@ -221,21 +201,20 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceProvisionRequest'
-          description: WorkspaceProvisionRequest details
+                $ref: '#/components/schemas/WorkspaceUser'
+          description: WorkspaceUser details
         "401":
           description: Unauthorized
         "404":
-          description: WorkspaceProvisionRequest object not found
+          description: WorkspaceUser object not found
         "500":
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a workspace provision request object by ID
+      summary: Get a workspace user object by ID
     put:
       parameters:
-      - description: The id of record
-        explode: false
+      - explode: false
         in: path
         name: id
         required: true
@@ -246,26 +225,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkspaceProvisionRequest'
+              $ref: '#/components/schemas/WorkspaceUser'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceProvisionRequest'
-          description: WorkspaceProvisionRequest updated successfully
+                $ref: '#/components/schemas/WorkspaceUser'
+          description: WorkspaceUser updated successfully
         "400":
           description: Invalid request payload
         "401":
           description: Unauthorized
         "404":
-          description: WorkspaceProvisionRequest not found
+          description: WorkspaceUser not found
         "500":
           description: Internal server error
       security:
       - Bearer: []
-      summary: Update a WorkspaceProvisionRequest
+      summary: Update a WorkspaceUser
   /api/v1/organizations/{id}/workspace-storages:
     get:
       parameters:
@@ -479,6 +458,15 @@ components:
       schema:
         type: string
       style: simple
+    orgid:
+      description: The id of organization
+      explode: false
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+      style: simple
   schemas:
     User:
       example:
@@ -575,7 +563,7 @@ components:
           description: Token expiration time in seconds
           type: integer
       type: object
-    WorkspaceProvisionRequest:
+    WorkspaceUser:
       example:
         ssh_public_key: ssh_public_key
         updated_at: 2000-01-23T04:56:07.000+00:00
@@ -583,15 +571,36 @@ components:
         org_id: org_id
         created_at: 2000-01-23T04:56:07.000+00:00
         id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        workspaces:
+        - workspaces
+        - workspaces
         state: null
         message: message
+        version: 0
         status:
-          workspace_namespace: workspace_namespace
+          service_account_name: service_account_name
           cluster_url: cluster_url
-          workspace_service_accountname: workspace_service_accountname
-          workspace_serviceaccount_token: workspace_serviceaccount_token
+          observed_version: 6
+          provisioned_namespaces:
+          - namespace: namespace
+            workspace_name: workspace_name
+          - namespace: namespace
+            workspace_name: workspace_name
           cluster_ca_cert: cluster_ca_cert
-          domain: domain
+          conditions:
+          - reason: reason
+            last_transition_time: 2000-01-23T04:56:07.000+00:00
+            type: type
+            message: message
+            observed_generation: 1
+            status: status
+          - reason: reason
+            last_transition_time: 2000-01-23T04:56:07.000+00:00
+            type: type
+            message: message
+            observed_generation: 1
+            status: status
+          serviceaccount_token: serviceaccount_token
       properties:
         id:
           format: uuid
@@ -602,10 +611,18 @@ components:
           type: string
         ssh_public_key:
           type: string
+        workspaces:
+          items:
+            type: string
+          minItems: 1
+          type: array
+        version:
+          readOnly: true
+          type: integer
         status:
-          $ref: '#/components/schemas/WorkspaceProvisionRequestStatus'
+          $ref: '#/components/schemas/WorkspaceUserStatus'
         state:
-          $ref: '#/components/schemas/WorkspaceProvisionRequestState'
+          $ref: '#/components/schemas/WorkspaceUserState'
         message:
           type: string
         created_at:
@@ -616,29 +633,50 @@ components:
           type: string
       required:
       - ssh_public_key
+      - workspaces
       type: object
-    WorkspaceProvisionRequestState:
+    WorkspaceUserState:
       enum:
       - Completed
       - Error
       - Pending
       type: string
-    WorkspaceProvisionRequestStatus:
+    WorkspaceUserStatus:
       example:
-        workspace_namespace: workspace_namespace
+        service_account_name: service_account_name
         cluster_url: cluster_url
-        workspace_service_accountname: workspace_service_accountname
-        workspace_serviceaccount_token: workspace_serviceaccount_token
+        observed_version: 6
+        provisioned_namespaces:
+        - namespace: namespace
+          workspace_name: workspace_name
+        - namespace: namespace
+          workspace_name: workspace_name
         cluster_ca_cert: cluster_ca_cert
-        domain: domain
+        conditions:
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 1
+          status: status
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 1
+          status: status
+        serviceaccount_token: serviceaccount_token
       properties:
-        workspace_namespace:
+        observed_version:
+          type: integer
+        provisioned_namespaces:
+          items:
+            $ref: '#/components/schemas/WorkspaceUserStatus_provisioned_namespaces_inner'
+          type: array
+        service_account_name:
           nullable: true
           type: string
-        workspace_service_accountname:
-          nullable: true
-          type: string
-        workspace_serviceaccount_token:
+        serviceaccount_token:
           nullable: true
           type: string
         cluster_ca_cert:
@@ -647,9 +685,10 @@ components:
         cluster_url:
           nullable: true
           type: string
-        domain:
-          nullable: true
-          type: string
+        conditions:
+          items:
+            $ref: '#/components/schemas/Condition'
+          type: array
       type: object
     Cluster:
       properties:
@@ -720,13 +759,13 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 0
+              observed_generation: 1
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 0
+              observed_generation: 1
               status: status
         - name: name
           annotations:
@@ -770,13 +809,13 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 0
+              observed_generation: 1
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 0
+              observed_generation: 1
               status: status
         annotations:
         - value: value
@@ -801,13 +840,13 @@ components:
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 0
+            observed_generation: 1
             status: status
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 0
+            observed_generation: 1
             status: status
       properties:
         id:
@@ -905,13 +944,13 @@ components:
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 0
+            observed_generation: 1
             status: status
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 0
+            observed_generation: 1
             status: status
       properties:
         id:
@@ -1046,13 +1085,13 @@ components:
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 0
+          observed_generation: 1
           status: status
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 0
+          observed_generation: 1
           status: status
       properties:
         conditions:
@@ -1079,13 +1118,13 @@ components:
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 0
+          observed_generation: 1
           status: status
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 0
+          observed_generation: 1
           status: status
       properties:
         conditions:
@@ -1119,7 +1158,7 @@ components:
         last_transition_time: 2000-01-23T04:56:07.000+00:00
         type: type
         message: message
-        observed_generation: 0
+        observed_generation: 1
         status: status
       properties:
         type:
@@ -1204,7 +1243,7 @@ components:
       type: object
     _api_v1_organizations__id__workspace_storages_get_200_response:
       example:
-        total: 6
+        total: 0
         items:
         - organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
@@ -1253,13 +1292,13 @@ components:
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 0
+                observed_generation: 1
                 status: status
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 0
+                observed_generation: 1
                 status: status
           - name: name
             annotations:
@@ -1303,13 +1342,13 @@ components:
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 0
+                observed_generation: 1
                 status: status
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 0
+                observed_generation: 1
                 status: status
           annotations:
           - value: value
@@ -1334,13 +1373,13 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 0
+              observed_generation: 1
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 0
+              observed_generation: 1
               status: status
         - organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
@@ -1389,13 +1428,13 @@ components:
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 0
+                observed_generation: 1
                 status: status
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 0
+                observed_generation: 1
                 status: status
           - name: name
             annotations:
@@ -1439,13 +1478,13 @@ components:
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 0
+                observed_generation: 1
                 status: status
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 0
+                observed_generation: 1
                 status: status
           annotations:
           - value: value
@@ -1470,13 +1509,13 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 0
+              observed_generation: 1
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 0
+              observed_generation: 1
               status: status
       properties:
         items:
@@ -1485,6 +1524,16 @@ components:
           type: array
         total:
           type: integer
+      type: object
+    WorkspaceUserStatus_provisioned_namespaces_inner:
+      example:
+        namespace: namespace
+        workspace_name: workspace_name
+      properties:
+        workspace_name:
+          type: string
+        namespace:
+          type: string
       type: object
     Error_allOf:
       properties:

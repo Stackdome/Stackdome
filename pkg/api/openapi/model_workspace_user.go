@@ -15,39 +15,42 @@ import (
 	"time"
 )
 
-// WorkspaceProvisionRequest struct for WorkspaceProvisionRequest
-type WorkspaceProvisionRequest struct {
-	Id           *string                          `json:"id,omitempty"`
-	UserId       *string                          `json:"user_id,omitempty"`
-	OrgId        *string                          `json:"org_id,omitempty"`
-	SshPublicKey string                           `json:"ssh_public_key"`
-	Status       *WorkspaceProvisionRequestStatus `json:"status,omitempty"`
-	State        *WorkspaceProvisionRequestState  `json:"state,omitempty"`
-	Message      *string                          `json:"message,omitempty"`
-	CreatedAt    *time.Time                       `json:"created_at,omitempty"`
-	UpdatedAt    *time.Time                       `json:"updated_at,omitempty"`
+// WorkspaceUser struct for WorkspaceUser
+type WorkspaceUser struct {
+	Id           *string              `json:"id,omitempty"`
+	UserId       *string              `json:"user_id,omitempty"`
+	OrgId        *string              `json:"org_id,omitempty"`
+	SshPublicKey string               `json:"ssh_public_key"`
+	Workspaces   []string             `json:"workspaces"`
+	Version      *int32               `json:"version,omitempty"`
+	Status       *WorkspaceUserStatus `json:"status,omitempty"`
+	State        *WorkspaceUserState  `json:"state,omitempty"`
+	Message      *string              `json:"message,omitempty"`
+	CreatedAt    *time.Time           `json:"created_at,omitempty"`
+	UpdatedAt    *time.Time           `json:"updated_at,omitempty"`
 }
 
-// NewWorkspaceProvisionRequest instantiates a new WorkspaceProvisionRequest object
+// NewWorkspaceUser instantiates a new WorkspaceUser object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewWorkspaceProvisionRequest(sshPublicKey string) *WorkspaceProvisionRequest {
-	this := WorkspaceProvisionRequest{}
+func NewWorkspaceUser(sshPublicKey string, workspaces []string) *WorkspaceUser {
+	this := WorkspaceUser{}
 	this.SshPublicKey = sshPublicKey
+	this.Workspaces = workspaces
 	return &this
 }
 
-// NewWorkspaceProvisionRequestWithDefaults instantiates a new WorkspaceProvisionRequest object
+// NewWorkspaceUserWithDefaults instantiates a new WorkspaceUser object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewWorkspaceProvisionRequestWithDefaults() *WorkspaceProvisionRequest {
-	this := WorkspaceProvisionRequest{}
+func NewWorkspaceUserWithDefaults() *WorkspaceUser {
+	this := WorkspaceUser{}
 	return &this
 }
 
 // GetId returns the Id field value if set, zero value otherwise.
-func (o *WorkspaceProvisionRequest) GetId() string {
+func (o *WorkspaceUser) GetId() string {
 	if o == nil || o.Id == nil {
 		var ret string
 		return ret
@@ -57,7 +60,7 @@ func (o *WorkspaceProvisionRequest) GetId() string {
 
 // GetIdOk returns a tuple with the Id field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *WorkspaceProvisionRequest) GetIdOk() (*string, bool) {
+func (o *WorkspaceUser) GetIdOk() (*string, bool) {
 	if o == nil || o.Id == nil {
 		return nil, false
 	}
@@ -65,7 +68,7 @@ func (o *WorkspaceProvisionRequest) GetIdOk() (*string, bool) {
 }
 
 // HasId returns a boolean if a field has been set.
-func (o *WorkspaceProvisionRequest) HasId() bool {
+func (o *WorkspaceUser) HasId() bool {
 	if o != nil && o.Id != nil {
 		return true
 	}
@@ -74,12 +77,12 @@ func (o *WorkspaceProvisionRequest) HasId() bool {
 }
 
 // SetId gets a reference to the given string and assigns it to the Id field.
-func (o *WorkspaceProvisionRequest) SetId(v string) {
+func (o *WorkspaceUser) SetId(v string) {
 	o.Id = &v
 }
 
 // GetUserId returns the UserId field value if set, zero value otherwise.
-func (o *WorkspaceProvisionRequest) GetUserId() string {
+func (o *WorkspaceUser) GetUserId() string {
 	if o == nil || o.UserId == nil {
 		var ret string
 		return ret
@@ -89,7 +92,7 @@ func (o *WorkspaceProvisionRequest) GetUserId() string {
 
 // GetUserIdOk returns a tuple with the UserId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *WorkspaceProvisionRequest) GetUserIdOk() (*string, bool) {
+func (o *WorkspaceUser) GetUserIdOk() (*string, bool) {
 	if o == nil || o.UserId == nil {
 		return nil, false
 	}
@@ -97,7 +100,7 @@ func (o *WorkspaceProvisionRequest) GetUserIdOk() (*string, bool) {
 }
 
 // HasUserId returns a boolean if a field has been set.
-func (o *WorkspaceProvisionRequest) HasUserId() bool {
+func (o *WorkspaceUser) HasUserId() bool {
 	if o != nil && o.UserId != nil {
 		return true
 	}
@@ -106,12 +109,12 @@ func (o *WorkspaceProvisionRequest) HasUserId() bool {
 }
 
 // SetUserId gets a reference to the given string and assigns it to the UserId field.
-func (o *WorkspaceProvisionRequest) SetUserId(v string) {
+func (o *WorkspaceUser) SetUserId(v string) {
 	o.UserId = &v
 }
 
 // GetOrgId returns the OrgId field value if set, zero value otherwise.
-func (o *WorkspaceProvisionRequest) GetOrgId() string {
+func (o *WorkspaceUser) GetOrgId() string {
 	if o == nil || o.OrgId == nil {
 		var ret string
 		return ret
@@ -121,7 +124,7 @@ func (o *WorkspaceProvisionRequest) GetOrgId() string {
 
 // GetOrgIdOk returns a tuple with the OrgId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *WorkspaceProvisionRequest) GetOrgIdOk() (*string, bool) {
+func (o *WorkspaceUser) GetOrgIdOk() (*string, bool) {
 	if o == nil || o.OrgId == nil {
 		return nil, false
 	}
@@ -129,7 +132,7 @@ func (o *WorkspaceProvisionRequest) GetOrgIdOk() (*string, bool) {
 }
 
 // HasOrgId returns a boolean if a field has been set.
-func (o *WorkspaceProvisionRequest) HasOrgId() bool {
+func (o *WorkspaceUser) HasOrgId() bool {
 	if o != nil && o.OrgId != nil {
 		return true
 	}
@@ -138,12 +141,12 @@ func (o *WorkspaceProvisionRequest) HasOrgId() bool {
 }
 
 // SetOrgId gets a reference to the given string and assigns it to the OrgId field.
-func (o *WorkspaceProvisionRequest) SetOrgId(v string) {
+func (o *WorkspaceUser) SetOrgId(v string) {
 	o.OrgId = &v
 }
 
 // GetSshPublicKey returns the SshPublicKey field value
-func (o *WorkspaceProvisionRequest) GetSshPublicKey() string {
+func (o *WorkspaceUser) GetSshPublicKey() string {
 	if o == nil {
 		var ret string
 		return ret
@@ -154,7 +157,7 @@ func (o *WorkspaceProvisionRequest) GetSshPublicKey() string {
 
 // GetSshPublicKeyOk returns a tuple with the SshPublicKey field value
 // and a boolean to check if the value has been set.
-func (o *WorkspaceProvisionRequest) GetSshPublicKeyOk() (*string, bool) {
+func (o *WorkspaceUser) GetSshPublicKeyOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -162,14 +165,70 @@ func (o *WorkspaceProvisionRequest) GetSshPublicKeyOk() (*string, bool) {
 }
 
 // SetSshPublicKey sets field value
-func (o *WorkspaceProvisionRequest) SetSshPublicKey(v string) {
+func (o *WorkspaceUser) SetSshPublicKey(v string) {
 	o.SshPublicKey = v
 }
 
+// GetWorkspaces returns the Workspaces field value
+func (o *WorkspaceUser) GetWorkspaces() []string {
+	if o == nil {
+		var ret []string
+		return ret
+	}
+
+	return o.Workspaces
+}
+
+// GetWorkspacesOk returns a tuple with the Workspaces field value
+// and a boolean to check if the value has been set.
+func (o *WorkspaceUser) GetWorkspacesOk() ([]string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return o.Workspaces, true
+}
+
+// SetWorkspaces sets field value
+func (o *WorkspaceUser) SetWorkspaces(v []string) {
+	o.Workspaces = v
+}
+
+// GetVersion returns the Version field value if set, zero value otherwise.
+func (o *WorkspaceUser) GetVersion() int32 {
+	if o == nil || o.Version == nil {
+		var ret int32
+		return ret
+	}
+	return *o.Version
+}
+
+// GetVersionOk returns a tuple with the Version field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *WorkspaceUser) GetVersionOk() (*int32, bool) {
+	if o == nil || o.Version == nil {
+		return nil, false
+	}
+	return o.Version, true
+}
+
+// HasVersion returns a boolean if a field has been set.
+func (o *WorkspaceUser) HasVersion() bool {
+	if o != nil && o.Version != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetVersion gets a reference to the given int32 and assigns it to the Version field.
+func (o *WorkspaceUser) SetVersion(v int32) {
+	o.Version = &v
+}
+
 // GetStatus returns the Status field value if set, zero value otherwise.
-func (o *WorkspaceProvisionRequest) GetStatus() WorkspaceProvisionRequestStatus {
+func (o *WorkspaceUser) GetStatus() WorkspaceUserStatus {
 	if o == nil || o.Status == nil {
-		var ret WorkspaceProvisionRequestStatus
+		var ret WorkspaceUserStatus
 		return ret
 	}
 	return *o.Status
@@ -177,7 +236,7 @@ func (o *WorkspaceProvisionRequest) GetStatus() WorkspaceProvisionRequestStatus 
 
 // GetStatusOk returns a tuple with the Status field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *WorkspaceProvisionRequest) GetStatusOk() (*WorkspaceProvisionRequestStatus, bool) {
+func (o *WorkspaceUser) GetStatusOk() (*WorkspaceUserStatus, bool) {
 	if o == nil || o.Status == nil {
 		return nil, false
 	}
@@ -185,7 +244,7 @@ func (o *WorkspaceProvisionRequest) GetStatusOk() (*WorkspaceProvisionRequestSta
 }
 
 // HasStatus returns a boolean if a field has been set.
-func (o *WorkspaceProvisionRequest) HasStatus() bool {
+func (o *WorkspaceUser) HasStatus() bool {
 	if o != nil && o.Status != nil {
 		return true
 	}
@@ -193,15 +252,15 @@ func (o *WorkspaceProvisionRequest) HasStatus() bool {
 	return false
 }
 
-// SetStatus gets a reference to the given WorkspaceProvisionRequestStatus and assigns it to the Status field.
-func (o *WorkspaceProvisionRequest) SetStatus(v WorkspaceProvisionRequestStatus) {
+// SetStatus gets a reference to the given WorkspaceUserStatus and assigns it to the Status field.
+func (o *WorkspaceUser) SetStatus(v WorkspaceUserStatus) {
 	o.Status = &v
 }
 
 // GetState returns the State field value if set, zero value otherwise.
-func (o *WorkspaceProvisionRequest) GetState() WorkspaceProvisionRequestState {
+func (o *WorkspaceUser) GetState() WorkspaceUserState {
 	if o == nil || o.State == nil {
-		var ret WorkspaceProvisionRequestState
+		var ret WorkspaceUserState
 		return ret
 	}
 	return *o.State
@@ -209,7 +268,7 @@ func (o *WorkspaceProvisionRequest) GetState() WorkspaceProvisionRequestState {
 
 // GetStateOk returns a tuple with the State field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *WorkspaceProvisionRequest) GetStateOk() (*WorkspaceProvisionRequestState, bool) {
+func (o *WorkspaceUser) GetStateOk() (*WorkspaceUserState, bool) {
 	if o == nil || o.State == nil {
 		return nil, false
 	}
@@ -217,7 +276,7 @@ func (o *WorkspaceProvisionRequest) GetStateOk() (*WorkspaceProvisionRequestStat
 }
 
 // HasState returns a boolean if a field has been set.
-func (o *WorkspaceProvisionRequest) HasState() bool {
+func (o *WorkspaceUser) HasState() bool {
 	if o != nil && o.State != nil {
 		return true
 	}
@@ -225,13 +284,13 @@ func (o *WorkspaceProvisionRequest) HasState() bool {
 	return false
 }
 
-// SetState gets a reference to the given WorkspaceProvisionRequestState and assigns it to the State field.
-func (o *WorkspaceProvisionRequest) SetState(v WorkspaceProvisionRequestState) {
+// SetState gets a reference to the given WorkspaceUserState and assigns it to the State field.
+func (o *WorkspaceUser) SetState(v WorkspaceUserState) {
 	o.State = &v
 }
 
 // GetMessage returns the Message field value if set, zero value otherwise.
-func (o *WorkspaceProvisionRequest) GetMessage() string {
+func (o *WorkspaceUser) GetMessage() string {
 	if o == nil || o.Message == nil {
 		var ret string
 		return ret
@@ -241,7 +300,7 @@ func (o *WorkspaceProvisionRequest) GetMessage() string {
 
 // GetMessageOk returns a tuple with the Message field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *WorkspaceProvisionRequest) GetMessageOk() (*string, bool) {
+func (o *WorkspaceUser) GetMessageOk() (*string, bool) {
 	if o == nil || o.Message == nil {
 		return nil, false
 	}
@@ -249,7 +308,7 @@ func (o *WorkspaceProvisionRequest) GetMessageOk() (*string, bool) {
 }
 
 // HasMessage returns a boolean if a field has been set.
-func (o *WorkspaceProvisionRequest) HasMessage() bool {
+func (o *WorkspaceUser) HasMessage() bool {
 	if o != nil && o.Message != nil {
 		return true
 	}
@@ -258,12 +317,12 @@ func (o *WorkspaceProvisionRequest) HasMessage() bool {
 }
 
 // SetMessage gets a reference to the given string and assigns it to the Message field.
-func (o *WorkspaceProvisionRequest) SetMessage(v string) {
+func (o *WorkspaceUser) SetMessage(v string) {
 	o.Message = &v
 }
 
 // GetCreatedAt returns the CreatedAt field value if set, zero value otherwise.
-func (o *WorkspaceProvisionRequest) GetCreatedAt() time.Time {
+func (o *WorkspaceUser) GetCreatedAt() time.Time {
 	if o == nil || o.CreatedAt == nil {
 		var ret time.Time
 		return ret
@@ -273,7 +332,7 @@ func (o *WorkspaceProvisionRequest) GetCreatedAt() time.Time {
 
 // GetCreatedAtOk returns a tuple with the CreatedAt field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *WorkspaceProvisionRequest) GetCreatedAtOk() (*time.Time, bool) {
+func (o *WorkspaceUser) GetCreatedAtOk() (*time.Time, bool) {
 	if o == nil || o.CreatedAt == nil {
 		return nil, false
 	}
@@ -281,7 +340,7 @@ func (o *WorkspaceProvisionRequest) GetCreatedAtOk() (*time.Time, bool) {
 }
 
 // HasCreatedAt returns a boolean if a field has been set.
-func (o *WorkspaceProvisionRequest) HasCreatedAt() bool {
+func (o *WorkspaceUser) HasCreatedAt() bool {
 	if o != nil && o.CreatedAt != nil {
 		return true
 	}
@@ -290,12 +349,12 @@ func (o *WorkspaceProvisionRequest) HasCreatedAt() bool {
 }
 
 // SetCreatedAt gets a reference to the given time.Time and assigns it to the CreatedAt field.
-func (o *WorkspaceProvisionRequest) SetCreatedAt(v time.Time) {
+func (o *WorkspaceUser) SetCreatedAt(v time.Time) {
 	o.CreatedAt = &v
 }
 
 // GetUpdatedAt returns the UpdatedAt field value if set, zero value otherwise.
-func (o *WorkspaceProvisionRequest) GetUpdatedAt() time.Time {
+func (o *WorkspaceUser) GetUpdatedAt() time.Time {
 	if o == nil || o.UpdatedAt == nil {
 		var ret time.Time
 		return ret
@@ -305,7 +364,7 @@ func (o *WorkspaceProvisionRequest) GetUpdatedAt() time.Time {
 
 // GetUpdatedAtOk returns a tuple with the UpdatedAt field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *WorkspaceProvisionRequest) GetUpdatedAtOk() (*time.Time, bool) {
+func (o *WorkspaceUser) GetUpdatedAtOk() (*time.Time, bool) {
 	if o == nil || o.UpdatedAt == nil {
 		return nil, false
 	}
@@ -313,7 +372,7 @@ func (o *WorkspaceProvisionRequest) GetUpdatedAtOk() (*time.Time, bool) {
 }
 
 // HasUpdatedAt returns a boolean if a field has been set.
-func (o *WorkspaceProvisionRequest) HasUpdatedAt() bool {
+func (o *WorkspaceUser) HasUpdatedAt() bool {
 	if o != nil && o.UpdatedAt != nil {
 		return true
 	}
@@ -322,11 +381,11 @@ func (o *WorkspaceProvisionRequest) HasUpdatedAt() bool {
 }
 
 // SetUpdatedAt gets a reference to the given time.Time and assigns it to the UpdatedAt field.
-func (o *WorkspaceProvisionRequest) SetUpdatedAt(v time.Time) {
+func (o *WorkspaceUser) SetUpdatedAt(v time.Time) {
 	o.UpdatedAt = &v
 }
 
-func (o WorkspaceProvisionRequest) MarshalJSON() ([]byte, error) {
+func (o WorkspaceUser) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Id != nil {
 		toSerialize["id"] = o.Id
@@ -339,6 +398,12 @@ func (o WorkspaceProvisionRequest) MarshalJSON() ([]byte, error) {
 	}
 	if true {
 		toSerialize["ssh_public_key"] = o.SshPublicKey
+	}
+	if true {
+		toSerialize["workspaces"] = o.Workspaces
+	}
+	if o.Version != nil {
+		toSerialize["version"] = o.Version
 	}
 	if o.Status != nil {
 		toSerialize["status"] = o.Status
@@ -358,38 +423,38 @@ func (o WorkspaceProvisionRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toSerialize)
 }
 
-type NullableWorkspaceProvisionRequest struct {
-	value *WorkspaceProvisionRequest
+type NullableWorkspaceUser struct {
+	value *WorkspaceUser
 	isSet bool
 }
 
-func (v NullableWorkspaceProvisionRequest) Get() *WorkspaceProvisionRequest {
+func (v NullableWorkspaceUser) Get() *WorkspaceUser {
 	return v.value
 }
 
-func (v *NullableWorkspaceProvisionRequest) Set(val *WorkspaceProvisionRequest) {
+func (v *NullableWorkspaceUser) Set(val *WorkspaceUser) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableWorkspaceProvisionRequest) IsSet() bool {
+func (v NullableWorkspaceUser) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableWorkspaceProvisionRequest) Unset() {
+func (v *NullableWorkspaceUser) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableWorkspaceProvisionRequest(val *WorkspaceProvisionRequest) *NullableWorkspaceProvisionRequest {
-	return &NullableWorkspaceProvisionRequest{value: val, isSet: true}
+func NewNullableWorkspaceUser(val *WorkspaceUser) *NullableWorkspaceUser {
+	return &NullableWorkspaceUser{value: val, isSet: true}
 }
 
-func (v NullableWorkspaceProvisionRequest) MarshalJSON() ([]byte, error) {
+func (v NullableWorkspaceUser) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableWorkspaceProvisionRequest) UnmarshalJSON(src []byte) error {
+func (v *NullableWorkspaceUser) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }

@@ -10,9 +10,14 @@ func WorkspaceStorageIdLabelPresentPredicate[T client.Object]() predicate.TypedF
 	return predicate.NewTypedPredicateFuncs(func(object T) bool {
 		objectLabels := object.GetLabels()
 		_, ok := objectLabels[models.WorkspaceStorageIDLabel]
-		if !ok {
-			return false
-		}
-		return true
+		return ok
+	})
+}
+
+func DBObjectIDPresentPredicate[T client.Object](label string) predicate.TypedFuncs[T] {
+	return predicate.NewTypedPredicateFuncs(func(object T) bool {
+		objectLabels := object.GetLabels()
+		_, ok := objectLabels[label]
+		return ok
 	})
 }

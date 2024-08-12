@@ -13,11 +13,10 @@ Method | HTTP request | Description
 [**ApiV1UsersIdGet**](DefaultApi.md#ApiV1UsersIdGet) | **Get** /api/v1/users/{id} | Get a user
 [**ApiV1UsersMeGet**](DefaultApi.md#ApiV1UsersMeGet) | **Get** /api/v1/users/me | Get a the current authenticated user
 [**ApiV1UsersPost**](DefaultApi.md#ApiV1UsersPost) | **Post** /api/v1/users | Create new user
-[**ApiV1WorkspaceProvisionRequestsCurrentGet**](DefaultApi.md#ApiV1WorkspaceProvisionRequestsCurrentGet) | **Get** /api/v1/workspace-provision-requests/current | Get the current users workspace provision request object.
-[**ApiV1WorkspaceProvisionRequestsIdDelete**](DefaultApi.md#ApiV1WorkspaceProvisionRequestsIdDelete) | **Delete** /api/v1/workspace-provision-requests/{id} | Delete a WorkspaceProvisionRequest
-[**ApiV1WorkspaceProvisionRequestsIdGet**](DefaultApi.md#ApiV1WorkspaceProvisionRequestsIdGet) | **Get** /api/v1/workspace-provision-requests/{id} | Get a workspace provision request object by ID
-[**ApiV1WorkspaceProvisionRequestsIdPut**](DefaultApi.md#ApiV1WorkspaceProvisionRequestsIdPut) | **Put** /api/v1/workspace-provision-requests/{id} | Update a WorkspaceProvisionRequest
-[**ApiV1WorkspaceProvisionRequestsPost**](DefaultApi.md#ApiV1WorkspaceProvisionRequestsPost) | **Post** /api/v1/workspace-provision-requests | Create a new workpace provision request object
+[**ApiV1WorkspaceUsersIdDelete**](DefaultApi.md#ApiV1WorkspaceUsersIdDelete) | **Delete** /api/v1/workspace-users/{id} | Delete a WorkspaceUser
+[**ApiV1WorkspaceUsersIdGet**](DefaultApi.md#ApiV1WorkspaceUsersIdGet) | **Get** /api/v1/workspace-users/{id} | Get a workspace user object by ID
+[**ApiV1WorkspaceUsersIdPut**](DefaultApi.md#ApiV1WorkspaceUsersIdPut) | **Put** /api/v1/workspace-users/{id} | Update a WorkspaceUser
+[**ApiV1WorkspaceUsersPost**](DefaultApi.md#ApiV1WorkspaceUsersPost) | **Post** /api/v1/workspace-users | Create a new workspace user object.
 
 
 
@@ -643,70 +642,11 @@ No authorization required
 [[Back to README]](../README.md)
 
 
-## ApiV1WorkspaceProvisionRequestsCurrentGet
+## ApiV1WorkspaceUsersIdDelete
 
-> WorkspaceProvisionRequest ApiV1WorkspaceProvisionRequestsCurrentGet(ctx).Execute()
+> ApiV1WorkspaceUsersIdDelete(ctx, id).Execute()
 
-Get the current users workspace provision request object.
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceProvisionRequestsCurrentGet(context.Background()).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceProvisionRequestsCurrentGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1WorkspaceProvisionRequestsCurrentGet`: WorkspaceProvisionRequest
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1WorkspaceProvisionRequestsCurrentGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-This endpoint does not need any parameter.
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1WorkspaceProvisionRequestsCurrentGetRequest struct via the builder pattern
-
-
-### Return type
-
-[**WorkspaceProvisionRequest**](WorkspaceProvisionRequest.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1WorkspaceProvisionRequestsIdDelete
-
-> ApiV1WorkspaceProvisionRequestsIdDelete(ctx, id).Execute()
-
-Delete a WorkspaceProvisionRequest
+Delete a WorkspaceUser
 
 ### Example
 
@@ -721,13 +661,13 @@ import (
 )
 
 func main() {
-    id := "id_example" // string | The id of record
+    id := "id_example" // string | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceProvisionRequestsIdDelete(context.Background(), id).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceUsersIdDelete(context.Background(), id).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceProvisionRequestsIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceUsersIdDelete``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
 }
@@ -739,11 +679,11 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**id** | **string** | The id of record | 
+**id** | **string** |  | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1WorkspaceProvisionRequestsIdDeleteRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1WorkspaceUsersIdDeleteRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
@@ -768,11 +708,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1WorkspaceProvisionRequestsIdGet
+## ApiV1WorkspaceUsersIdGet
 
-> WorkspaceProvisionRequest ApiV1WorkspaceProvisionRequestsIdGet(ctx, id).Execute()
+> WorkspaceUser ApiV1WorkspaceUsersIdGet(ctx, id).Execute()
 
-Get a workspace provision request object by ID
+Get a workspace user object by ID
 
 ### Example
 
@@ -787,17 +727,17 @@ import (
 )
 
 func main() {
-    id := "id_example" // string | The id of record
+    id := "id_example" // string | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceProvisionRequestsIdGet(context.Background(), id).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceUsersIdGet(context.Background(), id).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceProvisionRequestsIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceUsersIdGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1WorkspaceProvisionRequestsIdGet`: WorkspaceProvisionRequest
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1WorkspaceProvisionRequestsIdGet`: %v\n", resp)
+    // response from `ApiV1WorkspaceUsersIdGet`: WorkspaceUser
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1WorkspaceUsersIdGet`: %v\n", resp)
 }
 ```
 
@@ -807,11 +747,11 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**id** | **string** | The id of record | 
+**id** | **string** |  | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1WorkspaceProvisionRequestsIdGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1WorkspaceUsersIdGetRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
@@ -820,7 +760,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**WorkspaceProvisionRequest**](WorkspaceProvisionRequest.md)
+[**WorkspaceUser**](WorkspaceUser.md)
 
 ### Authorization
 
@@ -836,11 +776,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1WorkspaceProvisionRequestsIdPut
+## ApiV1WorkspaceUsersIdPut
 
-> WorkspaceProvisionRequest ApiV1WorkspaceProvisionRequestsIdPut(ctx, id).WorkspaceProvisionRequest(workspaceProvisionRequest).Execute()
+> WorkspaceUser ApiV1WorkspaceUsersIdPut(ctx, id).WorkspaceUser(workspaceUser).Execute()
 
-Update a WorkspaceProvisionRequest
+Update a WorkspaceUser
 
 ### Example
 
@@ -855,18 +795,18 @@ import (
 )
 
 func main() {
-    id := "id_example" // string | The id of record
-    workspaceProvisionRequest := *openapiclient.NewWorkspaceProvisionRequest("SshPublicKey_example") // WorkspaceProvisionRequest | 
+    id := "id_example" // string | 
+    workspaceUser := *openapiclient.NewWorkspaceUser("SshPublicKey_example", []string{"Workspaces_example"}) // WorkspaceUser | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceProvisionRequestsIdPut(context.Background(), id).WorkspaceProvisionRequest(workspaceProvisionRequest).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceUsersIdPut(context.Background(), id).WorkspaceUser(workspaceUser).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceProvisionRequestsIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceUsersIdPut``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1WorkspaceProvisionRequestsIdPut`: WorkspaceProvisionRequest
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1WorkspaceProvisionRequestsIdPut`: %v\n", resp)
+    // response from `ApiV1WorkspaceUsersIdPut`: WorkspaceUser
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1WorkspaceUsersIdPut`: %v\n", resp)
 }
 ```
 
@@ -876,21 +816,21 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**id** | **string** | The id of record | 
+**id** | **string** |  | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1WorkspaceProvisionRequestsIdPutRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1WorkspaceUsersIdPutRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
- **workspaceProvisionRequest** | [**WorkspaceProvisionRequest**](WorkspaceProvisionRequest.md) |  | 
+ **workspaceUser** | [**WorkspaceUser**](WorkspaceUser.md) |  | 
 
 ### Return type
 
-[**WorkspaceProvisionRequest**](WorkspaceProvisionRequest.md)
+[**WorkspaceUser**](WorkspaceUser.md)
 
 ### Authorization
 
@@ -906,11 +846,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1WorkspaceProvisionRequestsPost
+## ApiV1WorkspaceUsersPost
 
-> WorkspaceProvisionRequest ApiV1WorkspaceProvisionRequestsPost(ctx).WorkspaceProvisionRequest(workspaceProvisionRequest).Execute()
+> WorkspaceUser ApiV1WorkspaceUsersPost(ctx).WorkspaceUser(workspaceUser).Execute()
 
-Create a new workpace provision request object
+Create a new workspace user object.
 
 ### Example
 
@@ -925,17 +865,17 @@ import (
 )
 
 func main() {
-    workspaceProvisionRequest := *openapiclient.NewWorkspaceProvisionRequest("SshPublicKey_example") // WorkspaceProvisionRequest | 
+    workspaceUser := *openapiclient.NewWorkspaceUser("SshPublicKey_example", []string{"Workspaces_example"}) // WorkspaceUser | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceProvisionRequestsPost(context.Background()).WorkspaceProvisionRequest(workspaceProvisionRequest).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceUsersPost(context.Background()).WorkspaceUser(workspaceUser).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceProvisionRequestsPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceUsersPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1WorkspaceProvisionRequestsPost`: WorkspaceProvisionRequest
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1WorkspaceProvisionRequestsPost`: %v\n", resp)
+    // response from `ApiV1WorkspaceUsersPost`: WorkspaceUser
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1WorkspaceUsersPost`: %v\n", resp)
 }
 ```
 
@@ -945,16 +885,16 @@ func main() {
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1WorkspaceProvisionRequestsPostRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1WorkspaceUsersPostRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **workspaceProvisionRequest** | [**WorkspaceProvisionRequest**](WorkspaceProvisionRequest.md) |  | 
+ **workspaceUser** | [**WorkspaceUser**](WorkspaceUser.md) |  | 
 
 ### Return type
 
-[**WorkspaceProvisionRequest**](WorkspaceProvisionRequest.md)
+[**WorkspaceUser**](WorkspaceUser.md)
 
 ### Authorization
 

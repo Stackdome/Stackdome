@@ -186,7 +186,6 @@ func presentConditions(conditions []models.Condition) []openapi.Condition {
 		result[i] = openapi.Condition{
 			Type:               &condition.Type,
 			Status:             &condition.Status,
-			ObservedGeneration: &condition.ObservedGeneration,
 			LastTransitionTime: &condition.LastTransitionTime,
 			Reason:             &condition.Reason,
 			Message:            &condition.Message,

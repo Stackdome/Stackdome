@@ -12,7 +12,7 @@ func createUserAndOrganisationTable() *gormigrate.Migration {
 	type Organisation struct {
 		ID         string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 		Name       string
-		DomainName string // TLD + SLD. Ex: example.test
+		DomainName string
 		Default    bool
 		CreatedAt  time.Time
 		UpdatedAt  time.Time
@@ -20,7 +20,6 @@ func createUserAndOrganisationTable() *gormigrate.Migration {
 
 	type User struct {
 		ID             string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
-		InternalID     int    `gorm:"autoIncrement"`
 		CreatedAt      time.Time
 		UpdatedAt      time.Time
 		Name           string

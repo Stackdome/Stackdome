@@ -17,8 +17,8 @@ func (s apiServer) routes() *mux.Router {
 		UserService: services.UserService,
 	})
 
-	wprHandler := handlers.NewWorkspaceProvisionRequestServiceHandler(handlers.WorkspaceProvisionRequestServiceHandlerSpec{
-		WorkspaceProvisionRequestService: services.WorkspaceProvisionRequestService,
+	workspaceUserHandler := handlers.NewWorkspaceUserHandler(handlers.WorkspaceUserHandlerSpec{
+		WorkspaceUserService: services.WorkspaceUserService,
 	})
 
 	storageHandler := handlers.NewWorkspaceStorageHandler(handlers.WorkspaceStorageHandlerSpec{
@@ -39,13 +39,13 @@ func (s apiServer) routes() *mux.Router {
 	authenticationRouter := apiV1Router.PathPrefix("/auth").Subrouter()
 	authenticationRouter.HandleFunc("/login", userHandler.Login).Methods(http.MethodPost)
 
-	workspaceProvisionRequestRouter := apiV1Router.PathPrefix("/workspace-provision-requests").Subrouter()
-	workspaceProvisionRequestRouter.Use(authenticationMiddleware.AuthenticateUser)
-	workspaceProvisionRequestRouter.HandleFunc("", wprHandler.Create).Methods(http.MethodPost)
-	workspaceProvisionRequestRouter.HandleFunc("/current", wprHandler.Current).Methods(http.MethodGet)
-	workspaceProvisionRequestRouter.HandleFunc("/{id}", wprHandler.Get).Methods(http.MethodGet)
-	workspaceProvisionRequestRouter.HandleFunc("/{id}", wprHandler.Update).Methods(http.MethodPut)
-	workspaceProvisionRequestRouter.HandleFunc("/{id}", wprHandler.Delete).Methods(http.MethodDelete)
+	workspaceUsersRouter := apiV1Router.PathPrefix("/workspace-users").Subrouter()
+	workspaceUsersRouter.Use(authenticationMiddleware.AuthenticateUser)
+	workspaceUsersRouter.HandleFunc("", workspaceUserHandler.Create).Methods(http.MethodPost)
+	workspaceUsersRouter.HandleFunc("/current", workspaceUserHandler.Current).Methods(http.MethodGet)
+	workspaceUsersRouter.HandleFunc("/{id}", workspaceUserHandler.Get).Methods(http.MethodGet)
+	workspaceUsersRouter.HandleFunc("/{id}", workspaceUserHandler.Update).Methods(http.MethodPut)
+	workspaceUsersRouter.HandleFunc("/{id}", workspaceUserHandler.Delete).Methods(http.MethodDelete)
 
 	workspaceStorageRouter := organizationsRouter.PathPrefix("/{org_id}/workspace-storages").Subrouter()
 	workspaceStorageRouter.Use(authenticationMiddleware.AuthenticateUser)

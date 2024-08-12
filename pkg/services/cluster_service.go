@@ -14,8 +14,6 @@ import (
 
 type ClusterService interface {
 	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
-	IsManagerForClusterRunning(ctx context.Context, clusterID string) (bool, error)
-	PersistManagerState(ctx context.Context, clusterID string, running bool) error
 	GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 }
@@ -37,14 +35,6 @@ func NewClusterService(spec ClusterServiceSpec) ClusterService {
 type ClusterServiceSpec struct {
 	SessionFactory db.SessionFactory
 	Logger         logger.Logger
-}
-
-func (s *clusterService) IsManagerForClusterRunning(ctx context.Context, clusterID string) (bool, error) {
-	cluster, serr := s.clusterStore.Get(ctx, clusterID)
-	if serr != nil {
-		return false, fmt.Errorf("failed to get cluster manager state: %w", serr)
-	}
-	return cluster.ManagerRunning, nil
 }
 
 func (s *clusterService) PersistManagerState(ctx context.Context, clusterID string, running bool) error {

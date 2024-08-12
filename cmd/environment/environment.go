@@ -7,7 +7,6 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
-	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
 	"github.com/spf13/pflag"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -25,7 +24,6 @@ type Env struct {
 	DBSession      db.SessionFactory
 	Config         *config.ApplicationConfig
 	Clients        Clients
-	WorkerManager  workermanager.WorkerManager
 	ClusterManager clustermanager.ClusterManager
 }
 
@@ -38,10 +36,10 @@ type Database struct {
 }
 
 type Services struct {
-	UserService                      services.UserService
-	WorkspaceProvisionRequestService services.WorkspaceProvisionRequestService
-	OrganisationService              services.OrganisationService
-	ClusterService                   services.ClusterService
-	WorkspaceStorageService          services.WorkspaceStorageService
-	WorkspaceVolumeService           services.VolumeService
+	UserService             services.UserService
+	WorkspaceUserService    services.WorkspaceUserService
+	OrganisationService     services.OrganisationService
+	ClusterService          services.ClusterService
+	WorkspaceStorageService services.WorkspaceStorageService
+	WorkspaceVolumeService  services.VolumeService
 }

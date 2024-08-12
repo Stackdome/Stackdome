@@ -87,11 +87,10 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
 *DefaultApi* | [**ApiV1UsersMeGet**](docs/DefaultApi.md#apiv1usersmeget) | **Get** /api/v1/users/me | Get a the current authenticated user
 *DefaultApi* | [**ApiV1UsersPost**](docs/DefaultApi.md#apiv1userspost) | **Post** /api/v1/users | Create new user
-*DefaultApi* | [**ApiV1WorkspaceProvisionRequestsCurrentGet**](docs/DefaultApi.md#apiv1workspaceprovisionrequestscurrentget) | **Get** /api/v1/workspace-provision-requests/current | Get the current users workspace provision request object.
-*DefaultApi* | [**ApiV1WorkspaceProvisionRequestsIdDelete**](docs/DefaultApi.md#apiv1workspaceprovisionrequestsiddelete) | **Delete** /api/v1/workspace-provision-requests/{id} | Delete a WorkspaceProvisionRequest
-*DefaultApi* | [**ApiV1WorkspaceProvisionRequestsIdGet**](docs/DefaultApi.md#apiv1workspaceprovisionrequestsidget) | **Get** /api/v1/workspace-provision-requests/{id} | Get a workspace provision request object by ID
-*DefaultApi* | [**ApiV1WorkspaceProvisionRequestsIdPut**](docs/DefaultApi.md#apiv1workspaceprovisionrequestsidput) | **Put** /api/v1/workspace-provision-requests/{id} | Update a WorkspaceProvisionRequest
-*DefaultApi* | [**ApiV1WorkspaceProvisionRequestsPost**](docs/DefaultApi.md#apiv1workspaceprovisionrequestspost) | **Post** /api/v1/workspace-provision-requests | Create a new workpace provision request object
+*DefaultApi* | [**ApiV1WorkspaceUsersIdDelete**](docs/DefaultApi.md#apiv1workspaceusersiddelete) | **Delete** /api/v1/workspace-users/{id} | Delete a WorkspaceUser
+*DefaultApi* | [**ApiV1WorkspaceUsersIdGet**](docs/DefaultApi.md#apiv1workspaceusersidget) | **Get** /api/v1/workspace-users/{id} | Get a workspace user object by ID
+*DefaultApi* | [**ApiV1WorkspaceUsersIdPut**](docs/DefaultApi.md#apiv1workspaceusersidput) | **Put** /api/v1/workspace-users/{id} | Update a WorkspaceUser
+*DefaultApi* | [**ApiV1WorkspaceUsersPost**](docs/DefaultApi.md#apiv1workspaceuserspost) | **Post** /api/v1/workspace-users | Create a new workspace user object.
 
 
 ## Documentation For Models
@@ -118,12 +117,13 @@ Class | Method | HTTP request | Description
  - [VolumeSource](docs/VolumeSource.md)
  - [VolumeSourceTypes](docs/VolumeSourceTypes.md)
  - [VolumeStatus](docs/VolumeStatus.md)
- - [WorkspaceProvisionRequest](docs/WorkspaceProvisionRequest.md)
- - [WorkspaceProvisionRequestState](docs/WorkspaceProvisionRequestState.md)
- - [WorkspaceProvisionRequestStatus](docs/WorkspaceProvisionRequestStatus.md)
  - [WorkspaceStorage](docs/WorkspaceStorage.md)
  - [WorkspaceStorageState](docs/WorkspaceStorageState.md)
  - [WorkspaceStorageStatus](docs/WorkspaceStorageStatus.md)
+ - [WorkspaceUser](docs/WorkspaceUser.md)
+ - [WorkspaceUserState](docs/WorkspaceUserState.md)
+ - [WorkspaceUserStatus](docs/WorkspaceUserStatus.md)
+ - [WorkspaceUserStatusProvisionedNamespacesInner](docs/WorkspaceUserStatusProvisionedNamespacesInner.md)
  - [WorkspaceVolumeSpec](docs/WorkspaceVolumeSpec.md)
 
 

@@ -1,4 +1,4 @@
-# WorkspaceProvisionRequest
+# WorkspaceUser
 
 ## Properties
 
@@ -8,248 +8,295 @@ Name | Type | Description | Notes
 **UserId** | Pointer to **string** |  | [optional] 
 **OrgId** | Pointer to **string** |  | [optional] 
 **SshPublicKey** | **string** |  | 
-**Status** | Pointer to [**WorkspaceProvisionRequestStatus**](WorkspaceProvisionRequestStatus.md) |  | [optional] 
-**State** | Pointer to [**WorkspaceProvisionRequestState**](WorkspaceProvisionRequestState.md) |  | [optional] 
+**Workspaces** | **[]string** |  | 
+**Version** | Pointer to **int32** |  | [optional] [readonly] 
+**Status** | Pointer to [**WorkspaceUserStatus**](WorkspaceUserStatus.md) |  | [optional] 
+**State** | Pointer to [**WorkspaceUserState**](WorkspaceUserState.md) |  | [optional] 
 **Message** | Pointer to **string** |  | [optional] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] 
 **UpdatedAt** | Pointer to **time.Time** |  | [optional] 
 
 ## Methods
 
-### NewWorkspaceProvisionRequest
+### NewWorkspaceUser
 
-`func NewWorkspaceProvisionRequest(sshPublicKey string, ) *WorkspaceProvisionRequest`
+`func NewWorkspaceUser(sshPublicKey string, workspaces []string, ) *WorkspaceUser`
 
-NewWorkspaceProvisionRequest instantiates a new WorkspaceProvisionRequest object
+NewWorkspaceUser instantiates a new WorkspaceUser object
 This constructor will assign default values to properties that have it defined,
 and makes sure properties required by API are set, but the set of arguments
 will change when the set of required properties is changed
 
-### NewWorkspaceProvisionRequestWithDefaults
+### NewWorkspaceUserWithDefaults
 
-`func NewWorkspaceProvisionRequestWithDefaults() *WorkspaceProvisionRequest`
+`func NewWorkspaceUserWithDefaults() *WorkspaceUser`
 
-NewWorkspaceProvisionRequestWithDefaults instantiates a new WorkspaceProvisionRequest object
+NewWorkspaceUserWithDefaults instantiates a new WorkspaceUser object
 This constructor will only assign default values to properties that have it defined,
 but it doesn't guarantee that properties required by API are set
 
 ### GetId
 
-`func (o *WorkspaceProvisionRequest) GetId() string`
+`func (o *WorkspaceUser) GetId() string`
 
 GetId returns the Id field if non-nil, zero value otherwise.
 
 ### GetIdOk
 
-`func (o *WorkspaceProvisionRequest) GetIdOk() (*string, bool)`
+`func (o *WorkspaceUser) GetIdOk() (*string, bool)`
 
 GetIdOk returns a tuple with the Id field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetId
 
-`func (o *WorkspaceProvisionRequest) SetId(v string)`
+`func (o *WorkspaceUser) SetId(v string)`
 
 SetId sets Id field to given value.
 
 ### HasId
 
-`func (o *WorkspaceProvisionRequest) HasId() bool`
+`func (o *WorkspaceUser) HasId() bool`
 
 HasId returns a boolean if a field has been set.
 
 ### GetUserId
 
-`func (o *WorkspaceProvisionRequest) GetUserId() string`
+`func (o *WorkspaceUser) GetUserId() string`
 
 GetUserId returns the UserId field if non-nil, zero value otherwise.
 
 ### GetUserIdOk
 
-`func (o *WorkspaceProvisionRequest) GetUserIdOk() (*string, bool)`
+`func (o *WorkspaceUser) GetUserIdOk() (*string, bool)`
 
 GetUserIdOk returns a tuple with the UserId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetUserId
 
-`func (o *WorkspaceProvisionRequest) SetUserId(v string)`
+`func (o *WorkspaceUser) SetUserId(v string)`
 
 SetUserId sets UserId field to given value.
 
 ### HasUserId
 
-`func (o *WorkspaceProvisionRequest) HasUserId() bool`
+`func (o *WorkspaceUser) HasUserId() bool`
 
 HasUserId returns a boolean if a field has been set.
 
 ### GetOrgId
 
-`func (o *WorkspaceProvisionRequest) GetOrgId() string`
+`func (o *WorkspaceUser) GetOrgId() string`
 
 GetOrgId returns the OrgId field if non-nil, zero value otherwise.
 
 ### GetOrgIdOk
 
-`func (o *WorkspaceProvisionRequest) GetOrgIdOk() (*string, bool)`
+`func (o *WorkspaceUser) GetOrgIdOk() (*string, bool)`
 
 GetOrgIdOk returns a tuple with the OrgId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetOrgId
 
-`func (o *WorkspaceProvisionRequest) SetOrgId(v string)`
+`func (o *WorkspaceUser) SetOrgId(v string)`
 
 SetOrgId sets OrgId field to given value.
 
 ### HasOrgId
 
-`func (o *WorkspaceProvisionRequest) HasOrgId() bool`
+`func (o *WorkspaceUser) HasOrgId() bool`
 
 HasOrgId returns a boolean if a field has been set.
 
 ### GetSshPublicKey
 
-`func (o *WorkspaceProvisionRequest) GetSshPublicKey() string`
+`func (o *WorkspaceUser) GetSshPublicKey() string`
 
 GetSshPublicKey returns the SshPublicKey field if non-nil, zero value otherwise.
 
 ### GetSshPublicKeyOk
 
-`func (o *WorkspaceProvisionRequest) GetSshPublicKeyOk() (*string, bool)`
+`func (o *WorkspaceUser) GetSshPublicKeyOk() (*string, bool)`
 
 GetSshPublicKeyOk returns a tuple with the SshPublicKey field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetSshPublicKey
 
-`func (o *WorkspaceProvisionRequest) SetSshPublicKey(v string)`
+`func (o *WorkspaceUser) SetSshPublicKey(v string)`
 
 SetSshPublicKey sets SshPublicKey field to given value.
 
 
+### GetWorkspaces
+
+`func (o *WorkspaceUser) GetWorkspaces() []string`
+
+GetWorkspaces returns the Workspaces field if non-nil, zero value otherwise.
+
+### GetWorkspacesOk
+
+`func (o *WorkspaceUser) GetWorkspacesOk() (*[]string, bool)`
+
+GetWorkspacesOk returns a tuple with the Workspaces field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetWorkspaces
+
+`func (o *WorkspaceUser) SetWorkspaces(v []string)`
+
+SetWorkspaces sets Workspaces field to given value.
+
+
+### GetVersion
+
+`func (o *WorkspaceUser) GetVersion() int32`
+
+GetVersion returns the Version field if non-nil, zero value otherwise.
+
+### GetVersionOk
+
+`func (o *WorkspaceUser) GetVersionOk() (*int32, bool)`
+
+GetVersionOk returns a tuple with the Version field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetVersion
+
+`func (o *WorkspaceUser) SetVersion(v int32)`
+
+SetVersion sets Version field to given value.
+
+### HasVersion
+
+`func (o *WorkspaceUser) HasVersion() bool`
+
+HasVersion returns a boolean if a field has been set.
+
 ### GetStatus
 
-`func (o *WorkspaceProvisionRequest) GetStatus() WorkspaceProvisionRequestStatus`
+`func (o *WorkspaceUser) GetStatus() WorkspaceUserStatus`
 
 GetStatus returns the Status field if non-nil, zero value otherwise.
 
 ### GetStatusOk
 
-`func (o *WorkspaceProvisionRequest) GetStatusOk() (*WorkspaceProvisionRequestStatus, bool)`
+`func (o *WorkspaceUser) GetStatusOk() (*WorkspaceUserStatus, bool)`
 
 GetStatusOk returns a tuple with the Status field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetStatus
 
-`func (o *WorkspaceProvisionRequest) SetStatus(v WorkspaceProvisionRequestStatus)`
+`func (o *WorkspaceUser) SetStatus(v WorkspaceUserStatus)`
 
 SetStatus sets Status field to given value.
 
 ### HasStatus
 
-`func (o *WorkspaceProvisionRequest) HasStatus() bool`
+`func (o *WorkspaceUser) HasStatus() bool`
 
 HasStatus returns a boolean if a field has been set.
 
 ### GetState
 
-`func (o *WorkspaceProvisionRequest) GetState() WorkspaceProvisionRequestState`
+`func (o *WorkspaceUser) GetState() WorkspaceUserState`
 
 GetState returns the State field if non-nil, zero value otherwise.
 
 ### GetStateOk
 
-`func (o *WorkspaceProvisionRequest) GetStateOk() (*WorkspaceProvisionRequestState, bool)`
+`func (o *WorkspaceUser) GetStateOk() (*WorkspaceUserState, bool)`
 
 GetStateOk returns a tuple with the State field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetState
 
-`func (o *WorkspaceProvisionRequest) SetState(v WorkspaceProvisionRequestState)`
+`func (o *WorkspaceUser) SetState(v WorkspaceUserState)`
 
 SetState sets State field to given value.
 
 ### HasState
 
-`func (o *WorkspaceProvisionRequest) HasState() bool`
+`func (o *WorkspaceUser) HasState() bool`
 
 HasState returns a boolean if a field has been set.
 
 ### GetMessage
 
-`func (o *WorkspaceProvisionRequest) GetMessage() string`
+`func (o *WorkspaceUser) GetMessage() string`
 
 GetMessage returns the Message field if non-nil, zero value otherwise.
 
 ### GetMessageOk
 
-`func (o *WorkspaceProvisionRequest) GetMessageOk() (*string, bool)`
+`func (o *WorkspaceUser) GetMessageOk() (*string, bool)`
 
 GetMessageOk returns a tuple with the Message field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetMessage
 
-`func (o *WorkspaceProvisionRequest) SetMessage(v string)`
+`func (o *WorkspaceUser) SetMessage(v string)`
 
 SetMessage sets Message field to given value.
 
 ### HasMessage
 
-`func (o *WorkspaceProvisionRequest) HasMessage() bool`
+`func (o *WorkspaceUser) HasMessage() bool`
 
 HasMessage returns a boolean if a field has been set.
 
 ### GetCreatedAt
 
-`func (o *WorkspaceProvisionRequest) GetCreatedAt() time.Time`
+`func (o *WorkspaceUser) GetCreatedAt() time.Time`
 
 GetCreatedAt returns the CreatedAt field if non-nil, zero value otherwise.
 
 ### GetCreatedAtOk
 
-`func (o *WorkspaceProvisionRequest) GetCreatedAtOk() (*time.Time, bool)`
+`func (o *WorkspaceUser) GetCreatedAtOk() (*time.Time, bool)`
 
 GetCreatedAtOk returns a tuple with the CreatedAt field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetCreatedAt
 
-`func (o *WorkspaceProvisionRequest) SetCreatedAt(v time.Time)`
+`func (o *WorkspaceUser) SetCreatedAt(v time.Time)`
 
 SetCreatedAt sets CreatedAt field to given value.
 
 ### HasCreatedAt
 
-`func (o *WorkspaceProvisionRequest) HasCreatedAt() bool`
+`func (o *WorkspaceUser) HasCreatedAt() bool`
 
 HasCreatedAt returns a boolean if a field has been set.
 
 ### GetUpdatedAt
 
-`func (o *WorkspaceProvisionRequest) GetUpdatedAt() time.Time`
+`func (o *WorkspaceUser) GetUpdatedAt() time.Time`
 
 GetUpdatedAt returns the UpdatedAt field if non-nil, zero value otherwise.
 
 ### GetUpdatedAtOk
 
-`func (o *WorkspaceProvisionRequest) GetUpdatedAtOk() (*time.Time, bool)`
+`func (o *WorkspaceUser) GetUpdatedAtOk() (*time.Time, bool)`
 
 GetUpdatedAtOk returns a tuple with the UpdatedAt field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetUpdatedAt
 
-`func (o *WorkspaceProvisionRequest) SetUpdatedAt(v time.Time)`
+`func (o *WorkspaceUser) SetUpdatedAt(v time.Time)`
 
 SetUpdatedAt sets UpdatedAt field to given value.
 
 ### HasUpdatedAt
 
-`func (o *WorkspaceProvisionRequest) HasUpdatedAt() bool`
+`func (o *WorkspaceUser) HasUpdatedAt() bool`
 
 HasUpdatedAt returns a boolean if a field has been set.
 

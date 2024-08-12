@@ -12,7 +12,6 @@ import (
 type Condition struct {
 	Type               string    `json:"type"`
 	Status             string    `json:"status"`
-	ObservedGeneration int32     `json:"observed_generation"`
 	LastTransitionTime time.Time `json:"last_transition_time"`
 	Reason             string    `json:"reason"`
 	Message            string    `json:"message"`
@@ -61,7 +60,6 @@ func ConvertConditions(k8sconditions []metav1.Condition) []Condition {
 		conditions[i] = Condition{
 			Type:               k8sconditions[i].Type,
 			Status:             string(k8sconditions[i].Status),
-			ObservedGeneration: int32(k8sconditions[i].ObservedGeneration),
 			LastTransitionTime: k8sconditions[i].LastTransitionTime.Time,
 			Reason:             k8sconditions[i].Reason,
 			Message:            k8sconditions[i].Message,

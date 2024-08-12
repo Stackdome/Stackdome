@@ -1122,123 +1122,25 @@ func (a *DefaultApiService) ApiV1UsersPostExecute(r ApiApiV1UsersPostRequest) (*
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-type ApiApiV1WorkspaceProvisionRequestsCurrentGetRequest struct {
-	ctx        context.Context
-	ApiService *DefaultApiService
-}
-
-func (r ApiApiV1WorkspaceProvisionRequestsCurrentGetRequest) Execute() (*WorkspaceProvisionRequest, *http.Response, error) {
-	return r.ApiService.ApiV1WorkspaceProvisionRequestsCurrentGetExecute(r)
-}
-
-/*
-ApiV1WorkspaceProvisionRequestsCurrentGet Get the current users workspace provision request object.
-
-	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
-	@return ApiApiV1WorkspaceProvisionRequestsCurrentGetRequest
-*/
-func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsCurrentGet(ctx context.Context) ApiApiV1WorkspaceProvisionRequestsCurrentGetRequest {
-	return ApiApiV1WorkspaceProvisionRequestsCurrentGetRequest{
-		ApiService: a,
-		ctx:        ctx,
-	}
-}
-
-// Execute executes the request
-//
-//	@return WorkspaceProvisionRequest
-func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsCurrentGetExecute(r ApiApiV1WorkspaceProvisionRequestsCurrentGetRequest) (*WorkspaceProvisionRequest, *http.Response, error) {
-	var (
-		localVarHTTPMethod  = http.MethodGet
-		localVarPostBody    interface{}
-		formFiles           []formFile
-		localVarReturnValue *WorkspaceProvisionRequest
-	)
-
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1WorkspaceProvisionRequestsCurrentGet")
-	if err != nil {
-		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
-	}
-
-	localVarPath := localBasePath + "/api/v1/workspace-provision-requests/current"
-
-	localVarHeaderParams := make(map[string]string)
-	localVarQueryParams := url.Values{}
-	localVarFormParams := url.Values{}
-
-	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{}
-
-	// set Content-Type header
-	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
-	if localVarHTTPContentType != "" {
-		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
-	}
-
-	// to determine the Accept header
-	localVarHTTPHeaderAccepts := []string{"application/json"}
-
-	// set Accept header
-	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
-	if localVarHTTPHeaderAccept != "" {
-		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
-	}
-	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
-	if err != nil {
-		return localVarReturnValue, nil, err
-	}
-
-	localVarHTTPResponse, err := a.client.callAPI(req)
-	if err != nil || localVarHTTPResponse == nil {
-		return localVarReturnValue, localVarHTTPResponse, err
-	}
-
-	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
-	localVarHTTPResponse.Body.Close()
-	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
-	if err != nil {
-		return localVarReturnValue, localVarHTTPResponse, err
-	}
-
-	if localVarHTTPResponse.StatusCode >= 300 {
-		newErr := &GenericOpenAPIError{
-			body:  localVarBody,
-			error: localVarHTTPResponse.Status,
-		}
-		return localVarReturnValue, localVarHTTPResponse, newErr
-	}
-
-	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		newErr := &GenericOpenAPIError{
-			body:  localVarBody,
-			error: err.Error(),
-		}
-		return localVarReturnValue, localVarHTTPResponse, newErr
-	}
-
-	return localVarReturnValue, localVarHTTPResponse, nil
-}
-
-type ApiApiV1WorkspaceProvisionRequestsIdDeleteRequest struct {
+type ApiApiV1WorkspaceUsersIdDeleteRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
 	id         string
 }
 
-func (r ApiApiV1WorkspaceProvisionRequestsIdDeleteRequest) Execute() (*http.Response, error) {
-	return r.ApiService.ApiV1WorkspaceProvisionRequestsIdDeleteExecute(r)
+func (r ApiApiV1WorkspaceUsersIdDeleteRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1WorkspaceUsersIdDeleteExecute(r)
 }
 
 /*
-ApiV1WorkspaceProvisionRequestsIdDelete Delete a WorkspaceProvisionRequest
+ApiV1WorkspaceUsersIdDelete Delete a WorkspaceUser
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
-	@param id The id of record
-	@return ApiApiV1WorkspaceProvisionRequestsIdDeleteRequest
+	@param id
+	@return ApiApiV1WorkspaceUsersIdDeleteRequest
 */
-func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdDelete(ctx context.Context, id string) ApiApiV1WorkspaceProvisionRequestsIdDeleteRequest {
-	return ApiApiV1WorkspaceProvisionRequestsIdDeleteRequest{
+func (a *DefaultApiService) ApiV1WorkspaceUsersIdDelete(ctx context.Context, id string) ApiApiV1WorkspaceUsersIdDeleteRequest {
+	return ApiApiV1WorkspaceUsersIdDeleteRequest{
 		ApiService: a,
 		ctx:        ctx,
 		id:         id,
@@ -1246,19 +1148,19 @@ func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdDelete(ctx context.
 }
 
 // Execute executes the request
-func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdDeleteExecute(r ApiApiV1WorkspaceProvisionRequestsIdDeleteRequest) (*http.Response, error) {
+func (a *DefaultApiService) ApiV1WorkspaceUsersIdDeleteExecute(r ApiApiV1WorkspaceUsersIdDeleteRequest) (*http.Response, error) {
 	var (
 		localVarHTTPMethod = http.MethodDelete
 		localVarPostBody   interface{}
 		formFiles          []formFile
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1WorkspaceProvisionRequestsIdDelete")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1WorkspaceUsersIdDelete")
 	if err != nil {
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/workspace-provision-requests/{id}"
+	localVarPath := localBasePath + "/api/v1/workspace-users/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -1310,25 +1212,25 @@ func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdDeleteExecute(r Api
 	return localVarHTTPResponse, nil
 }
 
-type ApiApiV1WorkspaceProvisionRequestsIdGetRequest struct {
+type ApiApiV1WorkspaceUsersIdGetRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
 	id         string
 }
 
-func (r ApiApiV1WorkspaceProvisionRequestsIdGetRequest) Execute() (*WorkspaceProvisionRequest, *http.Response, error) {
-	return r.ApiService.ApiV1WorkspaceProvisionRequestsIdGetExecute(r)
+func (r ApiApiV1WorkspaceUsersIdGetRequest) Execute() (*WorkspaceUser, *http.Response, error) {
+	return r.ApiService.ApiV1WorkspaceUsersIdGetExecute(r)
 }
 
 /*
-ApiV1WorkspaceProvisionRequestsIdGet Get a workspace provision request object by ID
+ApiV1WorkspaceUsersIdGet Get a workspace user object by ID
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
-	@param id The id of record
-	@return ApiApiV1WorkspaceProvisionRequestsIdGetRequest
+	@param id
+	@return ApiApiV1WorkspaceUsersIdGetRequest
 */
-func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdGet(ctx context.Context, id string) ApiApiV1WorkspaceProvisionRequestsIdGetRequest {
-	return ApiApiV1WorkspaceProvisionRequestsIdGetRequest{
+func (a *DefaultApiService) ApiV1WorkspaceUsersIdGet(ctx context.Context, id string) ApiApiV1WorkspaceUsersIdGetRequest {
+	return ApiApiV1WorkspaceUsersIdGetRequest{
 		ApiService: a,
 		ctx:        ctx,
 		id:         id,
@@ -1337,21 +1239,21 @@ func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdGet(ctx context.Con
 
 // Execute executes the request
 //
-//	@return WorkspaceProvisionRequest
-func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdGetExecute(r ApiApiV1WorkspaceProvisionRequestsIdGetRequest) (*WorkspaceProvisionRequest, *http.Response, error) {
+//	@return WorkspaceUser
+func (a *DefaultApiService) ApiV1WorkspaceUsersIdGetExecute(r ApiApiV1WorkspaceUsersIdGetRequest) (*WorkspaceUser, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodGet
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue *WorkspaceProvisionRequest
+		localVarReturnValue *WorkspaceUser
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1WorkspaceProvisionRequestsIdGet")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1WorkspaceUsersIdGet")
 	if err != nil {
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/workspace-provision-requests/{id}"
+	localVarPath := localBasePath + "/api/v1/workspace-users/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -1412,31 +1314,31 @@ func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdGetExecute(r ApiApi
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-type ApiApiV1WorkspaceProvisionRequestsIdPutRequest struct {
-	ctx                       context.Context
-	ApiService                *DefaultApiService
-	id                        string
-	workspaceProvisionRequest *WorkspaceProvisionRequest
+type ApiApiV1WorkspaceUsersIdPutRequest struct {
+	ctx           context.Context
+	ApiService    *DefaultApiService
+	id            string
+	workspaceUser *WorkspaceUser
 }
 
-func (r ApiApiV1WorkspaceProvisionRequestsIdPutRequest) WorkspaceProvisionRequest(workspaceProvisionRequest WorkspaceProvisionRequest) ApiApiV1WorkspaceProvisionRequestsIdPutRequest {
-	r.workspaceProvisionRequest = &workspaceProvisionRequest
+func (r ApiApiV1WorkspaceUsersIdPutRequest) WorkspaceUser(workspaceUser WorkspaceUser) ApiApiV1WorkspaceUsersIdPutRequest {
+	r.workspaceUser = &workspaceUser
 	return r
 }
 
-func (r ApiApiV1WorkspaceProvisionRequestsIdPutRequest) Execute() (*WorkspaceProvisionRequest, *http.Response, error) {
-	return r.ApiService.ApiV1WorkspaceProvisionRequestsIdPutExecute(r)
+func (r ApiApiV1WorkspaceUsersIdPutRequest) Execute() (*WorkspaceUser, *http.Response, error) {
+	return r.ApiService.ApiV1WorkspaceUsersIdPutExecute(r)
 }
 
 /*
-ApiV1WorkspaceProvisionRequestsIdPut Update a WorkspaceProvisionRequest
+ApiV1WorkspaceUsersIdPut Update a WorkspaceUser
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
-	@param id The id of record
-	@return ApiApiV1WorkspaceProvisionRequestsIdPutRequest
+	@param id
+	@return ApiApiV1WorkspaceUsersIdPutRequest
 */
-func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdPut(ctx context.Context, id string) ApiApiV1WorkspaceProvisionRequestsIdPutRequest {
-	return ApiApiV1WorkspaceProvisionRequestsIdPutRequest{
+func (a *DefaultApiService) ApiV1WorkspaceUsersIdPut(ctx context.Context, id string) ApiApiV1WorkspaceUsersIdPutRequest {
+	return ApiApiV1WorkspaceUsersIdPutRequest{
 		ApiService: a,
 		ctx:        ctx,
 		id:         id,
@@ -1445,28 +1347,28 @@ func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdPut(ctx context.Con
 
 // Execute executes the request
 //
-//	@return WorkspaceProvisionRequest
-func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdPutExecute(r ApiApiV1WorkspaceProvisionRequestsIdPutRequest) (*WorkspaceProvisionRequest, *http.Response, error) {
+//	@return WorkspaceUser
+func (a *DefaultApiService) ApiV1WorkspaceUsersIdPutExecute(r ApiApiV1WorkspaceUsersIdPutRequest) (*WorkspaceUser, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodPut
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue *WorkspaceProvisionRequest
+		localVarReturnValue *WorkspaceUser
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1WorkspaceProvisionRequestsIdPut")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1WorkspaceUsersIdPut")
 	if err != nil {
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/workspace-provision-requests/{id}"
+	localVarPath := localBasePath + "/api/v1/workspace-users/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
-	if r.workspaceProvisionRequest == nil {
-		return localVarReturnValue, nil, reportError("workspaceProvisionRequest is required and must be specified")
+	if r.workspaceUser == nil {
+		return localVarReturnValue, nil, reportError("workspaceUser is required and must be specified")
 	}
 
 	// to determine the Content-Type header
@@ -1487,7 +1389,7 @@ func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdPutExecute(r ApiApi
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = r.workspaceProvisionRequest
+	localVarPostBody = r.workspaceUser
 	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -1525,29 +1427,29 @@ func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsIdPutExecute(r ApiApi
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-type ApiApiV1WorkspaceProvisionRequestsPostRequest struct {
-	ctx                       context.Context
-	ApiService                *DefaultApiService
-	workspaceProvisionRequest *WorkspaceProvisionRequest
+type ApiApiV1WorkspaceUsersPostRequest struct {
+	ctx           context.Context
+	ApiService    *DefaultApiService
+	workspaceUser *WorkspaceUser
 }
 
-func (r ApiApiV1WorkspaceProvisionRequestsPostRequest) WorkspaceProvisionRequest(workspaceProvisionRequest WorkspaceProvisionRequest) ApiApiV1WorkspaceProvisionRequestsPostRequest {
-	r.workspaceProvisionRequest = &workspaceProvisionRequest
+func (r ApiApiV1WorkspaceUsersPostRequest) WorkspaceUser(workspaceUser WorkspaceUser) ApiApiV1WorkspaceUsersPostRequest {
+	r.workspaceUser = &workspaceUser
 	return r
 }
 
-func (r ApiApiV1WorkspaceProvisionRequestsPostRequest) Execute() (*WorkspaceProvisionRequest, *http.Response, error) {
-	return r.ApiService.ApiV1WorkspaceProvisionRequestsPostExecute(r)
+func (r ApiApiV1WorkspaceUsersPostRequest) Execute() (*WorkspaceUser, *http.Response, error) {
+	return r.ApiService.ApiV1WorkspaceUsersPostExecute(r)
 }
 
 /*
-ApiV1WorkspaceProvisionRequestsPost Create a new workpace provision request object
+ApiV1WorkspaceUsersPost Create a new workspace user object.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
-	@return ApiApiV1WorkspaceProvisionRequestsPostRequest
+	@return ApiApiV1WorkspaceUsersPostRequest
 */
-func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsPost(ctx context.Context) ApiApiV1WorkspaceProvisionRequestsPostRequest {
-	return ApiApiV1WorkspaceProvisionRequestsPostRequest{
+func (a *DefaultApiService) ApiV1WorkspaceUsersPost(ctx context.Context) ApiApiV1WorkspaceUsersPostRequest {
+	return ApiApiV1WorkspaceUsersPostRequest{
 		ApiService: a,
 		ctx:        ctx,
 	}
@@ -1555,27 +1457,27 @@ func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsPost(ctx context.Cont
 
 // Execute executes the request
 //
-//	@return WorkspaceProvisionRequest
-func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsPostExecute(r ApiApiV1WorkspaceProvisionRequestsPostRequest) (*WorkspaceProvisionRequest, *http.Response, error) {
+//	@return WorkspaceUser
+func (a *DefaultApiService) ApiV1WorkspaceUsersPostExecute(r ApiApiV1WorkspaceUsersPostRequest) (*WorkspaceUser, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodPost
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue *WorkspaceProvisionRequest
+		localVarReturnValue *WorkspaceUser
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1WorkspaceProvisionRequestsPost")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1WorkspaceUsersPost")
 	if err != nil {
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/workspace-provision-requests"
+	localVarPath := localBasePath + "/api/v1/workspace-users"
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
-	if r.workspaceProvisionRequest == nil {
-		return localVarReturnValue, nil, reportError("workspaceProvisionRequest is required and must be specified")
+	if r.workspaceUser == nil {
+		return localVarReturnValue, nil, reportError("workspaceUser is required and must be specified")
 	}
 
 	// to determine the Content-Type header
@@ -1596,7 +1498,7 @@ func (a *DefaultApiService) ApiV1WorkspaceProvisionRequestsPostExecute(r ApiApiV
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = r.workspaceProvisionRequest
+	localVarPostBody = r.workspaceUser
 	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
 	if err != nil {
 		return localVarReturnValue, nil, err
