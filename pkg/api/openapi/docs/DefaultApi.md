@@ -10,6 +10,7 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspaceStoragesIdDelete) | **Delete** /api/v1/organizations/{org_id}/workspace-storages/{id} | Delete a WorkspaceStorage object
 [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspaceStoragesIdGet) | **Get** /api/v1/organizations/{org_id}/workspace-storages/{id} | Get a specific WorkspaceStorage object
 [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspaceStoragesIdPut) | **Put** /api/v1/organizations/{org_id}/workspace-storages/{id} | Update a WorkspaceStorage object
+[**ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet) | **Get** /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes | List all volumes under a WorkspaceStorage.
 [**ApiV1OrganizationsOrgIdWorkspacesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesGet) | **Get** /api/v1/organizations/{org_id}/workspaces | List all Workspaces for an organization
 [**ApiV1OrganizationsOrgIdWorkspacesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesIdDelete) | **Delete** /api/v1/organizations/{org_id}/workspaces/{id} | Delete a Workspace
 [**ApiV1OrganizationsOrgIdWorkspacesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesIdGet) | **Get** /api/v1/organizations/{org_id}/workspaces/{id} | Get a specific Workspace
@@ -17,7 +18,6 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdWorkspacesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesPost) | **Post** /api/v1/organizations/{org_id}/workspaces | Create a new Workspace
 [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources | List all WorkspaceResources for a Workspace
 [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdPut) | **Put** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id} | Update a WorkspaceResource
-[**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesPost) | **Post** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources | Create a new WorkspaceResource
 [**ApiV1UsersIdGet**](DefaultApi.md#ApiV1UsersIdGet) | **Get** /api/v1/users/{id} | Get a user
 [**ApiV1UsersMeGet**](DefaultApi.md#ApiV1UsersMeGet) | **Get** /api/v1/users/me | Get a the current authenticated user
 [**ApiV1UsersPost**](DefaultApi.md#ApiV1UsersPost) | **Post** /api/v1/users | Create new user
@@ -453,6 +453,77 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
+## ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet
+
+> ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet(ctx, orgId, id).Execute()
+
+List all volumes under a WorkspaceStorage.
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | 
+    id := "id_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet(context.Background(), orgId, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet`: ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** |  | 
+**id** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response**](ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## ApiV1OrganizationsOrgIdWorkspacesGet
 
 > ApiV1OrganizationsOrgIdWorkspacesGet200Response ApiV1OrganizationsOrgIdWorkspacesGet(ctx, orgId).Limit(limit).Offset(offset).Execute()
@@ -587,7 +658,7 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: Not defined
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
@@ -810,7 +881,7 @@ Name | Type | Description  | Notes
 
 ## ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet
 
-> ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet(ctx, orgId, workspaceId).Limit(limit).Offset(offset).Execute()
+> ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet(ctx, orgId, workspaceId).Execute()
 
 List all WorkspaceResources for a Workspace
 
@@ -829,12 +900,10 @@ import (
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
     workspaceId := "workspaceId_example" // string | The ID of the workspace
-    limit := int32(56) // int32 |  (optional) (default to 20)
-    offset := int32(56) // int32 |  (optional) (default to 0)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet(context.Background(), orgId, workspaceId).Limit(limit).Offset(offset).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet(context.Background(), orgId, workspaceId).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -862,8 +931,6 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
 
- **limit** | **int32** |  | [default to 20]
- **offset** | **int32** |  | [default to 0]
 
 ### Return type
 
@@ -937,79 +1004,6 @@ Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdWor
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
-
-
- **workspaceResource** | [**WorkspaceResource**](WorkspaceResource.md) |  | 
-
-### Return type
-
-[**WorkspaceResource**](WorkspaceResource.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesPost
-
-> WorkspaceResource ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesPost(ctx, orgId, workspaceId).WorkspaceResource(workspaceResource).Execute()
-
-Create a new WorkspaceResource
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    workspaceId := "workspaceId_example" // string | The ID of the workspace
-    workspaceResource := *openapiclient.NewWorkspaceResource("Name_example") // WorkspaceResource | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesPost(context.Background(), orgId, workspaceId).WorkspaceResource(workspaceResource).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesPost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesPost`: WorkspaceResource
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesPost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**workspaceId** | **string** | The ID of the workspace | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesPostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
 
 
  **workspaceResource** | [**WorkspaceResource**](WorkspaceResource.md) |  | 

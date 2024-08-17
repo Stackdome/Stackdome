@@ -84,6 +84,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesiddelete) | **Delete** /api/v1/organizations/{org_id}/workspace-storages/{id} | Delete a WorkspaceStorage object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidget) | **Get** /api/v1/organizations/{org_id}/workspace-storages/{id} | Get a specific WorkspaceStorage object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidput) | **Put** /api/v1/organizations/{org_id}/workspace-storages/{id} | Update a WorkspaceStorage object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidvolumesget) | **Get** /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes | List all volumes under a WorkspaceStorage.
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesget) | **Get** /api/v1/organizations/{org_id}/workspaces | List all Workspaces for an organization
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesiddelete) | **Delete** /api/v1/organizations/{org_id}/workspaces/{id} | Delete a Workspace
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesidget) | **Get** /api/v1/organizations/{org_id}/workspaces/{id} | Get a specific Workspace
@@ -91,7 +92,6 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesPost**](docs/DefaultApi.md#apiv1organizationsorgidworkspacespost) | **Post** /api/v1/organizations/{org_id}/workspaces | Create a new Workspace
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources | List all WorkspaceResources for a Workspace
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesidput) | **Put** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id} | Update a WorkspaceResource
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesPost**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcespost) | **Post** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources | Create a new WorkspaceResource
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
 *DefaultApi* | [**ApiV1UsersMeGet**](docs/DefaultApi.md#apiv1usersmeget) | **Get** /api/v1/users/me | Get a the current authenticated user
 *DefaultApi* | [**ApiV1UsersPost**](docs/DefaultApi.md#apiv1userspost) | **Post** /api/v1/users | Create new user
@@ -105,6 +105,7 @@ Class | Method | HTTP request | Description
 
  - [Annotation](docs/Annotation.md)
  - [ApiV1OrganizationsIdWorkspaceStoragesGet200Response](docs/ApiV1OrganizationsIdWorkspaceStoragesGet200Response.md)
+ - [ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response](docs/ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response.md)
  - [ApiV1OrganizationsOrgIdWorkspacesGet200Response](docs/ApiV1OrganizationsOrgIdWorkspacesGet200Response.md)
  - [ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response](docs/ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response.md)
  - [BuildArtifact](docs/BuildArtifact.md)

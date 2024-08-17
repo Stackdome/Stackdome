@@ -17,7 +17,6 @@ import (
 // ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response struct for ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response
 type ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response struct {
 	Items []WorkspaceResource `json:"items,omitempty"`
-	Total *int32              `json:"total,omitempty"`
 }
 
 // NewApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response instantiates a new ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response object
@@ -69,45 +68,10 @@ func (o *ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response) Se
 	o.Items = v
 }
 
-// GetTotal returns the Total field value if set, zero value otherwise.
-func (o *ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response) GetTotal() int32 {
-	if o == nil || o.Total == nil {
-		var ret int32
-		return ret
-	}
-	return *o.Total
-}
-
-// GetTotalOk returns a tuple with the Total field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response) GetTotalOk() (*int32, bool) {
-	if o == nil || o.Total == nil {
-		return nil, false
-	}
-	return o.Total, true
-}
-
-// HasTotal returns a boolean if a field has been set.
-func (o *ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response) HasTotal() bool {
-	if o != nil && o.Total != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetTotal gets a reference to the given int32 and assigns it to the Total field.
-func (o *ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response) SetTotal(v int32) {
-	o.Total = &v
-}
-
 func (o ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Items != nil {
 		toSerialize["items"] = o.Items
-	}
-	if o.Total != nil {
-		toSerialize["total"] = o.Total
 	}
 	return json.Marshal(toSerialize)
 }

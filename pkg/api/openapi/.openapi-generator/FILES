@@ -8,6 +8,7 @@ client.go
 configuration.go
 docs/Annotation.md
 docs/ApiV1OrganizationsIdWorkspaceStoragesGet200Response.md
+docs/ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response.md
 docs/ApiV1OrganizationsOrgIdWorkspacesGet200Response.md
 docs/ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response.md
 docs/BuildArtifact.md
@@ -57,6 +58,7 @@ git_push.sh
 go.mod
 go.sum
 model__api_v1_organizations__id__workspace_storages_get_200_response.go
+model__api_v1_organizations__org_id__workspace_storages__id__volumes_get_200_response.go
 model__api_v1_organizations__org_id__workspaces__workspace_id__resources_get_200_response.go
 model__api_v1_organizations__org_id__workspaces_get_200_response.go
 model_annotation.go
