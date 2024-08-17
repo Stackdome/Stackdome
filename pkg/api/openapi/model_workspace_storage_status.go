@@ -16,9 +16,10 @@ import (
 
 // WorkspaceStorageStatus struct for WorkspaceStorageStatus
 type WorkspaceStorageStatus struct {
-	Conditions               []Condition `json:"conditions,omitempty"`
-	Phase                    *string     `json:"phase,omitempty"`
-	StorageServerServiceName *string     `json:"storage_server_service_name,omitempty"`
+	ObservedVersion          *int32                 `json:"observed_version,omitempty"`
+	Conditions               []Condition            `json:"conditions,omitempty"`
+	State                    *WorkspaceStorageState `json:"state,omitempty"`
+	StorageServerServiceName *string                `json:"storage_server_service_name,omitempty"`
 }
 
 // NewWorkspaceStorageStatus instantiates a new WorkspaceStorageStatus object
@@ -36,6 +37,38 @@ func NewWorkspaceStorageStatus() *WorkspaceStorageStatus {
 func NewWorkspaceStorageStatusWithDefaults() *WorkspaceStorageStatus {
 	this := WorkspaceStorageStatus{}
 	return &this
+}
+
+// GetObservedVersion returns the ObservedVersion field value if set, zero value otherwise.
+func (o *WorkspaceStorageStatus) GetObservedVersion() int32 {
+	if o == nil || o.ObservedVersion == nil {
+		var ret int32
+		return ret
+	}
+	return *o.ObservedVersion
+}
+
+// GetObservedVersionOk returns a tuple with the ObservedVersion field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *WorkspaceStorageStatus) GetObservedVersionOk() (*int32, bool) {
+	if o == nil || o.ObservedVersion == nil {
+		return nil, false
+	}
+	return o.ObservedVersion, true
+}
+
+// HasObservedVersion returns a boolean if a field has been set.
+func (o *WorkspaceStorageStatus) HasObservedVersion() bool {
+	if o != nil && o.ObservedVersion != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetObservedVersion gets a reference to the given int32 and assigns it to the ObservedVersion field.
+func (o *WorkspaceStorageStatus) SetObservedVersion(v int32) {
+	o.ObservedVersion = &v
 }
 
 // GetConditions returns the Conditions field value if set, zero value otherwise.
@@ -70,36 +103,36 @@ func (o *WorkspaceStorageStatus) SetConditions(v []Condition) {
 	o.Conditions = v
 }
 
-// GetPhase returns the Phase field value if set, zero value otherwise.
-func (o *WorkspaceStorageStatus) GetPhase() string {
-	if o == nil || o.Phase == nil {
-		var ret string
+// GetState returns the State field value if set, zero value otherwise.
+func (o *WorkspaceStorageStatus) GetState() WorkspaceStorageState {
+	if o == nil || o.State == nil {
+		var ret WorkspaceStorageState
 		return ret
 	}
-	return *o.Phase
+	return *o.State
 }
 
-// GetPhaseOk returns a tuple with the Phase field value if set, nil otherwise
+// GetStateOk returns a tuple with the State field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *WorkspaceStorageStatus) GetPhaseOk() (*string, bool) {
-	if o == nil || o.Phase == nil {
+func (o *WorkspaceStorageStatus) GetStateOk() (*WorkspaceStorageState, bool) {
+	if o == nil || o.State == nil {
 		return nil, false
 	}
-	return o.Phase, true
+	return o.State, true
 }
 
-// HasPhase returns a boolean if a field has been set.
-func (o *WorkspaceStorageStatus) HasPhase() bool {
-	if o != nil && o.Phase != nil {
+// HasState returns a boolean if a field has been set.
+func (o *WorkspaceStorageStatus) HasState() bool {
+	if o != nil && o.State != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetPhase gets a reference to the given string and assigns it to the Phase field.
-func (o *WorkspaceStorageStatus) SetPhase(v string) {
-	o.Phase = &v
+// SetState gets a reference to the given WorkspaceStorageState and assigns it to the State field.
+func (o *WorkspaceStorageStatus) SetState(v WorkspaceStorageState) {
+	o.State = &v
 }
 
 // GetStorageServerServiceName returns the StorageServerServiceName field value if set, zero value otherwise.
@@ -136,11 +169,14 @@ func (o *WorkspaceStorageStatus) SetStorageServerServiceName(v string) {
 
 func (o WorkspaceStorageStatus) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
+	if o.ObservedVersion != nil {
+		toSerialize["observed_version"] = o.ObservedVersion
+	}
 	if o.Conditions != nil {
 		toSerialize["conditions"] = o.Conditions
 	}
-	if o.Phase != nil {
-		toSerialize["phase"] = o.Phase
+	if o.State != nil {
+		toSerialize["state"] = o.State
 	}
 	if o.StorageServerServiceName != nil {
 		toSerialize["storage_server_service_name"] = o.StorageServerServiceName

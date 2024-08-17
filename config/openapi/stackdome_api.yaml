@@ -597,9 +597,7 @@ components:
       additionalProperties: false
       required:
         - name
-        - namespace
-        - ssh_config
-        - volumes
+        - spec
       properties:
         id:
           type: string
@@ -610,6 +608,7 @@ components:
         name:
           type: string
         namespace:
+          readOnly: true
           type: string
         labels:
           type: array
@@ -619,17 +618,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Annotation'
-        ssh_config:
-          $ref: '#/components/schemas/SSHConfig'
-        volumes:
-          type: array
-          items:
-            $ref: '#/components/schemas/Volume'
+        version:
+          type: integer
+          readOnly: true
+        spec:
+          $ref: '#/components/schemas/WorkspaceStorageSpec'
         status:
           $ref: '#/components/schemas/WorkspaceStorageStatus'
-          readOnly: true
-        state:
-          $ref: '#/components/schemas/WorkspaceStorageState'
           readOnly: true
         created_at:
           type: string
@@ -639,6 +634,18 @@ components:
           type: string
           format: date-time
           readOnly: true
+
+    WorkspaceStorageSpec:
+      type: object
+      required:
+        - workspace_name
+      properties:
+        workspace_name:
+          type: string
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Volume'
 
     WorkspaceStorageState:
       type: string
@@ -655,9 +662,6 @@ components:
         - name
         - spec
       properties:
-        id: 
-          type: string
-          readOnly: true
         name:
           type: string
         labels:
@@ -747,12 +751,14 @@ components:
     WorkspaceStorageStatus:
       type: object
       properties:
+        observed_version:
+          type: integer
         conditions:
           type: array
           items:
             $ref: '#/components/schemas/Condition'
-        phase:
-          type: string
+        state:
+          $ref: '#/components/schemas/WorkspaceStorageState'
         storage_server_service_name:
           type: string
 

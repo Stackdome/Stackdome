@@ -182,7 +182,7 @@ import (
 
 func main() {
     id := "id_example" // string | The id of record
-    workspaceStorage := *openapiclient.NewWorkspaceStorage("Name_example", "Namespace_example", *openapiclient.NewSSHConfig("PublicKey_example"), []openapiclient.Volume{*openapiclient.NewVolume("Name_example", *openapiclient.NewWorkspaceVolumeSpec("Size_example"))}) // WorkspaceStorage | 
+    workspaceStorage := *openapiclient.NewWorkspaceStorage("Name_example", *openapiclient.NewWorkspaceStorageSpec("WorkspaceName_example")) // WorkspaceStorage | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -393,7 +393,7 @@ import (
 func main() {
     orgId := "orgId_example" // string | 
     id := "id_example" // string | 
-    workspaceStorage := *openapiclient.NewWorkspaceStorage("Name_example", "Namespace_example", *openapiclient.NewSSHConfig("PublicKey_example"), []openapiclient.Volume{*openapiclient.NewVolume("Name_example", *openapiclient.NewWorkspaceVolumeSpec("Size_example"))}) // WorkspaceStorage | 
+    workspaceStorage := *openapiclient.NewWorkspaceStorage("Name_example", *openapiclient.NewWorkspaceStorageSpec("WorkspaceName_example")) // WorkspaceStorage | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)

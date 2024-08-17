@@ -118,6 +118,7 @@ Class | Method | HTTP request | Description
  - [VolumeSourceTypes](docs/VolumeSourceTypes.md)
  - [VolumeStatus](docs/VolumeStatus.md)
  - [WorkspaceStorage](docs/WorkspaceStorage.md)
+ - [WorkspaceStorageSpec](docs/WorkspaceStorageSpec.md)
  - [WorkspaceStorageState](docs/WorkspaceStorageState.md)
  - [WorkspaceStorageStatus](docs/WorkspaceStorageStatus.md)
  - [WorkspaceUser](docs/WorkspaceUser.md)

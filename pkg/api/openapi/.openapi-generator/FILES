@@ -30,6 +30,7 @@ docs/VolumeSource.md
 docs/VolumeSourceTypes.md
 docs/VolumeStatus.md
 docs/WorkspaceStorage.md
+docs/WorkspaceStorageSpec.md
 docs/WorkspaceStorageState.md
 docs/WorkspaceStorageStatus.md
 docs/WorkspaceUser.md
@@ -63,6 +64,7 @@ model_volume_source.go
 model_volume_source_types.go
 model_volume_status.go
 model_workspace_storage.go
+model_workspace_storage_spec.go
 model_workspace_storage_state.go
 model_workspace_storage_status.go
 model_workspace_user.go

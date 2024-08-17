@@ -20,13 +20,12 @@ type WorkspaceStorage struct {
 	Id             *string                 `json:"id,omitempty"`
 	OrganisationId *string                 `json:"organisation_id,omitempty"`
 	Name           string                  `json:"name"`
-	Namespace      string                  `json:"namespace"`
+	Namespace      *string                 `json:"namespace,omitempty"`
 	Labels         []Label                 `json:"labels,omitempty"`
 	Annotations    []Annotation            `json:"annotations,omitempty"`
-	SshConfig      SSHConfig               `json:"ssh_config"`
-	Volumes        []Volume                `json:"volumes"`
+	Version        *int32                  `json:"version,omitempty"`
+	Spec           WorkspaceStorageSpec    `json:"spec"`
 	Status         *WorkspaceStorageStatus `json:"status,omitempty"`
-	State          *WorkspaceStorageState  `json:"state,omitempty"`
 	CreatedAt      *time.Time              `json:"created_at,omitempty"`
 	UpdatedAt      *time.Time              `json:"updated_at,omitempty"`
 }
@@ -35,12 +34,10 @@ type WorkspaceStorage struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewWorkspaceStorage(name string, namespace string, sshConfig SSHConfig, volumes []Volume) *WorkspaceStorage {
+func NewWorkspaceStorage(name string, spec WorkspaceStorageSpec) *WorkspaceStorage {
 	this := WorkspaceStorage{}
 	this.Name = name
-	this.Namespace = namespace
-	this.SshConfig = sshConfig
-	this.Volumes = volumes
+	this.Spec = spec
 	return &this
 }
 
@@ -140,28 +137,36 @@ func (o *WorkspaceStorage) SetName(v string) {
 	o.Name = v
 }
 
-// GetNamespace returns the Namespace field value
+// GetNamespace returns the Namespace field value if set, zero value otherwise.
 func (o *WorkspaceStorage) GetNamespace() string {
-	if o == nil {
+	if o == nil || o.Namespace == nil {
 		var ret string
 		return ret
 	}
-
-	return o.Namespace
+	return *o.Namespace
 }
 
-// GetNamespaceOk returns a tuple with the Namespace field value
+// GetNamespaceOk returns a tuple with the Namespace field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *WorkspaceStorage) GetNamespaceOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.Namespace == nil {
 		return nil, false
 	}
-	return &o.Namespace, true
+	return o.Namespace, true
 }
 
-// SetNamespace sets field value
+// HasNamespace returns a boolean if a field has been set.
+func (o *WorkspaceStorage) HasNamespace() bool {
+	if o != nil && o.Namespace != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetNamespace gets a reference to the given string and assigns it to the Namespace field.
 func (o *WorkspaceStorage) SetNamespace(v string) {
-	o.Namespace = v
+	o.Namespace = &v
 }
 
 // GetLabels returns the Labels field value if set, zero value otherwise.
@@ -228,52 +233,60 @@ func (o *WorkspaceStorage) SetAnnotations(v []Annotation) {
 	o.Annotations = v
 }
 
-// GetSshConfig returns the SshConfig field value
-func (o *WorkspaceStorage) GetSshConfig() SSHConfig {
+// GetVersion returns the Version field value if set, zero value otherwise.
+func (o *WorkspaceStorage) GetVersion() int32 {
+	if o == nil || o.Version == nil {
+		var ret int32
+		return ret
+	}
+	return *o.Version
+}
+
+// GetVersionOk returns a tuple with the Version field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *WorkspaceStorage) GetVersionOk() (*int32, bool) {
+	if o == nil || o.Version == nil {
+		return nil, false
+	}
+	return o.Version, true
+}
+
+// HasVersion returns a boolean if a field has been set.
+func (o *WorkspaceStorage) HasVersion() bool {
+	if o != nil && o.Version != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetVersion gets a reference to the given int32 and assigns it to the Version field.
+func (o *WorkspaceStorage) SetVersion(v int32) {
+	o.Version = &v
+}
+
+// GetSpec returns the Spec field value
+func (o *WorkspaceStorage) GetSpec() WorkspaceStorageSpec {
 	if o == nil {
-		var ret SSHConfig
+		var ret WorkspaceStorageSpec
 		return ret
 	}
 
-	return o.SshConfig
+	return o.Spec
 }
 
-// GetSshConfigOk returns a tuple with the SshConfig field value
+// GetSpecOk returns a tuple with the Spec field value
 // and a boolean to check if the value has been set.
-func (o *WorkspaceStorage) GetSshConfigOk() (*SSHConfig, bool) {
+func (o *WorkspaceStorage) GetSpecOk() (*WorkspaceStorageSpec, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return &o.SshConfig, true
+	return &o.Spec, true
 }
 
-// SetSshConfig sets field value
-func (o *WorkspaceStorage) SetSshConfig(v SSHConfig) {
-	o.SshConfig = v
-}
-
-// GetVolumes returns the Volumes field value
-func (o *WorkspaceStorage) GetVolumes() []Volume {
-	if o == nil {
-		var ret []Volume
-		return ret
-	}
-
-	return o.Volumes
-}
-
-// GetVolumesOk returns a tuple with the Volumes field value
-// and a boolean to check if the value has been set.
-func (o *WorkspaceStorage) GetVolumesOk() ([]Volume, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return o.Volumes, true
-}
-
-// SetVolumes sets field value
-func (o *WorkspaceStorage) SetVolumes(v []Volume) {
-	o.Volumes = v
+// SetSpec sets field value
+func (o *WorkspaceStorage) SetSpec(v WorkspaceStorageSpec) {
+	o.Spec = v
 }
 
 // GetStatus returns the Status field value if set, zero value otherwise.
@@ -306,38 +319,6 @@ func (o *WorkspaceStorage) HasStatus() bool {
 // SetStatus gets a reference to the given WorkspaceStorageStatus and assigns it to the Status field.
 func (o *WorkspaceStorage) SetStatus(v WorkspaceStorageStatus) {
 	o.Status = &v
-}
-
-// GetState returns the State field value if set, zero value otherwise.
-func (o *WorkspaceStorage) GetState() WorkspaceStorageState {
-	if o == nil || o.State == nil {
-		var ret WorkspaceStorageState
-		return ret
-	}
-	return *o.State
-}
-
-// GetStateOk returns a tuple with the State field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *WorkspaceStorage) GetStateOk() (*WorkspaceStorageState, bool) {
-	if o == nil || o.State == nil {
-		return nil, false
-	}
-	return o.State, true
-}
-
-// HasState returns a boolean if a field has been set.
-func (o *WorkspaceStorage) HasState() bool {
-	if o != nil && o.State != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetState gets a reference to the given WorkspaceStorageState and assigns it to the State field.
-func (o *WorkspaceStorage) SetState(v WorkspaceStorageState) {
-	o.State = &v
 }
 
 // GetCreatedAt returns the CreatedAt field value if set, zero value otherwise.
@@ -415,7 +396,7 @@ func (o WorkspaceStorage) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["name"] = o.Name
 	}
-	if true {
+	if o.Namespace != nil {
 		toSerialize["namespace"] = o.Namespace
 	}
 	if o.Labels != nil {
@@ -424,17 +405,14 @@ func (o WorkspaceStorage) MarshalJSON() ([]byte, error) {
 	if o.Annotations != nil {
 		toSerialize["annotations"] = o.Annotations
 	}
-	if true {
-		toSerialize["ssh_config"] = o.SshConfig
+	if o.Version != nil {
+		toSerialize["version"] = o.Version
 	}
 	if true {
-		toSerialize["volumes"] = o.Volumes
+		toSerialize["spec"] = o.Spec
 	}
 	if o.Status != nil {
 		toSerialize["status"] = o.Status
-	}
-	if o.State != nil {
-		toSerialize["state"] = o.State
 	}
 	if o.CreatedAt != nil {
 		toSerialize["created_at"] = o.CreatedAt

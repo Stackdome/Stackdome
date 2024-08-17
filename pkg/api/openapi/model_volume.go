@@ -16,7 +16,6 @@ import (
 
 // Volume struct for Volume
 type Volume struct {
-	Id          *string             `json:"id,omitempty"`
 	Name        string              `json:"name"`
 	Labels      []Label             `json:"labels,omitempty"`
 	Annotations []Annotation        `json:"annotations,omitempty"`
@@ -41,38 +40,6 @@ func NewVolume(name string, spec WorkspaceVolumeSpec) *Volume {
 func NewVolumeWithDefaults() *Volume {
 	this := Volume{}
 	return &this
-}
-
-// GetId returns the Id field value if set, zero value otherwise.
-func (o *Volume) GetId() string {
-	if o == nil || o.Id == nil {
-		var ret string
-		return ret
-	}
-	return *o.Id
-}
-
-// GetIdOk returns a tuple with the Id field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *Volume) GetIdOk() (*string, bool) {
-	if o == nil || o.Id == nil {
-		return nil, false
-	}
-	return o.Id, true
-}
-
-// HasId returns a boolean if a field has been set.
-func (o *Volume) HasId() bool {
-	if o != nil && o.Id != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetId gets a reference to the given string and assigns it to the Id field.
-func (o *Volume) SetId(v string) {
-	o.Id = &v
 }
 
 // GetName returns the Name field value
@@ -221,9 +188,6 @@ func (o *Volume) SetStatus(v VolumeStatus) {
 
 func (o Volume) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if o.Id != nil {
-		toSerialize["id"] = o.Id
-	}
 	if true {
 		toSerialize["name"] = o.Name
 	}

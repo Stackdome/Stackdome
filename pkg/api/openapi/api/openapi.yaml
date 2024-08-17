@@ -716,107 +716,6 @@ components:
         updated_at: 2000-01-23T04:56:07.000+00:00
         name: name
         namespace: namespace
-        volumes:
-        - name: name
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          id: id
-          spec:
-            storage_class: storage_class
-            size: size
-            sync_before_use: true
-            source:
-              local_source:
-                path: path
-                sync: true
-              build_source:
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              source_type: null
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            phase: phase
-            build_artifact_syncs:
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-        - name: name
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          id: id
-          spec:
-            storage_class: storage_class
-            size: size
-            sync_before_use: true
-            source:
-              local_source:
-                path: path
-                sync: true
-              build_source:
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              source_type: null
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            phase: phase
-            build_artifact_syncs:
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
         annotations:
         - value: value
           key: key
@@ -824,17 +723,117 @@ components:
           key: key
         created_at: 2000-01-23T04:56:07.000+00:00
         id: id
-        state: null
-        ssh_config:
-          public_key: public_key
+        version: 0
+        spec:
+          volumes:
+          - name: name
+            annotations:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            spec:
+              storage_class: storage_class
+              size: size
+              sync_before_use: true
+              source:
+                local_source:
+                  path: path
+                  sync: true
+                build_source:
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                source_type: null
+            labels:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            status:
+              phase: phase
+              build_artifact_syncs:
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              conditions:
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 1
+                status: status
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 1
+                status: status
+          - name: name
+            annotations:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            spec:
+              storage_class: storage_class
+              size: size
+              sync_before_use: true
+              source:
+                local_source:
+                  path: path
+                  sync: true
+                build_source:
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                source_type: null
+            labels:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            status:
+              phase: phase
+              build_artifact_syncs:
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              conditions:
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 1
+                status: status
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 1
+                status: status
+          workspace_name: workspace_name
         labels:
         - value: value
           key: key
         - value: value
           key: key
         status:
-          phase: phase
+          observed_version: 6
           storage_server_service_name: storage_server_service_name
+          state: null
           conditions:
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -858,6 +857,7 @@ components:
         name:
           type: string
         namespace:
+          readOnly: true
           type: string
         labels:
           items:
@@ -867,16 +867,13 @@ components:
           items:
             $ref: '#/components/schemas/Annotation'
           type: array
-        ssh_config:
-          $ref: '#/components/schemas/SSHConfig'
-        volumes:
-          items:
-            $ref: '#/components/schemas/Volume'
-          type: array
+        version:
+          readOnly: true
+          type: integer
+        spec:
+          $ref: '#/components/schemas/WorkspaceStorageSpec'
         status:
           $ref: '#/components/schemas/WorkspaceStorageStatus'
-        state:
-          $ref: '#/components/schemas/WorkspaceStorageState'
         created_at:
           format: date-time
           readOnly: true
@@ -887,9 +884,119 @@ components:
           type: string
       required:
       - name
-      - namespace
-      - ssh_config
-      - volumes
+      - spec
+      type: object
+    WorkspaceStorageSpec:
+      example:
+        volumes:
+        - name: name
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          spec:
+            storage_class: storage_class
+            size: size
+            sync_before_use: true
+            source:
+              local_source:
+                path: path
+                sync: true
+              build_source:
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              source_type: null
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            phase: phase
+            build_artifact_syncs:
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+        - name: name
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          spec:
+            storage_class: storage_class
+            size: size
+            sync_before_use: true
+            source:
+              local_source:
+                path: path
+                sync: true
+              build_source:
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              source_type: null
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            phase: phase
+            build_artifact_syncs:
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+        workspace_name: workspace_name
+      properties:
+        workspace_name:
+          type: string
+        volumes:
+          items:
+            $ref: '#/components/schemas/Volume'
+          type: array
+      required:
+      - workspace_name
       type: object
     WorkspaceStorageState:
       enum:
@@ -908,7 +1015,6 @@ components:
           key: key
         - value: value
           key: key
-        id: id
         spec:
           storage_class: storage_class
           size: size
@@ -953,9 +1059,6 @@ components:
             observed_generation: 1
             status: status
       properties:
-        id:
-          readOnly: true
-          type: string
         name:
           type: string
         labels:
@@ -976,8 +1079,6 @@ components:
       type: object
     SSHConfig:
       additionalProperties: false
-      example:
-        public_key: public_key
       properties:
         public_key:
           description: The SSH public key in OpenSSH format
@@ -1078,8 +1179,9 @@ components:
       type: object
     WorkspaceStorageStatus:
       example:
-        phase: phase
+        observed_version: 6
         storage_server_service_name: storage_server_service_name
+        state: null
         conditions:
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -1094,12 +1196,14 @@ components:
           observed_generation: 1
           status: status
       properties:
+        observed_version:
+          type: integer
         conditions:
           items:
             $ref: '#/components/schemas/Condition'
           type: array
-        phase:
-          type: string
+        state:
+          $ref: '#/components/schemas/WorkspaceStorageState'
         storage_server_service_name:
           type: string
       type: object
@@ -1243,113 +1347,12 @@ components:
       type: object
     _api_v1_organizations__id__workspace_storages_get_200_response:
       example:
-        total: 0
+        total: 1
         items:
         - organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
           name: name
           namespace: namespace
-          volumes:
-          - name: name
-            annotations:
-            - value: value
-              key: key
-            - value: value
-              key: key
-            id: id
-            spec:
-              storage_class: storage_class
-              size: size
-              sync_before_use: true
-              source:
-                local_source:
-                  path: path
-                  sync: true
-                build_source:
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                source_type: null
-            labels:
-            - value: value
-              key: key
-            - value: value
-              key: key
-            status:
-              phase: phase
-              build_artifact_syncs:
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              conditions:
-              - reason: reason
-                last_transition_time: 2000-01-23T04:56:07.000+00:00
-                type: type
-                message: message
-                observed_generation: 1
-                status: status
-              - reason: reason
-                last_transition_time: 2000-01-23T04:56:07.000+00:00
-                type: type
-                message: message
-                observed_generation: 1
-                status: status
-          - name: name
-            annotations:
-            - value: value
-              key: key
-            - value: value
-              key: key
-            id: id
-            spec:
-              storage_class: storage_class
-              size: size
-              sync_before_use: true
-              source:
-                local_source:
-                  path: path
-                  sync: true
-                build_source:
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                source_type: null
-            labels:
-            - value: value
-              key: key
-            - value: value
-              key: key
-            status:
-              phase: phase
-              build_artifact_syncs:
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              conditions:
-              - reason: reason
-                last_transition_time: 2000-01-23T04:56:07.000+00:00
-                type: type
-                message: message
-                observed_generation: 1
-                status: status
-              - reason: reason
-                last_transition_time: 2000-01-23T04:56:07.000+00:00
-                type: type
-                message: message
-                observed_generation: 1
-                status: status
           annotations:
           - value: value
             key: key
@@ -1357,17 +1360,117 @@ components:
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          state: null
-          ssh_config:
-            public_key: public_key
+          version: 0
+          spec:
+            volumes:
+            - name: name
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              spec:
+                storage_class: storage_class
+                size: size
+                sync_before_use: true
+                source:
+                  local_source:
+                    path: path
+                    sync: true
+                  build_source:
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  source_type: null
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              status:
+                phase: phase
+                build_artifact_syncs:
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+            - name: name
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              spec:
+                storage_class: storage_class
+                size: size
+                sync_before_use: true
+                source:
+                  local_source:
+                    path: path
+                    sync: true
+                  build_source:
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  source_type: null
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              status:
+                phase: phase
+                build_artifact_syncs:
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+            workspace_name: workspace_name
           labels:
           - value: value
             key: key
           - value: value
             key: key
           status:
-            phase: phase
+            observed_version: 6
             storage_server_service_name: storage_server_service_name
+            state: null
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -1385,107 +1488,6 @@ components:
           updated_at: 2000-01-23T04:56:07.000+00:00
           name: name
           namespace: namespace
-          volumes:
-          - name: name
-            annotations:
-            - value: value
-              key: key
-            - value: value
-              key: key
-            id: id
-            spec:
-              storage_class: storage_class
-              size: size
-              sync_before_use: true
-              source:
-                local_source:
-                  path: path
-                  sync: true
-                build_source:
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                source_type: null
-            labels:
-            - value: value
-              key: key
-            - value: value
-              key: key
-            status:
-              phase: phase
-              build_artifact_syncs:
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              conditions:
-              - reason: reason
-                last_transition_time: 2000-01-23T04:56:07.000+00:00
-                type: type
-                message: message
-                observed_generation: 1
-                status: status
-              - reason: reason
-                last_transition_time: 2000-01-23T04:56:07.000+00:00
-                type: type
-                message: message
-                observed_generation: 1
-                status: status
-          - name: name
-            annotations:
-            - value: value
-              key: key
-            - value: value
-              key: key
-            id: id
-            spec:
-              storage_class: storage_class
-              size: size
-              sync_before_use: true
-              source:
-                local_source:
-                  path: path
-                  sync: true
-                build_source:
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                source_type: null
-            labels:
-            - value: value
-              key: key
-            - value: value
-              key: key
-            status:
-              phase: phase
-              build_artifact_syncs:
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              conditions:
-              - reason: reason
-                last_transition_time: 2000-01-23T04:56:07.000+00:00
-                type: type
-                message: message
-                observed_generation: 1
-                status: status
-              - reason: reason
-                last_transition_time: 2000-01-23T04:56:07.000+00:00
-                type: type
-                message: message
-                observed_generation: 1
-                status: status
           annotations:
           - value: value
             key: key
@@ -1493,17 +1495,117 @@ components:
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          state: null
-          ssh_config:
-            public_key: public_key
+          version: 0
+          spec:
+            volumes:
+            - name: name
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              spec:
+                storage_class: storage_class
+                size: size
+                sync_before_use: true
+                source:
+                  local_source:
+                    path: path
+                    sync: true
+                  build_source:
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  source_type: null
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              status:
+                phase: phase
+                build_artifact_syncs:
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+            - name: name
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              spec:
+                storage_class: storage_class
+                size: size
+                sync_before_use: true
+                source:
+                  local_source:
+                    path: path
+                    sync: true
+                  build_source:
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  source_type: null
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              status:
+                phase: phase
+                build_artifact_syncs:
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+            workspace_name: workspace_name
           labels:
           - value: value
             key: key
           - value: value
             key: key
           status:
-            phase: phase
+            observed_version: 6
             storage_server_service_name: storage_server_service_name
+            state: null
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00

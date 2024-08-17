@@ -4,8 +4,9 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**ObservedVersion** | Pointer to **int32** |  | [optional] 
 **Conditions** | Pointer to [**[]Condition**](Condition.md) |  | [optional] 
-**Phase** | Pointer to **string** |  | [optional] 
+**State** | Pointer to [**WorkspaceStorageState**](WorkspaceStorageState.md) |  | [optional] 
 **StorageServerServiceName** | Pointer to **string** |  | [optional] 
 
 ## Methods
@@ -26,6 +27,31 @@ will change when the set of required properties is changed
 NewWorkspaceStorageStatusWithDefaults instantiates a new WorkspaceStorageStatus object
 This constructor will only assign default values to properties that have it defined,
 but it doesn't guarantee that properties required by API are set
+
+### GetObservedVersion
+
+`func (o *WorkspaceStorageStatus) GetObservedVersion() int32`
+
+GetObservedVersion returns the ObservedVersion field if non-nil, zero value otherwise.
+
+### GetObservedVersionOk
+
+`func (o *WorkspaceStorageStatus) GetObservedVersionOk() (*int32, bool)`
+
+GetObservedVersionOk returns a tuple with the ObservedVersion field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetObservedVersion
+
+`func (o *WorkspaceStorageStatus) SetObservedVersion(v int32)`
+
+SetObservedVersion sets ObservedVersion field to given value.
+
+### HasObservedVersion
+
+`func (o *WorkspaceStorageStatus) HasObservedVersion() bool`
+
+HasObservedVersion returns a boolean if a field has been set.
 
 ### GetConditions
 
@@ -52,30 +78,30 @@ SetConditions sets Conditions field to given value.
 
 HasConditions returns a boolean if a field has been set.
 
-### GetPhase
+### GetState
 
-`func (o *WorkspaceStorageStatus) GetPhase() string`
+`func (o *WorkspaceStorageStatus) GetState() WorkspaceStorageState`
 
-GetPhase returns the Phase field if non-nil, zero value otherwise.
+GetState returns the State field if non-nil, zero value otherwise.
 
-### GetPhaseOk
+### GetStateOk
 
-`func (o *WorkspaceStorageStatus) GetPhaseOk() (*string, bool)`
+`func (o *WorkspaceStorageStatus) GetStateOk() (*WorkspaceStorageState, bool)`
 
-GetPhaseOk returns a tuple with the Phase field if it's non-nil, zero value otherwise
+GetStateOk returns a tuple with the State field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetPhase
+### SetState
 
-`func (o *WorkspaceStorageStatus) SetPhase(v string)`
+`func (o *WorkspaceStorageStatus) SetState(v WorkspaceStorageState)`
 
-SetPhase sets Phase field to given value.
+SetState sets State field to given value.
 
-### HasPhase
+### HasState
 
-`func (o *WorkspaceStorageStatus) HasPhase() bool`
+`func (o *WorkspaceStorageStatus) HasState() bool`
 
-HasPhase returns a boolean if a field has been set.
+HasState returns a boolean if a field has been set.
 
 ### GetStorageServerServiceName
 

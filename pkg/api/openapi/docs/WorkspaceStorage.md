@@ -7,13 +7,12 @@ Name | Type | Description | Notes
 **Id** | Pointer to **string** |  | [optional] [readonly] 
 **OrganisationId** | Pointer to **string** |  | [optional] [readonly] 
 **Name** | **string** |  | 
-**Namespace** | **string** |  | 
+**Namespace** | Pointer to **string** |  | [optional] [readonly] 
 **Labels** | Pointer to [**[]Label**](Label.md) |  | [optional] 
 **Annotations** | Pointer to [**[]Annotation**](Annotation.md) |  | [optional] 
-**SshConfig** | [**SSHConfig**](SSHConfig.md) |  | 
-**Volumes** | [**[]Volume**](Volume.md) |  | 
+**Version** | Pointer to **int32** |  | [optional] [readonly] 
+**Spec** | [**WorkspaceStorageSpec**](WorkspaceStorageSpec.md) |  | 
 **Status** | Pointer to [**WorkspaceStorageStatus**](WorkspaceStorageStatus.md) |  | [optional] 
-**State** | Pointer to [**WorkspaceStorageState**](WorkspaceStorageState.md) |  | [optional] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] [readonly] 
 **UpdatedAt** | Pointer to **time.Time** |  | [optional] [readonly] 
 
@@ -21,7 +20,7 @@ Name | Type | Description | Notes
 
 ### NewWorkspaceStorage
 
-`func NewWorkspaceStorage(name string, namespace string, sshConfig SSHConfig, volumes []Volume, ) *WorkspaceStorage`
+`func NewWorkspaceStorage(name string, spec WorkspaceStorageSpec, ) *WorkspaceStorage`
 
 NewWorkspaceStorage instantiates a new WorkspaceStorage object
 This constructor will assign default values to properties that have it defined,
@@ -125,6 +124,11 @@ and a boolean to check if the value has been set.
 
 SetNamespace sets Namespace field to given value.
 
+### HasNamespace
+
+`func (o *WorkspaceStorage) HasNamespace() bool`
+
+HasNamespace returns a boolean if a field has been set.
 
 ### GetLabels
 
@@ -176,44 +180,49 @@ SetAnnotations sets Annotations field to given value.
 
 HasAnnotations returns a boolean if a field has been set.
 
-### GetSshConfig
+### GetVersion
 
-`func (o *WorkspaceStorage) GetSshConfig() SSHConfig`
+`func (o *WorkspaceStorage) GetVersion() int32`
 
-GetSshConfig returns the SshConfig field if non-nil, zero value otherwise.
+GetVersion returns the Version field if non-nil, zero value otherwise.
 
-### GetSshConfigOk
+### GetVersionOk
 
-`func (o *WorkspaceStorage) GetSshConfigOk() (*SSHConfig, bool)`
+`func (o *WorkspaceStorage) GetVersionOk() (*int32, bool)`
 
-GetSshConfigOk returns a tuple with the SshConfig field if it's non-nil, zero value otherwise
+GetVersionOk returns a tuple with the Version field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetSshConfig
+### SetVersion
 
-`func (o *WorkspaceStorage) SetSshConfig(v SSHConfig)`
+`func (o *WorkspaceStorage) SetVersion(v int32)`
 
-SetSshConfig sets SshConfig field to given value.
+SetVersion sets Version field to given value.
 
+### HasVersion
 
-### GetVolumes
+`func (o *WorkspaceStorage) HasVersion() bool`
 
-`func (o *WorkspaceStorage) GetVolumes() []Volume`
+HasVersion returns a boolean if a field has been set.
 
-GetVolumes returns the Volumes field if non-nil, zero value otherwise.
+### GetSpec
 
-### GetVolumesOk
+`func (o *WorkspaceStorage) GetSpec() WorkspaceStorageSpec`
 
-`func (o *WorkspaceStorage) GetVolumesOk() (*[]Volume, bool)`
+GetSpec returns the Spec field if non-nil, zero value otherwise.
 
-GetVolumesOk returns a tuple with the Volumes field if it's non-nil, zero value otherwise
+### GetSpecOk
+
+`func (o *WorkspaceStorage) GetSpecOk() (*WorkspaceStorageSpec, bool)`
+
+GetSpecOk returns a tuple with the Spec field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetVolumes
+### SetSpec
 
-`func (o *WorkspaceStorage) SetVolumes(v []Volume)`
+`func (o *WorkspaceStorage) SetSpec(v WorkspaceStorageSpec)`
 
-SetVolumes sets Volumes field to given value.
+SetSpec sets Spec field to given value.
 
 
 ### GetStatus
@@ -240,31 +249,6 @@ SetStatus sets Status field to given value.
 `func (o *WorkspaceStorage) HasStatus() bool`
 
 HasStatus returns a boolean if a field has been set.
-
-### GetState
-
-`func (o *WorkspaceStorage) GetState() WorkspaceStorageState`
-
-GetState returns the State field if non-nil, zero value otherwise.
-
-### GetStateOk
-
-`func (o *WorkspaceStorage) GetStateOk() (*WorkspaceStorageState, bool)`
-
-GetStateOk returns a tuple with the State field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetState
-
-`func (o *WorkspaceStorage) SetState(v WorkspaceStorageState)`
-
-SetState sets State field to given value.
-
-### HasState
-
-`func (o *WorkspaceStorage) HasState() bool`
-
-HasState returns a boolean if a field has been set.
 
 ### GetCreatedAt
 
