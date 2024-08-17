@@ -1,0 +1,108 @@
+# WorkspaceStatus
+
+## Properties
+
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**State** | Pointer to **string** |  | [optional] 
+**ObservedVersion** | Pointer to **int32** |  | [optional] 
+**Conditions** | Pointer to [**[]Condition**](Condition.md) |  | [optional] 
+
+## Methods
+
+### NewWorkspaceStatus
+
+`func NewWorkspaceStatus() *WorkspaceStatus`
+
+NewWorkspaceStatus instantiates a new WorkspaceStatus object
+This constructor will assign default values to properties that have it defined,
+and makes sure properties required by API are set, but the set of arguments
+will change when the set of required properties is changed
+
+### NewWorkspaceStatusWithDefaults
+
+`func NewWorkspaceStatusWithDefaults() *WorkspaceStatus`
+
+NewWorkspaceStatusWithDefaults instantiates a new WorkspaceStatus object
+This constructor will only assign default values to properties that have it defined,
+but it doesn't guarantee that properties required by API are set
+
+### GetState
+
+`func (o *WorkspaceStatus) GetState() string`
+
+GetState returns the State field if non-nil, zero value otherwise.
+
+### GetStateOk
+
+`func (o *WorkspaceStatus) GetStateOk() (*string, bool)`
+
+GetStateOk returns a tuple with the State field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetState
+
+`func (o *WorkspaceStatus) SetState(v string)`
+
+SetState sets State field to given value.
+
+### HasState
+
+`func (o *WorkspaceStatus) HasState() bool`
+
+HasState returns a boolean if a field has been set.
+
+### GetObservedVersion
+
+`func (o *WorkspaceStatus) GetObservedVersion() int32`
+
+GetObservedVersion returns the ObservedVersion field if non-nil, zero value otherwise.
+
+### GetObservedVersionOk
+
+`func (o *WorkspaceStatus) GetObservedVersionOk() (*int32, bool)`
+
+GetObservedVersionOk returns a tuple with the ObservedVersion field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetObservedVersion
+
+`func (o *WorkspaceStatus) SetObservedVersion(v int32)`
+
+SetObservedVersion sets ObservedVersion field to given value.
+
+### HasObservedVersion
+
+`func (o *WorkspaceStatus) HasObservedVersion() bool`
+
+HasObservedVersion returns a boolean if a field has been set.
+
+### GetConditions
+
+`func (o *WorkspaceStatus) GetConditions() []Condition`
+
+GetConditions returns the Conditions field if non-nil, zero value otherwise.
+
+### GetConditionsOk
+
+`func (o *WorkspaceStatus) GetConditionsOk() (*[]Condition, bool)`
+
+GetConditionsOk returns a tuple with the Conditions field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetConditions
+
+`func (o *WorkspaceStatus) SetConditions(v []Condition)`
+
+SetConditions sets Conditions field to given value.
+
+### HasConditions
+
+`func (o *WorkspaceStatus) HasConditions() bool`
+
+HasConditions returns a boolean if a field has been set.
+
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+
