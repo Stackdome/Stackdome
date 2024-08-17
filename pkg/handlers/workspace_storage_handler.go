@@ -31,7 +31,22 @@ func (h *workspaceStorageHandler) GetByID(w http.ResponseWriter, r *http.Request
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
 			id := mux.Vars(r)["id"]
-			obj, err := h.workspaceStorageService.Get(ctx, id)
+			if id == "current" {
+				currentUser, err := auth.GetCurrentUserFromCtx(ctx)
+				if err != nil {
+					return nil, errors.Unauthorized("failed to fetch current user")
+				}
+				objs, serr := h.workspaceStorageService.ListByUserID(ctx, currentUser.ID)
+				if serr != nil {
+					return nil, serr
+				}
+				return presenters.PresentWorkspaceStorageList(objs), nil
+			}
+			currentUser, uerr := auth.GetCurrentUserFromCtx(ctx)
+			if uerr != nil {
+				return nil, errors.Unauthorized("failed to fetch current user")
+			}
+			obj, err := h.workspaceStorageService.Get(ctx, id, currentUser.ID)
 			if err != nil {
 				return nil, err
 			}
@@ -77,6 +92,24 @@ func (h *workspaceStorageHandler) List(w http.ResponseWriter, r *http.Request) {
 	handleList(w, r, cfg)
 }
 
+func (h *workspaceStorageHandler) ListVolumes(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			ctx := r.Context()
+			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
+			if err != nil {
+				return nil, errors.Unauthorized("failed to fetch current user")
+			}
+			objs, serr := h.workspaceStorageService.ListVolumes(ctx, mux.Vars(r)["id"], currentUser.ID)
+			if serr != nil {
+				return nil, serr
+			}
+			return presenters.PresentVolumeList(objs, true), nil
+		},
+	}
+	handleList(w, r, cfg)
+}
+
 func (h *workspaceStorageHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var ws openapi.WorkspaceStorage
 	cfg := &handlerConfig{
@@ -92,7 +125,7 @@ func (h *workspaceStorageHandler) Create(w http.ResponseWriter, r *http.Request)
 			orgID := mux.Vars(r)["org_id"]
 			convertedObject.OrganisationID = orgID
 			convertedObject.UserID = currentUser.ID
-			obj, serr := h.workspaceStorageService.Create(ctx, convertedObject)
+			obj, serr := h.workspaceStorageService.Create(ctx, convertedObject, currentUser.ID)
 			if serr != nil {
 				return nil, serr
 			}
@@ -112,7 +145,11 @@ func (h *workspaceStorageHandler) Update(w http.ResponseWriter, r *http.Request)
 			ctx := r.Context()
 			id := mux.Vars(r)["id"]
 			convertedObject := presenters.ConvertWorkspaceStorage(&ws)
-			obj, serr := h.workspaceStorageService.Update(ctx, id, convertedObject)
+			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
+			if err != nil {
+				return nil, errors.Unauthorized("failed to fetch current user")
+			}
+			obj, serr := h.workspaceStorageService.Update(ctx, id, currentUser.ID, convertedObject)
 			if serr != nil {
 				return nil, serr
 			}
@@ -128,7 +165,11 @@ func (h *workspaceStorageHandler) Delete(w http.ResponseWriter, r *http.Request)
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
 			id := mux.Vars(r)["id"]
-			serr := h.workspaceStorageService.Delete(ctx, id)
+			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
+			if err != nil {
+				return nil, errors.Unauthorized("failed to fetch current user")
+			}
+			serr := h.workspaceStorageService.Delete(ctx, id, currentUser.ID)
 			if serr != nil {
 				return nil, serr
 			}

@@ -3,7 +3,6 @@ package workspaceuser
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers"
 	apperrors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -117,10 +116,9 @@ func (r *WorkspaceUserReconciler) deleteWorkspaceUserFromCluster(ctx context.Con
 func mapToDBStatusAndState(
 	clusterObject *workspacev1alpha1.WorkspaceUser,
 	cluster *models.Cluster) *models.WorkspaceUserStatus {
-	observedVersion, _ := strconv.Atoi(clusterObject.Status.ObservedStackdomeServerGeneration)
 
 	status := &models.WorkspaceUserStatus{
-		ObservedVersion:       observedVersion,
+		ObservedVersion:       clusterObject.Status.ObservedStackdomeServerObjectGeneration,
 		ServiceAccountName:    clusterObject.Status.ServiceAccountName,
 		ServiceAccountToken:   clusterObject.Status.ServiceAccountToken,
 		ProvisionedNamespaces: clusterObject.Status.Namespaces,
@@ -138,7 +136,7 @@ func mapToDBStatusAndState(
 		status.State = models.WorkspaceUserProvisionPending
 		status.Message = "WorkspaceUser not uptodate"
 		// Invalidate the version.
-		status.ObservedVersion = observedVersion - 1
+		status.ObservedVersion = clusterObject.Status.ObservedStackdomeServerObjectGeneration - 1
 	case availableCondition.Status == v1.ConditionFalse:
 		status.State = models.WorkspaceUserProvisionPending
 		status.Message = availableCondition.Message

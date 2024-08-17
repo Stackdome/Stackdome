@@ -92,6 +92,10 @@ func (f *Session) DirectDB() *sql.DB {
 }
 
 func (f *Session) New(ctx context.Context) *gorm.DB {
+	if tx := TxFromContext(ctx); tx != nil {
+		return tx
+	}
+
 	conn := f.g2.Session(&gorm.Session{
 		Context:              ctx,
 		Logger:               f.g2.Logger.LogMode(logger.Silent),

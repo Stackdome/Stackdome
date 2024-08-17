@@ -15,6 +15,7 @@ import (
 type workspaceUserStore struct {
 	sessionFactory          db.SessionFactory
 	workspaceNamespaceStore stores.WorkspaceNamespaceStore
+	atomicExecutor
 }
 
 type WorkspaceUserStoreSpec struct {
@@ -27,24 +28,8 @@ func NewWorkspaceUserStore(spec WorkspaceUserStoreSpec) stores.WorkspaceUserStor
 		workspaceNamespaceStore: NewWorkspaceNamespaceStore(WorkspaceNamespaceStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
+		atomicExecutor: atomicExecutor{sessionFactory: spec.SessionFactory},
 	}
-}
-
-func (w *workspaceUserStore) WithTransaction(ctx context.Context, fn func(ctx context.Context) *errors.ServiceError) *errors.ServiceError {
-	tx := w.sessionFactory.New(ctx).Begin()
-
-	txCtx := db.CtxWithTransaction(ctx, tx)
-
-	if err := fn(txCtx); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		tx.Rollback()
-		return errors.GeneralError("failed to commit transaction: %s", err.Error())
-	}
-	return nil
 }
 
 func (w *workspaceUserStore) CreateWithTx(ctx context.Context, spec *models.WorkspaceUser) (*models.WorkspaceUser, *errors.ServiceError) {

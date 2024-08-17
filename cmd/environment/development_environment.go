@@ -104,7 +104,16 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 		ClusterService: d.Services.ClusterService,
 		UserService:    d.Services.UserService,
 	})
+
+	workspacestorageClusterResourceService := clusterresource.NewWorkspaceStorageClusterResourceService(clusterresource.WorkspaceStorageClusterResourceServiceSpec{
+		ClusterManager:       d.ClusterManager,
+		Logger:               logger,
+		ClusterService:       d.Services.ClusterService,
+		WorkspaceUserService: d.Services.WorkspaceUserService,
+	})
+
 	d.Services.WorkspaceUserService.InjectClusterResourceService(workspaceUserClusterResourceService)
+	d.Services.WorkspaceStorageService.InjectClusterResourceService(workspacestorageClusterResourceService)
 	d.ClusterManager.Start(ctx)
 
 	if err := d.initializeDefaultOrgAndCluster(ctx); err != nil {
@@ -259,6 +268,10 @@ func (d *developmentEnvironment) loadSevices(logger logger.Logger) Services {
 			}),
 		}),
 		WorkspaceStorageService: services.NewWorkspaceStorageService(services.WorkspaceStorageServiceSpec{
+			SessionFactory: d.DBSession,
+			Logger:         logger,
+		}),
+		WorkspaceVolumeService: services.NewVolumeService(services.VolumeServiceSpec{
 			SessionFactory: d.DBSession,
 			Logger:         logger,
 		}),

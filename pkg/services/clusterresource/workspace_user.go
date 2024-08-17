@@ -3,11 +3,8 @@ package clusterresource
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -15,14 +12,6 @@ import (
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	workspacev1alpha1 "soradev.io/cluster-agent/api/v1alpha1"
 )
-
-type DBClusterService interface {
-	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
-}
-
-type DBUserService interface {
-	Get(ctx context.Context, userID string) (*models.User, *errors.ServiceError)
-}
 
 // WorkspaceUserClusterResourceService is an interface for managing workspace user resources in a cluster.
 type WorkspaceUserClusterResourceService interface {
@@ -71,7 +60,7 @@ func (s *workspaceUserClusterResourceService) CreateWorkspaceUserInCluster(ctx c
 
 	accessRules := user.ClusterAccessRules()
 
-	desiredObject := desiredObjectInCluster(user, workspaceUser, accessRules)
+	desiredObject := s.desiredObjectInCluster(user, workspaceUser, accessRules)
 
 	client, clientGetErr := s.clusterManager.GetClient(cluster.ID)
 	if clientGetErr != nil {
@@ -138,7 +127,7 @@ func (s *workspaceUserClusterResourceService) UpdateWorkspaceUserInCluster(ctx c
 
 	accessRules := user.ClusterAccessRules()
 
-	desiredObject := desiredObjectInCluster(user, workspaceUser, accessRules)
+	desiredObject := s.desiredObjectInCluster(user, workspaceUser, accessRules)
 
 	client, clientGetErr := s.clusterManager.GetClient(cluster.ID)
 	if clientGetErr != nil {
@@ -161,13 +150,13 @@ func (s *workspaceUserClusterResourceService) UpdateWorkspaceUserInCluster(ctx c
 	return nil
 }
 
-func desiredObjectInCluster(user *models.User, workspaceUser *models.WorkspaceUser, accessRules []rbacv1.PolicyRule) *workspacev1alpha1.WorkspaceUser {
+func (s *workspaceUserClusterResourceService) desiredObjectInCluster(user *models.User, workspaceUser *models.WorkspaceUser, accessRules []rbacv1.PolicyRule) *workspacev1alpha1.WorkspaceUser {
 	return &workspacev1alpha1.WorkspaceUser{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: WorkspaceUserClusterObjectName(user),
 			Labels: map[string]string{
-				models.WorkspaceUserIDLabel:      workspaceUser.ID,
-				models.WorkspaceUserDBGeneration: fmt.Sprintf("%d", workspaceUser.Version),
+				models.WorkspaceUserIDLabel:   workspaceUser.ID,
+				models.ObjectServerGeneration: fmt.Sprintf("%d", workspaceUser.Version),
 			},
 		},
 		Spec: workspacev1alpha1.WorkspaceUserSpec{
@@ -188,36 +177,6 @@ func WorkspaceUserClusterObjectName(user *models.User) string {
 	objectName := fmt.Sprintf("%s-%s", sanitizedName, user.ID)
 	// Ensure the object name meets the Kubernetes requirements
 	return truncateObjectName(objectName)
-}
-
-func sanitizeName(name string) string {
-	// Replace spaces and special characters with hyphens
-	reg := regexp.MustCompile(`[^a-zA-Z0-9-]`)
-	sanitized := reg.ReplaceAllString(name, "-")
-
-	// Remove leading and trailing hyphens
-	sanitized = strings.TrimPrefix(sanitized, "-")
-	sanitized = strings.TrimSuffix(sanitized, "-")
-
-	return strings.ToLower(sanitized)
-}
-
-func truncateObjectName(name string) string {
-	// Truncate the object name if it exceeds the maximum length
-	maxLength := 63
-	if len(name) > maxLength {
-		name = name[:maxLength]
-	}
-
-	name = strings.TrimSuffix(name, "-")
-	return name
-}
-
-func WrapErrAsServiceError(err error) *errors.ServiceError {
-	if err == nil {
-		return nil
-	}
-	return errors.GeneralError(err.Error())
 }
 
 func getNamespaces(workspaceUser *models.WorkspaceUser) []string {

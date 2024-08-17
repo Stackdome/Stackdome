@@ -47,6 +47,7 @@ func (s apiServer) routes() *mux.Router {
 	workspaceUsersRouter.HandleFunc("/{id}", workspaceUserHandler.Update).Methods(http.MethodPut)
 	workspaceUsersRouter.HandleFunc("/{id}", workspaceUserHandler.Delete).Methods(http.MethodDelete)
 
+	// TODO List based on filters. Like userID.
 	workspaceStorageRouter := organizationsRouter.PathPrefix("/{org_id}/workspace-storages").Subrouter()
 	workspaceStorageRouter.Use(authenticationMiddleware.AuthenticateUser)
 	workspaceStorageRouter.HandleFunc("", storageHandler.Create).Methods(http.MethodPost)
@@ -54,5 +55,7 @@ func (s apiServer) routes() *mux.Router {
 	workspaceStorageRouter.HandleFunc("/{id}", storageHandler.GetByID).Methods(http.MethodGet)
 	workspaceStorageRouter.HandleFunc("/{id}", storageHandler.Update).Methods(http.MethodPut)
 	workspaceStorageRouter.HandleFunc("/{id}", storageHandler.Delete).Methods(http.MethodDelete)
+	workspaceStorageRouter.HandleFunc("/{id}/volumes", storageHandler.ListVolumes).Methods(http.MethodGet)
+
 	return mainRouter
 }

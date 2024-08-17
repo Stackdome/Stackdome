@@ -74,7 +74,7 @@ func (r *WorkspaceVolumeReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
-	if _, serr := r.WorkspaceStorageService.Get(ctx, workspaceStorageID); serr != nil {
+	if _, serr := r.WorkspaceStorageService.InternalGet(ctx, workspaceStorageID); serr != nil {
 		r.Log.Errorf("failed to get workspace storage from db: %v", serr)
 		return ctrl.Result{}, nil
 	}
@@ -82,31 +82,23 @@ func (r *WorkspaceVolumeReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	dbInstance, serr := r.VolumeService.Get(ctx, clusterInstance.Name, workspaceStorageID)
 	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
-			return ctrl.Result{}, r.deleteWorkspaceVolumeFromCluster(ctx, clusterInstance)
+			r.Log.Infof("workspace volume %s in namespace %s not found in DB", clusterInstance.Name, clusterInstance.Namespace)
+			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to get workspace volume from db: %v", serr)
 	}
 
 	// status changed
-	if dbInstance.VolumeStatus.LastObservedStatusHash != clusterInstance.Status.StatusHash {
-		dbInstance.VolumeStatus = mapToVolumeStatus(clusterInstance.Status)
-		_, serr := r.VolumeService.Update(ctx, clusterInstance.Name, workspaceStorageID, dbInstance)
+	if dbInstance.Status == nil || dbInstance.Status.LastObservedStatusHash != clusterInstance.Status.StatusHash {
+		dbInstance.Status = mapToVolumeStatus(clusterInstance.Status)
+		serr := r.VolumeService.UpdateStatus(ctx, clusterInstance.Name, workspaceStorageID, dbInstance.Status)
 		if serr != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update workspace volume in db: %v", serr)
+			return ctrl.Result{}, fmt.Errorf("failed to update workspace volume status in db: %v", serr)
 		}
 		return ctrl.Result{}, nil
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func (r *WorkspaceVolumeReconciler) deleteWorkspaceVolumeFromCluster(ctx context.Context, inClusterInstance *workspacev1alpha1.WorkspaceVolume) error {
-	r.Log.Infof("deleting workspace volume: %s in namespace %s", inClusterInstance.Name, inClusterInstance.Namespace)
-	if err := r.Client.Delete(ctx, inClusterInstance); client.IgnoreNotFound(err) != nil {
-		r.Log.Errorf("failed to delete workspace volume: %v", err)
-		return err
-	}
-	return nil
 }
 
 func mapToVolumeStatus(clusterStatus workspacev1alpha1.WorkspaceVolumeStatus) *models.VolumeStatus {

@@ -9,7 +9,6 @@ import (
 
 const (
 	WorkspaceStorageIDLabel = "workspacestorage.stackdome.io/id"
-	WorkspaceVolumeIDLabel  = "workspacevolume.stackdome.io/id"
 )
 
 type WorkspaceStorageState string
@@ -24,28 +23,38 @@ const (
 )
 
 type WorkspaceStorage struct {
-	ID                string                  `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
-	OrganisationID    string                  `gorm:"not null"`
-	UserID            string                  `gorm:"not null"`
-	Name              string                  `gorm:"not null"`
-	Namespace         string                  `gorm:"unique;not null"`
+	ID             string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
+	OrganisationID string `gorm:"not null"`
+	UserID         string `gorm:"not null"`
+	Name           string `gorm:"not null; <-:create"`
+	Namespace      string `gorm:"unique;not null;  <-:create"`
+	WorkspaceName  string `gorm:"<-:create"`
+	// Tracks the version of the object in the database.
+	Version           int
 	Labels            Labels                  `gorm:"type:jsonb"`
 	Annotations       Annotations             `gorm:"type:jsonb"`
 	SSHConfig         *SSHConfig              `gorm:"type:jsonb"`
-	Volumes           []Volume                `gorm:"foreignKey:WorkspaceStorageID"`
+	Volumes           []*Volume               `gorm:"foreignKey:WorkspaceStorageID"`
 	Status            *WorkspaceStorageStatus `gorm:"type:jsonb"`
-	State             WorkspaceStorageState   `gorm:"not null"`
 	DeletionTimeStamp *time.Time              `json:"deletion_timestamp"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }
 
 func (w *WorkspaceStorage) SetState(state WorkspaceStorageState) bool {
-	if w.State == state {
+	if w.Status.State == state {
 		return false
 	}
-	w.State = state
+	w.Status.State = state
 	return true
+}
+
+func (w *WorkspaceStorage) VolumeMap() map[string]*Volume {
+	volumeMap := make(map[string]*Volume)
+	for i := range w.Volumes {
+		volumeMap[w.Volumes[i].ID] = w.Volumes[i]
+	}
+	return volumeMap
 }
 
 type SSHConfig struct {
@@ -66,17 +75,33 @@ func (c *SSHConfig) Scan(value interface{}) error {
 }
 
 type Volume struct {
-	ID                 string               `gorm:"primaryKey" json:"id"`
-	WorkspaceStorageID string               `gorm:"primaryKey" json:"workspace_storage_id"`
-	Name               string               `gorm:"not null" json:"name"`
-	Labels             Labels               `gorm:"type:jsonb" json:"labels"`
-	Annotations        Annotations          `gorm:"type:jsonb" json:"annotations"`
-	Size               string               `json:"size"`
-	StorageClass       string               `json:"storage_class,omitempty"`
-	LocalSource        *LocalSource         `gorm:"type:jsonb" json:"local_source,omitempty"`
-	BuildSource        BuildArtifactSources `gorm:"type:jsonb" json:"build_source,omitempty"`
-	SyncBeforeUse      bool                 `json:"sync_before_use"`
-	VolumeStatus       *VolumeStatus        `gorm:"type:jsonb" json:"volume_status,omitempty"`
+	ID                 string        `gorm:"primaryKey; <-:create" json:"id"`
+	WorkspaceStorageID string        `gorm:"primaryKey" json:"workspace_storage_id"`
+	Name               string        `gorm:"not null; <-:create" json:"name"`
+	Labels             Labels        `gorm:"type:jsonb" json:"labels"`
+	Annotations        Annotations   `gorm:"type:jsonb" json:"annotations"`
+	Size               string        `gorm:"<-:create" json:"size"`
+	StorageClass       string        `gorm:"<-:create" json:"storage_class,omitempty"`
+	VolumeSource       *VolumeSource `gorm:"type:jsonb" json:"volume_source,omitempty"`
+	SyncBeforeUse      bool          `json:"sync_before_use"`
+	Status             *VolumeStatus `gorm:"type:jsonb" json:"volume_status,omitempty"`
+}
+
+type VolumeSource struct {
+	LocalSource *LocalSource         `json:"local_source,omitempty"`
+	BuildSource BuildArtifactSources `json:"build_source,omitempty"`
+}
+
+func (v VolumeSource) Value() (driver.Value, error) {
+	return json.Marshal(v)
+}
+
+func (v *VolumeSource) Scan(value interface{}) error {
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte for VolumeSource failed")
+	}
+	return json.Unmarshal(b, &v)
 }
 
 type BuildArtifactSources []BuildArtifactSource
@@ -99,6 +124,7 @@ type VolumeStatus struct {
 	Phase                  string                  `json:"phase"`
 	BuildArtifactSyncs     []BuildArtifactSyncInfo `json:"build_artifact_syncs,omitempty"`
 	LastObservedStatusHash string                  `json:"last_observed_status_hash,omitempty"`
+	InUse                  bool                    `json:"in_use"`
 }
 
 func (v VolumeStatus) Value() (driver.Value, error) {
@@ -143,11 +169,12 @@ type BuildArtifactSource struct {
 }
 
 type WorkspaceStorageStatus struct {
-	ObservedGeneration       int64       `json:"observed_generation"`
-	Conditions               []Condition `json:"conditions"`
-	Phase                    string      `json:"phase"`
-	StorageServerServiceName string      `json:"storage_server_service_name"`
-	LastObservedStatusHash   string      `json:"last_observed_status_hash,omitempty"`
+	State                    WorkspaceStorageState `json:"state"`
+	Conditions               []Condition           `json:"conditions"`
+	Phase                    string                `json:"phase"`
+	StorageServerServiceName string                `json:"storage_server_service_name"`
+	LastObservedStatusHash   string                `json:"last_observed_status_hash,omitempty"`
+	ObservedVersion          int64                 `json:"observed_version"`
 }
 
 func (s WorkspaceStorageStatus) Value() (driver.Value, error) {

@@ -12,8 +12,7 @@ import (
 type WorkspaceUserState string
 
 const (
-	WorkspaceUserIDLabel      = "workspaceuser.stackdome.io/id"
-	WorkspaceUserDBGeneration = "workspaceuser.stackdome.io/stackdome-api-generation"
+	WorkspaceUserIDLabel = "workspaceuser.stackdome.io/id"
 )
 
 const (
@@ -25,7 +24,7 @@ const (
 type StringArray []string
 
 type WorkspaceUserStatus struct {
-	ObservedVersion       int                `json:"observed_version"`
+	ObservedVersion       int64              `json:"observed_version"`
 	ServiceAccountName    string             `json:"workspace_service_account_name"`
 	ServiceAccountToken   string             `json:"workspace_service_account_token"`
 	ClusterCACert         string             `json:"cluster_ca_cert"`

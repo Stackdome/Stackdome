@@ -14,20 +14,38 @@ func PresentWorkspaceStorageList(wss []*models.WorkspaceStorage) []openapi.Works
 	return result
 }
 
+func PresentVolumeList(volumes []*models.Volume, withStatus bool) []openapi.Volume {
+	result := make([]openapi.Volume, len(volumes))
+	for i, volume := range volumes {
+		result[i] = PresentVolume(volume, withStatus)
+	}
+	return result
+}
+
 func PresentWorkspaceStorage(ws *models.WorkspaceStorage) openapi.WorkspaceStorage {
-	return openapi.WorkspaceStorage{
+	res := openapi.WorkspaceStorage{
 		Id:             &ws.ID,
 		OrganisationId: &ws.OrganisationID,
 		Name:           ws.Name,
-		Namespace:      ws.Namespace,
 		Labels:         presentLabels(ws.Labels),
 		Annotations:    presentAnnotations(ws.Annotations),
-		SshConfig:      presentSSHConfig(ws.SSHConfig),
-		Volumes:        presentVolumes(ws.Volumes),
+		Version:        openapi.PtrInt32(int32(ws.Version)),
 		Status:         presentWorkspaceStorageStatus(ws.Status),
-		State:          ptr.To(presentWorkpaceStorageState(ws.State)),
 		CreatedAt:      &ws.CreatedAt,
 		UpdatedAt:      &ws.UpdatedAt,
+	}
+	res.SetNamespace(ws.Namespace)
+	res.SetSpec(presentWorkspaceStorageSpec(ws))
+	return res
+}
+
+func presentWorkspaceStorageSpec(ws *models.WorkspaceStorage) openapi.WorkspaceStorageSpec {
+	if ws == nil {
+		return openapi.WorkspaceStorageSpec{}
+	}
+	return openapi.WorkspaceStorageSpec{
+		WorkspaceName: ws.WorkspaceName,
+		Volumes:       PresentVolumeList(ws.Volumes, false),
 	}
 }
 
@@ -46,18 +64,20 @@ func presentWorkpaceStorageState(state models.WorkspaceStorageState) openapi.Wor
 	}
 }
 
-func PresentVolume(v *models.Volume) openapi.Volume {
+func PresentVolume(v *models.Volume, withStatus bool) openapi.Volume {
 	if v == nil {
 		return openapi.Volume{}
 	}
-	return openapi.Volume{
-		Id:          &v.ID,
+	res := openapi.Volume{
 		Name:        v.Name,
 		Spec:        presentWorkspaceVolumeSpec(v),
 		Labels:      presentLabels(v.Labels),
 		Annotations: presentAnnotations(v.Annotations),
-		Status:      presentVolumeStatus(v.VolumeStatus),
 	}
+	if withStatus {
+		res.Status = presentVolumeStatus(v.Status)
+	}
+	return res
 }
 
 func presentLabels(labels models.Labels) []openapi.Label {
@@ -97,13 +117,13 @@ func presentSSHConfig(config *models.SSHConfig) openapi.SSHConfig {
 	}
 }
 
-func presentVolumes(volumes []models.Volume) []openapi.Volume {
+func presentVolumes(volumes []models.Volume, withStatus bool) []openapi.Volume {
 	if len(volumes) == 0 {
 		return nil
 	}
 	result := make([]openapi.Volume, len(volumes))
 	for i, volume := range volumes {
-		result[i] = PresentVolume(&volume)
+		result[i] = PresentVolume(&volume, withStatus)
 	}
 	return result
 }
@@ -113,8 +133,9 @@ func presentWorkspaceStorageStatus(status *models.WorkspaceStorageStatus) *opena
 		return nil
 	}
 	return &openapi.WorkspaceStorageStatus{
+		ObservedVersion:          openapi.PtrInt32(int32(status.ObservedVersion)),
 		Conditions:               presentConditions(status.Conditions),
-		Phase:                    &status.Phase,
+		State:                    ptr.To(presentWorkpaceStorageState(status.State)),
 		StorageServerServiceName: &status.StorageServerServiceName,
 	}
 }
@@ -129,13 +150,15 @@ func presentWorkspaceVolumeSpec(spec *models.Volume) openapi.WorkspaceVolumeSpec
 		SyncBeforeUse: &spec.SyncBeforeUse,
 		Source:        &openapi.VolumeSource{},
 	}
-	if spec.BuildSource != nil && len(spec.BuildSource) > 0 {
-		res.Source.SourceType = openapi.BUILD_ARTIFACT
-		res.Source.BuildSource = presentBuildArtifacts(spec.BuildSource)
-	}
-	if spec.LocalSource != nil {
-		res.Source.SourceType = openapi.LOCAL
-		res.Source.LocalSource = presentLocalSource(spec.LocalSource)
+	if spec.VolumeSource != nil {
+		switch {
+		case spec.VolumeSource.LocalSource != nil:
+			res.Source.SourceType = openapi.LOCAL
+			res.Source.LocalSource = presentLocalSource(spec.VolumeSource.LocalSource)
+		case len(spec.VolumeSource.BuildSource) > 0:
+			res.Source.SourceType = openapi.BUILD_ARTIFACT
+			res.Source.BuildSource = presentBuildArtifacts(spec.VolumeSource.BuildSource)
+		}
 	}
 
 	return res
@@ -214,19 +237,17 @@ func presentBuildArtifactSyncInfo(info []models.BuildArtifactSyncInfo) []openapi
 
 func ConvertWorkspaceStorage(ws *openapi.WorkspaceStorage) *models.WorkspaceStorage {
 	return &models.WorkspaceStorage{
-		Name:        ws.Name,
-		Namespace:   ws.Namespace,
-		Labels:      convertLabels(ws.Labels),
-		Annotations: convertAnnotations(ws.Annotations),
-		SSHConfig:   convertSSHConfig(ws.SshConfig),
-		Volumes:     convertVolumes(ws.Volumes),
-		CreatedAt:   ws.GetCreatedAt(),
-		UpdatedAt:   ws.GetUpdatedAt(),
+		Name:          ws.Name,
+		Version:       1,
+		Labels:        convertLabels(ws.Labels),
+		Annotations:   convertAnnotations(ws.Annotations),
+		WorkspaceName: ws.Spec.WorkspaceName,
+		Volumes:       convertVolumes(ws.Spec.Volumes),
 	}
 }
 
-func ConvertVolume(v *openapi.Volume) models.Volume {
-	res := models.Volume{
+func ConvertVolume(v *openapi.Volume) *models.Volume {
+	res := &models.Volume{
 		ID:            v.Name,
 		Name:          v.Name,
 		Labels:        convertLabels(v.Labels),
@@ -234,13 +255,14 @@ func ConvertVolume(v *openapi.Volume) models.Volume {
 		Size:          v.Spec.Size,
 		StorageClass:  v.Spec.GetStorageClass(),
 		SyncBeforeUse: v.Spec.GetSyncBeforeUse(),
+		VolumeSource:  &models.VolumeSource{},
 	}
 	if v.Spec.Source != nil {
 		switch v.Spec.Source.SourceType {
 		case openapi.LOCAL:
-			res.LocalSource = convertLocalSource(v.Spec.Source.LocalSource)
+			res.VolumeSource.LocalSource = convertLocalSource(v.Spec.Source.LocalSource)
 		case openapi.BUILD_ARTIFACT:
-			res.BuildSource = convertBuildArtifacts(v.Spec.Source.BuildSource)
+			res.VolumeSource.BuildSource = convertBuildArtifacts(v.Spec.Source.BuildSource)
 		}
 	}
 	return res
@@ -274,8 +296,8 @@ func convertSSHConfig(config openapi.SSHConfig) *models.SSHConfig {
 	}
 }
 
-func convertVolumes(volumes []openapi.Volume) []models.Volume {
-	result := make([]models.Volume, len(volumes))
+func convertVolumes(volumes []openapi.Volume) []*models.Volume {
+	result := make([]*models.Volume, len(volumes))
 	for i, volume := range volumes {
 		result[i] = ConvertVolume(&volume)
 	}

@@ -14,7 +14,7 @@ import (
 type VolumeService interface {
 	Get(ctx context.Context, ID string, workspaceStorageID string) (*models.Volume, *errors.ServiceError)
 	GetByWorkspaceStorageID(ctx context.Context, workspaceStorageID string) ([]*models.Volume, *errors.ServiceError)
-	Update(ctx context.Context, ID string, workspaceStorageID string, spec *models.Volume) (*models.Volume, *errors.ServiceError)
+	UpdateStatus(ctx context.Context, ID string, workspaceStorageID string, status *models.VolumeStatus) *errors.ServiceError
 	Delete(ctx context.Context, ID string, workspaceStorageID string) *errors.ServiceError
 }
 
@@ -64,13 +64,13 @@ func (s *volumeService) Create(ctx context.Context, spec *models.Volume) (*model
 	return volume, nil
 }
 
-func (s *volumeService) Update(ctx context.Context, ID string, workspaceStorageID string, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	volume, err := s.volumeStore.Update(ctx, ID, workspaceStorageID, spec)
+func (s *volumeService) UpdateStatus(ctx context.Context, ID string, workspaceStorageID string, status *models.VolumeStatus) *errors.ServiceError {
+	err := s.volumeStore.UpdateStatus(ctx, ID, workspaceStorageID, status)
 	if err != nil {
-		s.logger.Errorf("failed to update volume: %v", err)
-		return nil, err
+		s.logger.Errorf("failed to update volume status: %v", err)
+		return err
 	}
-	return volume, nil
+	return nil
 }
 
 func (s *volumeService) Delete(ctx context.Context, ID string, workspaceStorageID string) *errors.ServiceError {

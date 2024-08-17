@@ -15,12 +15,11 @@ func ValidateWorkspaceStorage(in *openapi.WorkspaceStorage) Validate {
 		validateEmpty(in, "Id", "id"),
 		validateEmpty(in, "OrganisationId", "organisation_id"),
 		validateEmpty(in, "Status", "status"),
-		validateEmpty(in, "State", "state"),
 		validateLabels(&in.Labels),
 		validateAnnotations(&in.Annotations),
 		validateNotEmpty(in, "Name", "name"),
-		validateNotEmpty(in, "Namespace", "namespace"),
-		validateNotEmpty(&in.SshConfig, "PublicKey", "ssh_config.public_key"),
+		validateEmpty(in, "Namespace", "namespace"),
+		validateWorkspaceStorageSpec(in),
 		validateVolumes(in),
 		func() *errors.ServiceError {
 			if !ValidateName(in.Name) {
@@ -28,18 +27,43 @@ func ValidateWorkspaceStorage(in *openapi.WorkspaceStorage) Validate {
 			}
 			return nil
 		},
+	})
+}
+func ValidateWorkspaceStorageUpdate(in *openapi.WorkspaceStorage) Validate {
+	return ValidateAll([]Validate{
+		validateEmpty(in, "Id", "id"),
+		validateEmpty(in, "OrganisationId", "organisation_id"),
+		validateEmpty(in, "Status", "status"),
+		validateLabels(&in.Labels),
+		validateAnnotations(&in.Annotations),
+		validateNotEmpty(in, "Name", "name"),
+		validateEmpty(in, "Namespace", "namespace"),
+		validateWorkspaceStorageSpec(in),
+		validateVolumes(in),
 		func() *errors.ServiceError {
-			if !ValidateNamespace(in.Namespace) {
-				return errors.Validation("namespace is not a valid namespace")
+			if !ValidateName(in.Name) {
+				return errors.Validation("name is not a valid name")
 			}
 			return nil
 		},
 	})
 }
 
+func validateWorkspaceStorageSpec(in *openapi.WorkspaceStorage) Validate {
+	return func() *errors.ServiceError {
+		if in.Spec.WorkspaceName == "" {
+			return errors.Validation("workspace name cannot be empty")
+		}
+		if err := validateVolumes(in)(); err != nil {
+			return errors.Validation("validation error in volumes: %s", err.Error())
+		}
+		return nil
+	}
+}
+
 func validateVolumes(in *openapi.WorkspaceStorage) Validate {
 	return func() *errors.ServiceError {
-		for _, volume := range in.Volumes {
+		for _, volume := range in.Spec.Volumes {
 			if volume.Name == "" {
 				return errors.Validation("volume name cannot be empty")
 			}
@@ -59,6 +83,7 @@ func validateVolumes(in *openapi.WorkspaceStorage) Validate {
 		return nil
 	}
 }
+
 func validateVolumeSpec(spec openapi.WorkspaceVolumeSpec) error {
 	if spec.Size == "" {
 		return goerrors.New("size is required")

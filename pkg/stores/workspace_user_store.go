@@ -19,5 +19,5 @@ type WorkspaceUserStore interface {
 	PatchStatus(ctx context.Context, id string, spec *models.WorkspaceUserStatus) (*models.WorkspaceUser, *errors.ServiceError)
 	Delete(ctx context.Context, id string) *errors.ServiceError
 	DeleteWithTx(ctx context.Context, id string) *errors.ServiceError
-	WithTransaction(ctx context.Context, fn func(ctx context.Context) *errors.ServiceError) *errors.ServiceError
+	AtomicExecutor
 }

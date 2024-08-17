@@ -81,21 +81,19 @@ func (r *WorskspaceStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		r.Log.Errorf("workspace storage %s in namespace %s does not have a workspace storage id label", clusterInstance.Name, clusterInstance.Namespace)
 		return ctrl.Result{}, nil
 	}
-	dbInstance, serr := r.WorkspaceStorageService.Get(ctx, workspaceStorageID)
-	if err != nil {
+	dbInstance, serr := r.WorkspaceStorageService.InternalGet(ctx, workspaceStorageID)
+	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
-			return ctrl.Result{}, r.deleteWorkspaceStorageFromCluster(ctx, clusterInstance)
+			r.Log.Infof("workspace storage %s in namespace %s not found in DB", clusterInstance.Name, clusterInstance.Namespace)
+			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to get workspace storage %s in namespace %s: %w from DB", clusterInstance.Name, clusterInstance.Namespace, serr)
 	}
 
-	stateChanged := mapClusterObjStateToDBObjState(clusterInstance, dbInstance)
-	objectHashChanged := clusterInstance.Status.StatusHash != dbInstance.Status.LastObservedStatusHash
+	objectHashChanged := dbInstance.Status == nil || (clusterInstance.Status.StatusHash != dbInstance.Status.LastObservedStatusHash)
 	if objectHashChanged {
-		dbInstance.Status = mapClusterObjStatusToDBObj(clusterInstance)
-	}
-	if objectHashChanged || stateChanged {
-		_, serr = r.WorkspaceStorageService.Update(ctx, workspaceStorageID, dbInstance)
+		dbInstance.Status = mapClusterObjStatusToDBObjStatus(clusterInstance)
+		serr = r.WorkspaceStorageService.UpdateStatus(ctx, workspaceStorageID, dbInstance.Status)
 		if serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update workspace storage %s in namespace %s: %w from DB", clusterInstance.Name, clusterInstance.Namespace, serr)
 		}
@@ -104,9 +102,11 @@ func (r *WorskspaceStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return ctrl.Result{}, nil
 }
 
-func mapClusterObjStatusToDBObj(clusterInstance *workspacev1alpha1.WorkspaceStorage) *models.WorkspaceStorageStatus {
+func mapClusterObjStatusToDBObjStatus(clusterInstance *workspacev1alpha1.WorkspaceStorage) *models.WorkspaceStorageStatus {
 	clusterObjectStatus := clusterInstance.Status
 	return &models.WorkspaceStorageStatus{
+		ObservedVersion:          clusterObjectStatus.ObservedStackdomeServerObjectGeneration,
+		State:                    dbObjStateFromClusterObj(clusterInstance),
 		Phase:                    string(clusterObjectStatus.Phase),
 		Conditions:               models.ConvertConditions(clusterObjectStatus.Conditions),
 		StorageServerServiceName: clusterObjectStatus.ServiceName,
@@ -114,20 +114,21 @@ func mapClusterObjStatusToDBObj(clusterInstance *workspacev1alpha1.WorkspaceStor
 	}
 }
 
-func mapClusterObjStateToDBObjState(clusterInstance *workspacev1alpha1.WorkspaceStorage, dbInstance *models.WorkspaceStorage) bool {
+func dbObjStateFromClusterObj(clusterInstance *workspacev1alpha1.WorkspaceStorage) models.WorkspaceStorageState {
 	availableCondition := meta.FindStatusCondition(clusterInstance.Status.Conditions, string(workspacev1alpha1.WorkspaceStorageAvailable))
 	failedCondition := meta.FindStatusCondition(clusterInstance.Status.Conditions, string(workspacev1alpha1.WorkspaceStorageFailed))
 	switch {
 	case availableCondition == nil:
-		return dbInstance.SetState(models.WorkspaceStorageStatePending)
+		return models.WorkspaceStorageStatePending
 	case availableCondition.Status == metav1.ConditionTrue:
-		return dbInstance.SetState(models.WorkspaceStorageStateReady)
+		return models.WorkspaceStorageStateReady
 	case availableCondition.Status == metav1.ConditionFalse:
-		return dbInstance.SetState(models.WorkspaceStorageStateCreating)
+		return models.WorkspaceStorageStateCreating
 	case failedCondition != nil && failedCondition.Status == metav1.ConditionTrue:
-		return dbInstance.SetState(models.WorkspaceStorageStateFailed)
+		return models.WorkspaceStorageStateFailed
+	default:
+		return models.WorkspaceStorageStatePending
 	}
-	return false
 }
 
 func (r *WorskspaceStorageReconciler) deleteWorkspaceStorageFromCluster(ctx context.Context, instance *workspacev1alpha1.WorkspaceStorage) error {
@@ -138,23 +139,6 @@ func (r *WorskspaceStorageReconciler) deleteWorkspaceStorageFromCluster(ctx cont
 			return nil
 		}
 		return fmt.Errorf("failed to delete workspace storage %s in namespace %s: %w from cluster", instance.Name, instance.Namespace, err)
-	}
-	return nil
-}
-
-func (r *WorskspaceStorageReconciler) deleteWorkspaceStorageFromDB(ctx context.Context, instance *workspacev1alpha1.WorkspaceStorage) error {
-	r.Log.Infof("deleting workspace storage: %s in namespace %s", instance.Name, instance.Namespace)
-	id, found := instance.Labels[models.WorkspaceStorageIDLabel]
-	if !found {
-		r.Log.Errorf("workspace storage %s in namespace %s does not have a workspace storage id label", instance.Name, instance.Namespace)
-		return nil
-	}
-	serr := r.WorkspaceStorageService.Delete(ctx, id)
-	if serr != nil {
-		if serr.Code == apperrors.ErrorNotFound {
-			return nil
-		}
-		return fmt.Errorf("failed to delete workspace storage %s in namespace %s: %w from DB", instance.Name, instance.Namespace, serr)
 	}
 	return nil
 }

@@ -10,4 +10,7 @@ var MigrationList = []*gormigrate.Migration{
 	createWorkspaceUserTable(),
 	createWorkspaceNamespaceTable(),
 	alterWorkspaceUserTableAddVersioningSupport(),
+	alterWorkspaceStorageTable(),
+	addVolumeSourceToVolumesTable(),
+	renameVolumeStatusColumnInVolumesTable(),
 }

@@ -42,6 +42,15 @@ func (l *Labels) Scan(value interface{}) error {
 	return json.Unmarshal(v, &l)
 }
 
+// Labels to map
+func (l Labels) ToMap() map[string]string {
+	m := make(map[string]string)
+	for _, label := range l {
+		m[label.Key] = label.Value
+	}
+	return m
+}
+
 func (a Annotations) Value() (driver.Value, error) {
 	return json.Marshal(a)
 }
@@ -52,6 +61,15 @@ func (a *Annotations) Scan(value interface{}) error {
 		return errors.New("type assertion to []byte for Annotations failed")
 	}
 	return json.Unmarshal(v, &a)
+}
+
+// Annotations to map
+func (a Annotations) ToMap() map[string]string {
+	m := make(map[string]string)
+	for _, annotation := range a {
+		m[annotation.Key] = annotation.Value
+	}
+	return m
 }
 
 func ConvertConditions(k8sconditions []metav1.Condition) []Condition {
