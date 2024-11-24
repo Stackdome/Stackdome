@@ -14,6 +14,7 @@ import (
 
 type WorkspaceStorageService interface {
 	Get(ctx context.Context, ID string, userID string) (*models.WorkspaceStorage, *errors.ServiceError)
+	GetbyWorkspaceName(ctx context.Context, workspaceName string, userID string) (*models.WorkspaceStorage, *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.WorkspaceStorage, *errors.ServiceError)
 	ListByOrganisationID(ctx context.Context, organisationID string) ([]*models.WorkspaceStorage, *errors.ServiceError)
 	ListByUserID(ctx context.Context, userID string) ([]*models.WorkspaceStorage, *errors.ServiceError)
@@ -60,6 +61,15 @@ func (s *workspaceStorageService) Get(ctx context.Context, ID string, userID str
 		return nil, err
 	}
 
+	return storage, nil
+}
+
+func (s *workspaceStorageService) GetbyWorkspaceName(ctx context.Context, workspaceName string, userID string) (*models.WorkspaceStorage, *errors.ServiceError) {
+	storage, err := s.wsStorageStore.GetByWorkspaceName(ctx, workspaceName, userID)
+	if err != nil {
+		s.logger.Errorf("failed to get workspace storage: %v", err)
+		return nil, err
+	}
 	return storage, nil
 }
 

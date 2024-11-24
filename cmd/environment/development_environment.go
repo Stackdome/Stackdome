@@ -239,42 +239,54 @@ func (d *developmentEnvironment) InitDatabase(ctx context.Context) error {
 }
 
 func (d *developmentEnvironment) loadSevices(logger logger.Logger) Services {
-	return Services{
-		UserService: services.NewUserService(services.UserServiceSpec{
-			SessionFactory: d.DBSession,
-			Logger:         logger,
-			JwtSecretKey:   d.Config.Server.JwtSecret,
-		}),
+	userService := services.NewUserService(services.UserServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         logger,
+		JwtSecretKey:   d.Config.Server.JwtSecret,
+	})
 
-		OrganisationService: services.NewOrganisationService(services.OrganisationServiceSpec{
-			SessionFactory: d.DBSession,
-			Logger:         logger,
-		}),
-		ClusterService: services.NewClusterService(services.ClusterServiceSpec{
-			SessionFactory: d.DBSession,
-			Logger:         logger,
-		}),
-		WorkspaceUserService: services.NewWorkspaceUserService(services.WorkspaceUserServiceSpec{
-			SessionFactory: d.DBSession,
-			Logger:         logger,
-			ClusterService: services.NewClusterService(services.ClusterServiceSpec{
-				SessionFactory: d.DBSession,
-				Logger:         logger,
-			}),
-			UserService: services.NewUserService(services.UserServiceSpec{
-				SessionFactory: d.DBSession,
-				Logger:         logger,
-				JwtSecretKey:   d.Config.Server.JwtSecret,
-			}),
-		}),
-		WorkspaceStorageService: services.NewWorkspaceStorageService(services.WorkspaceStorageServiceSpec{
-			SessionFactory: d.DBSession,
-			Logger:         logger,
-		}),
-		WorkspaceVolumeService: services.NewVolumeService(services.VolumeServiceSpec{
-			SessionFactory: d.DBSession,
-			Logger:         logger,
-		}),
+	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         logger,
+	})
+
+	clusterService := services.NewClusterService(services.ClusterServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         logger,
+	})
+
+	workspaceUserService := services.NewWorkspaceUserService(services.WorkspaceUserServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         logger,
+		ClusterService: clusterService,
+		UserService:    userService,
+	})
+
+	workspaceStorageService := services.NewWorkspaceStorageService(services.WorkspaceStorageServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         logger,
+	})
+
+	workspaceVolumeService := services.NewVolumeService(services.VolumeServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         logger,
+	})
+
+	workspaceService := services.NewWorkspaceService(services.WorkspaceServiceSpec{
+		SessionFactory:          d.DBSession,
+		Logger:                  logger,
+		WorkspaceUserService:    workspaceUserService,
+		WorkspaceStorageService: workspaceStorageService,
+	})
+
+	return Services{
+		UserService:             userService,
+		WorkspaceUserService:    workspaceUserService,
+		OrganisationService:     organisationService,
+		ClusterService:          clusterService,
+		WorkspaceStorageService: workspaceStorageService,
+		WorkspaceVolumeService:  workspaceVolumeService,
+		WorkspaceService:        workspaceService,
 	}
 }
 

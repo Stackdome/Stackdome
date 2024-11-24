@@ -51,6 +51,14 @@ type WorkspaceUser struct {
 	DeletionTimeStamp *time.Time `json:"deletion_timestamp"`
 }
 
+func (w *WorkspaceUser) WorkspaceNamespaceMap() map[string]*WorkspaceNamespace {
+	res := make(map[string]*WorkspaceNamespace)
+	for i := range w.WorkspaceNamespaces {
+		res[w.WorkspaceNamespaces[i].Workspace] = w.WorkspaceNamespaces[i]
+	}
+	return res
+}
+
 func (sa *StringArray) Scan(value interface{}) error {
 	if value == nil {
 		*sa = StringArray{}

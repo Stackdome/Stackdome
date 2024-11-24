@@ -12,6 +12,7 @@ package openapi
 
 import (
 	"encoding/json"
+	"time"
 )
 
 // Workspace struct for Workspace
@@ -26,6 +27,8 @@ type Workspace struct {
 	Version        *int32           `json:"version,omitempty"`
 	Spec           WorkspaceSpec    `json:"spec"`
 	Status         *WorkspaceStatus `json:"status,omitempty"`
+	CreatedAt      *time.Time       `json:"created_at,omitempty"`
+	UpdatedAt      *time.Time       `json:"updated_at,omitempty"`
 }
 
 // NewWorkspace instantiates a new Workspace object
@@ -351,6 +354,70 @@ func (o *Workspace) SetStatus(v WorkspaceStatus) {
 	o.Status = &v
 }
 
+// GetCreatedAt returns the CreatedAt field value if set, zero value otherwise.
+func (o *Workspace) GetCreatedAt() time.Time {
+	if o == nil || o.CreatedAt == nil {
+		var ret time.Time
+		return ret
+	}
+	return *o.CreatedAt
+}
+
+// GetCreatedAtOk returns a tuple with the CreatedAt field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Workspace) GetCreatedAtOk() (*time.Time, bool) {
+	if o == nil || o.CreatedAt == nil {
+		return nil, false
+	}
+	return o.CreatedAt, true
+}
+
+// HasCreatedAt returns a boolean if a field has been set.
+func (o *Workspace) HasCreatedAt() bool {
+	if o != nil && o.CreatedAt != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetCreatedAt gets a reference to the given time.Time and assigns it to the CreatedAt field.
+func (o *Workspace) SetCreatedAt(v time.Time) {
+	o.CreatedAt = &v
+}
+
+// GetUpdatedAt returns the UpdatedAt field value if set, zero value otherwise.
+func (o *Workspace) GetUpdatedAt() time.Time {
+	if o == nil || o.UpdatedAt == nil {
+		var ret time.Time
+		return ret
+	}
+	return *o.UpdatedAt
+}
+
+// GetUpdatedAtOk returns a tuple with the UpdatedAt field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Workspace) GetUpdatedAtOk() (*time.Time, bool) {
+	if o == nil || o.UpdatedAt == nil {
+		return nil, false
+	}
+	return o.UpdatedAt, true
+}
+
+// HasUpdatedAt returns a boolean if a field has been set.
+func (o *Workspace) HasUpdatedAt() bool {
+	if o != nil && o.UpdatedAt != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetUpdatedAt gets a reference to the given time.Time and assigns it to the UpdatedAt field.
+func (o *Workspace) SetUpdatedAt(v time.Time) {
+	o.UpdatedAt = &v
+}
+
 func (o Workspace) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Id != nil {
@@ -382,6 +449,12 @@ func (o Workspace) MarshalJSON() ([]byte, error) {
 	}
 	if o.Status != nil {
 		toSerialize["status"] = o.Status
+	}
+	if o.CreatedAt != nil {
+		toSerialize["created_at"] = o.CreatedAt
+	}
+	if o.UpdatedAt != nil {
+		toSerialize["updated_at"] = o.UpdatedAt
 	}
 	return json.Marshal(toSerialize)
 }

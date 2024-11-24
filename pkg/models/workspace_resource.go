@@ -8,9 +8,10 @@ import (
 )
 
 type WorkspaceResource struct {
-	ID          string      `gorm:"default:gen_random_uuid()" json:"id"`
-	WorkspaceID string      `gorm:"primary_key; not null"`
-	Name        string      `gorm:"primary_key; not null; <-:create"`
+	ID          string `gorm:"default:gen_random_uuid()"`
+	UserID      string `gorm:"not null"`
+	WorkspaceID string
+	Name        string      `gorm:"<-:create"`
 	Labels      Labels      `gorm:"type:jsonb"`
 	Annotations Annotations `gorm:"type:jsonb"`
 	// Tracks the version of the object in the database.
@@ -23,33 +24,36 @@ type WorkspaceResource struct {
 	VolumeMounts    []*VolumeMount   `gorm:"foreignKey:WorkspaceResourceID"`
 	DependsOn       *Dependencies    `gorm:"type:jsonb"`
 	LifecycleConfig *LifecycleConfig `gorm:"type:jsonb"`
-	Ports           []*Port          `gorm:"foreignKey:WorkspaceResourceID"`
-	StateFul        bool             `json:"stateFul"`
-	Status          *ResourceStatus  `gorm:"type:jsonb"`
+	Ports           Ports            `gorm:"type:jsonb"`
+	StateFul        bool
+	Status          *WorkspaceResourceStatus `gorm:"type:jsonb"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type Dependencies []string
 
+type Ports []Port
+
 type VolumeMount struct {
-	WorkspaceResourceID string
 	WorkspaceStorageID  string
+	WorkspaceResourceID string
 	SourceVolumeID      string
 	SourceSubPath       string
 	TargetPath          string
 }
 
-type ResourceStatus struct {
+type WorkspaceResourceStatus struct {
 	State           string      `json:"state"`
 	ObservedVersion int64       `json:"observed_version"`
 	Conditions      []Condition `json:"conditions"`
 }
 
 type Port struct {
-	WorkspaceResourceID string
-	Number              int
-	Protocol            string
-	ExposedToPublic     bool
-	PublicURL           *string
+	Number          int     `json:"number"`
+	Protocol        string  `json:"protocol"`
+	ExposedToPublic bool    `json:"exposed_to_public"`
+	PublicURL       *string `json:"public_url"`
 }
 
 type LifecycleConfig struct {
@@ -83,6 +87,14 @@ type EnvVar struct {
 	Value string `json:"value"`
 }
 
+func (v *WorkspaceResource) VolumeMountMap() map[string]*VolumeMount {
+	volumeMountMap := make(map[string]*VolumeMount)
+	for i := range v.VolumeMounts {
+		volumeMountMap[v.VolumeMounts[i].SourceVolumeID] = v.VolumeMounts[i]
+	}
+	return volumeMountMap
+}
+
 func (d *Dependencies) Scan(value interface{}) error {
 	bytes, ok := value.([]byte)
 	if !ok {
@@ -94,6 +106,19 @@ func (d *Dependencies) Scan(value interface{}) error {
 
 func (d Dependencies) Value() (driver.Value, error) {
 	return json.Marshal(d)
+}
+
+func (p *Ports) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+
+	return json.Unmarshal(bytes, &p)
+}
+
+func (p Ports) Value() (driver.Value, error) {
+	return json.Marshal(p)
 }
 
 func (bc *BuildConfig) Scan(value interface{}) error {
@@ -161,7 +186,7 @@ func (lc LifecycleConfig) Value() (driver.Value, error) {
 	return json.Marshal(lc)
 }
 
-func (rs *ResourceStatus) Scan(value interface{}) error {
+func (rs *WorkspaceResourceStatus) Scan(value interface{}) error {
 	bytes, ok := value.([]byte)
 	if !ok {
 		return errors.New("type assertion to []byte failed")
@@ -170,6 +195,6 @@ func (rs *ResourceStatus) Scan(value interface{}) error {
 	return json.Unmarshal(bytes, &rs)
 }
 
-func (rs ResourceStatus) Value() (driver.Value, error) {
+func (rs WorkspaceResourceStatus) Value() (driver.Value, error) {
 	return json.Marshal(rs)
 }

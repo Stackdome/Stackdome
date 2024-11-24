@@ -1602,6 +1602,7 @@ components:
     Workspace:
       example:
         organisation_id: organisation_id
+        updated_at: 2000-01-23T04:56:07.000+00:00
         user_id: user_id
         name: name
         namespace: namespace
@@ -1610,6 +1611,7 @@ components:
           key: key
         - value: value
           key: key
+        created_at: 2000-01-23T04:56:07.000+00:00
         id: id
         version: 0
         spec:
@@ -1829,6 +1831,14 @@ components:
           $ref: '#/components/schemas/WorkspaceSpec'
         status:
           $ref: '#/components/schemas/WorkspaceStatus'
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+        updated_at:
+          format: date-time
+          readOnly: true
+          type: string
       required:
       - name
       - spec
@@ -2819,6 +2829,7 @@ components:
         total: 2
         items:
         - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
           user_id: user_id
           name: name
           namespace: namespace
@@ -2827,6 +2838,7 @@ components:
             key: key
           - value: value
             key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
           id: id
           version: 0
           spec:
@@ -3017,6 +3029,7 @@ components:
               observed_generation: 1
               status: status
         - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
           user_id: user_id
           name: name
           namespace: namespace
@@ -3025,6 +3038,7 @@ components:
             key: key
           - value: value
             key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
           id: id
           version: 0
           spec:

@@ -15,6 +15,13 @@ func (a *atomicExecutor) WithTransaction(ctx context.Context, fn func(ctx contex
 	tx := a.sessionFactory.New(ctx).Begin()
 
 	txCtx := db.CtxWithTransaction(ctx, tx)
+	// recover and rollback on panic
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
 
 	if err := fn(txCtx); err != nil {
 		tx.Rollback()
