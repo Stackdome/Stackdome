@@ -1212,7 +1212,7 @@ components:
           type: string
         exposed_to_public:
           type: boolean
-        public_url:
+        subdomain_prefix:
           type: string
 
     LifecycleConfig:
@@ -1226,10 +1226,13 @@ components:
       type: object
       additionalProperties: false
       required:
+        - source_volume_id
         - context_path
         - dockerfile_path
         - source_hash
       properties:
+        source_volume_id:
+          type: string
         context_path:
           type: string
         dockerfile_path:

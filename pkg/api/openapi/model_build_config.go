@@ -16,6 +16,7 @@ import (
 
 // BuildConfig struct for BuildConfig
 type BuildConfig struct {
+	SourceVolumeId string `json:"source_volume_id"`
 	ContextPath    string `json:"context_path"`
 	DockerfilePath string `json:"dockerfile_path"`
 	SourceHash     string `json:"source_hash"`
@@ -25,8 +26,9 @@ type BuildConfig struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewBuildConfig(contextPath string, dockerfilePath string, sourceHash string) *BuildConfig {
+func NewBuildConfig(sourceVolumeId string, contextPath string, dockerfilePath string, sourceHash string) *BuildConfig {
 	this := BuildConfig{}
+	this.SourceVolumeId = sourceVolumeId
 	this.ContextPath = contextPath
 	this.DockerfilePath = dockerfilePath
 	this.SourceHash = sourceHash
@@ -39,6 +41,30 @@ func NewBuildConfig(contextPath string, dockerfilePath string, sourceHash string
 func NewBuildConfigWithDefaults() *BuildConfig {
 	this := BuildConfig{}
 	return &this
+}
+
+// GetSourceVolumeId returns the SourceVolumeId field value
+func (o *BuildConfig) GetSourceVolumeId() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.SourceVolumeId
+}
+
+// GetSourceVolumeIdOk returns a tuple with the SourceVolumeId field value
+// and a boolean to check if the value has been set.
+func (o *BuildConfig) GetSourceVolumeIdOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.SourceVolumeId, true
+}
+
+// SetSourceVolumeId sets field value
+func (o *BuildConfig) SetSourceVolumeId(v string) {
+	o.SourceVolumeId = v
 }
 
 // GetContextPath returns the ContextPath field value
@@ -115,6 +141,9 @@ func (o *BuildConfig) SetSourceHash(v string) {
 
 func (o BuildConfig) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
+	if true {
+		toSerialize["source_volume_id"] = o.SourceVolumeId
+	}
 	if true {
 		toSerialize["context_path"] = o.ContextPath
 	}

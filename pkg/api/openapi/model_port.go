@@ -19,7 +19,7 @@ type Port struct {
 	Number          int32   `json:"number"`
 	Protocol        *string `json:"protocol,omitempty"`
 	ExposedToPublic *bool   `json:"exposed_to_public,omitempty"`
-	PublicUrl       *string `json:"public_url,omitempty"`
+	SubdomainPrefix *string `json:"subdomain_prefix,omitempty"`
 }
 
 // NewPort instantiates a new Port object
@@ -128,36 +128,36 @@ func (o *Port) SetExposedToPublic(v bool) {
 	o.ExposedToPublic = &v
 }
 
-// GetPublicUrl returns the PublicUrl field value if set, zero value otherwise.
-func (o *Port) GetPublicUrl() string {
-	if o == nil || o.PublicUrl == nil {
+// GetSubdomainPrefix returns the SubdomainPrefix field value if set, zero value otherwise.
+func (o *Port) GetSubdomainPrefix() string {
+	if o == nil || o.SubdomainPrefix == nil {
 		var ret string
 		return ret
 	}
-	return *o.PublicUrl
+	return *o.SubdomainPrefix
 }
 
-// GetPublicUrlOk returns a tuple with the PublicUrl field value if set, nil otherwise
+// GetSubdomainPrefixOk returns a tuple with the SubdomainPrefix field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *Port) GetPublicUrlOk() (*string, bool) {
-	if o == nil || o.PublicUrl == nil {
+func (o *Port) GetSubdomainPrefixOk() (*string, bool) {
+	if o == nil || o.SubdomainPrefix == nil {
 		return nil, false
 	}
-	return o.PublicUrl, true
+	return o.SubdomainPrefix, true
 }
 
-// HasPublicUrl returns a boolean if a field has been set.
-func (o *Port) HasPublicUrl() bool {
-	if o != nil && o.PublicUrl != nil {
+// HasSubdomainPrefix returns a boolean if a field has been set.
+func (o *Port) HasSubdomainPrefix() bool {
+	if o != nil && o.SubdomainPrefix != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetPublicUrl gets a reference to the given string and assigns it to the PublicUrl field.
-func (o *Port) SetPublicUrl(v string) {
-	o.PublicUrl = &v
+// SetSubdomainPrefix gets a reference to the given string and assigns it to the SubdomainPrefix field.
+func (o *Port) SetSubdomainPrefix(v string) {
+	o.SubdomainPrefix = &v
 }
 
 func (o Port) MarshalJSON() ([]byte, error) {
@@ -171,8 +171,8 @@ func (o Port) MarshalJSON() ([]byte, error) {
 	if o.ExposedToPublic != nil {
 		toSerialize["exposed_to_public"] = o.ExposedToPublic
 	}
-	if o.PublicUrl != nil {
-		toSerialize["public_url"] = o.PublicUrl
+	if o.SubdomainPrefix != nil {
+		toSerialize["subdomain_prefix"] = o.SubdomainPrefix
 	}
 	return json.Marshal(toSerialize)
 }

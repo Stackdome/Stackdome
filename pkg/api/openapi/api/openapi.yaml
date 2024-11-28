@@ -1657,14 +1657,14 @@ components:
               target_path: target_path
               source_volume_id: source_volume_id
             ports:
-            - public_url: public_url
-              number: 1
+            - number: 1
               protocol: protocol
               exposed_to_public: true
-            - public_url: public_url
-              number: 1
+              subdomain_prefix: subdomain_prefix
+            - number: 1
               protocol: protocol
               exposed_to_public: true
+              subdomain_prefix: subdomain_prefix
             version: 6
             labels:
             - value: value
@@ -1677,6 +1677,7 @@ components:
               context_path: context_path
               dockerfile_path: dockerfile_path
               source_hash: source_hash
+              source_volume_id: source_volume_id
             name: name
             lifecycle_config:
               last_restart_request_time: 2000-01-23T04:56:07.000+00:00
@@ -1739,14 +1740,14 @@ components:
               target_path: target_path
               source_volume_id: source_volume_id
             ports:
-            - public_url: public_url
-              number: 1
+            - number: 1
               protocol: protocol
               exposed_to_public: true
-            - public_url: public_url
-              number: 1
+              subdomain_prefix: subdomain_prefix
+            - number: 1
               protocol: protocol
               exposed_to_public: true
+              subdomain_prefix: subdomain_prefix
             version: 6
             labels:
             - value: value
@@ -1759,6 +1760,7 @@ components:
               context_path: context_path
               dockerfile_path: dockerfile_path
               source_hash: source_hash
+              source_volume_id: source_volume_id
             name: name
             lifecycle_config:
               last_restart_request_time: 2000-01-23T04:56:07.000+00:00
@@ -1887,14 +1889,14 @@ components:
             target_path: target_path
             source_volume_id: source_volume_id
           ports:
-          - public_url: public_url
-            number: 1
+          - number: 1
             protocol: protocol
             exposed_to_public: true
-          - public_url: public_url
-            number: 1
+            subdomain_prefix: subdomain_prefix
+          - number: 1
             protocol: protocol
             exposed_to_public: true
+            subdomain_prefix: subdomain_prefix
           version: 6
           labels:
           - value: value
@@ -1907,6 +1909,7 @@ components:
             context_path: context_path
             dockerfile_path: dockerfile_path
             source_hash: source_hash
+            source_volume_id: source_volume_id
           name: name
           lifecycle_config:
             last_restart_request_time: 2000-01-23T04:56:07.000+00:00
@@ -1969,14 +1972,14 @@ components:
             target_path: target_path
             source_volume_id: source_volume_id
           ports:
-          - public_url: public_url
-            number: 1
+          - number: 1
             protocol: protocol
             exposed_to_public: true
-          - public_url: public_url
-            number: 1
+            subdomain_prefix: subdomain_prefix
+          - number: 1
             protocol: protocol
             exposed_to_public: true
+            subdomain_prefix: subdomain_prefix
           version: 6
           labels:
           - value: value
@@ -1989,6 +1992,7 @@ components:
             context_path: context_path
             dockerfile_path: dockerfile_path
             source_hash: source_hash
+            source_volume_id: source_volume_id
           name: name
           lifecycle_config:
             last_restart_request_time: 2000-01-23T04:56:07.000+00:00
@@ -2088,14 +2092,14 @@ components:
           target_path: target_path
           source_volume_id: source_volume_id
         ports:
-        - public_url: public_url
-          number: 1
+        - number: 1
           protocol: protocol
           exposed_to_public: true
-        - public_url: public_url
-          number: 1
+          subdomain_prefix: subdomain_prefix
+        - number: 1
           protocol: protocol
           exposed_to_public: true
+          subdomain_prefix: subdomain_prefix
         version: 6
         labels:
         - value: value
@@ -2108,6 +2112,7 @@ components:
           context_path: context_path
           dockerfile_path: dockerfile_path
           source_hash: source_hash
+          source_volume_id: source_volume_id
         name: name
         lifecycle_config:
           last_restart_request_time: 2000-01-23T04:56:07.000+00:00
@@ -2233,10 +2238,10 @@ components:
       type: object
     Port:
       example:
-        public_url: public_url
         number: 1
         protocol: protocol
         exposed_to_public: true
+        subdomain_prefix: subdomain_prefix
       properties:
         number:
           type: integer
@@ -2244,7 +2249,7 @@ components:
           type: string
         exposed_to_public:
           type: boolean
-        public_url:
+        subdomain_prefix:
           type: string
       required:
       - number
@@ -2263,7 +2268,10 @@ components:
         context_path: context_path
         dockerfile_path: dockerfile_path
         source_hash: source_hash
+        source_volume_id: source_volume_id
       properties:
+        source_volume_id:
+          type: string
         context_path:
           type: string
         dockerfile_path:
@@ -2274,6 +2282,7 @@ components:
       - context_path
       - dockerfile_path
       - source_hash
+      - source_volume_id
       type: object
     PrebuiltConfig:
       additionalProperties: false
@@ -2884,14 +2893,14 @@ components:
                 target_path: target_path
                 source_volume_id: source_volume_id
               ports:
-              - public_url: public_url
-                number: 1
+              - number: 1
                 protocol: protocol
                 exposed_to_public: true
-              - public_url: public_url
-                number: 1
+                subdomain_prefix: subdomain_prefix
+              - number: 1
                 protocol: protocol
                 exposed_to_public: true
+                subdomain_prefix: subdomain_prefix
               version: 6
               labels:
               - value: value
@@ -2904,6 +2913,7 @@ components:
                 context_path: context_path
                 dockerfile_path: dockerfile_path
                 source_hash: source_hash
+                source_volume_id: source_volume_id
               name: name
               lifecycle_config:
                 last_restart_request_time: 2000-01-23T04:56:07.000+00:00
@@ -2966,14 +2976,14 @@ components:
                 target_path: target_path
                 source_volume_id: source_volume_id
               ports:
-              - public_url: public_url
-                number: 1
+              - number: 1
                 protocol: protocol
                 exposed_to_public: true
-              - public_url: public_url
-                number: 1
+                subdomain_prefix: subdomain_prefix
+              - number: 1
                 protocol: protocol
                 exposed_to_public: true
+                subdomain_prefix: subdomain_prefix
               version: 6
               labels:
               - value: value
@@ -2986,6 +2996,7 @@ components:
                 context_path: context_path
                 dockerfile_path: dockerfile_path
                 source_hash: source_hash
+                source_volume_id: source_volume_id
               name: name
               lifecycle_config:
                 last_restart_request_time: 2000-01-23T04:56:07.000+00:00
@@ -3084,14 +3095,14 @@ components:
                 target_path: target_path
                 source_volume_id: source_volume_id
               ports:
-              - public_url: public_url
-                number: 1
+              - number: 1
                 protocol: protocol
                 exposed_to_public: true
-              - public_url: public_url
-                number: 1
+                subdomain_prefix: subdomain_prefix
+              - number: 1
                 protocol: protocol
                 exposed_to_public: true
+                subdomain_prefix: subdomain_prefix
               version: 6
               labels:
               - value: value
@@ -3104,6 +3115,7 @@ components:
                 context_path: context_path
                 dockerfile_path: dockerfile_path
                 source_hash: source_hash
+                source_volume_id: source_volume_id
               name: name
               lifecycle_config:
                 last_restart_request_time: 2000-01-23T04:56:07.000+00:00
@@ -3166,14 +3178,14 @@ components:
                 target_path: target_path
                 source_volume_id: source_volume_id
               ports:
-              - public_url: public_url
-                number: 1
+              - number: 1
                 protocol: protocol
                 exposed_to_public: true
-              - public_url: public_url
-                number: 1
+                subdomain_prefix: subdomain_prefix
+              - number: 1
                 protocol: protocol
                 exposed_to_public: true
+                subdomain_prefix: subdomain_prefix
               version: 6
               labels:
               - value: value
@@ -3186,6 +3198,7 @@ components:
                 context_path: context_path
                 dockerfile_path: dockerfile_path
                 source_hash: source_hash
+                source_volume_id: source_volume_id
               name: name
               lifecycle_config:
                 last_restart_request_time: 2000-01-23T04:56:07.000+00:00
@@ -3280,14 +3293,14 @@ components:
             target_path: target_path
             source_volume_id: source_volume_id
           ports:
-          - public_url: public_url
-            number: 1
+          - number: 1
             protocol: protocol
             exposed_to_public: true
-          - public_url: public_url
-            number: 1
+            subdomain_prefix: subdomain_prefix
+          - number: 1
             protocol: protocol
             exposed_to_public: true
+            subdomain_prefix: subdomain_prefix
           version: 6
           labels:
           - value: value
@@ -3300,6 +3313,7 @@ components:
             context_path: context_path
             dockerfile_path: dockerfile_path
             source_hash: source_hash
+            source_volume_id: source_volume_id
           name: name
           lifecycle_config:
             last_restart_request_time: 2000-01-23T04:56:07.000+00:00
@@ -3362,14 +3376,14 @@ components:
             target_path: target_path
             source_volume_id: source_volume_id
           ports:
-          - public_url: public_url
-            number: 1
+          - number: 1
             protocol: protocol
             exposed_to_public: true
-          - public_url: public_url
-            number: 1
+            subdomain_prefix: subdomain_prefix
+          - number: 1
             protocol: protocol
             exposed_to_public: true
+            subdomain_prefix: subdomain_prefix
           version: 6
           labels:
           - value: value
@@ -3382,6 +3396,7 @@ components:
             context_path: context_path
             dockerfile_path: dockerfile_path
             source_hash: source_hash
+            source_volume_id: source_volume_id
           name: name
           lifecycle_config:
             last_restart_request_time: 2000-01-23T04:56:07.000+00:00

@@ -7,7 +7,7 @@ Name | Type | Description | Notes
 **Number** | **int32** |  | 
 **Protocol** | Pointer to **string** |  | [optional] 
 **ExposedToPublic** | Pointer to **bool** |  | [optional] 
-**PublicUrl** | Pointer to **string** |  | [optional] 
+**SubdomainPrefix** | Pointer to **string** |  | [optional] 
 
 ## Methods
 
@@ -98,30 +98,30 @@ SetExposedToPublic sets ExposedToPublic field to given value.
 
 HasExposedToPublic returns a boolean if a field has been set.
 
-### GetPublicUrl
+### GetSubdomainPrefix
 
-`func (o *Port) GetPublicUrl() string`
+`func (o *Port) GetSubdomainPrefix() string`
 
-GetPublicUrl returns the PublicUrl field if non-nil, zero value otherwise.
+GetSubdomainPrefix returns the SubdomainPrefix field if non-nil, zero value otherwise.
 
-### GetPublicUrlOk
+### GetSubdomainPrefixOk
 
-`func (o *Port) GetPublicUrlOk() (*string, bool)`
+`func (o *Port) GetSubdomainPrefixOk() (*string, bool)`
 
-GetPublicUrlOk returns a tuple with the PublicUrl field if it's non-nil, zero value otherwise
+GetSubdomainPrefixOk returns a tuple with the SubdomainPrefix field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetPublicUrl
+### SetSubdomainPrefix
 
-`func (o *Port) SetPublicUrl(v string)`
+`func (o *Port) SetSubdomainPrefix(v string)`
 
-SetPublicUrl sets PublicUrl field to given value.
+SetSubdomainPrefix sets SubdomainPrefix field to given value.
 
-### HasPublicUrl
+### HasSubdomainPrefix
 
-`func (o *Port) HasPublicUrl() bool`
+`func (o *Port) HasSubdomainPrefix() bool`
 
-HasPublicUrl returns a boolean if a field has been set.
+HasSubdomainPrefix returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

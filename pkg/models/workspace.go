@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+const (
+	WorkspaceIDLabel = "workspace.stackdome.io/id"
+)
+
 type Workspace struct {
 	ID                 string      `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 	OrganisationID     string      `gorm:"not null"`

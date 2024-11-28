@@ -7,6 +7,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/services/clusterresource"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 )
@@ -19,12 +20,14 @@ type WorkspaceService interface {
 	GetWorkspacesByOrganisationID(ctx context.Context, organisationID string) ([]*models.Workspace, *errors.ServiceError)
 	UpdateWorkspace(ctx context.Context, ID string, spec *models.Workspace) (*models.Workspace, *errors.ServiceError)
 	DeleteWorkspace(ctx context.Context, ID string) *errors.ServiceError
+	InjectClusterResourceService(workspaceClusterService clusterresource.ClusterWorkspaceService)
 }
 
 type WorkspaceServiceSpec struct {
 	SessionFactory          db.SessionFactory
 	WorkspaceUserService    WorkspaceUserService
 	WorkspaceStorageService WorkspaceStorageService
+	ClusterService          ClusterService
 	Logger                  logger.Logger
 }
 
@@ -33,6 +36,7 @@ type workspaceService struct {
 	logger                  logger.Logger
 	sessionFactory          db.SessionFactory
 	workspaceUserService    WorkspaceUserService
+	clusterResourceService  clusterresource.ClusterWorkspaceService
 	workspaceStorageService WorkspaceStorageService
 }
 
@@ -46,6 +50,10 @@ func NewWorkspaceService(spec WorkspaceServiceSpec) WorkspaceService {
 		logger:                  spec.Logger,
 		sessionFactory:          spec.SessionFactory,
 	}
+}
+
+func (s *workspaceService) InjectClusterResourceService(workspaceClusterService clusterresource.ClusterWorkspaceService) {
+	s.clusterResourceService = workspaceClusterService
 }
 
 func (s *workspaceService) CreateWorkspace(ctx context.Context, spec *models.Workspace) (*models.Workspace, *errors.ServiceError) {
@@ -75,12 +83,23 @@ func (s *workspaceService) CreateWorkspace(ctx context.Context, spec *models.Wor
 
 		setWorkspaceStorageAssociation(spec, currentUserWorkpaceStorage.ID)
 	}
-	// TODO: Generate public url for exposed ports
-	workspace, err := s.workspaceStore.Create(ctx, spec)
+
+	var createdWorkspace *models.Workspace
+	err = s.workspaceStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		var creatErr *errors.ServiceError
+		createdWorkspace, creatErr = s.workspaceStore.CreateWithTx(ctx, spec)
+		if creatErr != nil {
+			return creatErr
+		}
+		if err := s.clusterResourceService.CreateWorkspaceInCluster(ctx, createdWorkspace); err != nil {
+			return errors.GeneralError("failed to create workspace in cluster: %s", err.Error())
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	return workspace, nil
+	return createdWorkspace, nil
 }
 
 func (s *workspaceService) GetWorkspace(ctx context.Context, ID string) (*models.Workspace, *errors.ServiceError) {
@@ -116,7 +135,20 @@ func (s *workspaceService) GetWorkspacesByOrganisationID(ctx context.Context, or
 }
 
 func (s *workspaceService) DeleteWorkspace(ctx context.Context, ID string) *errors.ServiceError {
-	if err := s.workspaceStore.Delete(ctx, ID); err != nil {
+	workspace, err := s.GetWorkspace(ctx, ID)
+	if err != nil {
+		return err
+	}
+	err = s.workspaceStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		if err := s.clusterResourceService.DeleteWorkspaceInCluster(ctx, workspace); err != nil {
+			return errors.GeneralError("failed to delete workspace in cluster: %s", err.Error())
+		}
+		if err := s.workspaceStore.DeleteWithTx(ctx, ID); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
 		return err
 	}
 	return nil
@@ -149,11 +181,23 @@ func (s *workspaceService) UpdateWorkspace(ctx context.Context, ID string, spec 
 
 		setWorkspaceStorageAssociation(spec, currentUserWorkpaceStorage.ID)
 	}
-	workspace, err = s.workspaceStore.Update(ctx, ID, spec)
+
+	var updatedWorkspace *models.Workspace
+	err = s.workspaceStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		var updateErr *errors.ServiceError
+		updatedWorkspace, updateErr = s.workspaceStore.UpdateWithTx(ctx, ID, spec)
+		if updateErr != nil {
+			return updateErr
+		}
+		if err := s.clusterResourceService.UpdateWorkspaceInCluster(ctx, updatedWorkspace); err != nil {
+			return errors.GeneralError("failed to update workspace in cluster: %s", err.Error())
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	return workspace, nil
+	return updatedWorkspace, nil
 }
 
 func (s *workspaceService) validateWorkspaceVolumeMounts(currentUserWorkpaceStorage *models.WorkspaceStorage, spec *models.Workspace) *errors.ServiceError {

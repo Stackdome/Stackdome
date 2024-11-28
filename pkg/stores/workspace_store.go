@@ -19,4 +19,5 @@ type WorkspaceStore interface {
 	Delete(ctx context.Context, id string) *errors.ServiceError
 	ListByOrganisationID(ctx context.Context, organisationID string) ([]*models.Workspace, *errors.ServiceError)
 	ListByUserID(ctx context.Context, userID string) ([]*models.Workspace, *errors.ServiceError)
+	AtomicExecutor
 }

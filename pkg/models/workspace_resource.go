@@ -22,7 +22,7 @@ type WorkspaceResource struct {
 	Init            *InitConfig      `gorm:"type:jsonb"`
 	ExecutionConfig *ExecutionConfig `gorm:"type:jsonb"`
 	VolumeMounts    []*VolumeMount   `gorm:"foreignKey:WorkspaceResourceID"`
-	DependsOn       *Dependencies    `gorm:"type:jsonb"`
+	DependsOn       Dependencies     `gorm:"type:jsonb"`
 	LifecycleConfig *LifecycleConfig `gorm:"type:jsonb"`
 	Ports           Ports            `gorm:"type:jsonb"`
 	StateFul        bool
@@ -50,10 +50,10 @@ type WorkspaceResourceStatus struct {
 }
 
 type Port struct {
-	Number          int     `json:"number"`
-	Protocol        string  `json:"protocol"`
-	ExposedToPublic bool    `json:"exposed_to_public"`
-	PublicURL       *string `json:"public_url"`
+	Number          int    `json:"number"`
+	Protocol        string `json:"protocol"`
+	ExposedToPublic bool   `json:"exposed_to_public"`
+	SubdomainPrefix string `json:"subdomain_prefix"`
 }
 
 type LifecycleConfig struct {
@@ -61,6 +61,7 @@ type LifecycleConfig struct {
 }
 
 type BuildConfig struct {
+	SourceVolumeID string `json:"source_volume_id"`
 	ContextPath    string `json:"context_path"`
 	DockerfilePath string `json:"dockerfile_path"`
 	SourceHash     string `json:"source_hash"`

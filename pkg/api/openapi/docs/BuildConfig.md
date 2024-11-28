@@ -4,6 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**SourceVolumeId** | **string** |  | 
 **ContextPath** | **string** |  | 
 **DockerfilePath** | **string** |  | 
 **SourceHash** | **string** |  | 
@@ -12,7 +13,7 @@ Name | Type | Description | Notes
 
 ### NewBuildConfig
 
-`func NewBuildConfig(contextPath string, dockerfilePath string, sourceHash string, ) *BuildConfig`
+`func NewBuildConfig(sourceVolumeId string, contextPath string, dockerfilePath string, sourceHash string, ) *BuildConfig`
 
 NewBuildConfig instantiates a new BuildConfig object
 This constructor will assign default values to properties that have it defined,
@@ -26,6 +27,26 @@ will change when the set of required properties is changed
 NewBuildConfigWithDefaults instantiates a new BuildConfig object
 This constructor will only assign default values to properties that have it defined,
 but it doesn't guarantee that properties required by API are set
+
+### GetSourceVolumeId
+
+`func (o *BuildConfig) GetSourceVolumeId() string`
+
+GetSourceVolumeId returns the SourceVolumeId field if non-nil, zero value otherwise.
+
+### GetSourceVolumeIdOk
+
+`func (o *BuildConfig) GetSourceVolumeIdOk() (*string, bool)`
+
+GetSourceVolumeIdOk returns a tuple with the SourceVolumeId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetSourceVolumeId
+
+`func (o *BuildConfig) SetSourceVolumeId(v string)`
+
+SetSourceVolumeId sets SourceVolumeId field to given value.
+
 
 ### GetContextPath
 

@@ -67,3 +67,7 @@ type DBUserService interface {
 type DBWorkspaceUserService interface {
 	GetWorkspaceUser(ctx context.Context, userID string) (*models.WorkspaceUser, *errors.ServiceError)
 }
+
+type DBOrganisationService interface {
+	Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError)
+}

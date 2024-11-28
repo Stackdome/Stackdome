@@ -84,6 +84,7 @@ func presentBuildConfig(config *models.BuildConfig) *openapi.BuildConfig {
 		return nil
 	}
 	return &openapi.BuildConfig{
+		SourceVolumeId: config.SourceVolumeID,
 		ContextPath:    config.ContextPath,
 		DockerfilePath: config.DockerfilePath,
 		SourceHash:     config.SourceHash,
@@ -145,12 +146,12 @@ func presentVolumeMounts(mounts []*models.VolumeMount) []openapi.VolumeMount {
 	return result
 }
 
-func presentDependencies(deps *models.Dependencies) []string {
+func presentDependencies(deps models.Dependencies) []string {
 	if deps == nil {
 		return nil
 	}
 	var result []string
-	for _, dep := range *deps {
+	for _, dep := range deps {
 		result = append(result, dep)
 	}
 	return result
@@ -172,7 +173,7 @@ func presentPorts(ports models.Ports) []openapi.Port {
 			Number:          int32(port.Number),
 			Protocol:        &port.Protocol,
 			ExposedToPublic: &port.ExposedToPublic,
-			PublicUrl:       port.PublicURL,
+			SubdomainPrefix: &port.SubdomainPrefix,
 		}
 	}
 	return result
@@ -230,6 +231,7 @@ func convertBuildConfig(config *openapi.BuildConfig) *models.BuildConfig {
 		return nil
 	}
 	return &models.BuildConfig{
+		SourceVolumeID: config.SourceVolumeId,
 		ContextPath:    config.ContextPath,
 		DockerfilePath: config.DockerfilePath,
 		SourceHash:     config.SourceHash,
@@ -297,12 +299,12 @@ func convertVolumeMounts(mounts []openapi.VolumeMount) []*models.VolumeMount {
 	return result
 }
 
-func convertDependencies(deps []string) *models.Dependencies {
+func convertDependencies(deps []string) models.Dependencies {
 	if deps == nil {
 		return nil
 	}
 	result := models.Dependencies(deps)
-	return &result
+	return result
 }
 
 func convertLifecycleConfig(config *openapi.LifecycleConfig) *models.LifecycleConfig {
@@ -321,7 +323,6 @@ func convertPorts(ports []openapi.Port) []models.Port {
 			Number:          int(port.Number),
 			Protocol:        *port.Protocol,
 			ExposedToPublic: *port.ExposedToPublic,
-			PublicURL:       port.PublicUrl,
 		}
 	}
 	return models.Ports(result)
