@@ -78,7 +78,7 @@ func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequ
 		u.logger.Errorf("failed to login: %s", err.Error())
 		return nil, errors.GeneralError("failed to login")
 	}
-	expirationTime := time.Now().UTC().Add(24 * time.Hour)
+	expirationTime := time.Now().UTC().Add(10 * 24 * time.Hour)
 	claims := &auth.Claims{
 		UserID: userInDB.ID,
 		Role:   string(userInDB.Role),

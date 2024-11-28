@@ -11,6 +11,7 @@ type WorkspaceStorageStore interface {
 	Create(ctx context.Context, spec *models.WorkspaceStorage) (*models.WorkspaceStorage, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.WorkspaceStorage) (*models.WorkspaceStorage, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.WorkspaceStorage, *errors.ServiceError)
+	GetByWorkspaceName(ctx context.Context, workspaceName string, userID string) (*models.WorkspaceStorage, *errors.ServiceError)
 	GetByIDorName(ctx context.Context, idOrName string, userID string) (*models.WorkspaceStorage, *errors.ServiceError)
 	Update(ctx context.Context, id string, spec *models.WorkspaceStorage) (*models.WorkspaceStorage, *errors.ServiceError)
 	UpdateWithTx(ctx context.Context, id string, spec *models.WorkspaceStorage) (*models.WorkspaceStorage, *errors.ServiceError)

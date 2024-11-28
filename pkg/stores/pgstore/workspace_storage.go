@@ -84,6 +84,17 @@ func (w *workspaceStorageStore) GetByIDorName(ctx context.Context, idOrName stri
 	return w.getByName(ctx, idOrName, userID)
 }
 
+func (w *workspaceStorageStore) GetByWorkspaceName(ctx context.Context, workspaceName string, userID string) (*models.WorkspaceStorage, *errors.ServiceError) {
+	var res models.WorkspaceStorage
+	if err := w.sessionFactory.New(ctx).Preload("Volumes").Where("workspace_name = ? AND user_id = ?", workspaceName, userID).First(&res).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.NotFound("workspace storage with workspace name '%s' not found", workspaceName)
+		}
+		return nil, errors.GeneralError("failed to fetch workspace storage: %s", err.Error())
+	}
+	return &res, nil
+}
+
 func isValidUUID(id string) bool {
 	_, err := uuid.Parse(id)
 	return err == nil

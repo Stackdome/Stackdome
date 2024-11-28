@@ -405,6 +405,262 @@ paths:
         '500':
           description: Internal server error
 
+  /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes:
+    get:
+      summary: List all volumes under a WorkspaceStorage.
+      security:
+        - Bearer: []
+      parameters:
+        - in: path
+          name: org_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Volume'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+
+  /api/v1/organizations/{org_id}/workspaces:
+    post:
+      summary: Create a new Workspace
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Workspace'
+      responses:
+        '201':
+          description: Workspace created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        '401':
+          description: Unauthorized
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Workspace already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      summary: List all Workspaces for an organization
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Workspace'
+                  total:
+                    type: integer
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/organizations/{org_id}/workspaces/{id}:
+    get:
+      summary: Get a specific Workspace
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update a Workspace
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Workspace'
+      responses:
+        '200':
+          description: Workspace updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        '401':
+          description: Unauthorized
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete a Workspace
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Workspace deleted successfully
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources:
+    get:
+      summary: List all WorkspaceResources for a Workspace
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/workspace_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkspaceResource'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+
+  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id}:
+    put:
+      summary: Update a WorkspaceResource
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/workspace_id'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceResource'
+      responses:
+        '200':
+          description: WorkspaceResource updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResource'
+        '401':
+          description: Unauthorized
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 components:
   securitySchemes:
@@ -420,13 +676,20 @@ components:
       required: true
       schema:
         type: string
-    orgid:
-      name: id
+    org_id:
+      name: org_id
       in: path
-      description: The id of organization
       required: true
       schema:
         type: string
+      description: The ID of the organization
+    workspace_id:
+      name: workspace_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The ID of the workspace
   schemas:
     User:
       type: object
@@ -785,6 +1048,248 @@ components:
           type: string
         status:
           type: string
+
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        organisation_id:
+          type: string
+          readOnly: true
+        user_id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+        namespace:
+          type: string
+          readOnly: true
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+        annotations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Annotation'
+        version:
+          type: integer
+          readOnly: true
+        spec:
+          $ref: '#/components/schemas/WorkspaceSpec'
+        status:
+          $ref: '#/components/schemas/WorkspaceStatus'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+        - name
+        - spec
+
+    WorkspaceSpec:
+      type: object
+      required:
+        - resources
+      properties:
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceResource'
+
+    WorkspaceStatus:
+      type: object
+      properties:
+        state:
+          type: string
+        observed_version:
+          type: integer
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Condition'
+
+    WorkspaceResource:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        workspace_id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+        annotations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Annotation'
+        version:
+          type: integer
+          readOnly: true
+        image_registry:
+          type: string
+        build:
+          $ref: '#/components/schemas/BuildConfig'
+        prebuilt:
+          $ref: '#/components/schemas/PrebuiltConfig'
+        init:
+          $ref: '#/components/schemas/InitConfig'
+        execution_config:
+          $ref: '#/components/schemas/ExecutionConfig'
+        volume_mounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/VolumeMount'
+        depends_on:
+          type: array
+          items:
+            type: string
+        lifecycle_config:
+          $ref: '#/components/schemas/LifecycleConfig'
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/Port'
+        stateful:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/ResourceStatus'
+          readOnly: true
+      required:
+        - name
+
+    ResourceStatus:
+      type: object
+      properties:
+        state:
+          type: string
+        observed_version:
+          type: integer
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Condition'
+
+    VolumeMount:
+      type: object
+      required:
+        - source_volume_id
+        - target_path
+      properties:
+        workspace_resource_id:
+          type: string
+          readOnly: true
+        workspace_storage_id:
+          type: string
+          readOnly: true
+        source_volume_id:
+          type: string
+        source_sub_path:
+          type: string
+        target_path:
+          type: string
+
+    Port:
+      type: object
+      required:
+        - number
+      properties:
+        number:
+          type: integer
+        protocol:
+          type: string
+        exposed_to_public:
+          type: boolean
+        subdomain_prefix:
+          type: string
+
+    LifecycleConfig:
+      type: object
+      properties:
+        last_restart_request_time:
+          type: string
+          format: date-time
+
+    BuildConfig:
+      type: object
+      additionalProperties: false
+      required:
+        - source_volume_id
+        - context_path
+        - dockerfile_path
+        - source_hash
+      properties:
+        source_volume_id:
+          type: string
+        context_path:
+          type: string
+        dockerfile_path:
+          type: string
+        source_hash:
+          type: string
+
+    PrebuiltConfig:
+      type: object
+      additionalProperties: false
+      required: 
+        - image
+      properties:
+        image:
+          type: string
+
+    InitConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        command:
+          type: array
+          items:
+            type: string
+        args:
+          type: array
+          items:
+            type: string
+
+    ExecutionConfig:
+      type: object
+      properties:
+        command:
+          type: array
+          items:
+            type: string
+        args:
+          type: array
+          items:
+            type: string
+        environment_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnvVar'
+
+    EnvVar:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - value
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+
 
     Condition:
       type: object

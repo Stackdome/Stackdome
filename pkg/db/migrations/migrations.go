@@ -13,4 +13,5 @@ var MigrationList = []*gormigrate.Migration{
 	alterWorkspaceStorageTable(),
 	addVolumeSourceToVolumesTable(),
 	renameVolumeStatusColumnInVolumesTable(),
+	createWorkspaceAndWorkspaceResourceTables(),
 }

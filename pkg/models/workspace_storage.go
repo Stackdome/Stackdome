@@ -57,6 +57,11 @@ func (w *WorkspaceStorage) VolumeMap() map[string]*Volume {
 	return volumeMap
 }
 
+func (w *WorkspaceStorage) VolumeExists(volumeID string) bool {
+	_, exists := w.VolumeMap()[volumeID]
+	return exists
+}
+
 type SSHConfig struct {
 	// Users public key.
 	PublicKey string `json:"public_key"`
