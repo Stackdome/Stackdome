@@ -21,3 +21,11 @@ func DBObjectIDPresentPredicate[T client.Object](label string) predicate.TypedFu
 		return ok
 	})
 }
+
+func WorkspaceIDLabelPresentPredicate[T client.Object]() predicate.TypedFuncs[T] {
+	return predicate.NewTypedPredicateFuncs(func(object T) bool {
+		objectLabels := object.GetLabels()
+		_, ok := objectLabels[models.WorkspaceIDLabel]
+		return ok
+	})
+}

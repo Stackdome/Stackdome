@@ -4,6 +4,8 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**PublicIngress** | Pointer to [**[]Ingress**](Ingress.md) |  | [optional] 
+**InternalServiceName** | Pointer to **string** |  | [optional] 
 **State** | Pointer to **string** |  | [optional] 
 **ObservedVersion** | Pointer to **int32** |  | [optional] 
 **Conditions** | Pointer to [**[]Condition**](Condition.md) |  | [optional] 
@@ -26,6 +28,56 @@ will change when the set of required properties is changed
 NewResourceStatusWithDefaults instantiates a new ResourceStatus object
 This constructor will only assign default values to properties that have it defined,
 but it doesn't guarantee that properties required by API are set
+
+### GetPublicIngress
+
+`func (o *ResourceStatus) GetPublicIngress() []Ingress`
+
+GetPublicIngress returns the PublicIngress field if non-nil, zero value otherwise.
+
+### GetPublicIngressOk
+
+`func (o *ResourceStatus) GetPublicIngressOk() (*[]Ingress, bool)`
+
+GetPublicIngressOk returns a tuple with the PublicIngress field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetPublicIngress
+
+`func (o *ResourceStatus) SetPublicIngress(v []Ingress)`
+
+SetPublicIngress sets PublicIngress field to given value.
+
+### HasPublicIngress
+
+`func (o *ResourceStatus) HasPublicIngress() bool`
+
+HasPublicIngress returns a boolean if a field has been set.
+
+### GetInternalServiceName
+
+`func (o *ResourceStatus) GetInternalServiceName() string`
+
+GetInternalServiceName returns the InternalServiceName field if non-nil, zero value otherwise.
+
+### GetInternalServiceNameOk
+
+`func (o *ResourceStatus) GetInternalServiceNameOk() (*string, bool)`
+
+GetInternalServiceNameOk returns a tuple with the InternalServiceName field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetInternalServiceName
+
+`func (o *ResourceStatus) SetInternalServiceName(v string)`
+
+SetInternalServiceName sets InternalServiceName field to given value.
+
+### HasInternalServiceName
+
+`func (o *ResourceStatus) HasInternalServiceName() bool`
+
+HasInternalServiceName returns a boolean if a field has been set.
 
 ### GetState
 

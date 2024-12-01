@@ -90,7 +90,10 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesidget) | **Get** /api/v1/organizations/{org_id}/workspaces/{id} | Get a specific Workspace
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesidput) | **Put** /api/v1/organizations/{org_id}/workspaces/{id} | Update a Workspace
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesPost**](docs/DefaultApi.md#apiv1organizationsorgidworkspacespost) | **Post** /api/v1/organizations/{org_id}/workspaces | Create a new Workspace
+*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsBuildIdGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidbuildsbuildidget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds/{build_id} | Get a specific build under a workspace
+*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidbuildsget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds | List all builds under a workspace
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources | List all WorkspaceResources for a Workspace
+*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesidbuildsget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id}/builds | List all builds for a WorkspaceResource
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesidput) | **Put** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id} | Update a WorkspaceResource
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
 *DefaultApi* | [**ApiV1UsersMeGet**](docs/DefaultApi.md#apiv1usersmeget) | **Get** /api/v1/users/me | Get a the current authenticated user
@@ -108,6 +111,7 @@ Class | Method | HTTP request | Description
  - [ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response](docs/ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response.md)
  - [ApiV1OrganizationsOrgIdWorkspacesGet200Response](docs/ApiV1OrganizationsOrgIdWorkspacesGet200Response.md)
  - [ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response](docs/ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response.md)
+ - [ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response](docs/ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response.md)
  - [BuildArtifact](docs/BuildArtifact.md)
  - [BuildArtifactSyncInfo](docs/BuildArtifactSyncInfo.md)
  - [BuildConfig](docs/BuildConfig.md)
@@ -118,6 +122,7 @@ Class | Method | HTTP request | Description
  - [ErrorAllOf](docs/ErrorAllOf.md)
  - [ErrorList](docs/ErrorList.md)
  - [ExecutionConfig](docs/ExecutionConfig.md)
+ - [Ingress](docs/Ingress.md)
  - [InitConfig](docs/InitConfig.md)
  - [Label](docs/Label.md)
  - [LifecycleConfig](docs/LifecycleConfig.md)
@@ -128,6 +133,7 @@ Class | Method | HTTP request | Description
  - [ObjectReference](docs/ObjectReference.md)
  - [Port](docs/Port.md)
  - [PrebuiltConfig](docs/PrebuiltConfig.md)
+ - [ResourceBuildStatus](docs/ResourceBuildStatus.md)
  - [ResourceStatus](docs/ResourceStatus.md)
  - [SSHConfig](docs/SSHConfig.md)
  - [User](docs/User.md)
@@ -139,6 +145,7 @@ Class | Method | HTTP request | Description
  - [VolumeStatus](docs/VolumeStatus.md)
  - [Workspace](docs/Workspace.md)
  - [WorkspaceResource](docs/WorkspaceResource.md)
+ - [WorkspaceResourceBuild](docs/WorkspaceResourceBuild.md)
  - [WorkspaceSpec](docs/WorkspaceSpec.md)
  - [WorkspaceStatus](docs/WorkspaceStatus.md)
  - [WorkspaceStorage](docs/WorkspaceStorage.md)

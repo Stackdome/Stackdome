@@ -27,9 +27,10 @@ type Workspace struct {
 }
 
 type WorkspaceStatus struct {
-	State           string      `json:"state"`
-	ObservedVersion int64       `json:"observed_version"`
-	Conditions      []Condition `json:"conditions"`
+	State                  string      `json:"state"`
+	ObservedVersion        int64       `json:"observed_version"`
+	Conditions             []Condition `json:"conditions"`
+	LastObservedStatusHash string      `json:"last_observed_status_hash,omitempty"`
 }
 
 func (ws *WorkspaceStatus) Scan(value interface{}) error {

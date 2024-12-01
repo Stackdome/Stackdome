@@ -19,6 +19,7 @@ type WorkspaceService interface {
 	GetWorkspacesByUserID(ctx context.Context, userID string) ([]*models.Workspace, *errors.ServiceError)
 	GetWorkspacesByOrganisationID(ctx context.Context, organisationID string) ([]*models.Workspace, *errors.ServiceError)
 	UpdateWorkspace(ctx context.Context, ID string, spec *models.Workspace) (*models.Workspace, *errors.ServiceError)
+	UpdateStatus(ctx context.Context, ID string, status *models.WorkspaceStatus) *errors.ServiceError
 	DeleteWorkspace(ctx context.Context, ID string) *errors.ServiceError
 	InjectClusterResourceService(workspaceClusterService clusterresource.ClusterWorkspaceService)
 }
@@ -198,6 +199,14 @@ func (s *workspaceService) UpdateWorkspace(ctx context.Context, ID string, spec 
 		return nil, err
 	}
 	return updatedWorkspace, nil
+}
+
+func (s *workspaceService) UpdateStatus(ctx context.Context, ID string, status *models.WorkspaceStatus) *errors.ServiceError {
+	err := s.workspaceStore.UpdateStatus(ctx, ID, status)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *workspaceService) validateWorkspaceVolumeMounts(currentUserWorkpaceStorage *models.WorkspaceStorage, spec *models.Workspace) *errors.ServiceError {

@@ -7,8 +7,12 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/config"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
+	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/resourcebuild"
+	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspace"
+	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceresource"
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspacestorage"
-	workspaceusercontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceuser"
+	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceuser"
+
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspacevolume"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -89,11 +93,27 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 				VolumeService:           d.Services.WorkspaceVolumeService,
 				Env:                     d.Env.Name,
 			}),
-			workspaceusercontroller.NewWorkspaceUserReconciler(workspaceusercontroller.WorkspaceUserReconcilerSpec{
+			workspaceuser.NewWorkspaceUserReconciler(workspaceuser.WorkspaceUserReconcilerSpec{
 				Log:                  logger,
 				WorkspaceUserService: d.Services.WorkspaceUserService,
 				ClusterService:       d.Services.ClusterService,
 				Env:                  d.Env.Name,
+			}),
+			workspace.NewWorkspaceReconciler(workspace.WorkspaceReconcilerSpec{
+				Log:              logger,
+				WorkspaceService: d.Services.WorkspaceService,
+				Env:              d.Env.Name,
+			}),
+			workspaceresource.NewWorkspaceResourceReconciler(workspaceresource.WorkspaceResourceReconcilerSpec{
+				Log:                      logger,
+				WorkspaceService:         d.Services.WorkspaceService,
+				WorkspaceResourceService: d.Services.WorkspaceResourceService,
+				Env:                      d.Env.Name,
+			}),
+			resourcebuild.NewResourceBuildReconciler(resourcebuild.ResourceBuildReconcilerSpec{
+				Log:                    logger,
+				DBResourceBuildService: d.Services.WorkspaceResourceBuildService,
+				DBResourceService:      d.Services.WorkspaceResourceService,
 			}),
 		},
 	})
@@ -287,14 +307,30 @@ func (d *developmentEnvironment) loadSevices(logger logger.Logger) Services {
 		WorkspaceStorageService: workspaceStorageService,
 	})
 
-	return Services{
-		UserService:             userService,
+	workspaceResourceService := services.NewWorkspaceResourceService(services.WorkspaceResourceServiceSpec{
+		SessionFactory:          d.DBSession,
+		Logger:                  logger,
 		WorkspaceUserService:    workspaceUserService,
-		OrganisationService:     organisationService,
-		ClusterService:          clusterService,
 		WorkspaceStorageService: workspaceStorageService,
-		WorkspaceVolumeService:  workspaceVolumeService,
 		WorkspaceService:        workspaceService,
+	})
+
+	workspaceResourceBuildService := services.NewResourceBuildService(services.ResourceBuildServiceSpec{
+		WorkspaceResourceService: workspaceResourceService,
+		SessionFactory:           d.DBSession,
+		Logger:                   logger,
+	})
+
+	return Services{
+		UserService:                   userService,
+		WorkspaceUserService:          workspaceUserService,
+		OrganisationService:           organisationService,
+		ClusterService:                clusterService,
+		WorkspaceStorageService:       workspaceStorageService,
+		WorkspaceVolumeService:        workspaceVolumeService,
+		WorkspaceService:              workspaceService,
+		WorkspaceResourceService:      workspaceResourceService,
+		WorkspaceResourceBuildService: workspaceResourceBuildService,
 	}
 }
 

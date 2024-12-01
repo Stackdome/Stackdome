@@ -782,6 +782,134 @@ paths:
       security:
       - Bearer: []
       summary: Update a WorkspaceResource
+  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id}/builds:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The ID of the workspace
+        explode: false
+        in: path
+        name: workspace_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/_api_v1_organizations__org_id__workspaces__workspace_id__resources__id__builds_get_200_response'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all builds for a WorkspaceResource
+  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The ID of the workspace
+        explode: false
+        in: path
+        name: workspace_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/_api_v1_organizations__org_id__workspaces__workspace_id__resources__id__builds_get_200_response'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all builds under a workspace
+  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds/{build_id}:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The ID of the workspace
+        explode: false
+        in: path
+        name: workspace_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: build_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResourceBuild'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "404":
+          description: Build not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a specific build under a workspace
 components:
   parameters:
     id:
@@ -1685,6 +1813,7 @@ components:
             stateful: true
             status:
               observed_version: 5
+              internal_service_name: internal_service_name
               state: state
               conditions:
               - reason: reason
@@ -1699,6 +1828,11 @@ components:
                 message: message
                 observed_generation: 1
                 status: status
+              public_ingress:
+              - target_port: 5
+                url: url
+              - target_port: 5
+                url: url
           - init:
               args:
               - args
@@ -1768,6 +1902,7 @@ components:
             stateful: true
             status:
               observed_version: 5
+              internal_service_name: internal_service_name
               state: state
               conditions:
               - reason: reason
@@ -1782,13 +1917,18 @@ components:
                 message: message
                 observed_generation: 1
                 status: status
+              public_ingress:
+              - target_port: 5
+                url: url
+              - target_port: 5
+                url: url
         labels:
         - value: value
           key: key
         - value: value
           key: key
         status:
-          observed_version: 5
+          observed_version: 2
           state: state
           conditions:
           - reason: reason
@@ -1917,6 +2057,7 @@ components:
           stateful: true
           status:
             observed_version: 5
+            internal_service_name: internal_service_name
             state: state
             conditions:
             - reason: reason
@@ -1931,6 +2072,11 @@ components:
               message: message
               observed_generation: 1
               status: status
+            public_ingress:
+            - target_port: 5
+              url: url
+            - target_port: 5
+              url: url
         - init:
             args:
             - args
@@ -2000,6 +2146,7 @@ components:
           stateful: true
           status:
             observed_version: 5
+            internal_service_name: internal_service_name
             state: state
             conditions:
             - reason: reason
@@ -2014,6 +2161,11 @@ components:
               message: message
               observed_generation: 1
               status: status
+            public_ingress:
+            - target_port: 5
+              url: url
+            - target_port: 5
+              url: url
       properties:
         resources:
           items:
@@ -2024,7 +2176,7 @@ components:
       type: object
     WorkspaceStatus:
       example:
-        observed_version: 5
+        observed_version: 2
         state: state
         conditions:
         - reason: reason
@@ -2120,6 +2272,7 @@ components:
         stateful: true
         status:
           observed_version: 5
+          internal_service_name: internal_service_name
           state: state
           conditions:
           - reason: reason
@@ -2134,6 +2287,11 @@ components:
             message: message
             observed_generation: 1
             status: status
+          public_ingress:
+          - target_port: 5
+            url: url
+          - target_port: 5
+            url: url
       properties:
         id:
           readOnly: true
@@ -2185,10 +2343,60 @@ components:
       required:
       - name
       type: object
-    ResourceStatus:
+    WorkspaceResourceBuild:
       example:
-        observed_version: 5
+        workspace_id: workspace_id
+        image_registry: image_registry
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        namespace: namespace
+        workspace_resource_id: workspace_resource_id
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
+        source_hash: source_hash
+        status:
+          image_url: image_url
+          state: state
+          build_source_hash: build_source_hash
+          conditions:
+          - reason: reason
+            last_transition_time: 2000-01-23T04:56:07.000+00:00
+            type: type
+            message: message
+            observed_generation: 1
+            status: status
+          - reason: reason
+            last_transition_time: 2000-01-23T04:56:07.000+00:00
+            type: type
+            message: message
+            observed_generation: 1
+            status: status
+      properties:
+        id:
+          type: string
+        namespace:
+          type: string
+        workspace_id:
+          type: string
+        workspace_resource_id:
+          type: string
+        source_hash:
+          type: string
+        image_registry:
+          type: string
+        status:
+          $ref: '#/components/schemas/ResourceBuildStatus'
+        created_at:
+          format: date-time
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      type: object
+    ResourceBuildStatus:
+      example:
+        image_url: image_url
         state: state
+        build_source_hash: build_source_hash
         conditions:
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -2205,12 +2413,63 @@ components:
       properties:
         state:
           type: string
+        conditions:
+          items:
+            $ref: '#/components/schemas/Condition'
+          type: array
+        image_url:
+          type: string
+        build_source_hash:
+          type: string
+      type: object
+    ResourceStatus:
+      example:
+        observed_version: 5
+        internal_service_name: internal_service_name
+        state: state
+        conditions:
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 1
+          status: status
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 1
+          status: status
+        public_ingress:
+        - target_port: 5
+          url: url
+        - target_port: 5
+          url: url
+      properties:
+        public_ingress:
+          items:
+            $ref: '#/components/schemas/Ingress'
+          type: array
+        internal_service_name:
+          type: string
+        state:
+          type: string
         observed_version:
           type: integer
         conditions:
           items:
             $ref: '#/components/schemas/Condition'
           type: array
+      type: object
+    Ingress:
+      example:
+        target_port: 5
+        url: url
+      properties:
+        url:
+          type: string
+        target_port:
+          type: integer
       type: object
     VolumeMount:
       example:
@@ -2835,7 +3094,7 @@ components:
       type: object
     _api_v1_organizations__org_id__workspaces_get_200_response:
       example:
-        total: 2
+        total: 7
         items:
         - organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
@@ -2921,6 +3180,7 @@ components:
               stateful: true
               status:
                 observed_version: 5
+                internal_service_name: internal_service_name
                 state: state
                 conditions:
                 - reason: reason
@@ -2935,6 +3195,11 @@ components:
                   message: message
                   observed_generation: 1
                   status: status
+                public_ingress:
+                - target_port: 5
+                  url: url
+                - target_port: 5
+                  url: url
             - init:
                 args:
                 - args
@@ -3004,6 +3269,7 @@ components:
               stateful: true
               status:
                 observed_version: 5
+                internal_service_name: internal_service_name
                 state: state
                 conditions:
                 - reason: reason
@@ -3018,13 +3284,18 @@ components:
                   message: message
                   observed_generation: 1
                   status: status
+                public_ingress:
+                - target_port: 5
+                  url: url
+                - target_port: 5
+                  url: url
           labels:
           - value: value
             key: key
           - value: value
             key: key
           status:
-            observed_version: 5
+            observed_version: 2
             state: state
             conditions:
             - reason: reason
@@ -3123,6 +3394,7 @@ components:
               stateful: true
               status:
                 observed_version: 5
+                internal_service_name: internal_service_name
                 state: state
                 conditions:
                 - reason: reason
@@ -3137,6 +3409,11 @@ components:
                   message: message
                   observed_generation: 1
                   status: status
+                public_ingress:
+                - target_port: 5
+                  url: url
+                - target_port: 5
+                  url: url
             - init:
                 args:
                 - args
@@ -3206,6 +3483,7 @@ components:
               stateful: true
               status:
                 observed_version: 5
+                internal_service_name: internal_service_name
                 state: state
                 conditions:
                 - reason: reason
@@ -3220,13 +3498,18 @@ components:
                   message: message
                   observed_generation: 1
                   status: status
+                public_ingress:
+                - target_port: 5
+                  url: url
+                - target_port: 5
+                  url: url
           labels:
           - value: value
             key: key
           - value: value
             key: key
           status:
-            observed_version: 5
+            observed_version: 2
             state: state
             conditions:
             - reason: reason
@@ -3321,6 +3604,7 @@ components:
           stateful: true
           status:
             observed_version: 5
+            internal_service_name: internal_service_name
             state: state
             conditions:
             - reason: reason
@@ -3335,6 +3619,11 @@ components:
               message: message
               observed_generation: 1
               status: status
+            public_ingress:
+            - target_port: 5
+              url: url
+            - target_port: 5
+              url: url
         - init:
             args:
             - args
@@ -3404,7 +3693,72 @@ components:
           stateful: true
           status:
             observed_version: 5
+            internal_service_name: internal_service_name
             state: state
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            public_ingress:
+            - target_port: 5
+              url: url
+            - target_port: 5
+              url: url
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/WorkspaceResource'
+          type: array
+      type: object
+    _api_v1_organizations__org_id__workspaces__workspace_id__resources__id__builds_get_200_response:
+      example:
+        items:
+        - workspace_id: workspace_id
+          image_registry: image_registry
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          namespace: namespace
+          workspace_resource_id: workspace_resource_id
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          source_hash: source_hash
+          status:
+            image_url: image_url
+            state: state
+            build_source_hash: build_source_hash
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+        - workspace_id: workspace_id
+          image_registry: image_registry
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          namespace: namespace
+          workspace_resource_id: workspace_resource_id
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          source_hash: source_hash
+          status:
+            image_url: image_url
+            state: state
+            build_source_hash: build_source_hash
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -3421,7 +3775,7 @@ components:
       properties:
         items:
           items:
-            $ref: '#/components/schemas/WorkspaceResource'
+            $ref: '#/components/schemas/WorkspaceResourceBuild'
           type: array
       type: object
     WorkspaceUserStatus_provisioned_namespaces_inner:

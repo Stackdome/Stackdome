@@ -14,19 +14,25 @@ import (
 )
 
 type WorkspaceHandlerSpec struct {
-	WorkspaceService services.WorkspaceService
-	Logger           logger.Logger
+	WorkspaceService              services.WorkspaceService
+	WorkspaceResourceService      services.WorkspaceResourceService
+	WorkspaceResourceBuildService services.ResourceBuildService
+	Logger                        logger.Logger
 }
 
 type workspaceHandler struct {
-	workspaceService services.WorkspaceService
-	logger           logger.Logger
+	workspaceService              services.WorkspaceService
+	workspaceResourceService      services.WorkspaceResourceService
+	workspaceResourceBuildService services.ResourceBuildService
+	logger                        logger.Logger
 }
 
 func NewWorkspaceHandler(spec WorkspaceHandlerSpec) *workspaceHandler {
 	return &workspaceHandler{
-		workspaceService: spec.WorkspaceService,
-		logger:           spec.Logger,
+		workspaceResourceService:      spec.WorkspaceResourceService,
+		workspaceService:              spec.WorkspaceService,
+		workspaceResourceBuildService: spec.WorkspaceResourceBuildService,
+		logger:                        spec.Logger,
 	}
 }
 

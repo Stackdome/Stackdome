@@ -44,9 +44,17 @@ type VolumeMount struct {
 }
 
 type WorkspaceResourceStatus struct {
-	State           string      `json:"state"`
-	ObservedVersion int64       `json:"observed_version"`
-	Conditions      []Condition `json:"conditions"`
+	State                  string      `json:"state"`
+	ObservedVersion        int64       `json:"observed_version"`
+	Conditions             []Condition `json:"conditions"`
+	PublicIngresses        []Ingress   `json:"public_ingresses"`
+	InternalServiceName    *string     `json:"internal_service_name,omitempty"`
+	LastObservedStatusHash string      `json:"last_observed_status_hash,omitempty"`
+}
+
+type Ingress struct {
+	URL        string `json:"url"`
+	TargetPort int    `json:"target_port"`
 }
 
 type Port struct {
