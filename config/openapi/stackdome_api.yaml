@@ -377,7 +377,7 @@ paths:
           description: Forbidden
         '500':
           description: Internal server error
-    
+
     delete:
       summary: Delete a WorkspaceStorage object
       security:
@@ -655,6 +655,98 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id}/builds:
+    get:
+      summary: List all builds for a WorkspaceResource
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/workspace_id'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkspaceResourceBuild'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+ # List all builds under a workspace
+  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds:
+    get:
+      summary: List all builds under a workspace
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/workspace_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkspaceResourceBuild'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds/{build_id}:
+  # get a specific build under a workspace
+    get:
+      summary: Get a specific build under a workspace
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/workspace_id'
+        - in: path
+          name: build_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResourceBuild'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Build not found
         '500':
           description: Internal server error
           content:
@@ -950,7 +1042,7 @@ components:
         public_key:
           type: string
           description: The SSH public key in OpenSSH format
-    
+
     WorkspaceVolumeSpec:
           type: object
           required:
@@ -1170,9 +1262,53 @@ components:
       required:
         - name
 
+    WorkspaceResourceBuild:
+      type: object
+      properties:
+        id:
+          type: string
+        namespace:
+          type: string
+        workspace_id:
+          type: string
+        workspace_resource_id:
+          type: string
+        source_hash:
+          type: string
+        image_registry:
+          type: string
+        status:
+          $ref: '#/components/schemas/ResourceBuildStatus'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ResourceBuildStatus:
+      type: object
+      properties:
+        state:
+          type: string
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Condition'
+        image_url:
+          type: string
+        build_source_hash:
+          type: string
+
     ResourceStatus:
       type: object
       properties:
+        public_ingress:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ingress'
+        internal_service_name:
+          type: string
         state:
           type: string
         observed_version:
@@ -1181,7 +1317,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Condition'
-
+    Ingress:
+      type: object
+      properties:
+        url:
+          type: string
+        target_port:
+          type: integer
     VolumeMount:
       type: object
       required:
@@ -1243,7 +1385,7 @@ components:
     PrebuiltConfig:
       type: object
       additionalProperties: false
-      required: 
+      required:
         - image
       properties:
         image:
@@ -1319,7 +1461,7 @@ components:
           type: string
         value:
           type: string
-    
+
     Annotation:
       type: object
       required:

@@ -16,9 +16,11 @@ import (
 
 // ResourceStatus struct for ResourceStatus
 type ResourceStatus struct {
-	State           *string     `json:"state,omitempty"`
-	ObservedVersion *int32      `json:"observed_version,omitempty"`
-	Conditions      []Condition `json:"conditions,omitempty"`
+	PublicIngress       []Ingress   `json:"public_ingress,omitempty"`
+	InternalServiceName *string     `json:"internal_service_name,omitempty"`
+	State               *string     `json:"state,omitempty"`
+	ObservedVersion     *int32      `json:"observed_version,omitempty"`
+	Conditions          []Condition `json:"conditions,omitempty"`
 }
 
 // NewResourceStatus instantiates a new ResourceStatus object
@@ -36,6 +38,70 @@ func NewResourceStatus() *ResourceStatus {
 func NewResourceStatusWithDefaults() *ResourceStatus {
 	this := ResourceStatus{}
 	return &this
+}
+
+// GetPublicIngress returns the PublicIngress field value if set, zero value otherwise.
+func (o *ResourceStatus) GetPublicIngress() []Ingress {
+	if o == nil || o.PublicIngress == nil {
+		var ret []Ingress
+		return ret
+	}
+	return o.PublicIngress
+}
+
+// GetPublicIngressOk returns a tuple with the PublicIngress field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ResourceStatus) GetPublicIngressOk() ([]Ingress, bool) {
+	if o == nil || o.PublicIngress == nil {
+		return nil, false
+	}
+	return o.PublicIngress, true
+}
+
+// HasPublicIngress returns a boolean if a field has been set.
+func (o *ResourceStatus) HasPublicIngress() bool {
+	if o != nil && o.PublicIngress != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetPublicIngress gets a reference to the given []Ingress and assigns it to the PublicIngress field.
+func (o *ResourceStatus) SetPublicIngress(v []Ingress) {
+	o.PublicIngress = v
+}
+
+// GetInternalServiceName returns the InternalServiceName field value if set, zero value otherwise.
+func (o *ResourceStatus) GetInternalServiceName() string {
+	if o == nil || o.InternalServiceName == nil {
+		var ret string
+		return ret
+	}
+	return *o.InternalServiceName
+}
+
+// GetInternalServiceNameOk returns a tuple with the InternalServiceName field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ResourceStatus) GetInternalServiceNameOk() (*string, bool) {
+	if o == nil || o.InternalServiceName == nil {
+		return nil, false
+	}
+	return o.InternalServiceName, true
+}
+
+// HasInternalServiceName returns a boolean if a field has been set.
+func (o *ResourceStatus) HasInternalServiceName() bool {
+	if o != nil && o.InternalServiceName != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetInternalServiceName gets a reference to the given string and assigns it to the InternalServiceName field.
+func (o *ResourceStatus) SetInternalServiceName(v string) {
+	o.InternalServiceName = &v
 }
 
 // GetState returns the State field value if set, zero value otherwise.
@@ -136,6 +202,12 @@ func (o *ResourceStatus) SetConditions(v []Condition) {
 
 func (o ResourceStatus) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
+	if o.PublicIngress != nil {
+		toSerialize["public_ingress"] = o.PublicIngress
+	}
+	if o.InternalServiceName != nil {
+		toSerialize["internal_service_name"] = o.InternalServiceName
+	}
 	if o.State != nil {
 		toSerialize["state"] = o.State
 	}

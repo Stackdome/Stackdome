@@ -11,6 +11,7 @@ docs/ApiV1OrganizationsIdWorkspaceStoragesGet200Response.md
 docs/ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response.md
 docs/ApiV1OrganizationsOrgIdWorkspacesGet200Response.md
 docs/ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response.md
+docs/ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response.md
 docs/BuildArtifact.md
 docs/BuildArtifactSyncInfo.md
 docs/BuildConfig.md
@@ -22,6 +23,7 @@ docs/Error.md
 docs/ErrorAllOf.md
 docs/ErrorList.md
 docs/ExecutionConfig.md
+docs/Ingress.md
 docs/InitConfig.md
 docs/Label.md
 docs/LifecycleConfig.md
@@ -32,6 +34,7 @@ docs/LoginResponse.md
 docs/ObjectReference.md
 docs/Port.md
 docs/PrebuiltConfig.md
+docs/ResourceBuildStatus.md
 docs/ResourceStatus.md
 docs/SSHConfig.md
 docs/User.md
@@ -43,6 +46,7 @@ docs/VolumeSourceTypes.md
 docs/VolumeStatus.md
 docs/Workspace.md
 docs/WorkspaceResource.md
+docs/WorkspaceResourceBuild.md
 docs/WorkspaceSpec.md
 docs/WorkspaceStatus.md
 docs/WorkspaceStorage.md
@@ -59,6 +63,7 @@ go.mod
 go.sum
 model__api_v1_organizations__id__workspace_storages_get_200_response.go
 model__api_v1_organizations__org_id__workspace_storages__id__volumes_get_200_response.go
+model__api_v1_organizations__org_id__workspaces__workspace_id__resources__id__builds_get_200_response.go
 model__api_v1_organizations__org_id__workspaces__workspace_id__resources_get_200_response.go
 model__api_v1_organizations__org_id__workspaces_get_200_response.go
 model_annotation.go
@@ -72,6 +77,7 @@ model_error.go
 model_error_all_of.go
 model_error_list.go
 model_execution_config.go
+model_ingress.go
 model_init_config.go
 model_label.go
 model_lifecycle_config.go
@@ -82,6 +88,7 @@ model_login_response.go
 model_object_reference.go
 model_port.go
 model_prebuilt_config.go
+model_resource_build_status.go
 model_resource_status.go
 model_ssh_config.go
 model_user.go
@@ -93,6 +100,7 @@ model_volume_source_types.go
 model_volume_status.go
 model_workspace.go
 model_workspace_resource.go
+model_workspace_resource_build.go
 model_workspace_spec.go
 model_workspace_status.go
 model_workspace_storage.go

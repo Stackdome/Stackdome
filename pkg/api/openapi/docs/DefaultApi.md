@@ -16,7 +16,10 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdWorkspacesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesIdGet) | **Get** /api/v1/organizations/{org_id}/workspaces/{id} | Get a specific Workspace
 [**ApiV1OrganizationsOrgIdWorkspacesIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesIdPut) | **Put** /api/v1/organizations/{org_id}/workspaces/{id} | Update a Workspace
 [**ApiV1OrganizationsOrgIdWorkspacesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesPost) | **Post** /api/v1/organizations/{org_id}/workspaces | Create a new Workspace
+[**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsBuildIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsBuildIdGet) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds/{build_id} | Get a specific build under a workspace
+[**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGet) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds | List all builds under a workspace
 [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources | List all WorkspaceResources for a Workspace
+[**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id}/builds | List all builds for a WorkspaceResource
 [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdPut) | **Put** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id} | Update a WorkspaceResource
 [**ApiV1UsersIdGet**](DefaultApi.md#ApiV1UsersIdGet) | **Get** /api/v1/users/{id} | Get a user
 [**ApiV1UsersMeGet**](DefaultApi.md#ApiV1UsersMeGet) | **Get** /api/v1/users/me | Get a the current authenticated user
@@ -879,6 +882,151 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
+## ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsBuildIdGet
+
+> WorkspaceResourceBuild ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsBuildIdGet(ctx, orgId, workspaceId, buildId).Execute()
+
+Get a specific build under a workspace
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    workspaceId := "workspaceId_example" // string | The ID of the workspace
+    buildId := "buildId_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsBuildIdGet(context.Background(), orgId, workspaceId, buildId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsBuildIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsBuildIdGet`: WorkspaceResourceBuild
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsBuildIdGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**workspaceId** | **string** | The ID of the workspace | 
+**buildId** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsBuildIdGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**WorkspaceResourceBuild**](WorkspaceResourceBuild.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGet
+
+> ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGet(ctx, orgId, workspaceId).Execute()
+
+List all builds under a workspace
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    workspaceId := "workspaceId_example" // string | The ID of the workspace
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGet(context.Background(), orgId, workspaceId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGet`: ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**workspaceId** | **string** | The ID of the workspace | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response**](ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet
 
 > ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet(ctx, orgId, workspaceId).Execute()
@@ -935,6 +1083,80 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response**](ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet
+
+> ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet(ctx, orgId, workspaceId, id).Execute()
+
+List all builds for a WorkspaceResource
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    workspaceId := "workspaceId_example" // string | The ID of the workspace
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet(context.Background(), orgId, workspaceId, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet`: ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**workspaceId** | **string** | The ID of the workspace | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response**](ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response.md)
 
 ### Authorization
 
