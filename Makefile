@@ -1,5 +1,6 @@
 DOCKER ?= docker
 GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
 VERSION := $(shell date +%s)
 
 # Tag for the image
@@ -14,16 +15,18 @@ generate:
 .PHONY: generate
 
 binary:
-	GOOS=$(GOOS) go build -o bin/stackdome-server cmd/main.go
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o bin/stackdome-server cmd/main.go
 .PHONY: binary
 
 image: GOOS=linux
 image: binary
-ifeq ($(EXTERNAL_IMAGE_REGISTRY),)
-$(error EXTERNAL_IMAGE_REGISTRY is not set)
-endif
-ifeq ($(IMAGE_REPOSITORY),)
-$(error IMAGE_REPOSITORY is not set)
-endif
+	@if [ -z "$(EXTERNAL_IMAGE_REGISTRY)" ]; then \
+	  echo "Error: EXTERNAL_IMAGE_REGISTRY is not set"; \
+	  exit 1; \
+	fi
+	@if [ -z "$(IMAGE_REPOSITORY)" ]; then \
+	  echo "Error: IMAGE_REPOSITORY is not set"; \
+	  exit 1; \
+	fi
 	$(DOCKER) build -t "$(EXTERNAL_IMAGE_REGISTRY)/$(IMAGE_REPOSITORY):$(IMAGE_TAG)" .
 .PHONY: image
