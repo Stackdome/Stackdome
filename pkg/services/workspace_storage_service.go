@@ -24,6 +24,7 @@ type WorkspaceStorageService interface {
 	InjectClusterResourceService(clusterResourceService clusterresource.WorkspaceStorageClusterResourceService)
 	ListVolumes(ctx context.Context, workspaceStorageID string, userID string) ([]*models.Volume, *errors.ServiceError)
 	Delete(ctx context.Context, ID string, userID string) *errors.ServiceError
+	MarkAsSynced(ctx context.Context, userID string, storageID string, volumeID string) *errors.ServiceError
 }
 
 type WorkspaceStorageServiceSpec struct {
@@ -39,6 +40,10 @@ func NewWorkspaceStorageService(spec WorkspaceStorageServiceSpec) WorkspaceStora
 		workspaceNamespaceStore: pgstore.NewWorkspaceNamespaceStore(pgstore.WorkspaceNamespaceStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
+		volumeService: NewVolumeService(VolumeServiceSpec{
+			SessionFactory: spec.SessionFactory,
+			Logger:         spec.Logger,
+		}),
 		logger: spec.Logger,
 	}
 }
@@ -47,6 +52,7 @@ type workspaceStorageService struct {
 	wsStorageStore          stores.WorkspaceStorageStore
 	workspaceNamespaceStore stores.WorkspaceNamespaceStore
 	clusterResourceService  clusterresource.WorkspaceStorageClusterResourceService
+	volumeService           VolumeService
 	logger                  logger.Logger
 }
 
@@ -209,6 +215,24 @@ func (s *workspaceStorageService) Update(ctx context.Context, ID string, userID 
 		return nil, updateErr
 	}
 	return updatedStorage, nil
+}
+
+func (s *workspaceStorageService) MarkAsSynced(ctx context.Context, userID string, storageID string, volumeID string) *errors.ServiceError {
+	err := s.volumeService.AddLastSyncedAtAnnotation(ctx, volumeID, storageID)
+	if err != nil {
+		return errors.GeneralError("failed to mark volume as synced: %s", err.Error())
+	}
+	existingStorage, serr := s.wsStorageStore.GetByIDorName(ctx, storageID, userID)
+	if serr != nil {
+		s.logger.Errorf("failed to get workspace storage: %v", serr)
+		return serr
+	}
+
+	if err := s.clusterResourceService.UpsertWorkspaceStorageInCluster(ctx, existingStorage); err != nil {
+		s.logger.Errorf("failed to update workspace storage in cluster: %v", err)
+		return errors.GeneralError("failed to update workspace storage in cluster: %s", err.Error())
+	}
+	return nil
 }
 
 func allowedVolumeUpdate(existingVolume *models.Volume, volume *models.Volume) bool {

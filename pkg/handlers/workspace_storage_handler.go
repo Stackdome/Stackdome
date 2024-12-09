@@ -10,6 +10,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/gorilla/mux"
+	"k8s.io/utils/ptr"
 )
 
 func NewWorkspaceStorageHandler(spec WorkspaceStorageHandlerSpec) *workspaceStorageHandler {
@@ -24,6 +25,7 @@ type WorkspaceStorageHandlerSpec struct {
 
 type workspaceStorageHandler struct {
 	workspaceStorageService services.WorkspaceStorageService
+	workspaceVolumeService  services.VolumeService
 }
 
 func (h *workspaceStorageHandler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +70,11 @@ func (h *workspaceStorageHandler) ListByUser(w http.ResponseWriter, r *http.Requ
 			if serr != nil {
 				return nil, serr
 			}
-			return presenters.PresentWorkspaceStorageList(objs), nil
+			listResp := openapi.WorkspaceStorageList{
+				Items: presenters.PresentWorkspaceStorageList(objs),
+				Total: ptr.To(int32(len(objs))),
+			}
+			return listResp, nil
 		},
 	}
 	handleList(w, r, cfg)
@@ -86,7 +92,11 @@ func (h *workspaceStorageHandler) List(w http.ResponseWriter, r *http.Request) {
 			if serr != nil {
 				return nil, serr
 			}
-			return presenters.PresentWorkspaceStorageList(objs), nil
+			listResp := openapi.WorkspaceStorageList{
+				Items: presenters.PresentWorkspaceStorageList(objs),
+				Total: ptr.To(int32(len(objs))),
+			}
+			return listResp, nil
 		},
 	}
 	handleList(w, r, cfg)
@@ -104,7 +114,11 @@ func (h *workspaceStorageHandler) ListVolumes(w http.ResponseWriter, r *http.Req
 			if serr != nil {
 				return nil, serr
 			}
-			return presenters.PresentVolumeList(objs, true), nil
+			listResp := openapi.VolumeList{
+				Items: presenters.PresentVolumeList(objs, true),
+				Total: ptr.To(int32(len(objs))),
+			}
+			return listResp, nil
 		},
 	}
 	handleList(w, r, cfg)
@@ -134,6 +148,26 @@ func (h *workspaceStorageHandler) Create(w http.ResponseWriter, r *http.Request)
 		handleError,
 	}
 	handle(w, r, cfg, http.StatusCreated)
+}
+
+func (h *workspaceStorageHandler) MarkAsSynced(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			ctx := r.Context()
+			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
+			if err != nil {
+				return nil, errors.Unauthorized("failed to fetch user")
+			}
+			storageID := mux.Vars(r)["id"]
+			volumeID := mux.Vars(r)["volume_id"]
+			serr := h.workspaceStorageService.MarkAsSynced(ctx, currentUser.ID, storageID, volumeID)
+			if serr != nil {
+				return nil, serr
+			}
+			return nil, nil
+		},
+	}
+	handle(w, r, cfg, http.StatusOK)
 }
 
 func (h *workspaceStorageHandler) Update(w http.ResponseWriter, r *http.Request) {

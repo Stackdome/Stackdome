@@ -148,9 +148,9 @@ func presentWorkspaceVolumeSpec(spec *models.Volume) openapi.WorkspaceVolumeSpec
 		Size:          spec.Size,
 		StorageClass:  &spec.StorageClass,
 		SyncBeforeUse: &spec.SyncBeforeUse,
-		Source:        &openapi.VolumeSource{},
 	}
 	if spec.VolumeSource != nil {
+		res.Source = &openapi.VolumeSource{}
 		switch {
 		case spec.VolumeSource.LocalSource != nil:
 			res.Source.SourceType = openapi.LOCAL
@@ -255,9 +255,9 @@ func ConvertVolume(v *openapi.Volume) *models.Volume {
 		Size:          v.Spec.Size,
 		StorageClass:  v.Spec.GetStorageClass(),
 		SyncBeforeUse: v.Spec.GetSyncBeforeUse(),
-		VolumeSource:  &models.VolumeSource{},
 	}
 	if v.Spec.Source != nil {
+		res.VolumeSource = &models.VolumeSource{}
 		switch v.Spec.Source.SourceType {
 		case openapi.LOCAL:
 			res.VolumeSource.LocalSource = convertLocalSource(v.Spec.Source.LocalSource)

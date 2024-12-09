@@ -230,6 +230,24 @@ paths:
           description: WorkspaceUser not found
         '500':
           description: Internal server error
+  /api/v1/workspace-users/current:
+    get:
+      summary: Get the workspace user object for the current user
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: WorkspaceUser details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceUser'
+        '401':
+          description: Unauthorized
+        '404':
+          description: WorkspaceUser object not found
+        '500':
+          description: Internal server error
   /api/v1/organizations/{id}/workspace-storages:
     post:
       summary: Create a new WorkspaceStorage object
@@ -405,6 +423,32 @@ paths:
         '500':
           description: Internal server error
 
+  # List of workspace storages for the current user
+  /api/v1/organizations/{org_id}/workspace-storages/current:
+    get:
+      summary: List all WorkspaceStorage objects for the current user
+      security:
+        - Bearer: []
+      parameters:
+        - in: path
+          name: org_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceStorageList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  
   /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes:
     get:
       summary: List all volumes under a WorkspaceStorage.
@@ -427,19 +471,43 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Volume'
+                $ref: '#/components/schemas/VolumeList'
         '401':
           description: Unauthorized
         '403':
           description: Forbidden
         '500':
           description: Internal server error
-
+  /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes/{volume_id}/mark-as-synced:
+    post:
+      summary: Mark a volume as synced
+      security:
+        - Bearer: []
+      parameters:
+        - in: path
+          name: org_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: volume_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Volume marked as synced successfully
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
   /api/v1/organizations/{org_id}/workspaces:
     post:
       summary: Create a new Workspace
@@ -502,14 +570,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Workspace'
-                  total:
-                    type: integer
+                $ref: '#/components/schemas/WorkspaceList'
         '401':
           description: Unauthorized
         '500':
@@ -595,6 +656,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  # List of all workspaces for the current user
+  /api/v1/organizations/{org_id}/workspaces/current:
+    get:
+      summary: List all Workspaces for the current user
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceList'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources:
     get:
       summary: List all WorkspaceResources for a Workspace
@@ -609,12 +694,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/WorkspaceResource'
+                $ref: '#/components/schemas/WorkspaceResourceList'
         '401':
           description: Unauthorized
         '500':
@@ -677,12 +757,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/WorkspaceResourceBuild'
+                $ref: '#/components/schemas/WorkspaceResourceBuildList'
         '401':
           description: Unauthorized
         '500':
@@ -707,12 +782,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/WorkspaceResourceBuild'
+                $ref: '#/components/schemas/WorkspaceResourceBuildList'
         '401':
           description: Unauthorized
         '500':
@@ -947,6 +1017,7 @@ components:
           type: string
         client_key_data:
           type: string
+    
     WorkspaceStorage:
       type: object
       additionalProperties: false
@@ -990,6 +1061,16 @@ components:
           format: date-time
           readOnly: true
 
+    WorkspaceStorageList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceStorage'
+        total:
+          type: integer
+
     WorkspaceStorageSpec:
       type: object
       required:
@@ -1010,6 +1091,7 @@ components:
       - StorageCreated
       - StorageReady
       - StorageFailed
+
     Volume:
       type: object
       additionalProperties: false
@@ -1032,6 +1114,16 @@ components:
         status:
           $ref: '#/components/schemas/VolumeStatus'
           readOnly: true
+
+    VolumeList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Volume'
+        total:
+          type: integer
 
     SSHConfig:
       type: object
@@ -1077,7 +1169,6 @@ components:
       enum:
       - Local
       - BuildArtifact
-
     LocalSource:
       type: object
       required:
@@ -1185,6 +1276,16 @@ components:
       required:
         - name
         - spec
+    
+    WorkspaceList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workspace'
+        total:
+          type: integer
 
     WorkspaceSpec:
       type: object
@@ -1262,6 +1363,16 @@ components:
       required:
         - name
 
+    WorkspaceResourceList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceResource'
+        total:
+          type: integer
+
     WorkspaceResourceBuild:
       type: object
       properties:
@@ -1285,6 +1396,16 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    WorkspaceResourceBuildList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceResourceBuild'
+        total:
+          type: integer
 
     ResourceBuildStatus:
       type: object
@@ -1336,6 +1457,9 @@ components:
         workspace_storage_id:
           type: string
           readOnly: true
+        source_volume_type:
+          $ref: '#/components/schemas/VolumeMountSourceType'
+          readOnly: true
         source_volume_id:
           type: string
         source_sub_path:
@@ -1343,6 +1467,12 @@ components:
         target_path:
           type: string
 
+    VolumeMountSourceType:
+      type: string
+      enum:
+      - EmptyVolume
+      - LocalSyncedVolume
+      - BuildArtifactSyncedVolume
     Port:
       type: object
       required:

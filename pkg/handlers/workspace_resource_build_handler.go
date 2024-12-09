@@ -3,12 +3,14 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/gorilla/mux"
+	"k8s.io/utils/ptr"
 )
 
 type WorkspaceResourceBuildHandlerSpec struct {
@@ -49,7 +51,11 @@ func (h *workspaceResourceBuildHandler) ListByResourceName(w http.ResponseWriter
 			if err != nil {
 				return nil, err
 			}
-			return presenters.PresentWorkspaceResourceBuildList(objs), nil
+			listResp := openapi.WorkspaceResourceBuildList{
+				Items: presenters.PresentWorkspaceResourceBuildList(objs),
+				Total: ptr.To(int32(len(objs))),
+			}
+			return listResp, nil
 		},
 	}
 	handleList(w, r, cfg)
@@ -87,7 +93,11 @@ func (h *workspaceResourceBuildHandler) ListByWorkspaceID(w http.ResponseWriter,
 			if err != nil {
 				return nil, err
 			}
-			return presenters.PresentWorkspaceResourceBuildList(objs), nil
+			listResp := openapi.WorkspaceResourceBuildList{
+				Items: presenters.PresentWorkspaceResourceBuildList(objs),
+				Total: ptr.To(int32(len(objs))),
+			}
+			return listResp, nil
 		},
 	}
 	handleList(w, r, cfg)

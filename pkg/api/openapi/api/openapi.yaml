@@ -245,6 +245,24 @@ paths:
       security:
       - Bearer: []
       summary: Update a WorkspaceUser
+  /api/v1/workspace-users/current:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceUser'
+          description: WorkspaceUser details
+        "401":
+          description: Unauthorized
+        "404":
+          description: WorkspaceUser object not found
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get the workspace user object for the current user
   /api/v1/organizations/{id}/workspace-storages:
     get:
       parameters:
@@ -447,6 +465,32 @@ paths:
       security:
       - Bearer: []
       summary: Update a WorkspaceStorage object
+  /api/v1/organizations/{org_id}/workspace-storages/current:
+    get:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceStorageList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all WorkspaceStorage objects for the current user
   /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes:
     get:
       parameters:
@@ -469,7 +513,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__org_id__workspace_storages__id__volumes_get_200_response'
+                $ref: '#/components/schemas/VolumeList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -480,6 +524,42 @@ paths:
       security:
       - Bearer: []
       summary: List all volumes under a WorkspaceStorage.
+  /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes/{volume_id}/mark-as-synced:
+    post:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: volume_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          description: Volume marked as synced successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Mark a volume as synced
   /api/v1/organizations/{org_id}/workspaces:
     get:
       parameters:
@@ -512,7 +592,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__org_id__workspaces_get_200_response'
+                $ref: '#/components/schemas/WorkspaceList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -688,6 +768,35 @@ paths:
       security:
       - Bearer: []
       summary: Update a Workspace
+  /api/v1/organizations/{org_id}/workspaces/current:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all Workspaces for the current user
   /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources:
     get:
       parameters:
@@ -712,7 +821,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__org_id__workspaces__workspace_id__resources_get_200_response'
+                $ref: '#/components/schemas/WorkspaceResourceList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -814,7 +923,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__org_id__workspaces__workspace_id__resources__id__builds_get_200_response'
+                $ref: '#/components/schemas/WorkspaceResourceBuildList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -851,7 +960,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__org_id__workspaces__workspace_id__resources__id__builds_get_200_response'
+                $ref: '#/components/schemas/WorkspaceResourceBuildList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -1358,6 +1467,288 @@ components:
       - name
       - spec
       type: object
+    WorkspaceStorageList:
+      example:
+        total: 0
+        items:
+        - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          name: name
+          namespace: namespace
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          version: 0
+          spec:
+            volumes:
+            - name: name
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              spec:
+                storage_class: storage_class
+                size: size
+                sync_before_use: true
+                source:
+                  local_source:
+                    path: path
+                    sync: true
+                  build_source:
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  source_type: null
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              status:
+                phase: phase
+                build_artifact_syncs:
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+            - name: name
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              spec:
+                storage_class: storage_class
+                size: size
+                sync_before_use: true
+                source:
+                  local_source:
+                    path: path
+                    sync: true
+                  build_source:
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  source_type: null
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              status:
+                phase: phase
+                build_artifact_syncs:
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+            workspace_name: workspace_name
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            observed_version: 6
+            storage_server_service_name: storage_server_service_name
+            state: null
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+        - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          name: name
+          namespace: namespace
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          version: 0
+          spec:
+            volumes:
+            - name: name
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              spec:
+                storage_class: storage_class
+                size: size
+                sync_before_use: true
+                source:
+                  local_source:
+                    path: path
+                    sync: true
+                  build_source:
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  source_type: null
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              status:
+                phase: phase
+                build_artifact_syncs:
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+            - name: name
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              spec:
+                storage_class: storage_class
+                size: size
+                sync_before_use: true
+                source:
+                  local_source:
+                    path: path
+                    sync: true
+                  build_source:
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  source_type: null
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              status:
+                phase: phase
+                build_artifact_syncs:
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+            workspace_name: workspace_name
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            observed_version: 6
+            storage_server_service_name: storage_server_service_name
+            state: null
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/WorkspaceStorage'
+          type: array
+        total:
+          type: integer
+      type: object
     WorkspaceStorageSpec:
       example:
         volumes:
@@ -1548,6 +1939,116 @@ components:
       required:
       - name
       - spec
+      type: object
+    VolumeList:
+      example:
+        total: 0
+        items:
+        - name: name
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          spec:
+            storage_class: storage_class
+            size: size
+            sync_before_use: true
+            source:
+              local_source:
+                path: path
+                sync: true
+              build_source:
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              source_type: null
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            phase: phase
+            build_artifact_syncs:
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+        - name: name
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          spec:
+            storage_class: storage_class
+            size: size
+            sync_before_use: true
+            source:
+              local_source:
+                path: path
+                sync: true
+              build_source:
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              source_type: null
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            phase: phase
+            build_artifact_syncs:
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Volume'
+          type: array
+        total:
+          type: integer
       type: object
     SSHConfig:
       additionalProperties: false
@@ -1775,11 +2276,13 @@ components:
               - command
             volume_mounts:
             - workspace_storage_id: workspace_storage_id
+              source_volume_type: null
               workspace_resource_id: workspace_resource_id
               source_sub_path: source_sub_path
               target_path: target_path
               source_volume_id: source_volume_id
             - workspace_storage_id: workspace_storage_id
+              source_volume_type: null
               workspace_resource_id: workspace_resource_id
               source_sub_path: source_sub_path
               target_path: target_path
@@ -1864,11 +2367,13 @@ components:
               - command
             volume_mounts:
             - workspace_storage_id: workspace_storage_id
+              source_volume_type: null
               workspace_resource_id: workspace_resource_id
               source_sub_path: source_sub_path
               target_path: target_path
               source_volume_id: source_volume_id
             - workspace_storage_id: workspace_storage_id
+              source_volume_type: null
               workspace_resource_id: workspace_resource_id
               source_sub_path: source_sub_path
               target_path: target_path
@@ -1985,6 +2490,454 @@ components:
       - name
       - spec
       type: object
+    WorkspaceList:
+      example:
+        total: 7
+        items:
+        - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          name: name
+          namespace: namespace
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          version: 0
+          spec:
+            resources:
+            - init:
+                args:
+                - args
+                - args
+                command:
+                - command
+                - command
+              depends_on:
+              - depends_on
+              - depends_on
+              prebuilt:
+                image: image
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              execution_config:
+                args:
+                - args
+                - args
+                environment_variables:
+                - name: name
+                  value: value
+                - name: name
+                  value: value
+                command:
+                - command
+                - command
+              volume_mounts:
+              - workspace_storage_id: workspace_storage_id
+                source_volume_type: null
+                workspace_resource_id: workspace_resource_id
+                source_sub_path: source_sub_path
+                target_path: target_path
+                source_volume_id: source_volume_id
+              - workspace_storage_id: workspace_storage_id
+                source_volume_type: null
+                workspace_resource_id: workspace_resource_id
+                source_sub_path: source_sub_path
+                target_path: target_path
+                source_volume_id: source_volume_id
+              ports:
+              - number: 1
+                protocol: protocol
+                exposed_to_public: true
+                subdomain_prefix: subdomain_prefix
+              - number: 1
+                protocol: protocol
+                exposed_to_public: true
+                subdomain_prefix: subdomain_prefix
+              version: 6
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              workspace_id: workspace_id
+              image_registry: image_registry
+              build:
+                context_path: context_path
+                dockerfile_path: dockerfile_path
+                source_hash: source_hash
+                source_volume_id: source_volume_id
+              name: name
+              lifecycle_config:
+                last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+              id: id
+              stateful: true
+              status:
+                observed_version: 5
+                internal_service_name: internal_service_name
+                state: state
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                public_ingress:
+                - target_port: 5
+                  url: url
+                - target_port: 5
+                  url: url
+            - init:
+                args:
+                - args
+                - args
+                command:
+                - command
+                - command
+              depends_on:
+              - depends_on
+              - depends_on
+              prebuilt:
+                image: image
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              execution_config:
+                args:
+                - args
+                - args
+                environment_variables:
+                - name: name
+                  value: value
+                - name: name
+                  value: value
+                command:
+                - command
+                - command
+              volume_mounts:
+              - workspace_storage_id: workspace_storage_id
+                source_volume_type: null
+                workspace_resource_id: workspace_resource_id
+                source_sub_path: source_sub_path
+                target_path: target_path
+                source_volume_id: source_volume_id
+              - workspace_storage_id: workspace_storage_id
+                source_volume_type: null
+                workspace_resource_id: workspace_resource_id
+                source_sub_path: source_sub_path
+                target_path: target_path
+                source_volume_id: source_volume_id
+              ports:
+              - number: 1
+                protocol: protocol
+                exposed_to_public: true
+                subdomain_prefix: subdomain_prefix
+              - number: 1
+                protocol: protocol
+                exposed_to_public: true
+                subdomain_prefix: subdomain_prefix
+              version: 6
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              workspace_id: workspace_id
+              image_registry: image_registry
+              build:
+                context_path: context_path
+                dockerfile_path: dockerfile_path
+                source_hash: source_hash
+                source_volume_id: source_volume_id
+              name: name
+              lifecycle_config:
+                last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+              id: id
+              stateful: true
+              status:
+                observed_version: 5
+                internal_service_name: internal_service_name
+                state: state
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                public_ingress:
+                - target_port: 5
+                  url: url
+                - target_port: 5
+                  url: url
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            observed_version: 2
+            state: state
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+        - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          name: name
+          namespace: namespace
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          version: 0
+          spec:
+            resources:
+            - init:
+                args:
+                - args
+                - args
+                command:
+                - command
+                - command
+              depends_on:
+              - depends_on
+              - depends_on
+              prebuilt:
+                image: image
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              execution_config:
+                args:
+                - args
+                - args
+                environment_variables:
+                - name: name
+                  value: value
+                - name: name
+                  value: value
+                command:
+                - command
+                - command
+              volume_mounts:
+              - workspace_storage_id: workspace_storage_id
+                source_volume_type: null
+                workspace_resource_id: workspace_resource_id
+                source_sub_path: source_sub_path
+                target_path: target_path
+                source_volume_id: source_volume_id
+              - workspace_storage_id: workspace_storage_id
+                source_volume_type: null
+                workspace_resource_id: workspace_resource_id
+                source_sub_path: source_sub_path
+                target_path: target_path
+                source_volume_id: source_volume_id
+              ports:
+              - number: 1
+                protocol: protocol
+                exposed_to_public: true
+                subdomain_prefix: subdomain_prefix
+              - number: 1
+                protocol: protocol
+                exposed_to_public: true
+                subdomain_prefix: subdomain_prefix
+              version: 6
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              workspace_id: workspace_id
+              image_registry: image_registry
+              build:
+                context_path: context_path
+                dockerfile_path: dockerfile_path
+                source_hash: source_hash
+                source_volume_id: source_volume_id
+              name: name
+              lifecycle_config:
+                last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+              id: id
+              stateful: true
+              status:
+                observed_version: 5
+                internal_service_name: internal_service_name
+                state: state
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                public_ingress:
+                - target_port: 5
+                  url: url
+                - target_port: 5
+                  url: url
+            - init:
+                args:
+                - args
+                - args
+                command:
+                - command
+                - command
+              depends_on:
+              - depends_on
+              - depends_on
+              prebuilt:
+                image: image
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              execution_config:
+                args:
+                - args
+                - args
+                environment_variables:
+                - name: name
+                  value: value
+                - name: name
+                  value: value
+                command:
+                - command
+                - command
+              volume_mounts:
+              - workspace_storage_id: workspace_storage_id
+                source_volume_type: null
+                workspace_resource_id: workspace_resource_id
+                source_sub_path: source_sub_path
+                target_path: target_path
+                source_volume_id: source_volume_id
+              - workspace_storage_id: workspace_storage_id
+                source_volume_type: null
+                workspace_resource_id: workspace_resource_id
+                source_sub_path: source_sub_path
+                target_path: target_path
+                source_volume_id: source_volume_id
+              ports:
+              - number: 1
+                protocol: protocol
+                exposed_to_public: true
+                subdomain_prefix: subdomain_prefix
+              - number: 1
+                protocol: protocol
+                exposed_to_public: true
+                subdomain_prefix: subdomain_prefix
+              version: 6
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              workspace_id: workspace_id
+              image_registry: image_registry
+              build:
+                context_path: context_path
+                dockerfile_path: dockerfile_path
+                source_hash: source_hash
+                source_volume_id: source_volume_id
+              name: name
+              lifecycle_config:
+                last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+              id: id
+              stateful: true
+              status:
+                observed_version: 5
+                internal_service_name: internal_service_name
+                state: state
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                public_ingress:
+                - target_port: 5
+                  url: url
+                - target_port: 5
+                  url: url
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            observed_version: 2
+            state: state
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Workspace'
+          type: array
+        total:
+          type: integer
+      type: object
     WorkspaceSpec:
       example:
         resources:
@@ -2019,11 +2972,13 @@ components:
             - command
           volume_mounts:
           - workspace_storage_id: workspace_storage_id
+            source_volume_type: null
             workspace_resource_id: workspace_resource_id
             source_sub_path: source_sub_path
             target_path: target_path
             source_volume_id: source_volume_id
           - workspace_storage_id: workspace_storage_id
+            source_volume_type: null
             workspace_resource_id: workspace_resource_id
             source_sub_path: source_sub_path
             target_path: target_path
@@ -2108,11 +3063,13 @@ components:
             - command
           volume_mounts:
           - workspace_storage_id: workspace_storage_id
+            source_volume_type: null
             workspace_resource_id: workspace_resource_id
             source_sub_path: source_sub_path
             target_path: target_path
             source_volume_id: source_volume_id
           - workspace_storage_id: workspace_storage_id
+            source_volume_type: null
             workspace_resource_id: workspace_resource_id
             source_sub_path: source_sub_path
             target_path: target_path
@@ -2234,11 +3191,13 @@ components:
           - command
         volume_mounts:
         - workspace_storage_id: workspace_storage_id
+          source_volume_type: null
           workspace_resource_id: workspace_resource_id
           source_sub_path: source_sub_path
           target_path: target_path
           source_volume_id: source_volume_id
         - workspace_storage_id: workspace_storage_id
+          source_volume_type: null
           workspace_resource_id: workspace_resource_id
           source_sub_path: source_sub_path
           target_path: target_path
@@ -2343,6 +3302,200 @@ components:
       required:
       - name
       type: object
+    WorkspaceResourceList:
+      example:
+        total: 0
+        items:
+        - init:
+            args:
+            - args
+            - args
+            command:
+            - command
+            - command
+          depends_on:
+          - depends_on
+          - depends_on
+          prebuilt:
+            image: image
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          execution_config:
+            args:
+            - args
+            - args
+            environment_variables:
+            - name: name
+              value: value
+            - name: name
+              value: value
+            command:
+            - command
+            - command
+          volume_mounts:
+          - workspace_storage_id: workspace_storage_id
+            source_volume_type: null
+            workspace_resource_id: workspace_resource_id
+            source_sub_path: source_sub_path
+            target_path: target_path
+            source_volume_id: source_volume_id
+          - workspace_storage_id: workspace_storage_id
+            source_volume_type: null
+            workspace_resource_id: workspace_resource_id
+            source_sub_path: source_sub_path
+            target_path: target_path
+            source_volume_id: source_volume_id
+          ports:
+          - number: 1
+            protocol: protocol
+            exposed_to_public: true
+            subdomain_prefix: subdomain_prefix
+          - number: 1
+            protocol: protocol
+            exposed_to_public: true
+            subdomain_prefix: subdomain_prefix
+          version: 6
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          workspace_id: workspace_id
+          image_registry: image_registry
+          build:
+            context_path: context_path
+            dockerfile_path: dockerfile_path
+            source_hash: source_hash
+            source_volume_id: source_volume_id
+          name: name
+          lifecycle_config:
+            last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+          id: id
+          stateful: true
+          status:
+            observed_version: 5
+            internal_service_name: internal_service_name
+            state: state
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            public_ingress:
+            - target_port: 5
+              url: url
+            - target_port: 5
+              url: url
+        - init:
+            args:
+            - args
+            - args
+            command:
+            - command
+            - command
+          depends_on:
+          - depends_on
+          - depends_on
+          prebuilt:
+            image: image
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          execution_config:
+            args:
+            - args
+            - args
+            environment_variables:
+            - name: name
+              value: value
+            - name: name
+              value: value
+            command:
+            - command
+            - command
+          volume_mounts:
+          - workspace_storage_id: workspace_storage_id
+            source_volume_type: null
+            workspace_resource_id: workspace_resource_id
+            source_sub_path: source_sub_path
+            target_path: target_path
+            source_volume_id: source_volume_id
+          - workspace_storage_id: workspace_storage_id
+            source_volume_type: null
+            workspace_resource_id: workspace_resource_id
+            source_sub_path: source_sub_path
+            target_path: target_path
+            source_volume_id: source_volume_id
+          ports:
+          - number: 1
+            protocol: protocol
+            exposed_to_public: true
+            subdomain_prefix: subdomain_prefix
+          - number: 1
+            protocol: protocol
+            exposed_to_public: true
+            subdomain_prefix: subdomain_prefix
+          version: 6
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          workspace_id: workspace_id
+          image_registry: image_registry
+          build:
+            context_path: context_path
+            dockerfile_path: dockerfile_path
+            source_hash: source_hash
+            source_volume_id: source_volume_id
+          name: name
+          lifecycle_config:
+            last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+          id: id
+          stateful: true
+          status:
+            observed_version: 5
+            internal_service_name: internal_service_name
+            state: state
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            public_ingress:
+            - target_port: 5
+              url: url
+            - target_port: 5
+              url: url
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/WorkspaceResource'
+          type: array
+        total:
+          type: integer
+      type: object
     WorkspaceResourceBuild:
       example:
         workspace_id: workspace_id
@@ -2391,6 +3544,68 @@ components:
         updated_at:
           format: date-time
           type: string
+      type: object
+    WorkspaceResourceBuildList:
+      example:
+        total: 0
+        items:
+        - workspace_id: workspace_id
+          image_registry: image_registry
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          namespace: namespace
+          workspace_resource_id: workspace_resource_id
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          source_hash: source_hash
+          status:
+            image_url: image_url
+            state: state
+            build_source_hash: build_source_hash
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+        - workspace_id: workspace_id
+          image_registry: image_registry
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          namespace: namespace
+          workspace_resource_id: workspace_resource_id
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          source_hash: source_hash
+          status:
+            image_url: image_url
+            state: state
+            build_source_hash: build_source_hash
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/WorkspaceResourceBuild'
+          type: array
+        total:
+          type: integer
       type: object
     ResourceBuildStatus:
       example:
@@ -2474,6 +3689,7 @@ components:
     VolumeMount:
       example:
         workspace_storage_id: workspace_storage_id
+        source_volume_type: null
         workspace_resource_id: workspace_resource_id
         source_sub_path: source_sub_path
         target_path: target_path
@@ -2485,6 +3701,8 @@ components:
         workspace_storage_id:
           readOnly: true
           type: string
+        source_volume_type:
+          $ref: '#/components/schemas/VolumeMountSourceType'
         source_volume_id:
           type: string
         source_sub_path:
@@ -2495,6 +3713,12 @@ components:
       - source_volume_id
       - target_path
       type: object
+    VolumeMountSourceType:
+      enum:
+      - EmptyVolume
+      - LocalSyncedVolume
+      - BuildArtifactSyncedVolume
+      type: string
     Port:
       example:
         number: 1
@@ -2984,799 +4208,6 @@ components:
           type: array
         total:
           type: integer
-      type: object
-    _api_v1_organizations__org_id__workspace_storages__id__volumes_get_200_response:
-      example:
-        items:
-        - name: name
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          spec:
-            storage_class: storage_class
-            size: size
-            sync_before_use: true
-            source:
-              local_source:
-                path: path
-                sync: true
-              build_source:
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              source_type: null
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            phase: phase
-            build_artifact_syncs:
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-        - name: name
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          spec:
-            storage_class: storage_class
-            size: size
-            sync_before_use: true
-            source:
-              local_source:
-                path: path
-                sync: true
-              build_source:
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              source_type: null
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            phase: phase
-            build_artifact_syncs:
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/Volume'
-          type: array
-      type: object
-    _api_v1_organizations__org_id__workspaces_get_200_response:
-      example:
-        total: 7
-        items:
-        - organisation_id: organisation_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          user_id: user_id
-          name: name
-          namespace: namespace
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
-          version: 0
-          spec:
-            resources:
-            - init:
-                args:
-                - args
-                - args
-                command:
-                - command
-                - command
-              depends_on:
-              - depends_on
-              - depends_on
-              prebuilt:
-                image: image
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              execution_config:
-                args:
-                - args
-                - args
-                environment_variables:
-                - name: name
-                  value: value
-                - name: name
-                  value: value
-                command:
-                - command
-                - command
-              volume_mounts:
-              - workspace_storage_id: workspace_storage_id
-                workspace_resource_id: workspace_resource_id
-                source_sub_path: source_sub_path
-                target_path: target_path
-                source_volume_id: source_volume_id
-              - workspace_storage_id: workspace_storage_id
-                workspace_resource_id: workspace_resource_id
-                source_sub_path: source_sub_path
-                target_path: target_path
-                source_volume_id: source_volume_id
-              ports:
-              - number: 1
-                protocol: protocol
-                exposed_to_public: true
-                subdomain_prefix: subdomain_prefix
-              - number: 1
-                protocol: protocol
-                exposed_to_public: true
-                subdomain_prefix: subdomain_prefix
-              version: 6
-              labels:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              workspace_id: workspace_id
-              image_registry: image_registry
-              build:
-                context_path: context_path
-                dockerfile_path: dockerfile_path
-                source_hash: source_hash
-                source_volume_id: source_volume_id
-              name: name
-              lifecycle_config:
-                last_restart_request_time: 2000-01-23T04:56:07.000+00:00
-              id: id
-              stateful: true
-              status:
-                observed_version: 5
-                internal_service_name: internal_service_name
-                state: state
-                conditions:
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                public_ingress:
-                - target_port: 5
-                  url: url
-                - target_port: 5
-                  url: url
-            - init:
-                args:
-                - args
-                - args
-                command:
-                - command
-                - command
-              depends_on:
-              - depends_on
-              - depends_on
-              prebuilt:
-                image: image
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              execution_config:
-                args:
-                - args
-                - args
-                environment_variables:
-                - name: name
-                  value: value
-                - name: name
-                  value: value
-                command:
-                - command
-                - command
-              volume_mounts:
-              - workspace_storage_id: workspace_storage_id
-                workspace_resource_id: workspace_resource_id
-                source_sub_path: source_sub_path
-                target_path: target_path
-                source_volume_id: source_volume_id
-              - workspace_storage_id: workspace_storage_id
-                workspace_resource_id: workspace_resource_id
-                source_sub_path: source_sub_path
-                target_path: target_path
-                source_volume_id: source_volume_id
-              ports:
-              - number: 1
-                protocol: protocol
-                exposed_to_public: true
-                subdomain_prefix: subdomain_prefix
-              - number: 1
-                protocol: protocol
-                exposed_to_public: true
-                subdomain_prefix: subdomain_prefix
-              version: 6
-              labels:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              workspace_id: workspace_id
-              image_registry: image_registry
-              build:
-                context_path: context_path
-                dockerfile_path: dockerfile_path
-                source_hash: source_hash
-                source_volume_id: source_volume_id
-              name: name
-              lifecycle_config:
-                last_restart_request_time: 2000-01-23T04:56:07.000+00:00
-              id: id
-              stateful: true
-              status:
-                observed_version: 5
-                internal_service_name: internal_service_name
-                state: state
-                conditions:
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                public_ingress:
-                - target_port: 5
-                  url: url
-                - target_port: 5
-                  url: url
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            observed_version: 2
-            state: state
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-        - organisation_id: organisation_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          user_id: user_id
-          name: name
-          namespace: namespace
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
-          version: 0
-          spec:
-            resources:
-            - init:
-                args:
-                - args
-                - args
-                command:
-                - command
-                - command
-              depends_on:
-              - depends_on
-              - depends_on
-              prebuilt:
-                image: image
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              execution_config:
-                args:
-                - args
-                - args
-                environment_variables:
-                - name: name
-                  value: value
-                - name: name
-                  value: value
-                command:
-                - command
-                - command
-              volume_mounts:
-              - workspace_storage_id: workspace_storage_id
-                workspace_resource_id: workspace_resource_id
-                source_sub_path: source_sub_path
-                target_path: target_path
-                source_volume_id: source_volume_id
-              - workspace_storage_id: workspace_storage_id
-                workspace_resource_id: workspace_resource_id
-                source_sub_path: source_sub_path
-                target_path: target_path
-                source_volume_id: source_volume_id
-              ports:
-              - number: 1
-                protocol: protocol
-                exposed_to_public: true
-                subdomain_prefix: subdomain_prefix
-              - number: 1
-                protocol: protocol
-                exposed_to_public: true
-                subdomain_prefix: subdomain_prefix
-              version: 6
-              labels:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              workspace_id: workspace_id
-              image_registry: image_registry
-              build:
-                context_path: context_path
-                dockerfile_path: dockerfile_path
-                source_hash: source_hash
-                source_volume_id: source_volume_id
-              name: name
-              lifecycle_config:
-                last_restart_request_time: 2000-01-23T04:56:07.000+00:00
-              id: id
-              stateful: true
-              status:
-                observed_version: 5
-                internal_service_name: internal_service_name
-                state: state
-                conditions:
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                public_ingress:
-                - target_port: 5
-                  url: url
-                - target_port: 5
-                  url: url
-            - init:
-                args:
-                - args
-                - args
-                command:
-                - command
-                - command
-              depends_on:
-              - depends_on
-              - depends_on
-              prebuilt:
-                image: image
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              execution_config:
-                args:
-                - args
-                - args
-                environment_variables:
-                - name: name
-                  value: value
-                - name: name
-                  value: value
-                command:
-                - command
-                - command
-              volume_mounts:
-              - workspace_storage_id: workspace_storage_id
-                workspace_resource_id: workspace_resource_id
-                source_sub_path: source_sub_path
-                target_path: target_path
-                source_volume_id: source_volume_id
-              - workspace_storage_id: workspace_storage_id
-                workspace_resource_id: workspace_resource_id
-                source_sub_path: source_sub_path
-                target_path: target_path
-                source_volume_id: source_volume_id
-              ports:
-              - number: 1
-                protocol: protocol
-                exposed_to_public: true
-                subdomain_prefix: subdomain_prefix
-              - number: 1
-                protocol: protocol
-                exposed_to_public: true
-                subdomain_prefix: subdomain_prefix
-              version: 6
-              labels:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              workspace_id: workspace_id
-              image_registry: image_registry
-              build:
-                context_path: context_path
-                dockerfile_path: dockerfile_path
-                source_hash: source_hash
-                source_volume_id: source_volume_id
-              name: name
-              lifecycle_config:
-                last_restart_request_time: 2000-01-23T04:56:07.000+00:00
-              id: id
-              stateful: true
-              status:
-                observed_version: 5
-                internal_service_name: internal_service_name
-                state: state
-                conditions:
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                public_ingress:
-                - target_port: 5
-                  url: url
-                - target_port: 5
-                  url: url
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            observed_version: 2
-            state: state
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/Workspace'
-          type: array
-        total:
-          type: integer
-      type: object
-    _api_v1_organizations__org_id__workspaces__workspace_id__resources_get_200_response:
-      example:
-        items:
-        - init:
-            args:
-            - args
-            - args
-            command:
-            - command
-            - command
-          depends_on:
-          - depends_on
-          - depends_on
-          prebuilt:
-            image: image
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          execution_config:
-            args:
-            - args
-            - args
-            environment_variables:
-            - name: name
-              value: value
-            - name: name
-              value: value
-            command:
-            - command
-            - command
-          volume_mounts:
-          - workspace_storage_id: workspace_storage_id
-            workspace_resource_id: workspace_resource_id
-            source_sub_path: source_sub_path
-            target_path: target_path
-            source_volume_id: source_volume_id
-          - workspace_storage_id: workspace_storage_id
-            workspace_resource_id: workspace_resource_id
-            source_sub_path: source_sub_path
-            target_path: target_path
-            source_volume_id: source_volume_id
-          ports:
-          - number: 1
-            protocol: protocol
-            exposed_to_public: true
-            subdomain_prefix: subdomain_prefix
-          - number: 1
-            protocol: protocol
-            exposed_to_public: true
-            subdomain_prefix: subdomain_prefix
-          version: 6
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          workspace_id: workspace_id
-          image_registry: image_registry
-          build:
-            context_path: context_path
-            dockerfile_path: dockerfile_path
-            source_hash: source_hash
-            source_volume_id: source_volume_id
-          name: name
-          lifecycle_config:
-            last_restart_request_time: 2000-01-23T04:56:07.000+00:00
-          id: id
-          stateful: true
-          status:
-            observed_version: 5
-            internal_service_name: internal_service_name
-            state: state
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            public_ingress:
-            - target_port: 5
-              url: url
-            - target_port: 5
-              url: url
-        - init:
-            args:
-            - args
-            - args
-            command:
-            - command
-            - command
-          depends_on:
-          - depends_on
-          - depends_on
-          prebuilt:
-            image: image
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          execution_config:
-            args:
-            - args
-            - args
-            environment_variables:
-            - name: name
-              value: value
-            - name: name
-              value: value
-            command:
-            - command
-            - command
-          volume_mounts:
-          - workspace_storage_id: workspace_storage_id
-            workspace_resource_id: workspace_resource_id
-            source_sub_path: source_sub_path
-            target_path: target_path
-            source_volume_id: source_volume_id
-          - workspace_storage_id: workspace_storage_id
-            workspace_resource_id: workspace_resource_id
-            source_sub_path: source_sub_path
-            target_path: target_path
-            source_volume_id: source_volume_id
-          ports:
-          - number: 1
-            protocol: protocol
-            exposed_to_public: true
-            subdomain_prefix: subdomain_prefix
-          - number: 1
-            protocol: protocol
-            exposed_to_public: true
-            subdomain_prefix: subdomain_prefix
-          version: 6
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          workspace_id: workspace_id
-          image_registry: image_registry
-          build:
-            context_path: context_path
-            dockerfile_path: dockerfile_path
-            source_hash: source_hash
-            source_volume_id: source_volume_id
-          name: name
-          lifecycle_config:
-            last_restart_request_time: 2000-01-23T04:56:07.000+00:00
-          id: id
-          stateful: true
-          status:
-            observed_version: 5
-            internal_service_name: internal_service_name
-            state: state
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            public_ingress:
-            - target_port: 5
-              url: url
-            - target_port: 5
-              url: url
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/WorkspaceResource'
-          type: array
-      type: object
-    _api_v1_organizations__org_id__workspaces__workspace_id__resources__id__builds_get_200_response:
-      example:
-        items:
-        - workspace_id: workspace_id
-          image_registry: image_registry
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          namespace: namespace
-          workspace_resource_id: workspace_resource_id
-          created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
-          source_hash: source_hash
-          status:
-            image_url: image_url
-            state: state
-            build_source_hash: build_source_hash
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-        - workspace_id: workspace_id
-          image_registry: image_registry
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          namespace: namespace
-          workspace_resource_id: workspace_resource_id
-          created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
-          source_hash: source_hash
-          status:
-            image_url: image_url
-            state: state
-            build_source_hash: build_source_hash
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/WorkspaceResourceBuild'
-          type: array
       type: object
     WorkspaceUserStatus_provisioned_namespaces_inner:
       example:

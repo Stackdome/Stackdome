@@ -82,7 +82,7 @@ func (s *workspaceService) CreateWorkspace(ctx context.Context, spec *models.Wor
 			return nil, err
 		}
 
-		setWorkspaceStorageAssociation(spec, currentUserWorkpaceStorage.ID)
+		setWorkspaceStorageAssociation(spec, currentUserWorkpaceStorage)
 	}
 
 	var createdWorkspace *models.Workspace
@@ -180,7 +180,7 @@ func (s *workspaceService) UpdateWorkspace(ctx context.Context, ID string, spec 
 			return nil, err
 		}
 
-		setWorkspaceStorageAssociation(spec, currentUserWorkpaceStorage.ID)
+		setWorkspaceStorageAssociation(spec, currentUserWorkpaceStorage)
 	}
 
 	var updatedWorkspace *models.Workspace
@@ -222,10 +222,13 @@ func (s *workspaceService) validateWorkspaceVolumeMounts(currentUserWorkpaceStor
 	return nil
 }
 
-func setWorkspaceStorageAssociation(workspace *models.Workspace, workspaceStorageID string) {
+func setWorkspaceStorageAssociation(workspace *models.Workspace, currentUserWorkpaceStorage *models.WorkspaceStorage) {
+	volumeMap := currentUserWorkpaceStorage.VolumeMap()
 	for i := range workspace.WorkspaceResources {
 		for j := range workspace.WorkspaceResources[i].VolumeMounts {
-			workspace.WorkspaceResources[i].VolumeMounts[j].WorkspaceStorageID = workspaceStorageID
+			sourceVolumeID := workspace.WorkspaceResources[i].VolumeMounts[j].SourceVolumeID
+			workspace.WorkspaceResources[i].VolumeMounts[j].WorkspaceStorageID = currentUserWorkpaceStorage.ID
+			workspace.WorkspaceResources[i].VolumeMounts[j].SourceVolumeType = volumeMap[sourceVolumeID].VolumeSourceType()
 		}
 	}
 }

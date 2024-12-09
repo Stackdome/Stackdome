@@ -11,6 +11,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/gorilla/mux"
+	"k8s.io/utils/ptr"
 )
 
 type WorkspaceHandlerSpec struct {
@@ -67,7 +68,11 @@ func (h *workspaceHandler) ListByUser(w http.ResponseWriter, r *http.Request) {
 			if serr != nil {
 				return nil, serr
 			}
-			return presenters.PresentWorkspaceList(objs), nil
+			listResp := openapi.WorkspaceList{
+				Items: presenters.PresentWorkspaceList(objs),
+				Total: ptr.To(int32(len(objs))),
+			}
+			return listResp, nil
 		},
 	}
 	handleList(w, r, cfg)
@@ -82,7 +87,11 @@ func (h *workspaceHandler) ListByOrganisationID(w http.ResponseWriter, r *http.R
 			if serr != nil {
 				return nil, serr
 			}
-			return presenters.PresentWorkspaceList(objs), nil
+			listResp := openapi.WorkspaceList{
+				Items: presenters.PresentWorkspaceList(objs),
+				Total: ptr.To(int32(len(objs))),
+			}
+			return listResp, nil
 		},
 	}
 	handleList(w, r, cfg)

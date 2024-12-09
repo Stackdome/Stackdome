@@ -3,12 +3,14 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/gorilla/mux"
+	"k8s.io/utils/ptr"
 )
 
 // WorkspaceHandlerSpec defines the dependencies for the workspace handler
@@ -67,7 +69,12 @@ func (h *workspaceResourceHandler) List(w http.ResponseWriter, r *http.Request) 
 			if err != nil {
 				return nil, err
 			}
-			return presenters.PresentWorkspaceResourceList(objs), nil
+
+			listResp := openapi.WorkspaceResourceList{
+				Items: presenters.PresentWorkspaceResourceList(objs),
+				Total: ptr.To(int32(len(objs))),
+			}
+			return listResp, nil
 		},
 	}
 	handleList(w, r, cfg)

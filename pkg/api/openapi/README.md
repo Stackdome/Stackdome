@@ -81,10 +81,13 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1AuthLoginPost**](docs/DefaultApi.md#apiv1authloginpost) | **Post** /api/v1/auth/login | User login
 *DefaultApi* | [**ApiV1OrganizationsIdWorkspaceStoragesGet**](docs/DefaultApi.md#apiv1organizationsidworkspacestoragesget) | **Get** /api/v1/organizations/{id}/workspace-storages | List all WorkspaceStorage objects for an organization
 *DefaultApi* | [**ApiV1OrganizationsIdWorkspaceStoragesPost**](docs/DefaultApi.md#apiv1organizationsidworkspacestoragespost) | **Post** /api/v1/organizations/{id}/workspace-storages | Create a new WorkspaceStorage object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragescurrentget) | **Get** /api/v1/organizations/{org_id}/workspace-storages/current | List all WorkspaceStorage objects for the current user
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesiddelete) | **Delete** /api/v1/organizations/{org_id}/workspace-storages/{id} | Delete a WorkspaceStorage object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidget) | **Get** /api/v1/organizations/{org_id}/workspace-storages/{id} | Get a specific WorkspaceStorage object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidput) | **Put** /api/v1/organizations/{org_id}/workspace-storages/{id} | Update a WorkspaceStorage object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidvolumesget) | **Get** /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes | List all volumes under a WorkspaceStorage.
+*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPost**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidvolumesvolumeidmarkassyncedpost) | **Post** /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes/{volume_id}/mark-as-synced | Mark a volume as synced
+*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacescurrentget) | **Get** /api/v1/organizations/{org_id}/workspaces/current | List all Workspaces for the current user
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesget) | **Get** /api/v1/organizations/{org_id}/workspaces | List all Workspaces for an organization
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesiddelete) | **Delete** /api/v1/organizations/{org_id}/workspaces/{id} | Delete a Workspace
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesidget) | **Get** /api/v1/organizations/{org_id}/workspaces/{id} | Get a specific Workspace
@@ -98,6 +101,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
 *DefaultApi* | [**ApiV1UsersMeGet**](docs/DefaultApi.md#apiv1usersmeget) | **Get** /api/v1/users/me | Get a the current authenticated user
 *DefaultApi* | [**ApiV1UsersPost**](docs/DefaultApi.md#apiv1userspost) | **Post** /api/v1/users | Create new user
+*DefaultApi* | [**ApiV1WorkspaceUsersCurrentGet**](docs/DefaultApi.md#apiv1workspaceuserscurrentget) | **Get** /api/v1/workspace-users/current | Get the workspace user object for the current user
 *DefaultApi* | [**ApiV1WorkspaceUsersIdDelete**](docs/DefaultApi.md#apiv1workspaceusersiddelete) | **Delete** /api/v1/workspace-users/{id} | Delete a WorkspaceUser
 *DefaultApi* | [**ApiV1WorkspaceUsersIdGet**](docs/DefaultApi.md#apiv1workspaceusersidget) | **Get** /api/v1/workspace-users/{id} | Get a workspace user object by ID
 *DefaultApi* | [**ApiV1WorkspaceUsersIdPut**](docs/DefaultApi.md#apiv1workspaceusersidput) | **Put** /api/v1/workspace-users/{id} | Update a WorkspaceUser
@@ -108,10 +112,6 @@ Class | Method | HTTP request | Description
 
  - [Annotation](docs/Annotation.md)
  - [ApiV1OrganizationsIdWorkspaceStoragesGet200Response](docs/ApiV1OrganizationsIdWorkspaceStoragesGet200Response.md)
- - [ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response](docs/ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response.md)
- - [ApiV1OrganizationsOrgIdWorkspacesGet200Response](docs/ApiV1OrganizationsOrgIdWorkspacesGet200Response.md)
- - [ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response](docs/ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response.md)
- - [ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response](docs/ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response.md)
  - [BuildArtifact](docs/BuildArtifact.md)
  - [BuildArtifactSyncInfo](docs/BuildArtifactSyncInfo.md)
  - [BuildConfig](docs/BuildConfig.md)
@@ -139,16 +139,22 @@ Class | Method | HTTP request | Description
  - [User](docs/User.md)
  - [UserCreateRequest](docs/UserCreateRequest.md)
  - [Volume](docs/Volume.md)
+ - [VolumeList](docs/VolumeList.md)
  - [VolumeMount](docs/VolumeMount.md)
+ - [VolumeMountSourceType](docs/VolumeMountSourceType.md)
  - [VolumeSource](docs/VolumeSource.md)
  - [VolumeSourceTypes](docs/VolumeSourceTypes.md)
  - [VolumeStatus](docs/VolumeStatus.md)
  - [Workspace](docs/Workspace.md)
+ - [WorkspaceList](docs/WorkspaceList.md)
  - [WorkspaceResource](docs/WorkspaceResource.md)
  - [WorkspaceResourceBuild](docs/WorkspaceResourceBuild.md)
+ - [WorkspaceResourceBuildList](docs/WorkspaceResourceBuildList.md)
+ - [WorkspaceResourceList](docs/WorkspaceResourceList.md)
  - [WorkspaceSpec](docs/WorkspaceSpec.md)
  - [WorkspaceStatus](docs/WorkspaceStatus.md)
  - [WorkspaceStorage](docs/WorkspaceStorage.md)
+ - [WorkspaceStorageList](docs/WorkspaceStorageList.md)
  - [WorkspaceStorageSpec](docs/WorkspaceStorageSpec.md)
  - [WorkspaceStorageState](docs/WorkspaceStorageState.md)
  - [WorkspaceStorageStatus](docs/WorkspaceStorageStatus.md)

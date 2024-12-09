@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -9,12 +10,14 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	workspacev1alpha1 "soradev.io/cluster-agent/api/v1alpha1"
 )
 
 type VolumeService interface {
 	Get(ctx context.Context, ID string, workspaceStorageID string) (*models.Volume, *errors.ServiceError)
 	GetByWorkspaceStorageID(ctx context.Context, workspaceStorageID string) ([]*models.Volume, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, workspaceStorageID string, status *models.VolumeStatus) *errors.ServiceError
+	AddLastSyncedAtAnnotation(ctx context.Context, ID string, workspaceStorageID string) *errors.ServiceError
 	Delete(ctx context.Context, ID string, workspaceStorageID string) *errors.ServiceError
 }
 
@@ -69,6 +72,25 @@ func (s *volumeService) UpdateStatus(ctx context.Context, ID string, workspaceSt
 	if err != nil {
 		s.logger.Errorf("failed to update volume status: %v", err)
 		return err
+	}
+	return nil
+}
+
+func (s *volumeService) AddLastSyncedAtAnnotation(ctx context.Context, ID string, workspaceStorageID string) *errors.ServiceError {
+	volume, err := s.volumeStore.GetByID(ctx, ID, workspaceStorageID)
+	if err != nil {
+		return err
+	}
+	if volume.Annotations == nil {
+		volume.Annotations = models.Annotations{}
+	}
+	volume.Annotations = append(volume.Annotations, models.Annotation{
+		Key:   workspacev1alpha1.LastSyncedAtAnnotation,
+		Value: time.Now().UTC().Format(time.RFC3339),
+	})
+	_, updateErr := s.volumeStore.Update(ctx, ID, workspaceStorageID, volume)
+	if updateErr != nil {
+		return updateErr
 	}
 	return nil
 }

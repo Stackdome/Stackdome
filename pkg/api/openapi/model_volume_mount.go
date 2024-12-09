@@ -16,11 +16,12 @@ import (
 
 // VolumeMount struct for VolumeMount
 type VolumeMount struct {
-	WorkspaceResourceId *string `json:"workspace_resource_id,omitempty"`
-	WorkspaceStorageId  *string `json:"workspace_storage_id,omitempty"`
-	SourceVolumeId      string  `json:"source_volume_id"`
-	SourceSubPath       *string `json:"source_sub_path,omitempty"`
-	TargetPath          string  `json:"target_path"`
+	WorkspaceResourceId *string                `json:"workspace_resource_id,omitempty"`
+	WorkspaceStorageId  *string                `json:"workspace_storage_id,omitempty"`
+	SourceVolumeType    *VolumeMountSourceType `json:"source_volume_type,omitempty"`
+	SourceVolumeId      string                 `json:"source_volume_id"`
+	SourceSubPath       *string                `json:"source_sub_path,omitempty"`
+	TargetPath          string                 `json:"target_path"`
 }
 
 // NewVolumeMount instantiates a new VolumeMount object
@@ -104,6 +105,38 @@ func (o *VolumeMount) HasWorkspaceStorageId() bool {
 // SetWorkspaceStorageId gets a reference to the given string and assigns it to the WorkspaceStorageId field.
 func (o *VolumeMount) SetWorkspaceStorageId(v string) {
 	o.WorkspaceStorageId = &v
+}
+
+// GetSourceVolumeType returns the SourceVolumeType field value if set, zero value otherwise.
+func (o *VolumeMount) GetSourceVolumeType() VolumeMountSourceType {
+	if o == nil || o.SourceVolumeType == nil {
+		var ret VolumeMountSourceType
+		return ret
+	}
+	return *o.SourceVolumeType
+}
+
+// GetSourceVolumeTypeOk returns a tuple with the SourceVolumeType field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *VolumeMount) GetSourceVolumeTypeOk() (*VolumeMountSourceType, bool) {
+	if o == nil || o.SourceVolumeType == nil {
+		return nil, false
+	}
+	return o.SourceVolumeType, true
+}
+
+// HasSourceVolumeType returns a boolean if a field has been set.
+func (o *VolumeMount) HasSourceVolumeType() bool {
+	if o != nil && o.SourceVolumeType != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetSourceVolumeType gets a reference to the given VolumeMountSourceType and assigns it to the SourceVolumeType field.
+func (o *VolumeMount) SetSourceVolumeType(v VolumeMountSourceType) {
+	o.SourceVolumeType = &v
 }
 
 // GetSourceVolumeId returns the SourceVolumeId field value
@@ -193,6 +226,9 @@ func (o VolumeMount) MarshalJSON() ([]byte, error) {
 	}
 	if o.WorkspaceStorageId != nil {
 		toSerialize["workspace_storage_id"] = o.WorkspaceStorageId
+	}
+	if o.SourceVolumeType != nil {
+		toSerialize["source_volume_type"] = o.SourceVolumeType
 	}
 	if true {
 		toSerialize["source_volume_id"] = o.SourceVolumeId

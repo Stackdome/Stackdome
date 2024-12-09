@@ -2,7 +2,6 @@ package pgstore
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -60,7 +59,6 @@ func (w *workspaceResourceStore) CreateWithTx(ctx context.Context, spec *models.
 		}
 		for _, volumeMount := range spec.VolumeMounts {
 			volumeMount.WorkspaceResourceID = spec.ID
-			fmt.Printf("creating volume mount: %+v\n", volumeMount)
 			// create volume mount
 			if err := tx.Model(&models.VolumeMount{}).Omit(clause.Associations).Create(volumeMount).Error; err != nil {
 				return nil, errors.GeneralError("failed to create workspace resource: %s", err.Error())

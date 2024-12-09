@@ -35,10 +35,19 @@ type Dependencies []string
 
 type Ports []Port
 
+type SourceVolumeType string
+
+const (
+	EmptyVolume               SourceVolumeType = "EmptyVolume"
+	LocalSyncedVolume         SourceVolumeType = "LocalSyncedVolume"
+	BuildArtifactSyncedVolume SourceVolumeType = "BuildArtifactSyncedVolume"
+)
+
 type VolumeMount struct {
 	WorkspaceStorageID  string
 	WorkspaceResourceID string
 	SourceVolumeID      string
+	SourceVolumeType    SourceVolumeType
 	SourceSubPath       string
 	TargetPath          string
 }

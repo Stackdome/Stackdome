@@ -403,6 +403,108 @@ func (a *DefaultApiService) ApiV1OrganizationsIdWorkspaceStoragesPostExecute(r A
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+}
+
+func (r ApiApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGetRequest) Execute() (*WorkspaceStorageList, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGet List all WorkspaceStorage objects for the current user
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId
+	@return ApiApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGet(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGetRequest {
+	return ApiApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return WorkspaceStorageList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGetExecute(r ApiApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGetRequest) (*WorkspaceStorageList, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *WorkspaceStorageList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/workspace-storages/current"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdDeleteRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
@@ -727,7 +829,7 @@ type ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGetRequest struct {
 	id         string
 }
 
-func (r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGetRequest) Execute() (*ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response, *http.Response, error) {
+func (r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGetRequest) Execute() (*VolumeList, *http.Response, error) {
 	return r.ApiService.ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGetExecute(r)
 }
 
@@ -750,13 +852,13 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet
 
 // Execute executes the request
 //
-//	@return ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response
-func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGetExecute(r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGetRequest) (*ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response, *http.Response, error) {
+//	@return VolumeList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGetExecute(r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGetRequest) (*VolumeList, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodGet
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue *ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet200Response
+		localVarReturnValue *VolumeList
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet")
@@ -826,6 +928,215 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPostRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+	volumeId   string
+}
+
+func (r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPostRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPost Mark a volume as synced
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId
+	@param id
+	@param volumeId
+	@return ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPost(ctx context.Context, orgId string, id string, volumeId string) ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPostRequest {
+	return ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+		volumeId:   volumeId,
+	}
+}
+
+// Execute executes the request
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPostExecute(r ApiApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPostRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod = http.MethodPost
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPost")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/workspace-storages/{id}/volumes/{volume_id}/mark-as-synced"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"volume_id"+"}", url.PathEscape(parameterToString(r.volumeId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdWorkspacesCurrentGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+}
+
+func (r ApiApiV1OrganizationsOrgIdWorkspacesCurrentGetRequest) Execute() (*WorkspaceList, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdWorkspacesCurrentGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdWorkspacesCurrentGet List all Workspaces for the current user
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@return ApiApiV1OrganizationsOrgIdWorkspacesCurrentGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesCurrentGet(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdWorkspacesCurrentGetRequest {
+	return ApiApiV1OrganizationsOrgIdWorkspacesCurrentGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return WorkspaceList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesCurrentGetExecute(r ApiApiV1OrganizationsOrgIdWorkspacesCurrentGetRequest) (*WorkspaceList, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *WorkspaceList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdWorkspacesCurrentGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/workspaces/current"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiApiV1OrganizationsOrgIdWorkspacesGetRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
@@ -844,7 +1155,7 @@ func (r ApiApiV1OrganizationsOrgIdWorkspacesGetRequest) Offset(offset int32) Api
 	return r
 }
 
-func (r ApiApiV1OrganizationsOrgIdWorkspacesGetRequest) Execute() (*ApiV1OrganizationsOrgIdWorkspacesGet200Response, *http.Response, error) {
+func (r ApiApiV1OrganizationsOrgIdWorkspacesGetRequest) Execute() (*WorkspaceList, *http.Response, error) {
 	return r.ApiService.ApiV1OrganizationsOrgIdWorkspacesGetExecute(r)
 }
 
@@ -865,13 +1176,13 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesGet(ctx context.Con
 
 // Execute executes the request
 //
-//	@return ApiV1OrganizationsOrgIdWorkspacesGet200Response
-func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesGetExecute(r ApiApiV1OrganizationsOrgIdWorkspacesGetRequest) (*ApiV1OrganizationsOrgIdWorkspacesGet200Response, *http.Response, error) {
+//	@return WorkspaceList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesGetExecute(r ApiApiV1OrganizationsOrgIdWorkspacesGetRequest) (*WorkspaceList, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodGet
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue *ApiV1OrganizationsOrgIdWorkspacesGet200Response
+		localVarReturnValue *WorkspaceList
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdWorkspacesGet")
@@ -1577,7 +1888,7 @@ type ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGetRequest struct {
 	workspaceId string
 }
 
-func (r ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGetRequest) Execute() (*ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response, *http.Response, error) {
+func (r ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGetRequest) Execute() (*WorkspaceResourceBuildList, *http.Response, error) {
 	return r.ApiService.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGetExecute(r)
 }
 
@@ -1600,13 +1911,13 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGe
 
 // Execute executes the request
 //
-//	@return ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response
-func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGetExecute(r ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGetRequest) (*ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response, *http.Response, error) {
+//	@return WorkspaceResourceBuildList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGetExecute(r ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGetRequest) (*WorkspaceResourceBuildList, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodGet
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue *ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response
+		localVarReturnValue *WorkspaceResourceBuildList
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGet")
@@ -1692,7 +2003,7 @@ type ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGetRequest struct {
 	workspaceId string
 }
 
-func (r ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGetRequest) Execute() (*ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response, *http.Response, error) {
+func (r ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGetRequest) Execute() (*WorkspaceResourceList, *http.Response, error) {
 	return r.ApiService.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGetExecute(r)
 }
 
@@ -1715,13 +2026,13 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResource
 
 // Execute executes the request
 //
-//	@return ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response
-func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGetExecute(r ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGetRequest) (*ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response, *http.Response, error) {
+//	@return WorkspaceResourceList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGetExecute(r ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGetRequest) (*WorkspaceResourceList, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodGet
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue *ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet200Response
+		localVarReturnValue *WorkspaceResourceList
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet")
@@ -1808,7 +2119,7 @@ type ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGetRequest 
 	id          string
 }
 
-func (r ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGetRequest) Execute() (*ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response, *http.Response, error) {
+func (r ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGetRequest) Execute() (*WorkspaceResourceBuildList, *http.Response, error) {
 	return r.ApiService.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGetExecute(r)
 }
 
@@ -1833,13 +2144,13 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResource
 
 // Execute executes the request
 //
-//	@return ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response
-func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGetExecute(r ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGetRequest) (*ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response, *http.Response, error) {
+//	@return WorkspaceResourceBuildList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGetExecute(r ApiApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGetRequest) (*WorkspaceResourceBuildList, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodGet
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue *ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet200Response
+		localVarReturnValue *WorkspaceResourceBuildList
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet")
@@ -2445,6 +2756,104 @@ func (a *DefaultApiService) ApiV1UsersPostExecute(r ApiApiV1UsersPostRequest) (*
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1WorkspaceUsersCurrentGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+}
+
+func (r ApiApiV1WorkspaceUsersCurrentGetRequest) Execute() (*WorkspaceUser, *http.Response, error) {
+	return r.ApiService.ApiV1WorkspaceUsersCurrentGetExecute(r)
+}
+
+/*
+ApiV1WorkspaceUsersCurrentGet Get the workspace user object for the current user
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiApiV1WorkspaceUsersCurrentGetRequest
+*/
+func (a *DefaultApiService) ApiV1WorkspaceUsersCurrentGet(ctx context.Context) ApiApiV1WorkspaceUsersCurrentGetRequest {
+	return ApiApiV1WorkspaceUsersCurrentGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+	}
+}
+
+// Execute executes the request
+//
+//	@return WorkspaceUser
+func (a *DefaultApiService) ApiV1WorkspaceUsersCurrentGetExecute(r ApiApiV1WorkspaceUsersCurrentGetRequest) (*WorkspaceUser, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *WorkspaceUser
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1WorkspaceUsersCurrentGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/workspace-users/current"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

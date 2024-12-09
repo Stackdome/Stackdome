@@ -6,6 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **WorkspaceResourceId** | Pointer to **string** |  | [optional] [readonly] 
 **WorkspaceStorageId** | Pointer to **string** |  | [optional] [readonly] 
+**SourceVolumeType** | Pointer to [**VolumeMountSourceType**](VolumeMountSourceType.md) |  | [optional] 
 **SourceVolumeId** | **string** |  | 
 **SourceSubPath** | Pointer to **string** |  | [optional] 
 **TargetPath** | **string** |  | 
@@ -78,6 +79,31 @@ SetWorkspaceStorageId sets WorkspaceStorageId field to given value.
 `func (o *VolumeMount) HasWorkspaceStorageId() bool`
 
 HasWorkspaceStorageId returns a boolean if a field has been set.
+
+### GetSourceVolumeType
+
+`func (o *VolumeMount) GetSourceVolumeType() VolumeMountSourceType`
+
+GetSourceVolumeType returns the SourceVolumeType field if non-nil, zero value otherwise.
+
+### GetSourceVolumeTypeOk
+
+`func (o *VolumeMount) GetSourceVolumeTypeOk() (*VolumeMountSourceType, bool)`
+
+GetSourceVolumeTypeOk returns a tuple with the SourceVolumeType field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetSourceVolumeType
+
+`func (o *VolumeMount) SetSourceVolumeType(v VolumeMountSourceType)`
+
+SetSourceVolumeType sets SourceVolumeType field to given value.
+
+### HasSourceVolumeType
+
+`func (o *VolumeMount) HasSourceVolumeType() bool`
+
+HasSourceVolumeType returns a boolean if a field has been set.
 
 ### GetSourceVolumeId
 

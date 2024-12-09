@@ -72,6 +72,7 @@ func (s apiServer) routes() *mux.Router {
 	workspaceStorageRouter.HandleFunc("/{id}", storageHandler.Update).Methods(http.MethodPut)
 	workspaceStorageRouter.HandleFunc("/{id}", storageHandler.Delete).Methods(http.MethodDelete)
 	workspaceStorageRouter.HandleFunc("/{id}/volumes", storageHandler.ListVolumes).Methods(http.MethodGet)
+	workspaceStorageRouter.HandleFunc("/{id}/volumes/{volume_id}/mark-as-synced", storageHandler.MarkAsSynced).Methods(http.MethodPost)
 
 	workspaceRouter := organizationsRouter.PathPrefix("/{org_id}/workspaces").Subrouter()
 	workspaceRouter.Use(authenticationMiddleware.AuthenticateUser)

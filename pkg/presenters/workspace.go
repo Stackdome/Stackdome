@@ -139,11 +139,23 @@ func presentVolumeMounts(mounts []*models.VolumeMount) []openapi.VolumeMount {
 			WorkspaceResourceId: &mount.WorkspaceResourceID,
 			WorkspaceStorageId:  &mount.WorkspaceStorageID,
 			SourceVolumeId:      mount.SourceVolumeID,
+			SourceVolumeType:    presentVolumeSourceType(mount.SourceVolumeType),
 			SourceSubPath:       &mount.SourceSubPath,
 			TargetPath:          mount.TargetPath,
 		}
 	}
 	return result
+}
+
+func presentVolumeSourceType(sourceType models.SourceVolumeType) *openapi.VolumeMountSourceType {
+	switch sourceType {
+	case models.BuildArtifactSyncedVolume:
+		return openapi.BUILD_ARTIFACT_SYNCED_VOLUME.Ptr()
+	case models.LocalSyncedVolume:
+		return openapi.LOCAL_SYNCED_VOLUME.Ptr()
+	default:
+		return openapi.EMPTY_VOLUME.Ptr()
+	}
 }
 
 func presentDependencies(deps models.Dependencies) []string {
@@ -320,10 +332,10 @@ func convertPorts(ports []openapi.Port) []models.Port {
 	result := make([]models.Port, len(ports))
 	for i, port := range ports {
 		result[i] = models.Port{
-			Number:          int(port.Number),
-			Protocol:        *port.Protocol,
-			ExposedToPublic: *port.ExposedToPublic,
+			Number: int(port.Number),
 		}
+		result[i].Protocol = port.GetProtocol()
+		result[i].ExposedToPublic = port.GetExposedToPublic()
 	}
 	return models.Ports(result)
 }

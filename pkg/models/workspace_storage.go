@@ -92,6 +92,19 @@ type Volume struct {
 	Status             *VolumeStatus `gorm:"type:jsonb" json:"volume_status,omitempty"`
 }
 
+func (v *Volume) VolumeSourceType() SourceVolumeType {
+	switch {
+	case v.VolumeSource == nil:
+		return EmptyVolume
+	case v.VolumeSource.BuildSource != nil:
+		return BuildArtifactSyncedVolume
+	case v.VolumeSource.LocalSource != nil:
+		return LocalSyncedVolume
+	default:
+		return EmptyVolume
+	}
+}
+
 type VolumeSource struct {
 	LocalSource *LocalSource         `json:"local_source,omitempty"`
 	BuildSource BuildArtifactSources `json:"build_source,omitempty"`
@@ -130,6 +143,7 @@ type VolumeStatus struct {
 	BuildArtifactSyncs     []BuildArtifactSyncInfo `json:"build_artifact_syncs,omitempty"`
 	LastObservedStatusHash string                  `json:"last_observed_status_hash,omitempty"`
 	InUse                  bool                    `json:"in_use"`
+	LastSyncedAt           *time.Time              `json:"last_synced_at,omitempty"`
 }
 
 func (v VolumeStatus) Value() (driver.Value, error) {
@@ -180,6 +194,13 @@ type WorkspaceStorageStatus struct {
 	StorageServerServiceName string                `json:"storage_server_service_name"`
 	LastObservedStatusHash   string                `json:"last_observed_status_hash,omitempty"`
 	ObservedVersion          int64                 `json:"observed_version"`
+	// Subpath within the storage pod where different volumes are mounted.
+	VolumeMountPaths []VolumeMountPath `json:"volume_mount_paths,omitempty"`
+}
+
+type VolumeMountPath struct {
+	VolumeID string `json:"volume_id"`
+	Path     string `json:"path"`
 }
 
 func (s WorkspaceStorageStatus) Value() (driver.Value, error) {

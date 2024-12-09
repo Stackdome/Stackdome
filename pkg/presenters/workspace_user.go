@@ -60,6 +60,7 @@ func PresentWorkspaceUserStatus(in *models.WorkspaceUserStatus, wu *models.Works
 	res.SetServiceaccountToken(in.ServiceAccountToken)
 	res.SetObservedVersion(int32(in.ObservedVersion))
 	res.SetProvisionedNamespaces(presentProvisionedNamespaces(in.ProvisionedNamespaces, wu.WorkspaceNamespaces))
+	res.SetConditions(presentConditions(in.Conditions))
 	return res
 }
 
