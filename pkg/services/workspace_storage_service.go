@@ -44,6 +44,9 @@ func NewWorkspaceStorageService(spec WorkspaceStorageServiceSpec) WorkspaceStora
 			SessionFactory: spec.SessionFactory,
 			Logger:         spec.Logger,
 		}),
+		volumeMountStore: pgstore.NewVolumeMountStore(pgstore.VolumeMountStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
 		logger: spec.Logger,
 	}
 }
@@ -53,6 +56,7 @@ type workspaceStorageService struct {
 	workspaceNamespaceStore stores.WorkspaceNamespaceStore
 	clusterResourceService  clusterresource.WorkspaceStorageClusterResourceService
 	volumeService           VolumeService
+	volumeMountStore        stores.VolumeMountStore
 	logger                  logger.Logger
 }
 
@@ -255,6 +259,17 @@ func (s *workspaceStorageService) Delete(ctx context.Context, ID string, userID 
 			s.logger.Errorf("failed to get workspace storage: %v", serr)
 			return serr
 		}
+
+		volumeMounts, serr := s.volumeMountStore.ListByWorkspaceStorageID(ctx, existingStorage.ID)
+		if serr != nil {
+			s.logger.Errorf("failed to list volume mounts: %v", serr)
+			return serr
+		}
+
+		if len(volumeMounts) > 0 {
+			return errors.BadRequest("workspace storage is currently mounted to a workspace")
+		}
+
 		if err := s.clusterResourceService.DeleteWorkspaceStorageInCluster(ctx, existingStorage); err != nil {
 			s.logger.Errorf("failed to delete workspace storage in cluster: %v", err)
 			return errors.GeneralError("failed to delete workspace storage in cluster: %s", err.Error())
