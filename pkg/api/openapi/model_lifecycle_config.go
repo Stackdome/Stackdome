@@ -17,7 +17,7 @@ import (
 
 // LifecycleConfig struct for LifecycleConfig
 type LifecycleConfig struct {
-	LastRestartRequestTime *time.Time `json:"last_restart_request_time,omitempty"`
+	RestartRequestTime *time.Time `json:"restart_request_time,omitempty"`
 }
 
 // NewLifecycleConfig instantiates a new LifecycleConfig object
@@ -37,42 +37,42 @@ func NewLifecycleConfigWithDefaults() *LifecycleConfig {
 	return &this
 }
 
-// GetLastRestartRequestTime returns the LastRestartRequestTime field value if set, zero value otherwise.
-func (o *LifecycleConfig) GetLastRestartRequestTime() time.Time {
-	if o == nil || o.LastRestartRequestTime == nil {
+// GetRestartRequestTime returns the RestartRequestTime field value if set, zero value otherwise.
+func (o *LifecycleConfig) GetRestartRequestTime() time.Time {
+	if o == nil || o.RestartRequestTime == nil {
 		var ret time.Time
 		return ret
 	}
-	return *o.LastRestartRequestTime
+	return *o.RestartRequestTime
 }
 
-// GetLastRestartRequestTimeOk returns a tuple with the LastRestartRequestTime field value if set, nil otherwise
+// GetRestartRequestTimeOk returns a tuple with the RestartRequestTime field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *LifecycleConfig) GetLastRestartRequestTimeOk() (*time.Time, bool) {
-	if o == nil || o.LastRestartRequestTime == nil {
+func (o *LifecycleConfig) GetRestartRequestTimeOk() (*time.Time, bool) {
+	if o == nil || o.RestartRequestTime == nil {
 		return nil, false
 	}
-	return o.LastRestartRequestTime, true
+	return o.RestartRequestTime, true
 }
 
-// HasLastRestartRequestTime returns a boolean if a field has been set.
-func (o *LifecycleConfig) HasLastRestartRequestTime() bool {
-	if o != nil && o.LastRestartRequestTime != nil {
+// HasRestartRequestTime returns a boolean if a field has been set.
+func (o *LifecycleConfig) HasRestartRequestTime() bool {
+	if o != nil && o.RestartRequestTime != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetLastRestartRequestTime gets a reference to the given time.Time and assigns it to the LastRestartRequestTime field.
-func (o *LifecycleConfig) SetLastRestartRequestTime(v time.Time) {
-	o.LastRestartRequestTime = &v
+// SetRestartRequestTime gets a reference to the given time.Time and assigns it to the RestartRequestTime field.
+func (o *LifecycleConfig) SetRestartRequestTime(v time.Time) {
+	o.RestartRequestTime = &v
 }
 
 func (o LifecycleConfig) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if o.LastRestartRequestTime != nil {
-		toSerialize["last_restart_request_time"] = o.LastRestartRequestTime
+	if o.RestartRequestTime != nil {
+		toSerialize["restart_request_time"] = o.RestartRequestTime
 	}
 	return json.Marshal(toSerialize)
 }

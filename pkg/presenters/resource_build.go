@@ -15,13 +15,14 @@ func PresentWorkspaceResourceBuildList(in []*models.WorkspaceResourceBuild) []op
 
 func PresentWorkspaceResourceBuild(in *models.WorkspaceResourceBuild) openapi.WorkspaceResourceBuild {
 	return openapi.WorkspaceResourceBuild{
-		Id:                  &in.ID,
-		Namespace:           &in.Namespace,
-		WorkspaceId:         &in.WorkspaceID,
-		WorkspaceResourceId: &in.WorkspaceResourceID,
-		SourceHash:          &in.BuildSourceHash,
-		ImageRegistry:       &in.ImageRegistry,
-		Status:              presentWorkspaceResourceBuildStatus(in.Status),
+		Id:                    &in.ID,
+		Namespace:             &in.Namespace,
+		WorkspaceId:           &in.WorkspaceID,
+		WorkspaceResourceId:   &in.WorkspaceResourceID,
+		WorkspaceResourceName: &in.WorkspaceResourceName,
+		SourceHash:            &in.BuildSourceHash,
+		ImageRegistry:         &in.ImageRegistry,
+		Status:                presentWorkspaceResourceBuildStatus(in.Status),
 	}
 }
 

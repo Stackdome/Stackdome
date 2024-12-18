@@ -2311,11 +2311,12 @@ components:
               source_volume_id: source_volume_id
             name: name
             lifecycle_config:
-              last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+              restart_request_time: 2000-01-23T04:56:07.000+00:00
             id: id
             stateful: true
             status:
               observed_version: 5
+              last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
               internal_service_name: internal_service_name
               state: state
               conditions:
@@ -2402,11 +2403,12 @@ components:
               source_volume_id: source_volume_id
             name: name
             lifecycle_config:
-              last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+              restart_request_time: 2000-01-23T04:56:07.000+00:00
             id: id
             stateful: true
             status:
               observed_version: 5
+              last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
               internal_service_name: internal_service_name
               state: state
               conditions:
@@ -2575,11 +2577,12 @@ components:
                 source_volume_id: source_volume_id
               name: name
               lifecycle_config:
-                last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+                restart_request_time: 2000-01-23T04:56:07.000+00:00
               id: id
               stateful: true
               status:
                 observed_version: 5
+                last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 internal_service_name: internal_service_name
                 state: state
                 conditions:
@@ -2666,11 +2669,12 @@ components:
                 source_volume_id: source_volume_id
               name: name
               lifecycle_config:
-                last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+                restart_request_time: 2000-01-23T04:56:07.000+00:00
               id: id
               stateful: true
               status:
                 observed_version: 5
+                last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 internal_service_name: internal_service_name
                 state: state
                 conditions:
@@ -2793,11 +2797,12 @@ components:
                 source_volume_id: source_volume_id
               name: name
               lifecycle_config:
-                last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+                restart_request_time: 2000-01-23T04:56:07.000+00:00
               id: id
               stateful: true
               status:
                 observed_version: 5
+                last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 internal_service_name: internal_service_name
                 state: state
                 conditions:
@@ -2884,11 +2889,12 @@ components:
                 source_volume_id: source_volume_id
               name: name
               lifecycle_config:
-                last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+                restart_request_time: 2000-01-23T04:56:07.000+00:00
               id: id
               stateful: true
               status:
                 observed_version: 5
+                last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 internal_service_name: internal_service_name
                 state: state
                 conditions:
@@ -3007,11 +3013,12 @@ components:
             source_volume_id: source_volume_id
           name: name
           lifecycle_config:
-            last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+            restart_request_time: 2000-01-23T04:56:07.000+00:00
           id: id
           stateful: true
           status:
             observed_version: 5
+            last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             internal_service_name: internal_service_name
             state: state
             conditions:
@@ -3098,11 +3105,12 @@ components:
             source_volume_id: source_volume_id
           name: name
           lifecycle_config:
-            last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+            restart_request_time: 2000-01-23T04:56:07.000+00:00
           id: id
           stateful: true
           status:
             observed_version: 5
+            last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             internal_service_name: internal_service_name
             state: state
             conditions:
@@ -3226,11 +3234,12 @@ components:
           source_volume_id: source_volume_id
         name: name
         lifecycle_config:
-          last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+          restart_request_time: 2000-01-23T04:56:07.000+00:00
         id: id
         stateful: true
         status:
           observed_version: 5
+          last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
           internal_service_name: internal_service_name
           state: state
           conditions:
@@ -3372,11 +3381,12 @@ components:
             source_volume_id: source_volume_id
           name: name
           lifecycle_config:
-            last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+            restart_request_time: 2000-01-23T04:56:07.000+00:00
           id: id
           stateful: true
           status:
             observed_version: 5
+            last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             internal_service_name: internal_service_name
             state: state
             conditions:
@@ -3463,11 +3473,12 @@ components:
             source_volume_id: source_volume_id
           name: name
           lifecycle_config:
-            last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+            restart_request_time: 2000-01-23T04:56:07.000+00:00
           id: id
           stateful: true
           status:
             observed_version: 5
+            last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             internal_service_name: internal_service_name
             state: state
             conditions:
@@ -3505,6 +3516,7 @@ components:
         workspace_resource_id: workspace_resource_id
         created_at: 2000-01-23T04:56:07.000+00:00
         id: id
+        workspace_resource_name: workspace_resource_name
         source_hash: source_hash
         status:
           image_url: image_url
@@ -3532,6 +3544,8 @@ components:
           type: string
         workspace_resource_id:
           type: string
+        workspace_resource_name:
+          type: string
         source_hash:
           type: string
         image_registry:
@@ -3556,6 +3570,7 @@ components:
           workspace_resource_id: workspace_resource_id
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
+          workspace_resource_name: workspace_resource_name
           source_hash: source_hash
           status:
             image_url: image_url
@@ -3581,6 +3596,7 @@ components:
           workspace_resource_id: workspace_resource_id
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
+          workspace_resource_name: workspace_resource_name
           source_hash: source_hash
           status:
             image_url: image_url
@@ -3640,6 +3656,7 @@ components:
     ResourceStatus:
       example:
         observed_version: 5
+        last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
         internal_service_name: internal_service_name
         state: state
         conditions:
@@ -3666,6 +3683,9 @@ components:
             $ref: '#/components/schemas/Ingress'
           type: array
         internal_service_name:
+          type: string
+        last_restart_request_processed_at:
+          format: date-time
           type: string
         state:
           type: string
@@ -3739,9 +3759,9 @@ components:
       type: object
     LifecycleConfig:
       example:
-        last_restart_request_time: 2000-01-23T04:56:07.000+00:00
+        restart_request_time: 2000-01-23T04:56:07.000+00:00
       properties:
-        last_restart_request_time:
+        restart_request_time:
           format: date-time
           type: string
       type: object

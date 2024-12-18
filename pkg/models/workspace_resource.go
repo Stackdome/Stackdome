@@ -53,12 +53,13 @@ type VolumeMount struct {
 }
 
 type WorkspaceResourceStatus struct {
-	State                  string      `json:"state"`
-	ObservedVersion        int64       `json:"observed_version"`
-	Conditions             []Condition `json:"conditions"`
-	PublicIngresses        []Ingress   `json:"public_ingresses"`
-	InternalServiceName    *string     `json:"internal_service_name,omitempty"`
-	LastObservedStatusHash string      `json:"last_observed_status_hash,omitempty"`
+	State                         string      `json:"state"`
+	ObservedVersion               int64       `json:"observed_version"`
+	Conditions                    []Condition `json:"conditions"`
+	PublicIngresses               []Ingress   `json:"public_ingresses"`
+	InternalServiceName           *string     `json:"internal_service_name,omitempty"`
+	LastObservedStatusHash        string      `json:"last_observed_status_hash,omitempty"`
+	LastRestartRequestProcessedAt *time.Time  `json:"last_restart_request_processed_at,omitempty"`
 }
 
 type Ingress struct {
@@ -74,7 +75,7 @@ type Port struct {
 }
 
 type LifecycleConfig struct {
-	LastRestartRequestTime *time.Time `json:"last_restart_request_time"`
+	RestartRequestTime *time.Time `json:"restart_request_time"`
 }
 
 type BuildConfig struct {

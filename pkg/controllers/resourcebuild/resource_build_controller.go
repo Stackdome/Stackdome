@@ -104,13 +104,14 @@ func (r *ResourceBuildReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 func (r *ResourceBuildReconciler) createResourceBuildInDB(ctx context.Context, resourceBuild *workspacev1alpha1.WorkspaceApplicationBuild, DBworkspaceResource *models.WorkspaceResource) error {
 	dbResourceBuild := &models.WorkspaceResourceBuild{
-		ID:                  resourceBuild.Name,
-		WorkspaceResourceID: DBworkspaceResource.ID,
-		Namespace:           resourceBuild.Namespace,
-		WorkspaceID:         DBworkspaceResource.WorkspaceID,
-		BuildSourceHash:     resourceBuild.Spec.SourceHash,
-		ImageRegistry:       resourceBuild.Spec.Registry,
-		Status:              mapClusterStatusToServerStatus(resourceBuild.Status),
+		ID:                    resourceBuild.Name,
+		WorkspaceResourceID:   DBworkspaceResource.ID,
+		WorkspaceResourceName: DBworkspaceResource.Name,
+		Namespace:             resourceBuild.Namespace,
+		WorkspaceID:           DBworkspaceResource.WorkspaceID,
+		BuildSourceHash:       resourceBuild.Spec.SourceHash,
+		ImageRegistry:         resourceBuild.Spec.Registry,
+		Status:                mapClusterStatusToServerStatus(resourceBuild.Status),
 	}
 
 	_, err := r.DBResourceBuildService.Create(ctx, dbResourceBuild)

@@ -17,15 +17,16 @@ import (
 
 // WorkspaceResourceBuild struct for WorkspaceResourceBuild
 type WorkspaceResourceBuild struct {
-	Id                  *string              `json:"id,omitempty"`
-	Namespace           *string              `json:"namespace,omitempty"`
-	WorkspaceId         *string              `json:"workspace_id,omitempty"`
-	WorkspaceResourceId *string              `json:"workspace_resource_id,omitempty"`
-	SourceHash          *string              `json:"source_hash,omitempty"`
-	ImageRegistry       *string              `json:"image_registry,omitempty"`
-	Status              *ResourceBuildStatus `json:"status,omitempty"`
-	CreatedAt           *time.Time           `json:"created_at,omitempty"`
-	UpdatedAt           *time.Time           `json:"updated_at,omitempty"`
+	Id                    *string              `json:"id,omitempty"`
+	Namespace             *string              `json:"namespace,omitempty"`
+	WorkspaceId           *string              `json:"workspace_id,omitempty"`
+	WorkspaceResourceId   *string              `json:"workspace_resource_id,omitempty"`
+	WorkspaceResourceName *string              `json:"workspace_resource_name,omitempty"`
+	SourceHash            *string              `json:"source_hash,omitempty"`
+	ImageRegistry         *string              `json:"image_registry,omitempty"`
+	Status                *ResourceBuildStatus `json:"status,omitempty"`
+	CreatedAt             *time.Time           `json:"created_at,omitempty"`
+	UpdatedAt             *time.Time           `json:"updated_at,omitempty"`
 }
 
 // NewWorkspaceResourceBuild instantiates a new WorkspaceResourceBuild object
@@ -171,6 +172,38 @@ func (o *WorkspaceResourceBuild) HasWorkspaceResourceId() bool {
 // SetWorkspaceResourceId gets a reference to the given string and assigns it to the WorkspaceResourceId field.
 func (o *WorkspaceResourceBuild) SetWorkspaceResourceId(v string) {
 	o.WorkspaceResourceId = &v
+}
+
+// GetWorkspaceResourceName returns the WorkspaceResourceName field value if set, zero value otherwise.
+func (o *WorkspaceResourceBuild) GetWorkspaceResourceName() string {
+	if o == nil || o.WorkspaceResourceName == nil {
+		var ret string
+		return ret
+	}
+	return *o.WorkspaceResourceName
+}
+
+// GetWorkspaceResourceNameOk returns a tuple with the WorkspaceResourceName field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *WorkspaceResourceBuild) GetWorkspaceResourceNameOk() (*string, bool) {
+	if o == nil || o.WorkspaceResourceName == nil {
+		return nil, false
+	}
+	return o.WorkspaceResourceName, true
+}
+
+// HasWorkspaceResourceName returns a boolean if a field has been set.
+func (o *WorkspaceResourceBuild) HasWorkspaceResourceName() bool {
+	if o != nil && o.WorkspaceResourceName != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetWorkspaceResourceName gets a reference to the given string and assigns it to the WorkspaceResourceName field.
+func (o *WorkspaceResourceBuild) SetWorkspaceResourceName(v string) {
+	o.WorkspaceResourceName = &v
 }
 
 // GetSourceHash returns the SourceHash field value if set, zero value otherwise.
@@ -346,6 +379,9 @@ func (o WorkspaceResourceBuild) MarshalJSON() ([]byte, error) {
 	}
 	if o.WorkspaceResourceId != nil {
 		toSerialize["workspace_resource_id"] = o.WorkspaceResourceId
+	}
+	if o.WorkspaceResourceName != nil {
+		toSerialize["workspace_resource_name"] = o.WorkspaceResourceName
 	}
 	if o.SourceHash != nil {
 		toSerialize["source_hash"] = o.SourceHash

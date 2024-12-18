@@ -12,15 +12,17 @@ package openapi
 
 import (
 	"encoding/json"
+	"time"
 )
 
 // ResourceStatus struct for ResourceStatus
 type ResourceStatus struct {
-	PublicIngress       []Ingress   `json:"public_ingress,omitempty"`
-	InternalServiceName *string     `json:"internal_service_name,omitempty"`
-	State               *string     `json:"state,omitempty"`
-	ObservedVersion     *int32      `json:"observed_version,omitempty"`
-	Conditions          []Condition `json:"conditions,omitempty"`
+	PublicIngress                 []Ingress   `json:"public_ingress,omitempty"`
+	InternalServiceName           *string     `json:"internal_service_name,omitempty"`
+	LastRestartRequestProcessedAt *time.Time  `json:"last_restart_request_processed_at,omitempty"`
+	State                         *string     `json:"state,omitempty"`
+	ObservedVersion               *int32      `json:"observed_version,omitempty"`
+	Conditions                    []Condition `json:"conditions,omitempty"`
 }
 
 // NewResourceStatus instantiates a new ResourceStatus object
@@ -102,6 +104,38 @@ func (o *ResourceStatus) HasInternalServiceName() bool {
 // SetInternalServiceName gets a reference to the given string and assigns it to the InternalServiceName field.
 func (o *ResourceStatus) SetInternalServiceName(v string) {
 	o.InternalServiceName = &v
+}
+
+// GetLastRestartRequestProcessedAt returns the LastRestartRequestProcessedAt field value if set, zero value otherwise.
+func (o *ResourceStatus) GetLastRestartRequestProcessedAt() time.Time {
+	if o == nil || o.LastRestartRequestProcessedAt == nil {
+		var ret time.Time
+		return ret
+	}
+	return *o.LastRestartRequestProcessedAt
+}
+
+// GetLastRestartRequestProcessedAtOk returns a tuple with the LastRestartRequestProcessedAt field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ResourceStatus) GetLastRestartRequestProcessedAtOk() (*time.Time, bool) {
+	if o == nil || o.LastRestartRequestProcessedAt == nil {
+		return nil, false
+	}
+	return o.LastRestartRequestProcessedAt, true
+}
+
+// HasLastRestartRequestProcessedAt returns a boolean if a field has been set.
+func (o *ResourceStatus) HasLastRestartRequestProcessedAt() bool {
+	if o != nil && o.LastRestartRequestProcessedAt != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLastRestartRequestProcessedAt gets a reference to the given time.Time and assigns it to the LastRestartRequestProcessedAt field.
+func (o *ResourceStatus) SetLastRestartRequestProcessedAt(v time.Time) {
+	o.LastRestartRequestProcessedAt = &v
 }
 
 // GetState returns the State field value if set, zero value otherwise.
@@ -207,6 +241,9 @@ func (o ResourceStatus) MarshalJSON() ([]byte, error) {
 	}
 	if o.InternalServiceName != nil {
 		toSerialize["internal_service_name"] = o.InternalServiceName
+	}
+	if o.LastRestartRequestProcessedAt != nil {
+		toSerialize["last_restart_request_processed_at"] = o.LastRestartRequestProcessedAt
 	}
 	if o.State != nil {
 		toSerialize["state"] = o.State

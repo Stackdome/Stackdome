@@ -174,7 +174,7 @@ func presentLifecycleConfig(config *models.LifecycleConfig) *openapi.LifecycleCo
 		return nil
 	}
 	return &openapi.LifecycleConfig{
-		LastRestartRequestTime: config.LastRestartRequestTime,
+		RestartRequestTime: config.RestartRequestTime,
 	}
 }
 
@@ -324,7 +324,7 @@ func convertLifecycleConfig(config *openapi.LifecycleConfig) *models.LifecycleCo
 		return nil
 	}
 	return &models.LifecycleConfig{
-		LastRestartRequestTime: config.LastRestartRequestTime,
+		RestartRequestTime: config.RestartRequestTime,
 	}
 }
 

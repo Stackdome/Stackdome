@@ -1384,6 +1384,8 @@ components:
           type: string
         workspace_resource_id:
           type: string
+        workspace_resource_name:
+          type: string
         source_hash:
           type: string
         image_registry:
@@ -1430,6 +1432,9 @@ components:
             $ref: '#/components/schemas/Ingress'
         internal_service_name:
           type: string
+        last_restart_request_processed_at:
+          type: string
+          format: date-time
         state:
           type: string
         observed_version:
@@ -1490,7 +1495,7 @@ components:
     LifecycleConfig:
       type: object
       properties:
-        last_restart_request_time:
+        restart_request_time:
           type: string
           format: date-time
 

@@ -6,6 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **PublicIngress** | Pointer to [**[]Ingress**](Ingress.md) |  | [optional] 
 **InternalServiceName** | Pointer to **string** |  | [optional] 
+**LastRestartRequestProcessedAt** | Pointer to **time.Time** |  | [optional] 
 **State** | Pointer to **string** |  | [optional] 
 **ObservedVersion** | Pointer to **int32** |  | [optional] 
 **Conditions** | Pointer to [**[]Condition**](Condition.md) |  | [optional] 
@@ -78,6 +79,31 @@ SetInternalServiceName sets InternalServiceName field to given value.
 `func (o *ResourceStatus) HasInternalServiceName() bool`
 
 HasInternalServiceName returns a boolean if a field has been set.
+
+### GetLastRestartRequestProcessedAt
+
+`func (o *ResourceStatus) GetLastRestartRequestProcessedAt() time.Time`
+
+GetLastRestartRequestProcessedAt returns the LastRestartRequestProcessedAt field if non-nil, zero value otherwise.
+
+### GetLastRestartRequestProcessedAtOk
+
+`func (o *ResourceStatus) GetLastRestartRequestProcessedAtOk() (*time.Time, bool)`
+
+GetLastRestartRequestProcessedAtOk returns a tuple with the LastRestartRequestProcessedAt field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetLastRestartRequestProcessedAt
+
+`func (o *ResourceStatus) SetLastRestartRequestProcessedAt(v time.Time)`
+
+SetLastRestartRequestProcessedAt sets LastRestartRequestProcessedAt field to given value.
+
+### HasLastRestartRequestProcessedAt
+
+`func (o *ResourceStatus) HasLastRestartRequestProcessedAt() bool`
+
+HasLastRestartRequestProcessedAt returns a boolean if a field has been set.
 
 ### GetState
 

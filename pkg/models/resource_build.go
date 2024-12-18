@@ -8,15 +8,16 @@ import (
 )
 
 type WorkspaceResourceBuild struct {
-	ID                  string
-	Namespace           string
-	WorkspaceID         string
-	WorkspaceResourceID string
-	BuildSourceHash     string
-	ImageRegistry       string
-	Status              *WorkspaceResourceBuildStatus `gorm:"type:jsonb"`
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	ID                    string
+	Namespace             string
+	WorkspaceID           string
+	WorkspaceResourceID   string
+	WorkspaceResourceName string
+	BuildSourceHash       string
+	ImageRegistry         string
+	Status                *WorkspaceResourceBuildStatus `gorm:"type:jsonb"`
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 }
 
 type WorkspaceResourceBuildStatus struct {

@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**LastRestartRequestTime** | Pointer to **time.Time** |  | [optional] 
+**RestartRequestTime** | Pointer to **time.Time** |  | [optional] 
 
 ## Methods
 
@@ -25,30 +25,30 @@ NewLifecycleConfigWithDefaults instantiates a new LifecycleConfig object
 This constructor will only assign default values to properties that have it defined,
 but it doesn't guarantee that properties required by API are set
 
-### GetLastRestartRequestTime
+### GetRestartRequestTime
 
-`func (o *LifecycleConfig) GetLastRestartRequestTime() time.Time`
+`func (o *LifecycleConfig) GetRestartRequestTime() time.Time`
 
-GetLastRestartRequestTime returns the LastRestartRequestTime field if non-nil, zero value otherwise.
+GetRestartRequestTime returns the RestartRequestTime field if non-nil, zero value otherwise.
 
-### GetLastRestartRequestTimeOk
+### GetRestartRequestTimeOk
 
-`func (o *LifecycleConfig) GetLastRestartRequestTimeOk() (*time.Time, bool)`
+`func (o *LifecycleConfig) GetRestartRequestTimeOk() (*time.Time, bool)`
 
-GetLastRestartRequestTimeOk returns a tuple with the LastRestartRequestTime field if it's non-nil, zero value otherwise
+GetRestartRequestTimeOk returns a tuple with the RestartRequestTime field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetLastRestartRequestTime
+### SetRestartRequestTime
 
-`func (o *LifecycleConfig) SetLastRestartRequestTime(v time.Time)`
+`func (o *LifecycleConfig) SetRestartRequestTime(v time.Time)`
 
-SetLastRestartRequestTime sets LastRestartRequestTime field to given value.
+SetRestartRequestTime sets RestartRequestTime field to given value.
 
-### HasLastRestartRequestTime
+### HasRestartRequestTime
 
-`func (o *LifecycleConfig) HasLastRestartRequestTime() bool`
+`func (o *LifecycleConfig) HasRestartRequestTime() bool`
 
-HasLastRestartRequestTime returns a boolean if a field has been set.
+HasRestartRequestTime returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -9,6 +9,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -100,7 +101,7 @@ func (w *workspaceResourceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 }
 
 func mapClusterStatusToServerStatus(clusterInstance *workspacev1alpha1.WorkspaceResource) *models.WorkspaceResourceStatus {
-	return &models.WorkspaceResourceStatus{
+	res := &models.WorkspaceResourceStatus{
 		LastObservedStatusHash: clusterInstance.Status.StatusHash,
 		State:                  string(clusterInstance.Status.Phase),
 		Conditions:             models.ConvertConditions(clusterInstance.Status.Conditions),
@@ -108,6 +109,10 @@ func mapClusterStatusToServerStatus(clusterInstance *workspacev1alpha1.Workspace
 		ObservedVersion:        clusterInstance.Status.ObservedStackdomeServerObjectGeneration,
 		InternalServiceName:    clusterInstance.Status.InternalAddress,
 	}
+	if clusterInstance.Status.LastRestartRequestProcessedAt != nil {
+		res.LastRestartRequestProcessedAt = ptr.To(clusterInstance.Status.LastRestartRequestProcessedAt.UTC())
+	}
+	return res
 }
 
 func mapToPublicIngresses(externalAddresses []workspacev1alpha1.ExternalAddress) []models.Ingress {

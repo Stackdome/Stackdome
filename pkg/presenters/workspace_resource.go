@@ -41,11 +41,12 @@ func presentWorkspaceResourceStatus(status *models.WorkspaceResourceStatus) *ope
 		return nil
 	}
 	return &openapi.ResourceStatus{
-		State:               &status.State,
-		ObservedVersion:     ptr.To(int32(status.ObservedVersion)),
-		Conditions:          presentConditions(status.Conditions),
-		PublicIngress:       presentIngress(status.PublicIngresses),
-		InternalServiceName: status.InternalServiceName,
+		State:                         &status.State,
+		ObservedVersion:               ptr.To(int32(status.ObservedVersion)),
+		Conditions:                    presentConditions(status.Conditions),
+		PublicIngress:                 presentIngress(status.PublicIngresses),
+		InternalServiceName:           status.InternalServiceName,
+		LastRestartRequestProcessedAt: status.LastRestartRequestProcessedAt,
 	}
 }
 

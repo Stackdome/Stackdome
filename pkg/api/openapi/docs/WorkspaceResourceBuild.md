@@ -8,6 +8,7 @@ Name | Type | Description | Notes
 **Namespace** | Pointer to **string** |  | [optional] 
 **WorkspaceId** | Pointer to **string** |  | [optional] 
 **WorkspaceResourceId** | Pointer to **string** |  | [optional] 
+**WorkspaceResourceName** | Pointer to **string** |  | [optional] 
 **SourceHash** | Pointer to **string** |  | [optional] 
 **ImageRegistry** | Pointer to **string** |  | [optional] 
 **Status** | Pointer to [**ResourceBuildStatus**](ResourceBuildStatus.md) |  | [optional] 
@@ -132,6 +133,31 @@ SetWorkspaceResourceId sets WorkspaceResourceId field to given value.
 `func (o *WorkspaceResourceBuild) HasWorkspaceResourceId() bool`
 
 HasWorkspaceResourceId returns a boolean if a field has been set.
+
+### GetWorkspaceResourceName
+
+`func (o *WorkspaceResourceBuild) GetWorkspaceResourceName() string`
+
+GetWorkspaceResourceName returns the WorkspaceResourceName field if non-nil, zero value otherwise.
+
+### GetWorkspaceResourceNameOk
+
+`func (o *WorkspaceResourceBuild) GetWorkspaceResourceNameOk() (*string, bool)`
+
+GetWorkspaceResourceNameOk returns a tuple with the WorkspaceResourceName field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetWorkspaceResourceName
+
+`func (o *WorkspaceResourceBuild) SetWorkspaceResourceName(v string)`
+
+SetWorkspaceResourceName sets WorkspaceResourceName field to given value.
+
+### HasWorkspaceResourceName
+
+`func (o *WorkspaceResourceBuild) HasWorkspaceResourceName() bool`
+
+HasWorkspaceResourceName returns a boolean if a field has been set.
 
 ### GetSourceHash
 

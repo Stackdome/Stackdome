@@ -176,8 +176,9 @@ func desiredWorkspaceResources(workspace *models.Workspace) []workspacev1alpha1.
 			resource.Spec.Command = workspaceResource.ExecutionConfig.Command
 			resource.Spec.Args = workspaceResource.ExecutionConfig.Args
 		}
-		if workspaceResource.LifecycleConfig != nil && workspaceResource.LifecycleConfig.LastRestartRequestTime != nil {
-			resource.Spec.RestartRequest = &metav1.Time{Time: metav1.Now().UTC()}
+
+		if workspaceResource.LifecycleConfig != nil && workspaceResource.LifecycleConfig.RestartRequestTime != nil {
+			resource.Spec.RestartRequest = &metav1.Time{Time: workspaceResource.LifecycleConfig.RestartRequestTime.UTC()}
 		}
 
 		setBuildSpec(&resource, workspaceResource)
