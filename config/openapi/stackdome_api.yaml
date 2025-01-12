@@ -72,7 +72,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/users/me:
+  /api/v1/users/current:
     get:
       security:
         - Bearer: []

@@ -98,8 +98,8 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources | List all WorkspaceResources for a Workspace
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesidbuildsget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id}/builds | List all builds for a WorkspaceResource
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesidput) | **Put** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id} | Update a WorkspaceResource
+*DefaultApi* | [**ApiV1UsersCurrentGet**](docs/DefaultApi.md#apiv1userscurrentget) | **Get** /api/v1/users/current | Get a the current authenticated user
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
-*DefaultApi* | [**ApiV1UsersMeGet**](docs/DefaultApi.md#apiv1usersmeget) | **Get** /api/v1/users/me | Get a the current authenticated user
 *DefaultApi* | [**ApiV1UsersPost**](docs/DefaultApi.md#apiv1userspost) | **Post** /api/v1/users | Create new user
 *DefaultApi* | [**ApiV1WorkspaceUsersCurrentGet**](docs/DefaultApi.md#apiv1workspaceuserscurrentget) | **Get** /api/v1/workspace-users/current | Get the workspace user object for the current user
 *DefaultApi* | [**ApiV1WorkspaceUsersIdDelete**](docs/DefaultApi.md#apiv1workspaceusersiddelete) | **Delete** /api/v1/workspace-users/{id} | Delete a WorkspaceUser

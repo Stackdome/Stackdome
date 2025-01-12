@@ -118,6 +118,7 @@ func handleList(w http.ResponseWriter, r *http.Request, cfg *handlerConfig) {
 		cfg.ErrorHandler(r.Context(), w, serviceError)
 		return
 	}
+	
 	writeJSONResponse(w, http.StatusOK, results)
 }
 

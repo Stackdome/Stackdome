@@ -2370,37 +2370,34 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResource
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-type ApiApiV1UsersIdGetRequest struct {
+type ApiApiV1UsersCurrentGetRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
-	id         string
 }
 
-func (r ApiApiV1UsersIdGetRequest) Execute() (*User, *http.Response, error) {
-	return r.ApiService.ApiV1UsersIdGetExecute(r)
+func (r ApiApiV1UsersCurrentGetRequest) Execute() (*User, *http.Response, error) {
+	return r.ApiService.ApiV1UsersCurrentGetExecute(r)
 }
 
 /*
-ApiV1UsersIdGet Get a user
+ApiV1UsersCurrentGet Get a the current authenticated user
 
-Get a user
+Get a the current authenticated user
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
-	@param id The id of record
-	@return ApiApiV1UsersIdGetRequest
+	@return ApiApiV1UsersCurrentGetRequest
 */
-func (a *DefaultApiService) ApiV1UsersIdGet(ctx context.Context, id string) ApiApiV1UsersIdGetRequest {
-	return ApiApiV1UsersIdGetRequest{
+func (a *DefaultApiService) ApiV1UsersCurrentGet(ctx context.Context) ApiApiV1UsersCurrentGetRequest {
+	return ApiApiV1UsersCurrentGetRequest{
 		ApiService: a,
 		ctx:        ctx,
-		id:         id,
 	}
 }
 
 // Execute executes the request
 //
 //	@return User
-func (a *DefaultApiService) ApiV1UsersIdGetExecute(r ApiApiV1UsersIdGetRequest) (*User, *http.Response, error) {
+func (a *DefaultApiService) ApiV1UsersCurrentGetExecute(r ApiApiV1UsersCurrentGetRequest) (*User, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodGet
 		localVarPostBody    interface{}
@@ -2408,13 +2405,12 @@ func (a *DefaultApiService) ApiV1UsersIdGetExecute(r ApiApiV1UsersIdGetRequest) 
 		localVarReturnValue *User
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1UsersIdGet")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1UsersCurrentGet")
 	if err != nil {
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/users/{id}"
-	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+	localVarPath := localBasePath + "/api/v1/users/current"
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -2503,34 +2499,37 @@ func (a *DefaultApiService) ApiV1UsersIdGetExecute(r ApiApiV1UsersIdGetRequest) 
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-type ApiApiV1UsersMeGetRequest struct {
+type ApiApiV1UsersIdGetRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
+	id         string
 }
 
-func (r ApiApiV1UsersMeGetRequest) Execute() (*User, *http.Response, error) {
-	return r.ApiService.ApiV1UsersMeGetExecute(r)
+func (r ApiApiV1UsersIdGetRequest) Execute() (*User, *http.Response, error) {
+	return r.ApiService.ApiV1UsersIdGetExecute(r)
 }
 
 /*
-ApiV1UsersMeGet Get a the current authenticated user
+ApiV1UsersIdGet Get a user
 
-Get a the current authenticated user
+Get a user
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
-	@return ApiApiV1UsersMeGetRequest
+	@param id The id of record
+	@return ApiApiV1UsersIdGetRequest
 */
-func (a *DefaultApiService) ApiV1UsersMeGet(ctx context.Context) ApiApiV1UsersMeGetRequest {
-	return ApiApiV1UsersMeGetRequest{
+func (a *DefaultApiService) ApiV1UsersIdGet(ctx context.Context, id string) ApiApiV1UsersIdGetRequest {
+	return ApiApiV1UsersIdGetRequest{
 		ApiService: a,
 		ctx:        ctx,
+		id:         id,
 	}
 }
 
 // Execute executes the request
 //
 //	@return User
-func (a *DefaultApiService) ApiV1UsersMeGetExecute(r ApiApiV1UsersMeGetRequest) (*User, *http.Response, error) {
+func (a *DefaultApiService) ApiV1UsersIdGetExecute(r ApiApiV1UsersIdGetRequest) (*User, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodGet
 		localVarPostBody    interface{}
@@ -2538,12 +2537,13 @@ func (a *DefaultApiService) ApiV1UsersMeGetExecute(r ApiApiV1UsersMeGetRequest) 
 		localVarReturnValue *User
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1UsersMeGet")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1UsersIdGet")
 	if err != nil {
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/users/me"
+	localVarPath := localBasePath + "/api/v1/users/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}

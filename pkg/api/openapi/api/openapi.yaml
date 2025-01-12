@@ -81,7 +81,7 @@ paths:
       security:
       - Bearer: []
       summary: Get a user
-  /api/v1/users/me:
+  /api/v1/users/current:
     get:
       description: Get a the current authenticated user
       responses:
