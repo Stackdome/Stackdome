@@ -45,6 +45,8 @@ func NewAPIServer(env environment.EnvImpl) Server {
 	var mainHandler http.Handler = mainRouter
 
 	// Setup authentication handlers.
+	// Currently this uses jwt as the default auth mechanism - Reads the jwt token from the authorization header and sets
+	// the jwt payload in the request context.
 	mainHandler = setupAuthenticationMiddleWare(
 		mainHandler,
 		env,
@@ -68,7 +70,7 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 			"^/api/v1/users$",
 			"^/api/v1/auth",
 		},
-		DefaultAuthHandler: auth.NewJwtAuthHandler(mainHandler, []byte(env.Environment().Config.Server.JwtSecret)),
+		DefaultAuthHandler: auth.NewJwtAuthnHandler(mainHandler, []byte(env.Environment().Config.Server.JwtSecret)),
 	})
 
 	return authenticationHandler

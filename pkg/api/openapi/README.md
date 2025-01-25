@@ -138,6 +138,7 @@ Class | Method | HTTP request | Description
  - [SSHConfig](docs/SSHConfig.md)
  - [User](docs/User.md)
  - [UserCreateRequest](docs/UserCreateRequest.md)
+ - [UserRole](docs/UserRole.md)
  - [Volume](docs/Volume.md)
  - [VolumeList](docs/VolumeList.md)
  - [VolumeMount](docs/VolumeMount.md)

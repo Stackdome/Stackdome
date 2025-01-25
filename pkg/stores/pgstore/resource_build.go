@@ -57,7 +57,7 @@ func (r *resourceBuildStore) GetByResourceID(ctx context.Context, resourceID str
 
 func (r *resourceBuildStore) GetByID(ctx context.Context, ID string) (*models.WorkspaceResourceBuild, *errors.ServiceError) {
 	var resourceBuild models.WorkspaceResourceBuild
-	if err := r.sessionFactory.New(ctx).Where("id = ?", ID).First(&resourceBuild).Error; err != nil {
+	if err := r.sessionFactory.New(ctx).Where("id = ?", ID).Preload(clause.Associations).First(&resourceBuild).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NotFound("resource build with id '%s' not found", ID)
 		}

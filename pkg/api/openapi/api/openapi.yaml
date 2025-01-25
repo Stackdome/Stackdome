@@ -1052,7 +1052,7 @@ components:
     User:
       example:
         organisation_id: organisation_id
-        role: role
+        role: null
         name: name
         organisation: organisation
         id: id
@@ -1076,14 +1076,14 @@ components:
           description: User's organisation
           type: string
         role:
-          description: User's role
-          type: string
+          $ref: '#/components/schemas/UserRole'
         organisation_id:
           description: OrganisationID
           type: string
       type: object
     UserCreateRequest:
       example:
+        Role: null
         organisation_id: organisation_id
         password: password
         name: name
@@ -1104,6 +1104,8 @@ components:
         password:
           description: Users desired password
           type: string
+        Role:
+          $ref: '#/components/schemas/UserRole'
         organisation:
           description: User's organisation
           type: string
@@ -1116,6 +1118,12 @@ components:
       - organisation_id
       - password
       type: object
+    UserRole:
+      enum:
+      - OrganisationAdmin
+      - PlatformAdmin
+      - User
+      type: string
     LoginRequest:
       example:
         password: password

@@ -9,7 +9,7 @@ Name | Type | Description | Notes
 **Username** | Pointer to **string** | User&#39;s username | [optional] 
 **Email** | Pointer to **string** | User&#39;s email address | [optional] 
 **Organisation** | Pointer to **string** | User&#39;s organisation | [optional] 
-**Role** | Pointer to **string** | User&#39;s role | [optional] 
+**Role** | Pointer to [**UserRole**](UserRole.md) |  | [optional] 
 **OrganisationId** | Pointer to **string** | OrganisationID | [optional] 
 
 ## Methods
@@ -158,20 +158,20 @@ HasOrganisation returns a boolean if a field has been set.
 
 ### GetRole
 
-`func (o *User) GetRole() string`
+`func (o *User) GetRole() UserRole`
 
 GetRole returns the Role field if non-nil, zero value otherwise.
 
 ### GetRoleOk
 
-`func (o *User) GetRoleOk() (*string, bool)`
+`func (o *User) GetRoleOk() (*UserRole, bool)`
 
 GetRoleOk returns a tuple with the Role field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetRole
 
-`func (o *User) SetRole(v string)`
+`func (o *User) SetRole(v UserRole)`
 
 SetRole sets Role field to given value.
 

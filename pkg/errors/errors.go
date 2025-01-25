@@ -52,6 +52,9 @@ const (
 
 	// Unprocessable Entity
 	ErrorUnprocessableEntity ServiceErrorCode = 26
+
+	// InternalServerError
+	ErrorInternalServerError ServiceErrorCode = 27
 )
 
 type ServiceErrorCode int
@@ -83,6 +86,7 @@ func Errors() ServiceErrors {
 		ServiceError{ErrorGone, "Access to the target resource is no longer available", http.StatusGone},
 		ServiceError{ErrorTooManyRequests, "Too many requests", http.StatusTooManyRequests},
 		ServiceError{ErrorUnprocessableEntity, "Unable to process request entity", http.StatusUnprocessableEntity},
+		ServiceError{ErrorInternalServerError, "Internal server error", http.StatusInternalServerError},
 	}
 }
 

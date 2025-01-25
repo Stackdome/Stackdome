@@ -9,11 +9,11 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
-type authMiddleware struct {
+type authnMiddleware struct {
 	authenticators []authenticator
 }
 
-type AuthMiddleware interface {
+type AuthnMiddleware interface {
 	AuthenticateUser(next http.Handler) http.Handler
 	GetAvailableAuthenticators() []authenticator
 }
@@ -30,10 +30,10 @@ type authenticator interface {
 	AuthenticaticationHandler(w http.ResponseWriter, r *http.Request, next http.Handler)
 }
 
-var _ AuthMiddleware = &authMiddleware{}
+var _ AuthnMiddleware = &authnMiddleware{}
 
-func NewAuthMiddleware(userGetter UserGetter) AuthMiddleware {
-	middleware := &authMiddleware{
+func NewAuthMiddleware(userGetter UserGetter) AuthnMiddleware {
+	middleware := &authnMiddleware{
 		authenticators: []authenticator{
 			&jwtAuthenticator{userGetter: userGetter},
 		},
@@ -41,12 +41,12 @@ func NewAuthMiddleware(userGetter UserGetter) AuthMiddleware {
 	return middleware
 }
 
-func (a *authMiddleware) GetAvailableAuthenticators() []authenticator {
+func (a *authnMiddleware) GetAvailableAuthenticators() []authenticator {
 	return a.authenticators
 }
 
 // Middleware handler to validate JWT tokens and authenticate users
-func (a *authMiddleware) AuthenticateUser(next http.Handler) http.Handler {
+func (a *authnMiddleware) AuthenticateUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestCtx := r.Context()
 		for _, auth := range a.GetAvailableAuthenticators() {

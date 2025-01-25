@@ -6,6 +6,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/config"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
+	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/spf13/pflag"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,12 +20,14 @@ type EnvImpl interface {
 }
 
 type Env struct {
-	Name           string
-	Services       Services
-	DBSession      db.SessionFactory
-	Config         *config.ApplicationConfig
-	Clients        Clients
-	ClusterManager clustermanager.ClusterManager
+	Name                        string
+	Services                    Services
+	DBSession                   db.SessionFactory
+	Config                      *config.ApplicationConfig
+	BootstrapConfig             *config.BootstrapConfig
+	Clients                     Clients
+	ClusterManager              clustermanager.ClusterManager
+	ResourceAccessPolicyManager resourceaccess.ResourceAccessPolicyManager
 }
 
 type Clients struct {

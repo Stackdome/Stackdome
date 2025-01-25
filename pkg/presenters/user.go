@@ -11,9 +11,20 @@ func PresentUser(in *models.User) openapi.User {
 	res.SetOrganisation(in.Organisation)
 	res.SetId(in.ID)
 	res.SetName(in.Name)
-	res.SetRole(string(in.Role))
+	res.SetRole(presentRole(in.Role))
 	res.SetOrganisationId(in.OrganisationID)
 	return res
+}
+
+func presentRole(in models.Role) openapi.UserRole {
+	switch in {
+	case models.OrganisationAdminRole:
+		return openapi.ORGANISATION_ADMIN
+	case models.PlatformAdminRole:
+		return openapi.PLATFORM_ADMIN
+	default:
+		return openapi.USER
+	}
 }
 
 func ConvertUser(in *openapi.UserCreateRequest) *models.User {
@@ -23,6 +34,18 @@ func ConvertUser(in *openapi.UserCreateRequest) *models.User {
 		Organisation:   in.GetOrganisation(),
 		Password:       in.GetPassword(),
 		OrganisationID: in.GetOrganisationId(),
+		Role:           convertRole(in.GetRole()),
 	}
 	return res
+}
+
+func convertRole(in openapi.UserRole) models.Role {
+	switch in {
+	case openapi.ORGANISATION_ADMIN:
+		return models.OrganisationAdminRole
+	case openapi.PLATFORM_ADMIN:
+		return models.PlatformAdminRole
+	default:
+		return models.UserRole
+	}
 }

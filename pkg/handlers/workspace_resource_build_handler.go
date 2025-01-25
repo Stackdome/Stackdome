@@ -7,6 +7,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/gorilla/mux"
@@ -17,6 +18,7 @@ type WorkspaceResourceBuildHandlerSpec struct {
 	WorkspaceResourceService     services.WorkspaceResourceService
 	Logger                       logger.Logger
 	WorkspaceService             services.WorkspaceService
+	AuthzClient                  auth.AuthorizationClient
 	WorkspaceResouceBuildService services.ResourceBuildService
 }
 
@@ -24,6 +26,7 @@ type workspaceResourceBuildHandler struct {
 	workspaceResourceService     services.WorkspaceResourceService
 	logger                       logger.Logger
 	workspaceService             services.WorkspaceService
+	authzClient                  auth.AuthorizationClient
 	workspaceResouceBuildService services.ResourceBuildService
 }
 
@@ -33,6 +36,7 @@ func NewWorkspaceResourceBuildHandler(spec WorkspaceResourceBuildHandlerSpec) *w
 		logger:                       spec.Logger,
 		workspaceService:             spec.WorkspaceService,
 		workspaceResouceBuildService: spec.WorkspaceResouceBuildService,
+		authzClient:                  spec.AuthzClient,
 	}
 }
 
@@ -43,10 +47,29 @@ func (h *workspaceResourceBuildHandler) ListByResourceName(w http.ResponseWriter
 			ctx := r.Context()
 			workspaceID := mux.Vars(r)["id"]
 			resourceName := mux.Vars(r)["resource_name"]
-			_, uerr := auth.GetCurrentUserFromCtx(ctx)
+			currentUser, uerr := auth.GetCurrentUserFromCtx(ctx)
 			if uerr != nil {
 				return nil, errors.Unauthorized("failed to fetch current user")
 			}
+			workspace, serr := h.workspaceService.GetWorkspace(ctx, workspaceID)
+			if serr != nil {
+				return nil, serr
+			}
+
+			allowed, accessErr := h.authzClient.AuthorizeResourceAccess(
+				currentUser,
+				auth.WorkspaceResource,
+				workspaceID,
+				workspace.UserID,
+				models.ResourceAccessModeRead,
+			)
+			if accessErr != nil {
+				return nil, errors.Unauthorized("failed to authorize access: %s", accessErr.Error())
+			}
+			if !allowed {
+				return nil, errors.Unauthorized("user '%s' is not allowed to list workspace resource '%s' builds", currentUser.ID, resourceName)
+			}
+
 			objs, err := h.workspaceResouceBuildService.ListByResourceName(ctx, workspaceID, resourceName)
 			if err != nil {
 				return nil, err
@@ -66,9 +89,28 @@ func (h *workspaceResourceBuildHandler) GetByID(w http.ResponseWriter, r *http.R
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
 			buildID := mux.Vars(r)["build_id"]
-			_, uerr := auth.GetCurrentUserFromCtx(ctx)
+			workspaceID := mux.Vars(r)["id"]
+			currentUser, uerr := auth.GetCurrentUserFromCtx(ctx)
 			if uerr != nil {
 				return nil, errors.Unauthorized("failed to fetch current user")
+			}
+
+			workspace, serr := h.workspaceService.GetWorkspace(ctx, workspaceID)
+			if serr != nil {
+				return nil, serr
+			}
+			allowed, accessErr := h.authzClient.AuthorizeResourceAccess(
+				currentUser,
+				auth.WorkspaceResource,
+				workspaceID,
+				workspace.UserID,
+				models.ResourceAccessModeRead,
+			)
+			if accessErr != nil {
+				return nil, errors.Unauthorized("failed to authorize access: %s", accessErr.Error())
+			}
+			if !allowed {
+				return nil, errors.Unauthorized("user '%s' is not allowed to get workspace build '%s'", currentUser.ID, buildID)
 			}
 			obj, err := h.workspaceResouceBuildService.GetByID(ctx, buildID)
 			if err != nil {
@@ -85,9 +127,27 @@ func (h *workspaceResourceBuildHandler) ListByWorkspaceID(w http.ResponseWriter,
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
 			workspaceID := mux.Vars(r)["id"]
-			_, uerr := auth.GetCurrentUserFromCtx(ctx)
+			currentUser, uerr := auth.GetCurrentUserFromCtx(ctx)
 			if uerr != nil {
 				return nil, errors.Unauthorized("failed to fetch current user")
+			}
+			workspace, serr := h.workspaceService.GetWorkspace(ctx, workspaceID)
+			if serr != nil {
+				return nil, serr
+			}
+
+			allowed, accessErr := h.authzClient.AuthorizeResourceAccess(
+				currentUser,
+				auth.WorkspaceResource,
+				workspaceID,
+				workspace.UserID,
+				models.ResourceAccessModeRead,
+			)
+			if accessErr != nil {
+				return nil, errors.Unauthorized("failed to authorize access: %s", accessErr.Error())
+			}
+			if !allowed {
+				return nil, errors.Unauthorized("user '%s' is not allowed to list workspace '%s' builds", currentUser.ID, workspaceID)
 			}
 			objs, err := h.workspaceResouceBuildService.ListByWorkspaceID(ctx, workspaceID)
 			if err != nil {

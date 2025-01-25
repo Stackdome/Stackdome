@@ -8,6 +8,10 @@ import (
 
 type Role string
 
+func (r Role) String() string {
+	return string(r)
+}
+
 const (
 	UserRole              Role = "User"
 	OrganisationAdminRole Role = "OrganisationAdmin"
