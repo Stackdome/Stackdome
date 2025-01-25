@@ -20,12 +20,7 @@ type ApplicationConfig struct {
 	Database              *DatabaseConfig `json:"database"`
 	ClusterConfigFilePath string
 	ClusterConfig         *ClusterConfig
-	DefaultOrganisation   *OrganisationConfig
-}
-
-type OrganisationConfig struct {
-	Name       string
-	DomainName string
+	Debug                 bool `json:"debug"`
 }
 
 type ClusterConfig struct {
@@ -56,10 +51,9 @@ type DBConnectionConfig struct {
 
 func NewApplicationConfig() *ApplicationConfig {
 	return &ApplicationConfig{
-		Server:              NewServerConfig(),
-		Database:            NewDatabaseConfig(),
-		ClusterConfig:       &ClusterConfig{},
-		DefaultOrganisation: &OrganisationConfig{},
+		Server:        NewServerConfig(),
+		Database:      NewDatabaseConfig(),
+		ClusterConfig: &ClusterConfig{},
 	}
 }
 
@@ -69,7 +63,6 @@ func (c *ApplicationConfig) AddFlags(flagset *pflag.FlagSet) {
 	c.Server.AddFlags(flagset)
 	c.Database.AddFlags(flagset)
 	c.ClusterConfig.AddFlags(flagset)
-	c.DefaultOrganisation.AddFlags(flagset)
 }
 
 type ServerConfig struct {
@@ -113,10 +106,10 @@ func (c *ClusterConfig) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&c.ClusterURL, "cluster-url", c.ClusterURL, "cluster api server url")
 }
 
-func (c *OrganisationConfig) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&c.Name, "default-org-name", c.Name, "Name of the default organisation")
-	fs.StringVar(&c.DomainName, "default-domain", c.DomainName, "Domain name for the default organisation")
-}
+// func (c *OrganisationConfig) AddFlags(fs *pflag.FlagSet) {
+// 	fs.StringVar(&c.Name, "default-org-name", c.Name, "Name of the default organisation")
+// 	fs.StringVar(&c.DomainName, "default-domain", c.DomainName, "Domain name for the default organisation")
+// }
 
 func (c *DatabaseConfig) ConnectionString(withSSL bool) string {
 	return c.ConnectionStringWithName(c.Name, withSSL)
@@ -196,15 +189,15 @@ func (a *ApplicationConfig) ReadEnvironmentVariables() {
 		a.Server.JwtSecret = secret
 	}
 
-	defaultOrg, found := os.LookupEnv(DEFAULT_ORG_NAME_ENV)
-	if found {
-		a.DefaultOrganisation.Name = defaultOrg
-	}
+	// defaultOrg, found := os.LookupEnv(DEFAULT_ORG_NAME_ENV)
+	// if found {
+	// 	a.DefaultOrganisation.Name = defaultOrg
+	// }
 
-	defaultDomainName, found := os.LookupEnv(DEFAULT_DOMAIN)
-	if found {
-		a.DefaultOrganisation.DomainName = defaultDomainName
-	}
+	// defaultDomainName, found := os.LookupEnv(DEFAULT_DOMAIN)
+	// if found {
+	// 	a.DefaultOrganisation.DomainName = defaultDomainName
+	// }
 }
 
 func (c *DatabaseConfig) LogSafeConnectionString(withSSL bool) string {

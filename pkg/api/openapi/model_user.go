@@ -25,9 +25,8 @@ type User struct {
 	// User's email address
 	Email *string `json:"email,omitempty"`
 	// User's organisation
-	Organisation *string `json:"organisation,omitempty"`
-	// User's role
-	Role *string `json:"role,omitempty"`
+	Organisation *string   `json:"organisation,omitempty"`
+	Role         *UserRole `json:"role,omitempty"`
 	// OrganisationID
 	OrganisationId *string `json:"organisation_id,omitempty"`
 }
@@ -210,9 +209,9 @@ func (o *User) SetOrganisation(v string) {
 }
 
 // GetRole returns the Role field value if set, zero value otherwise.
-func (o *User) GetRole() string {
+func (o *User) GetRole() UserRole {
 	if o == nil || o.Role == nil {
-		var ret string
+		var ret UserRole
 		return ret
 	}
 	return *o.Role
@@ -220,7 +219,7 @@ func (o *User) GetRole() string {
 
 // GetRoleOk returns a tuple with the Role field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *User) GetRoleOk() (*string, bool) {
+func (o *User) GetRoleOk() (*UserRole, bool) {
 	if o == nil || o.Role == nil {
 		return nil, false
 	}
@@ -236,8 +235,8 @@ func (o *User) HasRole() bool {
 	return false
 }
 
-// SetRole gets a reference to the given string and assigns it to the Role field.
-func (o *User) SetRole(v string) {
+// SetRole gets a reference to the given UserRole and assigns it to the Role field.
+func (o *User) SetRole(v UserRole) {
 	o.Role = &v
 }
 

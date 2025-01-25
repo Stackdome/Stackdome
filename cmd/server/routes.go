@@ -13,33 +13,44 @@ func (s apiServer) routes() *mux.Router {
 	mainRouter := mux.NewRouter()
 	mainRouter.NotFoundHandler = http.HandlerFunc(api.SendNotFound)
 	services := s.environment.Environment().Services
+
+	authzClient := auth.NewAuthorizationHandler(auth.AuthorizationHanlderSpec{
+		AuthorizerBackend: s.environment.Environment().ResourceAccessPolicyManager,
+	})
+
 	userHandler := handlers.NewUserServiceHandler(handlers.UserServiceHandlerSpec{
 		UserService: services.UserService,
+		AuthzClient: authzClient,
 	})
 
 	workspaceUserHandler := handlers.NewWorkspaceUserHandler(handlers.WorkspaceUserHandlerSpec{
 		WorkspaceUserService: services.WorkspaceUserService,
+		AuthzClient:          authzClient,
 	})
 
 	storageHandler := handlers.NewWorkspaceStorageHandler(handlers.WorkspaceStorageHandlerSpec{
 		WorkspaceStorageService: services.WorkspaceStorageService,
+		AuthzClient:             authzClient,
 	})
 
 	workspaceHandler := handlers.NewWorkspaceHandler(handlers.WorkspaceHandlerSpec{
 		WorkspaceService:              services.WorkspaceService,
 		WorkspaceResourceService:      services.WorkspaceResourceService,
 		WorkspaceResourceBuildService: services.WorkspaceResourceBuildService,
+		AuthzClient:                   authzClient,
 	})
 
 	workspaceResourceHandler := handlers.NewWorkspaceResourceHandler(handlers.WorkspaceResourceHandlerSpec{
 		WorkspaceResourceService: services.WorkspaceResourceService,
 		WorkspaceService:         services.WorkspaceService,
+		AuthzClient:              authzClient,
 	})
 
 	workspaceResourceBuildHandler := handlers.NewWorkspaceResourceBuildHandler(handlers.WorkspaceResourceBuildHandlerSpec{
 		WorkspaceResourceService:     services.WorkspaceResourceService,
 		WorkspaceService:             services.WorkspaceService,
 		WorkspaceResouceBuildService: services.WorkspaceResourceBuildService,
+		AuthzClient:                  authzClient,
 	})
 
 	authenticationMiddleware := auth.NewAuthMiddleware(services.UserService)

@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	"github.com/golang-jwt/jwt"
@@ -22,6 +22,10 @@ type UserService interface {
 	Login(ctx context.Context, loginRequest *openapi.LoginRequest) (*openapi.LoginResponse, *errors.ServiceError)
 }
 
+type jwtClaimsBuilder interface {
+	BuildClaims(user *models.User, expirationTime time.Time) jwt.Claims
+}
+
 var _ UserService = &usersService{}
 
 func NewUserService(spec UserServiceSpec) UserService {
@@ -31,21 +35,27 @@ func NewUserService(spec UserServiceSpec) UserService {
 				SessionFactory: spec.SessionFactory,
 			},
 		),
-		logger:       spec.Logger,
-		jwtSecretKey: spec.JwtSecretKey,
+		logger:                  spec.Logger,
+		jwtSecretKey:            spec.JwtSecretKey,
+		resourceAccessPolicyMgr: spec.ResourceAccessPolicyManager,
+		jwtClaimsBuilder:        spec.JWTClaimsBuilder,
 	}
 }
 
 type UserServiceSpec struct {
-	SessionFactory db.SessionFactory
-	Logger         logger.Logger
-	JwtSecretKey   string
+	SessionFactory              db.SessionFactory
+	Logger                      logger.Logger
+	JwtSecretKey                string
+	ResourceAccessPolicyManager resourceaccess.ResourceAccessPolicyManager
+	JWTClaimsBuilder            jwtClaimsBuilder
 }
 
 type usersService struct {
-	userStore    stores.UserStore
-	logger       logger.Logger
-	jwtSecretKey string
+	userStore               stores.UserStore
+	logger                  logger.Logger
+	jwtSecretKey            string
+	resourceAccessPolicyMgr resourceaccess.ResourceAccessPolicyManager
+	jwtClaimsBuilder        jwtClaimsBuilder
 }
 
 func (u usersService) Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError) {
@@ -53,6 +63,9 @@ func (u usersService) Get(ctx context.Context, ID string) (*models.User, *errors
 }
 
 func (u usersService) Create(ctx context.Context, user *models.User) (*models.User, *errors.ServiceError) {
+	if len(user.Password) < 8 {
+		return nil, errors.BadRequest("password must be at least 8 characters")
+	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		u.logger.Errorf("failed to hash password, %s", err.Error())
@@ -62,7 +75,21 @@ func (u usersService) Create(ctx context.Context, user *models.User) (*models.Us
 	if len(user.Role) == 0 {
 		user.Role = models.UserRole
 	}
-	return u.userStore.Create(ctx, user)
+	createdUser, serr := u.userStore.Create(ctx, user)
+	if serr != nil {
+		return nil, serr
+	}
+
+	// TODO: Wrap user creation in a transaction so that we can rollback if policyAddErr is not nil.
+	if policyAddErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
+		createdUser.ID,
+		createdUser.Role.String(),
+		createdUser.OrganisationID,
+	); policyAddErr != nil {
+		u.logger.Errorf("failed to add policy for user: %s", policyAddErr.Error())
+		return nil, errors.GeneralError("failed to create user")
+	}
+	return createdUser, nil
 }
 
 func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequest) (*openapi.LoginResponse, *errors.ServiceError) {
@@ -79,13 +106,7 @@ func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequ
 		return nil, errors.GeneralError("failed to login")
 	}
 	expirationTime := time.Now().UTC().Add(10 * 24 * time.Hour)
-	claims := &auth.Claims{
-		UserID: userInDB.ID,
-		Role:   string(userInDB.Role),
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
-		},
-	}
+	claims := u.jwtClaimsBuilder.BuildClaims(userInDB, expirationTime)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, tokenErr := token.SignedString([]byte(u.jwtSecretKey))
 	if tokenErr != nil {

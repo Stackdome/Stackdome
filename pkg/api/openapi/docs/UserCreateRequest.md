@@ -8,6 +8,7 @@ Name | Type | Description | Notes
 **Username** | Pointer to **string** | User&#39;s username | [optional] 
 **Email** | **string** | User&#39;s email address | 
 **Password** | **string** | Users desired password | 
+**Role** | Pointer to [**UserRole**](UserRole.md) |  | [optional] 
 **Organisation** | Pointer to **string** | User&#39;s organisation | [optional] 
 **OrganisationId** | **string** | OrganisationID | 
 
@@ -114,6 +115,31 @@ and a boolean to check if the value has been set.
 
 SetPassword sets Password field to given value.
 
+
+### GetRole
+
+`func (o *UserCreateRequest) GetRole() UserRole`
+
+GetRole returns the Role field if non-nil, zero value otherwise.
+
+### GetRoleOk
+
+`func (o *UserCreateRequest) GetRoleOk() (*UserRole, bool)`
+
+GetRoleOk returns a tuple with the Role field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRole
+
+`func (o *UserCreateRequest) SetRole(v UserRole)`
+
+SetRole sets Role field to given value.
+
+### HasRole
+
+`func (o *UserCreateRequest) HasRole() bool`
+
+HasRole returns a boolean if a field has been set.
 
 ### GetOrganisation
 

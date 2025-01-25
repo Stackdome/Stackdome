@@ -23,7 +23,8 @@ type UserCreateRequest struct {
 	// User's email address
 	Email string `json:"email"`
 	// Users desired password
-	Password string `json:"password"`
+	Password string    `json:"password"`
+	Role     *UserRole `json:"Role,omitempty"`
 	// User's organisation
 	Organisation *string `json:"organisation,omitempty"`
 	// OrganisationID
@@ -155,6 +156,38 @@ func (o *UserCreateRequest) SetPassword(v string) {
 	o.Password = v
 }
 
+// GetRole returns the Role field value if set, zero value otherwise.
+func (o *UserCreateRequest) GetRole() UserRole {
+	if o == nil || o.Role == nil {
+		var ret UserRole
+		return ret
+	}
+	return *o.Role
+}
+
+// GetRoleOk returns a tuple with the Role field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *UserCreateRequest) GetRoleOk() (*UserRole, bool) {
+	if o == nil || o.Role == nil {
+		return nil, false
+	}
+	return o.Role, true
+}
+
+// HasRole returns a boolean if a field has been set.
+func (o *UserCreateRequest) HasRole() bool {
+	if o != nil && o.Role != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetRole gets a reference to the given UserRole and assigns it to the Role field.
+func (o *UserCreateRequest) SetRole(v UserRole) {
+	o.Role = &v
+}
+
 // GetOrganisation returns the Organisation field value if set, zero value otherwise.
 func (o *UserCreateRequest) GetOrganisation() string {
 	if o == nil || o.Organisation == nil {
@@ -224,6 +257,9 @@ func (o UserCreateRequest) MarshalJSON() ([]byte, error) {
 	}
 	if true {
 		toSerialize["password"] = o.Password
+	}
+	if o.Role != nil {
+		toSerialize["Role"] = o.Role
 	}
 	if o.Organisation != nil {
 		toSerialize["organisation"] = o.Organisation

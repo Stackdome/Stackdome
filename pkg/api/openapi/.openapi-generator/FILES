@@ -35,6 +35,7 @@ docs/ResourceStatus.md
 docs/SSHConfig.md
 docs/User.md
 docs/UserCreateRequest.md
+docs/UserRole.md
 docs/Volume.md
 docs/VolumeList.md
 docs/VolumeMount.md
@@ -91,6 +92,7 @@ model_resource_status.go
 model_ssh_config.go
 model_user.go
 model_user_create_request.go
+model_user_role.go
 model_volume.go
 model_volume_list.go
 model_volume_mount.go

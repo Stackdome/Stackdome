@@ -4,14 +4,17 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/config"
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/resourcebuild"
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspace"
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceresource"
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspacestorage"
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceuser"
+	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspacevolume"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
@@ -40,8 +43,9 @@ type developmentEnvironment struct {
 func NewDevelopmentEnvironment() EnvImpl {
 	return &developmentEnvironment{
 		Env: &Env{
-			Name:   "development",
-			Config: config.NewApplicationConfig(),
+			Name:            "development",
+			Config:          config.NewApplicationConfig(),
+			BootstrapConfig: config.NewBootstrapConfig(),
 		},
 	}
 }
@@ -76,7 +80,17 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create leadership flag: %w", err)
 	}
-
+	resourceAccessPolicyMgr, err := resourceaccess.NewResourceAccessPolicyManager(
+		resourceaccess.CasbinResourceAccessPolicyManagerConfig{
+			DBConnectionString:     d.Config.Database.ConnectionString(false),
+			EnableDebugLog:         true,
+			PolicyAutoLoadInterval: time.Minute,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create resource access policy manager: %w", err)
+	}
+	d.ResourceAccessPolicyManager = resourceAccessPolicyMgr
 	d.Services = d.loadSevices(logger)
 	d.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
 		LeadershipFlag: leadershipFlag,
@@ -143,10 +157,35 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 	d.Services.WorkspaceStorageService.InjectClusterResourceService(workspacestorageClusterResourceService)
 	d.Services.WorkspaceService.InjectClusterResourceService(clusterWorkspaceService)
 	d.ClusterManager.Start(ctx)
-
 	if err := d.initializeDefaultOrgAndCluster(ctx); err != nil {
 		return err
 	}
+
+	if err := d.initializeBaseResourceAccessPolicies(ctx); err != nil {
+		return err
+	}
+
+	// if err := d.createDefaultPlatformAdminUser(ctx); err != nil {
+	// 	return err
+	// }
+	return nil
+}
+
+func (d *developmentEnvironment) initializeBaseResourceAccessPolicies(ctx context.Context) error {
+	if err := d.ResourceAccessPolicyManager.AddPolicy(models.UserRole.String(), "*", "/*", "*", "self"); err != nil {
+		return fmt.Errorf("failed to add user policy: %w", err)
+	}
+
+	// Org admin policies
+	if err := d.ResourceAccessPolicyManager.AddPolicy(models.OrganisationAdminRole.String(), "*", "/*", "*", "*"); err != nil {
+		return fmt.Errorf("failed to add org admin policy: %w", err)
+	}
+
+	// Platform admin policies
+	if err := d.ResourceAccessPolicyManager.AddPolicy(models.PlatformAdminRole.String(), "*", "/*", "*", "*"); err != nil {
+		return fmt.Errorf("failed to add platform admin policy: %w", err)
+	}
+
 	return nil
 }
 
@@ -164,16 +203,16 @@ func (d *developmentEnvironment) initializeClients(ctx context.Context) error {
 func initializeClusterClient(cfg *config.ClusterConfig) (client.Client, error) {
 	cadata, err := base64.StdEncoding.DecodeString(cfg.ClusterCAData)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode cluster CA data: %w", err)
 	}
 	token, err := base64.StdEncoding.DecodeString(cfg.Token)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode cluster token: %w", err)
 	}
 
 	_, err = certutil.NewPoolFromBytes(cadata)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create cert pool: %w", err)
 	}
 
 	restConfig := &rest.Config{
@@ -209,11 +248,13 @@ func (d *developmentEnvironment) initializeDefaultOrgAndCluster(ctx context.Cont
 		SessionFactory: d.DBSession,
 	})
 
+	// TODO: Add cluster as a separate resource using a cluster CREATE API
+	// TODO: Add org as a separate resource using a org CREATE API or seed a default org during migration.
 	if _, err := orgStore.GetDefaultOrg(ctx); err != nil {
 		if err.Code == errors.ErrorNotFound {
 			desiredOrg := &models.Organisation{
-				Name:       d.Config.DefaultOrganisation.Name,
-				DomainName: d.Config.DefaultOrganisation.DomainName,
+				Name:       d.BootstrapConfig.DefaultOrganisation.Name,
+				DomainName: d.BootstrapConfig.DefaultOrganisation.DomainName,
 				Default:    true,
 			}
 			if _, err := orgStore.Create(ctx, desiredOrg); err != nil {
@@ -268,9 +309,11 @@ func (d *developmentEnvironment) InitDatabase(ctx context.Context) error {
 
 func (d *developmentEnvironment) loadSevices(logger logger.Logger) Services {
 	userService := services.NewUserService(services.UserServiceSpec{
-		SessionFactory: d.DBSession,
-		Logger:         logger,
-		JwtSecretKey:   d.Config.Server.JwtSecret,
+		SessionFactory:              d.DBSession,
+		Logger:                      logger,
+		JwtSecretKey:                d.Config.Server.JwtSecret,
+		ResourceAccessPolicyManager: d.ResourceAccessPolicyManager,
+		JWTClaimsBuilder:            auth.NewJWTClaimsBuilder(),
 	})
 
 	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{

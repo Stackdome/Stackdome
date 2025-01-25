@@ -873,8 +873,7 @@ components:
           type: string
           description: User's organisation
         role:
-          type: string
-          description: User's role
+          $ref: '#/components/schemas/UserRole'
         organisation_id:
           type: string
           description: OrganisationID
@@ -899,12 +898,20 @@ components:
         password:
           type: string
           description: Users desired password
+        Role:
+          $ref: '#/components/schemas/UserRole'
         organisation:
           type: string
           description: User's organisation
         organisation_id:
           type: string
           description: OrganisationID
+    UserRole:
+      type: string
+      enum:
+      - OrganisationAdmin
+      - PlatformAdmin
+      - User
     LoginRequest:
       type: object
       required:

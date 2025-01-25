@@ -18,6 +18,7 @@ type WorkspaceResourceBuild struct {
 	Status                *WorkspaceResourceBuildStatus `gorm:"type:jsonb"`
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
+	WorkspaceResource     *WorkspaceResource `gorm:"foreignKey:WorkspaceResourceID"`
 }
 
 type WorkspaceResourceBuildStatus struct {
