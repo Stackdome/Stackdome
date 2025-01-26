@@ -17,4 +17,6 @@ var MigrationList = []*gormigrate.Migration{
 	createResourceBuildsTable(),
 	addSourceVolumeTypeToVolumeMounts(),
 	addWorkspaceResourceNameToWorkspaceResourceBuilds(),
+	createDefaultOrganisation(),
+	addDefaultUserColumnToUsersTable(),
 }

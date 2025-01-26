@@ -188,16 +188,6 @@ func (a *ApplicationConfig) ReadEnvironmentVariables() {
 	if found {
 		a.Server.JwtSecret = secret
 	}
-
-	// defaultOrg, found := os.LookupEnv(DEFAULT_ORG_NAME_ENV)
-	// if found {
-	// 	a.DefaultOrganisation.Name = defaultOrg
-	// }
-
-	// defaultDomainName, found := os.LookupEnv(DEFAULT_DOMAIN)
-	// if found {
-	// 	a.DefaultOrganisation.DomainName = defaultDomainName
-	// }
 }
 
 func (c *DatabaseConfig) LogSafeConnectionString(withSSL bool) string {

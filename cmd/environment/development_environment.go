@@ -56,11 +56,13 @@ func (d *developmentEnvironment) Environment() *Env {
 
 func (d *developmentEnvironment) AddFlags(flags *pflag.FlagSet) error {
 	d.Config.AddFlags(flags)
+	d.BootstrapConfig.AddFlags(flags)
 	return setConfigDefaults(flags, d.defaultFlags())
 }
 
 func (d *developmentEnvironment) Init(ctx context.Context) error {
 	d.Config.ReadEnvironmentVariables()
+	d.BootstrapConfig.ReadEnvironmentVariables()
 	if err := d.Config.ReadConfigFiles(); err != nil {
 		return err
 	}
@@ -157,7 +159,17 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 	d.Services.WorkspaceStorageService.InjectClusterResourceService(workspacestorageClusterResourceService)
 	d.Services.WorkspaceService.InjectClusterResourceService(clusterWorkspaceService)
 	d.ClusterManager.Start(ctx)
-	if err := d.initializeDefaultOrgAndCluster(ctx); err != nil {
+
+	orgStore := pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+
+	defaultOrg, serr := orgStore.GetDefaultOrg(ctx)
+	if serr != nil {
+		return fmt.Errorf("failed to get default org: %s", serr.Error())
+	}
+
+	if err := d.initializeDefaultCluster(ctx, defaultOrg); err != nil {
 		return err
 	}
 
@@ -165,9 +177,36 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 		return err
 	}
 
-	// if err := d.createDefaultPlatformAdminUser(ctx); err != nil {
-	// 	return err
-	// }
+	if err := d.ensureDefaultPlatformAdminUser(ctx, defaultOrg); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *developmentEnvironment) ensureDefaultPlatformAdminUser(ctx context.Context, defaultOrg *models.Organisation) error {
+	_, err := d.Services.UserService.GetDefaultUser(ctx)
+	if err != nil {
+		if err.Code == errors.ErrorNotFound {
+			defaultUserInfo := d.BootstrapConfig.DefaultUser
+			if err := defaultUserInfo.Validate(); err != nil {
+				return fmt.Errorf("failed to validate default user info: %w", err)
+			}
+			defaultUser := &models.User{
+				Email:          defaultUserInfo.Email,
+				Role:           models.PlatformAdminRole,
+				Name:           defaultUserInfo.Name,
+				Password:       defaultUserInfo.Password,
+				Organisation:   defaultOrg.Name,
+				OrganisationID: defaultOrg.ID,
+				DefaultUser:    true,
+			}
+			if _, serr := d.Services.UserService.Create(ctx, defaultUser); serr != nil {
+				return fmt.Errorf("failed to create default user: %s", serr)
+			}
+			return nil
+		}
+		return fmt.Errorf("failed to get default user: %s", err)
+	}
 	return nil
 }
 
@@ -239,37 +278,13 @@ func initializeClusterClient(cfg *config.ClusterConfig) (client.Client, error) {
 	return clientset, nil
 }
 
-func (d *developmentEnvironment) initializeDefaultOrgAndCluster(ctx context.Context) error {
+func (d *developmentEnvironment) initializeDefaultCluster(ctx context.Context, defaultOrg *models.Organisation) error {
 	clusterStore := pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
-		SessionFactory: d.DBSession,
-	})
-
-	orgStore := pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
 		SessionFactory: d.DBSession,
 	})
 
 	// TODO: Add cluster as a separate resource using a cluster CREATE API
 	// TODO: Add org as a separate resource using a org CREATE API or seed a default org during migration.
-	if _, err := orgStore.GetDefaultOrg(ctx); err != nil {
-		if err.Code == errors.ErrorNotFound {
-			desiredOrg := &models.Organisation{
-				Name:       d.BootstrapConfig.DefaultOrganisation.Name,
-				DomainName: d.BootstrapConfig.DefaultOrganisation.DomainName,
-				Default:    true,
-			}
-			if _, err := orgStore.Create(ctx, desiredOrg); err != nil {
-				return fmt.Errorf("failed to create default org: %w", err)
-			}
-
-		} else {
-			return err
-		}
-	}
-
-	defaultOrg, err := orgStore.GetDefaultOrg(ctx)
-	if err != nil {
-		return err
-	}
 
 	if _, err := clusterStore.GetDefaultCluster(ctx); err != nil {
 		if err.Code == errors.ErrorNotFound {

@@ -28,11 +28,30 @@ type User struct {
 	Organisation   string
 	Role           Role
 	OrganisationID string
+	DefaultUser    bool
 }
 
 func (u *User) ClusterAccessRules() []rbacv1.PolicyRule {
 	switch u.Role {
 	case UserRole:
+		return []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods", "pods/log"},
+				Verbs:     []string{"get", "list"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods/exec", "pods/portforward"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"services"},
+				Verbs:     []string{"get"},
+			},
+		}
+	case PlatformAdminRole:
 		return []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
