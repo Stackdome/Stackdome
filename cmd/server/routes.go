@@ -23,6 +23,11 @@ func (s apiServer) routes() *mux.Router {
 		AuthzClient: authzClient,
 	})
 
+	organizationHandler := handlers.NewOrganisationHandler(handlers.OrganisationHandlerSpec{
+		OrganisationService: services.OrganisationService,
+		AuthzClient:         authzClient,
+	})
+
 	workspaceUserHandler := handlers.NewWorkspaceUserHandler(handlers.WorkspaceUserHandlerSpec{
 		WorkspaceUserService: services.WorkspaceUserService,
 		AuthzClient:          authzClient,
@@ -59,6 +64,12 @@ func (s apiServer) routes() *mux.Router {
 	userRouter := apiV1Router.PathPrefix("/users").Subrouter()
 	userRouter.HandleFunc("", userHandler.Create).Methods(http.MethodPost)
 	organizationsRouter := apiV1Router.PathPrefix("/organizations").Subrouter()
+	organizationsRouter.Use(authenticationMiddleware.AuthenticateUser)
+	organizationsRouter.HandleFunc("", organizationHandler.Create).Methods(http.MethodPost)
+	organizationsRouter.HandleFunc("/default", organizationHandler.GetDefault).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{id}", organizationHandler.GetByID).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{id}", organizationHandler.Update).Methods(http.MethodPut)
+
 	authenticatedUserRouter := userRouter.NewRoute().Subrouter()
 	authenticatedUserRouter.Use(authenticationMiddleware.AuthenticateUser)
 	authenticatedUserRouter.HandleFunc("/current", userHandler.GetCurrentUser).Methods(http.MethodGet)

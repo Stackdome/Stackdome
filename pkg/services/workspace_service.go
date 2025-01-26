@@ -29,6 +29,7 @@ type WorkspaceServiceSpec struct {
 	WorkspaceUserService    WorkspaceUserService
 	WorkspaceStorageService WorkspaceStorageService
 	ClusterService          ClusterService
+	OrganisationService     OrganisationService
 	Logger                  logger.Logger
 }
 
@@ -39,6 +40,7 @@ type workspaceService struct {
 	workspaceUserService    WorkspaceUserService
 	clusterResourceService  clusterresource.ClusterWorkspaceService
 	workspaceStorageService WorkspaceStorageService
+	organisationService     OrganisationService
 }
 
 func NewWorkspaceService(spec WorkspaceServiceSpec) WorkspaceService {
@@ -48,6 +50,7 @@ func NewWorkspaceService(spec WorkspaceServiceSpec) WorkspaceService {
 		}),
 		workspaceUserService:    spec.WorkspaceUserService,
 		workspaceStorageService: spec.WorkspaceStorageService,
+		organisationService:     spec.OrganisationService,
 		logger:                  spec.Logger,
 		sessionFactory:          spec.SessionFactory,
 	}
@@ -71,6 +74,15 @@ func (s *workspaceService) CreateWorkspace(ctx context.Context, spec *models.Wor
 
 	for i := range spec.WorkspaceResources {
 		spec.WorkspaceResources[i].UserID = spec.UserID
+	}
+
+	organisation, err := s.organisationService.Get(ctx, spec.OrganisationID)
+	if err != nil {
+		return nil, errors.GeneralError("failed to get organisation '%s': %s", spec.OrganisationID, err.Error())
+	}
+
+	if len(organisation.DomainName) == 0 {
+		return nil, errors.BadRequest("domain name is not defined for organisation '%s'", spec.OrganisationID)
 	}
 
 	if spec.HasVolumeMounts() {

@@ -79,6 +79,9 @@ All URIs are relative to *http://localhost*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *DefaultApi* | [**ApiV1AuthLoginPost**](docs/DefaultApi.md#apiv1authloginpost) | **Post** /api/v1/auth/login | User login
+*DefaultApi* | [**ApiV1OrganizationsDefaultGet**](docs/DefaultApi.md#apiv1organizationsdefaultget) | **Get** /api/v1/organizations/default | Get the default organization
+*DefaultApi* | [**ApiV1OrganizationsIdGet**](docs/DefaultApi.md#apiv1organizationsidget) | **Get** /api/v1/organizations/{id} | Get an organization
+*DefaultApi* | [**ApiV1OrganizationsIdPut**](docs/DefaultApi.md#apiv1organizationsidput) | **Put** /api/v1/organizations/{id} | Update an organization
 *DefaultApi* | [**ApiV1OrganizationsIdWorkspaceStoragesGet**](docs/DefaultApi.md#apiv1organizationsidworkspacestoragesget) | **Get** /api/v1/organizations/{id}/workspace-storages | List all WorkspaceStorage objects for an organization
 *DefaultApi* | [**ApiV1OrganizationsIdWorkspaceStoragesPost**](docs/DefaultApi.md#apiv1organizationsidworkspacestoragespost) | **Post** /api/v1/organizations/{id}/workspace-storages | Create a new WorkspaceStorage object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragescurrentget) | **Get** /api/v1/organizations/{org_id}/workspace-storages/current | List all WorkspaceStorage objects for the current user
@@ -98,6 +101,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources | List all WorkspaceResources for a Workspace
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesidbuildsget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id}/builds | List all builds for a WorkspaceResource
 *DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesidput) | **Put** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id} | Update a WorkspaceResource
+*DefaultApi* | [**ApiV1OrganizationsPost**](docs/DefaultApi.md#apiv1organizationspost) | **Post** /api/v1/organizations | Create a new organization
 *DefaultApi* | [**ApiV1UsersCurrentGet**](docs/DefaultApi.md#apiv1userscurrentget) | **Get** /api/v1/users/current | Get a the current authenticated user
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
 *DefaultApi* | [**ApiV1UsersPost**](docs/DefaultApi.md#apiv1userspost) | **Post** /api/v1/users | Create new user
@@ -131,6 +135,7 @@ Class | Method | HTTP request | Description
  - [LoginRequest](docs/LoginRequest.md)
  - [LoginResponse](docs/LoginResponse.md)
  - [ObjectReference](docs/ObjectReference.md)
+ - [Organisation](docs/Organisation.md)
  - [Port](docs/Port.md)
  - [PrebuiltConfig](docs/PrebuiltConfig.md)
  - [ResourceBuildStatus](docs/ResourceBuildStatus.md)

@@ -26,6 +26,9 @@ const (
 
 	// WorkspaceUser
 	WorkspaceUserResource AuthorizableResource = "WorkspaceUser"
+
+	// Organisation
+	OrganisationResource AuthorizableResource = "Organisation"
 )
 
 type AuthorizationClient interface {

@@ -11,4 +11,5 @@ type UserStore interface {
 	Create(ctx context.Context, user *models.User) (*models.User, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.User, *errors.ServiceError)
 	GetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError)
+	GetDefaultUser(ctx context.Context) (*models.User, *errors.ServiceError)
 }

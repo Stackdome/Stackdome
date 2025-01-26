@@ -160,7 +160,7 @@ func (s *workspaceUserClusterResourceService) desiredObjectInCluster(user *model
 			},
 		},
 		Spec: workspacev1alpha1.WorkspaceUserSpec{
-			Username:    user.Name,
+			Username:    SanitizedString(user.Name),
 			Namespaces:  getNamespaces(workspaceUser),
 			AccessRules: accessRules,
 		},
@@ -177,6 +177,10 @@ func WorkspaceUserClusterObjectName(user *models.User) string {
 	objectName := fmt.Sprintf("%s-%s", sanitizedName, user.ID)
 	// Ensure the object name meets the Kubernetes requirements
 	return truncateObjectName(objectName)
+}
+
+func SanitizedString(s string) string {
+	return truncateObjectName(sanitizeName(s))
 }
 
 func getNamespaces(workspaceUser *models.WorkspaceUser) []string {

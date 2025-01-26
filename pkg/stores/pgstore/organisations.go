@@ -70,3 +70,15 @@ func (d dbOrganisationStore) Delete(ctx context.Context, id string) *errors.Serv
 	}
 	return nil
 }
+
+func (d dbOrganisationStore) Update(ctx context.Context, id string, org *models.Organisation) (*models.Organisation, *errors.ServiceError) {
+	grm := d.sessionFactory.New(ctx)
+	err := grm.Model(&models.Organisation{}).Where("id = ?", id).Updates(org).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.NotFound("organisation with id '%s' not found", id)
+		}
+		return nil, errors.GeneralError("failed to update organisation: %s", err.Error())
+	}
+	return d.Get(ctx, id)
+}

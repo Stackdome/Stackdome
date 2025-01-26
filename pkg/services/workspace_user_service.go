@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
@@ -192,9 +194,7 @@ func (s *workspaceUserService) Delete(ctx context.Context, ID string) *errors.Se
 
 func (s *workspaceUserService) setNamespacesForCreate(spec *models.WorkspaceUser, user *models.User) {
 	for i := range spec.WorkspaceNamespaces {
-		namespaceUUID := uuid.NewString()
-		namespaceString := fmt.Sprintf("%s-%s", user.Name, namespaceUUID)
-		spec.WorkspaceNamespaces[i].Namespace = namespaceString
+		spec.WorkspaceNamespaces[i].Namespace = buildNamepaceForUser(user)
 		spec.WorkspaceNamespaces[i].Enabled = true
 	}
 }
@@ -208,10 +208,38 @@ func (s *workspaceUserService) setNamespacesForUpdate(spec *models.WorkspaceUser
 		if ns, ok := exitingWorkspaceNamespaceMap[ws.Workspace]; ok {
 			spec.WorkspaceNamespaces[i].Namespace = ns
 		} else {
-			namespaceUUID := uuid.NewString()
-			namespaceString := fmt.Sprintf("%s-%s", user.Name, namespaceUUID)
-			spec.WorkspaceNamespaces[i].Namespace = namespaceString
+			spec.WorkspaceNamespaces[i].Namespace = buildNamepaceForUser(user)
 		}
 		spec.WorkspaceNamespaces[i].Enabled = true
 	}
+}
+
+func buildNamepaceForUser(user *models.User) string {
+	namespaceUUID := uuid.NewString()
+	return k8sValidString(fmt.Sprintf("%s-%s", user.Name, namespaceUUID))
+}
+
+func k8sValidString(name string) string {
+	// Replace spaces and special characters with hyphens
+	reg := regexp.MustCompile(`[^a-zA-Z0-9-]`)
+	sanitized := reg.ReplaceAllString(name, "-")
+
+	// remove all spaces
+	sanitized = strings.ReplaceAll(sanitized, " ", "")
+	// Remove leading and trailing hyphens
+	sanitized = strings.TrimPrefix(sanitized, "-")
+	sanitized = strings.TrimSuffix(sanitized, "-")
+
+	return truncateObjectName(strings.ToLower(sanitized))
+}
+
+func truncateObjectName(name string) string {
+	// Truncate the object name if it exceeds the maximum length
+	maxLength := 63
+	if len(name) > maxLength {
+		name = name[:maxLength]
+	}
+
+	name = strings.TrimSuffix(name, "-")
+	return name
 }

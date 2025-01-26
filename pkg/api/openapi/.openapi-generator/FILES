@@ -28,6 +28,7 @@ docs/LocalSource.md
 docs/LoginRequest.md
 docs/LoginResponse.md
 docs/ObjectReference.md
+docs/Organisation.md
 docs/Port.md
 docs/PrebuiltConfig.md
 docs/ResourceBuildStatus.md
@@ -85,6 +86,7 @@ model_local_source.go
 model_login_request.go
 model_login_response.go
 model_object_reference.go
+model_organisation.go
 model_port.go
 model_prebuilt_config.go
 model_resource_build_status.go

@@ -26,6 +26,9 @@ func NewUserStore(spec UserStoreSpec) stores.UserStore {
 
 func (d dbUserStore) Create(ctx context.Context, user *models.User) (*models.User, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
+	if user.DefaultUser && user.Role != models.PlatformAdminRole {
+		return nil, errors.GeneralError("default user must have role %s", models.PlatformAdminRole)
+	}
 	err := grm.Create(&user).Error
 	if err != nil {
 		return nil, errors.GeneralError("failed to create user: %s", err.Error())
@@ -55,6 +58,18 @@ func (d dbUserStore) GetByEmail(ctx context.Context, email string) (*models.User
 			return nil, errors.NotFound("user with email '%s' not found", email)
 		}
 		return nil, errors.GeneralError("failed to fetch user: %s", err.Error())
+	}
+	return &user, nil
+}
+
+func (d dbUserStore) GetDefaultUser(ctx context.Context) (*models.User, *errors.ServiceError) {
+	grm := d.sessionFactory.New(ctx)
+	var user models.User
+	if err := grm.Model(&models.User{}).Where("default_user = ?", true).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.NotFound("default user not found")
+		}
+		return nil, errors.GeneralError("failed to fetch default user: %s", err.Error())
 	}
 	return &user, nil
 }

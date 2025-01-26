@@ -363,6 +363,7 @@ func (d *developmentEnvironment) loadSevices(logger logger.Logger) Services {
 		Logger:                  logger,
 		WorkspaceUserService:    workspaceUserService,
 		WorkspaceStorageService: workspaceStorageService,
+		OrganisationService:     organisationService,
 	})
 
 	workspaceResourceService := services.NewWorkspaceResourceService(services.WorkspaceResourceServiceSpec{

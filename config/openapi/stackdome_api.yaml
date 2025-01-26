@@ -132,6 +132,146 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/organizations/default:
+    get:
+      security:
+        - Bearer: []
+      summary: Get the default organization
+      description: Get the default organization
+      responses:
+        '200':
+          description: Default organization fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organisation'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Auth token is invalid
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthorized to perform operation
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}:
+    get:
+      security:
+        - Bearer: []
+      summary: Get an organization
+      description: Get an organization
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Organization fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organisation'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Auth token is invalid
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthorized to perform operation
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      security:
+        - Bearer: []
+      summary: Update an organization
+      description: Update an organization
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Organisation'
+      responses:
+        '200':
+          description: Organization updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organisation'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Auth token is invalid
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthorized to perform operation
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations:
+    post:
+      security:
+        - Bearer: []
+      summary: Create a new organization
+      description: Create a new organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Organisation'
+      responses:
+        '201':
+          description: Organization created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organisation'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Auth token is invalid
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthorized to perform operation
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/v1/workspace-users:
     post:
       summary: Create a new workspace user object.
@@ -853,6 +993,26 @@ components:
         type: string
       description: The ID of the workspace
   schemas:
+    Organisation:
+      type: object
+      required:
+        - name
+        - domain_name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        domain_name:
+          type: string
+        is_default:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     User:
       type: object
       properties:

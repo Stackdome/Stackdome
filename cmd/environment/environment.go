@@ -49,3 +49,11 @@ type Services struct {
 	WorkspaceResourceService      services.WorkspaceResourceService
 	WorkspaceResourceBuildService services.ResourceBuildService
 }
+
+func (s Services) GetUserService() services.UserService {
+	return s.UserService
+}
+
+func (s Services) GetOrganisationService() services.OrganisationService {
+	return s.OrganisationService
+}

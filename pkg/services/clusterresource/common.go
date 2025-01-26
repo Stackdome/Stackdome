@@ -35,7 +35,7 @@ func sanitizeName(name string) string {
 	sanitized = strings.TrimPrefix(sanitized, "-")
 	sanitized = strings.TrimSuffix(sanitized, "-")
 
-	return strings.ToLower(sanitized)
+	return truncateObjectName(strings.ToLower(sanitized))
 }
 
 func truncateObjectName(name string) string {
