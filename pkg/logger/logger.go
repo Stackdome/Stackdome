@@ -2,9 +2,8 @@ package logger
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 )
 
 type Logger interface {
@@ -39,6 +38,9 @@ type Logger interface {
 	Error(ctx context.Context, format string, args ...interface{})
 
 	Errorf(format string, args ...interface{})
+	Debugf(format string, args ...interface{})
+	Fatalf(format string, args ...interface{})
+	Warnf(format string, args ...interface{})
 
 	// Fatal sends to the log an error message formatted using the fmt.Sprintf function and the
 	// given format and arguments; and then executes an os.Exit(1)
@@ -46,96 +48,138 @@ type Logger interface {
 	Fatal(ctx context.Context, format string, args ...interface{})
 }
 
-var _ Logger = &logger{}
+var _ Logger = &appLogger{}
 
-type logger struct {
-	debug   bool
-	prefix  string
-	context context.Context
+type appLogger struct {
+	debug  bool
+	prefix string
+	logger *logrus.Logger
 }
 
-// NewOCMLogger creates a new logger instance with a default verbosity of 1
-func NewLogger(ctx context.Context) Logger {
-	logger := &logger{
-		context: ctx,
-		prefix:  "",
+// NewLogger creates a new logger instance with standard configuration
+func NewLogger() Logger {
+	l := logrus.New()
+	// Set default formatter with timestamps and full log level names
+	l.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02 15:04:05",
+		DisableQuote:    true,
+	})
+	return &appLogger{
+		prefix: "",
+		logger: l,
 	}
-	return logger
 }
 
 func NewLoggerWithPrefix(ctx context.Context, prefix string) Logger {
-	logger := &logger{
-		context: ctx,
-		prefix:  prefix,
+	l := logrus.New()
+	l.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02 15:04:05",
+		DisableQuote:    true,
+	})
+	return &appLogger{
+		prefix: prefix,
+		logger: l,
 	}
-	return logger
 }
 
 func NewLoggerWithDebug(ctx context.Context) Logger {
-	logger := &logger{
-		context: ctx,
-		debug:   true,
-	}
-	return logger
-}
-
-func (l *logger) WithPrefix(input string) string {
-	if len(l.prefix) > 0 {
-		return fmt.Sprintf("%s: %s", l.prefix, input)
-	}
-	return input
-}
-
-func (l *logger) Infof(message string, args ...interface{}) {
-	glog.Infof(l.WithPrefix(message), args...)
-}
-
-func (l *logger) Info(ctx context.Context, message string, args ...any) {
-	glog.Infof(l.WithPrefix(message), args...)
-}
-
-func (l *logger) Warning(message string) {
-	glog.Warningf(l.WithPrefix(message))
-}
-
-func (l *logger) Warnf(message string, args ...any) {
-	glog.Warningf(l.WithPrefix(message), args...)
-}
-
-func (l *logger) Error(ctx context.Context, message string, args ...any) {
-	glog.Errorf(l.WithPrefix(message), args...)
-}
-
-func (l *logger) Errorf(message string, args ...any) {
-	glog.Errorf(l.WithPrefix(message), args...)
-}
-
-func (l *logger) Fatal(ctx context.Context, message string, args ...any) {
-	glog.Fatalf(l.WithPrefix(message), args...)
-}
-
-func (l *logger) DebugEnabled() bool {
-	return l.debug
-}
-
-func (l *logger) InfoEnabled() bool {
-	return true
-}
-
-func (l *logger) WarnEnabled() bool {
-	return true
-}
-
-func (l *logger) ErrorEnabled() bool {
-	return true
-}
-
-func (l *logger) Debug(ctx context.Context, format string, args ...interface{}) {
-	if l.debug {
-		glog.Infof(l.WithPrefix(format), args...)
+	l := logrus.New()
+	l.SetLevel(logrus.DebugLevel)
+	l.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02 15:04:05",
+		DisableQuote:    true,
+	})
+	return &appLogger{
+		debug:  true,
+		prefix: "",
+		logger: l,
 	}
 }
 
-func (l *logger) Warn(ctx context.Context, format string, args ...interface{}) {
-	glog.Warningf(l.WithPrefix(format), args...)
+// withFields adds consistent fields to all log entries
+func (l *appLogger) withFields(ctx context.Context) *logrus.Entry {
+	fields := logrus.Fields{}
+	if l.prefix != "" {
+		fields["component"] = l.prefix
+	}
+	// You can add more context-based fields here, like:
+	// - Request ID from context
+	// - Correlation ID
+	// - User info
+	return l.logger.WithFields(fields)
+}
+
+func (l *appLogger) DebugEnabled() bool {
+	return l.logger.IsLevelEnabled(logrus.DebugLevel)
+}
+
+func (l *appLogger) InfoEnabled() bool {
+	return l.logger.IsLevelEnabled(logrus.InfoLevel)
+}
+
+func (l *appLogger) WarnEnabled() bool {
+	return l.logger.IsLevelEnabled(logrus.WarnLevel)
+}
+
+func (l *appLogger) ErrorEnabled() bool {
+	return l.logger.IsLevelEnabled(logrus.ErrorLevel)
+}
+
+func (l *appLogger) Debug(ctx context.Context, format string, args ...interface{}) {
+	if l.DebugEnabled() {
+		l.withFields(ctx).Debugf(format, args...)
+	}
+}
+
+func (l *appLogger) Infof(format string, args ...interface{}) {
+	// For backwards compatibility with methods that don't have context
+	l.logger.WithFields(logrus.Fields{
+		"component": l.prefix,
+	}).Infof(format, args...)
+}
+
+func (l *appLogger) Warnf(format string, args ...interface{}) {
+	// For backwards compatibility with methods that don't have context
+	l.logger.WithFields(logrus.Fields{
+		"component": l.prefix,
+	}).Warnf(format, args...)
+}
+
+func (l *appLogger) Errorf(format string, args ...interface{}) {
+	// For backwards compatibility with methods that don't have context
+	l.logger.WithFields(logrus.Fields{
+		"component": l.prefix,
+	}).Errorf(format, args...)
+}
+
+func (l *appLogger) Debugf(format string, args ...interface{}) {
+	// For backwards compatibility with methods that don't have context
+	l.logger.WithFields(logrus.Fields{
+		"component": l.prefix,
+	}).Debugf(format, args...)
+}
+
+func (l *appLogger) Fatalf(format string, args ...interface{}) {
+	l.logger.WithFields(logrus.Fields{
+		"component": l.prefix,
+	}).Fatalf(format, args...)
+}
+
+func (l *appLogger) Info(ctx context.Context, format string, args ...interface{}) {
+	l.withFields(ctx).Infof(format, args...)
+}
+
+func (l *appLogger) Warn(ctx context.Context, format string, args ...interface{}) {
+	l.withFields(ctx).Warnf(format, args...)
+}
+
+func (l *appLogger) Error(ctx context.Context, format string, args ...interface{}) {
+	l.withFields(ctx).Errorf(format, args...)
+}
+
+func (l *appLogger) Fatal(ctx context.Context, format string, args ...interface{}) {
+	l.withFields(ctx).Fatalf(format, args...)
 }

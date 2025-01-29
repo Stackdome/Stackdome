@@ -1,16 +1,7 @@
 package config
 
 import (
-	"flag"
 	"os"
-
-	"github.com/spf13/pflag"
-)
-
-const (
-	DefaultUserEmailEnv    = "DEFAULT_USER_EMAIL"
-	DefaultUserNameEnv     = "DEFAULT_USER_NAME"
-	DefaultUserPasswordEnv = "DEFAULT_USER_PASSWORD"
 )
 
 var (
@@ -28,9 +19,11 @@ func (e *ConfigError) Error() string {
 }
 
 type BootstrapConfig struct {
-	// Created during migration.
-	// DefaultOrganisation *DefaultOrganisationConfig
 	DefaultUser *DefaultPlatformAdminConfig
+}
+
+func (b *BootstrapConfig) Validate() error {
+	return b.DefaultUser.Validate()
 }
 
 type DefaultPlatformAdminConfig struct {
@@ -52,11 +45,6 @@ func (d *DefaultPlatformAdminConfig) Validate() error {
 	return nil
 }
 
-type DefaultOrganisationConfig struct {
-	Name       string
-	DomainName string
-}
-
 func NewBootstrapConfig() *BootstrapConfig {
 	return &BootstrapConfig{
 		DefaultUser: &DefaultPlatformAdminConfig{
@@ -66,25 +54,18 @@ func NewBootstrapConfig() *BootstrapConfig {
 	}
 }
 
-func (b *BootstrapConfig) AddFlags(fs *pflag.FlagSet) {
-	fs.AddGoFlagSet(flag.CommandLine)
-	fs.StringVar(&b.DefaultUser.Email, "default-user-email", b.DefaultUser.Email, "Default user email")
-	fs.StringVar(&b.DefaultUser.Name, "default-user-name", b.DefaultUser.Name, "Default user name")
-	fs.StringVar(&b.DefaultUser.Password, "default-user-password", b.DefaultUser.Password, "Default user password")
-}
-
-func (b *BootstrapConfig) ReadEnvironmentVariables() {
-	defaultUserEmail, found := os.LookupEnv(DefaultUserEmailEnv)
+func (b *BootstrapConfig) LoadEnvVariables() {
+	defaultUserEmail, found := os.LookupEnv(DEFAULT_USER_EMAIL)
 	if found {
 		b.DefaultUser.Email = defaultUserEmail
 	}
 
-	defaultUserName, found := os.LookupEnv(DefaultUserNameEnv)
+	defaultUserName, found := os.LookupEnv(DEFAULT_USER_NAME)
 	if found {
 		b.DefaultUser.Name = defaultUserName
 	}
 
-	defaultUserPassword, found := os.LookupEnv(DefaultUserPasswordEnv)
+	defaultUserPassword, found := os.LookupEnv(DEFAULT_USER_PASS)
 	if found {
 		b.DefaultUser.Password = defaultUserPassword
 	}

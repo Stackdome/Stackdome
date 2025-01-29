@@ -1,26 +1,67 @@
 package config
 
 import (
-	"flag"
 	"fmt"
 	"os"
-
-	"github.com/spf13/pflag"
-	"gopkg.in/yaml.v2"
+	"strconv"
 )
 
+type SSLMode string
+
 const (
-	JWT_SECRET_ENV       string = "JWT_KEY"
-	DEFAULT_ORG_NAME_ENV string = "DEFAULT_ORG_NAME"
-	DEFAULT_DOMAIN       string = "DEFAULT_DOMAIN"
+	DBSSLModeDisable SSLMode = "disable"
+	DBSSLModeRequire SSLMode = "require"
 )
 
 type ApplicationConfig struct {
-	Server                *ServerConfig   `json:"server"`
-	Database              *DatabaseConfig `json:"database"`
-	ClusterConfigFilePath string
-	ClusterConfig         *ClusterConfig
-	Debug                 bool `json:"debug"`
+	Server        *ServerConfig   `json:"server"`
+	Database      *DatabaseConfig `json:"database"`
+	ClusterConfig *ClusterConfig
+	JwtSecret     string `json:"jwt_secret"`
+	LogLevel      string `json:"log_level"`
+}
+
+func (c *ApplicationConfig) LoadEnvVariables() {
+	c.Server.LoadEnvVariables()
+	c.Database.LoadEnvVariables()
+	c.ClusterConfig.LoadEnvVariables()
+
+	val, found := os.LookupEnv(JWT_SECRET)
+	if found {
+		c.JwtSecret = val
+	}
+
+	val, found = os.LookupEnv(LOG_LEVEL)
+	if found {
+		c.LogLevel = val
+	}
+}
+
+func (c *ApplicationConfig) Validate() error {
+	validateFuncs := []func() error{
+		c.Server.Validate,
+		c.Database.Validate,
+		c.ClusterConfig.Validate,
+		func() error {
+			if c.JwtSecret == "" {
+				return fmt.Errorf("jwt secret is required")
+			}
+			return nil
+		},
+		func() error {
+			if c.LogLevel == "" {
+				return fmt.Errorf("log level is required")
+			}
+			return nil
+		},
+	}
+
+	for _, f := range validateFuncs {
+		if err := f(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type ClusterConfig struct {
@@ -30,15 +71,95 @@ type ClusterConfig struct {
 	Token         string `yaml:"token"`
 }
 
+func (c *ClusterConfig) Validate() error {
+	if c.Name == "" {
+		return fmt.Errorf("cluster name is required")
+	}
+
+	if c.ClusterURL == "" {
+		return fmt.Errorf("cluster url is required")
+	}
+
+	if c.ClusterCAData == "" {
+		return fmt.Errorf("cluster ca data is required")
+	}
+
+	if c.Token == "" {
+		return fmt.Errorf("cluster token is required")
+	}
+
+	return nil
+}
+
+func (c *ClusterConfig) LoadEnvVariables() {
+	val, found := os.LookupEnv(DEFAULT_CLUSTER_NAME)
+	if found {
+		c.Name = val
+	}
+
+	val, found = os.LookupEnv(DEFAULT_CLUSTER_API_URL)
+	if found {
+		c.ClusterURL = val
+	}
+
+	val, found = os.LookupEnv(DEFAULT_CLUSTER_CA_DATA)
+	if found {
+		c.ClusterCAData = val
+	}
+
+	val, found = os.LookupEnv(DEFAULT_CLUSTER_TOKEN)
+	if found {
+		c.Token = val
+	}
+}
+
 type DatabaseConfig struct {
-	Dialect            string `json:"dialect"`
-	SSLMode            string `json:"sslmode"`
+	Dialect            string  `json:"dialect"`
+	SSLMode            SSLMode `json:"sslmode"`
 	RootCertFile       string
 	Debug              bool `json:"debug"`
 	MaxOpenConnections int  `json:"max_connections"`
-
-	DatabaseConfigFile string `json:"database_config_file"`
 	DBConnectionConfig
+}
+
+func (c *DatabaseConfig) Validate() error {
+	if c.Dialect == "" {
+		return fmt.Errorf("dialect is required")
+	}
+
+	if c.SSLMode == "" {
+		return fmt.Errorf("sslmode is required")
+	}
+
+	if c.SSLMode == DBSSLModeRequire && c.RootCertFile == "" {
+		return fmt.Errorf("root_cert_file is required when sslmode is require")
+	}
+
+	if c.MaxOpenConnections == 0 {
+		return fmt.Errorf("max_connections is required")
+	}
+
+	if c.Host == "" {
+		return fmt.Errorf("host is required")
+	}
+
+	if c.Port == 0 {
+		return fmt.Errorf("port is required")
+	}
+
+	if c.Name == "" {
+		return fmt.Errorf("name is required")
+	}
+
+	if c.Username == "" {
+		return fmt.Errorf("username is required")
+	}
+
+	if c.Password == "" {
+		return fmt.Errorf("password is required")
+	}
+
+	return nil
 }
 
 type DBConnectionConfig struct {
@@ -54,22 +175,20 @@ func NewApplicationConfig() *ApplicationConfig {
 		Server:        NewServerConfig(),
 		Database:      NewDatabaseConfig(),
 		ClusterConfig: &ClusterConfig{},
+		LogLevel:      "info",
 	}
 }
 
-func (c *ApplicationConfig) AddFlags(flagset *pflag.FlagSet) {
-	flagset.AddGoFlagSet(flag.CommandLine)
-	flagset.StringVar(&c.ClusterConfigFilePath, "cluster-config-file", c.ClusterConfigFilePath, "cluster config file path")
-	c.Server.AddFlags(flagset)
-	c.Database.AddFlags(flagset)
-	c.ClusterConfig.AddFlags(flagset)
+type ServerConfig struct {
+	Hostname    string `json:"hostname"`
+	BindAddress string `json:"bind_address"`
 }
 
-type ServerConfig struct {
-	Hostname          string `json:"hostname"`
-	BindAddress       string `json:"bind_address"`
-	JwtSecret         string `json:"jwt_secret"`
-	JwtSecretFilePath string `json:"jwt_secret_file_path"`
+func (c *ServerConfig) Validate() error {
+	if c.BindAddress == "" {
+		return fmt.Errorf("bind_address is required")
+	}
+	return nil
 }
 
 func NewServerConfig() *ServerConfig {
@@ -78,11 +197,16 @@ func NewServerConfig() *ServerConfig {
 		BindAddress: "0.0.0.0:8000",
 	}
 }
+func (c *ServerConfig) LoadEnvVariables() {
+	val, found := os.LookupEnv(SERVER_HOSTNAME)
+	if found {
+		c.Hostname = val
+	}
 
-func (s *ServerConfig) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&s.BindAddress, "api-server-bindaddress", s.BindAddress, "API server bind adddress")
-	fs.StringVar(&s.Hostname, "api-server-hostname", s.Hostname, "Server's public hostname")
-	fs.StringVar(&s.JwtSecretFilePath, "jwt-secret-file", s.JwtSecretFilePath, "File containing the jwt secret")
+	val, found = os.LookupEnv(SERVER_BIND_ADDRESS)
+	if found {
+		c.BindAddress = val
+	}
 }
 
 func NewDatabaseConfig() *DatabaseConfig {
@@ -94,25 +218,75 @@ func NewDatabaseConfig() *DatabaseConfig {
 	}
 }
 
-func (c *DatabaseConfig) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&c.DatabaseConfigFile, "db-config-file", c.DatabaseConfigFile, "Database root certificate file")
-	fs.StringVar(&c.SSLMode, "db-sslmode", c.SSLMode, "Database ssl mode (disable | require | verify-ca | verify-full)")
-	fs.BoolVar(&c.Debug, "enable-db-debug", c.Debug, " framework's debug mode")
-	fs.IntVar(&c.MaxOpenConnections, "db-max-open-connections", c.MaxOpenConnections, "Maximum open DB connections for this instance")
+func (c *DatabaseConfig) LoadEnvVariables() {
+	val, found := os.LookupEnv(DB_SSL_MODE)
+	if found {
+		if val == string(DBSSLModeDisable) || val == string(DBSSLModeRequire) {
+			c.SSLMode = SSLMode(val)
+		}
+	}
+
+	val, found = os.LookupEnv(DB_MAX_CONNECTIONS)
+	if found {
+		// convert string to int
+		maxConns, err := strconv.Atoi(val)
+		if err == nil {
+			c.MaxOpenConnections = maxConns
+		}
+		// TODO: log error
+	}
+
+	val, found = os.LookupEnv(DB_HOST)
+	if found {
+		c.Host = val
+	}
+
+	val, found = os.LookupEnv(DB_PORT)
+	if found {
+		// convert string to int
+		port, err := strconv.Atoi(val)
+		if err == nil {
+			c.Port = port
+		}
+		// TODO: log error
+	}
+
+	val, found = os.LookupEnv(DB_NAME)
+	if found {
+		c.Name = val
+	}
+
+	val, found = os.LookupEnv(DB_USERNAME)
+	if found {
+		c.Username = val
+	}
+
+	val, found = os.LookupEnv(DB_PASSWORD)
+	if found {
+		c.Password = val
+	}
+
+	val, found = os.LookupEnv(DB_ROOT_CERT_FILE)
+	if found {
+		c.RootCertFile = val
+	}
+
+	val, found = os.LookupEnv(DB_DEBUG_MODE)
+	if found {
+		// convert string to bool
+		debugMode, err := strconv.ParseBool(val)
+		if err == nil {
+			c.Debug = debugMode
+		}
+		// TODO: log error
+	}
 }
 
-func (c *ClusterConfig) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&c.Name, "cluster-name", c.Name, "Name of the cluster")
-	fs.StringVar(&c.ClusterURL, "cluster-url", c.ClusterURL, "cluster api server url")
-}
-
-// func (c *OrganisationConfig) AddFlags(fs *pflag.FlagSet) {
-// 	fs.StringVar(&c.Name, "default-org-name", c.Name, "Name of the default organisation")
-// 	fs.StringVar(&c.DomainName, "default-domain", c.DomainName, "Domain name for the default organisation")
-// }
-
-func (c *DatabaseConfig) ConnectionString(withSSL bool) string {
-	return c.ConnectionStringWithName(c.Name, withSSL)
+func (c *DatabaseConfig) ConnectionString() string {
+	if c.SSLMode == DBSSLModeRequire {
+		return c.ConnectionStringWithName(c.Name, true)
+	}
+	return c.ConnectionStringWithName(c.Name, false)
 }
 
 func (c *DatabaseConfig) ConnectionStringWithName(name string, withSSL bool) string {
@@ -130,64 +304,6 @@ func (c *DatabaseConfig) ConnectionStringWithName(name string, withSSL bool) str
 	}
 
 	return cmd
-}
-
-func (a *ApplicationConfig) ReadConfigFiles() error {
-	if len(a.Database.DatabaseConfigFile) != 0 {
-		data, err := os.ReadFile(a.Database.DatabaseConfigFile)
-		if err != nil {
-			return fmt.Errorf("error reading YAML file: %v", err)
-		}
-
-		var config DBConnectionConfig
-		err = yaml.UnmarshalStrict(data, &config)
-		if err != nil {
-			return fmt.Errorf("error unmarshalling DB config YAML: %v", err)
-		}
-		a.Database.DBConnectionConfig = config
-
-	}
-	if len(a.ClusterConfigFilePath) != 0 {
-		clusterData, err := os.ReadFile(a.ClusterConfigFilePath)
-		if err != nil {
-			return fmt.Errorf("error reading cluster config YAML file: %v", err)
-		}
-		var clusterConfig ClusterConfig
-		if err := yaml.UnmarshalStrict(clusterData, &clusterConfig); err != nil {
-			return fmt.Errorf("failed to unmarshal cluster config yaml: %s", err)
-		}
-		a.ClusterConfig = &clusterConfig
-	}
-	if len(a.Server.JwtSecret) == 0 {
-		data, err := os.ReadFile(a.Server.JwtSecretFilePath)
-		if err != nil {
-			return fmt.Errorf("failed to read jwt secret from file '%s'. Error: %w", a.Server.JwtSecretFilePath, err)
-		}
-		a.Server.JwtSecret = string(data)
-	}
-	return nil
-}
-
-func (a *ApplicationConfig) ReadDBConfigFiles() error {
-	data, err := os.ReadFile(a.Database.DatabaseConfigFile)
-	if err != nil {
-		return fmt.Errorf("error reading YAML file: %v", err)
-	}
-
-	var config DBConnectionConfig
-	err = yaml.UnmarshalStrict(data, &config)
-	if err != nil {
-		return fmt.Errorf("error unmarshalling DB config YAML: %v", err)
-	}
-	a.Database.DBConnectionConfig = config
-	return nil
-}
-
-func (a *ApplicationConfig) ReadEnvironmentVariables() {
-	secret, found := os.LookupEnv(JWT_SECRET_ENV)
-	if found {
-		a.Server.JwtSecret = secret
-	}
 }
 
 func (c *DatabaseConfig) LogSafeConnectionString(withSSL bool) string {

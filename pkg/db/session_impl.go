@@ -44,9 +44,9 @@ func (f *Session) Init(config *config.DatabaseConfig) {
 	)
 
 	// Open connection to DB via standard library
-	dbx, err = sql.Open(config.Dialect, config.ConnectionString(config.SSLMode != "disable"))
+	dbx, err = sql.Open(config.Dialect, config.ConnectionString())
 	if err != nil {
-		dbx, err = sql.Open(config.Dialect, config.ConnectionString(false))
+		dbx, err = sql.Open(config.Dialect, config.ConnectionString())
 		if err != nil {
 			panic(fmt.Sprintf(
 				"SQL failed to connect to %s database %s with connection string: %s\nError: %s",

@@ -70,7 +70,7 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 			"^/api/v1/users$",
 			"^/api/v1/auth",
 		},
-		DefaultAuthHandler: auth.NewJwtAuthnHandler(mainHandler, []byte(env.Environment().Config.Server.JwtSecret)),
+		DefaultAuthHandler: auth.NewJwtAuthnHandler(mainHandler, []byte(env.Environment().Config.JwtSecret)),
 	})
 
 	return authenticationHandler

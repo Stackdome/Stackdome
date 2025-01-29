@@ -23,7 +23,7 @@ type errorHandlerFunc func(ctx context.Context, w http.ResponseWriter, err *erro
 type httpAction func() (interface{}, *errors.ServiceError)
 
 func handleError(ctx context.Context, w http.ResponseWriter, err *errors.ServiceError) {
-	log := logger.NewLogger(ctx)
+	log := logger.NewLogger()
 	// If this is a 400 error, its the user's issue, log as info rather than error
 	if err.HttpCode >= 400 && err.HttpCode <= 499 {
 		log.Infof(err.Error())
@@ -118,7 +118,7 @@ func handleList(w http.ResponseWriter, r *http.Request, cfg *handlerConfig) {
 		cfg.ErrorHandler(r.Context(), w, serviceError)
 		return
 	}
-	
+
 	writeJSONResponse(w, http.StatusOK, results)
 }
 

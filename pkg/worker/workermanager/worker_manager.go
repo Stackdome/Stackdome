@@ -57,7 +57,7 @@ func (s *serviceWorkerManager) Start(ctx context.Context) error {
 		return errors.New("no workers registered under the worker manager")
 	}
 
-	workerManagerLogger := logger.NewLogger(ctx)
+	workerManagerLogger := logger.NewLoggerWithPrefix(context.Background(), "worker-manager")
 
 	for _, worker := range s.registeredWorkers {
 		if worker != nil {

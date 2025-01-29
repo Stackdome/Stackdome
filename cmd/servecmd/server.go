@@ -16,10 +16,6 @@ func NewServeCommand() *cobra.Command {
 		Long:  "start the api server",
 	}
 	env := environment.LoadEnv()
-	err := env.AddFlags(cmd.PersistentFlags())
-	if err != nil {
-		glog.Fatalf("Unable to add environment flags to serve command: %s", err.Error())
-	}
 	cmd.Run = func(cmd *cobra.Command, args []string) {
 		runServe(env)
 	}

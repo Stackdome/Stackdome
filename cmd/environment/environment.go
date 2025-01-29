@@ -6,16 +6,15 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/config"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
+	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
-	"github.com/spf13/pflag"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type EnvImpl interface {
 	Init(context.Context) error
 	InitDatabase(context.Context) error
-	AddFlags(flags *pflag.FlagSet) error
 	Environment() *Env
 }
 
@@ -28,6 +27,7 @@ type Env struct {
 	Clients                     Clients
 	ClusterManager              clustermanager.ClusterManager
 	ResourceAccessPolicyManager resourceaccess.ResourceAccessPolicyManager
+	Logger                      applogger.Logger
 }
 
 type Clients struct {
@@ -48,12 +48,4 @@ type Services struct {
 	WorkspaceService              services.WorkspaceService
 	WorkspaceResourceService      services.WorkspaceResourceService
 	WorkspaceResourceBuildService services.ResourceBuildService
-}
-
-func (s Services) GetUserService() services.UserService {
-	return s.UserService
-}
-
-func (s Services) GetOrganisationService() services.OrganisationService {
-	return s.OrganisationService
 }

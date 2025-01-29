@@ -79,7 +79,7 @@ func (m *OpenAPIMiddleware) Middleware(next http.Handler) http.Handler {
 }
 
 func handleError(ctx context.Context, w http.ResponseWriter, code errors.ServiceErrorCode, reason string) {
-	log := logger.NewLogger(ctx)
+	log := logger.NewLogger()
 	err := errors.New(code, reason)
 	if err.HttpCode >= 400 && err.HttpCode <= 499 {
 		log.Infof(err.Error())

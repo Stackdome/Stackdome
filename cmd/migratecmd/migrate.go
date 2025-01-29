@@ -16,10 +16,6 @@ func NewMigrateCommand() *cobra.Command {
 		Long:  "Run database migrations",
 	}
 	env := environment.LoadEnv()
-	err := env.AddFlags(cmd.PersistentFlags())
-	if err != nil {
-		glog.Fatalf("Unable to add environment flags to migrate command: %s", err.Error())
-	}
 	cmd.Run = func(cmd *cobra.Command, args []string) {
 		runMigrate(env)
 	}
