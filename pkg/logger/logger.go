@@ -7,7 +7,10 @@ import (
 )
 
 type Logger interface {
-	// DebugEnabled returns true if the debug level is enabled.
+	SetLevel(level logrus.Level) Logger
+
+	GetLevel() logrus.Level
+
 	DebugEnabled() bool
 
 	// InfoEnabled returns true if the information level is enabled.
@@ -110,6 +113,15 @@ func (l *appLogger) withFields(ctx context.Context) *logrus.Entry {
 	// - Correlation ID
 	// - User info
 	return l.logger.WithFields(fields)
+}
+
+func (l *appLogger) SetLevel(level logrus.Level) Logger {
+	l.logger.SetLevel(level)
+	return l
+}
+
+func (l *appLogger) GetLevel() logrus.Level {
+	return l.logger.GetLevel()
 }
 
 func (l *appLogger) DebugEnabled() bool {

@@ -105,12 +105,11 @@ func (d *developmentEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 }
 
 func (d *developmentEnvironment) setupLogger(ctx context.Context) error {
-	d.Logger = applogger.NewLoggerWithPrefix(ctx, "development_env")
 	logLevel, err := logrus.ParseLevel(d.Config.LogLevel)
 	if err != nil {
 		return fmt.Errorf("invalid log level '%s': %w", d.Config.LogLevel, err)
 	}
-	logrus.SetLevel(logLevel)
+	d.Logger = applogger.NewLoggerWithPrefix(ctx, "applicationLogger").SetLevel(logLevel)
 	d.Logger.Debugf("Logger initialized with level: %s", logLevel.String())
 	return nil
 }
@@ -138,36 +137,36 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 		LeadershipFlag: leadershipFlag,
 		ControllersToRegister: []clustermanager.Controller{
 			workspacestorage.NewWorskspaceStorageReconciler(workspacestorage.WorskspaceStorageReconcilerSpec{
-				Log:                     applogger.NewLoggerWithPrefix(ctx, "workspace-storage-controller"),
+				Log:                     applogger.NewLoggerWithPrefix(ctx, "workspace-storage-controller").SetLevel(d.Logger.GetLevel()),
 				WorkspaceStorageService: d.Services.WorkspaceStorageService,
 				VolumeService:           d.Services.WorkspaceVolumeService,
 				Env:                     d.Env.Name,
 			}),
 			workspacevolume.NewWorkspaceVolumeReconciler(workspacevolume.WorkspaceVolumeReconcilerSpec{
-				Log:                     applogger.NewLoggerWithPrefix(ctx, "workspace-volume-controller"),
+				Log:                     applogger.NewLoggerWithPrefix(ctx, "workspace-volume-controller").SetLevel(d.Logger.GetLevel()),
 				WorkspaceStorageService: d.Services.WorkspaceStorageService,
 				VolumeService:           d.Services.WorkspaceVolumeService,
 				Env:                     d.Env.Name,
 			}),
 			workspaceuser.NewWorkspaceUserReconciler(workspaceuser.WorkspaceUserReconcilerSpec{
-				Log:                  applogger.NewLoggerWithPrefix(ctx, "workspace-user-controller"),
+				Log:                  applogger.NewLoggerWithPrefix(ctx, "workspace-user-controller").SetLevel(d.Logger.GetLevel()),
 				WorkspaceUserService: d.Services.WorkspaceUserService,
 				ClusterService:       d.Services.ClusterService,
 				Env:                  d.Env.Name,
 			}),
 			workspace.NewWorkspaceReconciler(workspace.WorkspaceReconcilerSpec{
-				Log:              applogger.NewLoggerWithPrefix(ctx, "workspace-controller"),
+				Log:              applogger.NewLoggerWithPrefix(ctx, "workspace-controller").SetLevel(d.Logger.GetLevel()),
 				WorkspaceService: d.Services.WorkspaceService,
 				Env:              d.Env.Name,
 			}),
 			workspaceresource.NewWorkspaceResourceReconciler(workspaceresource.WorkspaceResourceReconcilerSpec{
-				Log:                      applogger.NewLoggerWithPrefix(ctx, "workspace-resource-controller"),
+				Log:                      applogger.NewLoggerWithPrefix(ctx, "workspace-resource-controller").SetLevel(d.Logger.GetLevel()),
 				WorkspaceService:         d.Services.WorkspaceService,
 				WorkspaceResourceService: d.Services.WorkspaceResourceService,
 				Env:                      d.Env.Name,
 			}),
 			resourcebuild.NewResourceBuildReconciler(resourcebuild.ResourceBuildReconcilerSpec{
-				Log:                    applogger.NewLoggerWithPrefix(ctx, "resource-build-controller"),
+				Log:                    applogger.NewLoggerWithPrefix(ctx, "resource-build-controller").SetLevel(d.Logger.GetLevel()),
 				DBResourceBuildService: d.Services.WorkspaceResourceBuildService,
 				DBResourceService:      d.Services.WorkspaceResourceService,
 			}),
@@ -178,8 +177,7 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 
 func (d *developmentEnvironment) initializeResourceAccessPolicyManager(ctx context.Context) error {
 	d.Logger.Debugf("Initializing resource access policy manager")
-
-	debugModeEnabled := logrus.IsLevelEnabled(logrus.DebugLevel)
+	debugModeEnabled := d.Logger.GetLevel() == logrus.DebugLevel
 	resourceAccessPolicyMgr, err := resourceaccess.NewResourceAccessPolicyManager(
 		resourceaccess.CasbinResourceAccessPolicyManagerConfig{
 			DBConnectionString:     d.Config.Database.ConnectionString(),
