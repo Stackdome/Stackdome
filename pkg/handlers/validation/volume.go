@@ -1,0 +1,129 @@
+package validation
+
+import (
+	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	k8sresource "k8s.io/apimachinery/pkg/api/resource"
+)
+
+func ValidateVolume(in *openapi.Volume) Validate {
+	return ValidateAll([]Validate{
+		validateEmpty(in, "Id", "id"),
+		validateEmpty(in, "OrganisationId", "organisation_id"),
+		validateEmpty(in, "Status", "status"),
+		validateLabels(&in.Labels),
+		validateAnnotations(&in.Annotations),
+		validateNotEmpty(in, "Name", "name"),
+		validateNotEmpty(in, "WorkspaceName", "workspace_name"),
+		validateEmpty(in, "Namespace", "namespace"),
+		func() *errors.ServiceError {
+			if !ValidateName(in.Name) {
+				return errors.Validation("name is not a valid name")
+			}
+			return nil
+		},
+		func() *errors.ServiceError {
+			if in.Spec.AccessMode == "" {
+				return errors.Validation("spec.access_mode is required")
+			}
+
+			if in.Spec.Size == "" {
+				return errors.Validation("spec.size is required")
+			}
+			if _, err := k8sresource.ParseQuantity(in.Spec.Size); err != nil {
+				return errors.Validation("spec.size is not a valid quantity")
+			}
+			// If source is not nil, validate it
+			if in.Spec.Source != nil {
+				if !in.Spec.Source.SourceType.IsValid() {
+					return errors.Validation("spec.source is not a valid source type")
+				}
+				switch in.Spec.Source.SourceType {
+				case openapi.REMOTE_DIR:
+					if err := validateRemoteSource(in.Spec.Source.RemoteSource); err != nil {
+						return err
+					}
+				case openapi.BUILD_ARTIFACT:
+					if err := validateBuildSource(in.Spec.Source.BuildSource); err != nil {
+						return err
+					}
+				case openapi.GIT_REPO:
+					if err := validateGitRepoSource(in.Spec.Source.GitRepoSource); err != nil {
+						return err
+					}
+				default:
+					return errors.Validation("spec.source is not a valid source type")
+				}
+			}
+			return nil
+		},
+	})
+}
+
+func validateBuildSource(buildSource []openapi.BuildArtifact) *errors.ServiceError {
+	if len(buildSource) == 0 {
+		return nil
+	}
+	for _, source := range buildSource {
+		if len(source.ResourceRef) == 0 {
+			return errors.Validation("build source resource ref cannot be empty")
+		}
+		if len(source.DestinationPath) == 0 {
+			return errors.Validation("build source destination path cannot be empty")
+		}
+		if len(source.SourcePath) == 0 {
+			return errors.Validation("build source source path cannot be empty")
+		}
+	}
+	return nil
+}
+
+func validateRemoteSource(remoteSource *openapi.RemoteSource) *errors.ServiceError {
+	if remoteSource == nil {
+		return nil
+	}
+	if remoteSource.Path == "" {
+		return errors.Validation("remote source path cannot be empty")
+	}
+	if remoteSource.CurrentDirectoryHash == "" {
+		return errors.Validation("remote source current directory hash cannot be empty")
+	}
+	return nil
+}
+
+func validateGitRepoSource(gitRepoSource *openapi.GitRepoSource) *errors.ServiceError {
+	if gitRepoSource == nil {
+		return nil
+	}
+	if gitRepoSource.RepoUrl == "" {
+		return errors.Validation("git repo source repo url cannot be empty")
+	}
+
+	return validateGitRepoRevision(&gitRepoSource.Revision)
+}
+
+func validateGitRepoRevision(gitRepoRevision *openapi.GitRepoRevision) *errors.ServiceError {
+	if gitRepoRevision == nil {
+		return nil
+	}
+
+	if gitRepoRevision.Branch == nil && gitRepoRevision.Tag == nil && gitRepoRevision.Commit == nil {
+		return errors.Validation("git repo revision branch, tag or commit cannot be empty. At least one must be set")
+	}
+
+	setValues := 0
+	if gitRepoRevision.Branch != nil {
+		setValues++
+	}
+	if gitRepoRevision.Tag != nil {
+		setValues++
+	}
+	if gitRepoRevision.Commit != nil {
+		setValues++
+	}
+	if setValues > 1 {
+		return errors.Validation("git repo revision branch, tag or commit cannot be set at the same time")
+	}
+
+	return nil
+}

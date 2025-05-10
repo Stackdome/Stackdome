@@ -16,12 +16,12 @@ import (
 
 // VolumeMount struct for VolumeMount
 type VolumeMount struct {
-	WorkspaceResourceId *string                `json:"workspace_resource_id,omitempty"`
-	WorkspaceStorageId  *string                `json:"workspace_storage_id,omitempty"`
-	SourceVolumeType    *VolumeMountSourceType `json:"source_volume_type,omitempty"`
-	SourceVolumeId      string                 `json:"source_volume_id"`
-	SourceSubPath       *string                `json:"source_sub_path,omitempty"`
-	TargetPath          string                 `json:"target_path"`
+	StackResourceId  *string                `json:"stack_resource_id,omitempty"`
+	StackStorageId   *string                `json:"stack_storage_id,omitempty"`
+	SourceVolumeType *VolumeMountSourceType `json:"source_volume_type,omitempty"`
+	SourceVolumeId   string                 `json:"source_volume_id"`
+	SourceSubPath    *string                `json:"source_sub_path,omitempty"`
+	TargetPath       string                 `json:"target_path"`
 }
 
 // NewVolumeMount instantiates a new VolumeMount object
@@ -43,68 +43,68 @@ func NewVolumeMountWithDefaults() *VolumeMount {
 	return &this
 }
 
-// GetWorkspaceResourceId returns the WorkspaceResourceId field value if set, zero value otherwise.
-func (o *VolumeMount) GetWorkspaceResourceId() string {
-	if o == nil || o.WorkspaceResourceId == nil {
+// GetStackResourceId returns the StackResourceId field value if set, zero value otherwise.
+func (o *VolumeMount) GetStackResourceId() string {
+	if o == nil || o.StackResourceId == nil {
 		var ret string
 		return ret
 	}
-	return *o.WorkspaceResourceId
+	return *o.StackResourceId
 }
 
-// GetWorkspaceResourceIdOk returns a tuple with the WorkspaceResourceId field value if set, nil otherwise
+// GetStackResourceIdOk returns a tuple with the StackResourceId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *VolumeMount) GetWorkspaceResourceIdOk() (*string, bool) {
-	if o == nil || o.WorkspaceResourceId == nil {
+func (o *VolumeMount) GetStackResourceIdOk() (*string, bool) {
+	if o == nil || o.StackResourceId == nil {
 		return nil, false
 	}
-	return o.WorkspaceResourceId, true
+	return o.StackResourceId, true
 }
 
-// HasWorkspaceResourceId returns a boolean if a field has been set.
-func (o *VolumeMount) HasWorkspaceResourceId() bool {
-	if o != nil && o.WorkspaceResourceId != nil {
+// HasStackResourceId returns a boolean if a field has been set.
+func (o *VolumeMount) HasStackResourceId() bool {
+	if o != nil && o.StackResourceId != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetWorkspaceResourceId gets a reference to the given string and assigns it to the WorkspaceResourceId field.
-func (o *VolumeMount) SetWorkspaceResourceId(v string) {
-	o.WorkspaceResourceId = &v
+// SetStackResourceId gets a reference to the given string and assigns it to the StackResourceId field.
+func (o *VolumeMount) SetStackResourceId(v string) {
+	o.StackResourceId = &v
 }
 
-// GetWorkspaceStorageId returns the WorkspaceStorageId field value if set, zero value otherwise.
-func (o *VolumeMount) GetWorkspaceStorageId() string {
-	if o == nil || o.WorkspaceStorageId == nil {
+// GetStackStorageId returns the StackStorageId field value if set, zero value otherwise.
+func (o *VolumeMount) GetStackStorageId() string {
+	if o == nil || o.StackStorageId == nil {
 		var ret string
 		return ret
 	}
-	return *o.WorkspaceStorageId
+	return *o.StackStorageId
 }
 
-// GetWorkspaceStorageIdOk returns a tuple with the WorkspaceStorageId field value if set, nil otherwise
+// GetStackStorageIdOk returns a tuple with the StackStorageId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *VolumeMount) GetWorkspaceStorageIdOk() (*string, bool) {
-	if o == nil || o.WorkspaceStorageId == nil {
+func (o *VolumeMount) GetStackStorageIdOk() (*string, bool) {
+	if o == nil || o.StackStorageId == nil {
 		return nil, false
 	}
-	return o.WorkspaceStorageId, true
+	return o.StackStorageId, true
 }
 
-// HasWorkspaceStorageId returns a boolean if a field has been set.
-func (o *VolumeMount) HasWorkspaceStorageId() bool {
-	if o != nil && o.WorkspaceStorageId != nil {
+// HasStackStorageId returns a boolean if a field has been set.
+func (o *VolumeMount) HasStackStorageId() bool {
+	if o != nil && o.StackStorageId != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetWorkspaceStorageId gets a reference to the given string and assigns it to the WorkspaceStorageId field.
-func (o *VolumeMount) SetWorkspaceStorageId(v string) {
-	o.WorkspaceStorageId = &v
+// SetStackStorageId gets a reference to the given string and assigns it to the StackStorageId field.
+func (o *VolumeMount) SetStackStorageId(v string) {
+	o.StackStorageId = &v
 }
 
 // GetSourceVolumeType returns the SourceVolumeType field value if set, zero value otherwise.
@@ -221,11 +221,11 @@ func (o *VolumeMount) SetTargetPath(v string) {
 
 func (o VolumeMount) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if o.WorkspaceResourceId != nil {
-		toSerialize["workspace_resource_id"] = o.WorkspaceResourceId
+	if o.StackResourceId != nil {
+		toSerialize["stack_resource_id"] = o.StackResourceId
 	}
-	if o.WorkspaceStorageId != nil {
-		toSerialize["workspace_storage_id"] = o.WorkspaceStorageId
+	if o.StackStorageId != nil {
+		toSerialize["stack_storage_id"] = o.StackStorageId
 	}
 	if o.SourceVolumeType != nil {
 		toSerialize["source_volume_type"] = o.SourceVolumeType

@@ -388,9 +388,9 @@ paths:
           description: WorkspaceUser object not found
         '500':
           description: Internal server error
-  /api/v1/organizations/{id}/workspace-storages:
+  /api/v1/organizations/{id}/remote-sync-servers:
     post:
-      summary: Create a new WorkspaceStorage object
+      summary: Create a new remote sync server
       security:
       - Bearer: []
       parameters:
@@ -400,14 +400,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkspaceStorage'
+              $ref: '#/components/schemas/RemoteSyncServer'
       responses:
         '201':
-          description: WorkspaceStorage created successfully
+          description: RemoteSyncServer created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceStorage'
+                $ref: '#/components/schemas/RemoteSyncServer'
         '400':
           description: Invalid request payload
         '401':
@@ -417,34 +417,11 @@ paths:
         '500':
           description: Internal server error
     get:
-      summary: List all WorkspaceStorage objects for an organization
+      summary: List all RemoteSyncServer objects for an organization
       security:
         - Bearer: []
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 20
-        - in: query
-          name: offset
-          schema:
-            type: integer
-            default: 0
-        - in: query
-          name: workspaceName
-          schema:
-            type: string
-        - in: query
-          name: state
-          schema:
-            type: string
-            enum: [Pending, Creating, Created, Failed]
+        - $ref: '#/components/parameters/id'
       responses:
         '200':
           description: Successful operation
@@ -456,7 +433,7 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: '#/components/schemas/WorkspaceStorage'
+                      $ref: '#/components/schemas/RemoteSyncServer'
                   total:
                     type: integer
         '401':
@@ -466,9 +443,9 @@ paths:
         '500':
           description: Internal server error
 
-  /api/v1/organizations/{org_id}/workspace-storages/{id}:
+  /api/v1/organizations/{org_id}/remote-sync-servers/{id}:
     get:
-      summary: Get a specific WorkspaceStorage object
+      summary: Get a specific RemoteSyncServer object
       security:
         - Bearer: []
       parameters:
@@ -488,9 +465,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceStorage'
+                $ref: '#/components/schemas/RemoteSyncServer'
         '404':
-          description: WorkspaceStorage not found
+          description: RemoteSyncServer not found
         '401':
           description: Unauthorized
         '403':
@@ -498,7 +475,7 @@ paths:
         '500':
           description: Internal server error
     put:
-      summary: Update a WorkspaceStorage object
+      summary: Update a RemoteSyncServer object
       security:
         - Bearer: []
       parameters:
@@ -517,18 +494,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkspaceStorage'
+              $ref: '#/components/schemas/RemoteSyncServer'
       responses:
         '200':
-          description: WorkspaceStorage updated successfully
+          description: RemoteSyncServer updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceStorage'
+                $ref: '#/components/schemas/RemoteSyncServer'
         '400':
           description: Invalid request payload
         '404':
-          description: WorkspaceStorage not found
+          description: RemoteSyncServer not found
         '401':
           description: Unauthorized
         '403':
@@ -537,7 +514,7 @@ paths:
           description: Internal server error
 
     delete:
-      summary: Delete a WorkspaceStorage object
+      summary: Delete a RemoteSyncServer object
       security:
         - Bearer: []
       parameters:
@@ -553,9 +530,9 @@ paths:
             type: string
       responses:
         '204':
-          description: WorkspaceStorage deleted successfully
+          description: RemoteSyncServer deleted successfully
         '404':
-          description: WorkspaceStorage not found
+          description: RemoteSyncServer not found
         '401':
           description: Unauthorized
         '403':
@@ -563,10 +540,10 @@ paths:
         '500':
           description: Internal server error
 
-  # List of workspace storages for the current user
-  /api/v1/organizations/{org_id}/workspace-storages/current:
+  # get the remote-sync-server for the current user
+  /api/v1/organizations/{org_id}/remote-sync-servers/current:
     get:
-      summary: List all WorkspaceStorage objects for the current user
+      summary: Get RemoteSyncServer for the current user
       security:
         - Bearer: []
       parameters:
@@ -581,7 +558,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceStorageList'
+                $ref: '#/components/schemas/RemoteSyncServer'
         '401':
           description: Unauthorized
         '403':
@@ -589,19 +566,41 @@ paths:
         '500':
           description: Internal server error
   
-  /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes:
+  /api/v1/organizations/{org_id}/volumes:
+    post:
+      summary: Create a new volume
+      security:
+      - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Volume'
+      responses:
+        '201':
+          description: Volume created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Volume'
+        '400':
+          description: Invalid request payload
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
     get:
-      summary: List all volumes under a WorkspaceStorage.
+      summary: List all volumes in an organization.
       security:
         - Bearer: []
       parameters:
         - in: path
           name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
           required: true
           schema:
             type: string
@@ -618,9 +617,9 @@ paths:
           description: Forbidden
         '500':
           description: Internal server error
-  /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes/{volume_id}/mark-as-synced:
-    post:
-      summary: Mark a volume as synced
+  /api/v1/organizations/{org_id}/volumes/{id}:
+    get:
+      summary: Get a specific volume
       security:
         - Bearer: []
       parameters:
@@ -634,23 +633,108 @@ paths:
           required: true
           schema:
             type: string
-        - in: path
-          name: volume_id
-          required: true
-          schema:
-            type: string
       responses:
         '200':
-          description: Volume marked as synced successfully
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Volume'
         '401':
           description: Unauthorized
         '403':
           description: Forbidden
         '500':
           description: Internal server error
-  /api/v1/organizations/{org_id}/workspaces:
+    put:
+      summary: Update a volume
+      security:
+        - Bearer: []
+      parameters:
+        - in: path
+          name: org_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Volume'
+      responses:
+        '200':
+          description: Volume updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Volume'
+        '400':
+          description: Invalid request payload
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+    delete:
+      summary: Delete a volume
+      security:
+        - Bearer: []
+      parameters:
+        - in: path
+          name: org_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Volume deleted successfully
+        '404':
+          description: Volume not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/volumes/current:
+    get:
+      summary: List of volumes for the current user
+      security:
+        - Bearer: []
+      parameters:
+        - in: path
+          name: org_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumeList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/stacks:
     post:
-      summary: Create a new Workspace
+      summary: Create a new stack
       security:
         - Bearer: []
       parameters:
@@ -660,14 +744,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Workspace'
+              $ref: '#/components/schemas/Stack'
       responses:
         '201':
-          description: Workspace created successfully
+          description: Stack created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workspace'
+                $ref: '#/components/schemas/Stack'
         '401':
           description: Unauthorized
         '400':
@@ -677,7 +761,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Workspace already exists
+          description: Stack already exists
           content:
             application/json:
               schema:
@@ -689,7 +773,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     get:
-      summary: List all Workspaces for an organization
+      summary: List all Stacks for an organization
       security:
         - Bearer: []
       parameters:
@@ -710,7 +794,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceList'
+                $ref: '#/components/schemas/StackList'
         '401':
           description: Unauthorized
         '500':
@@ -720,9 +804,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/v1/organizations/{org_id}/workspaces/{id}:
+  /api/v1/organizations/{org_id}/stacks/{id}:
     get:
-      summary: Get a specific Workspace
+      summary: Get a specific Stack
       security:
         - Bearer: []
       parameters:
@@ -734,7 +818,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workspace'
+                $ref: '#/components/schemas/Stack'
         '401':
           description: Unauthorized
         '500':
@@ -744,7 +828,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     put:
-      summary: Update a Workspace
+      summary: Update a Stack
       security:
         - Bearer: []
       parameters:
@@ -755,14 +839,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Workspace'
+              $ref: '#/components/schemas/Stack'
       responses:
         '200':
-          description: Workspace updated successfully
+          description: Stack updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workspace'
+                $ref: '#/components/schemas/Stack'
         '401':
           description: Unauthorized
         '400':
@@ -778,7 +862,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     delete:
-      summary: Delete a Workspace
+      summary: Delete a Stack
       security:
         - Bearer: []
       parameters:
@@ -786,7 +870,7 @@ paths:
         - $ref: '#/components/parameters/id'
       responses:
         '204':
-          description: Workspace deleted successfully
+          description: Stack deleted successfully
         '401':
           description: Unauthorized
         '500':
@@ -796,10 +880,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  # List of all workspaces for the current user
-  /api/v1/organizations/{org_id}/workspaces/current:
+  # List of all stacks for the current user
+  /api/v1/organizations/{org_id}/stacks/current:
     get:
-      summary: List all Workspaces for the current user
+      summary: List all stacks of the current user
       security:
         - Bearer: []
       parameters:
@@ -810,7 +894,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceList'
+                $ref: '#/components/schemas/StackList'
         '401':
           description: Unauthorized
         '500':
@@ -820,21 +904,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources:
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources:
     get:
-      summary: List all WorkspaceResources for a Workspace
+      summary: List all StackResources under a Stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/workspace_id'
+        - $ref: '#/components/parameters/stack_id'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceResourceList'
+                $ref: '#/components/schemas/StackResourceList'
         '401':
           description: Unauthorized
         '500':
@@ -845,28 +929,28 @@ paths:
                 $ref: '#/components/schemas/Error'
 
 
-  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id}:
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}:
     put:
-      summary: Update a WorkspaceResource
+      summary: Update a StackResource
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/workspace_id'
+        - $ref: '#/components/parameters/stack_id'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkspaceResource'
+              $ref: '#/components/schemas/StackResource'
       responses:
         '200':
-          description: WorkspaceResource updated successfully
+          description: StackResource updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceResource'
+                $ref: '#/components/schemas/StackResource'
         '401':
           description: Unauthorized
         '400':
@@ -882,14 +966,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id}/builds:
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}/builds:
     get:
-      summary: List all builds for a WorkspaceResource
+      summary: List all builds for a StackResource
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/workspace_id'
+        - $ref: '#/components/parameters/stack_id'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -897,7 +981,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceResourceBuildList'
+                $ref: '#/components/schemas/ImageBuildList'
         '401':
           description: Unauthorized
         '500':
@@ -907,22 +991,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
- # List all builds under a workspace
-  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds:
+ # List all builds under a stack
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/builds:
     get:
-      summary: List all builds under a workspace
+      summary: List all builds under a stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/workspace_id'
+        - $ref: '#/components/parameters/stack_id'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceResourceBuildList'
+                $ref: '#/components/schemas/ImageBuildList'
         '401':
           description: Unauthorized
         '500':
@@ -932,15 +1016,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds/{build_id}:
-  # get a specific build under a workspace
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/builds/{build_id}:
+  # get a specific build under a stack
     get:
-      summary: Get a specific build under a workspace
+      summary: Get a specific build under a stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/workspace_id'
+        - $ref: '#/components/parameters/stack_id'
         - in: path
           name: build_id
           required: true
@@ -952,7 +1036,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceResourceBuild'
+                $ref: '#/components/schemas/ImageBuild'
         '401':
           description: Unauthorized
         '404':
@@ -985,13 +1069,13 @@ components:
       schema:
         type: string
       description: The ID of the organization
-    workspace_id:
-      name: workspace_id
+    stack_id:
+      name: stack_id
       in: path
       required: true
       schema:
         type: string
-      description: The ID of the workspace
+      description: The ID of the stack
   schemas:
     Organisation:
       type: object
@@ -1185,7 +1269,7 @@ components:
         client_key_data:
           type: string
     
-    WorkspaceStorage:
+    RemoteSyncServer:
       type: object
       additionalProperties: false
       required:
@@ -1211,13 +1295,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Annotation'
-        version:
-          type: integer
-          readOnly: true
         spec:
-          $ref: '#/components/schemas/WorkspaceStorageSpec'
+          $ref: '#/components/schemas/RemoteSyncServerSpec'
         status:
-          $ref: '#/components/schemas/WorkspaceStorageStatus'
+          $ref: '#/components/schemas/RemoteSyncServerStatus'
           readOnly: true
         created_at:
           type: string
@@ -1228,36 +1309,35 @@ components:
           format: date-time
           readOnly: true
 
-    WorkspaceStorageList:
+    RemoteSyncServerList:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/WorkspaceStorage'
+            $ref: '#/components/schemas/RemoteSyncServer'
         total:
           type: integer
 
-    WorkspaceStorageSpec:
+    RemoteSyncServerSpec:
       type: object
       required:
-        - workspace_name
+        - volumes
+      additionalProperties: false
       properties:
-        workspace_name:
+        volumeName:
           type: string
-        volumes:
-          type: array
-          items:
-            $ref: '#/components/schemas/Volume'
+        ssh_public_key:
+          type: string
 
-    WorkspaceStorageState:
+    RemoteSyncServerState:
       type: string
       enum:
-      - StoragePending
-      - StorageCreating
-      - StorageCreated
-      - StorageReady
-      - StorageFailed
+      - RemoteSyncServerPending
+      - RemoteSyncServerCreating
+      - RemoteSyncServerCreated
+      - RemoteSyncServerReady
+      - RemoteSyncServerFailed
 
     Volume:
       type: object
@@ -1265,6 +1345,7 @@ components:
       required:
         - name
         - spec
+        - workspace_name
       properties:
         name:
           type: string
@@ -1276,8 +1357,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Annotation'
+        workspace_name:
+          type: string
         spec:
-          $ref: '#/components/schemas/WorkspaceVolumeSpec'
+          $ref: '#/components/schemas/VolumeSpec'
         status:
           $ref: '#/components/schemas/VolumeStatus'
           readOnly: true
@@ -1302,30 +1385,43 @@ components:
           type: string
           description: The SSH public key in OpenSSH format
 
-    WorkspaceVolumeSpec:
+    VolumeSpec:
           type: object
           required:
             - size
+            - needs_sync_before_use
+            - access_mode
           additionalProperties: false
           properties:
             size:
               type: string
             storage_class:
               type: string
-            sync_before_use:
+            needs_sync_before_use:
               type: boolean
+            access_mode:
+              $ref: '#/components/schemas/VolumeAccessMode'
             source:
               $ref: '#/components/schemas/VolumeSource'
+    VolumeAccessMode:
+      type: string
+      enum:
+        - ReadWriteOnce
+        - ReadWriteMany
+        - ReadOnlyMany
+    
     VolumeSource:
       type: object
       required:
         - source_type
       additionalProperties: false
       properties:
+        git_repo_source:
+          $ref: '#/components/schemas/GitRepoSource'
         source_type:
           $ref: '#/components/schemas/VolumeSourceTypes'
-        local_source:
-          $ref: '#/components/schemas/LocalSource'
+        remote_source:
+          $ref: '#/components/schemas/RemoteSource'
         build_source:
           type: array
           items:
@@ -1334,18 +1430,46 @@ components:
     VolumeSourceTypes:
       type: string
       enum:
-      - Local
+      - RemoteDir
       - BuildArtifact
-    LocalSource:
+      - GitRepo
+
+    GitRepoSource:
+      type: object
+      required:
+        - repo_url
+        - revision
+      properties:
+        repo_url:
+          type: string
+        revision:
+          $ref: '#/components/schemas/GitRepoRevision'
+
+    GitRepoRevision:
+      type: object
+      properties:
+        branch:
+          type: object
+          properties:
+            name:
+              type: string
+            head_sha:
+              type: string
+        commit:
+          type: string
+        tag:
+          type: string
+
+    RemoteSource:
       type: object
       required:
         - path
-        - sync
+        - current_directory_hash
       properties:
         path:
           type: string
-        sync:
-          type: boolean
+        current_directory_hash:
+          type: string
 
     BuildArtifact:
       type: object
@@ -1361,7 +1485,7 @@ components:
         destination_path:
           type: string
 
-    WorkspaceStorageStatus:
+    RemoteSyncServerStatus:
       type: object
       properties:
         observed_version:
@@ -1371,8 +1495,8 @@ components:
           items:
             $ref: '#/components/schemas/Condition'
         state:
-          $ref: '#/components/schemas/WorkspaceStorageState'
-        storage_server_service_name:
+          $ref: '#/components/schemas/RemoteSyncServerState'
+        serviceName:
           type: string
 
     VolumeStatus:
@@ -1388,6 +1512,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BuildArtifactSyncInfo'
+        last_synced_git_revision:
+          type: string
+        last_remote_sync_hash:
+          type: string
 
     BuildArtifactSyncInfo:
       type: object
@@ -1399,7 +1527,7 @@ components:
         status:
           type: string
 
-    Workspace:
+    Stack:
       type: object
       properties:
         id:
@@ -1412,6 +1540,8 @@ components:
           type: string
           readOnly: true
         name:
+          type: string
+        workspace_name:
           type: string
         namespace:
           type: string
@@ -1428,9 +1558,9 @@ components:
           type: integer
           readOnly: true
         spec:
-          $ref: '#/components/schemas/WorkspaceSpec'
+          $ref: '#/components/schemas/StackSpec'
         status:
-          $ref: '#/components/schemas/WorkspaceStatus'
+          $ref: '#/components/schemas/StackStatus'
           readOnly: true
         created_at:
           type: string
@@ -1443,28 +1573,29 @@ components:
       required:
         - name
         - spec
+        - workspace_name
     
-    WorkspaceList:
+    StackList:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Workspace'
+            $ref: '#/components/schemas/Stack'
         total:
           type: integer
 
-    WorkspaceSpec:
+    StackSpec:
       type: object
       required:
-        - resources
+        - stack_resources
       properties:
-        resources:
+        stack_resources:
           type: array
           items:
-            $ref: '#/components/schemas/WorkspaceResource'
+            $ref: '#/components/schemas/StackResource'
 
-    WorkspaceStatus:
+    StackStatus:
       type: object
       properties:
         state:
@@ -1476,13 +1607,13 @@ components:
           items:
             $ref: '#/components/schemas/Condition'
 
-    WorkspaceResource:
+    StackResource:
       type: object
       properties:
         id:
           type: string
           readOnly: true
-        workspace_id:
+        stack_id:
           type: string
           readOnly: true
         name:
@@ -1498,14 +1629,12 @@ components:
         version:
           type: integer
           readOnly: true
-        image_registry:
-          type: string
-        build:
-          $ref: '#/components/schemas/BuildConfig'
-        prebuilt:
-          $ref: '#/components/schemas/PrebuiltConfig'
-        init:
-          $ref: '#/components/schemas/InitConfig'
+        build_spec:
+          $ref: '#/components/schemas/StackResourceBuildSpec'
+        image_spec:
+          $ref: '#/components/schemas/ImageSpec'
+        init_spec:
+          $ref: '#/components/schemas/InitSpec'
         execution_config:
           $ref: '#/components/schemas/ExecutionConfig'
         volume_mounts:
@@ -1525,40 +1654,48 @@ components:
         stateful:
           type: boolean
         status:
-          $ref: '#/components/schemas/ResourceStatus'
+          $ref: '#/components/schemas/StackResourceStatus'
           readOnly: true
       required:
         - name
 
-    WorkspaceResourceList:
+    StackResourceList:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/WorkspaceResource'
+            $ref: '#/components/schemas/StackResource'
         total:
           type: integer
 
-    WorkspaceResourceBuild:
+    ImageBuild:
       type: object
+      required:
+        - stack_resource_name
+        - stack_resource_id
+        - source_revision
+        - image_repo
+        - build_context
       properties:
         id:
           type: string
         namespace:
           type: string
-        workspace_id:
+        stack_id:
           type: string
-        workspace_resource_id:
+        stack_resource_id:
           type: string
-        workspace_resource_name:
+        stack_resource_name:
           type: string
-        source_hash:
-          type: string
-        image_registry:
+        source_revision:
+          $ref: '#/components/schemas/BuildSourceRevision'
+        build_context:
+          $ref: '#/components/schemas/BuildSourceContext'
+        image_repo:
           type: string
         status:
-          $ref: '#/components/schemas/ResourceBuildStatus'
+          $ref: '#/components/schemas/ImageBuildStatus'
         created_at:
           type: string
           format: date-time
@@ -1566,17 +1703,17 @@ components:
           type: string
           format: date-time
 
-    WorkspaceResourceBuildList:
+    ImageBuildList:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/WorkspaceResourceBuild'
+            $ref: '#/components/schemas/ImageBuild'
         total:
           type: integer
 
-    ResourceBuildStatus:
+    ImageBuildStatus:
       type: object
       properties:
         state:
@@ -1587,10 +1724,10 @@ components:
             $ref: '#/components/schemas/Condition'
         image_url:
           type: string
-        build_source_hash:
+        build_source_revision:
           type: string
 
-    ResourceStatus:
+    StackResourceStatus:
       type: object
       properties:
         public_ingress:
@@ -1623,10 +1760,10 @@ components:
         - source_volume_id
         - target_path
       properties:
-        workspace_resource_id:
+        stack_resource_id:
           type: string
           readOnly: true
-        workspace_storage_id:
+        stack_storage_id:
           type: string
           readOnly: true
         source_volume_type:
@@ -1643,12 +1780,14 @@ components:
       type: string
       enum:
       - EmptyVolume
-      - LocalSyncedVolume
+      - RemoteDirSyncedVolume
       - BuildArtifactSyncedVolume
+      - GitRepoSyncedVolume
     Port:
       type: object
       required:
         - number
+        - exposed_to_public
       properties:
         number:
           type: integer
@@ -1666,25 +1805,64 @@ components:
           type: string
           format: date-time
 
-    BuildConfig:
+    StackResourceBuildSpec:
       type: object
       additionalProperties: false
       required:
-        - source_volume_id
-        - context_path
+        - source_context
+        - context_path_within_source
         - dockerfile_path
-        - source_hash
+        - source_revision
+        - image_repository_url
+        - insecure_registry
       properties:
-        source_volume_id:
-          type: string
-        context_path:
+        source_context:
+          $ref: '#/components/schemas/BuildSourceContext'
+        context_path_within_source:
           type: string
         dockerfile_path:
           type: string
-        source_hash:
+        source_revision:
+          $ref: '#/components/schemas/BuildSourceRevision'
+        image_repository_url:
           type: string
+        insecure_registry:
+          type: boolean
 
-    PrebuiltConfig:
+    BuildSourceContext:
+      type: object
+      properties:
+        volume:
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+        git_repo:
+          type: object
+          required:
+            - repo_url
+          properties:
+            repo_url:
+              type: string
+
+    BuildSourceRevision:
+      type: object
+      properties:
+        volume_source_revision:
+          type: object
+          required:
+            - current_volume_hash
+          properties:
+            current_volume_hash:
+              type: string
+        git_repo_revision:
+          $ref: '#/components/schemas/GitRepoRevision'
+
+    ImageSpec:
       type: object
       additionalProperties: false
       required:
@@ -1693,10 +1871,12 @@ components:
         image:
           type: string
 
-    InitConfig:
+    InitSpec:
       type: object
       additionalProperties: false
       properties:
+        image_spec:
+          $ref: '#/components/schemas/ImageSpec'
         command:
           type: array
           items:

@@ -16,20 +16,22 @@ import (
 
 // Volume struct for Volume
 type Volume struct {
-	Name        string              `json:"name"`
-	Labels      []Label             `json:"labels,omitempty"`
-	Annotations []Annotation        `json:"annotations,omitempty"`
-	Spec        WorkspaceVolumeSpec `json:"spec"`
-	Status      *VolumeStatus       `json:"status,omitempty"`
+	Name          string        `json:"name"`
+	Labels        []Label       `json:"labels,omitempty"`
+	Annotations   []Annotation  `json:"annotations,omitempty"`
+	WorkspaceName string        `json:"workspace_name"`
+	Spec          VolumeSpec    `json:"spec"`
+	Status        *VolumeStatus `json:"status,omitempty"`
 }
 
 // NewVolume instantiates a new Volume object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewVolume(name string, spec WorkspaceVolumeSpec) *Volume {
+func NewVolume(name string, workspaceName string, spec VolumeSpec) *Volume {
 	this := Volume{}
 	this.Name = name
+	this.WorkspaceName = workspaceName
 	this.Spec = spec
 	return &this
 }
@@ -130,10 +132,34 @@ func (o *Volume) SetAnnotations(v []Annotation) {
 	o.Annotations = v
 }
 
-// GetSpec returns the Spec field value
-func (o *Volume) GetSpec() WorkspaceVolumeSpec {
+// GetWorkspaceName returns the WorkspaceName field value
+func (o *Volume) GetWorkspaceName() string {
 	if o == nil {
-		var ret WorkspaceVolumeSpec
+		var ret string
+		return ret
+	}
+
+	return o.WorkspaceName
+}
+
+// GetWorkspaceNameOk returns a tuple with the WorkspaceName field value
+// and a boolean to check if the value has been set.
+func (o *Volume) GetWorkspaceNameOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.WorkspaceName, true
+}
+
+// SetWorkspaceName sets field value
+func (o *Volume) SetWorkspaceName(v string) {
+	o.WorkspaceName = v
+}
+
+// GetSpec returns the Spec field value
+func (o *Volume) GetSpec() VolumeSpec {
+	if o == nil {
+		var ret VolumeSpec
 		return ret
 	}
 
@@ -142,7 +168,7 @@ func (o *Volume) GetSpec() WorkspaceVolumeSpec {
 
 // GetSpecOk returns a tuple with the Spec field value
 // and a boolean to check if the value has been set.
-func (o *Volume) GetSpecOk() (*WorkspaceVolumeSpec, bool) {
+func (o *Volume) GetSpecOk() (*VolumeSpec, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -150,7 +176,7 @@ func (o *Volume) GetSpecOk() (*WorkspaceVolumeSpec, bool) {
 }
 
 // SetSpec sets field value
-func (o *Volume) SetSpec(v WorkspaceVolumeSpec) {
+func (o *Volume) SetSpec(v VolumeSpec) {
 	o.Spec = v
 }
 
@@ -196,6 +222,9 @@ func (o Volume) MarshalJSON() ([]byte, error) {
 	}
 	if o.Annotations != nil {
 		toSerialize["annotations"] = o.Annotations
+	}
+	if true {
+		toSerialize["workspace_name"] = o.WorkspaceName
 	}
 	if true {
 		toSerialize["spec"] = o.Spec

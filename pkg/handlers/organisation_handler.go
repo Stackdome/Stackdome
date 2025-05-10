@@ -45,7 +45,7 @@ func (h *organisationHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 			}
 			allowed, accessErr := h.authzClient.AuthorizeResourceAccess(
 				currentUser,
-				auth.OrganisationResource,
+				auth.Organisation,
 				id,
 				"",
 				models.ResourceAccessModeRead,
@@ -83,7 +83,7 @@ func (h *organisationHandler) GetDefault(w http.ResponseWriter, r *http.Request)
 			}
 			allowed, accessErr := h.authzClient.AuthorizeResourceAccess(
 				currentUser,
-				auth.OrganisationResource,
+				auth.Organisation,
 				obj.ID,
 				"",
 				models.ResourceAccessModeRead,

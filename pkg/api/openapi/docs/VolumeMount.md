@@ -4,8 +4,8 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**WorkspaceResourceId** | Pointer to **string** |  | [optional] [readonly] 
-**WorkspaceStorageId** | Pointer to **string** |  | [optional] [readonly] 
+**StackResourceId** | Pointer to **string** |  | [optional] [readonly] 
+**StackStorageId** | Pointer to **string** |  | [optional] [readonly] 
 **SourceVolumeType** | Pointer to [**VolumeMountSourceType**](VolumeMountSourceType.md) |  | [optional] 
 **SourceVolumeId** | **string** |  | 
 **SourceSubPath** | Pointer to **string** |  | [optional] 
@@ -30,55 +30,55 @@ NewVolumeMountWithDefaults instantiates a new VolumeMount object
 This constructor will only assign default values to properties that have it defined,
 but it doesn't guarantee that properties required by API are set
 
-### GetWorkspaceResourceId
+### GetStackResourceId
 
-`func (o *VolumeMount) GetWorkspaceResourceId() string`
+`func (o *VolumeMount) GetStackResourceId() string`
 
-GetWorkspaceResourceId returns the WorkspaceResourceId field if non-nil, zero value otherwise.
+GetStackResourceId returns the StackResourceId field if non-nil, zero value otherwise.
 
-### GetWorkspaceResourceIdOk
+### GetStackResourceIdOk
 
-`func (o *VolumeMount) GetWorkspaceResourceIdOk() (*string, bool)`
+`func (o *VolumeMount) GetStackResourceIdOk() (*string, bool)`
 
-GetWorkspaceResourceIdOk returns a tuple with the WorkspaceResourceId field if it's non-nil, zero value otherwise
+GetStackResourceIdOk returns a tuple with the StackResourceId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetWorkspaceResourceId
+### SetStackResourceId
 
-`func (o *VolumeMount) SetWorkspaceResourceId(v string)`
+`func (o *VolumeMount) SetStackResourceId(v string)`
 
-SetWorkspaceResourceId sets WorkspaceResourceId field to given value.
+SetStackResourceId sets StackResourceId field to given value.
 
-### HasWorkspaceResourceId
+### HasStackResourceId
 
-`func (o *VolumeMount) HasWorkspaceResourceId() bool`
+`func (o *VolumeMount) HasStackResourceId() bool`
 
-HasWorkspaceResourceId returns a boolean if a field has been set.
+HasStackResourceId returns a boolean if a field has been set.
 
-### GetWorkspaceStorageId
+### GetStackStorageId
 
-`func (o *VolumeMount) GetWorkspaceStorageId() string`
+`func (o *VolumeMount) GetStackStorageId() string`
 
-GetWorkspaceStorageId returns the WorkspaceStorageId field if non-nil, zero value otherwise.
+GetStackStorageId returns the StackStorageId field if non-nil, zero value otherwise.
 
-### GetWorkspaceStorageIdOk
+### GetStackStorageIdOk
 
-`func (o *VolumeMount) GetWorkspaceStorageIdOk() (*string, bool)`
+`func (o *VolumeMount) GetStackStorageIdOk() (*string, bool)`
 
-GetWorkspaceStorageIdOk returns a tuple with the WorkspaceStorageId field if it's non-nil, zero value otherwise
+GetStackStorageIdOk returns a tuple with the StackStorageId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetWorkspaceStorageId
+### SetStackStorageId
 
-`func (o *VolumeMount) SetWorkspaceStorageId(v string)`
+`func (o *VolumeMount) SetStackStorageId(v string)`
 
-SetWorkspaceStorageId sets WorkspaceStorageId field to given value.
+SetStackStorageId sets StackStorageId field to given value.
 
-### HasWorkspaceStorageId
+### HasStackStorageId
 
-`func (o *VolumeMount) HasWorkspaceStorageId() bool`
+`func (o *VolumeMount) HasStackStorageId() bool`
 
-HasWorkspaceStorageId returns a boolean if a field has been set.
+HasStackStorageId returns a boolean if a field has been set.
 
 ### GetSourceVolumeType
 

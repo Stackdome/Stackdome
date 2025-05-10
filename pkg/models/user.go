@@ -6,6 +6,10 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
+const (
+	CreatedForUserLabel = "user.stackdome.io/id"
+)
+
 type Role string
 
 func (r Role) String() string {

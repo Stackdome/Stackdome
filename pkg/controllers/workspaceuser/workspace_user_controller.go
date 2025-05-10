@@ -17,7 +17,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	workspacev1alpha1 "soradev.io/cluster-agent/api/v1alpha1"
+	usersv1alpha1 "stackdome.io/cluster-agent/api/users/v1alpha1"
+)
+
+const (
+	controllerName = "workspace-user-controller"
 )
 
 type WorkspaceUserReconciler struct {
@@ -46,7 +50,7 @@ func NewWorkspaceUserReconciler(spec WorkspaceUserReconcilerSpec) *WorkspaceUser
 
 func (w *WorkspaceUserReconciler) AddToManager(manager manager.Manager) error {
 	w.Client = manager.GetClient()
-	controller, err := controller.New("workspace-user-controller", manager, controller.Options{
+	controller, err := controller.New(controllerName, manager, controller.Options{
 		Reconciler: w,
 	})
 	if err != nil {
@@ -54,17 +58,21 @@ func (w *WorkspaceUserReconciler) AddToManager(manager manager.Manager) error {
 	}
 	src := source.Kind(
 		manager.GetCache(),
-		&workspacev1alpha1.WorkspaceUser{},
-		&handler.TypedEnqueueRequestForObject[*workspacev1alpha1.WorkspaceUser]{},
-		controllers.DBObjectIDPresentPredicate[*workspacev1alpha1.WorkspaceUser](models.WorkspaceUserIDLabel),
+		&usersv1alpha1.User{},
+		&handler.TypedEnqueueRequestForObject[*usersv1alpha1.User]{},
+		controllers.DBObjectIDPresentPredicate[*usersv1alpha1.User](models.WorkspaceUserIDLabel),
 	)
 
 	return controller.Watch(src)
 }
 
+func (w *WorkspaceUserReconciler) Name() string {
+	return controllerName
+}
+
 func (r *WorkspaceUserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Log.Infof("reconciling workspace user: %s in namespace %s", req.Name, req.Namespace)
-	clusterInstance := &workspacev1alpha1.WorkspaceUser{}
+	clusterInstance := &usersv1alpha1.User{}
 	if err := r.Client.Get(ctx, req.NamespacedName, clusterInstance); err != nil {
 		r.Log.Errorf("failed to get workspace user from cluster: %v", err)
 		return ctrl.Result{}, nil
@@ -103,18 +111,9 @@ func (r *WorkspaceUserReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return ctrl.Result{}, nil
 }
 
-func (r *WorkspaceUserReconciler) deleteWorkspaceUserFromCluster(ctx context.Context, inClusterInstance *workspacev1alpha1.WorkspaceUser) error {
-	r.Log.Infof("deleting workspace user: %s in namespace %s", inClusterInstance.Name, inClusterInstance.Namespace)
-	if err := r.Client.Delete(ctx, inClusterInstance); client.IgnoreNotFound(err) != nil {
-		r.Log.Errorf("failed to delete workspace volume: %v", err)
-		return err
-	}
-	return nil
-}
-
 // TODO: CorrelationID b/w db object and object in cluster.
 func mapToDBStatusAndState(
-	clusterObject *workspacev1alpha1.WorkspaceUser,
+	clusterObject *usersv1alpha1.User,
 	cluster *models.Cluster) *models.WorkspaceUserStatus {
 
 	status := &models.WorkspaceUserStatus{
@@ -127,7 +126,7 @@ func mapToDBStatusAndState(
 		ClusterStatusHash:     clusterObject.Status.StatusHash,
 		Conditions:            models.ConvertConditions(clusterObject.Status.Conditions),
 	}
-	availableCondition := meta.FindStatusCondition(clusterObject.Status.Conditions, workspacev1alpha1.WorkspaceUserAvailable)
+	availableCondition := meta.FindStatusCondition(clusterObject.Status.Conditions, usersv1alpha1.UserAvailable)
 	switch {
 	case availableCondition == nil:
 		status.State = models.WorkspaceUserProvisionPending
@@ -145,8 +144,4 @@ func mapToDBStatusAndState(
 		status.Message = "WorkspaceUser provision completed"
 	}
 	return status
-}
-
-func invalidatedDBGenerationHash(hash string) string {
-	return hash + "X"
 }

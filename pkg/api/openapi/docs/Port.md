@@ -6,14 +6,14 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Number** | **int32** |  | 
 **Protocol** | Pointer to **string** |  | [optional] 
-**ExposedToPublic** | Pointer to **bool** |  | [optional] 
+**ExposedToPublic** | **bool** |  | 
 **SubdomainPrefix** | Pointer to **string** |  | [optional] 
 
 ## Methods
 
 ### NewPort
 
-`func NewPort(number int32, ) *Port`
+`func NewPort(number int32, exposedToPublic bool, ) *Port`
 
 NewPort instantiates a new Port object
 This constructor will assign default values to properties that have it defined,
@@ -92,11 +92,6 @@ and a boolean to check if the value has been set.
 
 SetExposedToPublic sets ExposedToPublic field to given value.
 
-### HasExposedToPublic
-
-`func (o *Port) HasExposedToPublic() bool`
-
-HasExposedToPublic returns a boolean if a field has been set.
 
 ### GetSubdomainPrefix
 

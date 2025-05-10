@@ -20,14 +20,16 @@ type VolumeSourceTypes string
 
 // List of VolumeSourceTypes
 const (
-	LOCAL          VolumeSourceTypes = "Local"
+	REMOTE_DIR     VolumeSourceTypes = "RemoteDir"
 	BUILD_ARTIFACT VolumeSourceTypes = "BuildArtifact"
+	GIT_REPO       VolumeSourceTypes = "GitRepo"
 )
 
 // All allowed values of VolumeSourceTypes enum
 var AllowedVolumeSourceTypesEnumValues = []VolumeSourceTypes{
-	"Local",
+	"RemoteDir",
 	"BuildArtifact",
+	"GitRepo",
 }
 
 func (v *VolumeSourceTypes) UnmarshalJSON(src []byte) error {

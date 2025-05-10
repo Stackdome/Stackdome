@@ -48,7 +48,7 @@ func (a workspaceUserHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 			allowed, accessErr := a.authzClient.AuthorizeResourceAccess(
 				currentUser,
-				auth.WorkspaceUserResource,
+				auth.WorkspaceUser,
 				id,
 				obj.UserID,
 				models.ResourceAccessModeRead,
@@ -99,7 +99,7 @@ func (a workspaceUserHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 			allowed, accessErr := a.authzClient.AuthorizeResourceAccess(
 				currentUser,
-				auth.WorkspaceUserResource,
+				auth.WorkspaceUser,
 				"",
 				currentUser.ID,
 				models.ResourceAccessModeCreate,
@@ -145,7 +145,7 @@ func (a workspaceUserHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 			allowed, accessErr := a.authzClient.AuthorizeResourceAccess(
 				currentUser,
-				auth.WorkspaceUserResource,
+				auth.WorkspaceUser,
 				id,
 				obj.UserID,
 				models.ResourceAccessModeUpdate,
@@ -188,7 +188,7 @@ func (a workspaceUserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 			allowed, accessErr := a.authzClient.AuthorizeResourceAccess(
 				currentUser,
-				auth.WorkspaceUserResource,
+				auth.WorkspaceUser,
 				id,
 				obj.UserID,
 				models.ResourceAccessModeDelete,

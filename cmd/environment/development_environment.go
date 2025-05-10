@@ -9,12 +9,13 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/config"
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
-	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/resourcebuild"
-	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspace"
-	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceresource"
-	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspacestorage"
-	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceuser"
-	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspacevolume"
+	imagebuildcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/imagebuild"
+	stackcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stack"
+	stackresourcecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stackresource"
+
+	volumecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/volume"
+	workspaceusercontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceuser"
+
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -32,7 +33,9 @@ import (
 	"k8s.io/client-go/rest"
 	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	workspacev1alpha1 "soradev.io/cluster-agent/api/v1alpha1"
+	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
+	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
+	usersv1alpha1 "stackdome.io/cluster-agent/api/users/v1alpha1"
 )
 
 type developmentEnvironment struct {
@@ -59,11 +62,11 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 		d.setupLogger,
 		d.setupDatabase,
 		d.initializeClients,
+		d.initializeResourceAccessPolicyManager,
 		d.loadServices,
 		d.initializeClusterManager,
 		d.injectClusterResourceServices,
 		d.initializeDefaultOrgAndCluster,
-		d.initializeResourceAccessPolicyManager,
 		d.initializeBaseResourceAccessPolicies,
 		d.ensureDefaultPlatformAdminUser,
 		d.startClusterManager,
@@ -82,7 +85,6 @@ func (d *developmentEnvironment) InitDatabase(ctx context.Context) error {
 	if err := d.setupDatabase(ctx); err != nil {
 		return fmt.Errorf("failed to setup database: %w", err)
 	}
-	d.Logger.Infof("Database initialized successfully")
 	return nil
 }
 
@@ -115,7 +117,13 @@ func (d *developmentEnvironment) setupLogger(ctx context.Context) error {
 }
 
 func (d *developmentEnvironment) setupDatabase(ctx context.Context) error {
-	d.Logger.Debugf("Initializing database session")
+	if err := godotenv.Load(); err != nil {
+		return fmt.Errorf("failed to load .env file: %w", err)
+	}
+	d.Config.Database.LoadEnvVariables()
+	if err := d.Config.Database.Validate(); err != nil {
+		return fmt.Errorf("invalid database config: %w", err)
+	}
 	d.DBSession = db.NewSessionFactory(d.Config.Database)
 	return nil
 }
@@ -136,39 +144,33 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 	d.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
 		LeadershipFlag: leadershipFlag,
 		ControllersToRegister: []clustermanager.Controller{
-			workspacestorage.NewWorskspaceStorageReconciler(workspacestorage.WorskspaceStorageReconcilerSpec{
-				Log:                     applogger.NewLoggerWithPrefix(ctx, "workspace-storage-controller").SetLevel(d.Logger.GetLevel()),
-				WorkspaceStorageService: d.Services.WorkspaceStorageService,
-				VolumeService:           d.Services.WorkspaceVolumeService,
-				Env:                     d.Env.Name,
+			volumecontroller.NewVolumeReconciler(volumecontroller.VolumeReconcilerSpec{
+				Log:            applogger.NewLoggerWithPrefix(ctx, "volume-controller").SetLevel(d.Logger.GetLevel()),
+				StorageService: d.Services.StackStorageService,
+				VolumeService:  d.Services.VolumeService,
+				Env:            d.Env.Name,
 			}),
-			workspacevolume.NewWorkspaceVolumeReconciler(workspacevolume.WorkspaceVolumeReconcilerSpec{
-				Log:                     applogger.NewLoggerWithPrefix(ctx, "workspace-volume-controller").SetLevel(d.Logger.GetLevel()),
-				WorkspaceStorageService: d.Services.WorkspaceStorageService,
-				VolumeService:           d.Services.WorkspaceVolumeService,
-				Env:                     d.Env.Name,
-			}),
-			workspaceuser.NewWorkspaceUserReconciler(workspaceuser.WorkspaceUserReconcilerSpec{
+			workspaceusercontroller.NewWorkspaceUserReconciler(workspaceusercontroller.WorkspaceUserReconcilerSpec{
 				Log:                  applogger.NewLoggerWithPrefix(ctx, "workspace-user-controller").SetLevel(d.Logger.GetLevel()),
 				WorkspaceUserService: d.Services.WorkspaceUserService,
 				ClusterService:       d.Services.ClusterService,
 				Env:                  d.Env.Name,
 			}),
-			workspace.NewWorkspaceReconciler(workspace.WorkspaceReconcilerSpec{
-				Log:              applogger.NewLoggerWithPrefix(ctx, "workspace-controller").SetLevel(d.Logger.GetLevel()),
-				WorkspaceService: d.Services.WorkspaceService,
-				Env:              d.Env.Name,
+			stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
+				Log:          applogger.NewLoggerWithPrefix(ctx, "stack-controller").SetLevel(d.Logger.GetLevel()),
+				StackService: d.Services.StackService,
+				Env:          d.Env.Name,
 			}),
-			workspaceresource.NewWorkspaceResourceReconciler(workspaceresource.WorkspaceResourceReconcilerSpec{
-				Log:                      applogger.NewLoggerWithPrefix(ctx, "workspace-resource-controller").SetLevel(d.Logger.GetLevel()),
-				WorkspaceService:         d.Services.WorkspaceService,
-				WorkspaceResourceService: d.Services.WorkspaceResourceService,
-				Env:                      d.Env.Name,
+			stackresourcecontroller.NewStackResourceReconciler(stackresourcecontroller.StackResourceReconcilerSpec{
+				Log:                  applogger.NewLoggerWithPrefix(ctx, "stack-resource-controller").SetLevel(d.Logger.GetLevel()),
+				StackService:         d.Services.StackService,
+				StackResourceService: d.Services.StackResourceService,
+				Env:                  d.Env.Name,
 			}),
-			resourcebuild.NewResourceBuildReconciler(resourcebuild.ResourceBuildReconcilerSpec{
-				Log:                    applogger.NewLoggerWithPrefix(ctx, "resource-build-controller").SetLevel(d.Logger.GetLevel()),
-				DBResourceBuildService: d.Services.WorkspaceResourceBuildService,
-				DBResourceService:      d.Services.WorkspaceResourceService,
+			imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
+				Log:                 applogger.NewLoggerWithPrefix(ctx, "image-build-controller").SetLevel(d.Logger.GetLevel()),
+				DBImageBuildService: d.Services.ImageBuildService,
+				DBResourceService:   d.Services.StackResourceService,
 			}),
 		},
 	})
@@ -219,48 +221,41 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		UserService:    userService,
 	})
 
-	workspaceStorageService := services.NewWorkspaceStorageService(services.WorkspaceStorageServiceSpec{
+	volumeService := services.NewVolumeService(services.VolumeServiceSpec{
 		SessionFactory: d.DBSession,
 		Logger:         d.Logger,
 	})
 
-	workspaceVolumeService := services.NewVolumeService(services.VolumeServiceSpec{
-		SessionFactory: d.DBSession,
-		Logger:         d.Logger,
+	stackService := services.NewStackService(services.StackServiceSpec{
+		SessionFactory:       d.DBSession,
+		Logger:               d.Logger,
+		WorkspaceUserService: workspaceUserService,
+		VolumeService:        volumeService,
+		OrganisationService:  organisationService,
 	})
 
-	workspaceService := services.NewWorkspaceService(services.WorkspaceServiceSpec{
-		SessionFactory:          d.DBSession,
-		Logger:                  d.Logger,
-		WorkspaceUserService:    workspaceUserService,
-		WorkspaceStorageService: workspaceStorageService,
-		OrganisationService:     organisationService,
+	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
+		SessionFactory:       d.DBSession,
+		Logger:               d.Logger,
+		WorkspaceUserService: workspaceUserService,
+		StackService:         stackService,
 	})
 
-	workspaceResourceService := services.NewWorkspaceResourceService(services.WorkspaceResourceServiceSpec{
-		SessionFactory:          d.DBSession,
-		Logger:                  d.Logger,
-		WorkspaceUserService:    workspaceUserService,
-		WorkspaceStorageService: workspaceStorageService,
-		WorkspaceService:        workspaceService,
-	})
-
-	workspaceResourceBuildService := services.NewResourceBuildService(services.ResourceBuildServiceSpec{
-		WorkspaceResourceService: workspaceResourceService,
-		SessionFactory:           d.DBSession,
-		Logger:                   d.Logger,
+	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
+		StackResourceService: stackResourceService,
+		SessionFactory:       d.DBSession,
+		Logger:               d.Logger,
 	})
 
 	d.Services = Services{
-		UserService:                   userService,
-		WorkspaceUserService:          workspaceUserService,
-		OrganisationService:           organisationService,
-		ClusterService:                clusterService,
-		WorkspaceStorageService:       workspaceStorageService,
-		WorkspaceVolumeService:        workspaceVolumeService,
-		WorkspaceService:              workspaceService,
-		WorkspaceResourceService:      workspaceResourceService,
-		WorkspaceResourceBuildService: workspaceResourceBuildService,
+		UserService:          userService,
+		WorkspaceUserService: workspaceUserService,
+		OrganisationService:  organisationService,
+		ClusterService:       clusterService,
+		VolumeService:        volumeService,
+		StackService:         stackService,
+		StackResourceService: stackResourceService,
+		ImageBuildService:    imageBuildService,
 	}
 
 	return nil
@@ -274,10 +269,9 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 		UserService:    d.Services.UserService,
 	})
 
-	workspacestorageClusterResourceService := clusterresource.NewWorkspaceStorageClusterResourceService(clusterresource.WorkspaceStorageClusterResourceServiceSpec{
+	volumeClusterResourceService := clusterresource.NewVolumeClusterResourceService(clusterresource.VolumeClusterResourceServiceSpec{
 		ClusterManager:       d.ClusterManager,
 		Logger:               d.Logger,
-		ClusterService:       d.Services.ClusterService,
 		WorkspaceUserService: d.Services.WorkspaceUserService,
 	})
 
@@ -289,8 +283,8 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 	})
 
 	d.Services.WorkspaceUserService.InjectClusterResourceService(workspaceUserClusterResourceService)
-	d.Services.WorkspaceStorageService.InjectClusterResourceService(workspacestorageClusterResourceService)
-	d.Services.WorkspaceService.InjectClusterResourceService(clusterWorkspaceService)
+	d.Services.VolumeService.InjectClusterResourceService(volumeClusterResourceService)
+	d.Services.StackService.InjectClusterResourceService(clusterWorkspaceService)
 	return nil
 }
 
@@ -373,6 +367,7 @@ func (d *developmentEnvironment) initializeBaseResourceAccessPolicies(ctx contex
 			return fmt.Errorf("failed to add %s policy: %w", policy.subject, err)
 		}
 	}
+	d.Logger.Debugf("Base resource access policies initialized")
 	return nil
 }
 
@@ -459,7 +454,15 @@ func initializeClusterClient(cfg *config.ClusterConfig) (client.Client, error) {
 		return nil, err
 	}
 
-	if err := workspacev1alpha1.AddToScheme(scheme); err != nil {
+	if err := corev1alpha1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+
+	if err := buildsv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+
+	if err := usersv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
 	clientset, err := client.New(restConfig, client.Options{

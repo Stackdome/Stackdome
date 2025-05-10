@@ -21,15 +21,17 @@ type VolumeMountSourceType string
 // List of VolumeMountSourceType
 const (
 	EMPTY_VOLUME                 VolumeMountSourceType = "EmptyVolume"
-	LOCAL_SYNCED_VOLUME          VolumeMountSourceType = "LocalSyncedVolume"
+	REMOTE_DIR_SYNCED_VOLUME     VolumeMountSourceType = "RemoteDirSyncedVolume"
 	BUILD_ARTIFACT_SYNCED_VOLUME VolumeMountSourceType = "BuildArtifactSyncedVolume"
+	GIT_REPO_SYNCED_VOLUME       VolumeMountSourceType = "GitRepoSyncedVolume"
 )
 
 // All allowed values of VolumeMountSourceType enum
 var AllowedVolumeMountSourceTypeEnumValues = []VolumeMountSourceType{
 	"EmptyVolume",
-	"LocalSyncedVolume",
+	"RemoteDirSyncedVolume",
 	"BuildArtifactSyncedVolume",
+	"GitRepoSyncedVolume",
 }
 
 func (v *VolumeMountSourceType) UnmarshalJSON(src []byte) error {

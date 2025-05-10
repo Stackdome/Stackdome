@@ -7,14 +7,15 @@ Name | Type | Description | Notes
 **Name** | **string** |  | 
 **Labels** | Pointer to [**[]Label**](Label.md) |  | [optional] 
 **Annotations** | Pointer to [**[]Annotation**](Annotation.md) |  | [optional] 
-**Spec** | [**WorkspaceVolumeSpec**](WorkspaceVolumeSpec.md) |  | 
+**WorkspaceName** | **string** |  | 
+**Spec** | [**VolumeSpec**](VolumeSpec.md) |  | 
 **Status** | Pointer to [**VolumeStatus**](VolumeStatus.md) |  | [optional] 
 
 ## Methods
 
 ### NewVolume
 
-`func NewVolume(name string, spec WorkspaceVolumeSpec, ) *Volume`
+`func NewVolume(name string, workspaceName string, spec VolumeSpec, ) *Volume`
 
 NewVolume instantiates a new Volume object
 This constructor will assign default values to properties that have it defined,
@@ -99,22 +100,42 @@ SetAnnotations sets Annotations field to given value.
 
 HasAnnotations returns a boolean if a field has been set.
 
+### GetWorkspaceName
+
+`func (o *Volume) GetWorkspaceName() string`
+
+GetWorkspaceName returns the WorkspaceName field if non-nil, zero value otherwise.
+
+### GetWorkspaceNameOk
+
+`func (o *Volume) GetWorkspaceNameOk() (*string, bool)`
+
+GetWorkspaceNameOk returns a tuple with the WorkspaceName field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetWorkspaceName
+
+`func (o *Volume) SetWorkspaceName(v string)`
+
+SetWorkspaceName sets WorkspaceName field to given value.
+
+
 ### GetSpec
 
-`func (o *Volume) GetSpec() WorkspaceVolumeSpec`
+`func (o *Volume) GetSpec() VolumeSpec`
 
 GetSpec returns the Spec field if non-nil, zero value otherwise.
 
 ### GetSpecOk
 
-`func (o *Volume) GetSpecOk() (*WorkspaceVolumeSpec, bool)`
+`func (o *Volume) GetSpecOk() (*VolumeSpec, bool)`
 
 GetSpecOk returns a tuple with the Spec field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetSpec
 
-`func (o *Volume) SetSpec(v WorkspaceVolumeSpec)`
+`func (o *Volume) SetSpec(v VolumeSpec)`
 
 SetSpec sets Spec field to given value.
 

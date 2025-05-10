@@ -82,25 +82,29 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsDefaultGet**](docs/DefaultApi.md#apiv1organizationsdefaultget) | **Get** /api/v1/organizations/default | Get the default organization
 *DefaultApi* | [**ApiV1OrganizationsIdGet**](docs/DefaultApi.md#apiv1organizationsidget) | **Get** /api/v1/organizations/{id} | Get an organization
 *DefaultApi* | [**ApiV1OrganizationsIdPut**](docs/DefaultApi.md#apiv1organizationsidput) | **Put** /api/v1/organizations/{id} | Update an organization
-*DefaultApi* | [**ApiV1OrganizationsIdWorkspaceStoragesGet**](docs/DefaultApi.md#apiv1organizationsidworkspacestoragesget) | **Get** /api/v1/organizations/{id}/workspace-storages | List all WorkspaceStorage objects for an organization
-*DefaultApi* | [**ApiV1OrganizationsIdWorkspaceStoragesPost**](docs/DefaultApi.md#apiv1organizationsidworkspacestoragespost) | **Post** /api/v1/organizations/{id}/workspace-storages | Create a new WorkspaceStorage object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragescurrentget) | **Get** /api/v1/organizations/{org_id}/workspace-storages/current | List all WorkspaceStorage objects for the current user
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesiddelete) | **Delete** /api/v1/organizations/{org_id}/workspace-storages/{id} | Delete a WorkspaceStorage object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidget) | **Get** /api/v1/organizations/{org_id}/workspace-storages/{id} | Get a specific WorkspaceStorage object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidput) | **Put** /api/v1/organizations/{org_id}/workspace-storages/{id} | Update a WorkspaceStorage object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidvolumesget) | **Get** /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes | List all volumes under a WorkspaceStorage.
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspaceStoragesIdVolumesVolumeIdMarkAsSyncedPost**](docs/DefaultApi.md#apiv1organizationsorgidworkspacestoragesidvolumesvolumeidmarkassyncedpost) | **Post** /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes/{volume_id}/mark-as-synced | Mark a volume as synced
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacescurrentget) | **Get** /api/v1/organizations/{org_id}/workspaces/current | List all Workspaces for the current user
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesget) | **Get** /api/v1/organizations/{org_id}/workspaces | List all Workspaces for an organization
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesiddelete) | **Delete** /api/v1/organizations/{org_id}/workspaces/{id} | Delete a Workspace
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesidget) | **Get** /api/v1/organizations/{org_id}/workspaces/{id} | Get a specific Workspace
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesidput) | **Put** /api/v1/organizations/{org_id}/workspaces/{id} | Update a Workspace
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesPost**](docs/DefaultApi.md#apiv1organizationsorgidworkspacespost) | **Post** /api/v1/organizations/{org_id}/workspaces | Create a new Workspace
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsBuildIdGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidbuildsbuildidget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds/{build_id} | Get a specific build under a workspace
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidbuildsget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds | List all builds under a workspace
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources | List all WorkspaceResources for a Workspace
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesidbuildsget) | **Get** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id}/builds | List all builds for a WorkspaceResource
-*DefaultApi* | [**ApiV1OrganizationsOrgIdWorkspacesWorkspaceIdResourcesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidworkspacesworkspaceidresourcesidput) | **Put** /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id} | Update a WorkspaceResource
+*DefaultApi* | [**ApiV1OrganizationsIdRemoteSyncServersGet**](docs/DefaultApi.md#apiv1organizationsidremotesyncserversget) | **Get** /api/v1/organizations/{id}/remote-sync-servers | List all RemoteSyncServer objects for an organization
+*DefaultApi* | [**ApiV1OrganizationsIdRemoteSyncServersPost**](docs/DefaultApi.md#apiv1organizationsidremotesyncserverspost) | **Post** /api/v1/organizations/{id}/remote-sync-servers | Create a new remote sync server
+*DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserverscurrentget) | **Get** /api/v1/organizations/{org_id}/remote-sync-servers/current | Get RemoteSyncServer for the current user
+*DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversiddelete) | **Delete** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Delete a RemoteSyncServer object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversidget) | **Get** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Get a specific RemoteSyncServer object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdPut**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversidput) | **Put** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Update a RemoteSyncServer object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidstackscurrentget) | **Get** /api/v1/organizations/{org_id}/stacks/current | List all stacks of the current user
+*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksget) | **Get** /api/v1/organizations/{org_id}/stacks | List all Stacks for an organization
+*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidstacksiddelete) | **Delete** /api/v1/organizations/{org_id}/stacks/{id} | Delete a Stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksIdGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksidget) | **Get** /api/v1/organizations/{org_id}/stacks/{id} | Get a specific Stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksIdPut**](docs/DefaultApi.md#apiv1organizationsorgidstacksidput) | **Put** /api/v1/organizations/{org_id}/stacks/{id} | Update a Stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksPost**](docs/DefaultApi.md#apiv1organizationsorgidstackspost) | **Post** /api/v1/organizations/{org_id}/stacks | Create a new stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidbuildsbuildidget) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/builds/{build_id} | Get a specific build under a stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidbuildsget) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/builds | List all builds under a stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdResourcesGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidresourcesget) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources | List all StackResources under a Stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidresourcesidbuildsget) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}/builds | List all builds for a StackResource
+*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidresourcesidput) | **Put** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id} | Update a StackResource
+*DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidvolumescurrentget) | **Get** /api/v1/organizations/{org_id}/volumes/current | List of volumes for the current user
+*DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesGet**](docs/DefaultApi.md#apiv1organizationsorgidvolumesget) | **Get** /api/v1/organizations/{org_id}/volumes | List all volumes in an organization.
+*DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidvolumesiddelete) | **Delete** /api/v1/organizations/{org_id}/volumes/{id} | Delete a volume
+*DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidvolumesidget) | **Get** /api/v1/organizations/{org_id}/volumes/{id} | Get a specific volume
+*DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidvolumesidput) | **Put** /api/v1/organizations/{org_id}/volumes/{id} | Update a volume
+*DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesPost**](docs/DefaultApi.md#apiv1organizationsorgidvolumespost) | **Post** /api/v1/organizations/{org_id}/volumes | Create a new volume
 *DefaultApi* | [**ApiV1OrganizationsPost**](docs/DefaultApi.md#apiv1organizationspost) | **Post** /api/v1/organizations | Create a new organization
 *DefaultApi* | [**ApiV1UsersCurrentGet**](docs/DefaultApi.md#apiv1userscurrentget) | **Get** /api/v1/users/current | Get a the current authenticated user
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
@@ -115,10 +119,14 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [Annotation](docs/Annotation.md)
- - [ApiV1OrganizationsIdWorkspaceStoragesGet200Response](docs/ApiV1OrganizationsIdWorkspaceStoragesGet200Response.md)
+ - [ApiV1OrganizationsIdRemoteSyncServersGet200Response](docs/ApiV1OrganizationsIdRemoteSyncServersGet200Response.md)
  - [BuildArtifact](docs/BuildArtifact.md)
  - [BuildArtifactSyncInfo](docs/BuildArtifactSyncInfo.md)
- - [BuildConfig](docs/BuildConfig.md)
+ - [BuildSourceContext](docs/BuildSourceContext.md)
+ - [BuildSourceContextGitRepo](docs/BuildSourceContextGitRepo.md)
+ - [BuildSourceContextVolume](docs/BuildSourceContextVolume.md)
+ - [BuildSourceRevision](docs/BuildSourceRevision.md)
+ - [BuildSourceRevisionVolumeSourceRevision](docs/BuildSourceRevisionVolumeSourceRevision.md)
  - [Cluster](docs/Cluster.md)
  - [Condition](docs/Condition.md)
  - [EnvVar](docs/EnvVar.md)
@@ -126,49 +134,54 @@ Class | Method | HTTP request | Description
  - [ErrorAllOf](docs/ErrorAllOf.md)
  - [ErrorList](docs/ErrorList.md)
  - [ExecutionConfig](docs/ExecutionConfig.md)
+ - [GitRepoRevision](docs/GitRepoRevision.md)
+ - [GitRepoRevisionBranch](docs/GitRepoRevisionBranch.md)
+ - [GitRepoSource](docs/GitRepoSource.md)
+ - [ImageBuild](docs/ImageBuild.md)
+ - [ImageBuildList](docs/ImageBuildList.md)
+ - [ImageBuildStatus](docs/ImageBuildStatus.md)
+ - [ImageSpec](docs/ImageSpec.md)
  - [Ingress](docs/Ingress.md)
- - [InitConfig](docs/InitConfig.md)
+ - [InitSpec](docs/InitSpec.md)
  - [Label](docs/Label.md)
  - [LifecycleConfig](docs/LifecycleConfig.md)
  - [List](docs/List.md)
- - [LocalSource](docs/LocalSource.md)
  - [LoginRequest](docs/LoginRequest.md)
  - [LoginResponse](docs/LoginResponse.md)
  - [ObjectReference](docs/ObjectReference.md)
  - [Organisation](docs/Organisation.md)
  - [Port](docs/Port.md)
- - [PrebuiltConfig](docs/PrebuiltConfig.md)
- - [ResourceBuildStatus](docs/ResourceBuildStatus.md)
- - [ResourceStatus](docs/ResourceStatus.md)
+ - [RemoteSource](docs/RemoteSource.md)
+ - [RemoteSyncServer](docs/RemoteSyncServer.md)
+ - [RemoteSyncServerList](docs/RemoteSyncServerList.md)
+ - [RemoteSyncServerSpec](docs/RemoteSyncServerSpec.md)
+ - [RemoteSyncServerState](docs/RemoteSyncServerState.md)
+ - [RemoteSyncServerStatus](docs/RemoteSyncServerStatus.md)
  - [SSHConfig](docs/SSHConfig.md)
+ - [Stack](docs/Stack.md)
+ - [StackList](docs/StackList.md)
+ - [StackResource](docs/StackResource.md)
+ - [StackResourceBuildSpec](docs/StackResourceBuildSpec.md)
+ - [StackResourceList](docs/StackResourceList.md)
+ - [StackResourceStatus](docs/StackResourceStatus.md)
+ - [StackSpec](docs/StackSpec.md)
+ - [StackStatus](docs/StackStatus.md)
  - [User](docs/User.md)
  - [UserCreateRequest](docs/UserCreateRequest.md)
  - [UserRole](docs/UserRole.md)
  - [Volume](docs/Volume.md)
+ - [VolumeAccessMode](docs/VolumeAccessMode.md)
  - [VolumeList](docs/VolumeList.md)
  - [VolumeMount](docs/VolumeMount.md)
  - [VolumeMountSourceType](docs/VolumeMountSourceType.md)
  - [VolumeSource](docs/VolumeSource.md)
  - [VolumeSourceTypes](docs/VolumeSourceTypes.md)
+ - [VolumeSpec](docs/VolumeSpec.md)
  - [VolumeStatus](docs/VolumeStatus.md)
- - [Workspace](docs/Workspace.md)
- - [WorkspaceList](docs/WorkspaceList.md)
- - [WorkspaceResource](docs/WorkspaceResource.md)
- - [WorkspaceResourceBuild](docs/WorkspaceResourceBuild.md)
- - [WorkspaceResourceBuildList](docs/WorkspaceResourceBuildList.md)
- - [WorkspaceResourceList](docs/WorkspaceResourceList.md)
- - [WorkspaceSpec](docs/WorkspaceSpec.md)
- - [WorkspaceStatus](docs/WorkspaceStatus.md)
- - [WorkspaceStorage](docs/WorkspaceStorage.md)
- - [WorkspaceStorageList](docs/WorkspaceStorageList.md)
- - [WorkspaceStorageSpec](docs/WorkspaceStorageSpec.md)
- - [WorkspaceStorageState](docs/WorkspaceStorageState.md)
- - [WorkspaceStorageStatus](docs/WorkspaceStorageStatus.md)
  - [WorkspaceUser](docs/WorkspaceUser.md)
  - [WorkspaceUserState](docs/WorkspaceUserState.md)
  - [WorkspaceUserStatus](docs/WorkspaceUserStatus.md)
  - [WorkspaceUserStatusProvisionedNamespacesInner](docs/WorkspaceUserStatusProvisionedNamespacesInner.md)
- - [WorkspaceVolumeSpec](docs/WorkspaceVolumeSpec.md)
 
 
 ## Documentation For Authorization

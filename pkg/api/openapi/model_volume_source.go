@@ -16,9 +16,10 @@ import (
 
 // VolumeSource struct for VolumeSource
 type VolumeSource struct {
-	SourceType  VolumeSourceTypes `json:"source_type"`
-	LocalSource *LocalSource      `json:"local_source,omitempty"`
-	BuildSource []BuildArtifact   `json:"build_source,omitempty"`
+	GitRepoSource *GitRepoSource    `json:"git_repo_source,omitempty"`
+	SourceType    VolumeSourceTypes `json:"source_type"`
+	RemoteSource  *RemoteSource     `json:"remote_source,omitempty"`
+	BuildSource   []BuildArtifact   `json:"build_source,omitempty"`
 }
 
 // NewVolumeSource instantiates a new VolumeSource object
@@ -37,6 +38,38 @@ func NewVolumeSource(sourceType VolumeSourceTypes) *VolumeSource {
 func NewVolumeSourceWithDefaults() *VolumeSource {
 	this := VolumeSource{}
 	return &this
+}
+
+// GetGitRepoSource returns the GitRepoSource field value if set, zero value otherwise.
+func (o *VolumeSource) GetGitRepoSource() GitRepoSource {
+	if o == nil || o.GitRepoSource == nil {
+		var ret GitRepoSource
+		return ret
+	}
+	return *o.GitRepoSource
+}
+
+// GetGitRepoSourceOk returns a tuple with the GitRepoSource field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *VolumeSource) GetGitRepoSourceOk() (*GitRepoSource, bool) {
+	if o == nil || o.GitRepoSource == nil {
+		return nil, false
+	}
+	return o.GitRepoSource, true
+}
+
+// HasGitRepoSource returns a boolean if a field has been set.
+func (o *VolumeSource) HasGitRepoSource() bool {
+	if o != nil && o.GitRepoSource != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetGitRepoSource gets a reference to the given GitRepoSource and assigns it to the GitRepoSource field.
+func (o *VolumeSource) SetGitRepoSource(v GitRepoSource) {
+	o.GitRepoSource = &v
 }
 
 // GetSourceType returns the SourceType field value
@@ -63,36 +96,36 @@ func (o *VolumeSource) SetSourceType(v VolumeSourceTypes) {
 	o.SourceType = v
 }
 
-// GetLocalSource returns the LocalSource field value if set, zero value otherwise.
-func (o *VolumeSource) GetLocalSource() LocalSource {
-	if o == nil || o.LocalSource == nil {
-		var ret LocalSource
+// GetRemoteSource returns the RemoteSource field value if set, zero value otherwise.
+func (o *VolumeSource) GetRemoteSource() RemoteSource {
+	if o == nil || o.RemoteSource == nil {
+		var ret RemoteSource
 		return ret
 	}
-	return *o.LocalSource
+	return *o.RemoteSource
 }
 
-// GetLocalSourceOk returns a tuple with the LocalSource field value if set, nil otherwise
+// GetRemoteSourceOk returns a tuple with the RemoteSource field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *VolumeSource) GetLocalSourceOk() (*LocalSource, bool) {
-	if o == nil || o.LocalSource == nil {
+func (o *VolumeSource) GetRemoteSourceOk() (*RemoteSource, bool) {
+	if o == nil || o.RemoteSource == nil {
 		return nil, false
 	}
-	return o.LocalSource, true
+	return o.RemoteSource, true
 }
 
-// HasLocalSource returns a boolean if a field has been set.
-func (o *VolumeSource) HasLocalSource() bool {
-	if o != nil && o.LocalSource != nil {
+// HasRemoteSource returns a boolean if a field has been set.
+func (o *VolumeSource) HasRemoteSource() bool {
+	if o != nil && o.RemoteSource != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetLocalSource gets a reference to the given LocalSource and assigns it to the LocalSource field.
-func (o *VolumeSource) SetLocalSource(v LocalSource) {
-	o.LocalSource = &v
+// SetRemoteSource gets a reference to the given RemoteSource and assigns it to the RemoteSource field.
+func (o *VolumeSource) SetRemoteSource(v RemoteSource) {
+	o.RemoteSource = &v
 }
 
 // GetBuildSource returns the BuildSource field value if set, zero value otherwise.
@@ -129,11 +162,14 @@ func (o *VolumeSource) SetBuildSource(v []BuildArtifact) {
 
 func (o VolumeSource) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
+	if o.GitRepoSource != nil {
+		toSerialize["git_repo_source"] = o.GitRepoSource
+	}
 	if true {
 		toSerialize["source_type"] = o.SourceType
 	}
-	if o.LocalSource != nil {
-		toSerialize["local_source"] = o.LocalSource
+	if o.RemoteSource != nil {
+		toSerialize["remote_source"] = o.RemoteSource
 	}
 	if o.BuildSource != nil {
 		toSerialize["build_source"] = o.BuildSource

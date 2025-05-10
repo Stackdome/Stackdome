@@ -16,9 +16,11 @@ import (
 
 // VolumeStatus struct for VolumeStatus
 type VolumeStatus struct {
-	Conditions         []Condition             `json:"conditions,omitempty"`
-	Phase              *string                 `json:"phase,omitempty"`
-	BuildArtifactSyncs []BuildArtifactSyncInfo `json:"build_artifact_syncs,omitempty"`
+	Conditions            []Condition             `json:"conditions,omitempty"`
+	Phase                 *string                 `json:"phase,omitempty"`
+	BuildArtifactSyncs    []BuildArtifactSyncInfo `json:"build_artifact_syncs,omitempty"`
+	LastSyncedGitRevision *string                 `json:"last_synced_git_revision,omitempty"`
+	LastRemoteSyncHash    *string                 `json:"last_remote_sync_hash,omitempty"`
 }
 
 // NewVolumeStatus instantiates a new VolumeStatus object
@@ -134,6 +136,70 @@ func (o *VolumeStatus) SetBuildArtifactSyncs(v []BuildArtifactSyncInfo) {
 	o.BuildArtifactSyncs = v
 }
 
+// GetLastSyncedGitRevision returns the LastSyncedGitRevision field value if set, zero value otherwise.
+func (o *VolumeStatus) GetLastSyncedGitRevision() string {
+	if o == nil || o.LastSyncedGitRevision == nil {
+		var ret string
+		return ret
+	}
+	return *o.LastSyncedGitRevision
+}
+
+// GetLastSyncedGitRevisionOk returns a tuple with the LastSyncedGitRevision field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *VolumeStatus) GetLastSyncedGitRevisionOk() (*string, bool) {
+	if o == nil || o.LastSyncedGitRevision == nil {
+		return nil, false
+	}
+	return o.LastSyncedGitRevision, true
+}
+
+// HasLastSyncedGitRevision returns a boolean if a field has been set.
+func (o *VolumeStatus) HasLastSyncedGitRevision() bool {
+	if o != nil && o.LastSyncedGitRevision != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLastSyncedGitRevision gets a reference to the given string and assigns it to the LastSyncedGitRevision field.
+func (o *VolumeStatus) SetLastSyncedGitRevision(v string) {
+	o.LastSyncedGitRevision = &v
+}
+
+// GetLastRemoteSyncHash returns the LastRemoteSyncHash field value if set, zero value otherwise.
+func (o *VolumeStatus) GetLastRemoteSyncHash() string {
+	if o == nil || o.LastRemoteSyncHash == nil {
+		var ret string
+		return ret
+	}
+	return *o.LastRemoteSyncHash
+}
+
+// GetLastRemoteSyncHashOk returns a tuple with the LastRemoteSyncHash field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *VolumeStatus) GetLastRemoteSyncHashOk() (*string, bool) {
+	if o == nil || o.LastRemoteSyncHash == nil {
+		return nil, false
+	}
+	return o.LastRemoteSyncHash, true
+}
+
+// HasLastRemoteSyncHash returns a boolean if a field has been set.
+func (o *VolumeStatus) HasLastRemoteSyncHash() bool {
+	if o != nil && o.LastRemoteSyncHash != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLastRemoteSyncHash gets a reference to the given string and assigns it to the LastRemoteSyncHash field.
+func (o *VolumeStatus) SetLastRemoteSyncHash(v string) {
+	o.LastRemoteSyncHash = &v
+}
+
 func (o VolumeStatus) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Conditions != nil {
@@ -144,6 +210,12 @@ func (o VolumeStatus) MarshalJSON() ([]byte, error) {
 	}
 	if o.BuildArtifactSyncs != nil {
 		toSerialize["build_artifact_syncs"] = o.BuildArtifactSyncs
+	}
+	if o.LastSyncedGitRevision != nil {
+		toSerialize["last_synced_git_revision"] = o.LastSyncedGitRevision
+	}
+	if o.LastRemoteSyncHash != nil {
+		toSerialize["last_remote_sync_hash"] = o.LastRemoteSyncHash
 	}
 	return json.Marshal(toSerialize)
 }
