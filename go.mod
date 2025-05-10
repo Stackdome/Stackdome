@@ -28,7 +28,7 @@ require (
 	k8s.io/client-go v0.32.3
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/controller-runtime v0.20.4
-	stackdome.io/cluster-agent v0.4.0-alpha
+	stackdome.io/cluster-agent v0.4.1-alpha
 )
 
 require (
@@ -110,6 +110,6 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace stackdome.io/cluster-agent => github.com/ashishmax31/cluster-agent v0.4.0-alpha
+replace stackdome.io/cluster-agent => github.com/ashishmax31/cluster-agent v0.4.1-alpha
 
 // replace stackdome.io/cluster-agent => ../../cluster-agent
