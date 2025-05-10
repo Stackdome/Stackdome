@@ -47,7 +47,7 @@ func (a usersHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 			allowed, accessErr := a.authzClient.AuthorizeResourceAccess(
 				currentUser,
-				auth.UserResource,
+				auth.User,
 				id,
 				result.ID,
 				models.ResourceAccessModeRead,

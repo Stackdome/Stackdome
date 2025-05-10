@@ -416,57 +416,23 @@ paths:
       security:
       - Bearer: []
       summary: Get the workspace user object for the current user
-  /api/v1/organizations/{id}/workspace-storages:
+  /api/v1/organizations/{id}/remote-sync-servers:
     get:
       parameters:
-      - explode: false
+      - description: The id of record
+        explode: false
         in: path
         name: id
         required: true
         schema:
           type: string
         style: simple
-      - explode: true
-        in: query
-        name: limit
-        required: false
-        schema:
-          default: 20
-          type: integer
-        style: form
-      - explode: true
-        in: query
-        name: offset
-        required: false
-        schema:
-          default: 0
-          type: integer
-        style: form
-      - explode: true
-        in: query
-        name: workspaceName
-        required: false
-        schema:
-          type: string
-        style: form
-      - explode: true
-        in: query
-        name: state
-        required: false
-        schema:
-          enum:
-          - Pending
-          - Creating
-          - Created
-          - Failed
-          type: string
-        style: form
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__id__workspace_storages_get_200_response'
+                $ref: '#/components/schemas/_api_v1_organizations__id__remote_sync_servers_get_200_response'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -476,7 +442,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all WorkspaceStorage objects for an organization
+      summary: List all RemoteSyncServer objects for an organization
     post:
       parameters:
       - description: The id of record
@@ -491,15 +457,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkspaceStorage'
+              $ref: '#/components/schemas/RemoteSyncServer'
         required: true
       responses:
         "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceStorage'
-          description: WorkspaceStorage created successfully
+                $ref: '#/components/schemas/RemoteSyncServer'
+          description: RemoteSyncServer created successfully
         "400":
           description: Invalid request payload
         "401":
@@ -510,8 +476,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Create a new WorkspaceStorage object
-  /api/v1/organizations/{org_id}/workspace-storages/{id}:
+      summary: Create a new remote sync server
+  /api/v1/organizations/{org_id}/remote-sync-servers/{id}:
     delete:
       parameters:
       - explode: false
@@ -530,9 +496,9 @@ paths:
         style: simple
       responses:
         "204":
-          description: WorkspaceStorage deleted successfully
+          description: RemoteSyncServer deleted successfully
         "404":
-          description: WorkspaceStorage not found
+          description: RemoteSyncServer not found
         "401":
           description: Unauthorized
         "403":
@@ -541,7 +507,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Delete a WorkspaceStorage object
+      summary: Delete a RemoteSyncServer object
     get:
       parameters:
       - explode: false
@@ -563,10 +529,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceStorage'
+                $ref: '#/components/schemas/RemoteSyncServer'
           description: Successful operation
         "404":
-          description: WorkspaceStorage not found
+          description: RemoteSyncServer not found
         "401":
           description: Unauthorized
         "403":
@@ -575,7 +541,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a specific WorkspaceStorage object
+      summary: Get a specific RemoteSyncServer object
     put:
       parameters:
       - explode: false
@@ -596,19 +562,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkspaceStorage'
+              $ref: '#/components/schemas/RemoteSyncServer'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceStorage'
-          description: WorkspaceStorage updated successfully
+                $ref: '#/components/schemas/RemoteSyncServer'
+          description: RemoteSyncServer updated successfully
         "400":
           description: Invalid request payload
         "404":
-          description: WorkspaceStorage not found
+          description: RemoteSyncServer not found
         "401":
           description: Unauthorized
         "403":
@@ -617,8 +583,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Update a WorkspaceStorage object
-  /api/v1/organizations/{org_id}/workspace-storages/current:
+      summary: Update a RemoteSyncServer object
+  /api/v1/organizations/{org_id}/remote-sync-servers/current:
     get:
       parameters:
       - explode: false
@@ -633,7 +599,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceStorageList'
+                $ref: '#/components/schemas/RemoteSyncServer'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -643,20 +609,13 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all WorkspaceStorage objects for the current user
-  /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes:
+      summary: Get RemoteSyncServer for the current user
+  /api/v1/organizations/{org_id}/volumes:
     get:
       parameters:
       - explode: false
         in: path
         name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      - explode: false
-        in: path
-        name: id
         required: true
         schema:
           type: string
@@ -676,9 +635,43 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all volumes under a WorkspaceStorage.
-  /api/v1/organizations/{org_id}/workspace-storages/{id}/volumes/{volume_id}/mark-as-synced:
+      summary: List all volumes in an organization.
     post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Volume'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Volume'
+          description: Volume created successfully
+        "400":
+          description: Invalid request payload
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Create a new volume
+  /api/v1/organizations/{org_id}/volumes/{id}:
+    delete:
       parameters:
       - explode: false
         in: path
@@ -694,16 +687,11 @@ paths:
         schema:
           type: string
         style: simple
-      - explode: false
-        in: path
-        name: volume_id
-        required: true
-        schema:
-          type: string
-        style: simple
       responses:
-        "200":
-          description: Volume marked as synced successfully
+        "204":
+          description: Volume deleted successfully
+        "404":
+          description: Volume not found
         "401":
           description: Unauthorized
         "403":
@@ -712,8 +700,106 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Mark a volume as synced
-  /api/v1/organizations/{org_id}/workspaces:
+      summary: Delete a volume
+    get:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Volume'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a specific volume
+    put:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Volume'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Volume'
+          description: Volume updated successfully
+        "400":
+          description: Invalid request payload
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update a volume
+  /api/v1/organizations/{org_id}/volumes/current:
+    get:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumeList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List of volumes for the current user
+  /api/v1/organizations/{org_id}/stacks:
     get:
       parameters:
       - description: The ID of the organization
@@ -745,7 +831,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceList'
+                $ref: '#/components/schemas/StackList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -757,7 +843,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all Workspaces for an organization
+      summary: List all Stacks for an organization
     post:
       parameters:
       - description: The ID of the organization
@@ -772,15 +858,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Workspace'
+              $ref: '#/components/schemas/Stack'
         required: true
       responses:
         "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workspace'
-          description: Workspace created successfully
+                $ref: '#/components/schemas/Stack'
+          description: Stack created successfully
         "401":
           description: Unauthorized
         "400":
@@ -794,7 +880,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: Workspace already exists
+          description: Stack already exists
         "500":
           content:
             application/json:
@@ -803,8 +889,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Create a new Workspace
-  /api/v1/organizations/{org_id}/workspaces/{id}:
+      summary: Create a new stack
+  /api/v1/organizations/{org_id}/stacks/{id}:
     delete:
       parameters:
       - description: The ID of the organization
@@ -825,7 +911,7 @@ paths:
         style: simple
       responses:
         "204":
-          description: Workspace deleted successfully
+          description: Stack deleted successfully
         "401":
           description: Unauthorized
         "500":
@@ -836,7 +922,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Delete a Workspace
+      summary: Delete a Stack
     get:
       parameters:
       - description: The ID of the organization
@@ -860,7 +946,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workspace'
+                $ref: '#/components/schemas/Stack'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -872,7 +958,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a specific Workspace
+      summary: Get a specific Stack
     put:
       parameters:
       - description: The ID of the organization
@@ -895,15 +981,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Workspace'
+              $ref: '#/components/schemas/Stack'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workspace'
-          description: Workspace updated successfully
+                $ref: '#/components/schemas/Stack'
+          description: Stack updated successfully
         "401":
           description: Unauthorized
         "400":
@@ -920,8 +1006,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Update a Workspace
-  /api/v1/organizations/{org_id}/workspaces/current:
+      summary: Update a Stack
+  /api/v1/organizations/{org_id}/stacks/current:
     get:
       parameters:
       - description: The ID of the organization
@@ -937,7 +1023,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceList'
+                $ref: '#/components/schemas/StackList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -949,8 +1035,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all Workspaces for the current user
-  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources:
+      summary: List all stacks of the current user
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources:
     get:
       parameters:
       - description: The ID of the organization
@@ -961,10 +1047,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The ID of the workspace
+      - description: The ID of the stack
         explode: false
         in: path
-        name: workspace_id
+        name: stack_id
         required: true
         schema:
           type: string
@@ -974,7 +1060,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceResourceList'
+                $ref: '#/components/schemas/StackResourceList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -986,8 +1072,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all WorkspaceResources for a Workspace
-  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id}:
+      summary: List all StackResources under a Stack
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}:
     put:
       parameters:
       - description: The ID of the organization
@@ -998,10 +1084,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The ID of the workspace
+      - description: The ID of the stack
         explode: false
         in: path
-        name: workspace_id
+        name: stack_id
         required: true
         schema:
           type: string
@@ -1018,15 +1104,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkspaceResource'
+              $ref: '#/components/schemas/StackResource'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceResource'
-          description: WorkspaceResource updated successfully
+                $ref: '#/components/schemas/StackResource'
+          description: StackResource updated successfully
         "401":
           description: Unauthorized
         "400":
@@ -1043,8 +1129,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Update a WorkspaceResource
-  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/resources/{id}/builds:
+      summary: Update a StackResource
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}/builds:
     get:
       parameters:
       - description: The ID of the organization
@@ -1055,10 +1141,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The ID of the workspace
+      - description: The ID of the stack
         explode: false
         in: path
-        name: workspace_id
+        name: stack_id
         required: true
         schema:
           type: string
@@ -1076,7 +1162,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceResourceBuildList'
+                $ref: '#/components/schemas/ImageBuildList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -1088,8 +1174,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all builds for a WorkspaceResource
-  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds:
+      summary: List all builds for a StackResource
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/builds:
     get:
       parameters:
       - description: The ID of the organization
@@ -1100,10 +1186,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The ID of the workspace
+      - description: The ID of the stack
         explode: false
         in: path
-        name: workspace_id
+        name: stack_id
         required: true
         schema:
           type: string
@@ -1113,7 +1199,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceResourceBuildList'
+                $ref: '#/components/schemas/ImageBuildList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -1125,8 +1211,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all builds under a workspace
-  /api/v1/organizations/{org_id}/workspaces/{workspace_id}/builds/{build_id}:
+      summary: List all builds under a stack
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/builds/{build_id}:
     get:
       parameters:
       - description: The ID of the organization
@@ -1137,10 +1223,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The ID of the workspace
+      - description: The ID of the stack
         explode: false
         in: path
-        name: workspace_id
+        name: stack_id
         required: true
         schema:
           type: string
@@ -1157,7 +1243,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceResourceBuild'
+                $ref: '#/components/schemas/ImageBuild'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -1171,7 +1257,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a specific build under a workspace
+      summary: Get a specific build under a stack
 components:
   parameters:
     id:
@@ -1192,11 +1278,11 @@ components:
       schema:
         type: string
       style: simple
-    workspace_id:
-      description: The ID of the workspace
+    stack_id:
+      description: The ID of the stack
       explode: false
       in: path
-      name: workspace_id
+      name: stack_id
       required: true
       schema:
         type: string
@@ -1478,7 +1564,7 @@ components:
         client_key_data:
           type: string
       type: object
-    WorkspaceStorage:
+    RemoteSyncServer:
       additionalProperties: false
       example:
         organisation_id: organisation_id
@@ -1492,116 +1578,16 @@ components:
           key: key
         created_at: 2000-01-23T04:56:07.000+00:00
         id: id
-        version: 0
         spec:
-          volumes:
-          - name: name
-            annotations:
-            - value: value
-              key: key
-            - value: value
-              key: key
-            spec:
-              storage_class: storage_class
-              size: size
-              sync_before_use: true
-              source:
-                local_source:
-                  path: path
-                  sync: true
-                build_source:
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                source_type: null
-            labels:
-            - value: value
-              key: key
-            - value: value
-              key: key
-            status:
-              phase: phase
-              build_artifact_syncs:
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              conditions:
-              - reason: reason
-                last_transition_time: 2000-01-23T04:56:07.000+00:00
-                type: type
-                message: message
-                observed_generation: 1
-                status: status
-              - reason: reason
-                last_transition_time: 2000-01-23T04:56:07.000+00:00
-                type: type
-                message: message
-                observed_generation: 1
-                status: status
-          - name: name
-            annotations:
-            - value: value
-              key: key
-            - value: value
-              key: key
-            spec:
-              storage_class: storage_class
-              size: size
-              sync_before_use: true
-              source:
-                local_source:
-                  path: path
-                  sync: true
-                build_source:
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                source_type: null
-            labels:
-            - value: value
-              key: key
-            - value: value
-              key: key
-            status:
-              phase: phase
-              build_artifact_syncs:
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              conditions:
-              - reason: reason
-                last_transition_time: 2000-01-23T04:56:07.000+00:00
-                type: type
-                message: message
-                observed_generation: 1
-                status: status
-              - reason: reason
-                last_transition_time: 2000-01-23T04:56:07.000+00:00
-                type: type
-                message: message
-                observed_generation: 1
-                status: status
-          workspace_name: workspace_name
+          ssh_public_key: ssh_public_key
+          volumeName: volumeName
         labels:
         - value: value
           key: key
         - value: value
           key: key
         status:
-          observed_version: 6
-          storage_server_service_name: storage_server_service_name
+          observed_version: 0
           state: null
           conditions:
           - reason: reason
@@ -1616,6 +1602,7 @@ components:
             message: message
             observed_generation: 1
             status: status
+          serviceName: serviceName
       properties:
         id:
           readOnly: true
@@ -1636,13 +1623,10 @@ components:
           items:
             $ref: '#/components/schemas/Annotation'
           type: array
-        version:
-          readOnly: true
-          type: integer
         spec:
-          $ref: '#/components/schemas/WorkspaceStorageSpec'
+          $ref: '#/components/schemas/RemoteSyncServerSpec'
         status:
-          $ref: '#/components/schemas/WorkspaceStorageStatus'
+          $ref: '#/components/schemas/RemoteSyncServerStatus'
         created_at:
           format: date-time
           readOnly: true
@@ -1655,407 +1639,35 @@ components:
       - name
       - spec
       type: object
-    WorkspaceStorageList:
-      example:
-        total: 0
-        items:
-        - organisation_id: organisation_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          name: name
-          namespace: namespace
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
-          version: 0
-          spec:
-            volumes:
-            - name: name
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              spec:
-                storage_class: storage_class
-                size: size
-                sync_before_use: true
-                source:
-                  local_source:
-                    path: path
-                    sync: true
-                  build_source:
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  source_type: null
-              labels:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              status:
-                phase: phase
-                build_artifact_syncs:
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                conditions:
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-            - name: name
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              spec:
-                storage_class: storage_class
-                size: size
-                sync_before_use: true
-                source:
-                  local_source:
-                    path: path
-                    sync: true
-                  build_source:
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  source_type: null
-              labels:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              status:
-                phase: phase
-                build_artifact_syncs:
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                conditions:
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-            workspace_name: workspace_name
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            observed_version: 6
-            storage_server_service_name: storage_server_service_name
-            state: null
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-        - organisation_id: organisation_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          name: name
-          namespace: namespace
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
-          version: 0
-          spec:
-            volumes:
-            - name: name
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              spec:
-                storage_class: storage_class
-                size: size
-                sync_before_use: true
-                source:
-                  local_source:
-                    path: path
-                    sync: true
-                  build_source:
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  source_type: null
-              labels:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              status:
-                phase: phase
-                build_artifact_syncs:
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                conditions:
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-            - name: name
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              spec:
-                storage_class: storage_class
-                size: size
-                sync_before_use: true
-                source:
-                  local_source:
-                    path: path
-                    sync: true
-                  build_source:
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  source_type: null
-              labels:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              status:
-                phase: phase
-                build_artifact_syncs:
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                conditions:
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-            workspace_name: workspace_name
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            observed_version: 6
-            storage_server_service_name: storage_server_service_name
-            state: null
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
+    RemoteSyncServerList:
       properties:
         items:
           items:
-            $ref: '#/components/schemas/WorkspaceStorage'
+            $ref: '#/components/schemas/RemoteSyncServer'
           type: array
         total:
           type: integer
       type: object
-    WorkspaceStorageSpec:
+    RemoteSyncServerSpec:
+      additionalProperties: false
       example:
-        volumes:
-        - name: name
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          spec:
-            storage_class: storage_class
-            size: size
-            sync_before_use: true
-            source:
-              local_source:
-                path: path
-                sync: true
-              build_source:
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              source_type: null
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            phase: phase
-            build_artifact_syncs:
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-        - name: name
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          spec:
-            storage_class: storage_class
-            size: size
-            sync_before_use: true
-            source:
-              local_source:
-                path: path
-                sync: true
-              build_source:
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              source_type: null
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            phase: phase
-            build_artifact_syncs:
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-        workspace_name: workspace_name
+        ssh_public_key: ssh_public_key
+        volumeName: volumeName
       properties:
-        workspace_name:
+        volumeName:
           type: string
-        volumes:
-          items:
-            $ref: '#/components/schemas/Volume'
-          type: array
+        ssh_public_key:
+          type: string
       required:
-      - workspace_name
+      - volumes
       type: object
-    WorkspaceStorageState:
+    RemoteSyncServerState:
       enum:
-      - StoragePending
-      - StorageCreating
-      - StorageCreated
-      - StorageReady
-      - StorageFailed
+      - RemoteSyncServerPending
+      - RemoteSyncServerCreating
+      - RemoteSyncServerCreated
+      - RemoteSyncServerReady
+      - RemoteSyncServerFailed
       type: string
     Volume:
       additionalProperties: false
@@ -2066,14 +1678,23 @@ components:
           key: key
         - value: value
           key: key
+        workspace_name: workspace_name
         spec:
+          needs_sync_before_use: true
           storage_class: storage_class
           size: size
-          sync_before_use: true
           source:
-            local_source:
+            git_repo_source:
+              repo_url: repo_url
+              revision:
+                commit: commit
+                tag: tag
+                branch:
+                  name: name
+                  head_sha: head_sha
+            remote_source:
               path: path
-              sync: true
+              current_directory_hash: current_directory_hash
             build_source:
             - destination_path: destination_path
               resource_ref: resource_ref
@@ -2082,6 +1703,7 @@ components:
               resource_ref: resource_ref
               source_path: source_path
             source_type: null
+          access_mode: null
         labels:
         - value: value
           key: key
@@ -2096,6 +1718,8 @@ components:
           - build_id: build_id
             resource_name: resource_name
             status: status
+          last_synced_git_revision: last_synced_git_revision
+          last_remote_sync_hash: last_remote_sync_hash
           conditions:
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -2120,13 +1744,16 @@ components:
           items:
             $ref: '#/components/schemas/Annotation'
           type: array
+        workspace_name:
+          type: string
         spec:
-          $ref: '#/components/schemas/WorkspaceVolumeSpec'
+          $ref: '#/components/schemas/VolumeSpec'
         status:
           $ref: '#/components/schemas/VolumeStatus'
       required:
       - name
       - spec
+      - workspace_name
       type: object
     VolumeList:
       example:
@@ -2138,14 +1765,23 @@ components:
             key: key
           - value: value
             key: key
+          workspace_name: workspace_name
           spec:
+            needs_sync_before_use: true
             storage_class: storage_class
             size: size
-            sync_before_use: true
             source:
-              local_source:
+              git_repo_source:
+                repo_url: repo_url
+                revision:
+                  commit: commit
+                  tag: tag
+                  branch:
+                    name: name
+                    head_sha: head_sha
+              remote_source:
                 path: path
-                sync: true
+                current_directory_hash: current_directory_hash
               build_source:
               - destination_path: destination_path
                 resource_ref: resource_ref
@@ -2154,6 +1790,7 @@ components:
                 resource_ref: resource_ref
                 source_path: source_path
               source_type: null
+            access_mode: null
           labels:
           - value: value
             key: key
@@ -2168,6 +1805,8 @@ components:
             - build_id: build_id
               resource_name: resource_name
               status: status
+            last_synced_git_revision: last_synced_git_revision
+            last_remote_sync_hash: last_remote_sync_hash
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -2187,14 +1826,23 @@ components:
             key: key
           - value: value
             key: key
+          workspace_name: workspace_name
           spec:
+            needs_sync_before_use: true
             storage_class: storage_class
             size: size
-            sync_before_use: true
             source:
-              local_source:
+              git_repo_source:
+                repo_url: repo_url
+                revision:
+                  commit: commit
+                  tag: tag
+                  branch:
+                    name: name
+                    head_sha: head_sha
+              remote_source:
                 path: path
-                sync: true
+                current_directory_hash: current_directory_hash
               build_source:
               - destination_path: destination_path
                 resource_ref: resource_ref
@@ -2203,6 +1851,7 @@ components:
                 resource_ref: resource_ref
                 source_path: source_path
               source_type: null
+            access_mode: null
           labels:
           - value: value
             key: key
@@ -2217,6 +1866,8 @@ components:
             - build_id: build_id
               resource_name: resource_name
               status: status
+            last_synced_git_revision: last_synced_git_revision
+            last_remote_sync_hash: last_remote_sync_hash
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -2247,16 +1898,24 @@ components:
       required:
       - public_key
       type: object
-    WorkspaceVolumeSpec:
+    VolumeSpec:
       additionalProperties: false
       example:
+        needs_sync_before_use: true
         storage_class: storage_class
         size: size
-        sync_before_use: true
         source:
-          local_source:
+          git_repo_source:
+            repo_url: repo_url
+            revision:
+              commit: commit
+              tag: tag
+              branch:
+                name: name
+                head_sha: head_sha
+          remote_source:
             path: path
-            sync: true
+            current_directory_hash: current_directory_hash
           build_source:
           - destination_path: destination_path
             resource_ref: resource_ref
@@ -2265,24 +1924,43 @@ components:
             resource_ref: resource_ref
             source_path: source_path
           source_type: null
+        access_mode: null
       properties:
         size:
           type: string
         storage_class:
           type: string
-        sync_before_use:
+        needs_sync_before_use:
           type: boolean
+        access_mode:
+          $ref: '#/components/schemas/VolumeAccessMode'
         source:
           $ref: '#/components/schemas/VolumeSource'
       required:
+      - access_mode
+      - needs_sync_before_use
       - size
       type: object
+    VolumeAccessMode:
+      enum:
+      - ReadWriteOnce
+      - ReadWriteMany
+      - ReadOnlyMany
+      type: string
     VolumeSource:
       additionalProperties: false
       example:
-        local_source:
+        git_repo_source:
+          repo_url: repo_url
+          revision:
+            commit: commit
+            tag: tag
+            branch:
+              name: name
+              head_sha: head_sha
+        remote_source:
           path: path
-          sync: true
+          current_directory_hash: current_directory_hash
         build_source:
         - destination_path: destination_path
           resource_ref: resource_ref
@@ -2292,10 +1970,12 @@ components:
           source_path: source_path
         source_type: null
       properties:
+        git_repo_source:
+          $ref: '#/components/schemas/GitRepoSource'
         source_type:
           $ref: '#/components/schemas/VolumeSourceTypes'
-        local_source:
-          $ref: '#/components/schemas/LocalSource'
+        remote_source:
+          $ref: '#/components/schemas/RemoteSource'
         build_source:
           items:
             $ref: '#/components/schemas/BuildArtifact'
@@ -2305,21 +1985,55 @@ components:
       type: object
     VolumeSourceTypes:
       enum:
-      - Local
+      - RemoteDir
       - BuildArtifact
+      - GitRepo
       type: string
-    LocalSource:
+    GitRepoSource:
+      example:
+        repo_url: repo_url
+        revision:
+          commit: commit
+          tag: tag
+          branch:
+            name: name
+            head_sha: head_sha
+      properties:
+        repo_url:
+          type: string
+        revision:
+          $ref: '#/components/schemas/GitRepoRevision'
+      required:
+      - repo_url
+      - revision
+      type: object
+    GitRepoRevision:
+      example:
+        commit: commit
+        tag: tag
+        branch:
+          name: name
+          head_sha: head_sha
+      properties:
+        branch:
+          $ref: '#/components/schemas/GitRepoRevision_branch'
+        commit:
+          type: string
+        tag:
+          type: string
+      type: object
+    RemoteSource:
       example:
         path: path
-        sync: true
+        current_directory_hash: current_directory_hash
       properties:
         path:
           type: string
-        sync:
-          type: boolean
+        current_directory_hash:
+          type: string
       required:
+      - current_directory_hash
       - path
-      - sync
       type: object
     BuildArtifact:
       example:
@@ -2338,10 +2052,9 @@ components:
       - resource_ref
       - source_path
       type: object
-    WorkspaceStorageStatus:
+    RemoteSyncServerStatus:
       example:
-        observed_version: 6
-        storage_server_service_name: storage_server_service_name
+        observed_version: 0
         state: null
         conditions:
         - reason: reason
@@ -2356,6 +2069,7 @@ components:
           message: message
           observed_generation: 1
           status: status
+        serviceName: serviceName
       properties:
         observed_version:
           type: integer
@@ -2364,8 +2078,8 @@ components:
             $ref: '#/components/schemas/Condition'
           type: array
         state:
-          $ref: '#/components/schemas/WorkspaceStorageState'
-        storage_server_service_name:
+          $ref: '#/components/schemas/RemoteSyncServerState'
+        serviceName:
           type: string
       type: object
     VolumeStatus:
@@ -2378,6 +2092,8 @@ components:
         - build_id: build_id
           resource_name: resource_name
           status: status
+        last_synced_git_revision: last_synced_git_revision
+        last_remote_sync_hash: last_remote_sync_hash
         conditions:
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -2402,6 +2118,10 @@ components:
           items:
             $ref: '#/components/schemas/BuildArtifactSyncInfo'
           type: array
+        last_synced_git_revision:
+          type: string
+        last_remote_sync_hash:
+          type: string
       type: object
     BuildArtifactSyncInfo:
       example:
@@ -2416,40 +2136,34 @@ components:
         status:
           type: string
       type: object
-    Workspace:
+    Stack:
       example:
-        organisation_id: organisation_id
-        updated_at: 2000-01-23T04:56:07.000+00:00
-        user_id: user_id
-        name: name
-        namespace: namespace
         annotations:
         - value: value
           key: key
         - value: value
           key: key
         created_at: 2000-01-23T04:56:07.000+00:00
-        id: id
         version: 0
         spec:
-          resources:
-          - init:
+          stack_resources:
+          - depends_on:
+            - depends_on
+            - depends_on
+            annotations:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            init_spec:
               args:
               - args
               - args
               command:
               - command
               - command
-            depends_on:
-            - depends_on
-            - depends_on
-            prebuilt:
-              image: image
-            annotations:
-            - value: value
-              key: key
-            - value: value
-              key: key
+              image_spec:
+                image: image
             execution_config:
               args:
               - args
@@ -2463,15 +2177,15 @@ components:
               - command
               - command
             volume_mounts:
-            - workspace_storage_id: workspace_storage_id
+            - stack_resource_id: stack_resource_id
               source_volume_type: null
-              workspace_resource_id: workspace_resource_id
+              stack_storage_id: stack_storage_id
               source_sub_path: source_sub_path
               target_path: target_path
               source_volume_id: source_volume_id
-            - workspace_storage_id: workspace_storage_id
+            - stack_resource_id: stack_resource_id
               source_volume_type: null
-              workspace_resource_id: workspace_resource_id
+              stack_storage_id: stack_storage_id
               source_sub_path: source_sub_path
               target_path: target_path
               source_volume_id: source_volume_id
@@ -2490,18 +2204,34 @@ components:
               key: key
             - value: value
               key: key
-            workspace_id: workspace_id
-            image_registry: image_registry
-            build:
-              context_path: context_path
-              dockerfile_path: dockerfile_path
-              source_hash: source_hash
-              source_volume_id: source_volume_id
+            stack_id: stack_id
             name: name
             lifecycle_config:
               restart_request_time: 2000-01-23T04:56:07.000+00:00
+            build_spec:
+              source_revision:
+                volume_source_revision:
+                  current_volume_hash: current_volume_hash
+                git_repo_revision:
+                  commit: commit
+                  tag: tag
+                  branch:
+                    name: name
+                    head_sha: head_sha
+              insecure_registry: true
+              context_path_within_source: context_path_within_source
+              dockerfile_path: dockerfile_path
+              image_repository_url: image_repository_url
+              source_context:
+                volume:
+                  name: name
+                  id: id
+                git_repo:
+                  repo_url: repo_url
             id: id
             stateful: true
+            image_spec:
+              image: image
             status:
               observed_version: 5
               last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
@@ -2525,23 +2255,23 @@ components:
                 url: url
               - target_port: 5
                 url: url
-          - init:
+          - depends_on:
+            - depends_on
+            - depends_on
+            annotations:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            init_spec:
               args:
               - args
               - args
               command:
               - command
               - command
-            depends_on:
-            - depends_on
-            - depends_on
-            prebuilt:
-              image: image
-            annotations:
-            - value: value
-              key: key
-            - value: value
-              key: key
+              image_spec:
+                image: image
             execution_config:
               args:
               - args
@@ -2555,15 +2285,15 @@ components:
               - command
               - command
             volume_mounts:
-            - workspace_storage_id: workspace_storage_id
+            - stack_resource_id: stack_resource_id
               source_volume_type: null
-              workspace_resource_id: workspace_resource_id
+              stack_storage_id: stack_storage_id
               source_sub_path: source_sub_path
               target_path: target_path
               source_volume_id: source_volume_id
-            - workspace_storage_id: workspace_storage_id
+            - stack_resource_id: stack_resource_id
               source_volume_type: null
-              workspace_resource_id: workspace_resource_id
+              stack_storage_id: stack_storage_id
               source_sub_path: source_sub_path
               target_path: target_path
               source_volume_id: source_volume_id
@@ -2582,18 +2312,34 @@ components:
               key: key
             - value: value
               key: key
-            workspace_id: workspace_id
-            image_registry: image_registry
-            build:
-              context_path: context_path
-              dockerfile_path: dockerfile_path
-              source_hash: source_hash
-              source_volume_id: source_volume_id
+            stack_id: stack_id
             name: name
             lifecycle_config:
               restart_request_time: 2000-01-23T04:56:07.000+00:00
+            build_spec:
+              source_revision:
+                volume_source_revision:
+                  current_volume_hash: current_volume_hash
+                git_repo_revision:
+                  commit: commit
+                  tag: tag
+                  branch:
+                    name: name
+                    head_sha: head_sha
+              insecure_registry: true
+              context_path_within_source: context_path_within_source
+              dockerfile_path: dockerfile_path
+              image_repository_url: image_repository_url
+              source_context:
+                volume:
+                  name: name
+                  id: id
+                git_repo:
+                  repo_url: repo_url
             id: id
             stateful: true
+            image_spec:
+              image: image
             status:
               observed_version: 5
               last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
@@ -2622,6 +2368,13 @@ components:
           key: key
         - value: value
           key: key
+        organisation_id: organisation_id
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        user_id: user_id
+        name: name
+        namespace: namespace
+        id: id
+        workspace_name: workspace_name
         status:
           observed_version: 2
           state: state
@@ -2650,6 +2403,8 @@ components:
           type: string
         name:
           type: string
+        workspace_name:
+          type: string
         namespace:
           readOnly: true
           type: string
@@ -2665,9 +2420,9 @@ components:
           readOnly: true
           type: integer
         spec:
-          $ref: '#/components/schemas/WorkspaceSpec'
+          $ref: '#/components/schemas/StackSpec'
         status:
-          $ref: '#/components/schemas/WorkspaceStatus'
+          $ref: '#/components/schemas/StackStatus'
         created_at:
           format: date-time
           readOnly: true
@@ -2679,43 +2434,38 @@ components:
       required:
       - name
       - spec
+      - workspace_name
       type: object
-    WorkspaceList:
+    StackList:
       example:
         total: 7
         items:
-        - organisation_id: organisation_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          user_id: user_id
-          name: name
-          namespace: namespace
-          annotations:
+        - annotations:
           - value: value
             key: key
           - value: value
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
           version: 0
           spec:
-            resources:
-            - init:
+            stack_resources:
+            - depends_on:
+              - depends_on
+              - depends_on
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              init_spec:
                 args:
                 - args
                 - args
                 command:
                 - command
                 - command
-              depends_on:
-              - depends_on
-              - depends_on
-              prebuilt:
-                image: image
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
+                image_spec:
+                  image: image
               execution_config:
                 args:
                 - args
@@ -2729,15 +2479,15 @@ components:
                 - command
                 - command
               volume_mounts:
-              - workspace_storage_id: workspace_storage_id
+              - stack_resource_id: stack_resource_id
                 source_volume_type: null
-                workspace_resource_id: workspace_resource_id
+                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
                 source_volume_id: source_volume_id
-              - workspace_storage_id: workspace_storage_id
+              - stack_resource_id: stack_resource_id
                 source_volume_type: null
-                workspace_resource_id: workspace_resource_id
+                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
                 source_volume_id: source_volume_id
@@ -2756,18 +2506,34 @@ components:
                 key: key
               - value: value
                 key: key
-              workspace_id: workspace_id
-              image_registry: image_registry
-              build:
-                context_path: context_path
-                dockerfile_path: dockerfile_path
-                source_hash: source_hash
-                source_volume_id: source_volume_id
+              stack_id: stack_id
               name: name
               lifecycle_config:
                 restart_request_time: 2000-01-23T04:56:07.000+00:00
+              build_spec:
+                source_revision:
+                  volume_source_revision:
+                    current_volume_hash: current_volume_hash
+                  git_repo_revision:
+                    commit: commit
+                    tag: tag
+                    branch:
+                      name: name
+                      head_sha: head_sha
+                insecure_registry: true
+                context_path_within_source: context_path_within_source
+                dockerfile_path: dockerfile_path
+                image_repository_url: image_repository_url
+                source_context:
+                  volume:
+                    name: name
+                    id: id
+                  git_repo:
+                    repo_url: repo_url
               id: id
               stateful: true
+              image_spec:
+                image: image
               status:
                 observed_version: 5
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
@@ -2791,23 +2557,23 @@ components:
                   url: url
                 - target_port: 5
                   url: url
-            - init:
+            - depends_on:
+              - depends_on
+              - depends_on
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              init_spec:
                 args:
                 - args
                 - args
                 command:
                 - command
                 - command
-              depends_on:
-              - depends_on
-              - depends_on
-              prebuilt:
-                image: image
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
+                image_spec:
+                  image: image
               execution_config:
                 args:
                 - args
@@ -2821,15 +2587,15 @@ components:
                 - command
                 - command
               volume_mounts:
-              - workspace_storage_id: workspace_storage_id
+              - stack_resource_id: stack_resource_id
                 source_volume_type: null
-                workspace_resource_id: workspace_resource_id
+                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
                 source_volume_id: source_volume_id
-              - workspace_storage_id: workspace_storage_id
+              - stack_resource_id: stack_resource_id
                 source_volume_type: null
-                workspace_resource_id: workspace_resource_id
+                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
                 source_volume_id: source_volume_id
@@ -2848,18 +2614,34 @@ components:
                 key: key
               - value: value
                 key: key
-              workspace_id: workspace_id
-              image_registry: image_registry
-              build:
-                context_path: context_path
-                dockerfile_path: dockerfile_path
-                source_hash: source_hash
-                source_volume_id: source_volume_id
+              stack_id: stack_id
               name: name
               lifecycle_config:
                 restart_request_time: 2000-01-23T04:56:07.000+00:00
+              build_spec:
+                source_revision:
+                  volume_source_revision:
+                    current_volume_hash: current_volume_hash
+                  git_repo_revision:
+                    commit: commit
+                    tag: tag
+                    branch:
+                      name: name
+                      head_sha: head_sha
+                insecure_registry: true
+                context_path_within_source: context_path_within_source
+                dockerfile_path: dockerfile_path
+                image_repository_url: image_repository_url
+                source_context:
+                  volume:
+                    name: name
+                    id: id
+                  git_repo:
+                    repo_url: repo_url
               id: id
               stateful: true
+              image_spec:
+                image: image
               status:
                 observed_version: 5
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
@@ -2888,6 +2670,13 @@ components:
             key: key
           - value: value
             key: key
+          organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          name: name
+          namespace: namespace
+          id: id
+          workspace_name: workspace_name
           status:
             observed_version: 2
             state: state
@@ -2904,38 +2693,32 @@ components:
               message: message
               observed_generation: 1
               status: status
-        - organisation_id: organisation_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          user_id: user_id
-          name: name
-          namespace: namespace
-          annotations:
+        - annotations:
           - value: value
             key: key
           - value: value
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
           version: 0
           spec:
-            resources:
-            - init:
+            stack_resources:
+            - depends_on:
+              - depends_on
+              - depends_on
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              init_spec:
                 args:
                 - args
                 - args
                 command:
                 - command
                 - command
-              depends_on:
-              - depends_on
-              - depends_on
-              prebuilt:
-                image: image
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
+                image_spec:
+                  image: image
               execution_config:
                 args:
                 - args
@@ -2949,15 +2732,15 @@ components:
                 - command
                 - command
               volume_mounts:
-              - workspace_storage_id: workspace_storage_id
+              - stack_resource_id: stack_resource_id
                 source_volume_type: null
-                workspace_resource_id: workspace_resource_id
+                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
                 source_volume_id: source_volume_id
-              - workspace_storage_id: workspace_storage_id
+              - stack_resource_id: stack_resource_id
                 source_volume_type: null
-                workspace_resource_id: workspace_resource_id
+                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
                 source_volume_id: source_volume_id
@@ -2976,18 +2759,34 @@ components:
                 key: key
               - value: value
                 key: key
-              workspace_id: workspace_id
-              image_registry: image_registry
-              build:
-                context_path: context_path
-                dockerfile_path: dockerfile_path
-                source_hash: source_hash
-                source_volume_id: source_volume_id
+              stack_id: stack_id
               name: name
               lifecycle_config:
                 restart_request_time: 2000-01-23T04:56:07.000+00:00
+              build_spec:
+                source_revision:
+                  volume_source_revision:
+                    current_volume_hash: current_volume_hash
+                  git_repo_revision:
+                    commit: commit
+                    tag: tag
+                    branch:
+                      name: name
+                      head_sha: head_sha
+                insecure_registry: true
+                context_path_within_source: context_path_within_source
+                dockerfile_path: dockerfile_path
+                image_repository_url: image_repository_url
+                source_context:
+                  volume:
+                    name: name
+                    id: id
+                  git_repo:
+                    repo_url: repo_url
               id: id
               stateful: true
+              image_spec:
+                image: image
               status:
                 observed_version: 5
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
@@ -3011,23 +2810,23 @@ components:
                   url: url
                 - target_port: 5
                   url: url
-            - init:
+            - depends_on:
+              - depends_on
+              - depends_on
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              init_spec:
                 args:
                 - args
                 - args
                 command:
                 - command
                 - command
-              depends_on:
-              - depends_on
-              - depends_on
-              prebuilt:
-                image: image
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
+                image_spec:
+                  image: image
               execution_config:
                 args:
                 - args
@@ -3041,15 +2840,15 @@ components:
                 - command
                 - command
               volume_mounts:
-              - workspace_storage_id: workspace_storage_id
+              - stack_resource_id: stack_resource_id
                 source_volume_type: null
-                workspace_resource_id: workspace_resource_id
+                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
                 source_volume_id: source_volume_id
-              - workspace_storage_id: workspace_storage_id
+              - stack_resource_id: stack_resource_id
                 source_volume_type: null
-                workspace_resource_id: workspace_resource_id
+                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
                 source_volume_id: source_volume_id
@@ -3068,18 +2867,34 @@ components:
                 key: key
               - value: value
                 key: key
-              workspace_id: workspace_id
-              image_registry: image_registry
-              build:
-                context_path: context_path
-                dockerfile_path: dockerfile_path
-                source_hash: source_hash
-                source_volume_id: source_volume_id
+              stack_id: stack_id
               name: name
               lifecycle_config:
                 restart_request_time: 2000-01-23T04:56:07.000+00:00
+              build_spec:
+                source_revision:
+                  volume_source_revision:
+                    current_volume_hash: current_volume_hash
+                  git_repo_revision:
+                    commit: commit
+                    tag: tag
+                    branch:
+                      name: name
+                      head_sha: head_sha
+                insecure_registry: true
+                context_path_within_source: context_path_within_source
+                dockerfile_path: dockerfile_path
+                image_repository_url: image_repository_url
+                source_context:
+                  volume:
+                    name: name
+                    id: id
+                  git_repo:
+                    repo_url: repo_url
               id: id
               stateful: true
+              image_spec:
+                image: image
               status:
                 observed_version: 5
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
@@ -3108,6 +2923,13 @@ components:
             key: key
           - value: value
             key: key
+          organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          name: name
+          namespace: namespace
+          id: id
+          workspace_name: workspace_name
           status:
             observed_version: 2
             state: state
@@ -3127,31 +2949,31 @@ components:
       properties:
         items:
           items:
-            $ref: '#/components/schemas/Workspace'
+            $ref: '#/components/schemas/Stack'
           type: array
         total:
           type: integer
       type: object
-    WorkspaceSpec:
+    StackSpec:
       example:
-        resources:
-        - init:
+        stack_resources:
+        - depends_on:
+          - depends_on
+          - depends_on
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          init_spec:
             args:
             - args
             - args
             command:
             - command
             - command
-          depends_on:
-          - depends_on
-          - depends_on
-          prebuilt:
-            image: image
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
+            image_spec:
+              image: image
           execution_config:
             args:
             - args
@@ -3165,15 +2987,15 @@ components:
             - command
             - command
           volume_mounts:
-          - workspace_storage_id: workspace_storage_id
+          - stack_resource_id: stack_resource_id
             source_volume_type: null
-            workspace_resource_id: workspace_resource_id
+            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
             source_volume_id: source_volume_id
-          - workspace_storage_id: workspace_storage_id
+          - stack_resource_id: stack_resource_id
             source_volume_type: null
-            workspace_resource_id: workspace_resource_id
+            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
             source_volume_id: source_volume_id
@@ -3192,18 +3014,34 @@ components:
             key: key
           - value: value
             key: key
-          workspace_id: workspace_id
-          image_registry: image_registry
-          build:
-            context_path: context_path
-            dockerfile_path: dockerfile_path
-            source_hash: source_hash
-            source_volume_id: source_volume_id
+          stack_id: stack_id
           name: name
           lifecycle_config:
             restart_request_time: 2000-01-23T04:56:07.000+00:00
+          build_spec:
+            source_revision:
+              volume_source_revision:
+                current_volume_hash: current_volume_hash
+              git_repo_revision:
+                commit: commit
+                tag: tag
+                branch:
+                  name: name
+                  head_sha: head_sha
+            insecure_registry: true
+            context_path_within_source: context_path_within_source
+            dockerfile_path: dockerfile_path
+            image_repository_url: image_repository_url
+            source_context:
+              volume:
+                name: name
+                id: id
+              git_repo:
+                repo_url: repo_url
           id: id
           stateful: true
+          image_spec:
+            image: image
           status:
             observed_version: 5
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
@@ -3227,23 +3065,23 @@ components:
               url: url
             - target_port: 5
               url: url
-        - init:
+        - depends_on:
+          - depends_on
+          - depends_on
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          init_spec:
             args:
             - args
             - args
             command:
             - command
             - command
-          depends_on:
-          - depends_on
-          - depends_on
-          prebuilt:
-            image: image
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
+            image_spec:
+              image: image
           execution_config:
             args:
             - args
@@ -3257,15 +3095,15 @@ components:
             - command
             - command
           volume_mounts:
-          - workspace_storage_id: workspace_storage_id
+          - stack_resource_id: stack_resource_id
             source_volume_type: null
-            workspace_resource_id: workspace_resource_id
+            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
             source_volume_id: source_volume_id
-          - workspace_storage_id: workspace_storage_id
+          - stack_resource_id: stack_resource_id
             source_volume_type: null
-            workspace_resource_id: workspace_resource_id
+            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
             source_volume_id: source_volume_id
@@ -3284,18 +3122,34 @@ components:
             key: key
           - value: value
             key: key
-          workspace_id: workspace_id
-          image_registry: image_registry
-          build:
-            context_path: context_path
-            dockerfile_path: dockerfile_path
-            source_hash: source_hash
-            source_volume_id: source_volume_id
+          stack_id: stack_id
           name: name
           lifecycle_config:
             restart_request_time: 2000-01-23T04:56:07.000+00:00
+          build_spec:
+            source_revision:
+              volume_source_revision:
+                current_volume_hash: current_volume_hash
+              git_repo_revision:
+                commit: commit
+                tag: tag
+                branch:
+                  name: name
+                  head_sha: head_sha
+            insecure_registry: true
+            context_path_within_source: context_path_within_source
+            dockerfile_path: dockerfile_path
+            image_repository_url: image_repository_url
+            source_context:
+              volume:
+                name: name
+                id: id
+              git_repo:
+                repo_url: repo_url
           id: id
           stateful: true
+          image_spec:
+            image: image
           status:
             observed_version: 5
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
@@ -3320,14 +3174,14 @@ components:
             - target_port: 5
               url: url
       properties:
-        resources:
+        stack_resources:
           items:
-            $ref: '#/components/schemas/WorkspaceResource'
+            $ref: '#/components/schemas/StackResource'
           type: array
       required:
-      - resources
+      - stack_resources
       type: object
-    WorkspaceStatus:
+    StackStatus:
       example:
         observed_version: 2
         state: state
@@ -3354,25 +3208,25 @@ components:
             $ref: '#/components/schemas/Condition'
           type: array
       type: object
-    WorkspaceResource:
+    StackResource:
       example:
-        init:
+        depends_on:
+        - depends_on
+        - depends_on
+        annotations:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        init_spec:
           args:
           - args
           - args
           command:
           - command
           - command
-        depends_on:
-        - depends_on
-        - depends_on
-        prebuilt:
-          image: image
-        annotations:
-        - value: value
-          key: key
-        - value: value
-          key: key
+          image_spec:
+            image: image
         execution_config:
           args:
           - args
@@ -3386,15 +3240,15 @@ components:
           - command
           - command
         volume_mounts:
-        - workspace_storage_id: workspace_storage_id
+        - stack_resource_id: stack_resource_id
           source_volume_type: null
-          workspace_resource_id: workspace_resource_id
+          stack_storage_id: stack_storage_id
           source_sub_path: source_sub_path
           target_path: target_path
           source_volume_id: source_volume_id
-        - workspace_storage_id: workspace_storage_id
+        - stack_resource_id: stack_resource_id
           source_volume_type: null
-          workspace_resource_id: workspace_resource_id
+          stack_storage_id: stack_storage_id
           source_sub_path: source_sub_path
           target_path: target_path
           source_volume_id: source_volume_id
@@ -3413,18 +3267,34 @@ components:
           key: key
         - value: value
           key: key
-        workspace_id: workspace_id
-        image_registry: image_registry
-        build:
-          context_path: context_path
-          dockerfile_path: dockerfile_path
-          source_hash: source_hash
-          source_volume_id: source_volume_id
+        stack_id: stack_id
         name: name
         lifecycle_config:
           restart_request_time: 2000-01-23T04:56:07.000+00:00
+        build_spec:
+          source_revision:
+            volume_source_revision:
+              current_volume_hash: current_volume_hash
+            git_repo_revision:
+              commit: commit
+              tag: tag
+              branch:
+                name: name
+                head_sha: head_sha
+          insecure_registry: true
+          context_path_within_source: context_path_within_source
+          dockerfile_path: dockerfile_path
+          image_repository_url: image_repository_url
+          source_context:
+            volume:
+              name: name
+              id: id
+            git_repo:
+              repo_url: repo_url
         id: id
         stateful: true
+        image_spec:
+          image: image
         status:
           observed_version: 5
           last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
@@ -3452,7 +3322,7 @@ components:
         id:
           readOnly: true
           type: string
-        workspace_id:
+        stack_id:
           readOnly: true
           type: string
         name:
@@ -3468,14 +3338,12 @@ components:
         version:
           readOnly: true
           type: integer
-        image_registry:
-          type: string
-        build:
-          $ref: '#/components/schemas/BuildConfig'
-        prebuilt:
-          $ref: '#/components/schemas/PrebuiltConfig'
-        init:
-          $ref: '#/components/schemas/InitConfig'
+        build_spec:
+          $ref: '#/components/schemas/StackResourceBuildSpec'
+        image_spec:
+          $ref: '#/components/schemas/ImageSpec'
+        init_spec:
+          $ref: '#/components/schemas/InitSpec'
         execution_config:
           $ref: '#/components/schemas/ExecutionConfig'
         volume_mounts:
@@ -3495,31 +3363,31 @@ components:
         stateful:
           type: boolean
         status:
-          $ref: '#/components/schemas/ResourceStatus'
+          $ref: '#/components/schemas/StackResourceStatus'
       required:
       - name
       type: object
-    WorkspaceResourceList:
+    StackResourceList:
       example:
         total: 0
         items:
-        - init:
+        - depends_on:
+          - depends_on
+          - depends_on
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          init_spec:
             args:
             - args
             - args
             command:
             - command
             - command
-          depends_on:
-          - depends_on
-          - depends_on
-          prebuilt:
-            image: image
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
+            image_spec:
+              image: image
           execution_config:
             args:
             - args
@@ -3533,15 +3401,15 @@ components:
             - command
             - command
           volume_mounts:
-          - workspace_storage_id: workspace_storage_id
+          - stack_resource_id: stack_resource_id
             source_volume_type: null
-            workspace_resource_id: workspace_resource_id
+            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
             source_volume_id: source_volume_id
-          - workspace_storage_id: workspace_storage_id
+          - stack_resource_id: stack_resource_id
             source_volume_type: null
-            workspace_resource_id: workspace_resource_id
+            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
             source_volume_id: source_volume_id
@@ -3560,18 +3428,34 @@ components:
             key: key
           - value: value
             key: key
-          workspace_id: workspace_id
-          image_registry: image_registry
-          build:
-            context_path: context_path
-            dockerfile_path: dockerfile_path
-            source_hash: source_hash
-            source_volume_id: source_volume_id
+          stack_id: stack_id
           name: name
           lifecycle_config:
             restart_request_time: 2000-01-23T04:56:07.000+00:00
+          build_spec:
+            source_revision:
+              volume_source_revision:
+                current_volume_hash: current_volume_hash
+              git_repo_revision:
+                commit: commit
+                tag: tag
+                branch:
+                  name: name
+                  head_sha: head_sha
+            insecure_registry: true
+            context_path_within_source: context_path_within_source
+            dockerfile_path: dockerfile_path
+            image_repository_url: image_repository_url
+            source_context:
+              volume:
+                name: name
+                id: id
+              git_repo:
+                repo_url: repo_url
           id: id
           stateful: true
+          image_spec:
+            image: image
           status:
             observed_version: 5
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
@@ -3595,23 +3479,23 @@ components:
               url: url
             - target_port: 5
               url: url
-        - init:
+        - depends_on:
+          - depends_on
+          - depends_on
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          init_spec:
             args:
             - args
             - args
             command:
             - command
             - command
-          depends_on:
-          - depends_on
-          - depends_on
-          prebuilt:
-            image: image
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
+            image_spec:
+              image: image
           execution_config:
             args:
             - args
@@ -3625,15 +3509,15 @@ components:
             - command
             - command
           volume_mounts:
-          - workspace_storage_id: workspace_storage_id
+          - stack_resource_id: stack_resource_id
             source_volume_type: null
-            workspace_resource_id: workspace_resource_id
+            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
             source_volume_id: source_volume_id
-          - workspace_storage_id: workspace_storage_id
+          - stack_resource_id: stack_resource_id
             source_volume_type: null
-            workspace_resource_id: workspace_resource_id
+            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
             source_volume_id: source_volume_id
@@ -3652,18 +3536,34 @@ components:
             key: key
           - value: value
             key: key
-          workspace_id: workspace_id
-          image_registry: image_registry
-          build:
-            context_path: context_path
-            dockerfile_path: dockerfile_path
-            source_hash: source_hash
-            source_volume_id: source_volume_id
+          stack_id: stack_id
           name: name
           lifecycle_config:
             restart_request_time: 2000-01-23T04:56:07.000+00:00
+          build_spec:
+            source_revision:
+              volume_source_revision:
+                current_volume_hash: current_volume_hash
+              git_repo_revision:
+                commit: commit
+                tag: tag
+                branch:
+                  name: name
+                  head_sha: head_sha
+            insecure_registry: true
+            context_path_within_source: context_path_within_source
+            dockerfile_path: dockerfile_path
+            image_repository_url: image_repository_url
+            source_context:
+              volume:
+                name: name
+                id: id
+              git_repo:
+                repo_url: repo_url
           id: id
           stateful: true
+          image_spec:
+            image: image
           status:
             observed_version: 5
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
@@ -3690,26 +3590,40 @@ components:
       properties:
         items:
           items:
-            $ref: '#/components/schemas/WorkspaceResource'
+            $ref: '#/components/schemas/StackResource'
           type: array
         total:
           type: integer
       type: object
-    WorkspaceResourceBuild:
+    ImageBuild:
       example:
-        workspace_id: workspace_id
-        image_registry: image_registry
+        stack_resource_id: stack_resource_id
+        source_revision:
+          volume_source_revision:
+            current_volume_hash: current_volume_hash
+          git_repo_revision:
+            commit: commit
+            tag: tag
+            branch:
+              name: name
+              head_sha: head_sha
         updated_at: 2000-01-23T04:56:07.000+00:00
+        image_repo: image_repo
+        stack_id: stack_id
         namespace: namespace
-        workspace_resource_id: workspace_resource_id
         created_at: 2000-01-23T04:56:07.000+00:00
+        build_context:
+          volume:
+            name: name
+            id: id
+          git_repo:
+            repo_url: repo_url
         id: id
-        workspace_resource_name: workspace_resource_name
-        source_hash: source_hash
+        stack_resource_name: stack_resource_name
         status:
+          build_source_revision: build_source_revision
           image_url: image_url
           state: state
-          build_source_hash: build_source_hash
           conditions:
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -3728,42 +3642,64 @@ components:
           type: string
         namespace:
           type: string
-        workspace_id:
+        stack_id:
           type: string
-        workspace_resource_id:
+        stack_resource_id:
           type: string
-        workspace_resource_name:
+        stack_resource_name:
           type: string
-        source_hash:
-          type: string
-        image_registry:
+        source_revision:
+          $ref: '#/components/schemas/BuildSourceRevision'
+        build_context:
+          $ref: '#/components/schemas/BuildSourceContext'
+        image_repo:
           type: string
         status:
-          $ref: '#/components/schemas/ResourceBuildStatus'
+          $ref: '#/components/schemas/ImageBuildStatus'
         created_at:
           format: date-time
           type: string
         updated_at:
           format: date-time
           type: string
+      required:
+      - build_context
+      - image_repo
+      - source_revision
+      - stack_resource_id
+      - stack_resource_name
       type: object
-    WorkspaceResourceBuildList:
+    ImageBuildList:
       example:
         total: 0
         items:
-        - workspace_id: workspace_id
-          image_registry: image_registry
+        - stack_resource_id: stack_resource_id
+          source_revision:
+            volume_source_revision:
+              current_volume_hash: current_volume_hash
+            git_repo_revision:
+              commit: commit
+              tag: tag
+              branch:
+                name: name
+                head_sha: head_sha
           updated_at: 2000-01-23T04:56:07.000+00:00
+          image_repo: image_repo
+          stack_id: stack_id
           namespace: namespace
-          workspace_resource_id: workspace_resource_id
           created_at: 2000-01-23T04:56:07.000+00:00
+          build_context:
+            volume:
+              name: name
+              id: id
+            git_repo:
+              repo_url: repo_url
           id: id
-          workspace_resource_name: workspace_resource_name
-          source_hash: source_hash
+          stack_resource_name: stack_resource_name
           status:
+            build_source_revision: build_source_revision
             image_url: image_url
             state: state
-            build_source_hash: build_source_hash
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -3777,19 +3713,33 @@ components:
               message: message
               observed_generation: 1
               status: status
-        - workspace_id: workspace_id
-          image_registry: image_registry
+        - stack_resource_id: stack_resource_id
+          source_revision:
+            volume_source_revision:
+              current_volume_hash: current_volume_hash
+            git_repo_revision:
+              commit: commit
+              tag: tag
+              branch:
+                name: name
+                head_sha: head_sha
           updated_at: 2000-01-23T04:56:07.000+00:00
+          image_repo: image_repo
+          stack_id: stack_id
           namespace: namespace
-          workspace_resource_id: workspace_resource_id
           created_at: 2000-01-23T04:56:07.000+00:00
+          build_context:
+            volume:
+              name: name
+              id: id
+            git_repo:
+              repo_url: repo_url
           id: id
-          workspace_resource_name: workspace_resource_name
-          source_hash: source_hash
+          stack_resource_name: stack_resource_name
           status:
+            build_source_revision: build_source_revision
             image_url: image_url
             state: state
-            build_source_hash: build_source_hash
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -3806,16 +3756,16 @@ components:
       properties:
         items:
           items:
-            $ref: '#/components/schemas/WorkspaceResourceBuild'
+            $ref: '#/components/schemas/ImageBuild'
           type: array
         total:
           type: integer
       type: object
-    ResourceBuildStatus:
+    ImageBuildStatus:
       example:
+        build_source_revision: build_source_revision
         image_url: image_url
         state: state
-        build_source_hash: build_source_hash
         conditions:
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -3838,10 +3788,10 @@ components:
           type: array
         image_url:
           type: string
-        build_source_hash:
+        build_source_revision:
           type: string
       type: object
-    ResourceStatus:
+    StackResourceStatus:
       example:
         observed_version: 5
         last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
@@ -3896,17 +3846,17 @@ components:
       type: object
     VolumeMount:
       example:
-        workspace_storage_id: workspace_storage_id
+        stack_resource_id: stack_resource_id
         source_volume_type: null
-        workspace_resource_id: workspace_resource_id
+        stack_storage_id: stack_storage_id
         source_sub_path: source_sub_path
         target_path: target_path
         source_volume_id: source_volume_id
       properties:
-        workspace_resource_id:
+        stack_resource_id:
           readOnly: true
           type: string
-        workspace_storage_id:
+        stack_storage_id:
           readOnly: true
           type: string
         source_volume_type:
@@ -3924,8 +3874,9 @@ components:
     VolumeMountSourceType:
       enum:
       - EmptyVolume
-      - LocalSyncedVolume
+      - RemoteDirSyncedVolume
       - BuildArtifactSyncedVolume
+      - GitRepoSyncedVolume
       type: string
     Port:
       example:
@@ -3943,6 +3894,7 @@ components:
         subdomain_prefix:
           type: string
       required:
+      - exposed_to_public
       - number
       type: object
     LifecycleConfig:
@@ -3953,29 +3905,79 @@ components:
           format: date-time
           type: string
       type: object
-    BuildConfig:
+    StackResourceBuildSpec:
       additionalProperties: false
       example:
-        context_path: context_path
+        source_revision:
+          volume_source_revision:
+            current_volume_hash: current_volume_hash
+          git_repo_revision:
+            commit: commit
+            tag: tag
+            branch:
+              name: name
+              head_sha: head_sha
+        insecure_registry: true
+        context_path_within_source: context_path_within_source
         dockerfile_path: dockerfile_path
-        source_hash: source_hash
-        source_volume_id: source_volume_id
+        image_repository_url: image_repository_url
+        source_context:
+          volume:
+            name: name
+            id: id
+          git_repo:
+            repo_url: repo_url
       properties:
-        source_volume_id:
-          type: string
-        context_path:
+        source_context:
+          $ref: '#/components/schemas/BuildSourceContext'
+        context_path_within_source:
           type: string
         dockerfile_path:
           type: string
-        source_hash:
+        source_revision:
+          $ref: '#/components/schemas/BuildSourceRevision'
+        image_repository_url:
           type: string
+        insecure_registry:
+          type: boolean
       required:
-      - context_path
+      - context_path_within_source
       - dockerfile_path
-      - source_hash
-      - source_volume_id
+      - image_repository_url
+      - insecure_registry
+      - source_context
+      - source_revision
       type: object
-    PrebuiltConfig:
+    BuildSourceContext:
+      example:
+        volume:
+          name: name
+          id: id
+        git_repo:
+          repo_url: repo_url
+      properties:
+        volume:
+          $ref: '#/components/schemas/BuildSourceContext_volume'
+        git_repo:
+          $ref: '#/components/schemas/BuildSourceContext_git_repo'
+      type: object
+    BuildSourceRevision:
+      example:
+        volume_source_revision:
+          current_volume_hash: current_volume_hash
+        git_repo_revision:
+          commit: commit
+          tag: tag
+          branch:
+            name: name
+            head_sha: head_sha
+      properties:
+        volume_source_revision:
+          $ref: '#/components/schemas/BuildSourceRevision_volume_source_revision'
+        git_repo_revision:
+          $ref: '#/components/schemas/GitRepoRevision'
+      type: object
+    ImageSpec:
       additionalProperties: false
       example:
         image: image
@@ -3985,7 +3987,7 @@ components:
       required:
       - image
       type: object
-    InitConfig:
+    InitSpec:
       additionalProperties: false
       example:
         args:
@@ -3994,7 +3996,11 @@ components:
         command:
         - command
         - command
+        image_spec:
+          image: image
       properties:
+        image_spec:
+          $ref: '#/components/schemas/ImageSpec'
         command:
           items:
             type: string
@@ -4135,9 +4141,9 @@ components:
         href:
           type: string
       type: object
-    _api_v1_organizations__id__workspace_storages_get_200_response:
+    _api_v1_organizations__id__remote_sync_servers_get_200_response:
       example:
-        total: 1
+        total: 6
         items:
         - organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
@@ -4150,116 +4156,16 @@ components:
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          version: 0
           spec:
-            volumes:
-            - name: name
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              spec:
-                storage_class: storage_class
-                size: size
-                sync_before_use: true
-                source:
-                  local_source:
-                    path: path
-                    sync: true
-                  build_source:
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  source_type: null
-              labels:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              status:
-                phase: phase
-                build_artifact_syncs:
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                conditions:
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-            - name: name
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              spec:
-                storage_class: storage_class
-                size: size
-                sync_before_use: true
-                source:
-                  local_source:
-                    path: path
-                    sync: true
-                  build_source:
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  source_type: null
-              labels:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              status:
-                phase: phase
-                build_artifact_syncs:
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                conditions:
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-            workspace_name: workspace_name
+            ssh_public_key: ssh_public_key
+            volumeName: volumeName
           labels:
           - value: value
             key: key
           - value: value
             key: key
           status:
-            observed_version: 6
-            storage_server_service_name: storage_server_service_name
+            observed_version: 0
             state: null
             conditions:
             - reason: reason
@@ -4274,6 +4180,7 @@ components:
               message: message
               observed_generation: 1
               status: status
+            serviceName: serviceName
         - organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
           name: name
@@ -4285,116 +4192,16 @@ components:
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          version: 0
           spec:
-            volumes:
-            - name: name
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              spec:
-                storage_class: storage_class
-                size: size
-                sync_before_use: true
-                source:
-                  local_source:
-                    path: path
-                    sync: true
-                  build_source:
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  source_type: null
-              labels:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              status:
-                phase: phase
-                build_artifact_syncs:
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                conditions:
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-            - name: name
-              annotations:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              spec:
-                storage_class: storage_class
-                size: size
-                sync_before_use: true
-                source:
-                  local_source:
-                    path: path
-                    sync: true
-                  build_source:
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  source_type: null
-              labels:
-              - value: value
-                key: key
-              - value: value
-                key: key
-              status:
-                phase: phase
-                build_artifact_syncs:
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                conditions:
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-                - reason: reason
-                  last_transition_time: 2000-01-23T04:56:07.000+00:00
-                  type: type
-                  message: message
-                  observed_generation: 1
-                  status: status
-            workspace_name: workspace_name
+            ssh_public_key: ssh_public_key
+            volumeName: volumeName
           labels:
           - value: value
             key: key
           - value: value
             key: key
           status:
-            observed_version: 6
-            storage_server_service_name: storage_server_service_name
+            observed_version: 0
             state: null
             conditions:
             - reason: reason
@@ -4409,10 +4216,11 @@ components:
               message: message
               observed_generation: 1
               status: status
+            serviceName: serviceName
       properties:
         items:
           items:
-            $ref: '#/components/schemas/WorkspaceStorage'
+            $ref: '#/components/schemas/RemoteSyncServer'
           type: array
         total:
           type: integer
@@ -4426,6 +4234,46 @@ components:
           type: string
         namespace:
           type: string
+      type: object
+    GitRepoRevision_branch:
+      example:
+        name: name
+        head_sha: head_sha
+      properties:
+        name:
+          type: string
+        head_sha:
+          type: string
+      type: object
+    BuildSourceContext_volume:
+      example:
+        name: name
+        id: id
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required:
+      - id
+      type: object
+    BuildSourceContext_git_repo:
+      example:
+        repo_url: repo_url
+      properties:
+        repo_url:
+          type: string
+      required:
+      - repo_url
+      type: object
+    BuildSourceRevision_volume_source_revision:
+      example:
+        current_volume_hash: current_volume_hash
+      properties:
+        current_volume_hash:
+          type: string
+      required:
+      - current_volume_hash
       type: object
     Error_allOf:
       properties:

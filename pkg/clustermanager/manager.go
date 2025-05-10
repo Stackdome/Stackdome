@@ -15,10 +15,15 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	certutil "k8s.io/client-go/util/cert"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	workspacev1alpha1 "soradev.io/cluster-agent/api/v1alpha1"
+	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
+	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
+	storagev1alpha1 "stackdome.io/cluster-agent/api/storage/v1alpha1"
+	usersv1alpha1 "stackdome.io/cluster-agent/api/users/v1alpha1"
 )
 
 // ClusterManager defines the interface for managing clusters
@@ -35,6 +40,7 @@ type ClusterManager interface {
 // Controller defines the interface for controllers that can be added to a manager
 type Controller interface {
 	AddToManager(manager ctrl.Manager) error
+	Name() string
 }
 
 // ClusterControl represents a control structure for a single cluster
@@ -84,6 +90,9 @@ func (cc *ClusterControl) createManager() (ctrl.Manager, error) {
 		Scheme:         scheme,
 		Metrics:        metricsserver.Options{BindAddress: "0"},
 		LeaderElection: false,
+		Controller: config.Controller{
+			SkipNameValidation: ptr.To(true),
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
@@ -97,7 +106,7 @@ func (cc *ClusterControl) createManager() (ctrl.Manager, error) {
 func (cc *ClusterControl) registerControllers(manager ctrl.Manager) error {
 	for _, controller := range cc.controllers {
 		if err := controller.AddToManager(manager); err != nil {
-			return err
+			return fmt.Errorf("failed to register controller %s: %v", controller.Name(), err)
 		}
 	}
 	return nil
@@ -268,8 +277,20 @@ func createScheme() (*runtime.Scheme, error) {
 		return nil, fmt.Errorf("failed to add client-go scheme: %w", err)
 	}
 
-	if err := workspacev1alpha1.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf("failed to add workspace v1alpha1 scheme: %w", err)
+	if err := corev1alpha1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add corev1alpha1 scheme: %w", err)
+	}
+
+	if err := buildsv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add buildsv1alpha1 scheme: %w", err)
+	}
+
+	if err := usersv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add userv1alpha1 scheme: %w", err)
+	}
+
+	if err := storagev1alpha1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add storagev1alpha1 scheme: %w", err)
 	}
 
 	return scheme, nil

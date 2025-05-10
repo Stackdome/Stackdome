@@ -6,10 +6,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-func WorkspaceStorageIdLabelPresentPredicate[T client.Object]() predicate.TypedFuncs[T] {
+func VolumeIdLabelPresentPredicate[T client.Object]() predicate.TypedFuncs[T] {
 	return predicate.NewTypedPredicateFuncs(func(object T) bool {
 		objectLabels := object.GetLabels()
-		_, ok := objectLabels[models.WorkspaceStorageIDLabel]
+		_, ok := objectLabels[models.VolumeIDLabel]
 		return ok
 	})
 }
@@ -22,10 +22,10 @@ func DBObjectIDPresentPredicate[T client.Object](label string) predicate.TypedFu
 	})
 }
 
-func WorkspaceIDLabelPresentPredicate[T client.Object]() predicate.TypedFuncs[T] {
+func StackIDLabelPresentPredicate[T client.Object]() predicate.TypedFuncs[T] {
 	return predicate.NewTypedPredicateFuncs(func(object T) bool {
 		objectLabels := object.GetLabels()
-		_, ok := objectLabels[models.WorkspaceIDLabel]
+		_, ok := objectLabels[models.StackIDLabel]
 		return ok
 	})
 }

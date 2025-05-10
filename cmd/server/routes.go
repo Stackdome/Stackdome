@@ -13,6 +13,7 @@ func (s apiServer) routes() *mux.Router {
 	mainRouter := mux.NewRouter()
 	mainRouter.NotFoundHandler = http.HandlerFunc(api.SendNotFound)
 	services := s.environment.Environment().Services
+	logger := s.environment.Environment().Logger
 
 	authzClient := auth.NewAuthorizationHandler(auth.AuthorizationHanlderSpec{
 		AuthorizerBackend: s.environment.Environment().ResourceAccessPolicyManager,
@@ -33,29 +34,30 @@ func (s apiServer) routes() *mux.Router {
 		AuthzClient:          authzClient,
 	})
 
-	storageHandler := handlers.NewWorkspaceStorageHandler(handlers.WorkspaceStorageHandlerSpec{
-		WorkspaceStorageService: services.WorkspaceStorageService,
-		AuthzClient:             authzClient,
+	volumeHandler := handlers.NewVolumeHandler(handlers.VolumeHandlerSpec{
+		VolumeService: services.VolumeService,
+		AuthzClient:   authzClient,
 	})
 
-	workspaceHandler := handlers.NewWorkspaceHandler(handlers.WorkspaceHandlerSpec{
-		WorkspaceService:              services.WorkspaceService,
-		WorkspaceResourceService:      services.WorkspaceResourceService,
-		WorkspaceResourceBuildService: services.WorkspaceResourceBuildService,
-		AuthzClient:                   authzClient,
+	stackHandler := handlers.NewStackHandler(handlers.StackHandlerSpec{
+		StackService:         services.StackService,
+		StackResourceService: services.StackResourceService,
+		ImageBuildService:    services.ImageBuildService,
+		AuthzClient:          authzClient,
+		Logger:               logger,
 	})
 
-	workspaceResourceHandler := handlers.NewWorkspaceResourceHandler(handlers.WorkspaceResourceHandlerSpec{
-		WorkspaceResourceService: services.WorkspaceResourceService,
-		WorkspaceService:         services.WorkspaceService,
-		AuthzClient:              authzClient,
+	stackResourceHandler := handlers.NewStackResourceHandler(handlers.StackResourceHandlerSpec{
+		StackResourceService: services.StackResourceService,
+		StackService:         services.StackService,
+		AuthzClient:          authzClient,
 	})
 
-	workspaceResourceBuildHandler := handlers.NewWorkspaceResourceBuildHandler(handlers.WorkspaceResourceBuildHandlerSpec{
-		WorkspaceResourceService:     services.WorkspaceResourceService,
-		WorkspaceService:             services.WorkspaceService,
-		WorkspaceResouceBuildService: services.WorkspaceResourceBuildService,
-		AuthzClient:                  authzClient,
+	imageBuildHandler := handlers.NewImageBuildHandler(handlers.ImageBuildHandlerSpec{
+		StackResourceService: services.StackResourceService,
+		StackService:         services.StackService,
+		ImageBuildService:    services.ImageBuildService,
+		AuthzClient:          authzClient,
 	})
 
 	authenticationMiddleware := auth.NewAuthMiddleware(services.UserService)
@@ -86,32 +88,30 @@ func (s apiServer) routes() *mux.Router {
 	workspaceUsersRouter.HandleFunc("/{id}", workspaceUserHandler.Update).Methods(http.MethodPut)
 	workspaceUsersRouter.HandleFunc("/{id}", workspaceUserHandler.Delete).Methods(http.MethodDelete)
 
-	workspaceStorageRouter := organizationsRouter.PathPrefix("/{org_id}/workspace-storages").Subrouter()
+	workspaceStorageRouter := organizationsRouter.PathPrefix("/{org_id}/volumes").Subrouter()
 	workspaceStorageRouter.Use(authenticationMiddleware.AuthenticateUser)
-	workspaceStorageRouter.HandleFunc("", storageHandler.Create).Methods(http.MethodPost)
-	workspaceStorageRouter.HandleFunc("/current", storageHandler.ListByUser).Methods(http.MethodGet)
-	workspaceStorageRouter.HandleFunc("/{id}", storageHandler.GetByID).Methods(http.MethodGet)
-	workspaceStorageRouter.HandleFunc("/{id}", storageHandler.Update).Methods(http.MethodPut)
-	workspaceStorageRouter.HandleFunc("/{id}", storageHandler.Delete).Methods(http.MethodDelete)
-	workspaceStorageRouter.HandleFunc("/{id}/volumes", storageHandler.ListVolumes).Methods(http.MethodGet)
-	workspaceStorageRouter.HandleFunc("/{id}/volumes/{volume_id}/mark-as-synced", storageHandler.MarkAsSynced).Methods(http.MethodPost)
+	workspaceStorageRouter.HandleFunc("", volumeHandler.Create).Methods(http.MethodPost)
+	workspaceStorageRouter.HandleFunc("/current", volumeHandler.GetByID).Methods(http.MethodGet)
+	workspaceStorageRouter.HandleFunc("/{id}", volumeHandler.GetByID).Methods(http.MethodGet)
+	// workspaceStorageRouter.HandleFunc("/{id}", storageHandler.Update).Methods(http.MethodPut)
+	workspaceStorageRouter.HandleFunc("/{id}", volumeHandler.Delete).Methods(http.MethodDelete)
 
-	workspaceRouter := organizationsRouter.PathPrefix("/{org_id}/workspaces").Subrouter()
+	workspaceRouter := organizationsRouter.PathPrefix("/{org_id}/stacks").Subrouter()
 	workspaceRouter.Use(authenticationMiddleware.AuthenticateUser)
-	workspaceRouter.HandleFunc("", workspaceHandler.Create).Methods(http.MethodPost)
-	workspaceRouter.HandleFunc("", workspaceHandler.ListByOrganisationID).Methods(http.MethodGet)
-	workspaceRouter.HandleFunc("/current", workspaceHandler.ListByUser).Methods(http.MethodGet)
-	workspaceRouter.HandleFunc("/{id}", workspaceHandler.GetByID).Methods(http.MethodGet)
-	workspaceRouter.HandleFunc("/{id}", workspaceHandler.Update).Methods(http.MethodPut)
-	workspaceRouter.HandleFunc("/{id}", workspaceHandler.Delete).Methods(http.MethodDelete)
+	workspaceRouter.HandleFunc("", stackHandler.Create).Methods(http.MethodPost)
+	workspaceRouter.HandleFunc("", stackHandler.ListByOrganisationID).Methods(http.MethodGet)
+	workspaceRouter.HandleFunc("/current", stackHandler.ListByUser).Methods(http.MethodGet)
+	workspaceRouter.HandleFunc("/{id}", stackHandler.GetByID).Methods(http.MethodGet)
+	workspaceRouter.HandleFunc("/{id}", stackHandler.Update).Methods(http.MethodPut)
+	workspaceRouter.HandleFunc("/{id}", stackHandler.Delete).Methods(http.MethodDelete)
 	// Resources
-	workspaceRouter.HandleFunc("/{id}/resources", workspaceResourceHandler.List).Methods(http.MethodGet)
-	workspaceRouter.HandleFunc("/{id}/resources/{resource_name}", workspaceResourceHandler.GetByResourceName).Methods(http.MethodGet)
+	workspaceRouter.HandleFunc("/{id}/resources", stackResourceHandler.List).Methods(http.MethodGet)
+	workspaceRouter.HandleFunc("/{id}/resources/{resource_name}", stackResourceHandler.GetByResourceName).Methods(http.MethodGet)
 
 	// Builds
-	workspaceRouter.HandleFunc("/{id}/resources/{resource_name}/builds", workspaceResourceBuildHandler.ListByResourceName).Methods(http.MethodGet)
-	workspaceRouter.HandleFunc("/{id}/builds", workspaceResourceBuildHandler.ListByWorkspaceID).Methods(http.MethodGet)
-	workspaceRouter.HandleFunc("/{id}/builds/{build_id}", workspaceResourceBuildHandler.GetByID).Methods(http.MethodGet)
+	workspaceRouter.HandleFunc("/{id}/resources/{resource_name}/builds", imageBuildHandler.ListByResourceName).Methods(http.MethodGet)
+	workspaceRouter.HandleFunc("/{id}/builds", imageBuildHandler.ListByStackID).Methods(http.MethodGet)
+	workspaceRouter.HandleFunc("/{id}/builds/{build_id}", imageBuildHandler.GetByID).Methods(http.MethodGet)
 
 	return mainRouter
 }

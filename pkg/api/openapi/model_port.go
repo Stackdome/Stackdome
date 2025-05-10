@@ -18,7 +18,7 @@ import (
 type Port struct {
 	Number          int32   `json:"number"`
 	Protocol        *string `json:"protocol,omitempty"`
-	ExposedToPublic *bool   `json:"exposed_to_public,omitempty"`
+	ExposedToPublic bool    `json:"exposed_to_public"`
 	SubdomainPrefix *string `json:"subdomain_prefix,omitempty"`
 }
 
@@ -26,9 +26,10 @@ type Port struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPort(number int32) *Port {
+func NewPort(number int32, exposedToPublic bool) *Port {
 	this := Port{}
 	this.Number = number
+	this.ExposedToPublic = exposedToPublic
 	return &this
 }
 
@@ -96,36 +97,28 @@ func (o *Port) SetProtocol(v string) {
 	o.Protocol = &v
 }
 
-// GetExposedToPublic returns the ExposedToPublic field value if set, zero value otherwise.
+// GetExposedToPublic returns the ExposedToPublic field value
 func (o *Port) GetExposedToPublic() bool {
-	if o == nil || o.ExposedToPublic == nil {
+	if o == nil {
 		var ret bool
 		return ret
 	}
-	return *o.ExposedToPublic
+
+	return o.ExposedToPublic
 }
 
-// GetExposedToPublicOk returns a tuple with the ExposedToPublic field value if set, nil otherwise
+// GetExposedToPublicOk returns a tuple with the ExposedToPublic field value
 // and a boolean to check if the value has been set.
 func (o *Port) GetExposedToPublicOk() (*bool, bool) {
-	if o == nil || o.ExposedToPublic == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.ExposedToPublic, true
+	return &o.ExposedToPublic, true
 }
 
-// HasExposedToPublic returns a boolean if a field has been set.
-func (o *Port) HasExposedToPublic() bool {
-	if o != nil && o.ExposedToPublic != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetExposedToPublic gets a reference to the given bool and assigns it to the ExposedToPublic field.
+// SetExposedToPublic sets field value
 func (o *Port) SetExposedToPublic(v bool) {
-	o.ExposedToPublic = &v
+	o.ExposedToPublic = v
 }
 
 // GetSubdomainPrefix returns the SubdomainPrefix field value if set, zero value otherwise.
@@ -168,7 +161,7 @@ func (o Port) MarshalJSON() ([]byte, error) {
 	if o.Protocol != nil {
 		toSerialize["protocol"] = o.Protocol
 	}
-	if o.ExposedToPublic != nil {
+	if true {
 		toSerialize["exposed_to_public"] = o.ExposedToPublic
 	}
 	if o.SubdomainPrefix != nil {

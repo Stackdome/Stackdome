@@ -10,25 +10,25 @@ type AuthorizableResource string
 
 const (
 	// User
-	UserResource AuthorizableResource = "User"
+	User AuthorizableResource = "User"
 
-	// Workspace
-	WorkspaceResource AuthorizableResource = "Workspace"
+	// Stack
+	Stack AuthorizableResource = "Stack"
 
-	// WorkspaceResource
-	WorkspaceResourceResource AuthorizableResource = "WorkspaceResource"
+	// StackResource
+	StackResource AuthorizableResource = "StackResource"
 
-	// WorkspaceResourceBuild
-	WorkspaceResourceBuildResource AuthorizableResource = "WorkspaceResourceBuild"
+	// ImageBuildBuild
+	ImageBuild AuthorizableResource = "ImageBuild"
 
-	// WorkspaceStorage
-	WorkspaceStorageResource AuthorizableResource = "WorkspaceStorage"
+	// Volume
+	Volume AuthorizableResource = "Volume"
 
 	// WorkspaceUser
-	WorkspaceUserResource AuthorizableResource = "WorkspaceUser"
+	WorkspaceUser AuthorizableResource = "WorkspaceUser"
 
 	// Organisation
-	OrganisationResource AuthorizableResource = "Organisation"
+	Organisation AuthorizableResource = "Organisation"
 )
 
 type AuthorizationClient interface {
