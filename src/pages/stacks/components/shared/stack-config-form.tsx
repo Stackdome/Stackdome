@@ -9,8 +9,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { 
-  ChevronLeft, Database, Globe, Server, Eye, EyeOff, Box, 
-  Link as LinkIcon, Play, HardDrive, PlusCircle, Trash2, Plus 
+  ChevronLeft, Database, Globe, Server, Box, 
+  Link as LinkIcon, Play, HardDrive, Trash2, Plus 
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -19,9 +19,10 @@ import { Label } from "@/components/ui/label";
 interface StackConfigFormProps {
   stackConfig: StackCompose;
   onBack: () => void;
+  onSubmit: (name: string, description?: string, template?: string) => void;
 }
 
-export function StackConfigForm({ stackConfig, onBack }: StackConfigFormProps) {
+export function StackConfigForm({ stackConfig, onBack, onSubmit }: StackConfigFormProps) {
   // Create a mutable copy of the stack configuration
   const [config, setConfig] = useState<StackCompose>(() => {
     // Deep clone the stackConfig object
@@ -31,6 +32,10 @@ export function StackConfigForm({ stackConfig, onBack }: StackConfigFormProps) {
   // Stack name and namespace
   const [stackName, setStackName] = useState("my-awesome-stack");
   const [namespace, setNamespace] = useState("default");
+  // Stack description for display in cards
+  const [description, setDescription] = useState("");
+  // Stack template/type
+  const [template, _setTemplate] = useState("Custom");
 
   // Filter out the volumes key to get only the service resources
   const resources = Object.entries(config)
@@ -279,14 +284,20 @@ export function StackConfigForm({ stackConfig, onBack }: StackConfigFormProps) {
 
   // Handle form submission
   const handleSubmit = () => {
-    // Here you would send the updated config to your backend
-    console.log("Submitting updated stack configuration:", {
-      name: stackName,
-      namespace,
-      config
-    });
-    // For demo purposes, show an alert
-    alert("Stack configuration updated");
+    // Determine template type based on resources
+    let detectedTemplate = template;
+    if (resources.some(([name]) => name.includes('next') || name.includes('react'))) {
+      detectedTemplate = 'Next.js';
+    } else if (resources.some(([name]) => name.includes('express'))) {
+      detectedTemplate = 'Express';
+    } else if (resources.some(([name]) => name.includes('django'))) {
+      detectedTemplate = 'Django';
+    } else if (resources.some(([name]) => name.includes('rails'))) {
+      detectedTemplate = 'Rails';
+    }
+
+    // Submit the stack information to the parent component
+    onSubmit(stackName, description, detectedTemplate);
   };
 
   return (
@@ -299,7 +310,7 @@ export function StackConfigForm({ stackConfig, onBack }: StackConfigFormProps) {
       </div>
 
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="stack-name" className="text-sm font-medium mb-2 block">
               Stack Name
@@ -320,6 +331,17 @@ export function StackConfigForm({ stackConfig, onBack }: StackConfigFormProps) {
               placeholder="default" 
               value={namespace}
               onChange={(e) => setNamespace(e.target.value)}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label htmlFor="stack-description" className="text-sm font-medium mb-2 block">
+              Description
+            </label>
+            <Input 
+              id="stack-description" 
+              placeholder="Describe your stack (optional)" 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
         </div>
@@ -837,15 +859,14 @@ export function StackConfigForm({ stackConfig, onBack }: StackConfigFormProps) {
                               <label className="text-xs font-medium mb-1 block">Local Path</label>
                               <Input 
                                 className="text-sm" 
-                                value={volume.source.localDir.path}
+                                value={volume.source?.localDir?.path || ""}
                                 onChange={(e) => {
                                   const newVolumes = { ...config.volumes };
                                   newVolumes[volumeName] = { 
                                     ...volume, 
                                     source: { 
-                                      ...volume.source, 
                                       localDir: {
-                                        ...volume.source.localDir,
+                                        sync: volume.source?.localDir?.sync || false,
                                         path: e.target.value
                                       }
                                     }
@@ -858,15 +879,14 @@ export function StackConfigForm({ stackConfig, onBack }: StackConfigFormProps) {
                               <div className="flex items-center">
                                 <Switch 
                                   id={`volume-sync-${volumeName}`}
-                                  checked={volume.source.localDir.sync}
+                                  checked={volume.source?.localDir?.sync || false}
                                   onCheckedChange={(checked) => {
                                     const newVolumes = { ...config.volumes };
                                     newVolumes[volumeName] = { 
                                       ...volume, 
                                       source: { 
-                                        ...volume.source, 
                                         localDir: {
-                                          ...volume.source.localDir,
+                                          path: volume.source?.localDir?.path || ".",
                                           sync: checked
                                         }
                                       }

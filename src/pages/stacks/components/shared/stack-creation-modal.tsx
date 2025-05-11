@@ -9,6 +9,7 @@ import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import { FileIcon, FileCode2 } from "lucide-react";
 import { parseYaml, getSampleStackYaml } from "@/lib/yaml-parser";
 import { StackConfigForm } from "./stack-config-form";
+import { useStacks } from "@/pages/stacks/contexts/stack-context";
 
 interface StackCreationModalProps {
   trigger: React.ReactNode;
@@ -20,6 +21,8 @@ export function StackCreationModal({ trigger }: StackCreationModalProps) {
   const [stackConfig, setStackConfig] = useState<StackCompose | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingSample, setIsLoadingSample] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const { addStack } = useStacks();
 
   // Function to handle parsing YAML content
   const handleYamlParse = () => {
@@ -53,8 +56,21 @@ export function StackCreationModal({ trigger }: StackCreationModalProps) {
     }
   };
 
+  // Handle stack creation from the form
+  const handleStackCreation = (name: string, description?: string, template?: string) => {
+    addStack({
+      name,
+      description,
+      template,
+    });
+    
+    setIsOpen(false);
+  };
+
   // Reset the form when dialog is closed
   const handleDialogChange = (open: boolean) => {
+    setIsOpen(open);
+    
     if (!open) {
       setYamlContent("");
       setGithubUrl("");
@@ -64,8 +80,8 @@ export function StackCreationModal({ trigger }: StackCreationModalProps) {
   };
 
   return (
-    <Dialog onOpenChange={handleDialogChange}>
-      <DialogTrigger asChild>
+    <Dialog open={isOpen} onOpenChange={handleDialogChange}>
+      <DialogTrigger asChild onClick={() => setIsOpen(true)}>
         {trigger}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
@@ -137,7 +153,11 @@ export function StackCreationModal({ trigger }: StackCreationModalProps) {
             </TabsContent>
           </Tabs>
         ) : (
-          <StackConfigForm stackConfig={stackConfig} onBack={() => setStackConfig(null)} />
+          <StackConfigForm 
+            stackConfig={stackConfig} 
+            onBack={() => setStackConfig(null)} 
+            onSubmit={handleStackCreation}
+          />
         )}
 
         {error && (
