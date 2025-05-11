@@ -6,7 +6,7 @@ info:
 servers:
 - url: /
 paths:
-  /api/v1/users:
+  /api/v1/user-signup:
     post:
       description: Create a new user
       requestBody:
@@ -20,7 +20,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/UserSignupResponse'
           description: User created successfully
         "400":
           content:
@@ -1310,6 +1310,39 @@ components:
           type: string
         updated_at:
           format: date-time
+          type: string
+      type: object
+    UserSignupResponse:
+      example:
+        role: null
+        jwt_token: jwt_token
+        name: name
+        organisation:
+          domain_name: domain_name
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          name: name
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          is_default: true
+        id: id
+        email: email
+      properties:
+        id:
+          description: User's ID
+          type: string
+        name:
+          description: User's name
+          type: string
+        email:
+          description: User's email address
+          format: email
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        organisation:
+          $ref: '#/components/schemas/Organisation'
+        jwt_token:
+          description: JWT token for the authenticated user
           type: string
       type: object
     User:

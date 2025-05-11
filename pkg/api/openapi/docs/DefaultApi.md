@@ -32,9 +32,9 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdVolumesIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesIdPut) | **Put** /api/v1/organizations/{org_id}/volumes/{id} | Update a volume
 [**ApiV1OrganizationsOrgIdVolumesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesPost) | **Post** /api/v1/organizations/{org_id}/volumes | Create a new volume
 [**ApiV1OrganizationsPost**](DefaultApi.md#ApiV1OrganizationsPost) | **Post** /api/v1/organizations | Create a new organization
+[**ApiV1UserSignupPost**](DefaultApi.md#ApiV1UserSignupPost) | **Post** /api/v1/user-signup | Create new user
 [**ApiV1UsersCurrentGet**](DefaultApi.md#ApiV1UsersCurrentGet) | **Get** /api/v1/users/current | Get a the current authenticated user
 [**ApiV1UsersIdGet**](DefaultApi.md#ApiV1UsersIdGet) | **Get** /api/v1/users/{id} | Get a user
-[**ApiV1UsersPost**](DefaultApi.md#ApiV1UsersPost) | **Post** /api/v1/users | Create new user
 [**ApiV1WorkspaceUsersCurrentGet**](DefaultApi.md#ApiV1WorkspaceUsersCurrentGet) | **Get** /api/v1/workspace-users/current | Get the workspace user object for the current user
 [**ApiV1WorkspaceUsersIdDelete**](DefaultApi.md#ApiV1WorkspaceUsersIdDelete) | **Delete** /api/v1/workspace-users/{id} | Delete a WorkspaceUser
 [**ApiV1WorkspaceUsersIdGet**](DefaultApi.md#ApiV1WorkspaceUsersIdGet) | **Get** /api/v1/workspace-users/{id} | Get a workspace user object by ID
@@ -2005,6 +2005,72 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
+## ApiV1UserSignupPost
+
+> UserSignupResponse ApiV1UserSignupPost(ctx).UserSignupRequest(userSignupRequest).Execute()
+
+Create new user
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    userSignupRequest := *openapiclient.NewUserSignupRequest("Name_example", "Email_example", "Password_example") // UserSignupRequest | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1UserSignupPost(context.Background()).UserSignupRequest(userSignupRequest).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1UserSignupPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1UserSignupPost`: UserSignupResponse
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1UserSignupPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1UserSignupPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **userSignupRequest** | [**UserSignupRequest**](UserSignupRequest.md) |  | 
+
+### Return type
+
+[**UserSignupResponse**](UserSignupResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## ApiV1UsersCurrentGet
 
 > User ApiV1UsersCurrentGet(ctx).Execute()
@@ -2129,72 +2195,6 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1UsersPost
-
-> User ApiV1UsersPost(ctx).UserSignupRequest(userSignupRequest).Execute()
-
-Create new user
-
-
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    userSignupRequest := *openapiclient.NewUserSignupRequest("Name_example", "Email_example", "Password_example") // UserSignupRequest | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1UsersPost(context.Background()).UserSignupRequest(userSignupRequest).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1UsersPost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1UsersPost`: User
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1UsersPost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1UsersPostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **userSignupRequest** | [**UserSignupRequest**](UserSignupRequest.md) |  | 
-
-### Return type
-
-[**User**](User.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
