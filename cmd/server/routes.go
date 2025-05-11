@@ -65,7 +65,6 @@ func (s apiServer) routes() *mux.Router {
 	apiV1Router := mainRouter.PathPrefix("/api/v1").Subrouter()
 
 	userSignupRouter := apiV1Router.PathPrefix("/user-signup").Subrouter()
-	userSignupRouter.Use(authenticationMiddleware.AuthenticateUser)
 	userSignupRouter.HandleFunc("", userHandler.Create).Methods(http.MethodPost)
 
 	userRouter := apiV1Router.PathPrefix("/users").Subrouter()
