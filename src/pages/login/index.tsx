@@ -1,8 +1,18 @@
-import { GalleryVerticalEnd } from "lucide-react"
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { isUserLoggedIn } from "@/helpers/auth";
+import { GalleryVerticalEnd } from "lucide-react";
 
-import { LoginForm } from "@/pages/login/components/login-form"
+import { LoginForm } from "@/pages/login/components/login-form";
 
 export default function Login() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (isUserLoggedIn()) {
+      navigate("/dashboard");
+    }
+  }, [navigate]);
+
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
       <div className="flex w-full max-w-md flex-col gap-6">
@@ -15,5 +25,5 @@ export default function Login() {
         <LoginForm />
       </div>
     </div>
-  )
+  );
 }
