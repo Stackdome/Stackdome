@@ -5,6 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Token** | Pointer to **string** | Access token for authenticated requests | [optional] 
+**User** | Pointer to [**User**](User.md) |  | [optional] 
 **ExpiresIn** | Pointer to **int32** | Token expiration time in seconds | [optional] 
 
 ## Methods
@@ -50,6 +51,31 @@ SetToken sets Token field to given value.
 `func (o *LoginResponse) HasToken() bool`
 
 HasToken returns a boolean if a field has been set.
+
+### GetUser
+
+`func (o *LoginResponse) GetUser() User`
+
+GetUser returns the User field if non-nil, zero value otherwise.
+
+### GetUserOk
+
+`func (o *LoginResponse) GetUserOk() (*User, bool)`
+
+GetUserOk returns a tuple with the User field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetUser
+
+`func (o *LoginResponse) SetUser(v User)`
+
+SetUser sets User field to given value.
+
+### HasUser
+
+`func (o *LoginResponse) HasUser() bool`
+
+HasUser returns a boolean if a field has been set.
 
 ### GetExpiresIn
 
