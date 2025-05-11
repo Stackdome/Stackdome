@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { signupUser } from "../api/users";
-import type { components } from "../api/types/openapi";
+import { signupUser } from "../../../api/users";
+import type { components } from "../../../api/types/openapi";
 
 type UserSignupRequest = components["schemas"]["UserSignupRequest"];
 type User = components["schemas"]["User"];

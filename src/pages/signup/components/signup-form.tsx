@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useSignup } from '@/hooks/use-signup';
+import { useSignup } from '../hooks/use-signup';
 import type { UserSignupRequest, UserSignupResponse } from '@/api/users';
 import type { SignupFormData } from '../types';
 import { signupSchema } from '../types';
