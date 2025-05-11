@@ -80,10 +80,15 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *DefaultApi* | [**ApiV1AuthLoginPost**](docs/DefaultApi.md#apiv1authloginpost) | **Post** /api/v1/auth/login | User login
 *DefaultApi* | [**ApiV1OrganizationsDefaultGet**](docs/DefaultApi.md#apiv1organizationsdefaultget) | **Get** /api/v1/organizations/default | Get the default organization
+*DefaultApi* | [**ApiV1OrganizationsIdClustersGet**](docs/DefaultApi.md#apiv1organizationsidclustersget) | **Get** /api/v1/organizations/{id}/clusters | List all clusters for an organization
+*DefaultApi* | [**ApiV1OrganizationsIdClustersPost**](docs/DefaultApi.md#apiv1organizationsidclusterspost) | **Post** /api/v1/organizations/{id}/clusters | Add a new cluster
 *DefaultApi* | [**ApiV1OrganizationsIdGet**](docs/DefaultApi.md#apiv1organizationsidget) | **Get** /api/v1/organizations/{id} | Get an organization
 *DefaultApi* | [**ApiV1OrganizationsIdPut**](docs/DefaultApi.md#apiv1organizationsidput) | **Put** /api/v1/organizations/{id} | Update an organization
 *DefaultApi* | [**ApiV1OrganizationsIdRemoteSyncServersGet**](docs/DefaultApi.md#apiv1organizationsidremotesyncserversget) | **Get** /api/v1/organizations/{id}/remote-sync-servers | List all RemoteSyncServer objects for an organization
 *DefaultApi* | [**ApiV1OrganizationsIdRemoteSyncServersPost**](docs/DefaultApi.md#apiv1organizationsidremotesyncserverspost) | **Post** /api/v1/organizations/{id}/remote-sync-servers | Create a new remote sync server
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidclustersiddelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{id} | Delete a cluster object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersidget) | **Get** /api/v1/organizations/{org_id}/clusters/{id} | Get a specific cluster object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdPut**](docs/DefaultApi.md#apiv1organizationsorgidclustersidput) | **Put** /api/v1/organizations/{org_id}/clusters/{id} | Update a cluster object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserverscurrentget) | **Get** /api/v1/organizations/{org_id}/remote-sync-servers/current | Get RemoteSyncServer for the current user
 *DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversiddelete) | **Delete** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Delete a RemoteSyncServer object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversidget) | **Get** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Get a specific RemoteSyncServer object
@@ -128,6 +133,7 @@ Class | Method | HTTP request | Description
  - [BuildSourceRevision](docs/BuildSourceRevision.md)
  - [BuildSourceRevisionVolumeSourceRevision](docs/BuildSourceRevisionVolumeSourceRevision.md)
  - [Cluster](docs/Cluster.md)
+ - [ClusterList](docs/ClusterList.md)
  - [Condition](docs/Condition.md)
  - [EnvVar](docs/EnvVar.md)
  - [Error](docs/Error.md)

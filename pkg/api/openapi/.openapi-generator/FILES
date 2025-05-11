@@ -16,6 +16,7 @@ docs/BuildSourceContextVolume.md
 docs/BuildSourceRevision.md
 docs/BuildSourceRevisionVolumeSourceRevision.md
 docs/Cluster.md
+docs/ClusterList.md
 docs/Condition.md
 docs/DefaultApi.md
 docs/EnvVar.md
@@ -85,6 +86,7 @@ model_build_source_context_volume.go
 model_build_source_revision.go
 model_build_source_revision_volume_source_revision.go
 model_cluster.go
+model_cluster_list.go
 model_condition.go
 model_env_var.go
 model_error.go

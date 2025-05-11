@@ -416,6 +416,174 @@ paths:
       security:
       - Bearer: []
       summary: Get the workspace user object for the current user
+  /api/v1/organizations/{id}/clusters:
+    get:
+      parameters:
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all clusters for an organization
+    post:
+      parameters:
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Cluster'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cluster'
+          description: Cluster added successfully
+        "400":
+          description: Invalid request payload
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Add a new cluster
+  /api/v1/organizations/{org_id}/clusters/{id}:
+    delete:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Cluster deleted successfully
+        "404":
+          description: Cluster not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete a cluster object
+    get:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cluster'
+          description: Successful operation
+        "404":
+          description: Cluster not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a specific cluster object
+    put:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Cluster'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cluster'
+          description: Cluster updated successfully
+        "400":
+          description: Invalid request payload
+        "404":
+          description: Cluster not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update a cluster object
   /api/v1/organizations/{id}/remote-sync-servers:
     get:
       parameters:
@@ -1575,7 +1743,41 @@ components:
             $ref: '#/components/schemas/Condition'
           type: array
       type: object
+    ClusterList:
+      example:
+        total: 0
+        items:
+        - cluster_url: cluster_url
+          cluster_ca_data: cluster_ca_data
+          organisation_id: organisation_id
+          cluster_sa_token: cluster_sa_token
+          default: true
+          name: name
+          id: id
+        - cluster_url: cluster_url
+          cluster_ca_data: cluster_ca_data
+          organisation_id: organisation_id
+          cluster_sa_token: cluster_sa_token
+          default: true
+          name: name
+          id: id
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Cluster'
+          type: array
+        total:
+          type: integer
+      type: object
     Cluster:
+      example:
+        cluster_url: cluster_url
+        cluster_ca_data: cluster_ca_data
+        organisation_id: organisation_id
+        cluster_sa_token: cluster_sa_token
+        default: true
+        name: name
+        id: id
       properties:
         id:
           type: string
@@ -1589,9 +1791,7 @@ components:
           type: string
         cluster_ca_data:
           type: string
-        client_cert_data:
-          type: string
-        client_key_data:
+        cluster_sa_token:
           type: string
       type: object
     RemoteSyncServer:

@@ -14,17 +14,15 @@ const (
 )
 
 type ApplicationConfig struct {
-	Server        *ServerConfig   `json:"server"`
-	Database      *DatabaseConfig `json:"database"`
-	ClusterConfig *ClusterConfig
-	JwtSecret     string `json:"jwt_secret"`
-	LogLevel      string `json:"log_level"`
+	Server    *ServerConfig   `json:"server"`
+	Database  *DatabaseConfig `json:"database"`
+	JwtSecret string          `json:"jwt_secret"`
+	LogLevel  string          `json:"log_level"`
 }
 
 func (c *ApplicationConfig) LoadEnvVariables() {
 	c.Server.LoadEnvVariables()
 	c.Database.LoadEnvVariables()
-	c.ClusterConfig.LoadEnvVariables()
 
 	val, found := os.LookupEnv(JWT_SECRET)
 	if found {
@@ -41,7 +39,6 @@ func (c *ApplicationConfig) Validate() error {
 	validateFuncs := []func() error{
 		c.Server.Validate,
 		c.Database.Validate,
-		c.ClusterConfig.Validate,
 		func() error {
 			if c.JwtSecret == "" {
 				return fmt.Errorf("jwt secret is required")
@@ -172,10 +169,9 @@ type DBConnectionConfig struct {
 
 func NewApplicationConfig() *ApplicationConfig {
 	return &ApplicationConfig{
-		Server:        NewServerConfig(),
-		Database:      NewDatabaseConfig(),
-		ClusterConfig: &ClusterConfig{},
-		LogLevel:      "info",
+		Server:   NewServerConfig(),
+		Database: NewDatabaseConfig(),
+		LogLevel: "info",
 	}
 }
 
