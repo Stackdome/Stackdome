@@ -81,7 +81,7 @@ export function LoginForm({
           <p className="text-sm text-muted-foreground">Login to access your account</p>
         </div>
         <div className="grid gap-6">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} autoComplete="on">
             <div className="grid gap-4">
               {serverError && (
                 <div className="text-red-500 text-sm text-center">{serverError}</div>
@@ -92,6 +92,7 @@ export function LoginForm({
                   id="email"
                   name="email"
                   type="email"
+                  autoComplete="username"
                   value={formData.email}
                   onChange={handleChange}
                   className={errors.email ? "border-red-500" : ""}
@@ -109,6 +110,7 @@ export function LoginForm({
                   id="password"
                   name="password"
                   type="password"
+                  autoComplete="current-password"
                   value={formData.password}
                   onChange={handleChange}
                   className={errors.password ? "border-red-500" : ""}
