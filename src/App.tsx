@@ -7,6 +7,12 @@ import StackDetailPage from "@/pages/stacks/components/detail"
 import StackActivityPage from "@/pages/stacks/components/activity"
 import StackSettingsPage from "@/pages/stacks/components/settings"
 import { StackProvider } from "./pages/stacks/contexts/stack-context"
+import { logoutAndRedirect } from "@/helpers/common"
+
+const Logout = () => {
+  logoutAndRedirect("/login");
+  return null;
+}
 
 // Create router with routes
 const router = createBrowserRouter(
@@ -21,6 +27,7 @@ const router = createBrowserRouter(
       <Route path="/stacks/:id" element={<StackDetailPage />} />
       <Route path="/stacks/:id/activity" element={<StackActivityPage />} />
       <Route path="/stacks/:id/settings" element={<StackSettingsPage />} />
+      <Route path="/logout" element={<Logout />} />
     </>
   )
 )

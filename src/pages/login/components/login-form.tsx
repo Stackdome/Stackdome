@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { useLogin } from '../hooks/use-login';
 import type { LoginFormData } from '../types';
 import { loginSchema } from '../types';
+import { setAuthSession } from '@/helpers/common';
 
 export function LoginForm({
   className,
@@ -50,14 +51,13 @@ export function LoginForm({
     setIsLoading(true);
     try {
       const response = await login(formData);
-      if (response && response.token) {
-        localStorage.setItem('authToken', response.token);
+      if (response && response.token && response.user) {
+        setAuthSession(response.token, response.user);
       }
       navigate("/dashboard");
     } catch (err) {
       let errorMsg = 'Login failed';
       if (typeof err === 'object' && err !== null) {
-        // Try to extract error message from axios-like error
         const maybeResponse = (err as { response?: { data?: { message?: string } } }).response;
         if (maybeResponse?.data?.message) {
           errorMsg = maybeResponse.data.message;
@@ -139,7 +139,7 @@ export function LoginForm({
         <div className="text-center">
           <p className="text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
-            <Link to="/sign-up" className="underline underline-offset-4 hover:text-primary">
+            <Link to="/signup" className="underline underline-offset-4 hover:text-primary">
               Sign up
             </Link>
           </p>

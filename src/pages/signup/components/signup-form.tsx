@@ -8,6 +8,7 @@ import { useSignup } from '../hooks/use-signup';
 import type { UserSignupRequest, UserSignupResponse } from '@/api/users';
 import type { SignupFormData } from '../types';
 import { signupSchema } from '../types';
+import { setAuthSession } from '@/helpers/common';
 
 export function SignupForm({
   className,
@@ -61,8 +62,8 @@ export function SignupForm({
         organisation: { name: formData.organisationName }
       };
       const response: UserSignupResponse = await signup(payload);
-      if (response && response.jwt_token) {
-        localStorage.setItem('authToken', response.jwt_token);
+      if (response && response.jwt_token && response.user) {
+        setAuthSession(response.jwt_token, response.user);
       }
       navigate("/dashboard");
     } catch (err) {

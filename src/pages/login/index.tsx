@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { isUserLoggedIn } from "@/helpers/auth";
+import { isUserLoggedIn } from "@/helpers/common";
 import { GalleryVerticalEnd } from "lucide-react";
 
 import { LoginForm } from "@/pages/login/components/login-form";
