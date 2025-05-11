@@ -18,8 +18,6 @@ import {
   Upload, 
   UserCircle2
 } from "lucide-react";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { StackSidebar } from "@/pages/stacks/components/shared/stack-sidebar";
 
 export default function StackActivityPage() {
   const { id } = useParams();
@@ -106,64 +104,59 @@ export default function StackActivityPage() {
         return 'text-gray-500 bg-gray-50';
     }
   };
-  
+
   return (
-    <SidebarProvider>
-      <StackSidebar />
-      <SidebarInset>
-        <div className="p-6">
-          <header className="mb-6">
-            <Breadcrumb className="mb-3">
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/stacks">Stacks</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbLink href={`/stacks/${id}`}>{currentStack.name}</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbLink>Activity</BreadcrumbLink>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-            
-            <div className="flex items-center">
-              <ActivityIcon className="mr-2 h-5 w-5" />
-              <h1 className="text-2xl font-bold">Activity Log</h1>
-            </div>
-            <p className="text-muted-foreground mt-1">
-              Recent activity and events for {currentStack.name}
-            </p>
-            <Separator className="mt-4" />
-          </header>
-          
-          <Card>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {activities.map((activity) => (
-                  <div key={activity.id} className="p-4 flex">
-                    <div className={`${getIconColor(activity.type)} p-2 rounded-full mr-4 self-start`}>
-                      {activity.icon}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between">
-                        <h3 className="font-medium">{activity.detail}</h3>
-                        <span className="text-sm text-muted-foreground">{activity.timestamp}</span>
-                      </div>
-                      <div className="flex items-center mt-1 text-sm text-muted-foreground">
-                        <UserCircle2 className="h-3.5 w-3.5 mr-1" />
-                        <span>{activity.user}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+    <div className="p-6">
+      <header className="mb-6">
+        <Breadcrumb className="mb-3">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/stacks">Stacks</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href={`/stacks/${id}`}>{currentStack.name}</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink>Activity</BreadcrumbLink>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        
+        <div className="flex items-center">
+          <ActivityIcon className="mr-2 h-5 w-5" />
+          <h1 className="text-2xl font-bold">Activity Log</h1>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+        <p className="text-muted-foreground mt-1">
+          Recent activity and events for {currentStack.name}
+        </p>
+        <Separator className="mt-4" />
+      </header>
+      
+      <Card>
+        <CardContent className="p-0">
+          <div className="divide-y">
+            {activities.map((activity) => (
+              <div key={activity.id} className="p-4 flex">
+                <div className={`${getIconColor(activity.type)} p-2 rounded-full mr-4 self-start`}>
+                  {activity.icon}
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between">
+                    <h3 className="font-medium">{activity.detail}</h3>
+                    <span className="text-sm text-muted-foreground">{activity.timestamp}</span>
+                  </div>
+                  <div className="flex items-center mt-1 text-sm text-muted-foreground">
+                    <UserCircle2 className="h-3.5 w-3.5 mr-1" />
+                    <span>{activity.user}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

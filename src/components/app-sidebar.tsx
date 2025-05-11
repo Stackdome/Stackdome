@@ -1,7 +1,9 @@
 import * as React from "react"
 import {
   Command,
-  Layers
+  Layers,
+  Plus,
+  Cloud
 } from "lucide-react"
 
 import {
@@ -12,7 +14,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar"
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 import { NavUser } from "@/components/nav-user"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -36,16 +42,51 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <a href="#" className="bg-primary/10 text-primary">
+        <div className="h-7" />
+        <Accordion type="multiple" className="w-full" defaultValue={["stacks"]}>
+          <AccordionItem value="stacks">
+            <AccordionTrigger className="px-2 py-1 rounded-md">
+              <span className="flex items-center gap-2">
                 <Layers className="size-4" />
                 <span>Stacks</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>
+              <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton asChild>
+                    <a href="/stacks/create">
+                      <Plus className="size-2" />
+                      <span>Add new Stack</span>
+                    </a>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+                {/* Existing stacks would be mapped here in the future */}
+              </SidebarMenuSub>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="clusters">
+            <AccordionTrigger className="px-2 py-1 rounded-md">
+              <span className="flex items-center gap-2">
+                <Cloud className="size-4" />
+                <span>Clusters</span>
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>
+              <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton asChild>
+                    <a href="/clusters">
+                      <Plus className="size-4" />
+                      <span>Add new Cluster</span>
+                    </a>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+                {/* Existing clusters would be mapped here in the future */}
+              </SidebarMenuSub>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

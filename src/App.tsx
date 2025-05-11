@@ -6,8 +6,10 @@ import StackCreatePage from "@/pages/stacks/components/create"
 import StackDetailPage from "@/pages/stacks/components/detail"
 import StackActivityPage from "@/pages/stacks/components/activity"
 import StackSettingsPage from "@/pages/stacks/components/settings"
+import ClustersPage from "@/pages/clusters"
 import { StackProvider } from "./pages/stacks/contexts/stack-context"
 import { logoutAndRedirect } from "@/helpers/common"
+import { AppLayout } from "@/components/app-layout"
 
 const Logout = () => {
   logoutAndRedirect("/login");
@@ -18,15 +20,18 @@ const Logout = () => {
 const router = createBrowserRouter(
   createRoutesFromElements(
     <>
-      <Route path="/" element={<StacksPage />} />
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<StacksPage />} />
+        <Route path="/dashboard" element={<StacksPage />} />
+        <Route path="/stacks" element={<StacksPage />} />
+        <Route path="/stacks/create" element={<StackCreatePage />} />
+        <Route path="/stacks/:id" element={<StackDetailPage />} />
+        <Route path="/stacks/:id/activity" element={<StackActivityPage />} />
+        <Route path="/stacks/:id/settings" element={<StackSettingsPage />} />
+        <Route path="/clusters" element={<ClustersPage />} />
+      </Route>
       <Route path="/login" element={<Login />} />
       <Route path="/sign-up" element={<Signup />} />
-      <Route path="/dashboard" element={<StacksPage />} />
-      <Route path="/stacks" element={<StacksPage />} />
-      <Route path="/stacks/create" element={<StackCreatePage />} />
-      <Route path="/stacks/:id" element={<StackDetailPage />} />
-      <Route path="/stacks/:id/activity" element={<StackActivityPage />} />
-      <Route path="/stacks/:id/settings" element={<StackSettingsPage />} />
       <Route path="/logout" element={<Logout />} />
     </>
   )
