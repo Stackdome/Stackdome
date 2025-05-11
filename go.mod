@@ -40,6 +40,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
+	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/glebarez/go-sqlite v1.20.3 // indirect
@@ -57,6 +58,7 @@ require (
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
+	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/yaml v0.3.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
