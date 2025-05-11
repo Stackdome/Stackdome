@@ -61,12 +61,11 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 		d.loadEnvAndConfigs,
 		d.setupLogger,
 		d.setupDatabase,
-		d.initializeClients,
 		d.initializeResourceAccessPolicyManager,
 		d.loadServices,
 		d.initializeClusterManager,
 		d.injectClusterResourceServices,
-		d.initializeDefaultOrgAndCluster,
+		// d.initializeDefaultOrgAndCluster,
 		d.initializeBaseResourceAccessPolicies,
 		d.ensureDefaultPlatformAdminUser,
 		d.startClusterManager,
@@ -174,6 +173,7 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 			}),
 		},
 	})
+	d.Services.ClusterService.InjectClusterManager(d.ClusterManager)
 	return nil
 }
 
@@ -290,59 +290,6 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 	return nil
 }
 
-func (d *developmentEnvironment) initializeDefaultOrgAndCluster(ctx context.Context) error {
-	d.Logger.Debugf("Initializing default organization and cluster")
-
-	orgStore := pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
-		SessionFactory: d.DBSession,
-	})
-
-	defaultOrg, serr := orgStore.GetDefaultOrg(ctx)
-	if serr != nil {
-		return fmt.Errorf("failed to get default organization: %w", serr)
-	}
-
-	if err := d.initializeDefaultCluster(ctx, defaultOrg); err != nil {
-		return fmt.Errorf("failed to initialize default cluster: %w", err)
-	}
-	return nil
-}
-
-func (d *developmentEnvironment) initializeDefaultCluster(ctx context.Context, defaultOrg *models.Organisation) error {
-	clusterStore := pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
-		SessionFactory: d.DBSession,
-	})
-
-	// TODO: Add cluster as a separate resource using a cluster CREATE API
-	// TODO: Add org as a separate resource using a org CREATE API or seed a default org during migration.
-
-	if _, err := clusterStore.GetDefaultCluster(ctx); err != nil {
-		if err.Code == errors.ErrorNotFound {
-			desiredCluster := &models.Cluster{
-				OrganisationID: defaultOrg.ID,
-				Name:           d.Config.ClusterConfig.Name,
-				ClusterURL:     d.Config.ClusterConfig.ClusterURL,
-				ClusterCAData:  string(d.Config.ClusterConfig.ClusterCAData),
-				Token:          string(d.Config.ClusterConfig.Token),
-				Default:        true,
-			}
-			if _, err := clusterStore.Create(ctx, desiredCluster); err != nil {
-				return fmt.Errorf("failed to create default cluster: %w", err)
-			}
-		} else {
-			return err
-		}
-	}
-
-	// Temporary:
-	cluster, err := clusterStore.GetDefaultCluster(ctx)
-	if err != nil {
-		return err
-	}
-
-	return d.ClusterManager.RegisterCluster(cluster)
-}
-
 func (d *developmentEnvironment) initializeBaseResourceAccessPolicies(ctx context.Context) error {
 	d.Logger.Debugf("Initializing base resource access policies")
 
@@ -414,17 +361,6 @@ func (d *developmentEnvironment) ensureDefaultPlatformAdminUser(ctx context.Cont
 func (d *developmentEnvironment) startClusterManager(ctx context.Context) error {
 	d.Logger.Debugf("Starting cluster manager")
 	d.ClusterManager.Start(ctx)
-	return nil
-}
-
-func (d *developmentEnvironment) initializeClients(ctx context.Context) error {
-	clusterClient, err := initializeClusterClient(d.Config.ClusterConfig)
-	if err != nil {
-		return fmt.Errorf("failed to intialize cluster client: %w", err)
-	}
-	d.Clients = Clients{
-		DefaultClusterClient: clusterClient,
-	}
 	return nil
 }
 

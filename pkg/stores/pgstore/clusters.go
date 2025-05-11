@@ -12,6 +12,7 @@ import (
 
 type dbClusterStore struct {
 	sessionFactory db.SessionFactory
+	atomicExecutor
 }
 
 type ClusterStoreSpec struct {
@@ -21,12 +22,38 @@ type ClusterStoreSpec struct {
 func NewClusterStore(spec ClusterStoreSpec) stores.ClusterStore {
 	return &dbClusterStore{
 		sessionFactory: spec.SessionFactory,
+		atomicExecutor: atomicExecutor{sessionFactory: spec.SessionFactory},
 	}
+}
+
+func (d dbClusterStore) GetByClusterUrl(ctx context.Context, clusterURL string) (*models.Cluster, *errors.ServiceError) {
+	grm := d.sessionFactory.New(ctx)
+	var res models.Cluster
+	err := grm.Model(&models.Cluster{}).Where("cluster_url = ?", clusterURL).First(&res).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.NotFound("cluster with url '%s' not found", clusterURL)
+		}
+		return nil, errors.GeneralError("failed to fetch cluster: %s", err.Error())
+	}
+	return &res, nil
 }
 
 func (d dbClusterStore) Create(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Create(&cluster).Error
+	if err != nil {
+		return nil, errors.GeneralError("failed to add cluster: %s", err.Error())
+	}
+	return d.Get(ctx, cluster.ID)
+}
+
+func (d dbClusterStore) CreateWithTx(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+	tx := db.TxFromContext(ctx)
+	if tx == nil {
+		return nil, errors.GeneralError("transaction not found in context")
+	}
+	err := tx.Create(&cluster).Error
 	if err != nil {
 		return nil, errors.GeneralError("failed to add cluster: %s", err.Error())
 	}

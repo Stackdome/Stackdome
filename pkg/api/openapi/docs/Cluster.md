@@ -10,8 +10,7 @@ Name | Type | Description | Notes
 **Default** | Pointer to **bool** |  | [optional] 
 **ClusterUrl** | Pointer to **string** |  | [optional] 
 **ClusterCaData** | Pointer to **string** |  | [optional] 
-**ClientCertData** | Pointer to **string** |  | [optional] 
-**ClientKeyData** | Pointer to **string** |  | [optional] 
+**ClusterSaToken** | Pointer to **string** |  | [optional] 
 
 ## Methods
 
@@ -182,55 +181,30 @@ SetClusterCaData sets ClusterCaData field to given value.
 
 HasClusterCaData returns a boolean if a field has been set.
 
-### GetClientCertData
+### GetClusterSaToken
 
-`func (o *Cluster) GetClientCertData() string`
+`func (o *Cluster) GetClusterSaToken() string`
 
-GetClientCertData returns the ClientCertData field if non-nil, zero value otherwise.
+GetClusterSaToken returns the ClusterSaToken field if non-nil, zero value otherwise.
 
-### GetClientCertDataOk
+### GetClusterSaTokenOk
 
-`func (o *Cluster) GetClientCertDataOk() (*string, bool)`
+`func (o *Cluster) GetClusterSaTokenOk() (*string, bool)`
 
-GetClientCertDataOk returns a tuple with the ClientCertData field if it's non-nil, zero value otherwise
+GetClusterSaTokenOk returns a tuple with the ClusterSaToken field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetClientCertData
+### SetClusterSaToken
 
-`func (o *Cluster) SetClientCertData(v string)`
+`func (o *Cluster) SetClusterSaToken(v string)`
 
-SetClientCertData sets ClientCertData field to given value.
+SetClusterSaToken sets ClusterSaToken field to given value.
 
-### HasClientCertData
+### HasClusterSaToken
 
-`func (o *Cluster) HasClientCertData() bool`
+`func (o *Cluster) HasClusterSaToken() bool`
 
-HasClientCertData returns a boolean if a field has been set.
-
-### GetClientKeyData
-
-`func (o *Cluster) GetClientKeyData() string`
-
-GetClientKeyData returns the ClientKeyData field if non-nil, zero value otherwise.
-
-### GetClientKeyDataOk
-
-`func (o *Cluster) GetClientKeyDataOk() (*string, bool)`
-
-GetClientKeyDataOk returns a tuple with the ClientKeyData field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetClientKeyData
-
-`func (o *Cluster) SetClientKeyData(v string)`
-
-SetClientKeyData sets ClientKeyData field to given value.
-
-### HasClientKeyData
-
-`func (o *Cluster) HasClientKeyData() bool`
-
-HasClientKeyData returns a boolean if a field has been set.
+HasClusterSaToken returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -29,6 +29,9 @@ const (
 
 	// Organisation
 	Organisation AuthorizableResource = "Organisation"
+
+	// Cluster
+	Cluster AuthorizableResource = "Cluster"
 )
 
 type AuthorizationClient interface {

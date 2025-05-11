@@ -60,6 +60,11 @@ func (s apiServer) routes() *mux.Router {
 		AuthzClient:          authzClient,
 	})
 
+	clusterHandler := handlers.NewClusterHandler(handlers.ClusterHandlerSpec{
+		ClusterService: services.ClusterService,
+		AuthzClient:    authzClient,
+	})
+
 	authenticationMiddleware := auth.NewAuthMiddleware(services.UserService)
 
 	apiV1Router := mainRouter.PathPrefix("/api/v1").Subrouter()
@@ -74,6 +79,14 @@ func (s apiServer) routes() *mux.Router {
 	organizationsRouter.HandleFunc("/default", organizationHandler.GetDefault).Methods(http.MethodGet)
 	organizationsRouter.HandleFunc("/{id}", organizationHandler.GetByID).Methods(http.MethodGet)
 	organizationsRouter.HandleFunc("/{id}", organizationHandler.Update).Methods(http.MethodPut)
+
+	// Cluster routes
+	clusterRouter := apiV1Router.PathPrefix("/organizations/{org_id}/clusters").Subrouter()
+	clusterRouter.Use(authenticationMiddleware.AuthenticateUser)
+	clusterRouter.HandleFunc("", clusterHandler.ListClustersForOrg).Methods(http.MethodGet)
+	clusterRouter.HandleFunc("", clusterHandler.AddClusterForOrg).Methods(http.MethodPost)
+	clusterRouter.HandleFunc("/{id}", clusterHandler.GetClusterForOrg).Methods(http.MethodGet)
+	clusterRouter.HandleFunc("/{id}", clusterHandler.DeleteClusterForOrg).Methods(http.MethodDelete)
 
 	authenticatedUserRouter := userRouter.NewRoute().Subrouter()
 	authenticatedUserRouter.Use(authenticationMiddleware.AuthenticateUser)
