@@ -97,7 +97,7 @@ func (a usersHandler) Create(w http.ResponseWriter, r *http.Request) {
 				return nil, err
 			}
 
-			return presenters.PresentUser(user), nil
+			return user, nil
 		},
 		handleError,
 	}

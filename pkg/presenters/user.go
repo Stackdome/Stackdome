@@ -11,12 +11,12 @@ func PresentUser(in *models.User) openapi.User {
 	res.SetOrganisation(in.Organisation.Name)
 	res.SetId(in.ID)
 	res.SetName(in.Name)
-	res.SetRole(presentRole(in.Role))
+	res.SetRole(PresentRole(in.Role))
 	res.SetOrganisationId(in.OrganisationID)
 	return res
 }
 
-func presentRole(in models.Role) openapi.UserRole {
+func PresentRole(in models.Role) openapi.UserRole {
 	switch in {
 	case models.OrganisationAdminRole:
 		return openapi.ORGANISATION_ADMIN

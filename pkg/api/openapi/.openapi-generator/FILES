@@ -58,6 +58,7 @@ docs/StackStatus.md
 docs/User.md
 docs/UserRole.md
 docs/UserSignupRequest.md
+docs/UserSignupResponse.md
 docs/Volume.md
 docs/VolumeAccessMode.md
 docs/VolumeList.md
@@ -125,6 +126,7 @@ model_stack_status.go
 model_user.go
 model_user_role.go
 model_user_signup_request.go
+model_user_signup_response.go
 model_volume.go
 model_volume_access_mode.go
 model_volume_list.go

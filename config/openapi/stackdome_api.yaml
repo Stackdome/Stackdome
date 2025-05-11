@@ -20,7 +20,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/UserSignupResponse'
         '400':
           description: Invalid request data
           content:
@@ -1094,6 +1094,26 @@ components:
         updated_at:
           type: string
           format: date-time
+    UserSignupResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: User's ID
+        name:
+          type: string
+          description: User's name
+        email:
+          type: string
+          format: email
+          description: User's email address
+        role:
+          $ref: '#/components/schemas/UserRole'
+        organisation:
+          $ref: '#/components/schemas/Organisation'
+        jwt_token:
+          type: string
+          description: JWT token for the authenticated user
     User:
       type: object
       properties:

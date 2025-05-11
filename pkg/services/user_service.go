@@ -9,17 +9,19 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
 	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
+	"k8s.io/utils/ptr"
 )
 
 type UserService interface {
 	Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
 	GetDefaultUser(ctx context.Context) (*models.User, *errors.ServiceError)
-	Create(ctx context.Context, user *models.User) (*models.User, *errors.ServiceError)
+	Create(ctx context.Context, user *models.User) (*openapi.UserSignupResponse, *errors.ServiceError)
 	Login(ctx context.Context, loginRequest *openapi.LoginRequest) (*openapi.LoginResponse, *errors.ServiceError)
 }
 
@@ -70,7 +72,7 @@ func (u usersService) GetDefaultUser(ctx context.Context) (*models.User, *errors
 	return u.userStore.GetDefaultUser(ctx)
 }
 
-func (u usersService) Create(ctx context.Context, user *models.User) (*models.User, *errors.ServiceError) {
+func (u usersService) Create(ctx context.Context, user *models.User) (*openapi.UserSignupResponse, *errors.ServiceError) {
 	if len(user.Password) < 8 {
 		return nil, errors.BadRequest("password must be at least 8 characters")
 	}
@@ -109,7 +111,26 @@ func (u usersService) Create(ctx context.Context, user *models.User) (*models.Us
 		u.logger.Errorf("failed to add policy for user: %s", policyAddErr.Error())
 		return nil, errors.GeneralError("failed to create user")
 	}
-	return createdUser, nil
+	expirationTime := time.Now().UTC().Add(10 * 24 * time.Hour)
+	claims := u.jwtClaimsBuilder.BuildClaims(createdUser, expirationTime)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, tokenErr := token.SignedString([]byte(u.jwtSecretKey))
+	if tokenErr != nil {
+		return nil, errors.GeneralError("failed to generate token: %s", tokenErr.Error())
+	}
+	res := openapi.UserSignupResponse{
+		Id:       &createdUser.ID,
+		Name:     &createdUser.Name,
+		Email:    &createdUser.Email,
+		Role:     ptr.To(presenters.PresentRole(createdUser.Role)),
+		JwtToken: &tokenString,
+		Organisation: &openapi.Organisation{
+			Id:   &createdUser.OrganisationID,
+			Name: &createdUser.Organisation.Name,
+		},
+	}
+
+	return &res, nil
 }
 
 func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequest) (*openapi.LoginResponse, *errors.ServiceError) {

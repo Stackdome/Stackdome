@@ -106,9 +106,9 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidvolumesidput) | **Put** /api/v1/organizations/{org_id}/volumes/{id} | Update a volume
 *DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesPost**](docs/DefaultApi.md#apiv1organizationsorgidvolumespost) | **Post** /api/v1/organizations/{org_id}/volumes | Create a new volume
 *DefaultApi* | [**ApiV1OrganizationsPost**](docs/DefaultApi.md#apiv1organizationspost) | **Post** /api/v1/organizations | Create a new organization
+*DefaultApi* | [**ApiV1UserSignupPost**](docs/DefaultApi.md#apiv1usersignuppost) | **Post** /api/v1/user-signup | Create new user
 *DefaultApi* | [**ApiV1UsersCurrentGet**](docs/DefaultApi.md#apiv1userscurrentget) | **Get** /api/v1/users/current | Get a the current authenticated user
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
-*DefaultApi* | [**ApiV1UsersPost**](docs/DefaultApi.md#apiv1userspost) | **Post** /api/v1/users | Create new user
 *DefaultApi* | [**ApiV1WorkspaceUsersCurrentGet**](docs/DefaultApi.md#apiv1workspaceuserscurrentget) | **Get** /api/v1/workspace-users/current | Get the workspace user object for the current user
 *DefaultApi* | [**ApiV1WorkspaceUsersIdDelete**](docs/DefaultApi.md#apiv1workspaceusersiddelete) | **Delete** /api/v1/workspace-users/{id} | Delete a WorkspaceUser
 *DefaultApi* | [**ApiV1WorkspaceUsersIdGet**](docs/DefaultApi.md#apiv1workspaceusersidget) | **Get** /api/v1/workspace-users/{id} | Get a workspace user object by ID
@@ -169,6 +169,7 @@ Class | Method | HTTP request | Description
  - [User](docs/User.md)
  - [UserRole](docs/UserRole.md)
  - [UserSignupRequest](docs/UserSignupRequest.md)
+ - [UserSignupResponse](docs/UserSignupResponse.md)
  - [Volume](docs/Volume.md)
  - [VolumeAccessMode](docs/VolumeAccessMode.md)
  - [VolumeList](docs/VolumeList.md)
