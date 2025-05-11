@@ -196,17 +196,19 @@ func (d *developmentEnvironment) initializeResourceAccessPolicyManager(ctx conte
 
 func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	d.Logger.Debugf("Initializing services")
+
+	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         d.Logger,
+	})
+
 	userService := services.NewUserService(services.UserServiceSpec{
 		SessionFactory:              d.DBSession,
 		Logger:                      d.Logger,
 		JwtSecretKey:                d.Config.JwtSecret,
 		ResourceAccessPolicyManager: d.ResourceAccessPolicyManager,
 		JWTClaimsBuilder:            auth.NewJWTClaimsBuilder(),
-	})
-
-	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
-		SessionFactory: d.DBSession,
-		Logger:         d.Logger,
+		OrganisationService:         organisationService,
 	})
 
 	clusterService := services.NewClusterService(services.ClusterServiceSpec{
@@ -394,7 +396,6 @@ func (d *developmentEnvironment) ensureDefaultPlatformAdminUser(ctx context.Cont
 				Role:           models.PlatformAdminRole,
 				Name:           defaultUserInfo.Name,
 				Password:       defaultUserInfo.Password, // Assumes service handles hashing
-				Organisation:   defaultOrg.Name,
 				OrganisationID: defaultOrg.ID,
 				DefaultUser:    true,
 			}

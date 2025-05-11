@@ -63,8 +63,12 @@ func (s apiServer) routes() *mux.Router {
 	authenticationMiddleware := auth.NewAuthMiddleware(services.UserService)
 
 	apiV1Router := mainRouter.PathPrefix("/api/v1").Subrouter()
+
+	userSignupRouter := apiV1Router.PathPrefix("/user-signup").Subrouter()
+	userSignupRouter.Use(authenticationMiddleware.AuthenticateUser)
+	userSignupRouter.HandleFunc("", userHandler.Create).Methods(http.MethodPost)
+
 	userRouter := apiV1Router.PathPrefix("/users").Subrouter()
-	userRouter.HandleFunc("", userHandler.Create).Methods(http.MethodPost)
 	organizationsRouter := apiV1Router.PathPrefix("/organizations").Subrouter()
 	organizationsRouter.Use(authenticationMiddleware.AuthenticateUser)
 	organizationsRouter.HandleFunc("", organizationHandler.Create).Methods(http.MethodPost)

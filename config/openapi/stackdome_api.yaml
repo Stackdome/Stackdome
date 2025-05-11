@@ -4,7 +4,7 @@ info:
   version: 0.0.1
   description: stackdome-api-server
 paths:
-  /api/v1/users:
+  /api/v1/user-signup:
     post:
       summary: Create new user
       description: Create a new user
@@ -13,7 +13,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserCreateRequest'
+              $ref: '#/components/schemas/UserSignupRequest'
       responses:
         '201':
           description: User created successfully
@@ -1079,9 +1079,6 @@ components:
   schemas:
     Organisation:
       type: object
-      required:
-        - name
-        - domain_name
       properties:
         id:
           type: string
@@ -1121,13 +1118,12 @@ components:
         organisation_id:
           type: string
           description: OrganisationID
-    UserCreateRequest:
+    UserSignupRequest:
       type: object
       required:
       - name
       - email
       - password
-      - organisation_id
       properties:
         name:
           type: string
@@ -1145,8 +1141,7 @@ components:
         Role:
           $ref: '#/components/schemas/UserRole'
         organisation:
-          type: string
-          description: User's organisation
+          $ref: '#/components/schemas/Organisation'
         organisation_id:
           type: string
           description: OrganisationID
@@ -1188,8 +1183,6 @@ components:
           type: string
         org_id:
           type: string
-        ssh_public_key:
-          type: string
         workspaces:
           type: array
           minItems: 1
@@ -1211,7 +1204,6 @@ components:
           type: string
           format: date-time
       required:
-        - ssh_public_key
         - workspaces
     WorkspaceUserState:
       type: string

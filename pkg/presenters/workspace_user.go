@@ -13,7 +13,6 @@ func PresentWorkspaceUser(in *models.WorkspaceUser) openapi.WorkspaceUser {
 	res.SetId(in.ID)
 	res.SetUserId(in.UserID)
 	res.SetVersion(int32(in.Version))
-	res.SetSshPublicKey(in.SshPublicKey)
 	res.SetWorkspaces(presentUserWorkspaceNamespaces(in.WorkspaceNamespaces))
 	res.SetStatus(PresentWorkspaceUserStatus(in.Status, in))
 	res.SetState(PresentWorkspaceUserState(in.Status))
@@ -86,7 +85,6 @@ func ConvertWorkspaceUser(in *openapi.WorkspaceUser) *models.WorkspaceUser {
 	res := &models.WorkspaceUser{
 		Status: &models.WorkspaceUserStatus{},
 	}
-	res.SshPublicKey = in.GetSshPublicKey()
 	res.WorkspaceNamespaces = convertWorkspaceNames(in.GetWorkspaces())
 	res.Version = 1
 	return res

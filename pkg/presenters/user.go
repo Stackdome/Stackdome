@@ -8,7 +8,7 @@ import (
 func PresentUser(in *models.User) openapi.User {
 	res := openapi.User{}
 	res.SetEmail(in.Email)
-	res.SetOrganisation(in.Organisation)
+	res.SetOrganisation(in.Organisation.Name)
 	res.SetId(in.ID)
 	res.SetName(in.Name)
 	res.SetRole(presentRole(in.Role))
@@ -27,14 +27,20 @@ func presentRole(in models.Role) openapi.UserRole {
 	}
 }
 
-func ConvertUser(in *openapi.UserCreateRequest) *models.User {
+func ConvertUser(in *openapi.UserSignupRequest) *models.User {
 	res := &models.User{
-		Name:           in.Name,
-		Email:          in.Email,
-		Organisation:   in.GetOrganisation(),
-		Password:       in.GetPassword(),
-		OrganisationID: in.GetOrganisationId(),
-		Role:           convertRole(in.GetRole()),
+		Name:     in.Name,
+		Email:    in.Email,
+		Password: in.GetPassword(),
+		Role:     convertRole(in.GetRole()),
+	}
+	if in.HasOrganisationId() {
+		res.OrganisationID = *in.OrganisationId
+	} else if in.HasOrganisation() {
+		res.Organisation = &models.Organisation{
+			Name:       in.Organisation.GetName(),
+			DomainName: in.Organisation.GetDomainName(),
+		}
 	}
 	return res
 }

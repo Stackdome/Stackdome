@@ -262,7 +262,7 @@ import (
 
 func main() {
     id := "id_example" // string | The id of record
-    organisation := *openapiclient.NewOrganisation("Name_example", "DomainName_example") // Organisation | 
+    organisation := *openapiclient.NewOrganisation() // Organisation | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -1960,7 +1960,7 @@ import (
 )
 
 func main() {
-    organisation := *openapiclient.NewOrganisation("Name_example", "DomainName_example") // Organisation | 
+    organisation := *openapiclient.NewOrganisation() // Organisation | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -2138,7 +2138,7 @@ Name | Type | Description  | Notes
 
 ## ApiV1UsersPost
 
-> User ApiV1UsersPost(ctx).UserCreateRequest(userCreateRequest).Execute()
+> User ApiV1UsersPost(ctx).UserSignupRequest(userSignupRequest).Execute()
 
 Create new user
 
@@ -2157,11 +2157,11 @@ import (
 )
 
 func main() {
-    userCreateRequest := *openapiclient.NewUserCreateRequest("Name_example", "Email_example", "Password_example", "OrganisationId_example") // UserCreateRequest | 
+    userSignupRequest := *openapiclient.NewUserSignupRequest("Name_example", "Email_example", "Password_example") // UserSignupRequest | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1UsersPost(context.Background()).UserCreateRequest(userCreateRequest).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1UsersPost(context.Background()).UserSignupRequest(userSignupRequest).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1UsersPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -2182,7 +2182,7 @@ Other parameters are passed through a pointer to a apiApiV1UsersPostRequest stru
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **userCreateRequest** | [**UserCreateRequest**](UserCreateRequest.md) |  | 
+ **userSignupRequest** | [**UserSignupRequest**](UserSignupRequest.md) |  | 
 
 ### Return type
 
@@ -2415,7 +2415,7 @@ import (
 
 func main() {
     id := "id_example" // string | 
-    workspaceUser := *openapiclient.NewWorkspaceUser("SshPublicKey_example", []string{"Workspaces_example"}) // WorkspaceUser | 
+    workspaceUser := *openapiclient.NewWorkspaceUser([]string{"Workspaces_example"}) // WorkspaceUser | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -2484,7 +2484,7 @@ import (
 )
 
 func main() {
-    workspaceUser := *openapiclient.NewWorkspaceUser("SshPublicKey_example", []string{"Workspaces_example"}) // WorkspaceUser | 
+    workspaceUser := *openapiclient.NewWorkspaceUser([]string{"Workspaces_example"}) // WorkspaceUser | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)

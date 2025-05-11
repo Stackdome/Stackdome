@@ -40,6 +40,7 @@ func NewUserService(spec UserServiceSpec) UserService {
 		jwtSecretKey:            spec.JwtSecretKey,
 		resourceAccessPolicyMgr: spec.ResourceAccessPolicyManager,
 		jwtClaimsBuilder:        spec.JWTClaimsBuilder,
+		organisationService:     spec.OrganisationService,
 	}
 }
 
@@ -49,10 +50,12 @@ type UserServiceSpec struct {
 	JwtSecretKey                string
 	ResourceAccessPolicyManager resourceaccess.ResourceAccessPolicyManager
 	JWTClaimsBuilder            jwtClaimsBuilder
+	OrganisationService         OrganisationService
 }
 
 type usersService struct {
 	userStore               stores.UserStore
+	organisationService     OrganisationService
 	logger                  logger.Logger
 	jwtSecretKey            string
 	resourceAccessPolicyMgr resourceaccess.ResourceAccessPolicyManager
@@ -79,6 +82,18 @@ func (u usersService) Create(ctx context.Context, user *models.User) (*models.Us
 	user.Password = string(hashedPassword)
 	if len(user.Role) == 0 {
 		user.Role = models.UserRole
+	}
+
+	if user.OrganisationID == "" {
+		// We create an organisation for the user if organisation ID is not provided.
+		createdOrganisation, err := u.organisationService.Create(ctx, user.Organisation)
+		if err != nil {
+			u.logger.Errorf("failed to create organisation, %s", err.Error())
+			return nil, errors.GeneralError("failed to create user")
+		}
+		user.OrganisationID = createdOrganisation.ID
+		// That mean this user is the organisation admin.
+		user.Role = models.OrganisationAdminRole
 	}
 	createdUser, serr := u.userStore.Create(ctx, user)
 	if serr != nil {
