@@ -20,8 +20,13 @@ import {
 } from "@/components/ui/sidebar"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 import { NavUser } from "@/components/nav-user"
+import { useClusters } from "@/pages/clusters/hooks/use-clusters"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  // Get clusters to conditionally show "Add new Cluster" option
+  const { clusters, loading } = useClusters();
+  const hasCluster = !loading && clusters.length > 0;
+  
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
@@ -74,15 +79,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </AccordionTrigger>
             <AccordionContent>
               <SidebarMenuSub>
-                <SidebarMenuSubItem>
-                  <SidebarMenuSubButton asChild>
-                    <a href="/clusters">
-                      <Plus className="size-4" />
-                      <span>Add new Cluster</span>
-                    </a>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-                {/* Existing clusters would be mapped here in the future */}
+                {!hasCluster ? (
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild>
+                      <a href="/clusters">
+                        <Plus className="size-4" />
+                        <span>Add new Cluster</span>
+                      </a>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                ) : (
+                  clusters.map(cluster => (
+                    <SidebarMenuSubItem key={cluster.id}>
+                      <SidebarMenuSubButton asChild>
+                        <a href={`/clusters/${cluster.id}`}>
+                          <Cloud className="size-4" />
+                          <span>{cluster.name || "Cluster"}</span>
+                        </a>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  ))
+                )}
               </SidebarMenuSub>
             </AccordionContent>
           </AccordionItem>

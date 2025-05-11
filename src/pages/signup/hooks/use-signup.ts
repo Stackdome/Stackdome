@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { signupUser } from "../../../api/users";
-import type { components } from "../../../api/types/openapi";
+import * as userApi from "@/api/users";
+import type { components } from "@/api/types/openapi";
 
 type UserSignupRequest = components["schemas"]["UserSignupRequest"];
 type User = components["schemas"]["User"];
@@ -14,7 +14,7 @@ export function useSignup() {
     setLoading(true);
     setError(null);
     try {
-      const result = await signupUser(data);
+      const result = await userApi.signupUser(data);
       setUser(result);
       return result;
     } catch (err: unknown) {

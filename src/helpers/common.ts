@@ -15,6 +15,11 @@ export function getCurrentUser(): User | null {
   }
 }
 
+export function getCurrentOrganizationId(): string {
+  const user = getCurrentUser();
+  return user?.organisation_id || "";
+}
+
 export function setAuthSession(token: string, user: User) {
   localStorage.setItem('authToken', token);
   localStorage.setItem('currentUser', JSON.stringify(user));

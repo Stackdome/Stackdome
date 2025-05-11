@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { loginUser } from "../../../api/users";
-import type { LoginRequest, LoginResponse } from "../../../api/users";
+import * as userApi from "@/api/users";
+import type { LoginRequest, LoginResponse } from "@/api/users";
 
 export function useLogin() {
   const [loading, setLoading] = useState(false);
@@ -11,7 +11,7 @@ export function useLogin() {
     setLoading(true);
     setError(null);
     try {
-      const result = await loginUser(data);
+      const result = await userApi.loginUser(data);
       setUser(result);
       return result;
     } catch (err: unknown) {

@@ -17,7 +17,7 @@ export async function loginUser(data: LoginRequest): Promise<LoginResponse> {
   return response.data;
 }
 
-export async function fetchCurrentUser(): Promise<User> {
+export async function getCurrentUser(): Promise<User> {
   const response = await api.get("/users/current");
   return response.data;
 }

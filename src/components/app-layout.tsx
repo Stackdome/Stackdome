@@ -3,32 +3,38 @@ import { ProjectSidebar } from "@/components/project-sidebar";
 import type { SidebarSection } from "@/components/project-sidebar";
 import { Outlet } from "react-router-dom";
 import { Layers, Cloud } from "lucide-react";
-
-// Default sidebar sections for the app (can be customized per page if needed)
-const defaultSections: SidebarSection[] = [
-  {
-    label: "Stacks",
-    icon: <Layers className="size-4" />,
-    addHref: "/stacks/create",
-    addLabel: "Add new Stack",
-    items: [],
-  },
-  {
-    label: "Clusters",
-    icon: <Cloud className="size-4" />,
-    addHref: "/clusters",
-    addLabel: "Add new Cluster",
-    items: [],
-  },
-];
+import { useClusters } from "@/pages/clusters/hooks/use-clusters";
 
 export function AppLayout({
   children,
-  sections = defaultSections,
 }: {
   children?: React.ReactNode;
-  sections?: SidebarSection[];
 }) {
+  const { clusters, loading } = useClusters();
+  const hasCluster = !loading && clusters.length > 0;
+
+  const sections: SidebarSection[] = [
+    {
+      label: "Stacks",
+      icon: <Layers className="size-4" />,
+      addHref: "/stacks/create",
+      addLabel: "Add new Stack",
+      items: [],
+    },
+    {
+      label: "Clusters",
+      icon: <Cloud className="size-4" />,
+      addHref: hasCluster ? undefined : "/clusters", // Only show Add new Cluster if no cluster exists
+      addLabel: "Add new Cluster",
+      items: hasCluster ? [
+        {
+          label: clusters[0]?.name || "Cluster",
+          href: `/clusters/${clusters[0]?.id}`,
+          active: true
+        }
+      ] : [],
+    },
+  ];
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
