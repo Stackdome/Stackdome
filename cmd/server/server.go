@@ -12,6 +12,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/config/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/golang/glog"
+	gorillahandlers "github.com/gorilla/handlers"
 )
 
 type Server interface {
@@ -51,6 +52,11 @@ func NewAPIServer(env environment.EnvImpl) Server {
 		mainHandler,
 		env,
 	)
+
+	// Setup CORS
+	mainHandler = gorillahandlers.CORS(
+		gorillahandlers.AllowedOrigins([]string{"*"}),
+	)(mainHandler)
 
 	mainHandler = removeTrailingSlash(mainHandler)
 
