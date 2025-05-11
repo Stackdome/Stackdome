@@ -119,15 +119,8 @@ func (u usersService) Create(ctx context.Context, user *models.User) (*openapi.U
 		return nil, errors.GeneralError("failed to generate token: %s", tokenErr.Error())
 	}
 	res := openapi.UserSignupResponse{
-		Id:       &createdUser.ID,
-		Name:     &createdUser.Name,
-		Email:    &createdUser.Email,
-		Role:     ptr.To(presenters.PresentRole(createdUser.Role)),
+		User:     ptr.To(presenters.PresentUser(createdUser)),
 		JwtToken: &tokenString,
-		Organisation: &openapi.Organisation{
-			Id:   &createdUser.OrganisationID,
-			Name: &createdUser.Organisation.Name,
-		},
 	}
 
 	return &res, nil

@@ -1482,33 +1482,18 @@ components:
       type: object
     UserSignupResponse:
       example:
-        role: null
         jwt_token: jwt_token
-        name: name
-        organisation:
-          domain_name: domain_name
-          updated_at: 2000-01-23T04:56:07.000+00:00
+        user:
+          organisation_id: organisation_id
+          role: null
           name: name
-          created_at: 2000-01-23T04:56:07.000+00:00
+          organisation: organisation
           id: id
-          is_default: true
-        id: id
-        email: email
+          email: email
+          username: username
       properties:
-        id:
-          description: User's ID
-          type: string
-        name:
-          description: User's name
-          type: string
-        email:
-          description: User's email address
-          format: email
-          type: string
-        role:
-          $ref: '#/components/schemas/UserRole'
-        organisation:
-          $ref: '#/components/schemas/Organisation'
+        user:
+          $ref: '#/components/schemas/User'
         jwt_token:
           description: JWT token for the authenticated user
           type: string

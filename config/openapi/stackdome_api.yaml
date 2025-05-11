@@ -1240,20 +1240,8 @@ components:
     UserSignupResponse:
       type: object
       properties:
-        id:
-          type: string
-          description: User's ID
-        name:
-          type: string
-          description: User's name
-        email:
-          type: string
-          format: email
-          description: User's email address
-        role:
-          $ref: '#/components/schemas/UserRole'
-        organisation:
-          $ref: '#/components/schemas/Organisation'
+        user:
+          $ref: '#/components/schemas/User'
         jwt_token:
           type: string
           description: JWT token for the authenticated user
