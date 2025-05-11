@@ -16,14 +16,7 @@ import (
 
 // UserSignupResponse struct for UserSignupResponse
 type UserSignupResponse struct {
-	// User's ID
-	Id *string `json:"id,omitempty"`
-	// User's name
-	Name *string `json:"name,omitempty"`
-	// User's email address
-	Email        *string       `json:"email,omitempty"`
-	Role         *UserRole     `json:"role,omitempty"`
-	Organisation *Organisation `json:"organisation,omitempty"`
+	User *User `json:"user,omitempty"`
 	// JWT token for the authenticated user
 	JwtToken *string `json:"jwt_token,omitempty"`
 }
@@ -45,164 +38,36 @@ func NewUserSignupResponseWithDefaults() *UserSignupResponse {
 	return &this
 }
 
-// GetId returns the Id field value if set, zero value otherwise.
-func (o *UserSignupResponse) GetId() string {
-	if o == nil || o.Id == nil {
-		var ret string
+// GetUser returns the User field value if set, zero value otherwise.
+func (o *UserSignupResponse) GetUser() User {
+	if o == nil || o.User == nil {
+		var ret User
 		return ret
 	}
-	return *o.Id
+	return *o.User
 }
 
-// GetIdOk returns a tuple with the Id field value if set, nil otherwise
+// GetUserOk returns a tuple with the User field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *UserSignupResponse) GetIdOk() (*string, bool) {
-	if o == nil || o.Id == nil {
+func (o *UserSignupResponse) GetUserOk() (*User, bool) {
+	if o == nil || o.User == nil {
 		return nil, false
 	}
-	return o.Id, true
+	return o.User, true
 }
 
-// HasId returns a boolean if a field has been set.
-func (o *UserSignupResponse) HasId() bool {
-	if o != nil && o.Id != nil {
+// HasUser returns a boolean if a field has been set.
+func (o *UserSignupResponse) HasUser() bool {
+	if o != nil && o.User != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetId gets a reference to the given string and assigns it to the Id field.
-func (o *UserSignupResponse) SetId(v string) {
-	o.Id = &v
-}
-
-// GetName returns the Name field value if set, zero value otherwise.
-func (o *UserSignupResponse) GetName() string {
-	if o == nil || o.Name == nil {
-		var ret string
-		return ret
-	}
-	return *o.Name
-}
-
-// GetNameOk returns a tuple with the Name field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *UserSignupResponse) GetNameOk() (*string, bool) {
-	if o == nil || o.Name == nil {
-		return nil, false
-	}
-	return o.Name, true
-}
-
-// HasName returns a boolean if a field has been set.
-func (o *UserSignupResponse) HasName() bool {
-	if o != nil && o.Name != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetName gets a reference to the given string and assigns it to the Name field.
-func (o *UserSignupResponse) SetName(v string) {
-	o.Name = &v
-}
-
-// GetEmail returns the Email field value if set, zero value otherwise.
-func (o *UserSignupResponse) GetEmail() string {
-	if o == nil || o.Email == nil {
-		var ret string
-		return ret
-	}
-	return *o.Email
-}
-
-// GetEmailOk returns a tuple with the Email field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *UserSignupResponse) GetEmailOk() (*string, bool) {
-	if o == nil || o.Email == nil {
-		return nil, false
-	}
-	return o.Email, true
-}
-
-// HasEmail returns a boolean if a field has been set.
-func (o *UserSignupResponse) HasEmail() bool {
-	if o != nil && o.Email != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetEmail gets a reference to the given string and assigns it to the Email field.
-func (o *UserSignupResponse) SetEmail(v string) {
-	o.Email = &v
-}
-
-// GetRole returns the Role field value if set, zero value otherwise.
-func (o *UserSignupResponse) GetRole() UserRole {
-	if o == nil || o.Role == nil {
-		var ret UserRole
-		return ret
-	}
-	return *o.Role
-}
-
-// GetRoleOk returns a tuple with the Role field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *UserSignupResponse) GetRoleOk() (*UserRole, bool) {
-	if o == nil || o.Role == nil {
-		return nil, false
-	}
-	return o.Role, true
-}
-
-// HasRole returns a boolean if a field has been set.
-func (o *UserSignupResponse) HasRole() bool {
-	if o != nil && o.Role != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetRole gets a reference to the given UserRole and assigns it to the Role field.
-func (o *UserSignupResponse) SetRole(v UserRole) {
-	o.Role = &v
-}
-
-// GetOrganisation returns the Organisation field value if set, zero value otherwise.
-func (o *UserSignupResponse) GetOrganisation() Organisation {
-	if o == nil || o.Organisation == nil {
-		var ret Organisation
-		return ret
-	}
-	return *o.Organisation
-}
-
-// GetOrganisationOk returns a tuple with the Organisation field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *UserSignupResponse) GetOrganisationOk() (*Organisation, bool) {
-	if o == nil || o.Organisation == nil {
-		return nil, false
-	}
-	return o.Organisation, true
-}
-
-// HasOrganisation returns a boolean if a field has been set.
-func (o *UserSignupResponse) HasOrganisation() bool {
-	if o != nil && o.Organisation != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetOrganisation gets a reference to the given Organisation and assigns it to the Organisation field.
-func (o *UserSignupResponse) SetOrganisation(v Organisation) {
-	o.Organisation = &v
+// SetUser gets a reference to the given User and assigns it to the User field.
+func (o *UserSignupResponse) SetUser(v User) {
+	o.User = &v
 }
 
 // GetJwtToken returns the JwtToken field value if set, zero value otherwise.
@@ -239,20 +104,8 @@ func (o *UserSignupResponse) SetJwtToken(v string) {
 
 func (o UserSignupResponse) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if o.Id != nil {
-		toSerialize["id"] = o.Id
-	}
-	if o.Name != nil {
-		toSerialize["name"] = o.Name
-	}
-	if o.Email != nil {
-		toSerialize["email"] = o.Email
-	}
-	if o.Role != nil {
-		toSerialize["role"] = o.Role
-	}
-	if o.Organisation != nil {
-		toSerialize["organisation"] = o.Organisation
+	if o.User != nil {
+		toSerialize["user"] = o.User
 	}
 	if o.JwtToken != nil {
 		toSerialize["jwt_token"] = o.JwtToken
