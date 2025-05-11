@@ -108,15 +108,9 @@ func (h *organisationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
 			spec := presenters.ConvertOrganisation(org)
-			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
+			_, err := auth.GetCurrentUserFromCtx(ctx)
 			if err != nil {
 				return nil, errors.Unauthorized("failed to fetch current user")
-			}
-			if currentUser.Role != models.PlatformAdminRole {
-				return nil, errors.Unauthorized("user '%s' is not allowed to create organisation", currentUser.ID)
-			}
-			if currentUser.Role == models.OrganisationAdminRole {
-				return nil, errors.Unauthorized("user '%s' is not allowed to create organisation", currentUser.ID)
 			}
 			obj, serr := h.organisationService.Create(ctx, spec)
 			if serr != nil {

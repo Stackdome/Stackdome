@@ -29,7 +29,7 @@ type User struct {
 	Name           string
 	Email          string `gorm:"unique"`
 	Password       string
-	Organisation   string
+	Organisation   *Organisation `gorm:"foreignKey:OrganisationID"`
 	Role           Role
 	OrganisationID string
 	DefaultUser    bool

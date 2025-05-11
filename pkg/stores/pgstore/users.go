@@ -8,6 +8,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type dbUserStore struct {
@@ -39,7 +40,8 @@ func (d dbUserStore) Create(ctx context.Context, user *models.User) (*models.Use
 func (d dbUserStore) GetByID(ctx context.Context, id string) (*models.User, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var user models.User
-	err := grm.Model(&models.User{}).Where("id = ?", id).First(&user).Error
+	err := grm.Model(&models.User{}).
+		Preload(clause.Associations).Where("id = ?", id).First(&user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NotFound("user with id '%s' not found", id)
@@ -52,7 +54,8 @@ func (d dbUserStore) GetByID(ctx context.Context, id string) (*models.User, *err
 func (d dbUserStore) GetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var user models.User
-	err := grm.Model(&models.User{}).Where("email = ?", email).First(&user).Error
+	err := grm.Model(&models.User{}).
+		Preload(clause.Associations).Where("email = ?", email).First(&user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NotFound("user with email '%s' not found", email)
@@ -65,7 +68,9 @@ func (d dbUserStore) GetByEmail(ctx context.Context, email string) (*models.User
 func (d dbUserStore) GetDefaultUser(ctx context.Context) (*models.User, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var user models.User
-	if err := grm.Model(&models.User{}).Where("default_user = ?", true).First(&user).Error; err != nil {
+	if err := grm.Model(&models.User{}).
+		Preload(clause.Associations).
+		Where("default_user = ?", true).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NotFound("default user not found")
 		}

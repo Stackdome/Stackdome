@@ -7,7 +7,6 @@ Name | Type | Description | Notes
 **Id** | Pointer to **string** |  | [optional] 
 **UserId** | Pointer to **string** |  | [optional] 
 **OrgId** | Pointer to **string** |  | [optional] 
-**SshPublicKey** | **string** |  | 
 **Workspaces** | **[]string** |  | 
 **Version** | Pointer to **int32** |  | [optional] [readonly] 
 **Status** | Pointer to [**WorkspaceUserStatus**](WorkspaceUserStatus.md) |  | [optional] 
@@ -20,7 +19,7 @@ Name | Type | Description | Notes
 
 ### NewWorkspaceUser
 
-`func NewWorkspaceUser(sshPublicKey string, workspaces []string, ) *WorkspaceUser`
+`func NewWorkspaceUser(workspaces []string, ) *WorkspaceUser`
 
 NewWorkspaceUser instantiates a new WorkspaceUser object
 This constructor will assign default values to properties that have it defined,
@@ -109,26 +108,6 @@ SetOrgId sets OrgId field to given value.
 `func (o *WorkspaceUser) HasOrgId() bool`
 
 HasOrgId returns a boolean if a field has been set.
-
-### GetSshPublicKey
-
-`func (o *WorkspaceUser) GetSshPublicKey() string`
-
-GetSshPublicKey returns the SshPublicKey field if non-nil, zero value otherwise.
-
-### GetSshPublicKeyOk
-
-`func (o *WorkspaceUser) GetSshPublicKeyOk() (*string, bool)`
-
-GetSshPublicKeyOk returns a tuple with the SshPublicKey field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetSshPublicKey
-
-`func (o *WorkspaceUser) SetSshPublicKey(v string)`
-
-SetSshPublicKey sets SshPublicKey field to given value.
-
 
 ### GetWorkspaces
 

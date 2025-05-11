@@ -3575,11 +3575,11 @@ func (a *DefaultApiService) ApiV1UsersIdGetExecute(r ApiApiV1UsersIdGetRequest) 
 type ApiApiV1UsersPostRequest struct {
 	ctx               context.Context
 	ApiService        *DefaultApiService
-	userCreateRequest *UserCreateRequest
+	userSignupRequest *UserSignupRequest
 }
 
-func (r ApiApiV1UsersPostRequest) UserCreateRequest(userCreateRequest UserCreateRequest) ApiApiV1UsersPostRequest {
-	r.userCreateRequest = &userCreateRequest
+func (r ApiApiV1UsersPostRequest) UserSignupRequest(userSignupRequest UserSignupRequest) ApiApiV1UsersPostRequest {
+	r.userSignupRequest = &userSignupRequest
 	return r
 }
 
@@ -3623,8 +3623,8 @@ func (a *DefaultApiService) ApiV1UsersPostExecute(r ApiApiV1UsersPostRequest) (*
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
-	if r.userCreateRequest == nil {
-		return localVarReturnValue, nil, reportError("userCreateRequest is required and must be specified")
+	if r.userSignupRequest == nil {
+		return localVarReturnValue, nil, reportError("userSignupRequest is required and must be specified")
 	}
 
 	// to determine the Content-Type header
@@ -3645,7 +3645,7 @@ func (a *DefaultApiService) ApiV1UsersPostExecute(r ApiApiV1UsersPostRequest) (*
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = r.userCreateRequest
+	localVarPostBody = r.userSignupRequest
 	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
 	if err != nil {
 		return localVarReturnValue, nil, err

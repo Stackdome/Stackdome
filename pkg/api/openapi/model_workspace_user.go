@@ -17,26 +17,24 @@ import (
 
 // WorkspaceUser struct for WorkspaceUser
 type WorkspaceUser struct {
-	Id           *string              `json:"id,omitempty"`
-	UserId       *string              `json:"user_id,omitempty"`
-	OrgId        *string              `json:"org_id,omitempty"`
-	SshPublicKey string               `json:"ssh_public_key"`
-	Workspaces   []string             `json:"workspaces"`
-	Version      *int32               `json:"version,omitempty"`
-	Status       *WorkspaceUserStatus `json:"status,omitempty"`
-	State        *WorkspaceUserState  `json:"state,omitempty"`
-	Message      *string              `json:"message,omitempty"`
-	CreatedAt    *time.Time           `json:"created_at,omitempty"`
-	UpdatedAt    *time.Time           `json:"updated_at,omitempty"`
+	Id         *string              `json:"id,omitempty"`
+	UserId     *string              `json:"user_id,omitempty"`
+	OrgId      *string              `json:"org_id,omitempty"`
+	Workspaces []string             `json:"workspaces"`
+	Version    *int32               `json:"version,omitempty"`
+	Status     *WorkspaceUserStatus `json:"status,omitempty"`
+	State      *WorkspaceUserState  `json:"state,omitempty"`
+	Message    *string              `json:"message,omitempty"`
+	CreatedAt  *time.Time           `json:"created_at,omitempty"`
+	UpdatedAt  *time.Time           `json:"updated_at,omitempty"`
 }
 
 // NewWorkspaceUser instantiates a new WorkspaceUser object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewWorkspaceUser(sshPublicKey string, workspaces []string) *WorkspaceUser {
+func NewWorkspaceUser(workspaces []string) *WorkspaceUser {
 	this := WorkspaceUser{}
-	this.SshPublicKey = sshPublicKey
 	this.Workspaces = workspaces
 	return &this
 }
@@ -143,30 +141,6 @@ func (o *WorkspaceUser) HasOrgId() bool {
 // SetOrgId gets a reference to the given string and assigns it to the OrgId field.
 func (o *WorkspaceUser) SetOrgId(v string) {
 	o.OrgId = &v
-}
-
-// GetSshPublicKey returns the SshPublicKey field value
-func (o *WorkspaceUser) GetSshPublicKey() string {
-	if o == nil {
-		var ret string
-		return ret
-	}
-
-	return o.SshPublicKey
-}
-
-// GetSshPublicKeyOk returns a tuple with the SshPublicKey field value
-// and a boolean to check if the value has been set.
-func (o *WorkspaceUser) GetSshPublicKeyOk() (*string, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.SshPublicKey, true
-}
-
-// SetSshPublicKey sets field value
-func (o *WorkspaceUser) SetSshPublicKey(v string) {
-	o.SshPublicKey = v
 }
 
 // GetWorkspaces returns the Workspaces field value
@@ -395,9 +369,6 @@ func (o WorkspaceUser) MarshalJSON() ([]byte, error) {
 	}
 	if o.OrgId != nil {
 		toSerialize["org_id"] = o.OrgId
-	}
-	if true {
-		toSerialize["ssh_public_key"] = o.SshPublicKey
 	}
 	if true {
 		toSerialize["workspaces"] = o.Workspaces

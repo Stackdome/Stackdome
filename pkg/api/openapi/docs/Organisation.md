@@ -5,8 +5,8 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** |  | [optional] 
-**Name** | **string** |  | 
-**DomainName** | **string** |  | 
+**Name** | Pointer to **string** |  | [optional] 
+**DomainName** | Pointer to **string** |  | [optional] 
 **IsDefault** | Pointer to **bool** |  | [optional] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] 
 **UpdatedAt** | Pointer to **time.Time** |  | [optional] 
@@ -15,7 +15,7 @@ Name | Type | Description | Notes
 
 ### NewOrganisation
 
-`func NewOrganisation(name string, domainName string, ) *Organisation`
+`func NewOrganisation() *Organisation`
 
 NewOrganisation instantiates a new Organisation object
 This constructor will assign default values to properties that have it defined,
@@ -74,6 +74,11 @@ and a boolean to check if the value has been set.
 
 SetName sets Name field to given value.
 
+### HasName
+
+`func (o *Organisation) HasName() bool`
+
+HasName returns a boolean if a field has been set.
 
 ### GetDomainName
 
@@ -94,6 +99,11 @@ and a boolean to check if the value has been set.
 
 SetDomainName sets DomainName field to given value.
 
+### HasDomainName
+
+`func (o *Organisation) HasDomainName() bool`
+
+HasDomainName returns a boolean if a field has been set.
 
 ### GetIsDefault
 

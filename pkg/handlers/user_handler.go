@@ -84,7 +84,7 @@ func (a usersHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a usersHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var user openapi.UserCreateRequest
+	var user openapi.UserSignupRequest
 	cfg := &handlerConfig{
 		&user,
 		validation.ValidateUserCreate(&user),

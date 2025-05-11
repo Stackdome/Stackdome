@@ -18,8 +18,8 @@ import (
 // Organisation struct for Organisation
 type Organisation struct {
 	Id         *string    `json:"id,omitempty"`
-	Name       string     `json:"name"`
-	DomainName string     `json:"domain_name"`
+	Name       *string    `json:"name,omitempty"`
+	DomainName *string    `json:"domain_name,omitempty"`
 	IsDefault  *bool      `json:"is_default,omitempty"`
 	CreatedAt  *time.Time `json:"created_at,omitempty"`
 	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
@@ -29,10 +29,8 @@ type Organisation struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewOrganisation(name string, domainName string) *Organisation {
+func NewOrganisation() *Organisation {
 	this := Organisation{}
-	this.Name = name
-	this.DomainName = domainName
 	return &this
 }
 
@@ -76,52 +74,68 @@ func (o *Organisation) SetId(v string) {
 	o.Id = &v
 }
 
-// GetName returns the Name field value
+// GetName returns the Name field value if set, zero value otherwise.
 func (o *Organisation) GetName() string {
-	if o == nil {
+	if o == nil || o.Name == nil {
 		var ret string
 		return ret
 	}
-
-	return o.Name
+	return *o.Name
 }
 
-// GetNameOk returns a tuple with the Name field value
+// GetNameOk returns a tuple with the Name field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *Organisation) GetNameOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.Name == nil {
 		return nil, false
 	}
-	return &o.Name, true
+	return o.Name, true
 }
 
-// SetName sets field value
+// HasName returns a boolean if a field has been set.
+func (o *Organisation) HasName() bool {
+	if o != nil && o.Name != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetName gets a reference to the given string and assigns it to the Name field.
 func (o *Organisation) SetName(v string) {
-	o.Name = v
+	o.Name = &v
 }
 
-// GetDomainName returns the DomainName field value
+// GetDomainName returns the DomainName field value if set, zero value otherwise.
 func (o *Organisation) GetDomainName() string {
-	if o == nil {
+	if o == nil || o.DomainName == nil {
 		var ret string
 		return ret
 	}
-
-	return o.DomainName
+	return *o.DomainName
 }
 
-// GetDomainNameOk returns a tuple with the DomainName field value
+// GetDomainNameOk returns a tuple with the DomainName field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *Organisation) GetDomainNameOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.DomainName == nil {
 		return nil, false
 	}
-	return &o.DomainName, true
+	return o.DomainName, true
 }
 
-// SetDomainName sets field value
+// HasDomainName returns a boolean if a field has been set.
+func (o *Organisation) HasDomainName() bool {
+	if o != nil && o.DomainName != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetDomainName gets a reference to the given string and assigns it to the DomainName field.
 func (o *Organisation) SetDomainName(v string) {
-	o.DomainName = v
+	o.DomainName = &v
 }
 
 // GetIsDefault returns the IsDefault field value if set, zero value otherwise.
@@ -225,10 +239,10 @@ func (o Organisation) MarshalJSON() ([]byte, error) {
 	if o.Id != nil {
 		toSerialize["id"] = o.Id
 	}
-	if true {
+	if o.Name != nil {
 		toSerialize["name"] = o.Name
 	}
-	if true {
+	if o.DomainName != nil {
 		toSerialize["domain_name"] = o.DomainName
 	}
 	if o.IsDefault != nil {

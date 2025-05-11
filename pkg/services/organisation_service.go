@@ -50,6 +50,9 @@ func (s *organisationService) GetDefaultOrg(ctx context.Context) (*models.Organi
 }
 
 func (s *organisationService) Create(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
+	if len(spec.Name) == 0 {
+		return nil, errors.BadRequest("organisation name is required")
+	}
 	org, err := s.organisationStore.Create(ctx, spec)
 	if err != nil {
 		s.logger.Errorf("failed to create organisation: %v", err)

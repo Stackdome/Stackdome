@@ -14,8 +14,8 @@ import (
 	"encoding/json"
 )
 
-// UserCreateRequest struct for UserCreateRequest
-type UserCreateRequest struct {
+// UserSignupRequest struct for UserSignupRequest
+type UserSignupRequest struct {
 	// User's name
 	Name string `json:"name"`
 	// User's username
@@ -23,37 +23,35 @@ type UserCreateRequest struct {
 	// User's email address
 	Email string `json:"email"`
 	// Users desired password
-	Password string    `json:"password"`
-	Role     *UserRole `json:"Role,omitempty"`
-	// User's organisation
-	Organisation *string `json:"organisation,omitempty"`
+	Password     string        `json:"password"`
+	Role         *UserRole     `json:"Role,omitempty"`
+	Organisation *Organisation `json:"organisation,omitempty"`
 	// OrganisationID
-	OrganisationId string `json:"organisation_id"`
+	OrganisationId *string `json:"organisation_id,omitempty"`
 }
 
-// NewUserCreateRequest instantiates a new UserCreateRequest object
+// NewUserSignupRequest instantiates a new UserSignupRequest object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewUserCreateRequest(name string, email string, password string, organisationId string) *UserCreateRequest {
-	this := UserCreateRequest{}
+func NewUserSignupRequest(name string, email string, password string) *UserSignupRequest {
+	this := UserSignupRequest{}
 	this.Name = name
 	this.Email = email
 	this.Password = password
-	this.OrganisationId = organisationId
 	return &this
 }
 
-// NewUserCreateRequestWithDefaults instantiates a new UserCreateRequest object
+// NewUserSignupRequestWithDefaults instantiates a new UserSignupRequest object
 // This constructor will only assign default values to properties that have it defined,
 // but it doesn't guarantee that properties required by API are set
-func NewUserCreateRequestWithDefaults() *UserCreateRequest {
-	this := UserCreateRequest{}
+func NewUserSignupRequestWithDefaults() *UserSignupRequest {
+	this := UserSignupRequest{}
 	return &this
 }
 
 // GetName returns the Name field value
-func (o *UserCreateRequest) GetName() string {
+func (o *UserSignupRequest) GetName() string {
 	if o == nil {
 		var ret string
 		return ret
@@ -64,7 +62,7 @@ func (o *UserCreateRequest) GetName() string {
 
 // GetNameOk returns a tuple with the Name field value
 // and a boolean to check if the value has been set.
-func (o *UserCreateRequest) GetNameOk() (*string, bool) {
+func (o *UserSignupRequest) GetNameOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -72,12 +70,12 @@ func (o *UserCreateRequest) GetNameOk() (*string, bool) {
 }
 
 // SetName sets field value
-func (o *UserCreateRequest) SetName(v string) {
+func (o *UserSignupRequest) SetName(v string) {
 	o.Name = v
 }
 
 // GetUsername returns the Username field value if set, zero value otherwise.
-func (o *UserCreateRequest) GetUsername() string {
+func (o *UserSignupRequest) GetUsername() string {
 	if o == nil || o.Username == nil {
 		var ret string
 		return ret
@@ -87,7 +85,7 @@ func (o *UserCreateRequest) GetUsername() string {
 
 // GetUsernameOk returns a tuple with the Username field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *UserCreateRequest) GetUsernameOk() (*string, bool) {
+func (o *UserSignupRequest) GetUsernameOk() (*string, bool) {
 	if o == nil || o.Username == nil {
 		return nil, false
 	}
@@ -95,7 +93,7 @@ func (o *UserCreateRequest) GetUsernameOk() (*string, bool) {
 }
 
 // HasUsername returns a boolean if a field has been set.
-func (o *UserCreateRequest) HasUsername() bool {
+func (o *UserSignupRequest) HasUsername() bool {
 	if o != nil && o.Username != nil {
 		return true
 	}
@@ -104,12 +102,12 @@ func (o *UserCreateRequest) HasUsername() bool {
 }
 
 // SetUsername gets a reference to the given string and assigns it to the Username field.
-func (o *UserCreateRequest) SetUsername(v string) {
+func (o *UserSignupRequest) SetUsername(v string) {
 	o.Username = &v
 }
 
 // GetEmail returns the Email field value
-func (o *UserCreateRequest) GetEmail() string {
+func (o *UserSignupRequest) GetEmail() string {
 	if o == nil {
 		var ret string
 		return ret
@@ -120,7 +118,7 @@ func (o *UserCreateRequest) GetEmail() string {
 
 // GetEmailOk returns a tuple with the Email field value
 // and a boolean to check if the value has been set.
-func (o *UserCreateRequest) GetEmailOk() (*string, bool) {
+func (o *UserSignupRequest) GetEmailOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -128,12 +126,12 @@ func (o *UserCreateRequest) GetEmailOk() (*string, bool) {
 }
 
 // SetEmail sets field value
-func (o *UserCreateRequest) SetEmail(v string) {
+func (o *UserSignupRequest) SetEmail(v string) {
 	o.Email = v
 }
 
 // GetPassword returns the Password field value
-func (o *UserCreateRequest) GetPassword() string {
+func (o *UserSignupRequest) GetPassword() string {
 	if o == nil {
 		var ret string
 		return ret
@@ -144,7 +142,7 @@ func (o *UserCreateRequest) GetPassword() string {
 
 // GetPasswordOk returns a tuple with the Password field value
 // and a boolean to check if the value has been set.
-func (o *UserCreateRequest) GetPasswordOk() (*string, bool) {
+func (o *UserSignupRequest) GetPasswordOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -152,12 +150,12 @@ func (o *UserCreateRequest) GetPasswordOk() (*string, bool) {
 }
 
 // SetPassword sets field value
-func (o *UserCreateRequest) SetPassword(v string) {
+func (o *UserSignupRequest) SetPassword(v string) {
 	o.Password = v
 }
 
 // GetRole returns the Role field value if set, zero value otherwise.
-func (o *UserCreateRequest) GetRole() UserRole {
+func (o *UserSignupRequest) GetRole() UserRole {
 	if o == nil || o.Role == nil {
 		var ret UserRole
 		return ret
@@ -167,7 +165,7 @@ func (o *UserCreateRequest) GetRole() UserRole {
 
 // GetRoleOk returns a tuple with the Role field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *UserCreateRequest) GetRoleOk() (*UserRole, bool) {
+func (o *UserSignupRequest) GetRoleOk() (*UserRole, bool) {
 	if o == nil || o.Role == nil {
 		return nil, false
 	}
@@ -175,7 +173,7 @@ func (o *UserCreateRequest) GetRoleOk() (*UserRole, bool) {
 }
 
 // HasRole returns a boolean if a field has been set.
-func (o *UserCreateRequest) HasRole() bool {
+func (o *UserSignupRequest) HasRole() bool {
 	if o != nil && o.Role != nil {
 		return true
 	}
@@ -184,14 +182,14 @@ func (o *UserCreateRequest) HasRole() bool {
 }
 
 // SetRole gets a reference to the given UserRole and assigns it to the Role field.
-func (o *UserCreateRequest) SetRole(v UserRole) {
+func (o *UserSignupRequest) SetRole(v UserRole) {
 	o.Role = &v
 }
 
 // GetOrganisation returns the Organisation field value if set, zero value otherwise.
-func (o *UserCreateRequest) GetOrganisation() string {
+func (o *UserSignupRequest) GetOrganisation() Organisation {
 	if o == nil || o.Organisation == nil {
-		var ret string
+		var ret Organisation
 		return ret
 	}
 	return *o.Organisation
@@ -199,7 +197,7 @@ func (o *UserCreateRequest) GetOrganisation() string {
 
 // GetOrganisationOk returns a tuple with the Organisation field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *UserCreateRequest) GetOrganisationOk() (*string, bool) {
+func (o *UserSignupRequest) GetOrganisationOk() (*Organisation, bool) {
 	if o == nil || o.Organisation == nil {
 		return nil, false
 	}
@@ -207,7 +205,7 @@ func (o *UserCreateRequest) GetOrganisationOk() (*string, bool) {
 }
 
 // HasOrganisation returns a boolean if a field has been set.
-func (o *UserCreateRequest) HasOrganisation() bool {
+func (o *UserSignupRequest) HasOrganisation() bool {
 	if o != nil && o.Organisation != nil {
 		return true
 	}
@@ -215,36 +213,44 @@ func (o *UserCreateRequest) HasOrganisation() bool {
 	return false
 }
 
-// SetOrganisation gets a reference to the given string and assigns it to the Organisation field.
-func (o *UserCreateRequest) SetOrganisation(v string) {
+// SetOrganisation gets a reference to the given Organisation and assigns it to the Organisation field.
+func (o *UserSignupRequest) SetOrganisation(v Organisation) {
 	o.Organisation = &v
 }
 
-// GetOrganisationId returns the OrganisationId field value
-func (o *UserCreateRequest) GetOrganisationId() string {
-	if o == nil {
+// GetOrganisationId returns the OrganisationId field value if set, zero value otherwise.
+func (o *UserSignupRequest) GetOrganisationId() string {
+	if o == nil || o.OrganisationId == nil {
 		var ret string
 		return ret
 	}
-
-	return o.OrganisationId
+	return *o.OrganisationId
 }
 
-// GetOrganisationIdOk returns a tuple with the OrganisationId field value
+// GetOrganisationIdOk returns a tuple with the OrganisationId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *UserCreateRequest) GetOrganisationIdOk() (*string, bool) {
-	if o == nil {
+func (o *UserSignupRequest) GetOrganisationIdOk() (*string, bool) {
+	if o == nil || o.OrganisationId == nil {
 		return nil, false
 	}
-	return &o.OrganisationId, true
+	return o.OrganisationId, true
 }
 
-// SetOrganisationId sets field value
-func (o *UserCreateRequest) SetOrganisationId(v string) {
-	o.OrganisationId = v
+// HasOrganisationId returns a boolean if a field has been set.
+func (o *UserSignupRequest) HasOrganisationId() bool {
+	if o != nil && o.OrganisationId != nil {
+		return true
+	}
+
+	return false
 }
 
-func (o UserCreateRequest) MarshalJSON() ([]byte, error) {
+// SetOrganisationId gets a reference to the given string and assigns it to the OrganisationId field.
+func (o *UserSignupRequest) SetOrganisationId(v string) {
+	o.OrganisationId = &v
+}
+
+func (o UserSignupRequest) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["name"] = o.Name
@@ -264,44 +270,44 @@ func (o UserCreateRequest) MarshalJSON() ([]byte, error) {
 	if o.Organisation != nil {
 		toSerialize["organisation"] = o.Organisation
 	}
-	if true {
+	if o.OrganisationId != nil {
 		toSerialize["organisation_id"] = o.OrganisationId
 	}
 	return json.Marshal(toSerialize)
 }
 
-type NullableUserCreateRequest struct {
-	value *UserCreateRequest
+type NullableUserSignupRequest struct {
+	value *UserSignupRequest
 	isSet bool
 }
 
-func (v NullableUserCreateRequest) Get() *UserCreateRequest {
+func (v NullableUserSignupRequest) Get() *UserSignupRequest {
 	return v.value
 }
 
-func (v *NullableUserCreateRequest) Set(val *UserCreateRequest) {
+func (v *NullableUserSignupRequest) Set(val *UserSignupRequest) {
 	v.value = val
 	v.isSet = true
 }
 
-func (v NullableUserCreateRequest) IsSet() bool {
+func (v NullableUserSignupRequest) IsSet() bool {
 	return v.isSet
 }
 
-func (v *NullableUserCreateRequest) Unset() {
+func (v *NullableUserSignupRequest) Unset() {
 	v.value = nil
 	v.isSet = false
 }
 
-func NewNullableUserCreateRequest(val *UserCreateRequest) *NullableUserCreateRequest {
-	return &NullableUserCreateRequest{value: val, isSet: true}
+func NewNullableUserSignupRequest(val *UserSignupRequest) *NullableUserSignupRequest {
+	return &NullableUserSignupRequest{value: val, isSet: true}
 }
 
-func (v NullableUserCreateRequest) MarshalJSON() ([]byte, error) {
+func (v NullableUserSignupRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.value)
 }
 
-func (v *NullableUserCreateRequest) UnmarshalJSON(src []byte) error {
+func (v *NullableUserSignupRequest) UnmarshalJSON(src []byte) error {
 	v.isSet = true
 	return json.Unmarshal(src, &v.value)
 }
