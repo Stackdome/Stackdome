@@ -53,6 +53,8 @@ func NewAPIServer(env environment.EnvImpl) Server {
 		env,
 	)
 
+	mainHandler = loggingMiddleware(mainHandler)
+
 	// Setup CORS
 	mainHandler = gorillahandlers.CORS(
 		gorillahandlers.AllowedOrigins([]string{"*"}),
@@ -73,7 +75,7 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 	authenticationHandler := NewAuthSelectHandler(AuthSelectorHandlerSpec{
 		MainHandler: mainHandler,
 		PublicPaths: []string{
-			"^/api/v1/users$",
+			"^/api/v1/user-signup",
 			"^/api/v1/auth",
 		},
 		DefaultAuthHandler: auth.NewJwtAuthnHandler(mainHandler, []byte(env.Environment().Config.JwtSecret)),
