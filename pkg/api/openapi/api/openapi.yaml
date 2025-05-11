@@ -1610,12 +1610,22 @@ components:
       type: object
     LoginResponse:
       example:
+        user:
+          organisation_id: organisation_id
+          role: null
+          name: name
+          organisation: organisation
+          id: id
+          email: email
+          username: username
         expires_in: 0
         token: token
       properties:
         token:
           description: Access token for authenticated requests
           type: string
+        user:
+          $ref: '#/components/schemas/User'
         expires_in:
           description: Token expiration time in seconds
           type: integer

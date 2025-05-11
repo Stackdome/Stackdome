@@ -1333,6 +1333,8 @@ components:
         token:
           type: string
           description: Access token for authenticated requests
+        user:
+          $ref: '#/components/schemas/User'
         expires_in:
           type: integer
           description: Token expiration time in seconds

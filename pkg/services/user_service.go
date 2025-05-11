@@ -156,5 +156,6 @@ func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequ
 
 	res := openapi.NewLoginResponse()
 	res.SetToken(tokenString)
+	res.SetUser(presenters.PresentUser(userInDB))
 	return res, nil
 }
