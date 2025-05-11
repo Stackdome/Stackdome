@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { loginUser } from "../api/login";
-import type { LoginRequest, LoginResponse } from "../api/login";
+import { loginUser } from "../api/users";
+import type { LoginRequest, LoginResponse } from "../api/users";
 
 export function useLogin() {
   const [loading, setLoading] = useState(false);
