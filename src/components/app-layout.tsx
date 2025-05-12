@@ -1,54 +1,70 @@
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { ProjectSidebar } from "@/components/project-sidebar";
-import type { SidebarSection } from "@/components/project-sidebar";
-import { Outlet } from "react-router-dom";
-import { Layers, Cloud } from "lucide-react";
-import { useClusters } from "@/pages/clusters/hooks/use-clusters";
+import * as React from "react";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { Outlet, useLocation } from "react-router-dom";
+import { 
+  Breadcrumb, 
+  BreadcrumbItem, 
+  BreadcrumbLink, 
+  BreadcrumbList, 
+  BreadcrumbPage, 
+  BreadcrumbSeparator 
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
 
 export function AppLayout({
   children,
 }: {
   children?: React.ReactNode;
 }) {
-  const { clusters, loading } = useClusters();
-  const hasCluster = !loading && clusters.length > 0;
+  const location = useLocation();
 
-  const sections: SidebarSection[] = [
-    {
-      label: "Stacks",
-      icon: <Layers className="size-4" />,
-      addHref: "/stacks/create",
-      addLabel: "Add new Stack",
-      items: [],
-    },
-    {
-      label: "Clusters",
-      icon: <Cloud className="size-4" />,
-      addHref: hasCluster ? undefined : "/clusters", // Only show Add new Cluster if no cluster exists
-      addLabel: "Add new Cluster",
-      items: hasCluster ? [
-        {
-          label: clusters[0]?.name || "Cluster",
-          href: `/clusters/${clusters[0]?.id}`,
-          active: true
-        }
-      ] : [],
-    },
+  // Parse the current path for breadcrumbs
+  const pathSegments = location.pathname.split('/').filter(Boolean);
+  
+  // Create breadcrumb items based on the current path
+  const breadcrumbItems = [
+    { name: 'Home', path: '/' },
+    ...pathSegments.map((segment, index) => {
+      // Create a path up to this segment
+      const path = '/' + pathSegments.slice(0, index + 1).join('/');
+      // Capitalize the segment for display
+      const name = segment.charAt(0).toUpperCase() + segment.slice(1);
+      return { name, path };
+    }),
   ];
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        <ProjectSidebar sections={sections} />
-        <main className="flex-1 flex flex-col">
-          {/* Global sidebar trigger at the top left of the main content */}
-          <div className="h-14 flex items-center px-4 border-b">
-            <SidebarTrigger className="mr-2" />
-            {/* You can add a global breadcrumb or title here if desired */}
+        <AppSidebar />
+        <SidebarInset>
+          <div className="flex items-center gap-2 p-4">
+            <SidebarTrigger />
+            <Separator orientation="vertical" className="h-6" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                {breadcrumbItems.map((item, index) => (
+                  <React.Fragment key={index}>
+                    {index > 0 && <BreadcrumbSeparator />}
+                    {index === breadcrumbItems.length - 1 ? (
+                      <BreadcrumbItem>
+                        <BreadcrumbPage>{item.name}</BreadcrumbPage>
+                      </BreadcrumbItem>
+                    ) : (
+                      <BreadcrumbItem>
+                        <BreadcrumbLink href={item.path}>{item.name}</BreadcrumbLink>
+                      </BreadcrumbItem>
+                    )}
+                  </React.Fragment>
+                ))}
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 p-4">
             {children ? children : <Outlet />}
           </div>
-        </main>
+        </SidebarInset>
       </div>
     </SidebarProvider>
   );
