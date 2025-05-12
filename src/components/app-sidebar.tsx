@@ -22,7 +22,8 @@ import {
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 import { useClusters } from "@/pages/clusters/hooks/use-clusters"
 import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { NavUser } from "@/components/nav-user"
+import { getCurrentUser } from "@/helpers/common"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Get clusters to conditionally show "Add new Cluster" option
@@ -42,7 +43,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">Stackdome</span>
-                  <span className="truncate text-xs text-muted-foreground">PaaS Platform</span>
+                  <span className="truncate text-xs text-muted-foreground">{getCurrentUser()?.organisation}</span>
                 </div>
               </a>
             </SidebarMenuButton>
@@ -129,22 +130,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       
       <SidebarFooter className="p-2">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="sm" asChild>
-              <a href="/profile">
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src="/avatars/shadcn.jpg" alt="shadcn" />
-                  <AvatarFallback>SC</AvatarFallback>
-                </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">shadcn</span>
-                  <span className="truncate text-xs text-muted-foreground">m@example.com</span>
-                </div>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <NavUser />
       </SidebarFooter>
     </Sidebar>
   )

@@ -19,6 +19,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { NavUser } from "@/components/nav-user";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { getCurrentUser } from "@/helpers/common";
 
 // SidebarSection type for navigation
 export interface SidebarSection {
@@ -53,7 +54,7 @@ export function ProjectSidebar({ sections, children }: ProjectSidebarProps) {
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">StackDome</span>
-                  <span className="truncate text-xs">PaaS Platform</span>
+                  <span className="truncate text-xs">{getCurrentUser()?.organisation}</span>
                 </div>
               </Link>
             </SidebarMenuButton>
