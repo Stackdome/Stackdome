@@ -12,6 +12,10 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsIdPut**](DefaultApi.md#ApiV1OrganizationsIdPut) | **Put** /api/v1/organizations/{id} | Update an organization
 [**ApiV1OrganizationsIdRemoteSyncServersGet**](DefaultApi.md#ApiV1OrganizationsIdRemoteSyncServersGet) | **Get** /api/v1/organizations/{id}/remote-sync-servers | List all RemoteSyncServer objects for an organization
 [**ApiV1OrganizationsIdRemoteSyncServersPost**](DefaultApi.md#ApiV1OrganizationsIdRemoteSyncServersPost) | **Post** /api/v1/organizations/{id}/remote-sync-servers | Create a new remote sync server
+[**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries | List all image registries for a cluster
+[**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Delete an image registry object
+[**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Get a specific image registry object
+[**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost) | **Post** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries | Create a new image registry
 [**ApiV1OrganizationsOrgIdClustersIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersIdDelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{id} | Delete a cluster object
 [**ApiV1OrganizationsOrgIdClustersIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersIdGet) | **Get** /api/v1/organizations/{org_id}/clusters/{id} | Get a specific cluster object
 [**ApiV1OrganizationsOrgIdClustersIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersIdPut) | **Put** /api/v1/organizations/{org_id}/clusters/{id} | Update a cluster object
@@ -263,7 +267,7 @@ import (
 
 func main() {
     id := "id_example" // string | The id of record
-    cluster := *openapiclient.NewCluster() // Cluster | 
+    cluster := *openapiclient.NewCluster("Name_example", "ClusterUrl_example", "ClusterCaData_example", "ClusterSaToken_example") // Cluster | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -593,6 +597,296 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
+## ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet
+
+> ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet(ctx, orgId, clusterId).Execute()
+
+List all image registries for a cluster
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | 
+    clusterId := "clusterId_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet(context.Background(), orgId, clusterId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet`: ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** |  | 
+**clusterId** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response**](ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete
+
+> ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete(ctx, orgId, clusterId, id).Execute()
+
+Delete an image registry object
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | 
+    clusterId := "clusterId_example" // string | 
+    id := "id_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete(context.Background(), orgId, clusterId, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** |  | 
+**clusterId** | **string** |  | 
+**id** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet
+
+> ClusterImageRegistry ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet(ctx, orgId, clusterId, id).Execute()
+
+Get a specific image registry object
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | 
+    clusterId := "clusterId_example" // string | 
+    id := "id_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet(context.Background(), orgId, clusterId, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet`: ClusterImageRegistry
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** |  | 
+**clusterId** | **string** |  | 
+**id** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**ClusterImageRegistry**](ClusterImageRegistry.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost
+
+> ClusterImageRegistry ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost(ctx, orgId, clusterId).ClusterImageRegistry(clusterImageRegistry).Execute()
+
+Create a new image registry
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | 
+    clusterId := "clusterId_example" // string | 
+    clusterImageRegistry := *openapiclient.NewClusterImageRegistry("Name_example") // ClusterImageRegistry | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost(context.Background(), orgId, clusterId).ClusterImageRegistry(clusterImageRegistry).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost`: ClusterImageRegistry
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** |  | 
+**clusterId** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **clusterImageRegistry** | [**ClusterImageRegistry**](ClusterImageRegistry.md) |  | 
+
+### Return type
+
+[**ClusterImageRegistry**](ClusterImageRegistry.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## ApiV1OrganizationsOrgIdClustersIdDelete
 
 > ApiV1OrganizationsOrgIdClustersIdDelete(ctx, orgId, id).Execute()
@@ -754,7 +1048,7 @@ import (
 func main() {
     orgId := "orgId_example" // string | 
     id := "id_example" // string | 
-    cluster := *openapiclient.NewCluster() // Cluster | 
+    cluster := *openapiclient.NewCluster("Name_example", "ClusterUrl_example", "ClusterCaData_example", "ClusterSaToken_example") // Cluster | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)

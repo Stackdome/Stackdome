@@ -5,18 +5,19 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** |  | [optional] 
-**Name** | Pointer to **string** |  | [optional] 
+**Name** | **string** |  | 
 **OrganisationId** | Pointer to **string** |  | [optional] 
 **Default** | Pointer to **bool** |  | [optional] 
-**ClusterUrl** | Pointer to **string** |  | [optional] 
-**ClusterCaData** | Pointer to **string** |  | [optional] 
-**ClusterSaToken** | Pointer to **string** |  | [optional] 
+**ClusterUrl** | **string** |  | 
+**ClusterCaData** | **string** |  | 
+**ClusterSaToken** | **string** |  | 
+**ClusterImageRegistry** | Pointer to [**ClusterImageRegistry**](ClusterImageRegistry.md) |  | [optional] 
 
 ## Methods
 
 ### NewCluster
 
-`func NewCluster() *Cluster`
+`func NewCluster(name string, clusterUrl string, clusterCaData string, clusterSaToken string, ) *Cluster`
 
 NewCluster instantiates a new Cluster object
 This constructor will assign default values to properties that have it defined,
@@ -75,11 +76,6 @@ and a boolean to check if the value has been set.
 
 SetName sets Name field to given value.
 
-### HasName
-
-`func (o *Cluster) HasName() bool`
-
-HasName returns a boolean if a field has been set.
 
 ### GetOrganisationId
 
@@ -150,11 +146,6 @@ and a boolean to check if the value has been set.
 
 SetClusterUrl sets ClusterUrl field to given value.
 
-### HasClusterUrl
-
-`func (o *Cluster) HasClusterUrl() bool`
-
-HasClusterUrl returns a boolean if a field has been set.
 
 ### GetClusterCaData
 
@@ -175,11 +166,6 @@ and a boolean to check if the value has been set.
 
 SetClusterCaData sets ClusterCaData field to given value.
 
-### HasClusterCaData
-
-`func (o *Cluster) HasClusterCaData() bool`
-
-HasClusterCaData returns a boolean if a field has been set.
 
 ### GetClusterSaToken
 
@@ -200,11 +186,31 @@ and a boolean to check if the value has been set.
 
 SetClusterSaToken sets ClusterSaToken field to given value.
 
-### HasClusterSaToken
 
-`func (o *Cluster) HasClusterSaToken() bool`
+### GetClusterImageRegistry
 
-HasClusterSaToken returns a boolean if a field has been set.
+`func (o *Cluster) GetClusterImageRegistry() ClusterImageRegistry`
+
+GetClusterImageRegistry returns the ClusterImageRegistry field if non-nil, zero value otherwise.
+
+### GetClusterImageRegistryOk
+
+`func (o *Cluster) GetClusterImageRegistryOk() (*ClusterImageRegistry, bool)`
+
+GetClusterImageRegistryOk returns a tuple with the ClusterImageRegistry field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetClusterImageRegistry
+
+`func (o *Cluster) SetClusterImageRegistry(v ClusterImageRegistry)`
+
+SetClusterImageRegistry sets ClusterImageRegistry field to given value.
+
+### HasClusterImageRegistry
+
+`func (o *Cluster) HasClusterImageRegistry() bool`
+
+HasClusterImageRegistry returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

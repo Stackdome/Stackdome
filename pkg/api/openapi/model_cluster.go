@@ -16,21 +16,26 @@ import (
 
 // Cluster struct for Cluster
 type Cluster struct {
-	Id             *string `json:"id,omitempty"`
-	Name           *string `json:"name,omitempty"`
-	OrganisationId *string `json:"organisation_id,omitempty"`
-	Default        *bool   `json:"default,omitempty"`
-	ClusterUrl     *string `json:"cluster_url,omitempty"`
-	ClusterCaData  *string `json:"cluster_ca_data,omitempty"`
-	ClusterSaToken *string `json:"cluster_sa_token,omitempty"`
+	Id                   *string               `json:"id,omitempty"`
+	Name                 string                `json:"name"`
+	OrganisationId       *string               `json:"organisation_id,omitempty"`
+	Default              *bool                 `json:"default,omitempty"`
+	ClusterUrl           string                `json:"cluster_url"`
+	ClusterCaData        string                `json:"cluster_ca_data"`
+	ClusterSaToken       string                `json:"cluster_sa_token"`
+	ClusterImageRegistry *ClusterImageRegistry `json:"cluster_image_registry,omitempty"`
 }
 
 // NewCluster instantiates a new Cluster object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewCluster() *Cluster {
+func NewCluster(name string, clusterUrl string, clusterCaData string, clusterSaToken string) *Cluster {
 	this := Cluster{}
+	this.Name = name
+	this.ClusterUrl = clusterUrl
+	this.ClusterCaData = clusterCaData
+	this.ClusterSaToken = clusterSaToken
 	return &this
 }
 
@@ -74,36 +79,28 @@ func (o *Cluster) SetId(v string) {
 	o.Id = &v
 }
 
-// GetName returns the Name field value if set, zero value otherwise.
+// GetName returns the Name field value
 func (o *Cluster) GetName() string {
-	if o == nil || o.Name == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.Name
+
+	return o.Name
 }
 
-// GetNameOk returns a tuple with the Name field value if set, nil otherwise
+// GetNameOk returns a tuple with the Name field value
 // and a boolean to check if the value has been set.
 func (o *Cluster) GetNameOk() (*string, bool) {
-	if o == nil || o.Name == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.Name, true
+	return &o.Name, true
 }
 
-// HasName returns a boolean if a field has been set.
-func (o *Cluster) HasName() bool {
-	if o != nil && o.Name != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetName gets a reference to the given string and assigns it to the Name field.
+// SetName sets field value
 func (o *Cluster) SetName(v string) {
-	o.Name = &v
+	o.Name = v
 }
 
 // GetOrganisationId returns the OrganisationId field value if set, zero value otherwise.
@@ -170,100 +167,108 @@ func (o *Cluster) SetDefault(v bool) {
 	o.Default = &v
 }
 
-// GetClusterUrl returns the ClusterUrl field value if set, zero value otherwise.
+// GetClusterUrl returns the ClusterUrl field value
 func (o *Cluster) GetClusterUrl() string {
-	if o == nil || o.ClusterUrl == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.ClusterUrl
+
+	return o.ClusterUrl
 }
 
-// GetClusterUrlOk returns a tuple with the ClusterUrl field value if set, nil otherwise
+// GetClusterUrlOk returns a tuple with the ClusterUrl field value
 // and a boolean to check if the value has been set.
 func (o *Cluster) GetClusterUrlOk() (*string, bool) {
-	if o == nil || o.ClusterUrl == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.ClusterUrl, true
+	return &o.ClusterUrl, true
 }
 
-// HasClusterUrl returns a boolean if a field has been set.
-func (o *Cluster) HasClusterUrl() bool {
-	if o != nil && o.ClusterUrl != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetClusterUrl gets a reference to the given string and assigns it to the ClusterUrl field.
+// SetClusterUrl sets field value
 func (o *Cluster) SetClusterUrl(v string) {
-	o.ClusterUrl = &v
+	o.ClusterUrl = v
 }
 
-// GetClusterCaData returns the ClusterCaData field value if set, zero value otherwise.
+// GetClusterCaData returns the ClusterCaData field value
 func (o *Cluster) GetClusterCaData() string {
-	if o == nil || o.ClusterCaData == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.ClusterCaData
+
+	return o.ClusterCaData
 }
 
-// GetClusterCaDataOk returns a tuple with the ClusterCaData field value if set, nil otherwise
+// GetClusterCaDataOk returns a tuple with the ClusterCaData field value
 // and a boolean to check if the value has been set.
 func (o *Cluster) GetClusterCaDataOk() (*string, bool) {
-	if o == nil || o.ClusterCaData == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.ClusterCaData, true
+	return &o.ClusterCaData, true
 }
 
-// HasClusterCaData returns a boolean if a field has been set.
-func (o *Cluster) HasClusterCaData() bool {
-	if o != nil && o.ClusterCaData != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetClusterCaData gets a reference to the given string and assigns it to the ClusterCaData field.
+// SetClusterCaData sets field value
 func (o *Cluster) SetClusterCaData(v string) {
-	o.ClusterCaData = &v
+	o.ClusterCaData = v
 }
 
-// GetClusterSaToken returns the ClusterSaToken field value if set, zero value otherwise.
+// GetClusterSaToken returns the ClusterSaToken field value
 func (o *Cluster) GetClusterSaToken() string {
-	if o == nil || o.ClusterSaToken == nil {
+	if o == nil {
 		var ret string
 		return ret
 	}
-	return *o.ClusterSaToken
+
+	return o.ClusterSaToken
 }
 
-// GetClusterSaTokenOk returns a tuple with the ClusterSaToken field value if set, nil otherwise
+// GetClusterSaTokenOk returns a tuple with the ClusterSaToken field value
 // and a boolean to check if the value has been set.
 func (o *Cluster) GetClusterSaTokenOk() (*string, bool) {
-	if o == nil || o.ClusterSaToken == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.ClusterSaToken, true
+	return &o.ClusterSaToken, true
 }
 
-// HasClusterSaToken returns a boolean if a field has been set.
-func (o *Cluster) HasClusterSaToken() bool {
-	if o != nil && o.ClusterSaToken != nil {
+// SetClusterSaToken sets field value
+func (o *Cluster) SetClusterSaToken(v string) {
+	o.ClusterSaToken = v
+}
+
+// GetClusterImageRegistry returns the ClusterImageRegistry field value if set, zero value otherwise.
+func (o *Cluster) GetClusterImageRegistry() ClusterImageRegistry {
+	if o == nil || o.ClusterImageRegistry == nil {
+		var ret ClusterImageRegistry
+		return ret
+	}
+	return *o.ClusterImageRegistry
+}
+
+// GetClusterImageRegistryOk returns a tuple with the ClusterImageRegistry field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Cluster) GetClusterImageRegistryOk() (*ClusterImageRegistry, bool) {
+	if o == nil || o.ClusterImageRegistry == nil {
+		return nil, false
+	}
+	return o.ClusterImageRegistry, true
+}
+
+// HasClusterImageRegistry returns a boolean if a field has been set.
+func (o *Cluster) HasClusterImageRegistry() bool {
+	if o != nil && o.ClusterImageRegistry != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetClusterSaToken gets a reference to the given string and assigns it to the ClusterSaToken field.
-func (o *Cluster) SetClusterSaToken(v string) {
-	o.ClusterSaToken = &v
+// SetClusterImageRegistry gets a reference to the given ClusterImageRegistry and assigns it to the ClusterImageRegistry field.
+func (o *Cluster) SetClusterImageRegistry(v ClusterImageRegistry) {
+	o.ClusterImageRegistry = &v
 }
 
 func (o Cluster) MarshalJSON() ([]byte, error) {
@@ -271,7 +276,7 @@ func (o Cluster) MarshalJSON() ([]byte, error) {
 	if o.Id != nil {
 		toSerialize["id"] = o.Id
 	}
-	if o.Name != nil {
+	if true {
 		toSerialize["name"] = o.Name
 	}
 	if o.OrganisationId != nil {
@@ -280,14 +285,17 @@ func (o Cluster) MarshalJSON() ([]byte, error) {
 	if o.Default != nil {
 		toSerialize["default"] = o.Default
 	}
-	if o.ClusterUrl != nil {
+	if true {
 		toSerialize["cluster_url"] = o.ClusterUrl
 	}
-	if o.ClusterCaData != nil {
+	if true {
 		toSerialize["cluster_ca_data"] = o.ClusterCaData
 	}
-	if o.ClusterSaToken != nil {
+	if true {
 		toSerialize["cluster_sa_token"] = o.ClusterSaToken
+	}
+	if o.ClusterImageRegistry != nil {
+		toSerialize["cluster_image_registry"] = o.ClusterImageRegistry
 	}
 	return json.Marshal(toSerialize)
 }

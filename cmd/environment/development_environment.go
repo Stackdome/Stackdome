@@ -9,6 +9,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/config"
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
+	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/clusterimageregistry"
 	imagebuildcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/imagebuild"
 	stackcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stack"
 	stackresourcecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stackresource"
@@ -171,6 +172,10 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 				DBImageBuildService: d.Services.ImageBuildService,
 				DBResourceService:   d.Services.StackResourceService,
 			}),
+			clusterimageregistry.NewClusterImageRegistryReconciler(clusterimageregistry.ClusterImageRegistryReconcilerSpec{
+				Logger:                 applogger.NewLoggerWithPrefix(ctx, "cluster-image-registry-controller").SetLevel(d.Logger.GetLevel()),
+				DBImageRegistryService: d.Services.ClusterImageRegistryService,
+			}),
 		},
 	})
 	d.Services.ClusterService.InjectClusterManager(d.ClusterManager)
@@ -249,15 +254,21 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:               d.Logger,
 	})
 
+	clusterImageRegistryService := services.NewClusterImageRegistryService(services.ClusterImageRegistryServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         d.Logger,
+	})
+
 	d.Services = Services{
-		UserService:          userService,
-		WorkspaceUserService: workspaceUserService,
-		OrganisationService:  organisationService,
-		ClusterService:       clusterService,
-		VolumeService:        volumeService,
-		StackService:         stackService,
-		StackResourceService: stackResourceService,
-		ImageBuildService:    imageBuildService,
+		UserService:                 userService,
+		WorkspaceUserService:        workspaceUserService,
+		OrganisationService:         organisationService,
+		ClusterService:              clusterService,
+		VolumeService:               volumeService,
+		StackService:                stackService,
+		StackResourceService:        stackResourceService,
+		ImageBuildService:           imageBuildService,
+		ClusterImageRegistryService: clusterImageRegistryService,
 	}
 
 	return nil
@@ -284,9 +295,16 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 		ClusterService:      d.Services.ClusterService,
 	})
 
+	clusterImageRegistryService := clusterresource.NewClusterImageRegistryService(clusterresource.ClusterImageRegistryServiceSpec{
+		ClusterManager: d.ClusterManager,
+		Logger:         d.Logger,
+		ClusterService: d.Services.ClusterService,
+	})
+
 	d.Services.WorkspaceUserService.InjectClusterResourceService(workspaceUserClusterResourceService)
 	d.Services.VolumeService.InjectClusterResourceService(volumeClusterResourceService)
 	d.Services.StackService.InjectClusterResourceService(clusterWorkspaceService)
+	d.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	return nil
 }
 

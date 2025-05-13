@@ -28,9 +28,10 @@ type ClusterService interface {
 }
 
 type clusterService struct {
-	clusterStore   stores.ClusterStore
-	logger         logger.Logger
-	clusterManager clustermanager.ClusterManager
+	clusterStore         stores.ClusterStore
+	logger               logger.Logger
+	clusterManager       clustermanager.ClusterManager
+	imageRegistryService ClusterImageRegistryService
 }
 
 func NewClusterService(spec ClusterServiceSpec) ClusterService {
@@ -38,15 +39,17 @@ func NewClusterService(spec ClusterServiceSpec) ClusterService {
 		clusterStore: pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		clusterManager: spec.ClusterManager,
-		logger:         spec.Logger,
+		clusterManager:       spec.ClusterManager,
+		logger:               spec.Logger,
+		imageRegistryService: spec.ImageRegistryService,
 	}
 }
 
 type ClusterServiceSpec struct {
-	SessionFactory db.SessionFactory
-	ClusterManager clustermanager.ClusterManager
-	Logger         logger.Logger
+	SessionFactory       db.SessionFactory
+	ClusterManager       clustermanager.ClusterManager
+	ImageRegistryService ClusterImageRegistryService
+	Logger               logger.Logger
 }
 
 // inject cluster manager
@@ -97,6 +100,18 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 		merr := s.clusterManager.RegisterCluster(createdCluster)
 		if merr != nil {
 			return errors.GeneralError("failed to register cluster with manager")
+		}
+		if len(cluster.ImageRegistries) != 0 {
+			// Create the image registry in the cluster
+			registry := cluster.ImageRegistries[0]
+			registry.ClusterID = createdCluster.ID
+			registry.OrganisationID = createdCluster.OrganisationID
+			createdRegistry, err := s.imageRegistryService.Create(ctx, registry)
+			if err != nil {
+				s.logger.Errorf("failed to create image registry: %v", err)
+				return err
+			}
+			createdCluster.ImageRegistries[0] = createdRegistry
 		}
 		return nil
 	})

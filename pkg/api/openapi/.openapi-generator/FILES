@@ -8,6 +8,7 @@ client.go
 configuration.go
 docs/Annotation.md
 docs/ApiV1OrganizationsIdRemoteSyncServersGet200Response.md
+docs/ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response.md
 docs/BuildArtifact.md
 docs/BuildArtifactSyncInfo.md
 docs/BuildSourceContext.md
@@ -16,6 +17,11 @@ docs/BuildSourceContextVolume.md
 docs/BuildSourceRevision.md
 docs/BuildSourceRevisionVolumeSourceRevision.md
 docs/Cluster.md
+docs/ClusterImageRegistry.md
+docs/ClusterImageRegistryList.md
+docs/ClusterImageRegistrySpec.md
+docs/ClusterImageRegistryState.md
+docs/ClusterImageRegistryStatus.md
 docs/ClusterList.md
 docs/Condition.md
 docs/DefaultApi.md
@@ -77,6 +83,7 @@ git_push.sh
 go.mod
 go.sum
 model__api_v1_organizations__id__remote_sync_servers_get_200_response.go
+model__api_v1_organizations__org_id__clusters__cluster_id__image_registries_get_200_response.go
 model_annotation.go
 model_build_artifact.go
 model_build_artifact_sync_info.go
@@ -86,6 +93,11 @@ model_build_source_context_volume.go
 model_build_source_revision.go
 model_build_source_revision_volume_source_revision.go
 model_cluster.go
+model_cluster_image_registry.go
+model_cluster_image_registry_list.go
+model_cluster_image_registry_spec.go
+model_cluster_image_registry_state.go
+model_cluster_image_registry_status.go
 model_cluster_list.go
 model_condition.go
 model_env_var.go

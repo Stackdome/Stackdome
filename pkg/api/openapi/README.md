@@ -86,6 +86,10 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsIdPut**](docs/DefaultApi.md#apiv1organizationsidput) | **Put** /api/v1/organizations/{id} | Update an organization
 *DefaultApi* | [**ApiV1OrganizationsIdRemoteSyncServersGet**](docs/DefaultApi.md#apiv1organizationsidremotesyncserversget) | **Get** /api/v1/organizations/{id}/remote-sync-servers | List all RemoteSyncServer objects for an organization
 *DefaultApi* | [**ApiV1OrganizationsIdRemoteSyncServersPost**](docs/DefaultApi.md#apiv1organizationsidremotesyncserverspost) | **Post** /api/v1/organizations/{id}/remote-sync-servers | Create a new remote sync server
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesget) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries | List all image registries for a cluster
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesiddelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Delete an image registry object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesidget) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Get a specific image registry object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriespost) | **Post** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries | Create a new image registry
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidclustersiddelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{id} | Delete a cluster object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersidget) | **Get** /api/v1/organizations/{org_id}/clusters/{id} | Get a specific cluster object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdPut**](docs/DefaultApi.md#apiv1organizationsorgidclustersidput) | **Put** /api/v1/organizations/{org_id}/clusters/{id} | Update a cluster object
@@ -125,6 +129,7 @@ Class | Method | HTTP request | Description
 
  - [Annotation](docs/Annotation.md)
  - [ApiV1OrganizationsIdRemoteSyncServersGet200Response](docs/ApiV1OrganizationsIdRemoteSyncServersGet200Response.md)
+ - [ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response](docs/ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response.md)
  - [BuildArtifact](docs/BuildArtifact.md)
  - [BuildArtifactSyncInfo](docs/BuildArtifactSyncInfo.md)
  - [BuildSourceContext](docs/BuildSourceContext.md)
@@ -133,6 +138,11 @@ Class | Method | HTTP request | Description
  - [BuildSourceRevision](docs/BuildSourceRevision.md)
  - [BuildSourceRevisionVolumeSourceRevision](docs/BuildSourceRevisionVolumeSourceRevision.md)
  - [Cluster](docs/Cluster.md)
+ - [ClusterImageRegistry](docs/ClusterImageRegistry.md)
+ - [ClusterImageRegistryList](docs/ClusterImageRegistryList.md)
+ - [ClusterImageRegistrySpec](docs/ClusterImageRegistrySpec.md)
+ - [ClusterImageRegistryState](docs/ClusterImageRegistryState.md)
+ - [ClusterImageRegistryStatus](docs/ClusterImageRegistryStatus.md)
  - [ClusterList](docs/ClusterList.md)
  - [Condition](docs/Condition.md)
  - [EnvVar](docs/EnvVar.md)

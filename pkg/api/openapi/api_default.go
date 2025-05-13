@@ -988,6 +988,437 @@ func (a *DefaultApiService) ApiV1OrganizationsIdRemoteSyncServersPostExecute(r A
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	clusterId  string
+}
+
+func (r ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGetRequest) Execute() (*ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet List all image registries for a cluster
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId
+	@param clusterId
+	@return ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet(ctx context.Context, orgId string, clusterId string) ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGetRequest {
+	return ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		clusterId:  clusterId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGetExecute(r ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGetRequest) (*ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"cluster_id"+"}", url.PathEscape(parameterToString(r.clusterId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDeleteRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	clusterId  string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDeleteRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDeleteExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete Delete an image registry object
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId
+	@param clusterId
+	@param id
+	@return ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDeleteRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete(ctx context.Context, orgId string, clusterId string, id string) ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDeleteRequest {
+	return ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDeleteRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		clusterId:  clusterId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDeleteExecute(r ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDeleteRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"cluster_id"+"}", url.PathEscape(parameterToString(r.clusterId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	clusterId  string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGetRequest) Execute() (*ClusterImageRegistry, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet Get a specific image registry object
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId
+	@param clusterId
+	@param id
+	@return ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet(ctx context.Context, orgId string, clusterId string, id string) ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGetRequest {
+	return ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		clusterId:  clusterId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return ClusterImageRegistry
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGetExecute(r ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGetRequest) (*ClusterImageRegistry, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *ClusterImageRegistry
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"cluster_id"+"}", url.PathEscape(parameterToString(r.clusterId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPostRequest struct {
+	ctx                  context.Context
+	ApiService           *DefaultApiService
+	orgId                string
+	clusterId            string
+	clusterImageRegistry *ClusterImageRegistry
+}
+
+func (r ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPostRequest) ClusterImageRegistry(clusterImageRegistry ClusterImageRegistry) ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPostRequest {
+	r.clusterImageRegistry = &clusterImageRegistry
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPostRequest) Execute() (*ClusterImageRegistry, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost Create a new image registry
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId
+	@param clusterId
+	@return ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost(ctx context.Context, orgId string, clusterId string) ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPostRequest {
+	return ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		clusterId:  clusterId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return ClusterImageRegistry
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPostExecute(r ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPostRequest) (*ClusterImageRegistry, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *ClusterImageRegistry
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"cluster_id"+"}", url.PathEscape(parameterToString(r.clusterId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.clusterImageRegistry == nil {
+		return localVarReturnValue, nil, reportError("clusterImageRegistry is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.clusterImageRegistry
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiApiV1OrganizationsOrgIdClustersIdDeleteRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
