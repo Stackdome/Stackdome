@@ -29,3 +29,11 @@ func StackIDLabelPresentPredicate[T client.Object]() predicate.TypedFuncs[T] {
 		return ok
 	})
 }
+
+func ClusterImageRegistryIDLabelPresentPredicate[T client.Object]() predicate.TypedFuncs[T] {
+	return predicate.NewTypedPredicateFuncs(func(object T) bool {
+		objectLabels := object.GetLabels()
+		_, ok := objectLabels[models.ImageRegistryIDLabel]
+		return ok
+	})
+}

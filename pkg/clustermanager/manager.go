@@ -22,6 +22,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
+	registryv1alpha1 "stackdome.io/cluster-agent/api/registry/v1alpha1"
 	storagev1alpha1 "stackdome.io/cluster-agent/api/storage/v1alpha1"
 	usersv1alpha1 "stackdome.io/cluster-agent/api/users/v1alpha1"
 )
@@ -291,6 +292,10 @@ func createScheme() (*runtime.Scheme, error) {
 
 	if err := storagev1alpha1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("failed to add storagev1alpha1 scheme: %w", err)
+	}
+
+	if err := registryv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add registryv1alpha1 scheme: %w", err)
 	}
 
 	return scheme, nil

@@ -20,4 +20,5 @@ var MigrationList = []*gormigrate.Migration{
 	addWorkspaceNameColumnToStacksTable(),
 	removeOrganisationColumnFromUsers(),
 	addNamespaceToStackResourcesTable(),
+	createClusterImageRegistriesTable(),
 }

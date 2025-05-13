@@ -65,6 +65,11 @@ func (s apiServer) routes() *mux.Router {
 		AuthzClient:    authzClient,
 	})
 
+	clusterImageRegistryHandler := handlers.NewClusterImageRegistryHandler(handlers.ClusterImageRegistryHandlerSpec{
+		ClusterImageRegistryService: services.ClusterImageRegistryService,
+		AuthzClient:                 authzClient,
+	})
+
 	authenticationMiddleware := auth.NewAuthMiddleware(services.UserService)
 
 	apiV1Router := mainRouter.PathPrefix("/api/v1").Subrouter()
@@ -87,6 +92,12 @@ func (s apiServer) routes() *mux.Router {
 	clusterRouter.HandleFunc("", clusterHandler.AddClusterForOrg).Methods(http.MethodPost)
 	clusterRouter.HandleFunc("/{id}", clusterHandler.GetClusterForOrg).Methods(http.MethodGet)
 	clusterRouter.HandleFunc("/{id}", clusterHandler.DeleteClusterForOrg).Methods(http.MethodDelete)
+
+	// Cluster image registry routes
+	clusterRouter.HandleFunc("/{cluster_id}/image_registries", clusterImageRegistryHandler.ListRegistriesForCluster).Methods(http.MethodGet)
+	clusterRouter.HandleFunc("/{cluster_id}/image_registries", clusterImageRegistryHandler.CreateRegistry).Methods(http.MethodPost)
+	clusterRouter.HandleFunc("/{cluster_id}/image_registries/{id}", clusterImageRegistryHandler.GetRegistry).Methods(http.MethodGet)
+	clusterRouter.HandleFunc("/{cluster_id}/image_registries/{id}", clusterImageRegistryHandler.DeleteRegistry).Methods(http.MethodDelete)
 
 	authenticatedUserRouter := userRouter.NewRoute().Subrouter()
 	authenticatedUserRouter.Use(authenticationMiddleware.AuthenticateUser)

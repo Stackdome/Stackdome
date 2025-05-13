@@ -39,13 +39,14 @@ type Database struct {
 }
 
 type Services struct {
-	UserService          services.UserService
-	WorkspaceUserService services.WorkspaceUserService
-	OrganisationService  services.OrganisationService
-	ClusterService       services.ClusterService
-	StackStorageService  services.StackStorageService
-	VolumeService        services.VolumeService
-	StackService         services.StackService
-	StackResourceService services.StackResourceService
-	ImageBuildService    services.ImageBuildService
+	UserService                 services.UserService
+	WorkspaceUserService        services.WorkspaceUserService
+	OrganisationService         services.OrganisationService
+	ClusterService              services.ClusterService
+	StackStorageService         services.StackStorageService
+	VolumeService               services.VolumeService
+	StackService                services.StackService
+	StackResourceService        services.StackResourceService
+	ImageBuildService           services.ImageBuildService
+	ClusterImageRegistryService services.ClusterImageRegistryService
 }

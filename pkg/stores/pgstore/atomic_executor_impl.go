@@ -5,6 +5,7 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type atomicExecutor struct {
@@ -12,9 +13,18 @@ type atomicExecutor struct {
 }
 
 func (a *atomicExecutor) WithTransaction(ctx context.Context, fn func(ctx context.Context) *errors.ServiceError) *errors.ServiceError {
-	tx := a.sessionFactory.New(ctx).Begin()
+	var (
+		tx    *gorm.DB
+		txCtx context.Context
+	)
+	tx = db.TxFromContext(ctx)
+	if tx == nil {
+		tx = a.sessionFactory.New(ctx).Begin()
+		txCtx = db.CtxWithTransaction(ctx, tx)
+	} else {
+		txCtx = ctx
+	}
 
-	txCtx := db.CtxWithTransaction(ctx, tx)
 	// recover and rollback on panic
 	defer func() {
 		if r := recover(); r != nil {

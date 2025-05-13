@@ -10,13 +10,20 @@ func PresentCluster(cluster *models.Cluster) *openapi.Cluster {
 	if cluster == nil {
 		return nil
 	}
-	return &openapi.Cluster{
+
+	res := &openapi.Cluster{
 		Id:             &cluster.ID,
-		Name:           &cluster.Name,
+		Name:           cluster.Name,
 		OrganisationId: &cluster.OrganisationID,
 		Default:        &cluster.Default,
-		ClusterUrl:     &cluster.ClusterURL,
+		ClusterUrl:     cluster.ClusterURL,
 	}
+
+	if len(cluster.ImageRegistries) != 0 {
+		imageRegistry := cluster.ImageRegistries[0]
+		res.ClusterImageRegistry = PresentClusterImageRegistry(imageRegistry)
+	}
+	return res
 }
 
 func PresentClusterList(clusters []*models.Cluster) *openapi.ClusterList {
@@ -36,11 +43,21 @@ func ConvertCluster(in *openapi.Cluster) *models.Cluster {
 		return nil
 	}
 	return &models.Cluster{
-		ID:             in.GetId(),
-		Name:           in.GetName(),
-		OrganisationID: in.GetOrganisationId(),
-		ClusterURL:     in.GetClusterUrl(),
-		ClusterCAData:  in.GetClusterCaData(),
-		Token:          in.GetClusterSaToken(),
+		ID:              in.GetId(),
+		Name:            in.GetName(),
+		OrganisationID:  in.GetOrganisationId(),
+		ClusterURL:      in.GetClusterUrl(),
+		ClusterCAData:   in.GetClusterCaData(),
+		Token:           in.GetClusterSaToken(),
+		ImageRegistries: convertClusterImageRegistryForCluster(in.ClusterImageRegistry),
+	}
+}
+
+func convertClusterImageRegistryForCluster(in *openapi.ClusterImageRegistry) []*models.ClusterImageRegistry {
+	if in == nil {
+		return nil
+	}
+	return []*models.ClusterImageRegistry{
+		ConvertClusterImageRegistry(in),
 	}
 }
