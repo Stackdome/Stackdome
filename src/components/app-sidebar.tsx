@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useLocation } from "react-router-dom"
+import { useLocation, Link } from "react-router-dom"
 import {
   Command,
   Layers,
@@ -38,7 +38,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="/">
+              <Link to="/">
                 <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Command className="size-4" />
                 </div>
@@ -46,7 +46,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <span className="truncate font-medium">Stackdome</span>
                   <span className="truncate text-xs text-muted-foreground">{getCurrentUser()?.organisation}</span>
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -71,10 +71,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       location.pathname.includes("/stacks/create") && "text-sidebar-foreground bg-sidebar-accent"
                     )}
                   >
-                    <a href="/stacks/create">
+                    <Link to="/stacks/create">
                       <Plus className="size-3.5" />
                       <span>Add new Stack</span>
-                    </a>
+                    </Link>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
                 {/* Existing stacks would be mapped here in the future */}
@@ -102,9 +102,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         (location.pathname === "/clusters" || location.pathname === "/clusters/") && "text-sidebar-foreground bg-sidebar-accent"
                       )}
                     >
-                      <a href={hasCluster && clusters.length === 1 ? `/clusters/${clusters[0].id}` : "/clusters"}>
+                      <Link to={hasCluster && clusters.length === 1 ? `/clusters/${clusters[0].id}` : "/clusters"}>
                         <span>Overview</span>
-                      </a>
+                      </Link>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
                   {hasCluster && clusters.length > 1 && clusters.map(cluster => (
@@ -116,9 +116,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           location.pathname.includes(`/clusters/${cluster.id}`) && "text-sidebar-foreground bg-sidebar-accent"
                         )}
                       >
-                        <a href={`/clusters/${cluster.id}`}>
+                        <Link to={`/clusters/${cluster.id}`}>
                           <span>Detail</span>
-                        </a>
+                        </Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   ))}
@@ -141,10 +141,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           location.pathname.includes("/clusters/create") && "text-sidebar-foreground bg-sidebar-accent"
                         )}
                       >
-                        <a href="/clusters/create">
+                        <Link to="/clusters/create">
                           <Plus className="size-3.5" />
                           <span>Add new Cluster</span>
-                        </a>
+                        </Link>
                       </SidebarMenuSubButton>
                     )}
                   </SidebarMenuSubItem>
