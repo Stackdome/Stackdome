@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useDeleteCluster } from "../../hooks/use-clusters";
 import * as clusterApi from "@/api/clusters";
 import { Button } from "@/components/ui/button";
-import { Trash2, AlertCircle, Info } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Trash2, AlertCircle, Info, EyeOff } from "lucide-react";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import {
   Card,
@@ -90,7 +91,13 @@ export default function ClusterDetailPage() {
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <div className="font-mono text-sm bg-muted p-2 rounded border">{cluster.cluster_url}</div>
+                    <div className="relative">
+                      <Input 
+                        value={cluster.cluster_url} 
+                        disabled 
+                        className="font-mono bg-muted" 
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -104,7 +111,17 @@ export default function ClusterDetailPage() {
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <div className="font-mono text-sm bg-muted p-2 rounded border overflow-hidden text-ellipsis whitespace-nowrap">{cluster.cluster_ca_data?.substring(0, 20)}...</div>
+                    <div className="relative">
+                      <Input 
+                        type="password" 
+                        value="••••••••••••••••••••••" 
+                        disabled 
+                        className="font-mono bg-muted" 
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center px-3">
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -118,7 +135,17 @@ export default function ClusterDetailPage() {
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <div className="font-mono text-sm bg-muted p-2 rounded border overflow-hidden text-ellipsis whitespace-nowrap">{cluster.cluster_sa_token?.substring(0, 20)}...</div>
+                    <div className="relative">
+                      <Input 
+                        type="password" 
+                        value="••••••••••••••••••••••" 
+                        disabled 
+                        className="font-mono bg-muted" 
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center px-3">
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 pt-2">
                     <Switch checked={!!(cluster as { image_registry_enabled?: boolean }).image_registry_enabled} disabled />
