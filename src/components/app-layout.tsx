@@ -10,7 +10,6 @@ import {
   BreadcrumbPage, 
   BreadcrumbSeparator 
 } from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
 import { BreadcrumbProvider } from "@/contexts/breadcrumb-context";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { ThemeProvider } from "@/contexts/theme-provider";
@@ -59,7 +58,7 @@ function AppLayoutContent({
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center gap-2">
               <SidebarTrigger />
-              <Separator orientation="vertical" className="h-6" />
+              <div className="border-l-2 h-4 w-0 mx-2" />
               <Breadcrumb>
                 <BreadcrumbList>
                   {breadcrumbItems.map((item, index) => (
