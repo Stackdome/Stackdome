@@ -3,14 +3,12 @@ import { useEffect, useState } from "react";
 import { useDeleteCluster } from "../../hooks/use-clusters";
 import * as clusterApi from "@/api/clusters";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { ChevronLeft, Trash2, Info, Globe, Shield, Key, Check, AlertCircle } from "lucide-react";
+import { Trash2, AlertCircle, Info } from "lucide-react";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -22,6 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 
 export default function ClusterDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -44,13 +44,10 @@ export default function ClusterDetailPage() {
     try {
       const success = await deleteCluster(id);
       if (success) {
-        // After successful deletion, navigate back to clusters page
-        // which will show the form to create a new cluster since no clusters exist
         navigate("/clusters");
       }
     } catch (error) {
       console.error("Failed to delete cluster:", error);
-      // Error handling is done by the useDeleteCluster hook
     }
   };
 
@@ -71,81 +68,83 @@ export default function ClusterDetailPage() {
   );
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4">
-      <div className="flex items-center mb-6">
-        <Button 
-          variant="ghost" 
-          className="mr-2 p-2" 
-          onClick={() => navigate("/clusters")}
-        >
-          <ChevronLeft size={20} />
-        </Button>
-        <h1 className="text-2xl font-bold">Cluster Details</h1>
-      </div>
-      
-      <Card className="mb-6">
+    <div className="container max-w-2xl mx-auto py-8 px-4">
+      <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl">{cluster.name}</CardTitle>
-              <CardDescription>Kubernetes Cluster</CardDescription>
-            </div>
-            <div className="flex items-center space-x-1 bg-green-100 text-green-600 px-2 py-1 rounded text-sm">
-              <Check size={16} />
-              <span>Connected</span>
-            </div>
-          </div>
+          <CardTitle className="text-xl">{cluster.name}</CardTitle>
+          <CardDescription>Kubernetes Cluster</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <div className="text-sm text-gray-500 flex items-center">
-                <Globe size={16} className="mr-2" />
-                API Server URL
+        <CardContent className="space-y-6">
+          <TooltipProvider>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">API Server URL</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="size-3.5 text-muted-foreground cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    The endpoint for your Kubernetes API server.
+                  </TooltipContent>
+                </Tooltip>
               </div>
-              <div className="font-mono text-sm bg-gray-50 p-2 rounded border">
-                {cluster.cluster_url}
-              </div>
+              <div className="font-mono text-sm bg-muted p-2 rounded border">{cluster.cluster_url}</div>
             </div>
-            
-            <div className="space-y-1">
-              <div className="text-sm text-gray-500 flex items-center">
-                <Shield size={16} className="mr-2" />
-                CA Certificate
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">CA Certificate</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="size-3.5 text-muted-foreground cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    The certificate authority data for your cluster.
+                  </TooltipContent>
+                </Tooltip>
               </div>
-              <div className="font-mono text-sm bg-gray-50 p-2 rounded border overflow-hidden text-ellipsis whitespace-nowrap">
-                {cluster.cluster_ca_data?.substring(0, 20)}...
-              </div>
+              <div className="font-mono text-sm bg-muted p-2 rounded border overflow-hidden text-ellipsis whitespace-nowrap">{cluster.cluster_ca_data?.substring(0, 20)}...</div>
             </div>
-            
-            <div className="space-y-1 md:col-span-2">
-              <div className="text-sm text-gray-500 flex items-center">
-                <Key size={16} className="mr-2" />
-                Service Account Token
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Service Account Token</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="size-3.5 text-muted-foreground cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    The service account token used for authentication.
+                  </TooltipContent>
+                </Tooltip>
               </div>
-              <div className="font-mono text-sm bg-gray-50 p-2 rounded border overflow-hidden text-ellipsis whitespace-nowrap">
-                {cluster.cluster_sa_token?.substring(0, 20)}...
-              </div>
+              <div className="font-mono text-sm bg-muted p-2 rounded border overflow-hidden text-ellipsis whitespace-nowrap">{cluster.cluster_sa_token?.substring(0, 20)}...</div>
             </div>
-          </div>
+            <div className="flex items-center gap-2 pt-2">
+              <Switch checked={!!(cluster as { image_registry_enabled?: boolean }).image_registry_enabled} disabled />
+              <span className="text-xs text-muted-foreground">Enable Image Registry</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="size-3.5 text-muted-foreground cursor-pointer" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  Allow this cluster to use the built-in image registry.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </CardContent>
-        <CardFooter className="flex justify-between border-t pt-4">
-          <div className="text-sm text-gray-500 flex items-center">
-            <Info size={16} className="mr-2" />
-            ID: {cluster.id}
-          </div>
+        <div className="flex justify-between items-center pt-4 px-6 pb-6">
+          <div className="text-xs text-muted-foreground">ID: {cluster.id}</div>
           <Button 
             variant="destructive" 
             size="sm"
             onClick={() => setShowDeleteDialog(true)}
             className="flex items-center"
           >
-            <Trash2 size={16} className="mr-2" />
+            <Trash2 className="size-4 mr-2" />
             Delete Cluster
           </Button>
-        </CardFooter>
+        </div>
       </Card>
-      
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

@@ -90,31 +90,40 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </span>
             </AccordionTrigger>
             <AccordionContent className="pb-1">
-              <SidebarMenuSub>
-                {loading ? (
-                  Array.from({ length: 2 }).map((_, index) => (
-                    <SidebarMenuSubItem key={index}>
-                      <SidebarMenuSkeleton />
+              {loading ? (
+                <SidebarMenuSkeleton />
+              ) : (
+                <SidebarMenuSub>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton
+                      asChild
+                      className={cn(
+                        "text-sidebar-foreground/70 text-sm hover:text-sidebar-foreground hover:bg-sidebar-accent",
+                        (location.pathname === "/clusters" || location.pathname === "/clusters/") && "text-sidebar-foreground bg-sidebar-accent"
+                      )}
+                    >
+                      <a href={hasCluster && clusters.length === 1 ? `/clusters/${clusters[0].id}` : "/clusters"}>
+                        <span>Overview</span>
+                      </a>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  {hasCluster && clusters.length > 1 && clusters.map(cluster => (
+                    <SidebarMenuSubItem key={cluster.id}>
+                      <SidebarMenuSubButton 
+                        asChild
+                        className={cn(
+                          "text-sidebar-foreground/70 text-sm hover:text-sidebar-foreground hover:bg-sidebar-accent",
+                          location.pathname.includes(`/clusters/${cluster.id}`) && "text-sidebar-foreground bg-sidebar-accent"
+                        )}
+                      >
+                        <a href={`/clusters/${cluster.id}`}>
+                          <span>Detail</span>
+                        </a>
+                      </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
-                  ))
-                ) : (
-                  <>
-                    {hasCluster && clusters.map(cluster => (
-                      <SidebarMenuSubItem key={cluster.id}>
-                        <SidebarMenuSubButton 
-                          asChild
-                          className={cn(
-                            "text-sidebar-foreground/70 text-sm hover:text-sidebar-foreground hover:bg-sidebar-accent",
-                            location.pathname.includes(`/clusters/${cluster.id}`) && "text-sidebar-foreground bg-sidebar-accent"
-                          )}
-                        >
-                          <a href={`/clusters/${cluster.id}`}>
-                            <span>Overview</span>
-                          </a>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
-                    <SidebarMenuSubItem>
+                  ))}
+                  <SidebarMenuSubItem>
+                    {hasCluster ? (
                       <div
                         className={cn(
                           "text-sidebar-foreground/40 text-sm cursor-not-allowed flex items-center gap-2 px-2 py-1.5 rounded-md select-none",
@@ -124,10 +133,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <Plus className="size-3.5" />
                         <span>Add new Cluster</span>
                       </div>
-                    </SidebarMenuSubItem>
-                  </>
-                )}
-              </SidebarMenuSub>
+                    ) : (
+                      <SidebarMenuSubButton
+                        asChild
+                        className={cn(
+                          "text-sidebar-foreground/70 text-sm hover:text-sidebar-foreground hover:bg-sidebar-accent",
+                          location.pathname.includes("/clusters/create") && "text-sidebar-foreground bg-sidebar-accent"
+                        )}
+                      >
+                        <a href="/clusters/create">
+                          <Plus className="size-3.5" />
+                          <span>Add new Cluster</span>
+                        </a>
+                      </SidebarMenuSubButton>
+                    )}
+                  </SidebarMenuSubItem>
+                </SidebarMenuSub>
+              )}
             </AccordionContent>
           </AccordionItem>
         </Accordion>

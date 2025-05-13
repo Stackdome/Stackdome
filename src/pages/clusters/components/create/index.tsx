@@ -221,7 +221,7 @@ export default function ClusterCreatePage({ onSubmit, loading, error, onCancel }
               Cancel
             </Button>
             <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? "Creating..." : "Create Cluster"}
+              {loading ? "Creating..." : "Create"}
             </Button>
           </CardFooter>
         </Card>
