@@ -4,7 +4,7 @@ import { useDeleteCluster } from "../../hooks/use-clusters";
 import * as clusterApi from "@/api/clusters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2, AlertCircle, Info, EyeOff } from "lucide-react";
+import { Trash2, AlertCircle, Info, EyeOff, Cloud } from "lucide-react";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import {
   Card,
@@ -96,10 +96,14 @@ export default function ClusterDetailPage() {
       <div className="flex h-[calc(100vh-64px)]">
         <div className="flex-grow p-6 overflow-y-auto">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-xl font-medium mb-6">{cluster.name}</h2>
+            <h2 className="text-xl font-medium mb-6">Cluster Details</h2>
             <Card className="w-full">
               <CardHeader>
-                <CardTitle>Cluster Details</CardTitle>
+                <CardTitle>
+                  <span className="flex items-center gap-2">
+                    {cluster.name}
+                  </span>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <TooltipProvider>
@@ -203,7 +207,8 @@ export default function ClusterDetailPage() {
                 <DialogHeader>
                   <DialogTitle>Delete Cluster</DialogTitle>
                   <DialogDescription>
-                    Are you sure you want to delete this cluster? This action cannot be undone.
+                    <p>Are you sure you want to delete this cluster?</p>
+                    <p>This action cannot be undone.</p>
                   </DialogDescription>
                 </DialogHeader>
                 {deleteError && (
