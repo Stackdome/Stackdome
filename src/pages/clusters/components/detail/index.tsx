@@ -72,7 +72,6 @@ export default function ClusterDetailPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">{cluster.name}</CardTitle>
-          <CardDescription>Kubernetes Cluster</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <TooltipProvider>
