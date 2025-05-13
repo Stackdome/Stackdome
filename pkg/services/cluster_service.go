@@ -23,6 +23,7 @@ type ClusterService interface {
 	Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	AddCluster(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError)
+	InternalListAllClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError)
 	InjectClusterManager(clusterManager clustermanager.ClusterManager)
 }
 
@@ -51,6 +52,16 @@ type ClusterServiceSpec struct {
 // inject cluster manager
 func (s *clusterService) InjectClusterManager(clusterManager clustermanager.ClusterManager) {
 	s.clusterManager = clusterManager
+}
+
+// InternalListAllClusters lists all clusters in the database
+func (s *clusterService) InternalListAllClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError) {
+	clusters, err := s.clusterStore.ListAll(ctx)
+	if err != nil {
+		s.logger.Errorf("failed to list all clusters: %v", err)
+		return nil, err
+	}
+	return clusters, nil
 }
 
 func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError) {

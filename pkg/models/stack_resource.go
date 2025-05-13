@@ -12,6 +12,7 @@ type StackResource struct {
 	UserID      string `gorm:"not null"`
 	StackID     string
 	Name        string      `gorm:"<-:create"`
+	Namespace   string      `gorm:"<-:create"`
 	Labels      Labels      `gorm:"type:jsonb"`
 	Annotations Annotations `gorm:"type:jsonb"`
 	// Tracks the version of the object in the database.

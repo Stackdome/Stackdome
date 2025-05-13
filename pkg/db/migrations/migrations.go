@@ -19,4 +19,5 @@ var MigrationList = []*gormigrate.Migration{
 	addDefaultUserColumnToUsersTable(),
 	addWorkspaceNameColumnToStacksTable(),
 	removeOrganisationColumnFromUsers(),
+	addNamespaceToStackResourcesTable(),
 }

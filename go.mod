@@ -12,6 +12,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang/glog v1.2.1
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
@@ -28,7 +29,7 @@ require (
 	k8s.io/client-go v0.32.3
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/controller-runtime v0.20.4
-	stackdome.io/cluster-agent v0.4.1-alpha
+	stackdome.io/cluster-agent v0.4.3-alpha
 )
 
 require (
@@ -58,7 +59,6 @@ require (
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/yaml v0.3.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -112,6 +112,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace stackdome.io/cluster-agent => github.com/ashishmax31/cluster-agent v0.4.1-alpha
-
-// replace stackdome.io/cluster-agent => ../../cluster-agent
+replace stackdome.io/cluster-agent => github.com/ashishmax31/cluster-agent v0.4.3-alpha
