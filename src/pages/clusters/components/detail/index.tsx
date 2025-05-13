@@ -23,6 +23,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function ClusterDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +33,7 @@ export default function ClusterDetailPage() {
   const { deleteCluster, loading: deleting, error: deleteError } = useDeleteCluster();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!id) return;
@@ -54,10 +56,22 @@ export default function ClusterDetailPage() {
   const handleDelete = async () => {
     if (!id) return;
     try {
-      await deleteCluster(id); // Removed unused 'success' variable
+      await deleteCluster(id);
+      toast({
+        title: "Success",
+        description: "Cluster deleted successfully",
+        variant: "success",
+        duration: 3000,
+      });
       navigate("/clusters");
-    } catch (err) { // Changed 'error' to 'err' to avoid conflict with 'deleteError'
+    } catch (err) {
       console.error("Failed to delete cluster:", err);
+      toast({
+        title: "Failed to delete cluster",
+        description: err instanceof Error ? err.message : "Failed to delete cluster. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
     }
   };
 
