@@ -39,6 +39,16 @@ func (d dbClusterStore) GetByClusterUrl(ctx context.Context, clusterURL string) 
 	return &res, nil
 }
 
+func (d dbClusterStore) ListAll(ctx context.Context) ([]*models.Cluster, *errors.ServiceError) {
+	grm := d.sessionFactory.New(ctx)
+	var res []*models.Cluster
+	err := grm.Model(&models.Cluster{}).Find(&res).Error
+	if err != nil {
+		return nil, errors.GeneralError("failed to fetch clusters: %s", err.Error())
+	}
+	return res, nil
+}
+
 func (d dbClusterStore) Create(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Create(&cluster).Error

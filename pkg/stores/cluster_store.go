@@ -16,5 +16,6 @@ type ClusterStore interface {
 	PersistManagerState(ctx context.Context, ID string, running bool) *errors.ServiceError
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	GetByClusterUrl(ctx context.Context, clusterURL string) (*models.Cluster, *errors.ServiceError)
+	ListAll(ctx context.Context) ([]*models.Cluster, *errors.ServiceError)
 	AtomicExecutor
 }

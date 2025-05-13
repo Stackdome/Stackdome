@@ -360,6 +360,18 @@ func (d *developmentEnvironment) ensureDefaultPlatformAdminUser(ctx context.Cont
 
 func (d *developmentEnvironment) startClusterManager(ctx context.Context) error {
 	d.Logger.Debugf("Starting cluster manager")
+	// Add clusters to the manager when booting up.
+	clusters, err := d.Services.ClusterService.InternalListAllClusters(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list clusters: %w", err)
+	}
+	for _, cluster := range clusters {
+		d.Logger.Debugf("Adding cluster %s to cluster manager", cluster.ID)
+		if err := d.ClusterManager.RegisterCluster(cluster); err != nil {
+			return fmt.Errorf("failed to register cluster %s: %w", cluster.ID, err)
+		}
+	}
+
 	d.ClusterManager.Start(ctx)
 	return nil
 }
