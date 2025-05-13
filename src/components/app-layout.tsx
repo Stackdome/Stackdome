@@ -11,11 +11,10 @@ import {
   BreadcrumbSeparator 
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import { StackCreationModal } from "@/pages/stacks/components/shared/stack-creation-modal";
 import { BreadcrumbProvider } from "@/contexts/breadcrumb-context";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
+import { ThemeProvider } from "@/contexts/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface BreadcrumbItemType {
   name: string;
@@ -80,6 +79,7 @@ function AppLayoutContent({
                 </BreadcrumbList>
               </Breadcrumb>
             </div>
+            <ThemeToggle />
           </div>
           <div className="flex-1 p-4">
             {children ? children : <Outlet />}
@@ -96,8 +96,10 @@ export function AppLayout({
   children?: React.ReactNode;
 }) {
   return (
-    <BreadcrumbProvider>
-      <AppLayoutContent children={children} />
-    </BreadcrumbProvider>
+    <ThemeProvider defaultTheme="system" storageKey="stackdome-ui-theme">
+      <BreadcrumbProvider>
+        <AppLayoutContent children={children} />
+      </BreadcrumbProvider>
+    </ThemeProvider>
   );
 }
