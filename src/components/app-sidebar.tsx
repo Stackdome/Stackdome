@@ -99,7 +99,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         location.pathname.includes("/clusters") && "text-sidebar-foreground bg-sidebar-accent"
                       )}
                     >
-                      <a href="/clusters">
+                      <a href="/clusters/create">
                         <Plus className="size-3.5" />
                         <span>Add new Cluster</span>
                       </a>
