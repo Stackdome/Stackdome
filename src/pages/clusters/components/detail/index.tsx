@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
+import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 
 export default function ClusterDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,24 +31,33 @@ export default function ClusterDetailPage() {
   const [loading, setLoading] = useState(true);
   const { deleteCluster, loading: deleting, error: deleteError } = useDeleteCluster();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { setCustomLabel, setPathLoading } = useBreadcrumb();
 
   useEffect(() => {
     if (!id) return;
+    const currentPath = `/clusters/${id}`;
+    setPathLoading(currentPath, true);
     setLoading(true);
     clusterApi.getCluster(getCurrentOrganizationId(), id)
-      .then(setCluster)
-      .finally(() => setLoading(false));
-  }, [id]);
+      .then((data) => {
+        setCluster(data);
+        if (data && data.name) {
+          setCustomLabel(currentPath, data.name);
+        }
+      })
+      .finally(() => {
+        setPathLoading(currentPath, false);
+        setLoading(false);
+      });
+  }, [id, setCustomLabel, setPathLoading]);
 
   const handleDelete = async () => {
     if (!id) return;
     try {
-      const success = await deleteCluster(id);
-      if (success) {
-        navigate("/clusters");
-      }
-    } catch (error) {
-      console.error("Failed to delete cluster:", error);
+      await deleteCluster(id); // Removed unused 'success' variable
+      navigate("/clusters");
+    } catch (err) { // Changed 'error' to 'err' to avoid conflict with 'deleteError'
+      console.error("Failed to delete cluster:", err);
     }
   };
 
@@ -149,7 +159,7 @@ export default function ClusterDetailPage() {
                   </div>
                   <div className="flex items-center gap-2 pt-2">
                     <Switch checked={!!(cluster as { image_registry_enabled?: boolean }).image_registry_enabled} disabled />
-                    <span className="text-xs text-muted-foreground">Enable Image Registry</span>
+                    <span className="text-xs text-muted-foreground">Stackdome Image Registry</span>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className="size-3.5 text-muted-foreground cursor-pointer" />
