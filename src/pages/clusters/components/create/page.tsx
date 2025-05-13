@@ -4,11 +4,14 @@ import ClusterCreatePage from ".";
 import { createCluster } from "@/api/clusters";
 import type { ClusterFormInput } from "../../hooks/use-clusters";
 import { getCurrentOrganizationId } from "@/helpers/common";
+import { useToast } from "@/components/ui/use-toast";
+import { extractErrorMessage } from "@/lib/utils";
 
 export default function ClusterCreateWrapperPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   async function handleSubmit(values: ClusterFormInput) {
     setLoading(true);
@@ -16,16 +19,34 @@ export default function ClusterCreateWrapperPage() {
     try {
       await createCluster(getCurrentOrganizationId(), values);
       setLoading(false);
+      
+      // Show success toast notification
+      toast({
+        title: "Success",
+        description: "Cluster created successfully",
+        variant: "success",
+        duration: 3000,
+      });
+      
       navigate("/clusters");
     } catch (e) {
       console.error("Failed to create cluster:", e);
-      if (e instanceof Error) {
-        setError(e.message);
-      } else if (typeof e === 'object' && e !== null && 'message' in e) {
-        setError(String(e.message));
-      } else {
-        setError("Failed to create cluster. Please check your connection and try again.");
-      }
+      
+      const errorMessage = extractErrorMessage(
+        e, 
+        "Failed to create cluster. Please check your connection and try again."
+      );
+      
+      setError(errorMessage);
+      
+      // Show error toast notification
+      toast({
+        title: "Failed to create cluster",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000,
+      });
+      
       setLoading(false);
     }
   }

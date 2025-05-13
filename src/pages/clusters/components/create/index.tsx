@@ -8,6 +8,7 @@ import { Info, Eye, EyeOff } from "lucide-react";
 import { ClusterSchema } from "../../hooks/use-clusters";
 import type { ClusterFormInput } from "../../hooks/use-clusters";
 import { Switch } from "@/components/ui/switch";
+import { extractErrorMessage } from '@/lib/utils';
 
 interface Props {
   onSubmit: (values: ClusterFormInput) => void;
@@ -34,7 +35,7 @@ export default function ClusterCreatePage({ onSubmit, loading, error, onCancel }
       const fieldErrors: Partial<Record<keyof ClusterFormInput, string>> = {};
       result.error.errors.forEach(err => {
         const field = err.path[0] as keyof ClusterFormInput;
-        fieldErrors[field] = err.message;
+        fieldErrors[field] = extractErrorMessage(err, err.message);
       });
       setErrors(fieldErrors);
       return false;

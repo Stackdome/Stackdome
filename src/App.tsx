@@ -12,6 +12,7 @@ import ClusterDetailPage from "@/pages/clusters/components/detail"
 import { StackProvider } from "@/pages/stacks/contexts/stack-context"
 import { logoutAndRedirect } from "@/helpers/common"
 import { AppLayout } from "@/components/app-layout"
+import { Toaster } from "@/components/ui/toaster"
 
 const Logout = () => {
   logoutAndRedirect("/login");
@@ -45,6 +46,7 @@ function App() {
   return (
     <StackProvider>
       <RouterProvider router={router} />
+      <Toaster />
     </StackProvider>
   )
 }
