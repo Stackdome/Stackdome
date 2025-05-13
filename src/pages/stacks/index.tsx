@@ -1,7 +1,5 @@
 import { Layers, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList } from "@/components/ui/breadcrumb";
 import { StackCard } from "@/pages/stacks/components/shared/stack-card";
 import { StackCreationModal } from "@/pages/stacks/components/shared/stack-creation-modal";
 import { CreateSampleStackButton } from "@/pages/stacks/components/shared/create-sample-stack-button";
@@ -12,30 +10,6 @@ export default function StacksPage() {
 
   return (
     <div className="flex flex-1 flex-col p-4 pt-0 h-full">
-      <header className="flex h-16 shrink-0 items-center gap-2">
-        <div className="flex items-center gap-2 px-4">
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="#">
-                  Stacks
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-        <div className="ml-auto mr-4">
-          <StackCreationModal 
-            trigger={
-              <Button size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                New Stack
-              </Button>
-            } 
-          />
-        </div>
-      </header>
       
       {stacks.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-[80vh] text-center">
