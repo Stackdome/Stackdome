@@ -15,9 +15,9 @@ export function getCurrentUser(): User | null {
   }
 }
 
-export function getCurrentOrganizationId(): string {
+export function getCurrentOrganizationId(): string | null {
   const user = getCurrentUser();
-  return user?.organisation_id || "";
+  return user?.organisation_id ?? null;
 }
 
 export function setAuthSession(token: string, user: User) {

@@ -41,6 +41,7 @@ interface ProjectSidebarProps {
   children?: React.ReactNode;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ProjectSidebar({ sections, children }: ProjectSidebarProps) {
   return (
     <Sidebar variant="inset">

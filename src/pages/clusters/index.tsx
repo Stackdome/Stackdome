@@ -12,7 +12,7 @@ import { getCurrentOrganizationId } from "@/helpers/common";
 
 export default function ClustersPage() {
   const { clusters, loading, error, refetch } = useClusters();
-  const [deleting, setDeleting] = useState<Cluster | null>(null);
+  const [deletingCluster, setDeletingCluster] = useState<Cluster | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -34,20 +34,25 @@ export default function ClustersPage() {
   }
 
   function handleDelete(cluster: Cluster) {
-    setDeleting(cluster);
+    setDeletingCluster(cluster);
   }
 
   async function handleDeleteConfirm() {
-    if (!deleting?.id) return;
+    if (!deletingCluster?.id) return;
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) {
+      console.error('No organization selected');
+      return;
+    }
     setDeleteLoading(true);
     try {
-      await deleteCluster(getCurrentOrganizationId(), deleting.id);
+      await deleteCluster(orgId, deletingCluster.id);
       refetch();
     } catch (e) {
       console.error('Failed to delete cluster:', e);
     } finally {
       setDeleteLoading(false);
-      setDeleting(null);
+      setDeletingCluster(null);
     }
   }
 
@@ -81,9 +86,9 @@ export default function ClustersPage() {
         </>
       )}
       <ClusterDeleteDialog
-        open={!!deleting}
+        open={!!deletingCluster}
         onConfirm={handleDeleteConfirm}
-        onCancel={() => setDeleting(null)}
+        onCancel={() => setDeletingCluster(null)}
         loading={deleteLoading}
       />
     </div>

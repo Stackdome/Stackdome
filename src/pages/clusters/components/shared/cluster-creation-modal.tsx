@@ -17,10 +17,15 @@ export function ClusterCreationModal({ open, onOpenChange, onSuccess }: ClusterC
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(values: api.Cluster) {
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) {
+      setError("No organization selected");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      await api.createCluster(getCurrentOrganizationId(), values);
+      await api.createCluster(orgId, values);
       setLoading(false);
       onSuccess();
       onOpenChange(false);
@@ -47,7 +52,12 @@ export function ClusterCreationModal({ open, onOpenChange, onSuccess }: ClusterC
           </DialogTitle>
         </DialogHeader>
         <div className="py-6 px-1">
-          <ClusterCreateForm onSubmit={handleSubmit} loading={loading} error={error} />
+          <ClusterCreateForm
+            onSubmit={handleSubmit}
+            loading={loading}
+            error={error}
+            onCancel={() => onOpenChange(false)}
+          />
         </div>
         <DialogClose asChild>
           <Button variant="ghost" size="icon" className="absolute top-4 right-4">

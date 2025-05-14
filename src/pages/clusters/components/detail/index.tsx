@@ -4,7 +4,7 @@ import { useDeleteCluster } from "../../hooks/use-clusters";
 import * as clusterApi from "@/api/clusters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2, AlertCircle, Info, EyeOff, Cloud } from "lucide-react";
+import { Trash2, AlertCircle, Info, EyeOff } from "lucide-react";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import {
   Card,
@@ -37,10 +37,13 @@ export default function ClusterDetailPage() {
 
   useEffect(() => {
     if (!id) return;
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) return;
+
     const currentPath = `/clusters/${id}`;
     setPathLoading(currentPath, true);
     setLoading(true);
-    clusterApi.getCluster(getCurrentOrganizationId(), id)
+    clusterApi.getCluster(orgId, id)
       .then((data) => {
         setCluster(data);
         if (data && data.name) {
