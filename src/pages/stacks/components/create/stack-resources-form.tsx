@@ -786,7 +786,7 @@ export default function StackResourcesForm() {
       </div>
 
       {resources.length > 0 && (
-        <div className="sticky bottom-6 left-0 w-full bg-background/95 border-t py-4 px-6 backdrop-blur-sm rounded-b-lg shadow-md">
+        <div className="sticky bottom-6 left-0 w-full bg-background/95 border-t py-4 px-6 backdrop-blur-sm shadow-md">
           <Button
             variant="outline"
             size="lg"
