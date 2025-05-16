@@ -175,7 +175,7 @@ func (w *stackStore) Update(ctx context.Context, id string, spec *models.Stack) 
 }
 
 func (w *stackStore) UpdateWithTx(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
-	currentStack, err := w.GetByID(ctx, id)
+	existingStack, err := w.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -187,16 +187,16 @@ func (w *stackStore) UpdateWithTx(ctx context.Context, id string, spec *models.S
 	if err := tx.Model(&models.Stack{}).Omit(clause.Associations).Where("id = ?", id).Updates(spec).Error; err != nil {
 		return nil, errors.GeneralError("failed to update stack: %s", err.Error())
 	}
-	currentResourceMap := currentStack.ResourcesMap()
-	for _, resource := range spec.StackResources {
-		resource.StackID = spec.ID
-		resource.UserID = spec.UserID
-		if currentResource, ok := currentResourceMap[resource.Name]; ok {
-			if _, err := w.stackResourceStore.UpdateWithTx(ctx, currentResource.ID, resource); err != nil {
+	existingResourceMap := existingStack.ResourcesMap()
+	for _, patchResource := range spec.StackResources {
+		patchResource.StackID = existingStack.ID
+		patchResource.UserID = existingStack.UserID
+		if existingResource, ok := existingResourceMap[patchResource.Name]; ok {
+			if _, err := w.stackResourceStore.UpdateWithTx(ctx, existingResource.ID, patchResource); err != nil {
 				return nil, errors.GeneralError("failed to update stack resource: %v", err)
 			}
 		} else {
-			if _, err := w.stackResourceStore.CreateWithTx(ctx, resource); err != nil {
+			if _, err := w.stackResourceStore.CreateWithTx(ctx, patchResource); err != nil {
 				return nil, errors.GeneralError("failed to create stack resource: %v", err)
 			}
 		}
@@ -205,10 +205,10 @@ func (w *stackStore) UpdateWithTx(ctx context.Context, id string, spec *models.S
 	specResourceMap := spec.ResourcesMap()
 
 	// Delete resources that are not in the new spec
-	for _, resource := range currentStack.StackResources {
+	for _, resource := range existingStack.StackResources {
 		if _, ok := specResourceMap[resource.Name]; !ok {
 			if err := w.stackResourceStore.DeleteWithTx(ctx, resource.ID); err != nil {
-				return nil, errors.GeneralError("failed to update stack. error deleting workspace resource '%s': %v", resource.Name, err)
+				return nil, errors.GeneralError("failed to update stack: error deleting stack resource '%s': %v", resource.Name, err)
 			}
 		}
 	}

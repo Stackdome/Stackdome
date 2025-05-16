@@ -1374,8 +1374,10 @@ components:
           type: string
         name:
           type: string
-        domain_name:
-          type: string
+        domains:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainName'
         is_default:
           type: boolean
         created_at:
@@ -1384,6 +1386,15 @@ components:
         updated_at:
           type: string
           format: date-time
+    DomainName:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        fqdn:
+          type: string
+          description: Fully Qualified Domain Name
     UserSignupResponse:
       type: object
       properties:

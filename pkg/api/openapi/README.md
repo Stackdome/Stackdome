@@ -145,6 +145,7 @@ Class | Method | HTTP request | Description
  - [ClusterImageRegistryStatus](docs/ClusterImageRegistryStatus.md)
  - [ClusterList](docs/ClusterList.md)
  - [Condition](docs/Condition.md)
+ - [DomainName](docs/DomainName.md)
  - [EnvVar](docs/EnvVar.md)
  - [Error](docs/Error.md)
  - [ErrorAllOf](docs/ErrorAllOf.md)

@@ -49,4 +49,5 @@ type Services struct {
 	StackResourceService        services.StackResourceService
 	ImageBuildService           services.ImageBuildService
 	ClusterImageRegistryService services.ClusterImageRegistryService
+	DomainNameService           services.DomainsService
 }

@@ -25,6 +25,7 @@ docs/ClusterImageRegistryStatus.md
 docs/ClusterList.md
 docs/Condition.md
 docs/DefaultApi.md
+docs/DomainName.md
 docs/EnvVar.md
 docs/Error.md
 docs/ErrorAllOf.md
@@ -100,6 +101,7 @@ model_cluster_image_registry_state.go
 model_cluster_image_registry_status.go
 model_cluster_list.go
 model_condition.go
+model_domain_name.go
 model_env_var.go
 model_error.go
 model_error_all_of.go

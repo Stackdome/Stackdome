@@ -73,3 +73,16 @@ func (ws *Stack) VolumeMountIds() []string {
 	}
 	return volumeMountIds
 }
+
+func (s *Stack) ExposedPortFqdnMap() map[string]map[int]string {
+	exposedPortFqdnMap := make(map[string]map[int]string)
+	for i := range s.StackResources {
+		exposedPortFqdnMap[s.StackResources[i].Name] = make(map[int]string)
+		for j := range s.StackResources[i].Ports {
+			if s.StackResources[i].Ports[j].ExposedToPublic {
+				exposedPortFqdnMap[s.StackResources[i].Name][s.StackResources[i].Ports[j].Number] = s.StackResources[i].Ports[j].ExposedFqdn
+			}
+		}
+	}
+	return exposedPortFqdnMap
+}

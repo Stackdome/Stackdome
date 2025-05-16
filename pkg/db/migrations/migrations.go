@@ -21,4 +21,5 @@ var MigrationList = []*gormigrate.Migration{
 	removeOrganisationColumnFromUsers(),
 	addNamespaceToStackResourcesTable(),
 	createClusterImageRegistriesTable(),
+	createDomainsTable(),
 }

@@ -61,13 +61,22 @@ func (d dbOrganisationStore) GetDefaultOrg(ctx context.Context) (*models.Organis
 
 func (d dbOrganisationStore) Delete(ctx context.Context, id string) *errors.ServiceError {
 	grm := d.sessionFactory.New(ctx)
-	err := grm.Where("id = ?", id).Delete(&models.Organisation{}).Error
+	tx := grm.Begin()
+	err := tx.Where("id = ?", id).Delete(&models.Organisation{}).Error
 	if err != nil {
+		tx.Rollback()
 		if err == gorm.ErrRecordNotFound {
 			return errors.NotFound("organisation with id '%s' not found", id)
 		}
 		return errors.GeneralError("failed to delete organisation: %s", err.Error())
 	}
+
+	err = tx.Where("owner_id = ? AND owner_type = ?", id, models.OwnerTypeOrganisation).Delete(&models.Domain{}).Error
+	if err != nil {
+		tx.Rollback()
+		return errors.GeneralError("failed to delete domains for organisation: %s", err.Error())
+	}
+	tx.Commit()
 	return nil
 }
 

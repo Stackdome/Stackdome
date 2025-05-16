@@ -429,6 +429,7 @@ func convertPorts(ports []openapi.Port) []models.Port {
 		}
 		result[i].Protocol = port.GetProtocol()
 		result[i].ExposedToPublic = port.GetExposedToPublic()
+		result[i].SubdomainPrefix = port.GetSubdomainPrefix()
 	}
 	return models.Ports(result)
 }

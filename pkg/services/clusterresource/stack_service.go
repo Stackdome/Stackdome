@@ -2,10 +2,7 @@ package clusterresource
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/base32"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
@@ -17,20 +14,20 @@ import (
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
 
-type ClusterWorkspaceService interface {
+type ClusterStackService interface {
 	CreateStackInCluster(ctx context.Context, stack *models.Stack) *ClusterResourceError
 	DeleteStackInCluster(ctx context.Context, stack *models.Stack) *ClusterResourceError
 	UpdateStackInCluster(ctx context.Context, stack *models.Stack) *ClusterResourceError
 }
 
-type clusterWorkspaceService struct {
+type clusterStackService struct {
 	clusterService      DBClusterService
 	clusterManager      clustermanager.ClusterManager
 	organisationService DBOrganisationService
 	logger              logger.Logger
 }
 
-type ClusterWorkspaceServiceSpec struct {
+type ClusterStackServiceSpec struct {
 	ClusterService      DBClusterService
 	OrganisationService DBOrganisationService
 	UserService         DBUserService
@@ -38,8 +35,8 @@ type ClusterWorkspaceServiceSpec struct {
 	Logger              logger.Logger
 }
 
-func NewClusterWorkspaceService(spec ClusterWorkspaceServiceSpec) ClusterWorkspaceService {
-	return &clusterWorkspaceService{
+func NewClusterStackService(spec ClusterStackServiceSpec) ClusterStackService {
+	return &clusterStackService{
 		clusterService:      spec.ClusterService,
 		clusterManager:      spec.ClusterManager,
 		organisationService: spec.OrganisationService,
@@ -47,17 +44,11 @@ func NewClusterWorkspaceService(spec ClusterWorkspaceServiceSpec) ClusterWorkspa
 	}
 }
 
-func (s *clusterWorkspaceService) CreateStackInCluster(ctx context.Context, stack *models.Stack) *ClusterResourceError {
+func (s *clusterStackService) CreateStackInCluster(ctx context.Context, stack *models.Stack) *ClusterResourceError {
 	cluster, err := s.clusterService.GetClusterForOrg(ctx, stack.OrganisationID)
 	if err != nil {
 		s.logger.Errorf("failed to get cluster for org: %v", err)
 		return newError("failed to get cluster for org", err)
-	}
-
-	organisation, err := s.organisationService.Get(ctx, stack.OrganisationID)
-	if err != nil {
-		s.logger.Errorf("failed to get organisation: %v", err)
-		return newError("failed to get organisation", err)
 	}
 
 	clusterClient, clientGetErr := s.clusterManager.GetClient(cluster.ID)
@@ -66,7 +57,7 @@ func (s *clusterWorkspaceService) CreateStackInCluster(ctx context.Context, stac
 		return newError("failed to get cluster client", clientGetErr)
 	}
 
-	desiredCR := s.desiredObjectInCluster(stack, organisation)
+	desiredCR := s.desiredObjectInCluster(stack)
 
 	if err := clusterClient.Create(ctx, desiredCR); err != nil {
 		s.logger.Errorf("failed to create workspaceCR in cluster: %v", err)
@@ -75,16 +66,11 @@ func (s *clusterWorkspaceService) CreateStackInCluster(ctx context.Context, stac
 	return nil
 }
 
-func (s *clusterWorkspaceService) DeleteStackInCluster(ctx context.Context, stack *models.Stack) *ClusterResourceError {
+func (s *clusterStackService) DeleteStackInCluster(ctx context.Context, stack *models.Stack) *ClusterResourceError {
 	cluster, err := s.clusterService.GetClusterForOrg(ctx, stack.OrganisationID)
 	if err != nil {
 		s.logger.Errorf("failed to get cluster for org: %v", err)
 		return newError("failed to get cluster for org", err)
-	}
-	organisation, err := s.organisationService.Get(ctx, stack.OrganisationID)
-	if err != nil {
-		s.logger.Errorf("failed to get organisation: %v", err)
-		return newError("failed to get organisation", err)
 	}
 
 	clusterClient, clientGetErr := s.clusterManager.GetClient(cluster.ID)
@@ -93,30 +79,35 @@ func (s *clusterWorkspaceService) DeleteStackInCluster(ctx context.Context, stac
 		return newError("failed to get cluster client", clientGetErr)
 	}
 
-	desiredCR := s.desiredObjectInCluster(stack, organisation)
-
-	if err := clusterClient.Delete(ctx, desiredCR); err != nil {
+	stackCr := &corev1alpha1.Stack{}
+	if err := clusterClient.Get(ctx, client.ObjectKey{
+		Name:      stack.Name,
+		Namespace: stack.Namespace,
+	}, stackCr); err != nil {
 		if k8sapierrors.IsNotFound(err) {
-			s.logger.Warn(ctx, "workspace storage '%s' not found in cluster", stack.ID)
+			s.logger.Warn(ctx, "stack '%s' not found in cluster", stack.ID)
 			return nil
 		}
-		s.logger.Errorf("failed to delete workspaceCR in cluster: %v", err)
-		return newError("failed to delete workspaceCR in cluster", err)
+		s.logger.Errorf("failed to get stackCR in cluster: %v", err)
+		return newError("failed to get stackCR in cluster", err)
+	}
+
+	if err := clusterClient.Delete(ctx, stackCr); err != nil {
+		if k8sapierrors.IsNotFound(err) {
+			s.logger.Warn(ctx, "stack '%s' not found in cluster", stack.ID)
+			return nil
+		}
+		s.logger.Errorf("failed to delete stackCR in cluster: %v", err)
+		return newError("failed to delete stackCR`1 in cluster", err)
 	}
 	return nil
 }
 
-func (s *clusterWorkspaceService) UpdateStackInCluster(ctx context.Context, stack *models.Stack) *ClusterResourceError {
+func (s *clusterStackService) UpdateStackInCluster(ctx context.Context, stack *models.Stack) *ClusterResourceError {
 	cluster, err := s.clusterService.GetClusterForOrg(ctx, stack.OrganisationID)
 	if err != nil {
 		s.logger.Errorf("failed to get cluster for org: %v", err)
 		return newError("failed to get cluster for org", err)
-	}
-
-	organisation, err := s.organisationService.Get(ctx, stack.OrganisationID)
-	if err != nil {
-		s.logger.Errorf("failed to get organisation: %v", err)
-		return newError("failed to get organisation", err)
 	}
 
 	clusterClient, clientGetErr := s.clusterManager.GetClient(cluster.ID)
@@ -125,7 +116,7 @@ func (s *clusterWorkspaceService) UpdateStackInCluster(ctx context.Context, stac
 		return newError("failed to get cluster client", clientGetErr)
 	}
 
-	desiredstackCR := s.desiredObjectInCluster(stack, organisation)
+	desiredstackCR := s.desiredObjectInCluster(stack)
 	var existingstackCR corev1alpha1.Stack
 
 	if err := clusterClient.Get(ctx, client.ObjectKeyFromObject(desiredstackCR), &existingstackCR); err != nil {
@@ -141,7 +132,7 @@ func (s *clusterWorkspaceService) UpdateStackInCluster(ctx context.Context, stac
 	return nil
 }
 
-func (s *clusterWorkspaceService) desiredObjectInCluster(stack *models.Stack, organisation *models.Organisation) *corev1alpha1.Stack {
+func (s *clusterStackService) desiredObjectInCluster(stack *models.Stack) *corev1alpha1.Stack {
 	stackCR := &corev1alpha1.Stack{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      stack.Name,
@@ -152,14 +143,13 @@ func (s *clusterWorkspaceService) desiredObjectInCluster(stack *models.Stack, or
 			},
 		},
 		Spec: corev1alpha1.StackSpec{
-			Domain:         organisation.DomainName,
-			StackResources: desiredStackResources(stack, organisation),
+			StackResources: desiredStackResources(stack),
 		},
 	}
 	return stackCR
 }
 
-func desiredStackResources(stack *models.Stack, organisation *models.Organisation) []corev1alpha1.StackResourceTemplate {
+func desiredStackResources(stack *models.Stack) []corev1alpha1.StackResourceTemplate {
 	var resources []corev1alpha1.StackResourceTemplate
 	for _, stackResource := range stack.StackResources {
 		resource := corev1alpha1.StackResourceTemplate{
@@ -183,7 +173,7 @@ func desiredStackResources(stack *models.Stack, organisation *models.Organisatio
 		setImageSpec(&resource, stackResource)
 		setInitSpec(&resource, stackResource)
 		setVolumeMounts(&resource, stackResource)
-		setPorts(&resource, stackResource, organisation)
+		setPorts(&resource, stackResource)
 		setEnvVars(&resource, stackResource)
 		resources = append(resources, resource)
 	}
@@ -287,7 +277,7 @@ func setVolumeMounts(resourceTemplateCr *corev1alpha1.StackResourceTemplate, sta
 	}
 }
 
-func setPorts(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource, organisation *models.Organisation) {
+func setPorts(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) {
 	if len(stackResource.Ports) > 0 {
 		resourceTemplateCr.Spec.Ports = make([]corev1alpha1.Port, len(stackResource.Ports))
 		for i, port := range stackResource.Ports {
@@ -296,11 +286,8 @@ func setPorts(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResou
 				ExposeToPublic: port.ExposedToPublic,
 				IsHttp:         strings.ToLower(port.Protocol) == "http",
 			}
-			if len(port.SubdomainPrefix) == 0 {
-				// Set prefix + domain name from the org.
-				resourceTemplateCr.Spec.Ports[i].FQDN = fmt.Sprintf("%s.%s", encodeUUIDAndPort(stackResource.ID, port.Number), organisation.DomainName)
-			} else {
-				resourceTemplateCr.Spec.Ports[i].FQDN = fmt.Sprintf("%s.%s", port.SubdomainPrefix, organisation.DomainName)
+			if port.ExposedToPublic {
+				resourceTemplateCr.Spec.Ports[i].FQDN = port.ExposedFqdn
 			}
 		}
 	}
@@ -316,24 +303,4 @@ func setEnvVars(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackRes
 			}
 		}
 	}
-}
-
-func encodeUUIDAndPort(uuid string, port int) string {
-	// Combine UUID and port into a single string
-	input := uuid + ":" + strconv.Itoa(port)
-
-	// Hash the combined string using MD5 (128-bit hash)
-	hasher := md5.New()
-	hasher.Write([]byte(input))
-	hash := hasher.Sum(nil)
-
-	// Encode the hash using Base32 (URL-safe) and trim padding
-	base32Encoded := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(hash)
-
-	// Truncate the result to 16 characters for a shorter subdomain
-	if len(base32Encoded) > 16 {
-		base32Encoded = base32Encoded[:16]
-	}
-
-	return strings.ToLower(base32Encoded)
 }
