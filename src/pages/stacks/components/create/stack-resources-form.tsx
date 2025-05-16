@@ -139,7 +139,7 @@ export default function StackResourcesForm() {
             <AccordionItem
               key={idx}
               value={String(idx)}
-              className="border rounded-md overflow-hidden"
+              className="border rounded-md last:border-b"
               ref={el => { itemRefs.current[idx] = el; }}
             >
               <AccordionTrigger className="px-4 py-4 hover:bg-muted/10 data-[state=open]:bg-muted/40 rounded-t-lg transition-colors duration-200">

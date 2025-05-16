@@ -42,7 +42,7 @@ export default function StackCreatePage() {
 
   return (
     <div className="px-4 pt-6 pb-10">
-      {/* Header with navigation - MOVED AND NOW PART OF SCROLLABLE CONTENT */}
+      {/* Header with navigation */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Create New Stack</h2>
@@ -146,7 +146,7 @@ export default function StackCreatePage() {
           </CardContent>
         </Card>
         {/* Section Card: Stack Resources */}
-        <Card className="mb-6 rounded-lg overflow-hidden">
+        <Card className="mb-6 rounded-lg"> {/* MODIFIED: Removed overflow-hidden */}
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
@@ -158,7 +158,7 @@ export default function StackCreatePage() {
             </div>
           </CardHeader>
           <Separator />
-          <CardContent className="p-0" style={{ height: "500px" }}>
+          <CardContent className="p-0">
             <StackResourcesForm />
           </CardContent>
         </Card>
