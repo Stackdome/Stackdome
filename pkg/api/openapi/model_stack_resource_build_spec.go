@@ -20,22 +20,19 @@ type StackResourceBuildSpec struct {
 	ContextPathWithinSource string              `json:"context_path_within_source"`
 	DockerfilePath          string              `json:"dockerfile_path"`
 	SourceRevision          BuildSourceRevision `json:"source_revision"`
-	ImageRepositoryUrl      string              `json:"image_repository_url"`
-	InsecureRegistry        bool                `json:"insecure_registry"`
+	ImageRepository         *ImageRepository    `json:"image_repository,omitempty"`
 }
 
 // NewStackResourceBuildSpec instantiates a new StackResourceBuildSpec object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewStackResourceBuildSpec(sourceContext BuildSourceContext, contextPathWithinSource string, dockerfilePath string, sourceRevision BuildSourceRevision, imageRepositoryUrl string, insecureRegistry bool) *StackResourceBuildSpec {
+func NewStackResourceBuildSpec(sourceContext BuildSourceContext, contextPathWithinSource string, dockerfilePath string, sourceRevision BuildSourceRevision) *StackResourceBuildSpec {
 	this := StackResourceBuildSpec{}
 	this.SourceContext = sourceContext
 	this.ContextPathWithinSource = contextPathWithinSource
 	this.DockerfilePath = dockerfilePath
 	this.SourceRevision = sourceRevision
-	this.ImageRepositoryUrl = imageRepositoryUrl
-	this.InsecureRegistry = insecureRegistry
 	return &this
 }
 
@@ -143,52 +140,36 @@ func (o *StackResourceBuildSpec) SetSourceRevision(v BuildSourceRevision) {
 	o.SourceRevision = v
 }
 
-// GetImageRepositoryUrl returns the ImageRepositoryUrl field value
-func (o *StackResourceBuildSpec) GetImageRepositoryUrl() string {
-	if o == nil {
-		var ret string
+// GetImageRepository returns the ImageRepository field value if set, zero value otherwise.
+func (o *StackResourceBuildSpec) GetImageRepository() ImageRepository {
+	if o == nil || o.ImageRepository == nil {
+		var ret ImageRepository
 		return ret
 	}
-
-	return o.ImageRepositoryUrl
+	return *o.ImageRepository
 }
 
-// GetImageRepositoryUrlOk returns a tuple with the ImageRepositoryUrl field value
+// GetImageRepositoryOk returns a tuple with the ImageRepository field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StackResourceBuildSpec) GetImageRepositoryUrlOk() (*string, bool) {
-	if o == nil {
+func (o *StackResourceBuildSpec) GetImageRepositoryOk() (*ImageRepository, bool) {
+	if o == nil || o.ImageRepository == nil {
 		return nil, false
 	}
-	return &o.ImageRepositoryUrl, true
+	return o.ImageRepository, true
 }
 
-// SetImageRepositoryUrl sets field value
-func (o *StackResourceBuildSpec) SetImageRepositoryUrl(v string) {
-	o.ImageRepositoryUrl = v
-}
-
-// GetInsecureRegistry returns the InsecureRegistry field value
-func (o *StackResourceBuildSpec) GetInsecureRegistry() bool {
-	if o == nil {
-		var ret bool
-		return ret
+// HasImageRepository returns a boolean if a field has been set.
+func (o *StackResourceBuildSpec) HasImageRepository() bool {
+	if o != nil && o.ImageRepository != nil {
+		return true
 	}
 
-	return o.InsecureRegistry
+	return false
 }
 
-// GetInsecureRegistryOk returns a tuple with the InsecureRegistry field value
-// and a boolean to check if the value has been set.
-func (o *StackResourceBuildSpec) GetInsecureRegistryOk() (*bool, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.InsecureRegistry, true
-}
-
-// SetInsecureRegistry sets field value
-func (o *StackResourceBuildSpec) SetInsecureRegistry(v bool) {
-	o.InsecureRegistry = v
+// SetImageRepository gets a reference to the given ImageRepository and assigns it to the ImageRepository field.
+func (o *StackResourceBuildSpec) SetImageRepository(v ImageRepository) {
+	o.ImageRepository = &v
 }
 
 func (o StackResourceBuildSpec) MarshalJSON() ([]byte, error) {
@@ -205,11 +186,8 @@ func (o StackResourceBuildSpec) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["source_revision"] = o.SourceRevision
 	}
-	if true {
-		toSerialize["image_repository_url"] = o.ImageRepositoryUrl
-	}
-	if true {
-		toSerialize["insecure_registry"] = o.InsecureRegistry
+	if o.ImageRepository != nil {
+		toSerialize["image_repository"] = o.ImageRepository
 	}
 	return json.Marshal(toSerialize)
 }

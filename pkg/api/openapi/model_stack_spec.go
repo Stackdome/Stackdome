@@ -17,6 +17,7 @@ import (
 // StackSpec struct for StackSpec
 type StackSpec struct {
 	StackResources []StackResource `json:"stack_resources"`
+	Volumes        []Volume        `json:"Volumes,omitempty"`
 }
 
 // NewStackSpec instantiates a new StackSpec object
@@ -61,10 +62,45 @@ func (o *StackSpec) SetStackResources(v []StackResource) {
 	o.StackResources = v
 }
 
+// GetVolumes returns the Volumes field value if set, zero value otherwise.
+func (o *StackSpec) GetVolumes() []Volume {
+	if o == nil || o.Volumes == nil {
+		var ret []Volume
+		return ret
+	}
+	return o.Volumes
+}
+
+// GetVolumesOk returns a tuple with the Volumes field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackSpec) GetVolumesOk() ([]Volume, bool) {
+	if o == nil || o.Volumes == nil {
+		return nil, false
+	}
+	return o.Volumes, true
+}
+
+// HasVolumes returns a boolean if a field has been set.
+func (o *StackSpec) HasVolumes() bool {
+	if o != nil && o.Volumes != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetVolumes gets a reference to the given []Volume and assigns it to the Volumes field.
+func (o *StackSpec) SetVolumes(v []Volume) {
+	o.Volumes = v
+}
+
 func (o StackSpec) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["stack_resources"] = o.StackResources
+	}
+	if o.Volumes != nil {
+		toSerialize["Volumes"] = o.Volumes
 	}
 	return json.Marshal(toSerialize)
 }

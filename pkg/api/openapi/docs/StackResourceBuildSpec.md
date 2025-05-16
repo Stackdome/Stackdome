@@ -8,14 +8,13 @@ Name | Type | Description | Notes
 **ContextPathWithinSource** | **string** |  | 
 **DockerfilePath** | **string** |  | 
 **SourceRevision** | [**BuildSourceRevision**](BuildSourceRevision.md) |  | 
-**ImageRepositoryUrl** | **string** |  | 
-**InsecureRegistry** | **bool** |  | 
+**ImageRepository** | Pointer to [**ImageRepository**](ImageRepository.md) |  | [optional] 
 
 ## Methods
 
 ### NewStackResourceBuildSpec
 
-`func NewStackResourceBuildSpec(sourceContext BuildSourceContext, contextPathWithinSource string, dockerfilePath string, sourceRevision BuildSourceRevision, imageRepositoryUrl string, insecureRegistry bool, ) *StackResourceBuildSpec`
+`func NewStackResourceBuildSpec(sourceContext BuildSourceContext, contextPathWithinSource string, dockerfilePath string, sourceRevision BuildSourceRevision, ) *StackResourceBuildSpec`
 
 NewStackResourceBuildSpec instantiates a new StackResourceBuildSpec object
 This constructor will assign default values to properties that have it defined,
@@ -110,45 +109,30 @@ and a boolean to check if the value has been set.
 SetSourceRevision sets SourceRevision field to given value.
 
 
-### GetImageRepositoryUrl
+### GetImageRepository
 
-`func (o *StackResourceBuildSpec) GetImageRepositoryUrl() string`
+`func (o *StackResourceBuildSpec) GetImageRepository() ImageRepository`
 
-GetImageRepositoryUrl returns the ImageRepositoryUrl field if non-nil, zero value otherwise.
+GetImageRepository returns the ImageRepository field if non-nil, zero value otherwise.
 
-### GetImageRepositoryUrlOk
+### GetImageRepositoryOk
 
-`func (o *StackResourceBuildSpec) GetImageRepositoryUrlOk() (*string, bool)`
+`func (o *StackResourceBuildSpec) GetImageRepositoryOk() (*ImageRepository, bool)`
 
-GetImageRepositoryUrlOk returns a tuple with the ImageRepositoryUrl field if it's non-nil, zero value otherwise
+GetImageRepositoryOk returns a tuple with the ImageRepository field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetImageRepositoryUrl
+### SetImageRepository
 
-`func (o *StackResourceBuildSpec) SetImageRepositoryUrl(v string)`
+`func (o *StackResourceBuildSpec) SetImageRepository(v ImageRepository)`
 
-SetImageRepositoryUrl sets ImageRepositoryUrl field to given value.
+SetImageRepository sets ImageRepository field to given value.
 
+### HasImageRepository
 
-### GetInsecureRegistry
+`func (o *StackResourceBuildSpec) HasImageRepository() bool`
 
-`func (o *StackResourceBuildSpec) GetInsecureRegistry() bool`
-
-GetInsecureRegistry returns the InsecureRegistry field if non-nil, zero value otherwise.
-
-### GetInsecureRegistryOk
-
-`func (o *StackResourceBuildSpec) GetInsecureRegistryOk() (*bool, bool)`
-
-GetInsecureRegistryOk returns a tuple with the InsecureRegistry field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetInsecureRegistry
-
-`func (o *StackResourceBuildSpec) SetInsecureRegistry(v bool)`
-
-SetInsecureRegistry sets InsecureRegistry field to given value.
-
+HasImageRepository returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -37,6 +37,7 @@ docs/GitRepoSource.md
 docs/ImageBuild.md
 docs/ImageBuildList.md
 docs/ImageBuildStatus.md
+docs/ImageRepository.md
 docs/ImageSpec.md
 docs/Ingress.md
 docs/InitSpec.md
@@ -113,6 +114,7 @@ model_git_repo_source.go
 model_image_build.go
 model_image_build_list.go
 model_image_build_status.go
+model_image_repository.go
 model_image_spec.go
 model_ingress.go
 model_init_spec.go
