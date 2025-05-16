@@ -17,6 +17,7 @@ type StackResourceService interface {
 	GetByID(ctx context.Context, ID string) (*models.StackResource, *errors.ServiceError)
 	GetByStackIDAndResourceName(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError)
 	Update(ctx context.Context, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
+	InternalUpdateWithTx(ctx context.Context, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, resourceID string, status *models.StackResourceStatus) *errors.ServiceError
 }
 
@@ -24,7 +25,6 @@ type StackResourceServiceSpec struct {
 	SessionFactory       db.SessionFactory
 	WorkspaceUserService WorkspaceUserService
 	StorageService       StackStorageService
-	StackService         StackService
 	Logger               logger.Logger
 }
 
@@ -34,7 +34,6 @@ type stackResourceService struct {
 	sessionFactory       db.SessionFactory
 	workspaceUserService WorkspaceUserService
 	storageService       StackStorageService
-	stackService         StackService
 }
 
 func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService {
@@ -44,7 +43,6 @@ func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService
 		}),
 		workspaceUserService: spec.WorkspaceUserService,
 		storageService:       spec.StorageService,
-		stackService:         spec.StackService,
 		logger:               spec.Logger,
 		sessionFactory:       spec.SessionFactory,
 	}
@@ -72,4 +70,8 @@ func (s *stackResourceService) Update(ctx context.Context, resourceID string, re
 
 func (s *stackResourceService) UpdateStatus(ctx context.Context, resourceID string, status *models.StackResourceStatus) *errors.ServiceError {
 	return s.stackResourceStore.UpdateStatus(ctx, resourceID, status)
+}
+
+func (s *stackResourceService) InternalUpdateWithTx(ctx context.Context, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
+	return s.stackResourceStore.UpdateWithTx(ctx, resourceID, resource)
 }

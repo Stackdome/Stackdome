@@ -202,9 +202,15 @@ func (d *developmentEnvironment) initializeResourceAccessPolicyManager(ctx conte
 func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	d.Logger.Debugf("Initializing services")
 
-	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
+	domainNameService := services.NewDomainsService(services.DomainsServiceSpec{
 		SessionFactory: d.DBSession,
 		Logger:         d.Logger,
+	})
+
+	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
+		DomainNameService: domainNameService,
+		SessionFactory:    d.DBSession,
+		Logger:            d.Logger,
 	})
 
 	userService := services.NewUserService(services.UserServiceSpec{
@@ -233,19 +239,19 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:         d.Logger,
 	})
 
+	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
+		SessionFactory:       d.DBSession,
+		Logger:               d.Logger,
+		WorkspaceUserService: workspaceUserService,
+	})
+
 	stackService := services.NewStackService(services.StackServiceSpec{
 		SessionFactory:       d.DBSession,
 		Logger:               d.Logger,
 		WorkspaceUserService: workspaceUserService,
 		VolumeService:        volumeService,
 		OrganisationService:  organisationService,
-	})
-
-	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
-		SessionFactory:       d.DBSession,
-		Logger:               d.Logger,
-		WorkspaceUserService: workspaceUserService,
-		StackService:         stackService,
+		StackResourceService: stackResourceService,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
@@ -269,6 +275,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		StackResourceService:        stackResourceService,
 		ImageBuildService:           imageBuildService,
 		ClusterImageRegistryService: clusterImageRegistryService,
+		DomainNameService:           domainNameService,
 	}
 
 	return nil
@@ -288,7 +295,7 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 		WorkspaceUserService: d.Services.WorkspaceUserService,
 	})
 
-	clusterWorkspaceService := clusterresource.NewClusterWorkspaceService(clusterresource.ClusterWorkspaceServiceSpec{
+	clusterStackService := clusterresource.NewClusterStackService(clusterresource.ClusterStackServiceSpec{
 		ClusterManager:      d.ClusterManager,
 		OrganisationService: d.Services.OrganisationService,
 		Logger:              d.Logger,
@@ -303,7 +310,7 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 
 	d.Services.WorkspaceUserService.InjectClusterResourceService(workspaceUserClusterResourceService)
 	d.Services.VolumeService.InjectClusterResourceService(volumeClusterResourceService)
-	d.Services.StackService.InjectClusterResourceService(clusterWorkspaceService)
+	d.Services.StackService.InjectClusterResourceService(clusterStackService)
 	d.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	return nil
 }

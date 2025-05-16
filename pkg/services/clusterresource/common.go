@@ -71,3 +71,9 @@ type DBWorkspaceUserService interface {
 type DBOrganisationService interface {
 	Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError)
 }
+
+type DBDomainService interface {
+	DomainToUseForStack(ctx context.Context, stack *models.Stack) (*models.Domain, *errors.ServiceError)
+	Create(ctx context.Context, spec *models.Domain) (*models.Domain, *errors.ServiceError)
+	DeleteForOwner(ctx context.Context, ownerID string, ownerType models.OwnerType) *errors.ServiceError
+}

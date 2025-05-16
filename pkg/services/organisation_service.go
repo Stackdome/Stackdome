@@ -2,8 +2,6 @@ package services
 
 import (
 	"context"
-	"regexp"
-	"strings"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -23,6 +21,7 @@ type OrganisationService interface {
 
 type organisationService struct {
 	organisationStore stores.OrganisationStore
+	domainNameService DomainsService
 	logger            logger.Logger
 }
 
@@ -31,13 +30,15 @@ func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
 		organisationStore: pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		logger: spec.Logger,
+		domainNameService: spec.DomainNameService,
+		logger:            spec.Logger,
 	}
 }
 
 type OrganisationServiceSpec struct {
-	SessionFactory db.SessionFactory
-	Logger         logger.Logger
+	SessionFactory    db.SessionFactory
+	DomainNameService DomainsService
+	Logger            logger.Logger
 }
 
 func (s *organisationService) GetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {
@@ -53,11 +54,24 @@ func (s *organisationService) Create(ctx context.Context, spec *models.Organisat
 	if len(spec.Name) == 0 {
 		return nil, errors.BadRequest("organisation name is required")
 	}
+
 	org, err := s.organisationStore.Create(ctx, spec)
 	if err != nil {
 		s.logger.Errorf("failed to create organisation: %v", err)
 		return nil, err
 	}
+
+	for _, domain := range spec.Domains {
+		domain.OwnerID = org.ID
+		domain.OwnerType = models.OwnerTypeOrganisation
+		createdDomain, err := s.domainNameService.Create(ctx, domain)
+		if err != nil {
+			s.logger.Errorf("failed to create domain: %v", err)
+			return nil, err
+		}
+		org.Domains = append(org.Domains, createdDomain)
+	}
+
 	return org, nil
 }
 
@@ -67,6 +81,12 @@ func (s *organisationService) Get(ctx context.Context, ID string) (*models.Organ
 		s.logger.Errorf("failed to get organisation: %v", err)
 		return nil, err
 	}
+	domains, err := s.domainNameService.ListByOwner(ctx, ID, models.OwnerTypeOrganisation)
+	if err != nil {
+		s.logger.Errorf("failed to list domains: %v", err)
+		return nil, err
+	}
+	org.Domains = domains
 	return org, nil
 }
 
@@ -81,15 +101,10 @@ func (s *organisationService) Delete(ctx context.Context, ID string) *errors.Ser
 
 // Update updates an organisation
 func (s *organisationService) Update(ctx context.Context, ID string, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
-	if len(spec.DomainName) == 0 || !IsValidDomain(spec.DomainName) {
-		return nil, errors.BadRequest("domain name is required and must be a valid domain")
-	}
-
 	updatedOrg, err := s.Get(ctx, ID)
 	if err != nil {
 		return nil, err
 	}
-	updatedOrg.DomainName = spec.DomainName
 	updatedOrg.Name = spec.Name
 	// We dont want to set the default organisation by orgs created through the external API.
 	updatedOrg.Default = false
@@ -99,17 +114,29 @@ func (s *organisationService) Update(ctx context.Context, ID string, spec *model
 		s.logger.Errorf("failed to update organisation: %v", err)
 		return nil, err
 	}
-	return org, nil
-}
 
-func IsValidDomain(domain string) bool {
-	if strings.TrimSpace(domain) == "" {
-		return false
+	for _, domain := range spec.Domains {
+		existing, err := s.domainNameService.GetByFqdn(ctx, domain.Fqdn)
+		if err != nil && err.Code != errors.ErrorNotFound {
+			s.logger.Errorf("failed to check if domain exists: %v", err)
+			return nil, err
+		}
+		if existing != nil {
+			continue
+		}
+		domain.OwnerID = ID
+		domain.OwnerType = models.OwnerTypeOrganisation
+		_, err = s.domainNameService.Create(ctx, domain)
+		if err != nil {
+			s.logger.Errorf("failed to create domain: %v", err)
+			return nil, err
+		}
 	}
-
-	// Match RFC standards for DNS domain names
-	pattern := `^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$`
-
-	regex := regexp.MustCompile(pattern)
-	return regex.MatchString(domain)
+	domains, err := s.domainNameService.ListByOwner(ctx, ID, models.OwnerTypeOrganisation)
+	if err != nil {
+		s.logger.Errorf("failed to list domains: %v", err)
+		return nil, err
+	}
+	org.Domains = domains
+	return org, nil
 }

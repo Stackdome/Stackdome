@@ -33,9 +33,7 @@ func (b *clusterResourceBuilder) BuildStackCR(stack *models.Stack, organisation 
 				models.ObjectServerGeneration: fmt.Sprintf("%d", stack.Version),
 			},
 		},
-		Spec: corev1alpha1.StackSpec{
-			Domain: organisation.DomainName,
-		},
+		Spec: corev1alpha1.StackSpec{},
 	}
 
 	stackResourcesTemplates := make([]corev1alpha1.StackResourceTemplate, len(stack.StackResources))
@@ -194,11 +192,8 @@ func setPorts(resourceSpecCr *corev1alpha1.StackResourceSpec, stackResource *mod
 				ExposeToPublic: port.ExposedToPublic,
 				IsHttp:         strings.ToLower(port.Protocol) == "http",
 			}
-			if len(port.SubdomainPrefix) == 0 {
-				// Set prefix + domain name from the org.
-				resourceSpecCr.Ports[i].FQDN = fmt.Sprintf("%s.%s", encodeUUIDAndPort(stackResource.ID, port.Number), organisation.DomainName)
-			} else {
-				resourceSpecCr.Ports[i].FQDN = fmt.Sprintf("%s.%s", port.SubdomainPrefix, organisation.DomainName)
+			if port.ExposedToPublic {
+				resourceSpecCr.Ports[i].FQDN = port.ExposedFqdn
 			}
 		}
 	}

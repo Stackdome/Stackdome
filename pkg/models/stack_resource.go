@@ -51,10 +51,12 @@ type Ingress struct {
 }
 
 type Port struct {
-	Number          int    `json:"number"`
-	Protocol        string `json:"protocol"`
-	ExposedToPublic bool   `json:"exposed_to_public"`
-	SubdomainPrefix string `json:"subdomain_prefix"`
+	Number                   int    `json:"number"`
+	Protocol                 string `json:"protocol"`
+	ExposedToPublic          bool   `json:"exposed_to_public"`
+	SubdomainPrefix          string `json:"subdomain_prefix"`
+	GeneratedSubdomainPrefix string `json:"generated_subdomain_prefix"`
+	ExposedFqdn              string `json:"fqdn"`
 }
 
 type LifecycleConfig struct {

@@ -38,8 +38,8 @@ func ConvertUser(in *openapi.UserSignupRequest) *models.User {
 		res.OrganisationID = *in.OrganisationId
 	} else if in.HasOrganisation() {
 		res.Organisation = &models.Organisation{
-			Name:       in.Organisation.GetName(),
-			DomainName: in.Organisation.GetDomainName(),
+			Name:    in.Organisation.GetName(),
+			Domains: ConvertDomains(in.Organisation.GetDomains()),
 		}
 	}
 	return res

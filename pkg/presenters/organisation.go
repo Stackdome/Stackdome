@@ -7,25 +7,46 @@ import (
 
 func PresentOrganisation(in *models.Organisation) openapi.Organisation {
 	return openapi.Organisation{
-		Id:         &in.ID,
-		Name:       &in.Name,
-		DomainName: &in.DomainName,
-		IsDefault:  &in.Default,
-		CreatedAt:  &in.CreatedAt,
-		UpdatedAt:  &in.UpdatedAt,
+		Id:        &in.ID,
+		Name:      &in.Name,
+		Domains:   PresentDomains(in.Domains),
+		IsDefault: &in.Default,
+		CreatedAt: &in.CreatedAt,
+		UpdatedAt: &in.UpdatedAt,
 	}
 
+}
+
+func PresentDomains(in []*models.Domain) []openapi.DomainName {
+	domains := make([]openapi.DomainName, len(in))
+	for i, domain := range in {
+		domains[i] = openapi.DomainName{
+			Id:   &domain.ID,
+			Fqdn: &domain.Fqdn,
+		}
+	}
+	return domains
 }
 
 func ConvertOrganisation(in openapi.Organisation) *models.Organisation {
 	res := &models.Organisation{
 		Default: false,
 	}
-	if in.HasDomainName() {
-		res.DomainName = *in.DomainName
+	if in.HasDomains() {
+		res.Domains = ConvertDomains(in.Domains)
 	}
 	if in.HasName() {
 		res.Name = *in.Name
 	}
 	return res
+}
+
+func ConvertDomains(in []openapi.DomainName) []*models.Domain {
+	domains := make([]*models.Domain, len(in))
+	for i, domain := range in {
+		domains[i] = &models.Domain{
+			Fqdn: *domain.Fqdn,
+		}
+	}
+	return domains
 }

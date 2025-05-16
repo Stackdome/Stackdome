@@ -6,7 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** |  | [optional] 
 **Name** | Pointer to **string** |  | [optional] 
-**DomainName** | Pointer to **string** |  | [optional] 
+**Domains** | Pointer to [**[]DomainName**](DomainName.md) |  | [optional] 
 **IsDefault** | Pointer to **bool** |  | [optional] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] 
 **UpdatedAt** | Pointer to **time.Time** |  | [optional] 
@@ -80,30 +80,30 @@ SetName sets Name field to given value.
 
 HasName returns a boolean if a field has been set.
 
-### GetDomainName
+### GetDomains
 
-`func (o *Organisation) GetDomainName() string`
+`func (o *Organisation) GetDomains() []DomainName`
 
-GetDomainName returns the DomainName field if non-nil, zero value otherwise.
+GetDomains returns the Domains field if non-nil, zero value otherwise.
 
-### GetDomainNameOk
+### GetDomainsOk
 
-`func (o *Organisation) GetDomainNameOk() (*string, bool)`
+`func (o *Organisation) GetDomainsOk() (*[]DomainName, bool)`
 
-GetDomainNameOk returns a tuple with the DomainName field if it's non-nil, zero value otherwise
+GetDomainsOk returns a tuple with the Domains field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetDomainName
+### SetDomains
 
-`func (o *Organisation) SetDomainName(v string)`
+`func (o *Organisation) SetDomains(v []DomainName)`
 
-SetDomainName sets DomainName field to given value.
+SetDomains sets Domains field to given value.
 
-### HasDomainName
+### HasDomains
 
-`func (o *Organisation) HasDomainName() bool`
+`func (o *Organisation) HasDomains() bool`
 
-HasDomainName returns a boolean if a field has been set.
+HasDomains returns a boolean if a field has been set.
 
 ### GetIsDefault
 
