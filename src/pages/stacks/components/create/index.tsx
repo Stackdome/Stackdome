@@ -1,48 +1,270 @@
-import { useState } from "react";
+import React, { useState, useCallback, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import StackResourcesForm from "./stack-resources-form";
 import { Button } from "@/components/ui/button";
-import { Rocket, Tag as TagIcon, X } from "lucide-react";
+import { Rocket, Tag as TagIcon, X, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Label as UILabel } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { 
+  StackCreateSchema, 
+  type StackCreateData, 
+  type StackResourceData,
+} from "@/pages/stacks/schemas/stack-create-schema"; 
 
-// Types from OpenAPI
-import type { components } from "@/api/types/openapi";
+type FormErrors = { [path: string]: string | undefined };
 
-type Label = components["schemas"]["Label"];
+const mockCreateStackApi = (payload: StackCreateData): Promise<{ success: boolean; error?: string; errors?: FormErrors }> => {
+  console.log("Mock API called with payload:", JSON.stringify(payload, null, 2));
+  return new Promise(resolve => {
+    setTimeout(() => {
+      if (payload.name === "fail_validation") {
+        resolve({ 
+          success: false, 
+          errors: { 
+            "name": "This stack name is blacklisted by mock.",
+            "spec.stack_resources.1.name": "Resource name 'db' is too common.",
+            "spec.stack_resources.1._form": "Mock API validation failed for this resource."
+          } 
+        });
+      } else if (payload.name === "fail_api_generic") {
+        resolve({ success: false, error: "A generic API error occurred. Please try again." });
+      }
+      else {
+        resolve({ success: true });
+      }
+    }, 1000);
+  });
+};
+
+const setNestedValue = <T extends Record<string, any>>(
+  obj: T, 
+  path: string, 
+  value: any
+): T => {
+  const keys = path.split('.');
+  let current: any = obj;
+  keys.forEach((key, index) => {
+    if (index === keys.length - 1) {
+      current[key] = value;
+    } else {
+      if (!current[key] || typeof current[key] !== 'object') {
+        current[key] = /^[0-9]+$/.test(keys[index + 1]) ? [] : {};
+      }
+      current = current[key];
+    }
+  });
+  return obj;
+};
 
 export default function StackCreatePage() {
-  const [stackName, setStackName] = useState("");
-  const [labels, setLabels] = useState<Label[]>([]);
-  const [currentLabel, setCurrentLabel] = useState("");
+  const [formData, setFormData] = useState<Partial<StackCreateData>>({
+    name: "",
+    workspace_name: "default",
+    labels: [],
+    spec: {
+      stack_resources: [],
+    },
+  });
+  const [currentLabelInput, setCurrentLabelInput] = useState("");
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleChange = (path: string, value: string | number | boolean | object | null) => {
+    setFormData(prev => {
+      const newState = JSON.parse(JSON.stringify(prev)) as Partial<StackCreateData>;
+      setNestedValue(newState, path, value);
+      return newState;
+    });
+    if (formErrors[path]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[path];
+        return newErrors;
+      });
+    }
+  };
   
+  const handleLabelInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCurrentLabelInput(e.target.value);
+  };
+
   const handleAddLabel = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && currentLabel.trim()) {
-      // Simple key-value parser (format: key=value or just key)
-      const labelParts = currentLabel.trim().split("=");
-      const key = labelParts[0].trim();
-      const value = labelParts.length > 1 ? labelParts[1].trim() : "true";
-      
-      if (key) {
-        setLabels(prev => [...prev, { key, value }]);
-        setCurrentLabel("");
-      }
+    if (e.key === "Enter" && currentLabelInput.trim()) {
       e.preventDefault();
+      const labelStr = currentLabelInput.trim();
+      const parts = labelStr.split('=');
+      const key = parts[0].trim();
+      const value = parts.length > 1 ? parts.slice(1).join('=').trim() : "";
+
+      if (key) {
+        setFormData(prev => ({
+          ...prev,
+          labels: [...(prev.labels || []), { key, value }],
+        }));
+        setCurrentLabelInput("");
+        if (formErrors["labels"]) {
+          setFormErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors["labels"];
+            return newErrors;
+          });
+        }
+      }
     }
   };
   
   const removeLabel = (indexToRemove: number) => {
-    setLabels(prev => prev.filter((_, idx) => idx !== indexToRemove));
+    setFormData(prev => ({
+      ...prev,
+      labels: (prev.labels || []).filter((_, idx) => idx !== indexToRemove),
+    }));
+    const errorPathsToClear = [`labels.${indexToRemove}.key`, `labels.${indexToRemove}.value`, `labels.${indexToRemove}`];
+    setFormErrors(prev => {
+      const newErrors = { ...prev };
+      errorPathsToClear.forEach(path => delete newErrors[path]);
+      return newErrors;
+    });
   };
+
+  const handleResourcesChange = useCallback((updatedResources: Partial<StackResourceData>[]) => {
+    setFormData(prev => ({
+      ...prev,
+      spec: {
+        ...(prev.spec || {}),
+        stack_resources: updatedResources as StackResourceData[],
+      }
+    }));
+    if (formErrors["spec.stack_resources"]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors["spec.stack_resources"];
+        Object.keys(newErrors).forEach(key => {
+          if (key.startsWith("spec.stack_resources.")) {
+            delete newErrors[key];
+          }
+        });
+        return newErrors;
+      });
+    }
+  }, [formErrors]);
+
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    setApiError(null);
+    setFormErrors({});
+
+    const payloadToValidate: StackCreateData = {
+      name: formData.name || "",
+      workspace_name: formData.workspace_name || "default",
+      labels: formData.labels || [],
+      spec: {
+        stack_resources: (formData.spec?.stack_resources || []).map(sr => {
+          const resource: StackResourceData = {
+            name: sr.name || "",
+            sourceType: sr.sourceType || 'image',
+            labels: sr.labels?.length ? sr.labels : undefined,
+            depends_on: sr.depends_on?.length ? sr.depends_on : undefined,
+            ports: sr.ports?.length ? sr.ports : undefined,
+            execution_config: sr.execution_config && (sr.execution_config.command?.length || sr.execution_config.args?.length || sr.execution_config.environment_variables?.length) ? {
+              command: sr.execution_config.command?.length ? sr.execution_config.command : undefined,
+              args: sr.execution_config.args?.length ? sr.execution_config.args : undefined,
+              environment_variables: sr.execution_config.environment_variables?.length ? sr.execution_config.environment_variables : undefined,
+            } : undefined,
+            init_spec: sr.init_spec && (sr.init_spec.command?.length || sr.init_spec.args?.length || sr.init_spec.image_spec?.image) ? {
+                command: sr.init_spec.command?.length ? sr.init_spec.command : undefined,
+                args: sr.init_spec.args?.length ? sr.init_spec.args : undefined,
+                image_spec: sr.init_spec.image_spec?.image ? { image: sr.init_spec.image_spec.image } : undefined,
+            } : undefined,
+          };
+
+          if (sr.sourceType === 'image') {
+            resource.image_spec = sr.image_spec?.image ? { image: sr.image_spec.image } : undefined;
+            resource.build_spec = undefined;
+          } else if (sr.sourceType === 'git') {
+            resource.build_spec = sr.build_spec ? {
+              source_context: {
+                git_repo: sr.build_spec.source_context?.git_repo?.repo_url 
+                  ? { repo_url: sr.build_spec.source_context.git_repo.repo_url } 
+                  : undefined,
+              },
+              context_path_within_source: sr.build_spec.context_path_within_source || "./",
+              dockerfile_path: sr.build_spec.dockerfile_path || "Dockerfile",
+              image_repository_url: sr.build_spec.image_repository_url?.url 
+                ? { url: sr.build_spec.image_repository_url.url, cluster_registry_id: sr.build_spec.image_repository_url.cluster_registry_id } 
+                : { url: sr.build_spec.image_repository_url?.url || "", cluster_registry_id: sr.build_spec.image_repository_url?.cluster_registry_id },
+              insecure_registry: sr.build_spec.insecure_registry || false,
+              source_revision: sr.build_spec.source_revision?.git_repo_revision 
+                ? { git_repo_revision: sr.build_spec.source_revision.git_repo_revision } 
+                : undefined,
+            } : undefined;
+            resource.image_spec = undefined;
+          }
+          if (resource.sourceType !== 'git') resource.build_spec = undefined;
+          if (resource.sourceType !== 'image') resource.image_spec = undefined;
+
+          return resource;
+        }),
+      },
+    };
+    
+    const validationResult = StackCreateSchema.safeParse(payloadToValidate);
+    console.log("Validation result:", validationResult);
+    if (!validationResult.success) {
+      const newErrors: FormErrors = {};
+      validationResult.error.issues.forEach(issue => {
+        const pathKey = issue.path.join('.');
+        if (!newErrors[pathKey]) {
+          newErrors[pathKey] = issue.message;
+        }
+      });
+      setFormErrors(newErrors);
+      setIsLoading(false);
+      const formLevelError = validationResult.error.issues.find(issue => issue.path.length === 0);
+      if (formLevelError && !apiError) {
+        setApiError(formLevelError.message);
+      }
+      return;
+    }
+
+    const response = await mockCreateStackApi(validationResult.data);
+    setIsLoading(false);
+
+    if (response.success) {
+      navigate("/stacks");
+    } else {
+      if (response.errors) {
+        setFormErrors(response.errors);
+      } else if (response.error) {
+        setApiError(response.error);
+      } else {
+        setApiError("An unknown error occurred during stack creation.");
+      }
+    }
+  };
+
+  type StackResourcesFormErrors = { [index: number]: { [field: string]: string | undefined } };
+
+  const resourcesErrors: StackResourcesFormErrors = Object.entries(formErrors)
+    .filter(([key]) => key.startsWith("spec.stack_resources."))
+    .reduce((acc: StackResourcesFormErrors, [key, value]) => {
+      const pathParts = key.split('.');
+      if (pathParts.length >= 4) {
+        const index = parseInt(pathParts[2], 10);
+        const fieldName = pathParts.slice(3).join('.');
+        if (!acc[index]) acc[index] = {};
+        acc[index][fieldName] = value;
+      }
+      return acc;
+    }, {});
 
   return (
     <div className="px-4 pt-6 pb-10">
-      {/* Header with navigation */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Create New Stack</h2>
@@ -51,85 +273,96 @@ export default function StackCreatePage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => {
-            if (window.history.length > 2) {
-              navigate(-1);
+          <Button variant="outline" onClick={() => { 
+            if (window.history.length > 2 && window.history.state && window.history.state.idx !== 0) {
+                navigate(-1); 
             } else {
-              navigate("/stacks");
+                navigate("/stacks", { replace: true });
             }
-          }}>Cancel</Button>
-          <Button variant="default">
-            <Rocket className="mr-2 h-4 w-4" />
-            Deploy
+           }}>Cancel</Button>
+          <Button variant="default" onClick={handleSubmit} disabled={isLoading}>
+            {isLoading ? "Deploying..." : <><Rocket className="mr-2 h-4 w-4" /> Deploy</>}
           </Button>
         </div>
       </div>
       <Separator className="my-6" />
+
+      {apiError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{apiError}</AlertDescription>
+        </Alert>
+      )}
+      
+      {formErrors[""] && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Configuration Error</AlertTitle>
+          <AlertDescription>{formErrors[""]}</AlertDescription>
+        </Alert>
+      )}
         
-      {/* Content area - cards will flow naturally after the header */}
       <div className="flex flex-col">
-        {/* === Stack Name & Labels Section === */}
         <Card className="mb-6 rounded-lg overflow-hidden">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl">Stack Information</CardTitle>
-              </div>
-            </div>
+            <CardTitle className="text-xl">Stack Information</CardTitle>
           </CardHeader>
           <Separator />
           <CardContent className="pt-6">
             <div className="grid gap-6 max-w-5xl">
               <div>
-                <Label htmlFor="stack-name" className="text-sm font-medium flex items-center gap-1 mb-2">
+                <UILabel htmlFor="stack-name" className="text-sm font-medium flex items-center gap-1 mb-2">
                   Stack Name <span className="text-red-500">*</span>
-                  <Tooltip delayDuration={300}>
-                    <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
-                    <TooltipContent className="max-w-xs" side="right">
-                      <p>A unique name to identify this stack.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </Label>
+                </UILabel>
                 <Input
                   id="stack-name"
-                  value={stackName}
-                  onChange={(e) => setStackName(e.target.value)}
-                  className="max-w-md"
+                  value={formData.name || ""}
+                  onChange={(e) => handleChange("name", e.target.value)}
+                  className={`max-w-md ${formErrors.name ? "border-red-500" : ""}`}
                   placeholder="my-application-stack"
                   required
                 />
+                {formErrors.name && <p className="text-sm text-red-500 mt-1">{formErrors.name}</p>}
               </div>
               
               <div>
-                <Label htmlFor="stack-labels" className="text-sm font-medium flex items-center gap-1 mb-2">
+                <UILabel htmlFor="stack-labels" className="text-sm font-medium flex items-center gap-1 mb-2">
                   Labels
-                  <Tooltip delayDuration={300}>
-                    <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
-                    <TooltipContent className="max-w-xs" side="right">
-                      <p>Add metadata to your stack using key-value labels. Format: key=value or just a tag (press Enter to add)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </Label>
+                </UILabel>
                 <div className="flex items-center">
                   <TagIcon className="h-4 w-4 mr-2 text-muted-foreground" />
                   <Input
                     id="stack-labels"
-                    value={currentLabel}
-                    onChange={(e) => setCurrentLabel(e.target.value)}
+                    value={currentLabelInput}
+                    onChange={handleLabelInputChange}
                     onKeyDown={handleAddLabel}
-                    className="max-w-md"
+                    className={`max-w-md ${formErrors.labels ? "border-red-500" : ""}`}
                     placeholder="e.g., environment=dev or just tag (press Enter to add)"
                   />
                 </div>
-                {labels.length > 0 && (
+                {formErrors.labels && <p className="text-sm text-red-500 mt-1 whitespace-pre-line">{formErrors.labels}</p>}
+                {(formData.labels || []).map((_label, idx) => {
+                  const keyError = formErrors[`labels.${idx}.key`];
+                  const valueError = formErrors[`labels.${idx}.value`];
+                  const itemError = formErrors[`labels.${idx}`];
+                  return (
+                    <Fragment key={`label-err-${idx}`}>
+                      {itemError && <p className="text-sm text-red-500 mt-1">{`Label ${idx + 1}: ${itemError}`}</p>}
+                      {keyError && <p className="text-sm text-red-500 mt-1">{`Label ${idx + 1} Key: ${keyError}`}</p>}
+                      {valueError && <p className="text-sm text-red-500 mt-1">{`Label ${idx + 1} Value: ${valueError}`}</p>}
+                    </Fragment>
+                  );
+                })}
+                {(formData.labels && formData.labels.length > 0) && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {labels.map((label, idx) => (
+                    {(formData.labels).map((label, idx) => (
                       <Badge 
                         key={idx} 
                         variant="secondary"
                         className="flex items-center gap-1 px-2.5 py-1"
                       >
-                        <span>{label.key}{label.value !== "true" ? `=${label.value}` : ""}</span>
+                        <span>{label.key}{label.value && label.value !== "" ? `=${label.value}` : ""}</span>
                         <button 
                           onClick={() => removeLabel(idx)} 
                           className="ml-1 rounded-full hover:bg-secondary-foreground/20 h-4 w-4 flex items-center justify-center"
@@ -145,24 +378,30 @@ export default function StackCreatePage() {
             </div>
           </CardContent>
         </Card>
-        {/* Section Card: Stack Resources */}
-        <Card className="mb-6 rounded-lg"> {/* MODIFIED: Removed overflow-hidden */}
+        <Card className="mb-6 rounded-lg">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl">Define Stack Resources</CardTitle>
-                <CardDescription className="mt-1">
-                  Configure the containerized services that make up your stack
-                </CardDescription>
-              </div>
-            </div>
+            <CardTitle className="text-xl">Define Stack Resources</CardTitle>
+            <CardDescription className="mt-1">
+              Configure the containerized services that make up your stack
+            </CardDescription>
           </CardHeader>
           <Separator />
           <CardContent className="p-0">
-            <StackResourcesForm />
+            <StackResourcesForm 
+              resources={formData.spec?.stack_resources || []}
+              onResourcesChange={handleResourcesChange}
+              errors={resourcesErrors}
+            />
           </CardContent>
         </Card>
-        {/* === End Stack Resources Section === */}
+        
+        {formErrors["spec.stack_resources"] && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Resource Error</AlertTitle>
+            <AlertDescription>{formErrors["spec.stack_resources"]}</AlertDescription>
+          </Alert>
+        )}
       </div>
     </div>
   );
