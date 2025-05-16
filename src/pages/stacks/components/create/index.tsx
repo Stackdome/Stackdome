@@ -1,100 +1,171 @@
 import { useState } from "react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { useStacks } from "@/pages/stacks/contexts/stack-context";
-import type { StackFormState } from "./types";
-import BasicInfoSection from "./basic-info-section";
-import SourceCodeSection from "./source-code-section";
-import StackConfigSection from "./stack-config-section";
-import EnvironmentSection from "./environment-section";
-import ReviewDeploySection from "./review-deploy-section";
+import StackResourcesForm from "./stack-resources-form";
+import { Button } from "@/components/ui/button";
+import { Rocket, Tag as TagIcon, X } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Types from OpenAPI
+import type { components } from "@/api/types/openapi";
+
+type Label = components["schemas"]["Label"];
 
 export default function StackCreatePage() {
-  // Form state for all sections
-  const [form, setForm] = useState<StackFormState>({
-    name: "",
-    description: "",
-    region: "US East (N. Virginia)",
-    template: "",
-    repositoryUrl: "",
-    yamlConfig: "",
-    environment: {},
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState("basic-info");
-  const { toast } = useToast();
+  const [stackName, setStackName] = useState("");
+  const [labels, setLabels] = useState<Label[]>([]);
+  const [currentLabel, setCurrentLabel] = useState("");
   const navigate = useNavigate();
-  const { addStack } = useStacks();
-
-  // Handlers for each section
-  const handleChange = (values: Partial<StackFormState>) => {
-    setForm((prev) => ({ ...prev, ...values }));
-  };
-
-  const handleSubmit = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      addStack({
-        name: form.name,
-        description: form.description,
-        template: form.template,
-      });
-      setLoading(false);
-      toast({
-        title: "Success",
-        description: "Stack created successfully",
-        variant: "success",
-        duration: 3000,
-      });
-      navigate("/stacks");
-    } catch (e: any) {
-      setError(e?.message || "Failed to create stack");
-      toast({
-        title: "Failed to create stack",
-        description: e?.message || "Failed to create stack. Please try again.",
-        variant: "destructive",
-        duration: 5000,
-      });
-      setLoading(false);
+  
+  const handleAddLabel = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && currentLabel.trim()) {
+      // Simple key-value parser (format: key=value or just key)
+      const labelParts = currentLabel.trim().split("=");
+      const key = labelParts[0].trim();
+      const value = labelParts.length > 1 ? labelParts[1].trim() : "true";
+      
+      if (key) {
+        setLabels(prev => [...prev, { key, value }]);
+        setCurrentLabel("");
+      }
+      e.preventDefault();
     }
+  };
+  
+  const removeLabel = (indexToRemove: number) => {
+    setLabels(prev => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   return (
-    <div className="p-4 pt-0 h-full">
-      <div className="flex h-[calc(100vh-64px)]">
-        <div className="flex-grow p-6 overflow-y-auto">
-          <div className="max-w-2xl w-full mx-auto">
-            <h2 className="text-2xl font-semibold mb-6">Create New Stack</h2>
-            <Tabs value={tab} onValueChange={setTab} className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="basic-info">Basic Info</TabsTrigger>
-                <TabsTrigger value="source-code">Source Code</TabsTrigger>
-                <TabsTrigger value="stack-config">Stack Configuration</TabsTrigger>
-                <TabsTrigger value="environment">Environment</TabsTrigger>
-                <TabsTrigger value="review">Review & Deploy</TabsTrigger>
-              </TabsList>
-              <TabsContent value="basic-info">
-                <Card><CardContent><BasicInfoSection value={form} onChange={handleChange} error={error} loading={loading} /></CardContent></Card>
-              </TabsContent>
-              <TabsContent value="source-code">
-                <Card><CardContent><SourceCodeSection value={form} onChange={handleChange} error={error} loading={loading} /></CardContent></Card>
-              </TabsContent>
-              <TabsContent value="stack-config">
-                <Card><CardContent><StackConfigSection value={form} onChange={handleChange} error={error} loading={loading} /></CardContent></Card>
-              </TabsContent>
-              <TabsContent value="environment">
-                <Card><CardContent><EnvironmentSection value={form} onChange={handleChange} error={error} loading={loading} /></CardContent></Card>
-              </TabsContent>
-              <TabsContent value="review">
-                <Card><CardContent><ReviewDeploySection value={form} onSubmit={handleSubmit} loading={loading} error={error} /></CardContent></Card>
-              </TabsContent>
-            </Tabs>
+    <div className="h-full overflow-hidden flex flex-col">
+      <div className="flex-shrink-0 px-4">
+        {/* Header with navigation */}
+        <div className="flex items-center justify-between py-6">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Create New Stack</h2>
+            <p className="text-muted-foreground mt-1">
+              Define your stack resources to provision infrastructure
+            </p>
           </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={() => {
+              if (window.history.length > 2) {
+                navigate(-1);
+              } else {
+                navigate("/stacks");
+              }
+            }}>Cancel</Button>
+            <Button variant="default">
+              <Rocket className="mr-2 h-4 w-4" />
+              Deploy
+            </Button>
+          </div>
+        </div>
+        <Separator className="mb-6" />
+      </div>
+        
+      {/* Scrollable content area */}
+      <div className="flex-grow overflow-y-auto scrollbar-hide px-4 pb-10">
+        <div className="flex flex-col">
+          {/* === Stack Name & Labels Section === */}
+          <Card className="mb-6 rounded-lg overflow-hidden">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Stack Information</CardTitle>
+                </div>
+              </div>
+            </CardHeader>
+            <Separator />
+            <CardContent className="pt-6">
+              <div className="grid gap-6 max-w-5xl">
+                <div>
+                  <Label htmlFor="stack-name" className="text-sm font-medium flex items-center gap-1 mb-2">
+                    Stack Name <span className="text-red-500">*</span>
+                    <Tooltip delayDuration={300}>
+                      <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                      <TooltipContent className="max-w-xs" side="right">
+                        <p>A unique name to identify this stack.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </Label>
+                  <Input
+                    id="stack-name"
+                    value={stackName}
+                    onChange={(e) => setStackName(e.target.value)}
+                    className="max-w-md"
+                    placeholder="my-application-stack"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="stack-labels" className="text-sm font-medium flex items-center gap-1 mb-2">
+                    Labels
+                    <Tooltip delayDuration={300}>
+                      <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                      <TooltipContent className="max-w-xs" side="right">
+                        <p>Add metadata to your stack using key-value labels. Format: key=value or just a tag (press Enter to add)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </Label>
+                  <div className="flex items-center">
+                    <TagIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <Input
+                      id="stack-labels"
+                      value={currentLabel}
+                      onChange={(e) => setCurrentLabel(e.target.value)}
+                      onKeyDown={handleAddLabel}
+                      className="max-w-md"
+                      placeholder="e.g., environment=dev or just tag (press Enter to add)"
+                    />
+                  </div>
+                  {labels.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {labels.map((label, idx) => (
+                        <Badge 
+                          key={idx} 
+                          variant="secondary"
+                          className="flex items-center gap-1 px-2.5 py-1"
+                        >
+                          <span>{label.key}{label.value !== "true" ? `=${label.value}` : ""}</span>
+                          <button 
+                            onClick={() => removeLabel(idx)} 
+                            className="ml-1 rounded-full hover:bg-secondary-foreground/20 h-4 w-4 flex items-center justify-center"
+                            type="button"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          {/* Section Card: Stack Resources */}
+          <Card className="mb-6 rounded-lg overflow-hidden">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Define Stack Resources</CardTitle>
+                  <CardDescription className="mt-1">
+                    Configure the containerized services that make up your stack
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <Separator />
+            <CardContent className="p-0" style={{ height: "500px" }}>
+              <StackResourcesForm />
+            </CardContent>
+          </Card>
+          {/* === End Stack Resources Section === */}
         </div>
       </div>
     </div>
