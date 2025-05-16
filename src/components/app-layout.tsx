@@ -14,6 +14,7 @@ import { BreadcrumbProvider } from "@/contexts/breadcrumb-context";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { ThemeProvider } from "@/contexts/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Separator } from "@/components/ui/separator";
 
 interface BreadcrumbItemType {
   name: string;
@@ -26,7 +27,7 @@ function AppLayoutContent({
   children?: React.ReactNode;
 }) {
   const location = useLocation();
-  const { customLabels, loadingLabels } = useBreadcrumb(); // Added loadingLabels
+  const { customLabels, loadingLabels } = useBreadcrumb();
 
   // Parse the current path for breadcrumbs
   const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -52,35 +53,40 @@ function AppLayoutContent({
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex h-screen max-h-screen w-full overflow-hidden">
         <AppSidebar />
         <SidebarInset>
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger />
-              <div className="border-l-2 h-4 w-0 mx-2" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  {breadcrumbItems.map((item, index) => (
-                    <React.Fragment key={index}>
-                      {index > 0 && <BreadcrumbSeparator />}
-                      {index === breadcrumbItems.length - 1 ? (
-                        <BreadcrumbItem>
-                          <BreadcrumbPage>{item.name}</BreadcrumbPage>
-                        </BreadcrumbItem>
-                      ) : (
-                        <BreadcrumbItem>
-                          <BreadcrumbLink href={item.path}>{item.name}</BreadcrumbLink>
-                        </BreadcrumbItem>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </BreadcrumbList>
-              </Breadcrumb>
+          <div className="flex-shrink-0 bg-background rounded-tl-lg rounded-tr-lg">
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-2">
+                <SidebarTrigger />
+                <div className="border-l-2 h-4 w-0 mx-2" />
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    {breadcrumbItems.map((item, index) => (
+                      <React.Fragment key={index}>
+                        {index > 0 && <BreadcrumbSeparator />}
+                        {index === breadcrumbItems.length - 1 ? (
+                          <BreadcrumbItem>
+                            <BreadcrumbPage>{item.name}</BreadcrumbPage>
+                          </BreadcrumbItem>
+                        ) : (
+                          <BreadcrumbItem>
+                            <BreadcrumbLink href={item.path}>{item.name}</BreadcrumbLink>
+                          </BreadcrumbItem>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+              <ThemeToggle />
             </div>
-            <ThemeToggle />
+            <Separator />
           </div>
-          <div className="flex-1 p-4">
+          
+          {/* Scrollable content area */}
+          <div className="flex-grow overflow-auto scrollbar-hide rounded-bl-lg rounded-br-lg">
             {children ? children : <Outlet />}
           </div>
         </SidebarInset>
