@@ -17,9 +17,8 @@ import (
 // VolumeMount struct for VolumeMount
 type VolumeMount struct {
 	StackResourceId  *string                `json:"stack_resource_id,omitempty"`
-	StackStorageId   *string                `json:"stack_storage_id,omitempty"`
 	SourceVolumeType *VolumeMountSourceType `json:"source_volume_type,omitempty"`
-	SourceVolumeId   string                 `json:"source_volume_id"`
+	SourceVolumeName string                 `json:"source_volume_name"`
 	SourceSubPath    *string                `json:"source_sub_path,omitempty"`
 	TargetPath       string                 `json:"target_path"`
 }
@@ -28,9 +27,9 @@ type VolumeMount struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewVolumeMount(sourceVolumeId string, targetPath string) *VolumeMount {
+func NewVolumeMount(sourceVolumeName string, targetPath string) *VolumeMount {
 	this := VolumeMount{}
-	this.SourceVolumeId = sourceVolumeId
+	this.SourceVolumeName = sourceVolumeName
 	this.TargetPath = targetPath
 	return &this
 }
@@ -75,38 +74,6 @@ func (o *VolumeMount) SetStackResourceId(v string) {
 	o.StackResourceId = &v
 }
 
-// GetStackStorageId returns the StackStorageId field value if set, zero value otherwise.
-func (o *VolumeMount) GetStackStorageId() string {
-	if o == nil || o.StackStorageId == nil {
-		var ret string
-		return ret
-	}
-	return *o.StackStorageId
-}
-
-// GetStackStorageIdOk returns a tuple with the StackStorageId field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *VolumeMount) GetStackStorageIdOk() (*string, bool) {
-	if o == nil || o.StackStorageId == nil {
-		return nil, false
-	}
-	return o.StackStorageId, true
-}
-
-// HasStackStorageId returns a boolean if a field has been set.
-func (o *VolumeMount) HasStackStorageId() bool {
-	if o != nil && o.StackStorageId != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetStackStorageId gets a reference to the given string and assigns it to the StackStorageId field.
-func (o *VolumeMount) SetStackStorageId(v string) {
-	o.StackStorageId = &v
-}
-
 // GetSourceVolumeType returns the SourceVolumeType field value if set, zero value otherwise.
 func (o *VolumeMount) GetSourceVolumeType() VolumeMountSourceType {
 	if o == nil || o.SourceVolumeType == nil {
@@ -139,28 +106,28 @@ func (o *VolumeMount) SetSourceVolumeType(v VolumeMountSourceType) {
 	o.SourceVolumeType = &v
 }
 
-// GetSourceVolumeId returns the SourceVolumeId field value
-func (o *VolumeMount) GetSourceVolumeId() string {
+// GetSourceVolumeName returns the SourceVolumeName field value
+func (o *VolumeMount) GetSourceVolumeName() string {
 	if o == nil {
 		var ret string
 		return ret
 	}
 
-	return o.SourceVolumeId
+	return o.SourceVolumeName
 }
 
-// GetSourceVolumeIdOk returns a tuple with the SourceVolumeId field value
+// GetSourceVolumeNameOk returns a tuple with the SourceVolumeName field value
 // and a boolean to check if the value has been set.
-func (o *VolumeMount) GetSourceVolumeIdOk() (*string, bool) {
+func (o *VolumeMount) GetSourceVolumeNameOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return &o.SourceVolumeId, true
+	return &o.SourceVolumeName, true
 }
 
-// SetSourceVolumeId sets field value
-func (o *VolumeMount) SetSourceVolumeId(v string) {
-	o.SourceVolumeId = v
+// SetSourceVolumeName sets field value
+func (o *VolumeMount) SetSourceVolumeName(v string) {
+	o.SourceVolumeName = v
 }
 
 // GetSourceSubPath returns the SourceSubPath field value if set, zero value otherwise.
@@ -224,14 +191,11 @@ func (o VolumeMount) MarshalJSON() ([]byte, error) {
 	if o.StackResourceId != nil {
 		toSerialize["stack_resource_id"] = o.StackResourceId
 	}
-	if o.StackStorageId != nil {
-		toSerialize["stack_storage_id"] = o.StackStorageId
-	}
 	if o.SourceVolumeType != nil {
 		toSerialize["source_volume_type"] = o.SourceVolumeType
 	}
 	if true {
-		toSerialize["source_volume_id"] = o.SourceVolumeId
+		toSerialize["source_volume_name"] = o.SourceVolumeName
 	}
 	if o.SourceSubPath != nil {
 		toSerialize["source_sub_path"] = o.SourceSubPath

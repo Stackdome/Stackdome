@@ -5,6 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **StackResources** | [**[]StackResource**](StackResource.md) |  | 
+**Volumes** | Pointer to [**[]Volume**](Volume.md) |  | [optional] 
 
 ## Methods
 
@@ -44,6 +45,31 @@ and a boolean to check if the value has been set.
 
 SetStackResources sets StackResources field to given value.
 
+
+### GetVolumes
+
+`func (o *StackSpec) GetVolumes() []Volume`
+
+GetVolumes returns the Volumes field if non-nil, zero value otherwise.
+
+### GetVolumesOk
+
+`func (o *StackSpec) GetVolumesOk() (*[]Volume, bool)`
+
+GetVolumesOk returns a tuple with the Volumes field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetVolumes
+
+`func (o *StackSpec) SetVolumes(v []Volume)`
+
+SetVolumes sets Volumes field to given value.
+
+### HasVolumes
+
+`func (o *StackSpec) HasVolumes() bool`
+
+HasVolumes returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -157,6 +157,7 @@ Class | Method | HTTP request | Description
  - [ImageBuild](docs/ImageBuild.md)
  - [ImageBuildList](docs/ImageBuildList.md)
  - [ImageBuildStatus](docs/ImageBuildStatus.md)
+ - [ImageRepository](docs/ImageRepository.md)
  - [ImageSpec](docs/ImageSpec.md)
  - [Ingress](docs/Ingress.md)
  - [InitSpec](docs/InitSpec.md)

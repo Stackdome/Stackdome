@@ -2677,17 +2677,15 @@ components:
               - command
             volume_mounts:
             - stack_resource_id: stack_resource_id
+              source_volume_name: source_volume_name
               source_volume_type: null
-              stack_storage_id: stack_storage_id
               source_sub_path: source_sub_path
               target_path: target_path
-              source_volume_id: source_volume_id
             - stack_resource_id: stack_resource_id
+              source_volume_name: source_volume_name
               source_volume_type: null
-              stack_storage_id: stack_storage_id
               source_sub_path: source_sub_path
               target_path: target_path
-              source_volume_id: source_volume_id
             ports:
             - number: 1
               protocol: protocol
@@ -2717,10 +2715,11 @@ components:
                   branch:
                     name: name
                     head_sha: head_sha
-              insecure_registry: true
+              image_repository:
+                external_image_repo_url: external_image_repo_url
+                use_internal_registry: true
               context_path_within_source: context_path_within_source
               dockerfile_path: dockerfile_path
-              image_repository_url: image_repository_url
               source_context:
                 volume:
                   name: name
@@ -2785,17 +2784,15 @@ components:
               - command
             volume_mounts:
             - stack_resource_id: stack_resource_id
+              source_volume_name: source_volume_name
               source_volume_type: null
-              stack_storage_id: stack_storage_id
               source_sub_path: source_sub_path
               target_path: target_path
-              source_volume_id: source_volume_id
             - stack_resource_id: stack_resource_id
+              source_volume_name: source_volume_name
               source_volume_type: null
-              stack_storage_id: stack_storage_id
               source_sub_path: source_sub_path
               target_path: target_path
-              source_volume_id: source_volume_id
             ports:
             - number: 1
               protocol: protocol
@@ -2825,10 +2822,11 @@ components:
                   branch:
                     name: name
                     head_sha: head_sha
-              insecure_registry: true
+              image_repository:
+                external_image_repo_url: external_image_repo_url
+                use_internal_registry: true
               context_path_within_source: context_path_within_source
               dockerfile_path: dockerfile_path
-              image_repository_url: image_repository_url
               source_context:
                 volume:
                   name: name
@@ -2862,6 +2860,129 @@ components:
                 url: url
               - target_port: 5
                 url: url
+          Volumes:
+          - name: name
+            annotations:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            workspace_name: workspace_name
+            spec:
+              needs_sync_before_use: true
+              storage_class: storage_class
+              size: size
+              source:
+                git_repo_source:
+                  repo_url: repo_url
+                  revision:
+                    commit: commit
+                    tag: tag
+                    branch:
+                      name: name
+                      head_sha: head_sha
+                remote_source:
+                  path: path
+                  current_directory_hash: current_directory_hash
+                build_source:
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                source_type: null
+              access_mode: null
+            labels:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            status:
+              phase: phase
+              build_artifact_syncs:
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              last_synced_git_revision: last_synced_git_revision
+              last_remote_sync_hash: last_remote_sync_hash
+              conditions:
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 1
+                status: status
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 1
+                status: status
+          - name: name
+            annotations:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            workspace_name: workspace_name
+            spec:
+              needs_sync_before_use: true
+              storage_class: storage_class
+              size: size
+              source:
+                git_repo_source:
+                  repo_url: repo_url
+                  revision:
+                    commit: commit
+                    tag: tag
+                    branch:
+                      name: name
+                      head_sha: head_sha
+                remote_source:
+                  path: path
+                  current_directory_hash: current_directory_hash
+                build_source:
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                - destination_path: destination_path
+                  resource_ref: resource_ref
+                  source_path: source_path
+                source_type: null
+              access_mode: null
+            labels:
+            - value: value
+              key: key
+            - value: value
+              key: key
+            status:
+              phase: phase
+              build_artifact_syncs:
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              - build_id: build_id
+                resource_name: resource_name
+                status: status
+              last_synced_git_revision: last_synced_git_revision
+              last_remote_sync_hash: last_remote_sync_hash
+              conditions:
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 1
+                status: status
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 1
+                status: status
         labels:
         - value: value
           key: key
@@ -2979,17 +3100,15 @@ components:
                 - command
               volume_mounts:
               - stack_resource_id: stack_resource_id
+                source_volume_name: source_volume_name
                 source_volume_type: null
-                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
-                source_volume_id: source_volume_id
               - stack_resource_id: stack_resource_id
+                source_volume_name: source_volume_name
                 source_volume_type: null
-                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
-                source_volume_id: source_volume_id
               ports:
               - number: 1
                 protocol: protocol
@@ -3019,10 +3138,11 @@ components:
                     branch:
                       name: name
                       head_sha: head_sha
-                insecure_registry: true
+                image_repository:
+                  external_image_repo_url: external_image_repo_url
+                  use_internal_registry: true
                 context_path_within_source: context_path_within_source
                 dockerfile_path: dockerfile_path
-                image_repository_url: image_repository_url
                 source_context:
                   volume:
                     name: name
@@ -3087,17 +3207,15 @@ components:
                 - command
               volume_mounts:
               - stack_resource_id: stack_resource_id
+                source_volume_name: source_volume_name
                 source_volume_type: null
-                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
-                source_volume_id: source_volume_id
               - stack_resource_id: stack_resource_id
+                source_volume_name: source_volume_name
                 source_volume_type: null
-                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
-                source_volume_id: source_volume_id
               ports:
               - number: 1
                 protocol: protocol
@@ -3127,10 +3245,11 @@ components:
                     branch:
                       name: name
                       head_sha: head_sha
-                insecure_registry: true
+                image_repository:
+                  external_image_repo_url: external_image_repo_url
+                  use_internal_registry: true
                 context_path_within_source: context_path_within_source
                 dockerfile_path: dockerfile_path
-                image_repository_url: image_repository_url
                 source_context:
                   volume:
                     name: name
@@ -3164,6 +3283,129 @@ components:
                   url: url
                 - target_port: 5
                   url: url
+            Volumes:
+            - name: name
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              workspace_name: workspace_name
+              spec:
+                needs_sync_before_use: true
+                storage_class: storage_class
+                size: size
+                source:
+                  git_repo_source:
+                    repo_url: repo_url
+                    revision:
+                      commit: commit
+                      tag: tag
+                      branch:
+                        name: name
+                        head_sha: head_sha
+                  remote_source:
+                    path: path
+                    current_directory_hash: current_directory_hash
+                  build_source:
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  source_type: null
+                access_mode: null
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              status:
+                phase: phase
+                build_artifact_syncs:
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                last_synced_git_revision: last_synced_git_revision
+                last_remote_sync_hash: last_remote_sync_hash
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+            - name: name
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              workspace_name: workspace_name
+              spec:
+                needs_sync_before_use: true
+                storage_class: storage_class
+                size: size
+                source:
+                  git_repo_source:
+                    repo_url: repo_url
+                    revision:
+                      commit: commit
+                      tag: tag
+                      branch:
+                        name: name
+                        head_sha: head_sha
+                  remote_source:
+                    path: path
+                    current_directory_hash: current_directory_hash
+                  build_source:
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  source_type: null
+                access_mode: null
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              status:
+                phase: phase
+                build_artifact_syncs:
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                last_synced_git_revision: last_synced_git_revision
+                last_remote_sync_hash: last_remote_sync_hash
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
           labels:
           - value: value
             key: key
@@ -3232,17 +3474,15 @@ components:
                 - command
               volume_mounts:
               - stack_resource_id: stack_resource_id
+                source_volume_name: source_volume_name
                 source_volume_type: null
-                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
-                source_volume_id: source_volume_id
               - stack_resource_id: stack_resource_id
+                source_volume_name: source_volume_name
                 source_volume_type: null
-                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
-                source_volume_id: source_volume_id
               ports:
               - number: 1
                 protocol: protocol
@@ -3272,10 +3512,11 @@ components:
                     branch:
                       name: name
                       head_sha: head_sha
-                insecure_registry: true
+                image_repository:
+                  external_image_repo_url: external_image_repo_url
+                  use_internal_registry: true
                 context_path_within_source: context_path_within_source
                 dockerfile_path: dockerfile_path
-                image_repository_url: image_repository_url
                 source_context:
                   volume:
                     name: name
@@ -3340,17 +3581,15 @@ components:
                 - command
               volume_mounts:
               - stack_resource_id: stack_resource_id
+                source_volume_name: source_volume_name
                 source_volume_type: null
-                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
-                source_volume_id: source_volume_id
               - stack_resource_id: stack_resource_id
+                source_volume_name: source_volume_name
                 source_volume_type: null
-                stack_storage_id: stack_storage_id
                 source_sub_path: source_sub_path
                 target_path: target_path
-                source_volume_id: source_volume_id
               ports:
               - number: 1
                 protocol: protocol
@@ -3380,10 +3619,11 @@ components:
                     branch:
                       name: name
                       head_sha: head_sha
-                insecure_registry: true
+                image_repository:
+                  external_image_repo_url: external_image_repo_url
+                  use_internal_registry: true
                 context_path_within_source: context_path_within_source
                 dockerfile_path: dockerfile_path
-                image_repository_url: image_repository_url
                 source_context:
                   volume:
                     name: name
@@ -3417,6 +3657,129 @@ components:
                   url: url
                 - target_port: 5
                   url: url
+            Volumes:
+            - name: name
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              workspace_name: workspace_name
+              spec:
+                needs_sync_before_use: true
+                storage_class: storage_class
+                size: size
+                source:
+                  git_repo_source:
+                    repo_url: repo_url
+                    revision:
+                      commit: commit
+                      tag: tag
+                      branch:
+                        name: name
+                        head_sha: head_sha
+                  remote_source:
+                    path: path
+                    current_directory_hash: current_directory_hash
+                  build_source:
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  source_type: null
+                access_mode: null
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              status:
+                phase: phase
+                build_artifact_syncs:
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                last_synced_git_revision: last_synced_git_revision
+                last_remote_sync_hash: last_remote_sync_hash
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+            - name: name
+              annotations:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              workspace_name: workspace_name
+              spec:
+                needs_sync_before_use: true
+                storage_class: storage_class
+                size: size
+                source:
+                  git_repo_source:
+                    repo_url: repo_url
+                    revision:
+                      commit: commit
+                      tag: tag
+                      branch:
+                        name: name
+                        head_sha: head_sha
+                  remote_source:
+                    path: path
+                    current_directory_hash: current_directory_hash
+                  build_source:
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  - destination_path: destination_path
+                    resource_ref: resource_ref
+                    source_path: source_path
+                  source_type: null
+                access_mode: null
+              labels:
+              - value: value
+                key: key
+              - value: value
+                key: key
+              status:
+                phase: phase
+                build_artifact_syncs:
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                - build_id: build_id
+                  resource_name: resource_name
+                  status: status
+                last_synced_git_revision: last_synced_git_revision
+                last_remote_sync_hash: last_remote_sync_hash
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
           labels:
           - value: value
             key: key
@@ -3487,17 +3850,15 @@ components:
             - command
           volume_mounts:
           - stack_resource_id: stack_resource_id
+            source_volume_name: source_volume_name
             source_volume_type: null
-            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
-            source_volume_id: source_volume_id
           - stack_resource_id: stack_resource_id
+            source_volume_name: source_volume_name
             source_volume_type: null
-            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
-            source_volume_id: source_volume_id
           ports:
           - number: 1
             protocol: protocol
@@ -3527,10 +3888,11 @@ components:
                 branch:
                   name: name
                   head_sha: head_sha
-            insecure_registry: true
+            image_repository:
+              external_image_repo_url: external_image_repo_url
+              use_internal_registry: true
             context_path_within_source: context_path_within_source
             dockerfile_path: dockerfile_path
-            image_repository_url: image_repository_url
             source_context:
               volume:
                 name: name
@@ -3595,17 +3957,15 @@ components:
             - command
           volume_mounts:
           - stack_resource_id: stack_resource_id
+            source_volume_name: source_volume_name
             source_volume_type: null
-            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
-            source_volume_id: source_volume_id
           - stack_resource_id: stack_resource_id
+            source_volume_name: source_volume_name
             source_volume_type: null
-            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
-            source_volume_id: source_volume_id
           ports:
           - number: 1
             protocol: protocol
@@ -3635,10 +3995,11 @@ components:
                 branch:
                   name: name
                   head_sha: head_sha
-            insecure_registry: true
+            image_repository:
+              external_image_repo_url: external_image_repo_url
+              use_internal_registry: true
             context_path_within_source: context_path_within_source
             dockerfile_path: dockerfile_path
-            image_repository_url: image_repository_url
             source_context:
               volume:
                 name: name
@@ -3672,10 +4033,137 @@ components:
               url: url
             - target_port: 5
               url: url
+        Volumes:
+        - name: name
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          workspace_name: workspace_name
+          spec:
+            needs_sync_before_use: true
+            storage_class: storage_class
+            size: size
+            source:
+              git_repo_source:
+                repo_url: repo_url
+                revision:
+                  commit: commit
+                  tag: tag
+                  branch:
+                    name: name
+                    head_sha: head_sha
+              remote_source:
+                path: path
+                current_directory_hash: current_directory_hash
+              build_source:
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              source_type: null
+            access_mode: null
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            phase: phase
+            build_artifact_syncs:
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            last_synced_git_revision: last_synced_git_revision
+            last_remote_sync_hash: last_remote_sync_hash
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+        - name: name
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          workspace_name: workspace_name
+          spec:
+            needs_sync_before_use: true
+            storage_class: storage_class
+            size: size
+            source:
+              git_repo_source:
+                repo_url: repo_url
+                revision:
+                  commit: commit
+                  tag: tag
+                  branch:
+                    name: name
+                    head_sha: head_sha
+              remote_source:
+                path: path
+                current_directory_hash: current_directory_hash
+              build_source:
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              source_type: null
+            access_mode: null
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            phase: phase
+            build_artifact_syncs:
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            last_synced_git_revision: last_synced_git_revision
+            last_remote_sync_hash: last_remote_sync_hash
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
       properties:
         stack_resources:
           items:
             $ref: '#/components/schemas/StackResource'
+          type: array
+        Volumes:
+          items:
+            $ref: '#/components/schemas/Volume'
           type: array
       required:
       - stack_resources
@@ -3740,17 +4228,15 @@ components:
           - command
         volume_mounts:
         - stack_resource_id: stack_resource_id
+          source_volume_name: source_volume_name
           source_volume_type: null
-          stack_storage_id: stack_storage_id
           source_sub_path: source_sub_path
           target_path: target_path
-          source_volume_id: source_volume_id
         - stack_resource_id: stack_resource_id
+          source_volume_name: source_volume_name
           source_volume_type: null
-          stack_storage_id: stack_storage_id
           source_sub_path: source_sub_path
           target_path: target_path
-          source_volume_id: source_volume_id
         ports:
         - number: 1
           protocol: protocol
@@ -3780,10 +4266,11 @@ components:
               branch:
                 name: name
                 head_sha: head_sha
-          insecure_registry: true
+          image_repository:
+            external_image_repo_url: external_image_repo_url
+            use_internal_registry: true
           context_path_within_source: context_path_within_source
           dockerfile_path: dockerfile_path
-          image_repository_url: image_repository_url
           source_context:
             volume:
               name: name
@@ -3901,17 +4388,15 @@ components:
             - command
           volume_mounts:
           - stack_resource_id: stack_resource_id
+            source_volume_name: source_volume_name
             source_volume_type: null
-            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
-            source_volume_id: source_volume_id
           - stack_resource_id: stack_resource_id
+            source_volume_name: source_volume_name
             source_volume_type: null
-            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
-            source_volume_id: source_volume_id
           ports:
           - number: 1
             protocol: protocol
@@ -3941,10 +4426,11 @@ components:
                 branch:
                   name: name
                   head_sha: head_sha
-            insecure_registry: true
+            image_repository:
+              external_image_repo_url: external_image_repo_url
+              use_internal_registry: true
             context_path_within_source: context_path_within_source
             dockerfile_path: dockerfile_path
-            image_repository_url: image_repository_url
             source_context:
               volume:
                 name: name
@@ -4009,17 +4495,15 @@ components:
             - command
           volume_mounts:
           - stack_resource_id: stack_resource_id
+            source_volume_name: source_volume_name
             source_volume_type: null
-            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
-            source_volume_id: source_volume_id
           - stack_resource_id: stack_resource_id
+            source_volume_name: source_volume_name
             source_volume_type: null
-            stack_storage_id: stack_storage_id
             source_sub_path: source_sub_path
             target_path: target_path
-            source_volume_id: source_volume_id
           ports:
           - number: 1
             protocol: protocol
@@ -4049,10 +4533,11 @@ components:
                 branch:
                   name: name
                   head_sha: head_sha
-            insecure_registry: true
+            image_repository:
+              external_image_repo_url: external_image_repo_url
+              use_internal_registry: true
             context_path_within_source: context_path_within_source
             dockerfile_path: dockerfile_path
-            image_repository_url: image_repository_url
             source_context:
               volume:
                 name: name
@@ -4457,28 +4942,24 @@ components:
     VolumeMount:
       example:
         stack_resource_id: stack_resource_id
+        source_volume_name: source_volume_name
         source_volume_type: null
-        stack_storage_id: stack_storage_id
         source_sub_path: source_sub_path
         target_path: target_path
-        source_volume_id: source_volume_id
       properties:
         stack_resource_id:
           readOnly: true
           type: string
-        stack_storage_id:
-          readOnly: true
-          type: string
         source_volume_type:
           $ref: '#/components/schemas/VolumeMountSourceType'
-        source_volume_id:
+        source_volume_name:
           type: string
         source_sub_path:
           type: string
         target_path:
           type: string
       required:
-      - source_volume_id
+      - source_volume_name
       - target_path
       type: object
     VolumeMountSourceType:
@@ -4527,10 +5008,11 @@ components:
             branch:
               name: name
               head_sha: head_sha
-        insecure_registry: true
+        image_repository:
+          external_image_repo_url: external_image_repo_url
+          use_internal_registry: true
         context_path_within_source: context_path_within_source
         dockerfile_path: dockerfile_path
-        image_repository_url: image_repository_url
         source_context:
           volume:
             name: name
@@ -4546,17 +5028,25 @@ components:
           type: string
         source_revision:
           $ref: '#/components/schemas/BuildSourceRevision'
-        image_repository_url:
-          type: string
-        insecure_registry:
-          type: boolean
+        image_repository:
+          $ref: '#/components/schemas/ImageRepository'
       required:
       - context_path_within_source
       - dockerfile_path
-      - image_repository_url
-      - insecure_registry
       - source_context
       - source_revision
+      type: object
+    ImageRepository:
+      additionalProperties: false
+      description: The image repository to push the built image to
+      example:
+        external_image_repo_url: external_image_repo_url
+        use_internal_registry: true
+      properties:
+        external_image_repo_url:
+          type: string
+        use_internal_registry:
+          type: boolean
       type: object
     BuildSourceContext:
       example:

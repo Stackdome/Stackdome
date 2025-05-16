@@ -1911,6 +1911,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StackResource'
+        Volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Volume'
 
     StackStatus:
       type: object
@@ -2135,19 +2139,16 @@ components:
     VolumeMount:
       type: object
       required:
-        - source_volume_id
+        - source_volume_name
         - target_path
       properties:
         stack_resource_id:
           type: string
           readOnly: true
-        stack_storage_id:
-          type: string
-          readOnly: true
         source_volume_type:
           $ref: '#/components/schemas/VolumeMountSourceType'
           readOnly: true
-        source_volume_id:
+        source_volume_name:
           type: string
         source_sub_path:
           type: string
@@ -2191,8 +2192,6 @@ components:
         - context_path_within_source
         - dockerfile_path
         - source_revision
-        - image_repository_url
-        - insecure_registry
       properties:
         source_context:
           $ref: '#/components/schemas/BuildSourceContext'
@@ -2202,11 +2201,18 @@ components:
           type: string
         source_revision:
           $ref: '#/components/schemas/BuildSourceRevision'
-        image_repository_url:
+        image_repository:
+          $ref: '#/components/schemas/ImageRepository'
+          description: The image repository to push the built image to
+    ImageRepository:
+      type: object
+      description: The image repository to push the built image to
+      additionalProperties: false
+      properties:
+        external_image_repo_url:
           type: string
-        insecure_registry:
+        use_internal_registry:
           type: boolean
-
     BuildSourceContext:
       type: object
       properties:

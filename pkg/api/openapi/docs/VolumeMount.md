@@ -5,9 +5,8 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **StackResourceId** | Pointer to **string** |  | [optional] [readonly] 
-**StackStorageId** | Pointer to **string** |  | [optional] [readonly] 
 **SourceVolumeType** | Pointer to [**VolumeMountSourceType**](VolumeMountSourceType.md) |  | [optional] 
-**SourceVolumeId** | **string** |  | 
+**SourceVolumeName** | **string** |  | 
 **SourceSubPath** | Pointer to **string** |  | [optional] 
 **TargetPath** | **string** |  | 
 
@@ -15,7 +14,7 @@ Name | Type | Description | Notes
 
 ### NewVolumeMount
 
-`func NewVolumeMount(sourceVolumeId string, targetPath string, ) *VolumeMount`
+`func NewVolumeMount(sourceVolumeName string, targetPath string, ) *VolumeMount`
 
 NewVolumeMount instantiates a new VolumeMount object
 This constructor will assign default values to properties that have it defined,
@@ -55,31 +54,6 @@ SetStackResourceId sets StackResourceId field to given value.
 
 HasStackResourceId returns a boolean if a field has been set.
 
-### GetStackStorageId
-
-`func (o *VolumeMount) GetStackStorageId() string`
-
-GetStackStorageId returns the StackStorageId field if non-nil, zero value otherwise.
-
-### GetStackStorageIdOk
-
-`func (o *VolumeMount) GetStackStorageIdOk() (*string, bool)`
-
-GetStackStorageIdOk returns a tuple with the StackStorageId field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetStackStorageId
-
-`func (o *VolumeMount) SetStackStorageId(v string)`
-
-SetStackStorageId sets StackStorageId field to given value.
-
-### HasStackStorageId
-
-`func (o *VolumeMount) HasStackStorageId() bool`
-
-HasStackStorageId returns a boolean if a field has been set.
-
 ### GetSourceVolumeType
 
 `func (o *VolumeMount) GetSourceVolumeType() VolumeMountSourceType`
@@ -105,24 +79,24 @@ SetSourceVolumeType sets SourceVolumeType field to given value.
 
 HasSourceVolumeType returns a boolean if a field has been set.
 
-### GetSourceVolumeId
+### GetSourceVolumeName
 
-`func (o *VolumeMount) GetSourceVolumeId() string`
+`func (o *VolumeMount) GetSourceVolumeName() string`
 
-GetSourceVolumeId returns the SourceVolumeId field if non-nil, zero value otherwise.
+GetSourceVolumeName returns the SourceVolumeName field if non-nil, zero value otherwise.
 
-### GetSourceVolumeIdOk
+### GetSourceVolumeNameOk
 
-`func (o *VolumeMount) GetSourceVolumeIdOk() (*string, bool)`
+`func (o *VolumeMount) GetSourceVolumeNameOk() (*string, bool)`
 
-GetSourceVolumeIdOk returns a tuple with the SourceVolumeId field if it's non-nil, zero value otherwise
+GetSourceVolumeNameOk returns a tuple with the SourceVolumeName field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetSourceVolumeId
+### SetSourceVolumeName
 
-`func (o *VolumeMount) SetSourceVolumeId(v string)`
+`func (o *VolumeMount) SetSourceVolumeName(v string)`
 
-SetSourceVolumeId sets SourceVolumeId field to given value.
+SetSourceVolumeName sets SourceVolumeName field to given value.
 
 
 ### GetSourceSubPath
