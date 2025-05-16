@@ -46,7 +46,6 @@ export function useClusters() {
 
 export function useCreateCluster() {
   const orgId = getCurrentOrganizationId();
-  debugger
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Cluster | null>(null);
