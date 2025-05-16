@@ -142,7 +142,7 @@ export default function StackResourcesForm() {
               className="border rounded-md overflow-hidden"
               ref={el => { itemRefs.current[idx] = el; }}
             >
-              <AccordionTrigger className="px-4 py-4 hover:bg-muted/40 data-[state=open]:bg-muted/40 rounded-t-lg transition-colors duration-200">
+              <AccordionTrigger className="px-4 py-4 hover:bg-muted/10 data-[state=open]:bg-muted/40 rounded-t-lg transition-colors duration-200">
                 <div className="flex items-center gap-3 w-full justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/15 text-primary font-medium shadow-sm">
@@ -161,7 +161,7 @@ export default function StackResourcesForm() {
               </AccordionTrigger>
               <AccordionContent className="p-0 rounded-b-lg overflow-hidden">
                 <Tabs defaultValue="general" className="w-full">
-                  <div className="border-b bg-muted/30 px-4">
+                  <div className="border-b px-4">
                     <TabsList className="mb-0 h-12">
                       <TabsTrigger value="general" className="data-[state=active]:bg-background rounded-t-md rounded-b-none">General</TabsTrigger>
                       <TabsTrigger value="build" className="data-[state=active]:bg-background rounded-t-md rounded-b-none">Build</TabsTrigger>
@@ -786,7 +786,7 @@ export default function StackResourcesForm() {
       </div>
 
       {resources.length > 0 && (
-        <div className="sticky bottom-6 left-0 w-full bg-background/95 border-t py-4 px-6 backdrop-blur-sm shadow-md">
+        <div className="sticky bottom-0 left-0 w-full bg-background/95 border-t py-6 px-6 backdrop-blur-sm shadow-md">
           <Button
             variant="outline"
             size="lg"
