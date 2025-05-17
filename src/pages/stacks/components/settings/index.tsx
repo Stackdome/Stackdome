@@ -21,10 +21,10 @@ import { Switch } from "@/components/ui/switch";
 export default function StackSettingsPage() {
   const { id } = useParams();
   const { stacks, removeStack } = useStacks();
-  
+
   // Find the current stack
   const currentStack = stacks.find(stack => stack.id === id);
-  
+
   const [stackName, setStackName] = useState(currentStack?.name || "");
   const [stackDescription, setStackDescription] = useState(currentStack?.description || "");
   const [autoScaling, setAutoScaling] = useState(true);
@@ -40,7 +40,7 @@ export default function StackSettingsPage() {
       </div>
     );
   }
-  
+
   const handleDeleteStack = () => {
     if (window.confirm(`Are you sure you want to delete the stack "${currentStack.name}"?`)) {
       removeStack(currentStack.id);
@@ -48,12 +48,12 @@ export default function StackSettingsPage() {
       window.location.href = "/stacks";
     }
   };
-  
+
   const handleSaveSettings = () => {
     // In a real app, this would update the stack in the backend
     alert("Settings saved successfully!");
   };
-  
+
   return (
     <div className="p-6">
       <header className="mb-6">
@@ -72,7 +72,7 @@ export default function StackSettingsPage() {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        
+
         <div className="flex items-center">
           <SettingsIcon className="mr-2 h-5 w-5" />
           <h1 className="text-2xl font-bold">Stack Settings</h1>
@@ -82,7 +82,7 @@ export default function StackSettingsPage() {
         </p>
         <Separator className="mt-4" />
       </header>
-      
+
       <Tabs defaultValue="general">
         <TabsList className="mb-4">
           <TabsTrigger value="general">General</TabsTrigger>
@@ -91,7 +91,7 @@ export default function StackSettingsPage() {
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
           <TabsTrigger value="danger">Danger Zone</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="general">
           <Card>
             <CardHeader>
@@ -103,27 +103,27 @@ export default function StackSettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="stack-name">Stack Name</Label>
-                <Input 
-                  id="stack-name" 
-                  value={stackName} 
+                <Input
+                  id="stack-name"
+                  value={stackName}
                   onChange={(e) => setStackName(e.target.value)}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="stack-description">Description</Label>
-                <Textarea 
-                  id="stack-description" 
-                  value={stackDescription} 
+                <Textarea
+                  id="stack-description"
+                  value={stackDescription}
                   onChange={(e) => setStackDescription(e.target.value)}
                   rows={3}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="public-stack">Public Stack</Label>
-                  <Switch 
+                  <Switch
                     id="public-stack"
                     checked={isPublic}
                     onCheckedChange={setIsPublic}
@@ -133,7 +133,7 @@ export default function StackSettingsPage() {
                   When enabled, this stack will be accessible without authentication.
                 </p>
               </div>
-              
+
               <Button className="mt-4" onClick={handleSaveSettings}>
                 <Save className="h-4 w-4 mr-2" />
                 Save Changes
@@ -141,7 +141,7 @@ export default function StackSettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="scaling">
           <Card>
             <CardHeader>
@@ -154,7 +154,7 @@ export default function StackSettingsPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="auto-scaling">Auto-scaling</Label>
-                  <Switch 
+                  <Switch
                     id="auto-scaling"
                     checked={autoScaling}
                     onCheckedChange={setAutoScaling}
@@ -164,29 +164,29 @@ export default function StackSettingsPage() {
                   Automatically scale resources based on traffic and usage.
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="min-replicas">Minimum Replicas</Label>
-                  <Input 
-                    id="min-replicas" 
-                    type="number" 
+                  <Input
+                    id="min-replicas"
+                    type="number"
                     defaultValue="1"
                     disabled={!autoScaling}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="max-replicas">Maximum Replicas</Label>
-                  <Input 
-                    id="max-replicas" 
-                    type="number" 
+                  <Input
+                    id="max-replicas"
+                    type="number"
                     defaultValue="5"
                     disabled={!autoScaling}
                   />
                 </div>
               </div>
-              
+
               <Button className="mt-4" onClick={handleSaveSettings}>
                 <Save className="h-4 w-4 mr-2" />
                 Save Changes
@@ -194,7 +194,7 @@ export default function StackSettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="network">
           <Card>
             <CardHeader>
@@ -206,19 +206,19 @@ export default function StackSettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="custom-domain">Custom Domain</Label>
-                <Input 
-                  id="custom-domain" 
+                <Input
+                  id="custom-domain"
                   placeholder="example.com"
                 />
                 <p className="text-sm text-muted-foreground">
                   Enter a custom domain to use for your stack.
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="ssl-enabled">SSL/TLS</Label>
-                  <Switch 
+                  <Switch
                     id="ssl-enabled"
                     defaultChecked={true}
                   />
@@ -227,7 +227,7 @@ export default function StackSettingsPage() {
                   Enable SSL/TLS encryption for your stack.
                 </p>
               </div>
-              
+
               <Button className="mt-4" onClick={handleSaveSettings}>
                 <Save className="h-4 w-4 mr-2" />
                 Save Changes
@@ -235,7 +235,7 @@ export default function StackSettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="advanced">
           <Card>
             <CardHeader>
@@ -248,7 +248,7 @@ export default function StackSettingsPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="logging-enabled">Logging</Label>
-                  <Switch 
+                  <Switch
                     id="logging-enabled"
                     checked={loggingEnabled}
                     onCheckedChange={setLoggingEnabled}
@@ -258,11 +258,11 @@ export default function StackSettingsPage() {
                   Enable detailed logging for this stack.
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="environment-variables">Environment Variables</Label>
-                <Textarea 
-                  id="environment-variables" 
+                <Textarea
+                  id="environment-variables"
                   placeholder="KEY=value
 ANOTHER_KEY=another value"
                   rows={4}
@@ -272,7 +272,7 @@ ANOTHER_KEY=another value"
                   Add environment variables in KEY=value format, one per line.
                 </p>
               </div>
-              
+
               <Button className="mt-4" onClick={handleSaveSettings}>
                 <Save className="h-4 w-4 mr-2" />
                 Save Changes
@@ -280,7 +280,7 @@ ANOTHER_KEY=another value"
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="danger">
           <Card className="border-red-200">
             <CardHeader className="text-red-600">

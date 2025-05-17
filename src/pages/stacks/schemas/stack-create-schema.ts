@@ -9,7 +9,7 @@ export const AnnotationSchema = LabelSchema;
 
 export const PortSchema = z.object({
   number: z.number().int().min(1, "Port number is required"),
-  protocol: z.enum(['tcp', 'http']).optional().default('tcp'), 
+  protocol: z.enum(['tcp', 'http']).optional().default('tcp'),
   exposed_to_public: z.boolean().optional().default(false),
   subdomain_prefix: z.string().optional(),
 });
@@ -80,12 +80,12 @@ export const StackResourceSchema = z.object({
   depends_on: z.array(z.string()).optional(),
   ports: z.array(PortSchema).optional(),
   // UI helper, not part of API spec for StackResource itself
-  sourceType: z.enum(["image", "git"]).optional().default("image"), 
+  sourceType: z.enum(["image", "git"]).optional().default("image"),
 });
 
 export const VolumeAccessModeSchema = z.enum([
   'ReadWriteOnce',
-  'ReadWriteMany', 
+  'ReadWriteMany',
   'ReadOnlyMany'
 ]).default('ReadWriteOnce');
 
@@ -97,7 +97,7 @@ export const VolumeSourceTypeSchema = z.enum([
 
 export const RemoteSourceSchema = z.object({
   path: z.string().min(1, 'Path is required'),
-  current_directory_hash: z.string().optional(), 
+  current_directory_hash: z.string().optional(),
 });
 
 export const BuildArtifactSchema = z.object({
@@ -125,7 +125,7 @@ export const VolumeSourceSchema = z.object({
       path: ['git_repo_source'],
     });
   }
-  
+
   if (data.source_type === 'RemoteDir' && !data.remote_source) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -133,7 +133,7 @@ export const VolumeSourceSchema = z.object({
       path: ['remote_source'],
     });
   }
-  
+
   if (data.source_type === 'BuildArtifact' && (!data.build_source || data.build_source.length === 0)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -144,8 +144,8 @@ export const VolumeSourceSchema = z.object({
 });
 
 export const VolumeSpecSchema = z.object({
-  size: z.string().min(1, 'Volume size is required'), 
-  storage_class: z.string().optional(), 
+  size: z.string().min(1, 'Volume size is required'),
+  storage_class: z.string().optional(),
   needs_sync_before_use: z.boolean().default(false),
   access_mode: VolumeAccessModeSchema,
   source: VolumeSourceSchema.optional(),
@@ -155,7 +155,7 @@ export const VolumeSchema = z.object({
   name: z.string().min(1, 'Volume name is required'),
   labels: z.array(LabelSchema).optional(),
   annotations: z.array(AnnotationSchema).optional(),
-  workspace_name: z.string().min(1, 'Workspace name is required'), 
+  workspace_name: z.string().min(1, 'Workspace name is required'),
   spec: VolumeSpecSchema,
 });
 
@@ -171,7 +171,7 @@ export const StackSchema = z.object({
   labels: z.array(LabelSchema).optional(),
   spec: z.object({
     stack_resources: z.array(StackResourceSchema).min(1, "At least one stack resource is required"),
-    volumes: z.array(VolumeSchema).optional(), 
+    volumes: z.array(VolumeSchema).optional(),
   }),
 });
 

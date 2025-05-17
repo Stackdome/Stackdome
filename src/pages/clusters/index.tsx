@@ -17,7 +17,7 @@ export default function ClustersPage() {
   const navigate = useNavigate();
 
   const showBlankSlate = clusters.length === 0;
-  
+
   // Automatically redirect to cluster detail page if a cluster exists
   useEffect(() => {
     if (!loading && clusters.length === 1) {

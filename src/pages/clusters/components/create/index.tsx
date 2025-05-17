@@ -195,8 +195,8 @@ export default function ClusterCreatePage({ onSubmit, loading, error, onCancel }
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <Switch 
-                  id="create-image-registry" 
+                <Switch
+                  id="create-image-registry"
                   checked={createImageRegistry}
                   onCheckedChange={setCreateImageRegistry}
                 />
@@ -209,12 +209,12 @@ export default function ClusterCreatePage({ onSubmit, loading, error, onCancel }
             )}
           </CardContent>
           <CardFooter className="flex justify-between space-x-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={(e) => {
                 e.preventDefault();
                 onCancel();
-              }} 
+              }}
               type="button"
               className="flex-1"
             >

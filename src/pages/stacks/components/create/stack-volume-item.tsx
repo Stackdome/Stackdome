@@ -48,7 +48,7 @@ export default function StackVolumeItem({
 
   // For labels management
   const [currentLabelInput, setCurrentLabelInput] = useState("");
-  
+
   // For source tab selection based on volume.sourceType
   const getInitialSourceTab = (): string => {
     if (!volume.sourceType || volume.sourceType === "None") return "no-source";
@@ -57,20 +57,20 @@ export default function StackVolumeItem({
     if (volume.sourceType === "BuildArtifact") return "build-artifact";
     return "no-source";
   };
-  
+
   const handleSourceTypeChange = (value: string) => {
     let sourceType: "None" | "GitRepo" | "RemoteDir" | "BuildArtifact" = "None";
-    
+
     if (value === "git-repo") sourceType = "GitRepo";
     else if (value === "remote-dir") sourceType = "RemoteDir";
     else if (value === "build-artifact") sourceType = "BuildArtifact";
-    
+
     // Update the UI helper field and prepare the source structure based on the selected type
     const updatedVolume: Partial<VolumeFormData> = {
       ...volume,
       sourceType
     };
-    
+
     // Set up the spec with required fields
     updatedVolume.spec = {
       size: volume.spec?.size || "",
@@ -78,13 +78,13 @@ export default function StackVolumeItem({
       access_mode: volume.spec?.access_mode || "ReadWriteOnce",
       storage_class: volume.spec?.storage_class
     };
-    
+
     // Add source configuration based on source type
     if (sourceType !== "None") {
       updatedVolume.spec.source = {
         source_type: sourceType as "GitRepo" | "RemoteDir" | "BuildArtifact",
       };
-      
+
       if (sourceType === "GitRepo") {
         updatedVolume.spec.source.git_repo_source = {
           repo_url: "",
@@ -100,18 +100,18 @@ export default function StackVolumeItem({
         }];
       }
     }
-    
+
     update(updatedVolume);
   };
-  
+
   // Add a new label
   const addLabel = () => {
     if (!currentLabelInput.trim()) return;
-    
+
     const labelParts = currentLabelInput.trim().split('=');
     const key = labelParts[0].trim();
     const value = labelParts.length > 1 ? labelParts.slice(1).join('=').trim() : "";
-    
+
     if (key) {
       update({
         ...volume,
@@ -120,7 +120,7 @@ export default function StackVolumeItem({
       setCurrentLabelInput("");
     }
   };
-  
+
   // Remove a label
   const removeLabel = (indexToRemove: number) => {
     update({
@@ -128,11 +128,11 @@ export default function StackVolumeItem({
       labels: (volume.labels || []).filter((_, idx: number) => idx !== indexToRemove)
     });
   };
-  
+
   // Handle adding a build artifact (for BuildArtifact source type)
   const addBuildArtifact = () => {
     if (!volume.spec?.source?.build_source) return;
-    
+
     update({
       ...volume,
       spec: {
@@ -147,11 +147,11 @@ export default function StackVolumeItem({
       }
     });
   };
-  
+
   // Handle removing a build artifact
   const removeBuildArtifact = (artifactIndex: number) => {
     if (!volume.spec?.source?.build_source) return;
-    
+
     update({
       ...volume,
       spec: {
@@ -163,18 +163,18 @@ export default function StackVolumeItem({
       }
     });
   };
-  
+
   // Update a build artifact field
   const updateBuildArtifact = (artifactIndex: number, field: string, value: string) => {
     if (!volume.spec?.source?.build_source) return;
-    
+
     update({
       ...volume,
       spec: {
         ...volume.spec,
         source: {
           ...volume.spec.source,
-          build_source: volume.spec.source.build_source.map((artifact: BuildArtifact, idx: number) => 
+          build_source: volume.spec.source.build_source.map((artifact: BuildArtifact, idx: number) =>
             idx === artifactIndex ? { ...artifact, [field]: value } : artifact
           )
         }
@@ -201,7 +201,7 @@ export default function StackVolumeItem({
           </div>
         </div>
       </AccordionTrigger>
-      
+
       <AccordionContent className="pb-4 pt-2">
         <div className="px-4 space-y-4">
           {/* Basic info section */}
@@ -220,7 +220,7 @@ export default function StackVolumeItem({
               />
               {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor={`volume-size-${index}`}>
                 Size <span className="text-destructive">*</span>
@@ -229,8 +229,8 @@ export default function StackVolumeItem({
                 id={`volume-size-${index}`}
                 placeholder="e.g., 1Gi, 500Mi"
                 value={volume.spec?.size || ""}
-                onChange={(e) => update({ 
-                  spec: { 
+                onChange={(e) => update({
+                  spec: {
                     size: e.target.value,
                     needs_sync_before_use: volume.spec?.needs_sync_before_use || false,
                     access_mode: volume.spec?.access_mode || "ReadWriteOnce",
@@ -245,14 +245,14 @@ export default function StackVolumeItem({
               <p className="text-xs text-muted-foreground">Volume size (e.g., 1Gi, 500Mi)</p>
             </div>
           </div>
-          
+
           {/* Advanced settings */}
           <div className="space-y-2">
             <h3 className="font-medium text-sm">Access Mode</h3>
             <Select
               value={volume.spec?.access_mode || "ReadWriteOnce"}
               onValueChange={(value) => update({
-                spec: { 
+                spec: {
                   size: volume.spec?.size || "",
                   needs_sync_before_use: volume.spec?.needs_sync_before_use || false,
                   access_mode: value as "ReadWriteOnce" | "ReadWriteMany" | "ReadOnlyMany",
@@ -276,13 +276,13 @@ export default function StackVolumeItem({
               ReadOnlyMany: Can be mounted by multiple nodes for read only.
             </p>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <Switch
               id={`needs-sync-${index}`}
               checked={volume.spec?.needs_sync_before_use || false}
               onCheckedChange={(checked) => update({
-                spec: { 
+                spec: {
                   size: volume.spec?.size || "",
                   needs_sync_before_use: checked,
                   access_mode: volume.spec?.access_mode || "ReadWriteOnce",
@@ -303,7 +303,7 @@ export default function StackVolumeItem({
               </TooltipContent>
             </Tooltip>
           </div>
-          
+
           {/* Optional storage class */}
           <div className="space-y-2">
             <Label htmlFor={`storage-class-${index}`}>Storage Class (optional)</Label>
@@ -311,7 +311,7 @@ export default function StackVolumeItem({
               id={`storage-class-${index}`}
               placeholder="Storage class name"
               value={volume.spec?.storage_class || ""}
-              onChange={(e) => update({ 
+              onChange={(e) => update({
                 spec: {
                   size: volume.spec?.size || "",
                   needs_sync_before_use: volume.spec?.needs_sync_before_use || false,
@@ -325,14 +325,14 @@ export default function StackVolumeItem({
               Leave empty to use the cluster's default storage class
             </p>
           </div>
-          
+
           <Separator />
-          
+
           {/* Source Settings */}
           <div className="space-y-2">
             <h3 className="font-medium">Volume Source</h3>
-            <Tabs 
-              defaultValue={getInitialSourceTab()} 
+            <Tabs
+              defaultValue={getInitialSourceTab()}
               onValueChange={handleSourceTypeChange}
               className="w-full"
             >
@@ -342,7 +342,7 @@ export default function StackVolumeItem({
                 <TabsTrigger value="remote-dir">Remote Directory</TabsTrigger>
                 <TabsTrigger value="build-artifact">Build Artifact</TabsTrigger>
               </TabsList>
-              
+
               {/* No Source Content */}
               <TabsContent value="no-source" className="pt-4">
                 <div className="text-center text-muted-foreground">
@@ -350,7 +350,7 @@ export default function StackVolumeItem({
                   <p>Empty volume without an initial source.</p>
                 </div>
               </TabsContent>
-              
+
               {/* Git Repository Source */}
               <TabsContent value="git-repo" className="space-y-4 pt-4">
                 <div className="space-y-2">
@@ -378,17 +378,17 @@ export default function StackVolumeItem({
                     })}
                     className={errors["spec.source.git_repo_source.repo_url"] ? "border-destructive" : ""}
                   />
-                  {errors["spec.source.git_repo_source.repo_url"] && 
+                  {errors["spec.source.git_repo_source.repo_url"] &&
                     <p className="text-sm text-destructive">{errors["spec.source.git_repo_source.repo_url"]}</p>}
                 </div>
-                
+
                 {/* Git Revision Section */}
                 <div className="space-y-4 border rounded-lg p-3 bg-muted/20">
                   <div className="flex items-center">
                     <GitBranch className="h-4 w-4 mr-2" />
                     <h4 className="font-medium">Git Revision</h4>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor={`git-branch-${index}`}>Branch Name</Label>
                     <Input
@@ -417,7 +417,7 @@ export default function StackVolumeItem({
                     />
                     <p className="text-xs text-muted-foreground">Default branch is "main"</p>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor={`git-commit-${index}`}>Commit SHA (optional)</Label>
                     <Input
@@ -445,7 +445,7 @@ export default function StackVolumeItem({
                       })}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor={`git-tag-${index}`}>Tag (optional)</Label>
                     <Input
@@ -475,7 +475,7 @@ export default function StackVolumeItem({
                   </div>
                 </div>
               </TabsContent>
-              
+
               {/* Remote Directory Source */}
               <TabsContent value="remote-dir" className="space-y-4 pt-4">
                 <div className="space-y-2">
@@ -504,14 +504,14 @@ export default function StackVolumeItem({
                     })}
                     className={errors["spec.source.remote_source.path"] ? "border-destructive" : ""}
                   />
-                  {errors["spec.source.remote_source.path"] && 
+                  {errors["spec.source.remote_source.path"] &&
                     <p className="text-sm text-destructive">{errors["spec.source.remote_source.path"]}</p>}
                   <p className="text-xs text-muted-foreground">
                     Provide the path to the remote directory that should be mounted
                   </p>
                 </div>
               </TabsContent>
-              
+
               {/* Build Artifact Source */}
               <TabsContent value="build-artifact" className="space-y-4 pt-4">
                 {(volume.spec?.source?.build_source || []).map((artifact, artifactIndex) => (
@@ -529,7 +529,7 @@ export default function StackVolumeItem({
                         </Button>
                       )}
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor={`resource-ref-${index}-${artifactIndex}`}>
                         Resource Reference <span className="text-destructive">*</span>
@@ -541,13 +541,13 @@ export default function StackVolumeItem({
                         onChange={(e) => updateBuildArtifact(artifactIndex, "resource_ref", e.target.value)}
                         className={errors[`spec.source.build_source.${artifactIndex}.resource_ref`] ? "border-destructive" : ""}
                       />
-                      {errors[`spec.source.build_source.${artifactIndex}.resource_ref`] && 
+                      {errors[`spec.source.build_source.${artifactIndex}.resource_ref`] &&
                         <p className="text-sm text-destructive">{errors[`spec.source.build_source.${artifactIndex}.resource_ref`]}</p>}
                       <p className="text-xs text-muted-foreground">
                         Reference to a stack resource that produces build artifacts
                       </p>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor={`source-path-${index}-${artifactIndex}`}>
                         Source Path <span className="text-destructive">*</span>
@@ -559,10 +559,10 @@ export default function StackVolumeItem({
                         onChange={(e) => updateBuildArtifact(artifactIndex, "source_path", e.target.value)}
                         className={errors[`spec.source.build_source.${artifactIndex}.source_path`] ? "border-destructive" : ""}
                       />
-                      {errors[`spec.source.build_source.${artifactIndex}.source_path`] && 
+                      {errors[`spec.source.build_source.${artifactIndex}.source_path`] &&
                         <p className="text-sm text-destructive">{errors[`spec.source.build_source.${artifactIndex}.source_path`]}</p>}
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor={`dest-path-${index}-${artifactIndex}`}>
                         Destination Path <span className="text-destructive">*</span>
@@ -574,12 +574,12 @@ export default function StackVolumeItem({
                         onChange={(e) => updateBuildArtifact(artifactIndex, "destination_path", e.target.value)}
                         className={errors[`spec.source.build_source.${artifactIndex}.destination_path`] ? "border-destructive" : ""}
                       />
-                      {errors[`spec.source.build_source.${artifactIndex}.destination_path`] && 
+                      {errors[`spec.source.build_source.${artifactIndex}.destination_path`] &&
                         <p className="text-sm text-destructive">{errors[`spec.source.build_source.${artifactIndex}.destination_path`]}</p>}
                     </div>
                   </div>
                 ))}
-                
+
                 <Button
                   type="button"
                   variant="outline"
@@ -593,9 +593,9 @@ export default function StackVolumeItem({
               </TabsContent>
             </Tabs>
           </div>
-          
+
           <Separator />
-          
+
           {/* Labels Section */}
           <div className="space-y-3">
             <h3 className="font-medium">Labels (Optional)</h3>
@@ -618,7 +618,7 @@ export default function StackVolumeItem({
             <p className="text-xs text-muted-foreground">
               Enter labels in key=value format and press Enter or click Add
             </p>
-            
+
             {(volume.labels && volume.labels.length > 0) && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {volume.labels.map((label, labelIndex) => (
@@ -636,7 +636,7 @@ export default function StackVolumeItem({
               </div>
             )}
           </div>
-          
+
           {/* Delete button at bottom */}
           {!isOnlyVolume && (
             <div className="pt-4 border-t">

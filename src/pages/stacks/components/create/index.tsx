@@ -10,12 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label as UILabel } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { 
-  StackSchema, 
-  type StackData, 
+import {
+  StackSchema,
+  type StackData,
   type StackResourceData,
   type VolumeFormData,
-} from "@/pages/stacks/schemas/stack-create-schema"; 
+} from "@/pages/stacks/schemas/stack-create-schema";
 
 type FormErrors = { [path: string]: string | undefined };
 
@@ -24,13 +24,13 @@ const mockCreateStackApi = (payload: StackData): Promise<{ success: boolean; err
   return new Promise(resolve => {
     setTimeout(() => {
       if (payload.name === "fail_validation") {
-        resolve({ 
-          success: false, 
-          errors: { 
+        resolve({
+          success: false,
+          errors: {
             "name": "This stack name is blacklisted by mock.",
             "spec.stack_resources.1.name": "Resource name 'db' is too common.",
             "spec.stack_resources.1._form": "Mock API validation failed for this resource."
-          } 
+          }
         });
       } else if (payload.name === "fail_api_generic") {
         resolve({ success: false, error: "A generic API error occurred. Please try again." });
@@ -43,8 +43,8 @@ const mockCreateStackApi = (payload: StackData): Promise<{ success: boolean; err
 };
 
 const setNestedValue = <T extends Record<string, unknown>>(
-  obj: T, 
-  path: string, 
+  obj: T,
+  path: string,
   value: unknown
 ): T => {
   const keys = path.split('.');
@@ -92,7 +92,7 @@ export default function StackCreatePage() {
       });
     }
   };
-  
+
   const handleLabelInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCurrentLabelInput(e.target.value);
   };
@@ -121,7 +121,7 @@ export default function StackCreatePage() {
       }
     }
   };
-  
+
   const removeLabel = (indexToRemove: number) => {
     setFormData(prev => ({
       ...prev,
@@ -156,7 +156,7 @@ export default function StackCreatePage() {
       });
     }
   }, [formErrors]);
-  
+
   const getDefaultVolume = (workspace?: string): Partial<VolumeFormData> => {
     return {
       name: "",
@@ -174,14 +174,14 @@ export default function StackCreatePage() {
   const handleVolumesChange = useCallback((updatedVolumes: Partial<VolumeFormData>[]) => {
     setFormData(prev => {
       const newFormData = { ...prev };
-      
+
       if (!newFormData.spec) {
-        newFormData.spec = { 
+        newFormData.spec = {
           stack_resources: [],
           volumes: []
         };
       }
-      
+
       newFormData.spec = {
         ...newFormData.spec,
         volumes: updatedVolumes.map(vol => ({
@@ -198,10 +198,10 @@ export default function StackCreatePage() {
           }
         }))
       };
-      
+
       return newFormData;
     });
-    
+
     if (formErrors["spec.volumes"]) {
       setFormErrors((prev: FormErrors) => {
         const newErrors: FormErrors = { ...prev };
@@ -238,9 +238,9 @@ export default function StackCreatePage() {
               environment_variables: sr.execution_config.environment_variables?.length ? sr.execution_config.environment_variables : undefined,
             } : undefined,
             init_spec: sr.init_spec && (sr.init_spec.command?.length || sr.init_spec.args?.length || sr.init_spec.image_spec?.image) ? {
-                command: sr.init_spec.command?.length ? sr.init_spec.command : undefined,
-                args: sr.init_spec.args?.length ? sr.init_spec.args : undefined,
-                image_spec: sr.init_spec.image_spec?.image ? { image: sr.init_spec.image_spec.image } : undefined,
+              command: sr.init_spec.command?.length ? sr.init_spec.command : undefined,
+              args: sr.init_spec.args?.length ? sr.init_spec.args : undefined,
+              image_spec: sr.init_spec.image_spec?.image ? { image: sr.init_spec.image_spec.image } : undefined,
             } : undefined,
           };
 
@@ -250,18 +250,18 @@ export default function StackCreatePage() {
           } else if (sr.sourceType === 'git') {
             resource.build_spec = sr.build_spec ? {
               source_context: {
-                git_repo: sr.build_spec.source_context?.git_repo?.repo_url 
-                  ? { repo_url: sr.build_spec.source_context.git_repo.repo_url } 
+                git_repo: sr.build_spec.source_context?.git_repo?.repo_url
+                  ? { repo_url: sr.build_spec.source_context.git_repo.repo_url }
                   : undefined,
               },
               context_path_within_source: sr.build_spec.context_path_within_source || "./",
               dockerfile_path: sr.build_spec.dockerfile_path || "Dockerfile",
-              image_repository_url: sr.build_spec.image_repository_url?.url 
-                ? { url: sr.build_spec.image_repository_url.url, cluster_registry_id: sr.build_spec.image_repository_url.cluster_registry_id } 
+              image_repository_url: sr.build_spec.image_repository_url?.url
+                ? { url: sr.build_spec.image_repository_url.url, cluster_registry_id: sr.build_spec.image_repository_url.cluster_registry_id }
                 : { url: sr.build_spec.image_repository_url?.url || "", cluster_registry_id: sr.build_spec.image_repository_url?.cluster_registry_id },
               insecure_registry: sr.build_spec.insecure_registry || false,
-              source_revision: sr.build_spec.source_revision?.git_repo_revision 
-                ? { git_repo_revision: sr.build_spec.source_revision.git_repo_revision } 
+              source_revision: sr.build_spec.source_revision?.git_repo_revision
+                ? { git_repo_revision: sr.build_spec.source_revision.git_repo_revision }
                 : undefined,
             } : undefined;
             resource.image_spec = undefined;
@@ -276,13 +276,13 @@ export default function StackCreatePage() {
             const sourceConfig = (() => {
               const typedVol = vol as VolumeFormData;
               if (!typedVol.sourceType || typedVol.sourceType === 'None') {
-                return {}; 
+                return {};
               }
               return {
                 source: {
-                  source_type: typedVol.sourceType === "GitRepo" 
+                  source_type: typedVol.sourceType === "GitRepo"
                     ? "GitRepo" as const
-                    : typedVol.sourceType === "RemoteDir" 
+                    : typedVol.sourceType === "RemoteDir"
                       ? "RemoteDir" as const
                       : "BuildArtifact" as const,
                   git_repo_source: typedVol.sourceType === "GitRepo" ? vol.spec?.source?.git_repo_source : undefined,
@@ -307,27 +307,27 @@ export default function StackCreatePage() {
           })
       }
     };
-    
+
     const validationResult = StackSchema.safeParse(payloadToValidate);
 
     if (!validationResult.success) {
       const newErrors: FormErrors = {};
-      
+
       validationResult.error.issues.forEach(issue => {
         const pathKey = issue.path.join('.');
         if (!newErrors[pathKey]) {
           newErrors[pathKey] = issue.message;
         }
       });
-      
+
       console.log("Form errors:", newErrors);
       setFormErrors(newErrors);
       setIsLoading(false);
-      
+
       if (Object.keys(newErrors).length > 0 && !apiError) {
         setApiError("Please fix the highlighted errors before submitting the form");
       }
-      
+
       return;
     }
 
@@ -362,7 +362,7 @@ export default function StackCreatePage() {
       }
       return acc;
     }, {});
-    
+
   const volumesErrors: StackVolumesFormErrors = Object.entries(formErrors)
     .filter(([key]) => key.startsWith("spec.volumes."))
     .reduce((acc: StackVolumesFormErrors, [key, value]) => {
@@ -386,20 +386,20 @@ export default function StackCreatePage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => { 
+          <Button variant="outline" onClick={() => {
             if (window.history.length > 2 && window.history.state && window.history.state.idx !== 0) {
-                navigate(-1); 
+              navigate(-1);
             } else {
-                navigate("/stacks", { replace: true });
+              navigate("/stacks", { replace: true });
             }
-           }}>Cancel</Button>
+          }}>Cancel</Button>
           <Button variant="default" onClick={handleSubmit} disabled={isLoading}>
             {isLoading ? "Deploying..." : <><Rocket className="mr-2 h-4 w-4" /> Deploy</>}
           </Button>
         </div>
       </div>
       <Separator className="my-6" />
-      
+
       {Object.keys(formErrors).length > 0 && (
         <div className="bg-red-500/10 border border-red-500 rounded-lg px-4 py-3 mb-6">
           <h3 className="text-red-500 font-semibold flex items-center">
@@ -416,7 +416,7 @@ export default function StackCreatePage() {
           <AlertDescription className="text-red-500">{formErrors[""]}</AlertDescription>
         </Alert>
       )}
-        
+
       <div className="flex flex-col">
         <Card className="mb-6 rounded-lg overflow-hidden">
           <CardHeader className="pb-3">
@@ -440,7 +440,7 @@ export default function StackCreatePage() {
                 />
                 {formErrors.name && <p className="text-sm text-destructive">{formErrors.name}</p>}
               </div>
-              
+
               <div>
                 <UILabel htmlFor="stack-labels" className="text-sm font-medium flex items-center gap-1 mb-2">
                   Labels
@@ -473,14 +473,14 @@ export default function StackCreatePage() {
                 {(formData.labels && formData.labels.length > 0) && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {(formData.labels).map((label, idx) => (
-                      <Badge 
-                        key={idx} 
+                      <Badge
+                        key={idx}
                         variant="secondary"
                         className="flex items-center gap-1 px-2.5 py-1"
                       >
                         <span>{label.key}{label.value && label.value !== "" ? `=${label.value}` : ""}</span>
-                        <button 
-                          onClick={() => removeLabel(idx)} 
+                        <button
+                          onClick={() => removeLabel(idx)}
                           className="ml-1 rounded-full hover:bg-secondary-foreground/20 h-4 w-4 flex items-center justify-center"
                           type="button"
                         >
@@ -503,25 +503,25 @@ export default function StackCreatePage() {
           </CardHeader>
           <Separator />
           <CardContent className="p-0">
-            <StackResourcesForm 
+            <StackResourcesForm
               resources={formData.spec?.stack_resources || []}
               onResourcesChange={handleResourcesChange}
               errors={resourcesErrors}
             />
           </CardContent>
         </Card>
-        
+
         {formErrors["spec.stack_resources"] && (
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Resource Error</AlertTitle>
             <AlertDescription>
-              {formErrors["spec.stack_resources"]} 
+              {formErrors["spec.stack_resources"]}
               {formData.spec?.stack_resources.length === 0 && (
                 <div className="mt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleResourcesChange([{ name: "", sourceType: "image" }])}>
                     Add a resource
                   </Button>
@@ -540,7 +540,7 @@ export default function StackCreatePage() {
           </CardHeader>
           <Separator />
           <CardContent className="p-0">
-            <StackVolumesForm 
+            <StackVolumesForm
               volumes={formData.spec?.volumes || []}
               onVolumesChange={handleVolumesChange}
               errors={volumesErrors}
@@ -548,7 +548,7 @@ export default function StackCreatePage() {
             />
           </CardContent>
         </Card>
-        
+
         {/* Volume section empty state */}
         {(!formData.spec?.volumes || formData.spec.volumes.length === 0) && (
           <div className="bg-muted/30 border border-muted-foreground/20 rounded-lg px-4 py-6 mb-6 text-center text-muted-foreground">

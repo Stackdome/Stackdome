@@ -133,15 +133,17 @@ export default function ResourceFormList<T>({
         className="rounded-none divide-y"
       >
         {items.map((item, index) => (
-          renderItem({
-            item,
-            index,
-            itemRef: getItemRef(index),
-            isOnlyItem: items.length === 1,
-            onChange: handleItemChange,
-            onRemove: handleRemoveItem,
-            errors: errors[index] || {},
-          })
+          <div key={index}>
+            {renderItem({
+              item,
+              index,
+              itemRef: getItemRef(index),
+              isOnlyItem: items.length === 1,
+              onChange: handleItemChange,
+              onRemove: handleRemoveItem,
+              errors: errors[index] || {},
+            })}
+          </div>
         ))}
       </Accordion>
       <div className="flex justify-center py-4 border-t">

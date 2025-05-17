@@ -2804,11 +2804,11 @@ export interface components {
         /** @enum {string} */
         RemoteSyncServerState: "RemoteSyncServerPending" | "RemoteSyncServerCreating" | "RemoteSyncServerCreated" | "RemoteSyncServerReady" | "RemoteSyncServerFailed";
         Volume: {
-            name: string; 
+            name: string;
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
             workspace_name: string;
-            spec: components["schemas"]["VolumeSpec"]; 
+            spec: components["schemas"]["VolumeSpec"];
             readonly status?: components["schemas"]["VolumeStatus"];
         };
         VolumeList: {
@@ -2820,9 +2820,9 @@ export interface components {
             public_key: string;
         };
         VolumeSpec: {
-            size: string; 
-            storage_class?: string; 
-            needs_sync_before_use: boolean; 
+            size: string;
+            storage_class?: string;
+            needs_sync_before_use: boolean;
             access_mode: components["schemas"]["VolumeAccessMode"];
             source?: components["schemas"]["VolumeSource"];
         };

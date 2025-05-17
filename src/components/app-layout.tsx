@@ -2,13 +2,13 @@ import * as React from "react";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Outlet, useLocation } from "react-router-dom";
-import { 
-  Breadcrumb, 
-  BreadcrumbItem, 
-  BreadcrumbLink, 
-  BreadcrumbList, 
-  BreadcrumbPage, 
-  BreadcrumbSeparator 
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
 } from "@/components/ui/breadcrumb";
 import { BreadcrumbProvider } from "@/contexts/breadcrumb-context";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
@@ -31,7 +31,7 @@ function AppLayoutContent({
 
   // Parse the current path for breadcrumbs
   const pathSegments = location.pathname.split('/').filter(Boolean);
-  
+
   // Create breadcrumb items based on the current path
   const breadcrumbItems: BreadcrumbItemType[] = [
     { name: 'Home', path: '/' },
@@ -84,7 +84,7 @@ function AppLayoutContent({
             </div>
             <Separator />
           </div>
-          
+
           {/* Scrollable content area */}
           <div className="flex-grow overflow-auto scrollbar-hide rounded-bl-lg rounded-br-lg">
             {children ? children : <Outlet />}

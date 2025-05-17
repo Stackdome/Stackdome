@@ -31,7 +31,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { clusters, loading } = useClusters();
   const hasCluster = !loading && clusters.length > 0;
   const location = useLocation();
-  
+
   return (
     <Sidebar variant="inset" className="bg-sidebar text-sidebar-foreground" {...props}>
       <SidebarHeader className="px-2 py-3">
@@ -51,7 +51,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      
+
       <SidebarContent className="px-2 py-2">
         <Accordion type="multiple" className="w-full" defaultValue={["stacks", "clusters"]}>
           <AccordionItem value="stacks" className="border-none">
@@ -64,7 +64,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <AccordionContent className="pb-1">
               <SidebarMenuSub>
                 <SidebarMenuSubItem>
-                  <SidebarMenuSubButton 
+                  <SidebarMenuSubButton
                     asChild
                     className={cn(
                       "text-sidebar-foreground/70 text-sm hover:text-sidebar-foreground hover:bg-sidebar-accent",
@@ -81,7 +81,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </SidebarMenuSub>
             </AccordionContent>
           </AccordionItem>
-          
+
           <AccordionItem value="clusters" className="border-none">
             <AccordionTrigger className="px-2 py-1.5 text-sm text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent hover:no-underline rounded-md">
               <span className="flex items-center gap-2">
@@ -109,7 +109,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuSubItem>
                   {hasCluster && clusters.length > 1 && clusters.map(cluster => (
                     <SidebarMenuSubItem key={cluster.id}>
-                      <SidebarMenuSubButton 
+                      <SidebarMenuSubButton
                         asChild
                         className={cn(
                           "text-sidebar-foreground/70 text-sm hover:text-sidebar-foreground hover:bg-sidebar-accent",
@@ -154,7 +154,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </AccordionItem>
         </Accordion>
       </SidebarContent>
-      
+
       <SidebarFooter className="p-2">
         <NavUser />
       </SidebarFooter>
