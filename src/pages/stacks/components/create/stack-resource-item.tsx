@@ -1,4 +1,3 @@
-import React from "react";
 import {
   AccordionItem,
   AccordionTrigger,
@@ -40,22 +39,32 @@ export default function StackResourceItem({
   };
 
   // Helper for updating nested build_spec
-  const updateBuildSpec = (patch: any) => {
+  const updateBuildSpec = (patch: Partial<NonNullable<StackResourceData["build_spec"]>>) => {
+    const currentBuildSpec = resource.build_spec || {
+      source_context: { git_repo: { repo_url: '' } },
+      context_path_within_source: './',
+      dockerfile_path: 'Dockerfile',
+      image_repository_url: { url: '', cluster_registry_id: '' },
+      insecure_registry: false
+    };
+    
     update({
-      build_spec: { ...resource.build_spec, ...patch },
+      build_spec: { ...currentBuildSpec, ...patch },
       image_spec: undefined,
     });
   };
   // Helper for updating nested image_spec
-  const updateImageSpec = (patch: any) => {
+  const updateImageSpec = (patch: Partial<NonNullable<StackResourceData["image_spec"]>>) => {
+    const currentImageSpec = resource.image_spec || { image: '' };
+    
     update({
-      image_spec: { ...resource.image_spec, ...patch },
+      image_spec: { ...currentImageSpec, ...patch },
       build_spec: undefined,
     });
   };
 
   // Helper for updating ports
-  const updatePort = (pidx: number, patch: any) => {
+  const updatePort = (pidx: number, patch: Partial<NonNullable<StackResourceData["ports"]>[number]>) => {
     update({
       ports: (resource.ports || []).map((pt, i) => (i === pidx ? { ...pt, ...patch } : pt)),
     });
@@ -108,41 +117,47 @@ export default function StackResourceItem({
   };
 
   return (
-    <AccordionItem value={String(index)} className="border rounded-md last:border-b">
-      <AccordionTrigger className="px-4 py-4 hover:bg-muted/10 data-[state=open]:bg-muted/40 rounded-t-lg transition-colors duration-200" ref={itemRef}>
-        <div className="flex items-center gap-3 w-full justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/15 text-primary font-medium shadow-sm">
-              {index + 1}
-            </div>
-            <span className="font-medium text-lg">
-              {resource.name || `Resource ${index + 1}`}
-            </span>
+    <AccordionItem value={String(index)} className="border-0">
+      <AccordionTrigger 
+        ref={itemRef}
+        className="px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
+      >
+        <div className="flex items-center gap-2 text-left">
+          {resource.sourceType === "git" ? (
+            <GitBranch className="h-5 w-5 text-muted-foreground shrink-0" />
+          ) : (
+            <ImageIcon className="h-5 w-5 text-muted-foreground shrink-0" />
+          )}
+          <div>
+            <span className="font-medium">{resource.name || `Resource ${index + 1}`}</span>
             {resource.name === "" && (
-              <span className="ml-2 text-xs text-muted-foreground font-normal inline-block align-middle">
-                (unnamed)
-              </span>
+              <span className="ml-2 text-sm text-muted-foreground">(unnamed)</span>
+            )}
+            {errors._form && (
+              <div className="text-sm text-destructive mt-1">{errors._form}</div>
             )}
           </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="p-0 rounded-b-lg overflow-hidden">
-        <Tabs defaultValue="configuration" className="w-full">
-          <div className="border-b px-4 mt-2">
-            <TabsList className="mb-0 h-12">
-              <TabsTrigger value="configuration" className="data-[state=active]:bg-background rounded-t-md rounded-b-none">Configuration</TabsTrigger>
-              <TabsTrigger value="deployment" className="data-[state=active]:bg-background rounded-t-md rounded-b-none">Deployment</TabsTrigger>
-              <TabsTrigger value="environment" className="data-[state=active]:bg-background rounded-t-md rounded-b-none">Environment Variables</TabsTrigger>
+      
+      <AccordionContent className="pb-4 pt-2">
+        <div className="px-4 space-y-4">
+          <Tabs defaultValue="configuration" className="w-full">
+            <div className="mt-1 mb-3">
+            <TabsList className="grid grid-cols-3 w-full">
+              <TabsTrigger value="configuration">Configuration</TabsTrigger>
+              <TabsTrigger value="deployment">Deployment</TabsTrigger>
+              <TabsTrigger value="environment">Environment Variables</TabsTrigger>
             </TabsList>
           </div>
 
           {/* General Section (always at top) */}
-          <TabsContent value="configuration" className="p-6 space-y-8">
+          <TabsContent value="configuration" className="pt-4 space-y-6">
             <div>
-              <h3 className="text-lg font-semibold mb-4">General</h3>
-              <div className="grid gap-6 max-w-3xl">
+              <h3 className="text-lg font-medium mb-3">General</h3>
+              <div className="grid gap-4 max-w-3xl">
                 <div>
-                  <div className="flex items-center gap-1 mb-1">
+                  <div className="flex items-center gap-1 mb-2">
                     <Label htmlFor={`name-${index}`} className="text-sm font-medium">
                       Resource Name <span className="text-red-500">*</span>
                     </Label>
@@ -158,13 +173,14 @@ export default function StackResourceItem({
                     value={resource.name || ""}
                     onChange={e => update({ name: e.target.value })}
                     required
-                    className="max-w-md"
+                    className={`max-w-md ${errors.name ? "border-destructive" : ""}`}
                     placeholder="e.g., web-server, database, cache"
+                    aria-invalid={!!errors.name}
                   />
-                  {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
+                  {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
                 </div>
                 <div>
-                  <div className="flex items-center gap-1 mb-1">
+                  <div className="flex items-center gap-1 mb-2">
                     <Label htmlFor={`depends-on-${index}`} className="text-sm font-medium">
                       Depends On
                     </Label>
@@ -185,10 +201,10 @@ export default function StackResourceItem({
                 </div>
               </div>
             </div>
-            <Separator />
+            <Separator className="my-4" />
             {/* Source Configuration Section */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Source Configuration</h3>
+              <h3 className="text-lg font-medium mb-3">Source Configuration</h3>
               <div className="mb-4">
                 <div className="flex items-center gap-1 mb-2">
                   <Label htmlFor={`source-type-${index}`} className="text-sm font-medium">
@@ -227,7 +243,7 @@ export default function StackResourceItem({
               {resource.sourceType === "image" ? (
                 <div className="grid gap-4 max-w-3xl">
                   <div>
-                    <div className="flex items-center gap-1 mb-1">
+                    <div className="flex items-center gap-1 mb-2">
                       <Label htmlFor={`container-image-${index}`} className="text-sm font-medium">
                         Container Image URL <span className="text-red-500">*</span>
                       </Label>
@@ -243,15 +259,19 @@ export default function StackResourceItem({
                       value={resource.image_spec?.image || ""}
                       onChange={e => updateImageSpec({ image: e.target.value })}
                       placeholder="e.g., nginx:latest, your-registry/your-image:v1.0"
-                      className="max-w-xl"
+                      className={`max-w-xl ${errors["image_spec.image"] ? "border-destructive" : ""}`}
                       required={resource.sourceType === "image"}
+                      aria-invalid={!!errors["image_spec.image"]}
                     />
+                    {errors["image_spec.image"] && (
+                      <p className="text-sm text-destructive">{errors["image_spec.image"]}</p>
+                    )}
                   </div>
                 </div>
               ) : (
                 <div className="grid gap-6 max-w-3xl">
                   <div>
-                    <div className="flex items-center gap-1 mb-1">
+                    <div className="flex items-center gap-1 mb-2">
                       <Label htmlFor={`git-repo-${index}`} className="text-sm font-medium">
                         Git Repository URL <span className="text-red-500">*</span>
                       </Label>
@@ -267,23 +287,27 @@ export default function StackResourceItem({
                       value={resource.build_spec?.source_context?.git_repo?.repo_url || ""}
                       onChange={e => updateBuildSpec({ source_context: { git_repo: { repo_url: e.target.value }}})}
                       placeholder="https://github.com/username/repository.git"
-                      className="max-w-xl"
+                      className={`max-w-xl ${errors["build_spec.source_context.git_repo.repo_url"] ? "border-destructive" : ""}`}
                       required={resource.sourceType === "git"}
+                      aria-invalid={!!errors["build_spec.source_context.git_repo.repo_url"]}
                     />
+                    {errors["build_spec.source_context.git_repo.repo_url"] && (
+                      <p className="text-sm text-destructive">{errors["build_spec.source_context.git_repo.repo_url"]}</p>
+                    )}
                   </div>
                   {/* Add more build_spec fields as needed */}
                 </div>
               )}
             </div>
-            <Separator />
+            <Separator className="my-4" />
             {/* Ports Section */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Ports Configuration</h3>
+              <h3 className="text-lg font-medium mb-3">Ports Configuration</h3>
               <div className="grid gap-6 max-w-3xl">
                 {(resource.ports || []).map((port, pidx) => (
                   <div key={pidx} className="grid grid-cols-2 md:grid-cols-5 gap-4 items-end border p-3 rounded-md bg-muted/10">
                     <div>
-                      <div className="flex items-center gap-1 mb-1">
+                      <div className="flex items-center gap-1 mb-2">
                         <Label htmlFor={`port-number-${index}-${pidx}`} className="text-sm font-medium">
                           Port Number <span className="text-red-500">*</span>
                         </Label>
@@ -301,7 +325,7 @@ export default function StackResourceItem({
                       />
                     </div>
                     <div>
-                      <div className="flex items-center gap-1 mb-1">
+                      <div className="flex items-center gap-1 mb-2">
                         <Label htmlFor={`port-protocol-${index}-${pidx}`} className="text-sm font-medium">
                           Protocol
                         </Label>
@@ -310,15 +334,22 @@ export default function StackResourceItem({
                           <TooltipContent side="top">tcp or http</TooltipContent>
                         </Tooltip>
                       </div>
-                      <Input
-                        id={`port-protocol-${index}-${pidx}`}
-                        value={port.protocol || ""}
-                        onChange={e => updatePort(pidx, { protocol: e.target.value })}
-                        placeholder="http"
-                      />
+                      <Select
+                        value={port.protocol || "tcp"}
+                        onValueChange={(value) => updatePort(pidx, { protocol: value as "tcp" | "http" })}
+                      >
+                        <SelectTrigger id={`port-protocol-${index}-${pidx}`}>
+                          <SelectValue placeholder="Select protocol" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="tcp">TCP</SelectItem>
+                          <SelectItem value="http">HTTP</SelectItem>
+                          <SelectItem value="udp">UDP</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
-                      <div className="flex items-center gap-1 mb-1">
+                      <div className="flex items-center gap-1 mb-2">
                         <Label htmlFor={`port-public-${index}-${pidx}`} className="text-sm font-medium">
                           Expose Publicly
                         </Label>
@@ -336,7 +367,7 @@ export default function StackResourceItem({
                       </div>
                     </div>
                     <div>
-                      <div className="flex items-center gap-1 mb-1">
+                      <div className="flex items-center gap-1 mb-2">
                         <Label htmlFor={`port-subdomain-${index}-${pidx}`} className="text-sm font-medium">
                           Subdomain Prefix
                         </Label>
@@ -364,7 +395,7 @@ export default function StackResourceItem({
                   </div>
                 ))}
                 <div>
-                  <Button variant="outline" onClick={addPort}>
+                  <Button variant="outline" size="sm" onClick={addPort}>
                     <Plus className="h-4 w-4 mr-2" />Add Port
                   </Button>
                 </div>
@@ -373,16 +404,16 @@ export default function StackResourceItem({
           </TabsContent>
 
           {/* Deployment Tab */}
-          <TabsContent value="deployment" className="p-6 space-y-8">
+          <TabsContent value="deployment" className="pt-4 space-y-6">
             {/* Pre-Deploy Section (Init) */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Pre-Deployment Configuration</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <h3 className="text-lg font-medium mb-3">Pre-Deployment Configuration</h3>
+              <p className="text-sm text-muted-foreground mb-3">
                 Commands to run before the main container starts
               </p>
-              <div className="grid gap-6 max-w-3xl">
+              <div className="grid gap-4 max-w-3xl">
                 <div>
-                  <div className="flex items-center gap-1 mb-1">
+                  <div className="flex items-center gap-1 mb-2">
                     <Label htmlFor={`init-image-${index}`} className="text-sm font-medium">
                       Init Image
                     </Label>
@@ -400,7 +431,7 @@ export default function StackResourceItem({
                   />
                 </div>
                 <div>
-                  <div className="flex items-center gap-1 mb-1">
+                  <div className="flex items-center gap-1 mb-2">
                     <Label htmlFor={`init-command-${index}`} className="text-sm font-medium">
                       Init Command
                     </Label>
@@ -417,7 +448,7 @@ export default function StackResourceItem({
                   />
                 </div>
                 <div>
-                  <div className="flex items-center gap-1 mb-1">
+                  <div className="flex items-center gap-1 mb-2">
                     <Label htmlFor={`init-args-${index}`} className="text-sm font-medium">
                       Init Arguments
                     </Label>
@@ -435,16 +466,16 @@ export default function StackResourceItem({
                 </div>
               </div>
             </div>
-            <Separator />
+            <Separator className="my-4" />
             {/* Post-Deploy Section (Execution) */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Main Container Configuration</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <h3 className="text-lg font-medium mb-3">Main Container Configuration</h3>
+              <p className="text-sm text-muted-foreground mb-3">
                 Main container runtime settings
               </p>
-              <div className="grid gap-6 max-w-3xl">
+              <div className="grid gap-4 max-w-3xl">
                 <div>
-                  <div className="flex items-center gap-1 mb-1">
+                  <div className="flex items-center gap-1 mb-2">
                     <Label htmlFor={`exec-command-${index}`} className="text-sm font-medium">
                       Command
                     </Label>
@@ -461,7 +492,7 @@ export default function StackResourceItem({
                   />
                 </div>
                 <div>
-                  <div className="flex items-center gap-1 mb-1">
+                  <div className="flex items-center gap-1 mb-2">
                     <Label htmlFor={`exec-args-${index}`} className="text-sm font-medium">
                       Arguments
                     </Label>
@@ -482,9 +513,9 @@ export default function StackResourceItem({
           </TabsContent>
 
           {/* Environment Variables Tab */}
-          <TabsContent value="environment" className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Environment Variables</h3>
+          <TabsContent value="environment" className="pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-medium">Environment Variables</h3>
               <Button variant="outline" size="sm" onClick={addEnvVar}>
                 <Plus className="h-4 w-4 mr-2" /> Add Variable
               </Button>
@@ -493,14 +524,14 @@ export default function StackResourceItem({
               <table className="min-w-full border border-muted rounded-md">
                 <thead className="bg-muted/30">
                   <tr>
-                    <th className="text-left px-6 py-3 font-semibold text-sm">Key</th>
-                    <th className="text-left px-6 py-3 font-semibold text-sm">Value</th>
+                    <th className="text-left px-6 py-3 text-sm">Key</th>
+                    <th className="text-left px-6 py-3 text-sm">Value</th>
                     <th className="w-12"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {(resource.execution_config?.environment_variables || []).length ? (
-                    resource.execution_config?.environment_variables.map((env, envIdx) => (
+                    (resource.execution_config?.environment_variables || []).map((env, envIdx) => (
                       <tr key={envIdx} className="border-t border-muted">
                         <td className="px-6 py-2 align-middle">
                           <Input
@@ -543,19 +574,22 @@ export default function StackResourceItem({
               </table>
             </div>
           </TabsContent>
-
-          <div className="flex justify-end mt-4 px-6 py-4 border-t bg-muted/30">
+        </Tabs>
+        
+        {/* Delete button at bottom */}
+        {!isOnlyResource && (
+          <div className="pt-4 border-t">
             <Button
+              type="button"
               variant="destructive"
               onClick={() => onRemove(index)}
-              disabled={isOnlyResource}
-              size="sm"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="h-5 w-5 mr-1" />
               Remove Resource
             </Button>
           </div>
-        </Tabs>
+        )}
+        </div>
       </AccordionContent>
     </AccordionItem>
   );

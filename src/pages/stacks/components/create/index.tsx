@@ -1,6 +1,7 @@
 import React, { useState, useCallback, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import StackResourcesForm from "./stack-resources-form";
+import StackVolumesForm from "./stack-volumes-form";
 import { Button } from "@/components/ui/button";
 import { Rocket, Tag as TagIcon, X, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,14 +11,15 @@ import { Label as UILabel } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
-  StackCreateSchema, 
-  type StackCreateData, 
+  StackSchema, 
+  type StackData, 
   type StackResourceData,
+  type VolumeFormData,
 } from "@/pages/stacks/schemas/stack-create-schema"; 
 
 type FormErrors = { [path: string]: string | undefined };
 
-const mockCreateStackApi = (payload: StackCreateData): Promise<{ success: boolean; error?: string; errors?: FormErrors }> => {
+const mockCreateStackApi = (payload: StackData): Promise<{ success: boolean; error?: string; errors?: FormErrors }> => {
   console.log("Mock API called with payload:", JSON.stringify(payload, null, 2));
   return new Promise(resolve => {
     setTimeout(() => {
@@ -40,13 +42,13 @@ const mockCreateStackApi = (payload: StackCreateData): Promise<{ success: boolea
   });
 };
 
-const setNestedValue = <T extends Record<string, any>>(
+const setNestedValue = <T extends Record<string, unknown>>(
   obj: T, 
   path: string, 
-  value: any
+  value: unknown
 ): T => {
   const keys = path.split('.');
-  let current: any = obj;
+  let current = obj as Record<string, unknown>;
   keys.forEach((key, index) => {
     if (index === keys.length - 1) {
       current[key] = value;
@@ -54,19 +56,20 @@ const setNestedValue = <T extends Record<string, any>>(
       if (!current[key] || typeof current[key] !== 'object') {
         current[key] = /^[0-9]+$/.test(keys[index + 1]) ? [] : {};
       }
-      current = current[key];
+      current = current[key] as Record<string, unknown>;
     }
   });
   return obj;
 };
 
 export default function StackCreatePage() {
-  const [formData, setFormData] = useState<Partial<StackCreateData>>({
+  const [formData, setFormData] = useState<Partial<StackData>>({
     name: "",
     workspace_name: "default",
     labels: [],
     spec: {
       stack_resources: [],
+      volumes: [],
     },
   });
   const [currentLabelInput, setCurrentLabelInput] = useState("");
@@ -77,7 +80,7 @@ export default function StackCreatePage() {
 
   const handleChange = (path: string, value: string | number | boolean | object | null) => {
     setFormData(prev => {
-      const newState = JSON.parse(JSON.stringify(prev)) as Partial<StackCreateData>;
+      const newState = JSON.parse(JSON.stringify(prev)) as Partial<StackData>;
       setNestedValue(newState, path, value);
       return newState;
     });
@@ -153,13 +156,71 @@ export default function StackCreatePage() {
       });
     }
   }, [formErrors]);
+  
+  const getDefaultVolume = (workspace?: string): Partial<VolumeFormData> => {
+    return {
+      name: "",
+      workspace_name: workspace || "",
+      sourceType: "None",
+      labels: [],
+      spec: {
+        size: "1Gi", // Default size
+        access_mode: "ReadWriteOnce", // Default access mode
+        needs_sync_before_use: false
+      }
+    };
+  };
+
+  const handleVolumesChange = useCallback((updatedVolumes: Partial<VolumeFormData>[]) => {
+    setFormData(prev => {
+      const newFormData = { ...prev };
+      
+      if (!newFormData.spec) {
+        newFormData.spec = { 
+          stack_resources: [],
+          volumes: []
+        };
+      }
+      
+      newFormData.spec = {
+        ...newFormData.spec,
+        volumes: updatedVolumes.map(vol => ({
+          name: vol.name || '',
+          workspace_name: vol.workspace_name || newFormData.workspace_name || 'default',
+          labels: vol.labels,
+          annotations: vol.annotations,
+          spec: {
+            size: vol.spec?.size || '',
+            storage_class: vol.spec?.storage_class,
+            needs_sync_before_use: vol.spec?.needs_sync_before_use || false,
+            access_mode: vol.spec?.access_mode || 'ReadWriteOnce',
+            source: vol.spec?.source
+          }
+        }))
+      };
+      
+      return newFormData;
+    });
+    
+    if (formErrors["spec.volumes"]) {
+      setFormErrors((prev: FormErrors) => {
+        const newErrors: FormErrors = { ...prev };
+        delete newErrors["spec.volumes"];
+        Object.keys(newErrors).forEach((key) => {
+          if (key.startsWith("spec.volumes.")) {
+            delete newErrors[key];
+          }
+        });
+        return newErrors;
+      });
+    }
+  }, [formErrors]);
 
   const handleSubmit = async () => {
     setIsLoading(true);
     setApiError(null);
-    setFormErrors({});
 
-    const payloadToValidate: StackCreateData = {
+    const payloadToValidate: StackData = {
       name: formData.name || "",
       workspace_name: formData.workspace_name || "default",
       labels: formData.labels || [],
@@ -210,25 +271,63 @@ export default function StackCreatePage() {
 
           return resource;
         }),
-      },
+        volumes: (formData.spec?.volumes || [])
+          .map(vol => {
+            const sourceConfig = (() => {
+              const typedVol = vol as VolumeFormData;
+              if (!typedVol.sourceType || typedVol.sourceType === 'None') {
+                return {}; 
+              }
+              return {
+                source: {
+                  source_type: typedVol.sourceType === "GitRepo" 
+                    ? "GitRepo" as const
+                    : typedVol.sourceType === "RemoteDir" 
+                      ? "RemoteDir" as const
+                      : "BuildArtifact" as const,
+                  git_repo_source: typedVol.sourceType === "GitRepo" ? vol.spec?.source?.git_repo_source : undefined,
+                  remote_source: typedVol.sourceType === "RemoteDir" ? vol.spec?.source?.remote_source : undefined,
+                  build_source: typedVol.sourceType === "BuildArtifact" ? vol.spec?.source?.build_source : undefined,
+                }
+              };
+            })();
+            return {
+              name: vol.name || "",
+              workspace_name: vol.workspace_name || formData.workspace_name || "default",
+              labels: vol.labels?.length ? vol.labels : undefined,
+              annotations: vol.annotations?.length ? vol.annotations : undefined,
+              spec: {
+                size: vol.spec?.size || "",
+                storage_class: vol.spec?.storage_class,
+                needs_sync_before_use: vol.spec?.needs_sync_before_use || false,
+                access_mode: vol.spec?.access_mode || "ReadWriteOnce",
+                ...sourceConfig
+              }
+            };
+          })
+      }
     };
     
-    const validationResult = StackCreateSchema.safeParse(payloadToValidate);
-    console.log("Validation result:", validationResult);
+    const validationResult = StackSchema.safeParse(payloadToValidate);
+
     if (!validationResult.success) {
       const newErrors: FormErrors = {};
+      
       validationResult.error.issues.forEach(issue => {
         const pathKey = issue.path.join('.');
         if (!newErrors[pathKey]) {
           newErrors[pathKey] = issue.message;
         }
       });
+      
+      console.log("Form errors:", newErrors);
       setFormErrors(newErrors);
       setIsLoading(false);
-      const formLevelError = validationResult.error.issues.find(issue => issue.path.length === 0);
-      if (formLevelError && !apiError) {
-        setApiError(formLevelError.message);
+      
+      if (Object.keys(newErrors).length > 0 && !apiError) {
+        setApiError("Please fix the highlighted errors before submitting the form");
       }
+      
       return;
     }
 
@@ -249,10 +348,24 @@ export default function StackCreatePage() {
   };
 
   type StackResourcesFormErrors = { [index: number]: { [field: string]: string | undefined } };
+  type StackVolumesFormErrors = { [index: number]: { [field: string]: string | undefined } };
 
   const resourcesErrors: StackResourcesFormErrors = Object.entries(formErrors)
     .filter(([key]) => key.startsWith("spec.stack_resources."))
     .reduce((acc: StackResourcesFormErrors, [key, value]) => {
+      const pathParts = key.split('.');
+      if (pathParts.length >= 4) {
+        const index = parseInt(pathParts[2], 10);
+        const fieldName = pathParts.slice(3).join('.');
+        if (!acc[index]) acc[index] = {};
+        acc[index][fieldName] = value;
+      }
+      return acc;
+    }, {});
+    
+  const volumesErrors: StackVolumesFormErrors = Object.entries(formErrors)
+    .filter(([key]) => key.startsWith("spec.volumes."))
+    .reduce((acc: StackVolumesFormErrors, [key, value]) => {
       const pathParts = key.split('.');
       if (pathParts.length >= 4) {
         const index = parseInt(pathParts[2], 10);
@@ -286,20 +399,21 @@ export default function StackCreatePage() {
         </div>
       </div>
       <Separator className="my-6" />
-
-      {apiError && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{apiError}</AlertDescription>
-        </Alert>
-      )}
       
+      {Object.keys(formErrors).length > 0 && (
+        <div className="bg-red-500/10 border border-red-500 rounded-lg px-4 py-3 mb-6">
+          <h3 className="text-red-500 font-semibold flex items-center">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            Please fix errors on the form to deploy.
+          </h3>
+        </div>
+      )}
+
       {formErrors[""] && (
         <Alert variant="destructive" className="mb-6">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Configuration Error</AlertTitle>
-          <AlertDescription>{formErrors[""]}</AlertDescription>
+          <AlertDescription className="text-red-500">{formErrors[""]}</AlertDescription>
         </Alert>
       )}
         
@@ -322,8 +436,9 @@ export default function StackCreatePage() {
                   className={`max-w-md ${formErrors.name ? "border-red-500" : ""}`}
                   placeholder="my-application-stack"
                   required
+                  aria-invalid={!!formErrors.name}
                 />
-                {formErrors.name && <p className="text-sm text-red-500 mt-1">{formErrors.name}</p>}
+                {formErrors.name && <p className="text-sm text-destructive">{formErrors.name}</p>}
               </div>
               
               <div>
@@ -339,18 +454,19 @@ export default function StackCreatePage() {
                     onKeyDown={handleAddLabel}
                     className={`max-w-md ${formErrors.labels ? "border-red-500" : ""}`}
                     placeholder="e.g., environment=dev or just tag (press Enter to add)"
+                    aria-invalid={!!formErrors.labels}
                   />
                 </div>
-                {formErrors.labels && <p className="text-sm text-red-500 mt-1 whitespace-pre-line">{formErrors.labels}</p>}
+                {formErrors.labels && <p className="text-sm text-destructive whitespace-pre-line">{formErrors.labels}</p>}
                 {(formData.labels || []).map((_label, idx) => {
                   const keyError = formErrors[`labels.${idx}.key`];
                   const valueError = formErrors[`labels.${idx}.value`];
                   const itemError = formErrors[`labels.${idx}`];
                   return (
                     <Fragment key={`label-err-${idx}`}>
-                      {itemError && <p className="text-sm text-red-500 mt-1">{`Label ${idx + 1}: ${itemError}`}</p>}
-                      {keyError && <p className="text-sm text-red-500 mt-1">{`Label ${idx + 1} Key: ${keyError}`}</p>}
-                      {valueError && <p className="text-sm text-red-500 mt-1">{`Label ${idx + 1} Value: ${valueError}`}</p>}
+                      {itemError && <p className="text-sm text-destructive">{`Label ${idx + 1}: ${itemError}`}</p>}
+                      {keyError && <p className="text-sm text-destructive">{`Label ${idx + 1} Key: ${keyError}`}</p>}
+                      {valueError && <p className="text-sm text-destructive">{`Label ${idx + 1} Value: ${valueError}`}</p>}
                     </Fragment>
                   );
                 })}
@@ -399,8 +515,49 @@ export default function StackCreatePage() {
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Resource Error</AlertTitle>
-            <AlertDescription>{formErrors["spec.stack_resources"]}</AlertDescription>
+            <AlertDescription>
+              {formErrors["spec.stack_resources"]} 
+              {formData.spec?.stack_resources.length === 0 && (
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleResourcesChange([{ name: "", sourceType: "image" }])}>
+                    Add a resource
+                  </Button>
+                </div>
+              )}
+            </AlertDescription>
           </Alert>
+        )}
+
+        <Card className="mb-6 rounded-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl">Define Stack Volumes</CardTitle>
+            <CardDescription className="mt-1">
+              Configure persistent volumes that your stack resources can use
+            </CardDescription>
+          </CardHeader>
+          <Separator />
+          <CardContent className="p-0">
+            <StackVolumesForm 
+              volumes={formData.spec?.volumes || []}
+              onVolumesChange={handleVolumesChange}
+              errors={volumesErrors}
+              workspace={formData.workspace_name}
+            />
+          </CardContent>
+        </Card>
+        
+        {/* Volume section empty state */}
+        {(!formData.spec?.volumes || formData.spec.volumes.length === 0) && (
+          <div className="bg-muted/30 border border-muted-foreground/20 rounded-lg px-4 py-6 mb-6 text-center text-muted-foreground">
+            <div className="mb-2 font-medium">No volumes defined.</div>
+            <div className="mb-4 text-sm">Add a volume if your stack needs persistent storage. Volumes are optional.</div>
+            <Button variant="outline" size="sm" onClick={() => handleVolumesChange([getDefaultVolume(formData.workspace_name)])}>
+              + Add Volume
+            </Button>
+          </div>
         )}
       </div>
     </div>

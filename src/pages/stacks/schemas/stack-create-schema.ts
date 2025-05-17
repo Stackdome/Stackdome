@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-
 export const LabelSchema = z.object({
   key: z.string().min(1, "Key is required"),
   value: z.string().min(1, "Value is required"),
@@ -10,7 +9,7 @@ export const AnnotationSchema = LabelSchema;
 
 export const PortSchema = z.object({
   number: z.number().int().min(1, "Port number is required"),
-  protocol: z.enum(['tcp', 'http', 'udp']).optional().default('tcp'), // Assuming tcp/http/udp are common, default to tcp
+  protocol: z.enum(['tcp', 'http']).optional().default('tcp'), 
   exposed_to_public: z.boolean().optional().default(false),
   subdomain_prefix: z.string().optional(),
 });
@@ -155,8 +154,8 @@ export const VolumeSpecSchema = z.object({
 export const VolumeSchema = z.object({
   name: z.string().min(1, 'Volume name is required'),
   labels: z.array(LabelSchema).optional(),
-  annotations: z.array(AnnotationSchema).optional(), // system-generated or admin input
-  workspace_name: z.string().min(1, 'Workspace name is required'), // This might be pre-filled or selected
+  annotations: z.array(AnnotationSchema).optional(),
+  workspace_name: z.string().min(1, 'Workspace name is required'), 
   spec: VolumeSpecSchema,
 });
 
