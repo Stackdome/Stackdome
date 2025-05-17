@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   AccordionItem,
   AccordionTrigger,
@@ -33,8 +32,6 @@ export default function StackVolumeItem({
     onChange(index, { ...volume, ...patch });
   };
 
-  // For labels management
-  const [currentLabelInput, setCurrentLabelInput] = useState("");
 
   return (
     <AccordionItem value={String(index)} className="border-0">
@@ -85,6 +82,8 @@ export default function StackVolumeItem({
                   spec: {
                     ...volume.spec,
                     size: e.target.value,
+                    needs_sync_before_use: volume.spec?.needs_sync_before_use ?? false,
+                    access_mode: volume.spec?.access_mode ?? "ReadWriteOnce",
                   }
                 })}
                 className={errors["spec.size"] ? "border-destructive" : ""}
