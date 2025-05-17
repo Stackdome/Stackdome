@@ -36,7 +36,6 @@ export default function StackVolumeItem({
   volume,
   index,
   itemRef,
-  isOnlyVolume,
   onChange,
   onRemove,
   errors,
@@ -637,20 +636,18 @@ export default function StackVolumeItem({
             )}
           </div>
 
-          {/* Delete button at bottom */}
-          {!isOnlyVolume && (
-            <div className="pt-4 border-t">
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => onRemove(index)}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Remove Volume
-              </Button>
-            </div>
-          )}
+          {/* Delete button always visible at the bottom */}
+          <div className="pt-4 border-t">
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => onRemove(index)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Remove Volume
+            </Button>
+          </div>
         </div>
       </AccordionContent>
     </AccordionItem>

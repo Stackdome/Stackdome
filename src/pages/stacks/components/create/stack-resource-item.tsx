@@ -581,11 +581,12 @@ export default function StackResourceItem({
             <div className="pt-4 border-t">
               <Button
                 type="button"
-                variant="destructive"
+                variant="ghost"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={() => onRemove(index)}
               >
-                <Trash2 className="h-5 w-5 mr-1" />
-              Remove Resource
+                <Trash2 className="h-4 w-4 mr-1" />
+                Remove Resource
               </Button>
             </div>
           )}
