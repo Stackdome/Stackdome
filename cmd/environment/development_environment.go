@@ -222,9 +222,16 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OrganisationService:         organisationService,
 	})
 
-	clusterService := services.NewClusterService(services.ClusterServiceSpec{
+	clusterImageRegistryService := services.NewClusterImageRegistryService(services.ClusterImageRegistryServiceSpec{
 		SessionFactory: d.DBSession,
 		Logger:         d.Logger,
+	})
+
+	clusterService := services.NewClusterService(services.ClusterServiceSpec{
+		ClusterManager:       d.ClusterManager,
+		ImageRegistryService: clusterImageRegistryService,
+		SessionFactory:       d.DBSession,
+		Logger:               d.Logger,
 	})
 
 	workspaceUserService := services.NewWorkspaceUserService(services.WorkspaceUserServiceSpec{
@@ -251,10 +258,6 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:               d.Logger,
 	})
 
-	clusterImageRegistryService := services.NewClusterImageRegistryService(services.ClusterImageRegistryServiceSpec{
-		SessionFactory: d.DBSession,
-		Logger:         d.Logger,
-	})
 	namespaceService := services.NewNamespaceService(services.NamespaceServiceSpec{
 		SessionFactory: d.DBSession,
 		Logger:         d.Logger,
