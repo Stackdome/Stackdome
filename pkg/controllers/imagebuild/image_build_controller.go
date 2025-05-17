@@ -133,17 +133,16 @@ func (r *ImageBuildReconciler) createImageBuildInDB(
 			DockerfilePath:          imageBuildCr.Spec.BuildContext.DockerfilePath,
 			ContextPathWithinSource: imageBuildCr.Spec.BuildContext.ContextPath,
 			ImageRepositoryUrl:      imageBuildCr.Spec.RegistryURL,
-			InsecureRegistry:        imageBuildCr.Spec.InsecureRegistry,
 			SourceContext:           *dbSourceContext,
 			SourceRevision:          dbSourceRevision,
 		},
 		Status: mapClusterStatusToServerStatus(imageBuildCr.Status),
 	}
 
-	_, err = r.DBImageBuildService.Create(ctx, dbImageBuild)
-	if err != nil {
-		r.Logger.Errorf("Failed to create image build '%s': %s", imageBuildCr.Name, err)
-		return err
+	_, serr := r.DBImageBuildService.Create(ctx, dbImageBuild)
+	if serr != nil {
+		r.Logger.Errorf("Failed to create image build '%s': %s", imageBuildCr.Name, serr)
+		return serr.AsError()
 	}
 	return nil
 }

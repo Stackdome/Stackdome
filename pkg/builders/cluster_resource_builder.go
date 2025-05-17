@@ -95,8 +95,10 @@ func setBuildSpec(resourceSpecCr *corev1alpha1.StackResourceSpec, stackResource 
 			DockerFilePath: stackResource.BuildConfig.DockerfilePath,
 			Registry: corev1alpha1.RegistrySpec{
 				RepositoryURL: stackResource.BuildConfig.ImageRepositoryUrl,
-				Insecure:      stackResource.BuildConfig.InsecureRegistry,
 			},
+		}
+		if stackResource.BuildConfig.BuildImageRepository.InsecureRegistry {
+			resourceSpecCr.BuildSpec.Registry.Insecure = stackResource.BuildConfig.BuildImageRepository.InsecureRegistry
 		}
 	}
 }

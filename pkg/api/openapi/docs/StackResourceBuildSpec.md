@@ -8,13 +8,13 @@ Name | Type | Description | Notes
 **ContextPathWithinSource** | **string** |  | 
 **DockerfilePath** | **string** |  | 
 **SourceRevision** | [**BuildSourceRevision**](BuildSourceRevision.md) |  | 
-**ImageRepository** | Pointer to [**ImageRepository**](ImageRepository.md) |  | [optional] 
+**ImageRepository** | [**ImageRepository**](ImageRepository.md) |  | 
 
 ## Methods
 
 ### NewStackResourceBuildSpec
 
-`func NewStackResourceBuildSpec(sourceContext BuildSourceContext, contextPathWithinSource string, dockerfilePath string, sourceRevision BuildSourceRevision, ) *StackResourceBuildSpec`
+`func NewStackResourceBuildSpec(sourceContext BuildSourceContext, contextPathWithinSource string, dockerfilePath string, sourceRevision BuildSourceRevision, imageRepository ImageRepository, ) *StackResourceBuildSpec`
 
 NewStackResourceBuildSpec instantiates a new StackResourceBuildSpec object
 This constructor will assign default values to properties that have it defined,
@@ -128,11 +128,6 @@ and a boolean to check if the value has been set.
 
 SetImageRepository sets ImageRepository field to given value.
 
-### HasImageRepository
-
-`func (o *StackResourceBuildSpec) HasImageRepository() bool`
-
-HasImageRepository returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

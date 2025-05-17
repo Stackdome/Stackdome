@@ -17,7 +17,7 @@ import (
 // StackSpec struct for StackSpec
 type StackSpec struct {
 	StackResources []StackResource `json:"stack_resources"`
-	Volumes        []Volume        `json:"Volumes,omitempty"`
+	Volumes        []Volume        `json:"volumes,omitempty"`
 }
 
 // NewStackSpec instantiates a new StackSpec object
@@ -100,7 +100,7 @@ func (o StackSpec) MarshalJSON() ([]byte, error) {
 		toSerialize["stack_resources"] = o.StackResources
 	}
 	if o.Volumes != nil {
-		toSerialize["Volumes"] = o.Volumes
+		toSerialize["volumes"] = o.Volumes
 	}
 	return json.Marshal(toSerialize)
 }

@@ -15,6 +15,7 @@ import (
 
 type ClusterImageRegistryService interface {
 	Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
+	GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	ListByClusterID(ctx context.Context, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.ClusterImageRegistryStatus) *errors.ServiceError
@@ -62,6 +63,15 @@ func (s *clusterImageRegistryService) ListByClusterID(ctx context.Context, clust
 		return nil, err
 	}
 	return registries, nil
+}
+
+func (s *clusterImageRegistryService) GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
+	registry, err := s.clusterImageRegistryStore.GetForOrg(ctx, orgID)
+	if err != nil {
+		s.logger.Errorf("failed to get cluster image registry for org: %v", err)
+		return nil, err
+	}
+	return registry, nil
 }
 
 func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {

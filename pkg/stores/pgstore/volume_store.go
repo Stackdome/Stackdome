@@ -22,6 +22,7 @@ type VolumeStoreSpec struct {
 func NewVolumeStore(v VolumeStoreSpec) stores.VolumeStore {
 	return &volumeStore{
 		sessionFactory: v.SessionFactory,
+		atomicExecutor: atomicExecutor{sessionFactory: v.SessionFactory},
 	}
 }
 

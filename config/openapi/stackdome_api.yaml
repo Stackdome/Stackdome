@@ -1662,8 +1662,10 @@ components:
       required:
         - name
         - spec
-        - workspace_name
       properties:
+        id:
+          type: string
+          readOnly: true
         name:
           type: string
         labels:
@@ -1674,8 +1676,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Annotation'
-        workspace_name:
-          type: string
         spec:
           $ref: '#/components/schemas/VolumeSpec'
         status:
@@ -1858,8 +1858,6 @@ components:
           readOnly: true
         name:
           type: string
-        workspace_name:
-          type: string
         namespace:
           type: string
           readOnly: true
@@ -1890,7 +1888,6 @@ components:
       required:
         - name
         - spec
-        - workspace_name
     
     StackList:
       type: object
@@ -1911,7 +1908,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StackResource'
-        Volumes:
+        volumes:
           type: array
           items:
             $ref: '#/components/schemas/Volume'
@@ -2192,6 +2189,7 @@ components:
         - context_path_within_source
         - dockerfile_path
         - source_revision
+        - image_repository
       properties:
         source_context:
           $ref: '#/components/schemas/BuildSourceContext'

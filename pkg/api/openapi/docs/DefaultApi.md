@@ -1682,7 +1682,7 @@ import (
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
     id := "id_example" // string | The id of record
-    stack := *openapiclient.NewStack("Name_example", "WorkspaceName_example", *openapiclient.NewStackSpec([]openapiclient.StackResource{*openapiclient.NewStackResource("Name_example")})) // Stack | 
+    stack := *openapiclient.NewStack("Name_example", *openapiclient.NewStackSpec([]openapiclient.StackResource{*openapiclient.NewStackResource("Name_example")})) // Stack | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -1754,7 +1754,7 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    stack := *openapiclient.NewStack("Name_example", "WorkspaceName_example", *openapiclient.NewStackSpec([]openapiclient.StackResource{*openapiclient.NewStackResource("Name_example")})) // Stack | 
+    stack := *openapiclient.NewStack("Name_example", *openapiclient.NewStackSpec([]openapiclient.StackResource{*openapiclient.NewStackResource("Name_example")})) // Stack | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -2467,7 +2467,7 @@ import (
 func main() {
     orgId := "orgId_example" // string | 
     id := "id_example" // string | 
-    volume := *openapiclient.NewVolume("Name_example", "WorkspaceName_example", *openapiclient.NewVolumeSpec("Size_example", false, openapiclient.VolumeAccessMode("ReadWriteOnce"))) // Volume | 
+    volume := *openapiclient.NewVolume("Name_example", *openapiclient.NewVolumeSpec("Size_example", false, openapiclient.VolumeAccessMode("ReadWriteOnce"))) // Volume | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -2539,7 +2539,7 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    volume := *openapiclient.NewVolume("Name_example", "WorkspaceName_example", *openapiclient.NewVolumeSpec("Size_example", false, openapiclient.VolumeAccessMode("ReadWriteOnce"))) // Volume | 
+    volume := *openapiclient.NewVolume("Name_example", *openapiclient.NewVolumeSpec("Size_example", false, openapiclient.VolumeAccessMode("ReadWriteOnce"))) // Volume | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)

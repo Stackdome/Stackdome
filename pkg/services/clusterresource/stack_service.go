@@ -189,8 +189,10 @@ func setBuildSpec(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackR
 			DockerFilePath: stackResource.BuildConfig.DockerfilePath,
 			Registry: corev1alpha1.RegistrySpec{
 				RepositoryURL: stackResource.BuildConfig.ImageRepositoryUrl,
-				Insecure:      stackResource.BuildConfig.InsecureRegistry,
 			},
+		}
+		if stackResource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
+			resourceTemplateCr.Spec.BuildSpec.Registry.Insecure = true
 		}
 	}
 }
@@ -269,7 +271,7 @@ func setVolumeMounts(resourceTemplateCr *corev1alpha1.StackResourceTemplate, sta
 		resourceTemplateCr.Spec.VolumeMounts = make([]corev1alpha1.VolumeMount, len(stackResource.VolumeMounts))
 		for i, volumeMount := range stackResource.VolumeMounts {
 			resourceTemplateCr.Spec.VolumeMounts[i] = corev1alpha1.VolumeMount{
-				SourceVolume:  volumeMount.SourceVolumeID,
+				SourceVolume:  volumeMount.SourceVolumeName,
 				SourceSubPath: volumeMount.SourceSubPath,
 				Destination:   volumeMount.TargetPath,
 			}

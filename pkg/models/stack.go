@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -16,12 +17,13 @@ type Stack struct {
 	OrganisationID string      `gorm:"not null"`
 	UserID         string      `gorm:"not null"`
 	Name           string      `gorm:"not null;<-:create"`
-	WorkspaceName  string      `gorm:"not null;<-:create"`
+	NamespaceID    string      `gorm:"not null"`
 	Namespace      string      `gorm:"unique;not null;<-:create"`
 	Labels         Labels      `gorm:"type:jsonb"`
 	Annotations    Annotations `gorm:"type:jsonb"`
 	Version        int
 	StackResources []*StackResource `gorm:"foreignKey:StackID"`
+	Volumes        []*Volume        `gorm:"-"`
 	Status         *StackStatus     `gorm:"type:jsonb"`
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
@@ -55,6 +57,14 @@ func (ws *Stack) ResourcesMap() map[string]*StackResource {
 	return resourceMap
 }
 
+func (ws *Stack) VolumesMap() map[string]*Volume {
+	volumeMap := make(map[string]*Volume)
+	for i := range ws.Volumes {
+		volumeMap[ws.Volumes[i].Name] = ws.Volumes[i]
+	}
+	return volumeMap
+}
+
 func (ws *Stack) HasVolumeMounts() bool {
 	for i := range ws.StackResources {
 		if len(ws.StackResources[i].VolumeMounts) > 0 {
@@ -62,6 +72,25 @@ func (ws *Stack) HasVolumeMounts() bool {
 		}
 	}
 	return false
+}
+
+func (ws *Stack) UsesInClusterRegistry() bool {
+	for _, resource := range ws.StackResources {
+		if resource.BuildConfig != nil && resource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
+			return true
+		}
+	}
+	return false
+}
+
+func (ws *Stack) PopulateInternalImageRegistryUrlsForResources(registryUrl string) {
+	for i := range ws.StackResources {
+		curr := ws.StackResources[i]
+		if curr.BuildConfig != nil && curr.BuildConfig.BuildImageRepository.UseInClusterRegistry {
+			curr.BuildConfig.ImageRepositoryUrl = fmt.Sprintf(
+				"%s/%s/%s/%s", registryUrl, ws.OrganisationID, ws.Name, curr.Name)
+		}
+	}
 }
 
 func (ws *Stack) VolumeMountIds() []string {

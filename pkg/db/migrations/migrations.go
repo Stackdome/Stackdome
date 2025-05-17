@@ -22,4 +22,10 @@ var MigrationList = []*gormigrate.Migration{
 	addNamespaceToStackResourcesTable(),
 	createClusterImageRegistriesTable(),
 	createDomainsTable(),
+	createNamespaceTable(),
+	renameWorkspaceNameToNamespaceIDInStack(),
+	renameWorkspaceNameToNamespaceIDInVolume(),
+	addSourceVolumeNameToVolumeMounts(),
+	createStackVolumesTable(),
+	addVolumeIDFkConstraintToVolumeMounts(),
 }

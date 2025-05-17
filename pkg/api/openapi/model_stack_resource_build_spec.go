@@ -20,19 +20,20 @@ type StackResourceBuildSpec struct {
 	ContextPathWithinSource string              `json:"context_path_within_source"`
 	DockerfilePath          string              `json:"dockerfile_path"`
 	SourceRevision          BuildSourceRevision `json:"source_revision"`
-	ImageRepository         *ImageRepository    `json:"image_repository,omitempty"`
+	ImageRepository         ImageRepository     `json:"image_repository"`
 }
 
 // NewStackResourceBuildSpec instantiates a new StackResourceBuildSpec object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewStackResourceBuildSpec(sourceContext BuildSourceContext, contextPathWithinSource string, dockerfilePath string, sourceRevision BuildSourceRevision) *StackResourceBuildSpec {
+func NewStackResourceBuildSpec(sourceContext BuildSourceContext, contextPathWithinSource string, dockerfilePath string, sourceRevision BuildSourceRevision, imageRepository ImageRepository) *StackResourceBuildSpec {
 	this := StackResourceBuildSpec{}
 	this.SourceContext = sourceContext
 	this.ContextPathWithinSource = contextPathWithinSource
 	this.DockerfilePath = dockerfilePath
 	this.SourceRevision = sourceRevision
+	this.ImageRepository = imageRepository
 	return &this
 }
 
@@ -140,36 +141,28 @@ func (o *StackResourceBuildSpec) SetSourceRevision(v BuildSourceRevision) {
 	o.SourceRevision = v
 }
 
-// GetImageRepository returns the ImageRepository field value if set, zero value otherwise.
+// GetImageRepository returns the ImageRepository field value
 func (o *StackResourceBuildSpec) GetImageRepository() ImageRepository {
-	if o == nil || o.ImageRepository == nil {
+	if o == nil {
 		var ret ImageRepository
 		return ret
 	}
-	return *o.ImageRepository
+
+	return o.ImageRepository
 }
 
-// GetImageRepositoryOk returns a tuple with the ImageRepository field value if set, nil otherwise
+// GetImageRepositoryOk returns a tuple with the ImageRepository field value
 // and a boolean to check if the value has been set.
 func (o *StackResourceBuildSpec) GetImageRepositoryOk() (*ImageRepository, bool) {
-	if o == nil || o.ImageRepository == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.ImageRepository, true
+	return &o.ImageRepository, true
 }
 
-// HasImageRepository returns a boolean if a field has been set.
-func (o *StackResourceBuildSpec) HasImageRepository() bool {
-	if o != nil && o.ImageRepository != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetImageRepository gets a reference to the given ImageRepository and assigns it to the ImageRepository field.
+// SetImageRepository sets field value
 func (o *StackResourceBuildSpec) SetImageRepository(v ImageRepository) {
-	o.ImageRepository = &v
+	o.ImageRepository = v
 }
 
 func (o StackResourceBuildSpec) MarshalJSON() ([]byte, error) {
@@ -186,7 +179,7 @@ func (o StackResourceBuildSpec) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["source_revision"] = o.SourceRevision
 	}
-	if o.ImageRepository != nil {
+	if true {
 		toSerialize["image_repository"] = o.ImageRepository
 	}
 	return json.Marshal(toSerialize)
