@@ -1097,6 +1097,242 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all image registries for a cluster */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    org_id: string;
+                    cluster_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items?: components["schemas"]["ClusterImageRegistry"][];
+                            total?: number;
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Create a new image registry */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    org_id: string;
+                    cluster_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ClusterImageRegistry"];
+                };
+            };
+            responses: {
+                /** @description ImageRegistry created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ClusterImageRegistry"];
+                    };
+                };
+                /** @description Invalid request payload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a specific image registry object */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    org_id: string;
+                    cluster_id: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ClusterImageRegistry"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ImageRegistry not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Delete an image registry object */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    org_id: string;
+                    cluster_id: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description ImageRegistry deleted successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ImageRegistry not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{id}/remote-sync-servers": {
         parameters: {
             query?: never;
@@ -2281,7 +2517,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
-                };
+                }
                 /** @description Internal server error */
                 500: {
                     headers: {
@@ -2430,12 +2666,17 @@ export interface components {
         Organisation: {
             id?: string;
             name?: string;
-            domain_name?: string;
+            domains?: components["schemas"]["DomainName"][];
             is_default?: boolean;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
             updated_at?: string;
+        };
+        DomainName: {
+            readonly id?: string;
+            /** @description Fully Qualified Domain Name */
+            fqdn?: string;
         };
         UserSignupResponse: {
             user?: components["schemas"]["User"];
@@ -2530,12 +2771,13 @@ export interface components {
         };
         Cluster: {
             id?: string;
-            name?: string;
+            name: string;
             organisation_id?: string;
             default?: boolean;
-            cluster_url?: string;
-            cluster_ca_data?: string;
-            cluster_sa_token?: string;
+            cluster_url: string;
+            cluster_ca_data: string;
+            cluster_sa_token: string;
+            cluster_image_registry?: components["schemas"]["ClusterImageRegistry"];
         };
         RemoteSyncServer: {
             readonly id?: string;
@@ -2562,11 +2804,11 @@ export interface components {
         /** @enum {string} */
         RemoteSyncServerState: "RemoteSyncServerPending" | "RemoteSyncServerCreating" | "RemoteSyncServerCreated" | "RemoteSyncServerReady" | "RemoteSyncServerFailed";
         Volume: {
-            name: string;
+            name: string; 
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
             workspace_name: string;
-            spec: components["schemas"]["VolumeSpec"];
+            spec: components["schemas"]["VolumeSpec"]; 
             readonly status?: components["schemas"]["VolumeStatus"];
         };
         VolumeList: {
@@ -2578,9 +2820,9 @@ export interface components {
             public_key: string;
         };
         VolumeSpec: {
-            size: string;
-            storage_class?: string;
-            needs_sync_before_use: boolean;
+            size: string; 
+            storage_class?: string; 
+            needs_sync_before_use: boolean; 
             access_mode: components["schemas"]["VolumeAccessMode"];
             source?: components["schemas"]["VolumeSource"];
         };
@@ -2656,6 +2898,7 @@ export interface components {
         };
         StackSpec: {
             stack_resources: components["schemas"]["StackResource"][];
+            Volumes?: components["schemas"]["Volume"][];
         };
         StackStatus: {
             state?: string;
@@ -2709,6 +2952,35 @@ export interface components {
             image_url?: string;
             build_source_revision?: string;
         };
+        ClusterImageRegistryList: {
+            items?: components["schemas"]["ClusterImageRegistry"][];
+            total?: number;
+        };
+        ClusterImageRegistry: {
+            id?: string;
+            name: string;
+            readonly organisation_id?: string;
+            readonly cluster_id?: string;
+            spec?: components["schemas"]["ClusterImageRegistrySpec"];
+            status?: components["schemas"]["ClusterImageRegistryStatus"];
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        ClusterImageRegistrySpec: {
+            backend_storage_size?: string;
+            backend_storage_class?: string;
+            max_repositories?: number;
+            tags_per_repository?: number;
+            delete_untagged?: boolean;
+        };
+        ClusterImageRegistryStatus: {
+            state?: components["schemas"]["ClusterImageRegistryState"];
+            conditions?: components["schemas"]["Condition"][];
+        };
+        /** @enum {string} */
+        ClusterImageRegistryState: "ImageRegistryPending" | "ImageRegistryError" | "ImageRegistryRunning";
         StackResourceStatus: {
             public_ingress?: components["schemas"]["Ingress"][];
             internal_service_name?: string;
@@ -2724,9 +2996,8 @@ export interface components {
         };
         VolumeMount: {
             readonly stack_resource_id?: string;
-            readonly stack_storage_id?: string;
             readonly source_volume_type?: components["schemas"]["VolumeMountSourceType"];
-            source_volume_id: string;
+            source_volume_name: string;
             source_sub_path?: string;
             target_path: string;
         };
@@ -2747,8 +3018,13 @@ export interface components {
             context_path_within_source: string;
             dockerfile_path: string;
             source_revision: components["schemas"]["BuildSourceRevision"];
-            image_repository_url: string;
-            insecure_registry: boolean;
+            /** @description The image repository to push the built image to */
+            image_repository?: components["schemas"]["ImageRepository"];
+        };
+        /** @description The image repository to push the built image to */
+        ImageRepository: {
+            external_image_repo_url?: string;
+            use_internal_registry?: boolean;
         };
         BuildSourceContext: {
             volume?: {
@@ -2818,13 +3094,15 @@ export interface components {
             kind?: string;
             href?: string;
         };
-    };
+    }
     responses: never;
     parameters: {
         /** @description The id of record */
         id: string;
         /** @description The ID of the organization */
         org_id: string;
+        /** @description The ID of the cluster */
+        cluster_id: string;
         /** @description The ID of the stack */
         stack_id: string;
     };
