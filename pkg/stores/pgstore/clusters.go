@@ -8,6 +8,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type dbClusterStore struct {
@@ -29,7 +30,7 @@ func NewClusterStore(spec ClusterStoreSpec) stores.ClusterStore {
 func (d dbClusterStore) GetByClusterUrl(ctx context.Context, clusterURL string) (*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var res models.Cluster
-	err := grm.Model(&models.Cluster{}).Where("cluster_url = ?", clusterURL).First(&res).Error
+	err := grm.Model(&models.Cluster{}).Where("cluster_url = ?", clusterURL).Preload(clause.Associations).First(&res).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NotFound("cluster with url '%s' not found", clusterURL)
@@ -42,7 +43,7 @@ func (d dbClusterStore) GetByClusterUrl(ctx context.Context, clusterURL string) 
 func (d dbClusterStore) ListAll(ctx context.Context) ([]*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var res []*models.Cluster
-	err := grm.Model(&models.Cluster{}).Find(&res).Error
+	err := grm.Model(&models.Cluster{}).Preload(clause.Associations).Find(&res).Error
 	if err != nil {
 		return nil, errors.GeneralError("failed to fetch clusters: %s", err.Error())
 	}
@@ -51,7 +52,7 @@ func (d dbClusterStore) ListAll(ctx context.Context) ([]*models.Cluster, *errors
 
 func (d dbClusterStore) Create(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
-	err := grm.Create(&cluster).Error
+	err := grm.Omit(clause.Associations).Create(&cluster).Error
 	if err != nil {
 		return nil, errors.GeneralError("failed to add cluster: %s", err.Error())
 	}
@@ -63,7 +64,7 @@ func (d dbClusterStore) CreateWithTx(ctx context.Context, cluster *models.Cluste
 	if tx == nil {
 		return nil, errors.GeneralError("transaction not found in context")
 	}
-	err := tx.Create(&cluster).Error
+	err := tx.Omit(clause.Associations).Create(&cluster).Error
 	if err != nil {
 		return nil, errors.GeneralError("failed to add cluster: %s", err.Error())
 	}
@@ -85,7 +86,7 @@ func (d dbClusterStore) PersistManagerState(ctx context.Context, id string, runn
 func (d dbClusterStore) Get(ctx context.Context, id string) (*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var res models.Cluster
-	err := grm.Model(&models.Cluster{}).Where("id = ?", id).First(&res).Error
+	err := grm.Model(&models.Cluster{}).Preload(clause.Associations).Where("id = ?", id).First(&res).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NotFound("cluster with id '%s' not found", id)
@@ -98,7 +99,7 @@ func (d dbClusterStore) Get(ctx context.Context, id string) (*models.Cluster, *e
 func (d dbClusterStore) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var res models.Cluster
-	err := grm.Model(&models.Cluster{}).Where("organisation_id = ?", orgID).First(&res).Error
+	err := grm.Model(&models.Cluster{}).Where("organisation_id = ?", orgID).Preload(clause.Associations).First(&res).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NotFound("cluster for organisation '%s' not found", orgID)
@@ -111,7 +112,7 @@ func (d dbClusterStore) GetClusterForOrg(ctx context.Context, orgID string) (*mo
 func (d dbClusterStore) GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var res models.Cluster
-	err := grm.Model(&models.Cluster{}).Where("\"default\" = ?", true).First(&res).Error
+	err := grm.Model(&models.Cluster{}).Where("\"default\" = ?", true).Preload(clause.Associations).First(&res).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NotFound("default cluster not found")

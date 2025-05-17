@@ -106,12 +106,12 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 			registry := cluster.ImageRegistries[0]
 			registry.ClusterID = createdCluster.ID
 			registry.OrganisationID = createdCluster.OrganisationID
-			createdRegistry, err := s.imageRegistryService.Create(ctx, registry)
+			createdRegistry, err := s.imageRegistryService.CreateWithTx(ctx, registry)
 			if err != nil {
 				s.logger.Errorf("failed to create image registry: %v", err)
 				return err
 			}
-			createdCluster.ImageRegistries[0] = createdRegistry
+			createdCluster.ImageRegistries = []*models.ClusterImageRegistry{createdRegistry}
 		}
 		return nil
 	})
@@ -129,13 +129,29 @@ func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceE
 		s.logger.Errorf("failed to get cluster: %v", err)
 		return err
 	}
+	// // Unregister the cluster from the cluster manager
+	// cerr := s.clusterManager.UnregisterCluster(cluster.ID)
+	// if cerr != nil {
+	// 	s.logger.Errorf("failed to unregister cluster from manager: %v", cerr)
+	// 	return errors.GeneralError("failed to unregister cluster from manager: %v", cerr)
+	// }
 
-	// Unregister the cluster from the cluster manager
-	cerr := s.clusterManager.UnregisterCluster(cluster.ID)
-	if cerr != nil {
-		s.logger.Errorf("failed to unregister cluster from manager: %v", cerr)
-		return errors.GeneralError("failed to unregister cluster from manager: %v", cerr)
+	if len(cluster.ImageRegistries) != 0 {
+		for _, registry := range cluster.ImageRegistries {
+			// Delete the image registry from the cluster
+			if registry == nil {
+				s.logger.Errorf("image registry is nil")
+				return errors.GeneralError("image registry is nil")
+			}
+			s.logger.Infof("Deleting image registry %s", registry.ID)
+			err := s.imageRegistryService.Delete(ctx, registry.ID)
+			if err != nil {
+				s.logger.Errorf("failed to delete image registry: %v", err)
+				return err
+			}
+		}
 	}
+
 	// Delete the cluster from the database
 	err = s.clusterStore.Delete(ctx, ID)
 	if err != nil {

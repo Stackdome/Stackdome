@@ -18,6 +18,7 @@ type ClusterImageRegistryService interface {
 	GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	ListByClusterID(ctx context.Context, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
+	CreateWithTx(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.ClusterImageRegistryStatus) *errors.ServiceError
 	InjectClusterResourceService(registryClusterService clusterresource.ClusterImageRegistryService)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
@@ -121,6 +122,50 @@ func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.C
 	if createErr != nil {
 		return nil, createErr
 	}
+	return createdRegistry, nil
+}
+
+func (s *clusterImageRegistryService) CreateWithTx(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {
+	var createdRegistry *models.ClusterImageRegistry
+	var err *errors.ServiceError
+
+	// Initialize status if not set
+	if spec.Status == nil {
+		spec.Status = &models.ClusterImageRegistryStatus{
+			State:      models.RegistryStatePending,
+			Conditions: []models.Condition{},
+		}
+	}
+
+	if spec.ClusterID == "" {
+		return nil, errors.GeneralError("cluster ID is required")
+	}
+	if spec.OrganisationID == "" {
+		return nil, errors.GeneralError("organisation ID is required")
+	}
+	if spec.Name == "" {
+		return nil, errors.GeneralError("name is required")
+	}
+
+	if err := s.validateBackendStorageSize(spec.BackendStorageSize); err != nil {
+		return nil, err
+	}
+	s.setDefaultValues(spec)
+
+	// Create registry in database
+	createdRegistry, err = s.clusterImageRegistryStore.CreateWithTx(ctx, spec)
+	if err != nil {
+		s.logger.Errorf("failed to create cluster image registry: %v", err)
+		return nil, err
+	}
+
+	// Create registry in cluster
+	cerr := s.clusterResourceService.CreateImageRegistryInCluster(ctx, createdRegistry)
+	if cerr != nil {
+		s.logger.Errorf("failed to create cluster image registry in cluster: %v", cerr)
+		return nil, errors.GeneralError("failed to create cluster image registry in cluster: %s", cerr.Error())
+	}
+
 	return createdRegistry, nil
 }
 
