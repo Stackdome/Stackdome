@@ -16,10 +16,22 @@ export default function ClusterCreateWrapperPage() {
   async function handleSubmit(values: ClusterFormInput) {
     setLoading(true);
     setError(null);
-    try {
-      await createCluster(getCurrentOrganizationId(), values);
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) {
       setLoading(false);
-      
+      const errorMessage = "No organization selected";
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await createCluster(orgId, values);
+      setLoading(false);
+
       // Show success toast notification
       toast({
         title: "Success",
@@ -27,18 +39,18 @@ export default function ClusterCreateWrapperPage() {
         variant: "success",
         duration: 3000,
       });
-      
+
       navigate("/clusters");
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("Failed to create cluster:", e);
-      
+
       const errorMessage = extractErrorMessage(
-        e, 
+        e as Error,
         "Failed to create cluster. Please check your connection and try again."
       );
-      
+
       setError(errorMessage);
-      
+
       // Show error toast notification
       toast({
         title: "Failed to create cluster",
@@ -46,7 +58,7 @@ export default function ClusterCreateWrapperPage() {
         variant: "destructive",
         duration: 5000,
       });
-      
+
       setLoading(false);
     }
   }

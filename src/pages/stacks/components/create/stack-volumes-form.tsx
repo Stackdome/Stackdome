@@ -1,5 +1,5 @@
 import type { VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
-import ResourceFormList from "@/components/resource-form-list";
+import ResourceFormList from "@/pages/stacks/components/shared/resource-form-list";
 import StackVolumeItem from "./stack-volume-item";
 
 // Props interface for StackVolumesForm
