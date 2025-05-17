@@ -89,7 +89,7 @@ func (r *clusterImageRegistryReconciler) Reconcile(ctx context.Context, req ctrl
 
 	if dbImageRegistry.Status == nil ||
 		string(dbImageRegistry.Status.State) != string(registryCr.Status.Phase) ||
-		len(dbImageRegistry.Status.Conditions) != len(registryCr.Status.Conditions) {
+		len(dbImageRegistry.Status.Conditions) != len(registryCr.Status.Conditions) || dbImageRegistry.Status.RegistryUrl == "" {
 		dbImageRegistry.Status = mapClusterStatusToServerStatus(registryCr.Status)
 		return ctrl.Result{}, r.DBImageRegistryService.UpdateStatus(ctx, dbImageRegistry.ID, dbImageRegistry.Status)
 	}

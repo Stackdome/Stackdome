@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/base32"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validation"
+	"github.com/google/uuid"
 )
 
 type StackService interface {
@@ -27,30 +29,36 @@ type StackService interface {
 	UpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.StackStatus) *errors.ServiceError
 	DeleteStack(ctx context.Context, ID string) *errors.ServiceError
-	InjectClusterResourceService(clusterStackService clusterresource.ClusterStackService)
+	ClusterResourceServiceInjectable
 }
 
 type StackServiceSpec struct {
-	SessionFactory       db.SessionFactory
-	WorkspaceUserService WorkspaceUserService
-	VolumeService        VolumeService
-	ClusterService       ClusterService
-	OrganisationService  OrganisationService
-	StackResourceService StackResourceService
-	Logger               logger.Logger
+	SessionFactory         db.SessionFactory
+	WorkspaceUserService   WorkspaceUserService
+	VolumeService          VolumeService
+	ClusterService         ClusterService
+	OrganisationService    OrganisationService
+	StackResourceService   StackResourceService
+	ClusterRegistryService ClusterImageRegistryService
+	NamespaceService       NamespaceService
+	Logger                 logger.Logger
 }
 
 type stackService struct {
-	stackStore             stores.StackStore
-	logger                 logger.Logger
-	sessionFactory         db.SessionFactory
-	workspaceUserService   WorkspaceUserService
-	clusterResourceService clusterresource.ClusterStackService
-	volumeService          VolumeService
-	organisationService    OrganisationService
-	interpolationValidator validation.InterpolationValidation
-	domainNameService      DomainsService
-	stackResourceService   StackResourceService
+	stackStore                      stores.StackStore
+	logger                          logger.Logger
+	sessionFactory                  db.SessionFactory
+	workspaceUserService            WorkspaceUserService
+	clusterResourceService          clusterresource.ClusterStackService
+	volumeService                   VolumeService
+	organisationService             OrganisationService
+	interpolationValidator          validation.InterpolationValidation
+	domainNameService               DomainsService
+	stackResourceService            StackResourceService
+	namespaceService                NamespaceService
+	namespaceClusterResourceService clusterresource.NamespaceClusterResourceService
+	volumeClusterResourceService    clusterresource.VolumeClusterResourceService
+	clusterRegistryService          ClusterImageRegistryService
 }
 
 func NewStackService(spec StackServiceSpec) StackService {
@@ -65,6 +73,8 @@ func NewStackService(spec StackServiceSpec) StackService {
 		sessionFactory:         spec.SessionFactory,
 		interpolationValidator: validation.NewInterpolationValidation(),
 		stackResourceService:   spec.StackResourceService,
+		clusterRegistryService: spec.ClusterRegistryService,
+		namespaceService:       spec.NamespaceService,
 		domainNameService: NewDomainsService(DomainsServiceSpec{
 			SessionFactory: spec.SessionFactory,
 			Logger:         spec.Logger,
@@ -72,23 +82,16 @@ func NewStackService(spec StackServiceSpec) StackService {
 	}
 }
 
-func (s *stackService) InjectClusterResourceService(clusterStackService clusterresource.ClusterStackService) {
-	s.clusterResourceService = clusterStackService
+func (s *stackService) InjectClusterResourceServiceDeps(deps ClusterResourceServiceDeps) {
+	s.clusterResourceService = deps.ClusterStackService
+	s.namespaceClusterResourceService = deps.NamespaceClusterService
+	s.volumeClusterResourceService = deps.VolumeClusterService
 }
 
 func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
-	// Validate workspace
-	workspaceUser, err := s.workspaceUserService.GetWorkspaceUser(ctx, spec.UserID)
-	if err != nil {
-		return nil, errors.GeneralError("failed to get workspaceuser for user '%s': %s", spec.UserID, err.Error())
-	}
-	userWorkspaceNamespaceMap := workspaceUser.WorkspaceNamespaceMap()
-	if workpaceNamepace, ok := userWorkspaceNamespaceMap[spec.WorkspaceName]; ok {
-		spec.Namespace = workpaceNamepace.Namespace
-	} else {
-		return nil, errors.BadRequest("workspace with name '%s' does not exist for user", spec.Name)
-	}
-
+	// Setup namespace
+	namespaceForStack := s.prepareNamespaceForStack(spec)
+	spec.Namespace = namespaceForStack.Name
 	// Set default values and populate fields
 	s.setDefaultValues(spec)
 	for i := range spec.StackResources {
@@ -107,14 +110,10 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 
 	// Validate volume mounts if present
 	if spec.HasVolumeMounts() {
-		volumes, err := s.volumeService.InternalList(ctx, spec.VolumeMountIds())
-		if err != nil {
-			return nil, errors.GeneralError("failed to get volumes '%s': %s", spec.Name, err.Error())
-		}
-		if err := s.validateVolumeMounts(volumes, spec); err != nil {
+		if err := s.validateVolumeMounts(spec.Volumes, spec); err != nil {
 			return nil, err
 		}
-		setVolumeMountType(volumes, spec)
+		setVolumeMountType(spec.Volumes, spec)
 	}
 
 	// Populate associations and validate
@@ -133,25 +132,94 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 		return nil, err
 	}
 
+	if spec.UsesInClusterRegistry() {
+		clusterRegistry, err := s.clusterRegistryService.GetForOrg(ctx, spec.OrganisationID)
+		if err != nil {
+			if err.Code == errors.ErrorNotFound {
+				return nil, errors.BadRequest("no cluster registry found for organisation '%s'", spec.OrganisationID)
+			}
+			return nil, errors.GeneralError("failed to get cluster registry for organisation '%s': %s", spec.OrganisationID, err.Error())
+		}
+		if clusterRegistry.Status.State != models.RegistryStateRunning {
+			return nil, errors.BadRequest("cluster registry '%s' is not running", clusterRegistry.Name)
+		}
+		registryUrl := clusterRegistry.Status.RegistryUrl
+		if len(registryUrl) == 0 {
+			return nil, errors.BadRequest("cluster registry '%s' has no registry URL", clusterRegistry.Name)
+		}
+
+		urlObj, perr := url.Parse(registryUrl)
+		if perr != nil {
+			return nil, errors.BadRequest("invalid cluster registry URL '%s': %s", registryUrl, perr.Error())
+		}
+		spec.PopulateInternalImageRegistryUrlsForResources(urlObj.Hostname())
+	}
+
 	// Create stack and update domains within a transaction
 	var createdStack *models.Stack
 	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		// Step 1: Create the stack to get real IDs
+		// step 1: Create namespace in db
+		namespace, err := s.namespaceService.CreateWithTx(ctx, namespaceForStack)
+		if err != nil {
+			return err
+		}
+		spec.NamespaceID = namespace.ID
+
+		// Step 2: create volumes in db
+		createdVolumesMap := make(map[string]*models.Volume)
+		for _, volume := range spec.Volumes {
+			volume.NamespaceID = namespace.ID
+			volume.OrganisationID = spec.OrganisationID
+			volume.UserID = spec.UserID
+			volume.Namespace = namespace.Name
+
+			createdVolume, err := s.volumeService.CreateInDbWithTx(ctx, volume)
+			if err != nil {
+				return errors.GeneralError("failed to create volume '%s': %s", volume.Name, err.Error())
+			}
+			createdVolumesMap[volume.Name] = createdVolume
+		}
+
+		// Step 4: Populate volume mounts source IDs in the stack resources.
+		for i := range spec.StackResources {
+			currentResource := spec.StackResources[i]
+			if len(currentResource.VolumeMounts) == 0 {
+				continue
+			}
+			for j := range currentResource.VolumeMounts {
+				currentVolumeMount := currentResource.VolumeMounts[j]
+				if volume, found := createdVolumesMap[currentVolumeMount.SourceVolumeName]; found {
+					currentVolumeMount.SourceVolumeID = volume.ID
+					currentVolumeMount.SourceVolumeName = volume.Name
+				} else {
+					return errors.BadRequest("volume '%s' does not exist", currentVolumeMount.SourceVolumeName)
+				}
+			}
+		}
+
+		// Step 5: Create the stack to get real IDs
 		var createErr *errors.ServiceError
 		createdStack, createErr = s.stackStore.CreateWithTx(ctx, spec)
 		if createErr != nil {
 			return createErr
 		}
 
-		// Step 2: Now that we have IDs, populate the domain information
+		// Step 6: Associate the created stack with the created volumes
+		for volumeName, volume := range createdVolumesMap {
+			if err := s.volumeService.UpdateVolumeInUseByStackWithTx(ctx, volume.ID, createdStack.ID); err != nil {
+				return errors.GeneralError("failed to update volume '%s' with stack ID '%s': %s", volumeName, createdStack.ID, err.Error())
+			}
+		}
+
+		// Step 7: Now that we have IDs, populate the domain information
 		s.populateExposedPortDomainsForStack(ctx, createdStack, domainToUse)
 
-		// Step 3: Validate domain uniqueness with the populated domains
+		// Step 8: Validate domain uniqueness with the populated domains
 		if err := s.validateExposedPortDomainUniquenessForStackCreate(ctx, createdStack); err != nil {
 			return err
 		}
 
-		// Step 4: Update resources and create domains for exposed ports
+		// Step 9: Update resources and create domains for exposed ports
 		stackResourcesToUpdate := make([]*models.StackResource, 0)
 		for _, stackResource := range createdStack.StackResources {
 			if len(stackResource.Ports) == 0 {
@@ -180,7 +248,7 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 			}
 		}
 
-		// Step 5: Update stack resources with generated subdomain prefixes
+		// Step 10: Update stack resources with generated subdomain prefixes
 		for _, stackResource := range stackResourcesToUpdate {
 			_, err := s.stackResourceService.InternalUpdateWithTx(ctx, stackResource.ID, stackResource)
 			if err != nil {
@@ -190,12 +258,25 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 			}
 		}
 
-		// Step 6: Get updated stack and create in cluster
+		// Step 11: Get updated stack and create in cluster
 		createdStack, err = s.GetStack(ctx, createdStack.ID)
 		if err != nil {
 			return errors.GeneralError("failed to get created stack '%s': %s", createdStack.ID, err.Error())
 		}
 
+		// Step 12: Create namespace in cluster
+		if err := s.namespaceClusterResourceService.CreateNamespaceInCluster(ctx, namespace); err != nil {
+			return errors.GeneralError("failed to create namespace in cluster: %s", err.Error())
+		}
+
+		// Step 13: Create volumes in cluster
+		for _, volume := range createdStack.Volumes {
+			if err := s.volumeService.CreateInCluster(ctx, volume); err != nil {
+				return errors.GeneralError("failed to create volume in cluster: %s", err.Error())
+			}
+		}
+
+		// Step 14: Create stack in cluster
 		if err := s.clusterResourceService.CreateStackInCluster(ctx, createdStack); err != nil {
 			return errors.GeneralError("failed to create stack in cluster: %s", err.Error())
 		}
@@ -216,6 +297,7 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 	if err != nil {
 		return nil, err
 	}
+	existingStackVolumeMap := existingStack.VolumesMap()
 
 	// Validate immutable fields
 	if spec.Name != existingStack.Name {
@@ -240,14 +322,10 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 
 	// Validate volume mounts if present
 	if spec.HasVolumeMounts() {
-		volumes, err := s.volumeService.InternalList(ctx, spec.VolumeMountIds())
-		if err != nil {
-			return nil, errors.GeneralError("failed to get volumes '%s': %s", spec.Name, err.Error())
-		}
-		if err := s.validateVolumeMounts(volumes, spec); err != nil {
+		if err := s.validateVolumeMounts(spec.Volumes, spec); err != nil {
 			return nil, err
 		}
-		setVolumeMountType(volumes, spec)
+		setVolumeMountType(spec.Volumes, spec)
 	}
 
 	// Get domain to use
@@ -273,6 +351,29 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 	// Update stack and domains within transaction
 	var updatedStack *models.Stack
 	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		var newlyCreatedVolumesInPatch []*models.Volume
+		// Create volumes required for this update
+		for _, volume := range spec.Volumes {
+			volume.NamespaceID = existingStack.NamespaceID
+			volume.OrganisationID = spec.OrganisationID
+			volume.UserID = spec.UserID
+			volume.Namespace = existingStack.Namespace
+			if _, found := existingStackVolumeMap[volume.Name]; !found {
+				createdVolume, err := s.volumeService.CreateInDbWithTx(ctx, volume)
+				if err != nil {
+					return errors.GeneralError("failed to create volume '%s': %s", volume.Name, err.Error())
+				}
+				// Assoicate volume with the stack.
+				if err := s.volumeService.UpdateVolumeInUseByStackWithTx(ctx, createdVolume.ID, ID); err != nil {
+					return errors.GeneralError("failed to update volume '%s' with stack ID '%s': %s", volume.Name, ID, err.Error())
+				}
+				// Add to the list of newly created volumes
+				newlyCreatedVolumesInPatch = append(newlyCreatedVolumesInPatch, createdVolume)
+			} else {
+				s.logger.Info(ctx, "Volume '%s' already exists, skipping creation", volume.Name)
+			}
+		}
+
 		// Step 1: Update the stack
 		var updateErr *errors.ServiceError
 		updatedStack, updateErr = s.stackStore.UpdateWithTx(ctx, ID, spec)
@@ -314,6 +415,22 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 		updatedStack, err = s.GetStack(ctx, updatedStack.ID)
 		if err != nil {
 			return errors.GeneralError("failed to get updated stack '%s': %s", updatedStack.ID, err.Error())
+		}
+
+		// Step 6: Update volumes in cluster
+		for _, volume := range newlyCreatedVolumesInPatch {
+			if err := s.volumeService.CreateInCluster(ctx, volume); err != nil {
+				return errors.GeneralError("failed to create volume in cluster: %s", err.Error())
+			}
+		}
+
+		updatedStackVolumeMap := updatedStack.VolumesMap()
+		for _, existingVolume := range existingStack.Volumes {
+			if _, found := updatedStackVolumeMap[existingVolume.Name]; !found {
+				if err := s.volumeService.DeleteWithTx(ctx, existingVolume.ID); err != nil {
+					return errors.GeneralError("failed to delete volume: %s", err.Error())
+				}
+			}
 		}
 
 		if err := s.clusterResourceService.UpdateStackInCluster(ctx, updatedStack); err != nil {
@@ -380,11 +497,30 @@ func (s *stackService) DeleteStack(ctx context.Context, ID string) *errors.Servi
 			}
 		}
 
-		// Step 3: Delete the stack from database
+		// Step 4: Delete the stack from database
 		if err := s.stackStore.DeleteWithTx(ctx, ID); err != nil {
 			return err
 		}
 
+		// Step 3: Delete volumes in cluster
+		for _, volume := range stack.Volumes {
+			if err := s.volumeService.DeleteWithTx(ctx, volume.ID); err != nil {
+				return errors.GeneralError("failed to delete volume in cluster: %s", err.Error())
+			}
+		}
+		// Step 5: Delete the namespace from cluster
+		if err := s.namespaceClusterResourceService.DeleteNamespaceInCluster(ctx, &models.Namespace{
+			ID:             stack.NamespaceID,
+			Name:           stack.Namespace,
+			OrganisationID: stack.OrganisationID,
+		}); err != nil {
+			return errors.GeneralError("failed to delete namespace in cluster: %s", err.Error())
+		}
+
+		// Step 6: Delete the namespace from database
+		if err := s.namespaceService.DeleteWithTx(ctx, stack.NamespaceID); err != nil {
+			return errors.GeneralError("failed to delete namespace in database: %s", err.Error())
+		}
 		return nil
 	})
 
@@ -425,18 +561,18 @@ func (s *stackService) UpdateStatus(ctx context.Context, ID string, status *mode
 	return nil
 }
 
-func (s *stackService) validateVolumeMounts(existingVolumes []*models.Volume, spec *models.Stack) *errors.ServiceError {
-	existingVolumeMap := make(map[string]*models.Volume)
-	for i := range existingVolumes {
-		existingVolumeMap[existingVolumes[i].ID] = existingVolumes[i]
+func (s *stackService) validateVolumeMounts(definedVolumes []*models.Volume, spec *models.Stack) *errors.ServiceError {
+	definedVolumesMap := make(map[string]*models.Volume)
+	for i := range definedVolumes {
+		definedVolumesMap[definedVolumes[i].Name] = definedVolumes[i]
 	}
 
 	for i := range spec.StackResources {
 		currentResource := spec.StackResources[i]
 		for j := range spec.StackResources[i].VolumeMounts {
 			currentVolumeMount := currentResource.VolumeMounts[j]
-			if _, found := existingVolumeMap[currentVolumeMount.SourceVolumeID]; !found {
-				return errors.BadRequest("volume '%s' does not exist", currentVolumeMount.SourceVolumeID)
+			if _, found := definedVolumesMap[currentVolumeMount.SourceVolumeName]; !found {
+				return errors.BadRequest("volume '%s' does not exist", currentVolumeMount.SourceVolumeName)
 			}
 		}
 	}
@@ -578,18 +714,19 @@ func (s *stackService) populateAssociations(ctx context.Context, spec *models.St
 	if spec.StackResources == nil {
 		return nil
 	}
+	definedVolumesMap := make(map[string]*models.Volume)
+	for i := range spec.Volumes {
+		definedVolumesMap[spec.Volumes[i].Name] = spec.Volumes[i]
+	}
+
 	for i := range spec.StackResources {
 		spec.StackResources[i].UserID = spec.UserID
-
 		if spec.StackResources[i].BuildConfig != nil {
 			buildConfig := spec.StackResources[i].BuildConfig
 			if buildConfig.SourceContext.Volume != nil {
-				volume, err := s.volumeService.Get(ctx, buildConfig.SourceContext.Volume.SourceVolumeID)
-				if err != nil {
-					return errors.GeneralError(
-						"failed to get volume specified in the build source '%s': %s",
-						buildConfig.SourceContext.Volume.SourceVolumeID, err.Error(),
-					)
+				volume, found := definedVolumesMap[buildConfig.SourceContext.Volume.SourceVolumeName]
+				if !found {
+					return errors.BadRequest("volume '%s' does not exist", buildConfig.SourceContext.Volume.SourceVolumeName)
 				}
 				buildConfig.SourceContext.Volume.SourceVolumeName = volume.Name
 			}
@@ -638,15 +775,26 @@ func (s *stackService) setDefaultValues(spec *models.Stack) {
 	}
 }
 
-func setVolumeMountType(existingVolumes []*models.Volume, spec *models.Stack) {
-	existingVolumeMap := make(map[string]*models.Volume)
-	for i := range existingVolumes {
-		existingVolumeMap[existingVolumes[i].ID] = existingVolumes[i]
+func (s *stackService) prepareNamespaceForStack(spec *models.Stack) *models.Namespace {
+	// Generate a unique namespace for the stack
+	namespace := &models.Namespace{
+		Name:           fmt.Sprintf("%s-%s", spec.Name, uuid.New().String()),
+		OrganisationID: spec.OrganisationID,
+	}
+	namespace.AddDefaultLabels()
+
+	return namespace
+}
+
+func setVolumeMountType(definedVolumes []*models.Volume, spec *models.Stack) {
+	definedVolumesMap := make(map[string]*models.Volume)
+	for i := range definedVolumes {
+		definedVolumesMap[definedVolumes[i].Name] = definedVolumes[i]
 	}
 
 	for i := range spec.StackResources {
 		for j := range spec.StackResources[i].VolumeMounts {
-			if volume, found := existingVolumeMap[spec.StackResources[i].VolumeMounts[j].SourceVolumeID]; found {
+			if volume, found := definedVolumesMap[spec.StackResources[i].VolumeMounts[j].SourceVolumeName]; found {
 				spec.StackResources[i].VolumeMounts[j].SourceVolumeType = volume.VolumeSourceType()
 			}
 		}

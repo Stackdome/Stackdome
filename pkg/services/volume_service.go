@@ -17,12 +17,18 @@ type VolumeService interface {
 	GetByVolumeNameAndNamespace(ctx context.Context, volumeName, namespace string) (*models.Volume, *errors.ServiceError)
 	InternalList(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
+	CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
+	CreateInDbWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
+	CreateInCluster(ctx context.Context, spec *models.Volume) *errors.ServiceError
 	ListByUserID(ctx context.Context, userID string) ([]*models.Volume, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.VolumeStatus) *errors.ServiceError
 	UpdateGitRepoSourceRevision(ctx context.Context, ID string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError)
 	UpdateRemoteSourceRevision(ctx context.Context, ID string, revision models.RemoteDirSource) (*models.Volume, *errors.ServiceError)
 	InjectClusterResourceService(volumeClusterService clusterresource.VolumeClusterResourceService)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
+	DeleteWithTx(ctx context.Context, ID string) *errors.ServiceError
+	ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError)
+	UpdateVolumeInUseByStackWithTx(ctx context.Context, volumeID string, stackID string) *errors.ServiceError
 }
 
 type VolumeServiceSpec struct {
@@ -38,6 +44,9 @@ func NewVolumeService(spec VolumeServiceSpec) VolumeService {
 		volumeMountStore: pgstore.NewVolumeMountStore(pgstore.VolumeMountStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
+		stackVolumeStore: pgstore.NewStackVolumeStore(pgstore.StackVolumeStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
 		logger: spec.Logger,
 	}
 }
@@ -45,6 +54,7 @@ func NewVolumeService(spec VolumeServiceSpec) VolumeService {
 type volumeService struct {
 	volumeStore            stores.VolumeStore
 	volumeMountStore       stores.VolumeMountStore
+	stackVolumeStore       stores.StackVolumeStore
 	clusterResourceService clusterresource.VolumeClusterResourceService
 	logger                 logger.Logger
 }
@@ -60,6 +70,22 @@ func (s *volumeService) Get(ctx context.Context, ID string) (*models.Volume, *er
 		return nil, err
 	}
 	return volume, nil
+}
+
+func (s *volumeService) ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError) {
+	volumes, err := s.stackVolumeStore.ListVolumesByStackID(ctx, stackID)
+	if err != nil {
+		s.logger.Errorf("failed to list volumes used by stack: %v", err)
+		return nil, err
+	}
+	return volumes, nil
+}
+
+func (s *volumeService) UpdateVolumeInUseByStackWithTx(ctx context.Context, volumeID string, stackID string) *errors.ServiceError {
+	return s.stackVolumeStore.CreateWithTx(ctx, &models.StackVolume{
+		VolumeID: volumeID,
+		StackID:  stackID,
+	})
 }
 
 func (s *volumeService) GetByVolumeNameAndNamespace(ctx context.Context, volumeName, namespace string) (*models.Volume, *errors.ServiceError) {
@@ -167,6 +193,52 @@ func (s *volumeService) Create(ctx context.Context, spec *models.Volume) (*model
 	return createdVolume, nil
 }
 
+// Assume ctx already has a transaction
+func (s *volumeService) CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
+	var createdVolume *models.Volume
+	var err *errors.ServiceError
+	createdVolume, err = s.volumeStore.CreateWithTx(ctx, spec)
+	if err != nil {
+		s.logger.Errorf("failed to create volume: %v", err)
+		return nil, err
+	}
+	cerr := s.clusterResourceService.CreateVolumeInCluster(ctx, createdVolume)
+	if cerr != nil {
+		s.logger.Errorf("failed to create volume in cluster: %v", cerr)
+		return nil, errors.GeneralError("failed to create volume in cluster: %s", cerr.Error())
+	}
+	return createdVolume, nil
+}
+
+func (s *volumeService) CreateInCluster(ctx context.Context, spec *models.Volume) *errors.ServiceError {
+	volume, err := s.volumeStore.GetByID(ctx, spec.ID)
+	if err != nil {
+		s.logger.Errorf("failed to get volume for creation in cluster: %v", err)
+		return err
+	}
+	if volume == nil {
+		s.logger.Errorf("volume not found for creation in cluster: %v", spec.ID)
+		return errors.NotFound("volume not found")
+	}
+	cErr := s.clusterResourceService.CreateVolumeInCluster(ctx, volume)
+	if cErr != nil {
+		s.logger.Errorf("failed to create volume in cluster: %v", cErr)
+		return errors.GeneralError("failed to create volume in cluster: %s", cErr.Error())
+	}
+	return nil
+}
+
+func (s *volumeService) CreateInDbWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
+	var createdVolume *models.Volume
+	var err *errors.ServiceError
+	createdVolume, err = s.volumeStore.CreateWithTx(ctx, spec)
+	if err != nil {
+		s.logger.Errorf("failed to create volume: %v", err)
+		return nil, err
+	}
+	return createdVolume, nil
+}
+
 func (s *volumeService) UpdateStatus(ctx context.Context, ID string, status *models.VolumeStatus) *errors.ServiceError {
 	err := s.volumeStore.UpdateStatus(ctx, ID, status)
 	if err != nil {
@@ -208,6 +280,35 @@ func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 	if deleteErr != nil {
 		s.logger.Errorf("failed to delete volume: %v", deleteErr)
 		return deleteErr
+	}
+	return nil
+}
+
+func (s *volumeService) DeleteWithTx(ctx context.Context, ID string) *errors.ServiceError {
+	volume, err := s.volumeStore.GetByID(ctx, ID)
+	if err != nil {
+		s.logger.Errorf("failed to get volume for deletion: %v", err)
+		return err
+	}
+
+	volumeMounts, err := s.volumeMountStore.ListBySourceVolumeID(ctx, ID)
+	if err != nil {
+		s.logger.Errorf("failed to list volume mounts for deletion: %v", err)
+	}
+	if len(volumeMounts) > 0 {
+		s.logger.Errorf("cannot delete volume with mounts: %v", volumeMounts)
+		return errors.BadRequest("cannot delete volume with mounts")
+	}
+
+	cErr := s.clusterResourceService.DeleteVolumeInCluster(ctx, volume)
+	if cErr != nil {
+		s.logger.Errorf("failed to delete volume in cluster: %v", cErr)
+		return errors.GeneralError("failed to delete volume in cluster: %s", cErr.Error())
+	}
+	err = s.volumeStore.DeleteWithTx(ctx, ID)
+	if err != nil {
+		s.logger.Errorf("failed to delete volume: %v", err)
+		return err
 	}
 	return nil
 }

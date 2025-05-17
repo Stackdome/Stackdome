@@ -12,6 +12,7 @@ const (
 type VolumeMount struct {
 	StackID          string
 	StackResourceID  string
+	SourceVolumeName string
 	SourceVolumeID   string
 	SourceVolumeType SourceVolumeType
 	SourceSubPath    string

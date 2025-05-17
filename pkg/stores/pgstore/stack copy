@@ -9,6 +9,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"k8s.io/utils/ptr"
 )
 
 type StackStoreSpec struct {
@@ -18,7 +19,7 @@ type StackStoreSpec struct {
 type stackStore struct {
 	sessionFactory     db.SessionFactory
 	stackResourceStore stores.StackResourceStore
-	stackVolumeStore   stores.StackVolumeStore
+	volumeStore        stores.VolumeStore
 	atomicExecutor
 }
 
@@ -26,9 +27,6 @@ func NewStackStore(spec *StackStoreSpec) stores.StackStore {
 	return &stackStore{
 		sessionFactory: spec.SessionFactory,
 		stackResourceStore: NewStackResourceStore(StackResourceStoreSpec{
-			SessionFactory: spec.SessionFactory,
-		}),
-		stackVolumeStore: NewStackVolumeStore(StackVolumeStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
 		atomicExecutor: atomicExecutor{sessionFactory: spec.SessionFactory},
@@ -42,9 +40,28 @@ func (w *stackStore) Create(ctx context.Context, spec *models.Stack) (*models.St
 		tx.Rollback()
 		return nil, errors.GeneralError("failed to create stack: %s", err.Error())
 	}
+	createdVolumes := make(map[string]*models.Volume)
+	for _, volume := range spec.Volumes {
+		volume.StackID = ptr.To(spec.ID)
+		volume.UserID = spec.UserID
+		volume.OrganisationID = spec.OrganisationID
+		volume.NamespaceID = spec.NamespaceID
+		volume.Namespace = spec.Namespace
+		createdVolume, err := w.volumeStore.CreateWithTx(ctx, volume)
+		if err != nil {
+			tx.Rollback()
+			return nil, errors.GeneralError("failed to create stack: create volume: %v", err)
+		}
+		createdVolumes[volume.Name] = createdVolume
+	}
+
 	for _, resource := range spec.StackResources {
 		resource.StackID = spec.ID
 		resource.UserID = spec.UserID
+		if err := w.populateVolumeSourceIds(resource, createdVolumes); err != nil {
+			tx.Rollback()
+			return nil, errors.GeneralError("failed to create stack: populate volume source ids: %v", err)
+		}
 		if _, err := w.stackResourceStore.CreateWithTx(ctx, resource); err != nil {
 			tx.Rollback()
 			return nil, errors.GeneralError("failed to create stack: errored creating stack resource '%s': %v", resource.Name, err)
@@ -63,12 +80,32 @@ func (w *stackStore) CreateWithTx(ctx context.Context, spec *models.Stack) (*mod
 	if err := tx.Model(&models.Stack{}).Omit(clause.Associations).Create(spec).Error; err != nil {
 		return nil, errors.GeneralError("failed to create stack: %s", err.Error())
 	}
+
+	createdVolumes := make(map[string]*models.Volume)
+
+	for _, volume := range spec.Volumes {
+		volume.StackID = ptr.To(spec.ID)
+		volume.UserID = spec.UserID
+		volume.OrganisationID = spec.OrganisationID
+		volume.NamespaceID = spec.NamespaceID
+		volume.Namespace = spec.Namespace
+		createdVolume, err := w.volumeStore.CreateWithTx(ctx, volume)
+		if err != nil {
+			return nil, errors.GeneralError("failed to create stack: create volume: %v", err)
+		}
+		createdVolumes[volume.Name] = createdVolume
+	}
+
 	for _, resource := range spec.StackResources {
 		resource.StackID = spec.ID
+		if err := w.populateVolumeSourceIds(resource, createdVolumes); err != nil {
+			return nil, errors.GeneralError("failed to create stack: populate volume source ids: %v", err)
+		}
 		if _, err := w.stackResourceStore.CreateWithTx(ctx, resource); err != nil {
 			return nil, errors.GeneralError("failed to create stack: create stack resource: %v", err)
 		}
 	}
+
 	return w.GetByID(ctx, spec.ID)
 }
 
@@ -83,11 +120,6 @@ func (w *stackStore) ListByUserID(ctx context.Context, userID string) ([]*models
 			return nil, errors.GeneralError("failed to get stack resources: %v", err)
 		}
 		stack.StackResources = resources
-		stackVolumes, err := w.stackVolumeStore.ListVolumesByStackID(ctx, stack.ID)
-		if err != nil {
-			return nil, errors.GeneralError("failed to get stack volumes: %v", err)
-		}
-		stack.Volumes = stackVolumes
 	}
 	return stacks, nil
 }
@@ -103,11 +135,6 @@ func (w *stackStore) ListByOrganisationID(ctx context.Context, organisationID st
 			return nil, errors.GeneralError("failed to get resources: %v", err)
 		}
 		stack.StackResources = resources
-		stackVolumes, err := w.stackVolumeStore.ListVolumesByStackID(ctx, stack.ID)
-		if err != nil {
-			return nil, errors.GeneralError("failed to get stack volumes: %v", err)
-		}
-		stack.Volumes = stackVolumes
 	}
 	return stacks, nil
 }
@@ -125,12 +152,6 @@ func (w *stackStore) GetByID(ctx context.Context, id string) (*models.Stack, *er
 		return nil, errors.GeneralError("failed to get stack resources: %v", err)
 	}
 	stack.StackResources = resources
-
-	stackVolumes, err := w.stackVolumeStore.ListVolumesByStackID(ctx, id)
-	if err != nil {
-		return nil, errors.GeneralError("failed to get stack volumes: %v", err)
-	}
-	stack.Volumes = stackVolumes
 	return &stack, nil
 }
 
@@ -147,11 +168,6 @@ func (w *stackStore) GetByName(ctx context.Context, name string, userID string) 
 		return nil, errors.GeneralError("failed to get stack resources: %v", err)
 	}
 	stack.StackResources = resources
-	stackVolumes, err := w.stackVolumeStore.ListVolumesByStackID(ctx, stack.ID)
-	if err != nil {
-		return nil, errors.GeneralError("failed to get stack volumes: %v", err)
-	}
-	stack.Volumes = stackVolumes
 	return &stack, nil
 }
 
@@ -168,10 +184,32 @@ func (w *stackStore) Update(ctx context.Context, id string, spec *models.Stack) 
 		return nil, errors.GeneralError("failed to update stack: %s", err.Error())
 	}
 	existingResourceMap := existingStack.ResourcesMap()
+	existingVolumeMap := existingStack.VolumesMap()
+
+	patchVolumes := make(map[string]*models.Volume)
+	for _, patchVolume := range spec.Volumes {
+		patchVolume.StackID = ptr.To(existingStack.ID)
+		patchVolume.UserID = existingStack.UserID
+		patchVolume.OrganisationID = existingStack.OrganisationID
+		patchVolume.NamespaceID = existingStack.NamespaceID
+		patchVolume.Namespace = existingStack.Namespace
+		// We ignore updates to existing volumes.
+		if _, ok := existingVolumeMap[patchVolume.Name]; !ok {
+			patchVolume, err = w.volumeStore.CreateWithTx(txCtx, patchVolume)
+			if err != nil {
+				tx.Rollback()
+				return nil, errors.GeneralError("failed to create stack volume: %v", err)
+			}
+		}
+		patchVolumes[patchVolume.Name] = patchVolume
+	}
 
 	for _, resource := range spec.StackResources {
 		resource.StackID = existingStack.ID
 		resource.UserID = existingStack.UserID
+		if err := w.populateVolumeSourceIds(resource, patchVolumes); err != nil {
+			return nil, errors.GeneralError("failed to create stack: populate volume source ids: %v", err)
+		}
 		if currentResource, ok := existingResourceMap[resource.Name]; ok {
 			if _, err := w.stackResourceStore.UpdateWithTx(txCtx, currentResource.ID, resource); err != nil {
 				tx.Rollback()
@@ -196,6 +234,7 @@ func (w *stackStore) Update(ctx context.Context, id string, spec *models.Stack) 
 			}
 		}
 	}
+	// We dont delete volumes here, we do it from the service since we also have to cleanup up them from the cluster.
 	tx.Commit()
 	return w.GetByID(ctx, id)
 }
@@ -213,10 +252,33 @@ func (w *stackStore) UpdateWithTx(ctx context.Context, id string, spec *models.S
 	if err := tx.Model(&models.Stack{}).Omit(clause.Associations).Where("id = ?", id).Updates(spec).Error; err != nil {
 		return nil, errors.GeneralError("failed to update stack: %s", err.Error())
 	}
+
 	existingResourceMap := existingStack.ResourcesMap()
+	existingVolumeMap := existingStack.VolumesMap()
+	patchVolumes := make(map[string]*models.Volume)
+	for _, patchVolume := range spec.Volumes {
+		patchVolume.StackID = ptr.To(existingStack.ID)
+		patchVolume.UserID = existingStack.UserID
+		patchVolume.OrganisationID = existingStack.OrganisationID
+		patchVolume.NamespaceID = existingStack.NamespaceID
+		patchVolume.Namespace = existingStack.Namespace
+		// We ignore updates to existing volumes.
+		if _, ok := existingVolumeMap[patchVolume.Name]; !ok {
+			patchVolume, err = w.volumeStore.CreateWithTx(ctx, patchVolume)
+			if err != nil {
+				tx.Rollback()
+				return nil, errors.GeneralError("failed to create stack volume: %v", err)
+			}
+		}
+		patchVolumes[patchVolume.Name] = patchVolume
+	}
+
 	for _, patchResource := range spec.StackResources {
 		patchResource.StackID = existingStack.ID
 		patchResource.UserID = existingStack.UserID
+		if err := w.populateVolumeSourceIds(patchResource, patchVolumes); err != nil {
+			return nil, errors.GeneralError("failed to create stack: populate volume source ids: %v", err)
+		}
 		if existingResource, ok := existingResourceMap[patchResource.Name]; ok {
 			if _, err := w.stackResourceStore.UpdateWithTx(ctx, existingResource.ID, patchResource); err != nil {
 				return nil, errors.GeneralError("failed to update stack resource: %v", err)
@@ -238,6 +300,9 @@ func (w *stackStore) UpdateWithTx(ctx context.Context, id string, spec *models.S
 			}
 		}
 	}
+
+	// We dont delete volumes here, we do it from the service since we also have to cleanup up them from the cluster.
+
 	return w.GetByID(ctx, id)
 }
 
@@ -260,6 +325,21 @@ func (w *stackStore) Delete(ctx context.Context, id string) *errors.ServiceError
 	tx := w.sessionFactory.New(ctx)
 	if err := tx.Delete(&models.Stack{}, "id = ?", id).Error; err != nil {
 		return errors.GeneralError("failed to delete stack: %s", err.Error())
+	}
+	return nil
+}
+
+func (w *stackStore) populateVolumeSourceIds(resource *models.StackResource, createdVolumes map[string]*models.Volume) *errors.ServiceError {
+	if len(resource.VolumeMounts) == 0 {
+		return nil
+	}
+	for i := range resource.VolumeMounts {
+		volumeMount := resource.VolumeMounts[i]
+		if volume, ok := createdVolumes[volumeMount.SourceVolumeName]; ok {
+			resource.VolumeMounts[i].SourceVolumeID = volume.ID
+		} else {
+			return errors.GeneralError("failed to populate volume source id: volume '%s' not found", volumeMount.SourceVolumeName)
+		}
 	}
 	return nil
 }

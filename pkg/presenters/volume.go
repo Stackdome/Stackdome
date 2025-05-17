@@ -18,11 +18,11 @@ func PresentVolume(v *models.Volume, withStatus bool) openapi.Volume {
 		return openapi.Volume{}
 	}
 	res := openapi.Volume{
-		Name:          v.Name,
-		WorkspaceName: v.WorkspaceName,
-		Spec:          presentVolumeSpec(v),
-		Labels:        presentLabels(v.Labels),
-		Annotations:   presentAnnotations(v.Annotations),
+		Id:          &v.ID,
+		Name:        v.Name,
+		Spec:        presentVolumeSpec(v),
+		Labels:      presentLabels(v.Labels),
+		Annotations: presentAnnotations(v.Annotations),
 	}
 	if withStatus {
 		res.Status = presentVolumeStatus(v.Status)
@@ -67,13 +67,13 @@ func presentSSHConfig(config *models.SSHConfig) openapi.SSHConfig {
 	}
 }
 
-func presentVolumes(volumes []models.Volume, withStatus bool) []openapi.Volume {
+func presentVolumes(volumes []*models.Volume, withStatus bool) []openapi.Volume {
 	if len(volumes) == 0 {
 		return nil
 	}
 	result := make([]openapi.Volume, len(volumes))
 	for i, volume := range volumes {
-		result[i] = PresentVolume(&volume, withStatus)
+		result[i] = PresentVolume(volume, withStatus)
 	}
 	return result
 }
@@ -220,11 +220,10 @@ func presentBuildArtifactSyncInfo(info []models.BuildArtifactSyncInfo) []openapi
 
 func ConvertVolume(v *openapi.Volume) *models.Volume {
 	res := &models.Volume{
-		ID:            v.Name,
 		Name:          v.Name,
 		Labels:        convertLabels(v.Labels),
 		Annotations:   convertAnnotations(v.Annotations),
-		WorkspaceName: v.WorkspaceName,
+		AccessMode:    convertVolumeAccessMode(v.Spec.AccessMode),
 		Size:          v.Spec.Size,
 		StorageClass:  v.Spec.GetStorageClass(),
 		SyncBeforeUse: v.Spec.GetNeedsSyncBeforeUse(),
@@ -241,6 +240,19 @@ func ConvertVolume(v *openapi.Volume) *models.Volume {
 		}
 	}
 	return res
+}
+
+func convertVolumeAccessMode(mode openapi.VolumeAccessMode) models.VolumeAccessMode {
+	switch mode {
+	case openapi.READ_WRITE_ONCE:
+		return models.READ_WRITE_ONCE
+	case openapi.READ_ONLY_MANY:
+		return models.READ_ONLY_MANY
+	case openapi.READ_WRITE_MANY:
+		return models.READ_WRITE_MANY
+	default:
+		return models.READ_WRITE_ONCE
+	}
 }
 
 func convertLabels(labels []openapi.Label) models.Labels {

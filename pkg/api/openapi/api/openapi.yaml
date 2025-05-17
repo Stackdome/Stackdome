@@ -2177,7 +2177,7 @@ components:
           key: key
         - value: value
           key: key
-        workspace_name: workspace_name
+        id: id
         spec:
           needs_sync_before_use: true
           storage_class: storage_class
@@ -2233,6 +2233,9 @@ components:
             observed_generation: 1
             status: status
       properties:
+        id:
+          readOnly: true
+          type: string
         name:
           type: string
         labels:
@@ -2243,8 +2246,6 @@ components:
           items:
             $ref: '#/components/schemas/Annotation'
           type: array
-        workspace_name:
-          type: string
         spec:
           $ref: '#/components/schemas/VolumeSpec'
         status:
@@ -2252,7 +2253,6 @@ components:
       required:
       - name
       - spec
-      - workspace_name
       type: object
     VolumeList:
       example:
@@ -2264,7 +2264,7 @@ components:
             key: key
           - value: value
             key: key
-          workspace_name: workspace_name
+          id: id
           spec:
             needs_sync_before_use: true
             storage_class: storage_class
@@ -2325,7 +2325,7 @@ components:
             key: key
           - value: value
             key: key
-          workspace_name: workspace_name
+          id: id
           spec:
             needs_sync_before_use: true
             storage_class: storage_class
@@ -2637,12 +2637,18 @@ components:
       type: object
     Stack:
       example:
+        organisation_id: organisation_id
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        user_id: user_id
+        name: name
+        namespace: namespace
         annotations:
         - value: value
           key: key
         - value: value
           key: key
         created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
         version: 0
         spec:
           stack_resources:
@@ -2860,14 +2866,14 @@ components:
                 url: url
               - target_port: 5
                 url: url
-          Volumes:
+          volumes:
           - name: name
             annotations:
             - value: value
               key: key
             - value: value
               key: key
-            workspace_name: workspace_name
+            id: id
             spec:
               needs_sync_before_use: true
               storage_class: storage_class
@@ -2928,7 +2934,7 @@ components:
               key: key
             - value: value
               key: key
-            workspace_name: workspace_name
+            id: id
             spec:
               needs_sync_before_use: true
               storage_class: storage_class
@@ -2988,13 +2994,6 @@ components:
           key: key
         - value: value
           key: key
-        organisation_id: organisation_id
-        updated_at: 2000-01-23T04:56:07.000+00:00
-        user_id: user_id
-        name: name
-        namespace: namespace
-        id: id
-        workspace_name: workspace_name
         status:
           observed_version: 2
           state: state
@@ -3022,8 +3021,6 @@ components:
           readOnly: true
           type: string
         name:
-          type: string
-        workspace_name:
           type: string
         namespace:
           readOnly: true
@@ -3054,18 +3051,23 @@ components:
       required:
       - name
       - spec
-      - workspace_name
       type: object
     StackList:
       example:
         total: 7
         items:
-        - annotations:
+        - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          name: name
+          namespace: namespace
+          annotations:
           - value: value
             key: key
           - value: value
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
           version: 0
           spec:
             stack_resources:
@@ -3283,14 +3285,14 @@ components:
                   url: url
                 - target_port: 5
                   url: url
-            Volumes:
+            volumes:
             - name: name
               annotations:
               - value: value
                 key: key
               - value: value
                 key: key
-              workspace_name: workspace_name
+              id: id
               spec:
                 needs_sync_before_use: true
                 storage_class: storage_class
@@ -3351,7 +3353,7 @@ components:
                 key: key
               - value: value
                 key: key
-              workspace_name: workspace_name
+              id: id
               spec:
                 needs_sync_before_use: true
                 storage_class: storage_class
@@ -3411,13 +3413,6 @@ components:
             key: key
           - value: value
             key: key
-          organisation_id: organisation_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          user_id: user_id
-          name: name
-          namespace: namespace
-          id: id
-          workspace_name: workspace_name
           status:
             observed_version: 2
             state: state
@@ -3434,12 +3429,18 @@ components:
               message: message
               observed_generation: 1
               status: status
-        - annotations:
+        - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          name: name
+          namespace: namespace
+          annotations:
           - value: value
             key: key
           - value: value
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
           version: 0
           spec:
             stack_resources:
@@ -3657,14 +3658,14 @@ components:
                   url: url
                 - target_port: 5
                   url: url
-            Volumes:
+            volumes:
             - name: name
               annotations:
               - value: value
                 key: key
               - value: value
                 key: key
-              workspace_name: workspace_name
+              id: id
               spec:
                 needs_sync_before_use: true
                 storage_class: storage_class
@@ -3725,7 +3726,7 @@ components:
                 key: key
               - value: value
                 key: key
-              workspace_name: workspace_name
+              id: id
               spec:
                 needs_sync_before_use: true
                 storage_class: storage_class
@@ -3785,13 +3786,6 @@ components:
             key: key
           - value: value
             key: key
-          organisation_id: organisation_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          user_id: user_id
-          name: name
-          namespace: namespace
-          id: id
-          workspace_name: workspace_name
           status:
             observed_version: 2
             state: state
@@ -4033,14 +4027,14 @@ components:
               url: url
             - target_port: 5
               url: url
-        Volumes:
+        volumes:
         - name: name
           annotations:
           - value: value
             key: key
           - value: value
             key: key
-          workspace_name: workspace_name
+          id: id
           spec:
             needs_sync_before_use: true
             storage_class: storage_class
@@ -4101,7 +4095,7 @@ components:
             key: key
           - value: value
             key: key
-          workspace_name: workspace_name
+          id: id
           spec:
             needs_sync_before_use: true
             storage_class: storage_class
@@ -4161,7 +4155,7 @@ components:
           items:
             $ref: '#/components/schemas/StackResource'
           type: array
-        Volumes:
+        volumes:
           items:
             $ref: '#/components/schemas/Volume'
           type: array
@@ -5033,6 +5027,7 @@ components:
       required:
       - context_path_within_source
       - dockerfile_path
+      - image_repository
       - source_context
       - source_revision
       type: object

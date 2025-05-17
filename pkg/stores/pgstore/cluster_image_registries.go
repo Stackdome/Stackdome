@@ -44,6 +44,17 @@ func (c *clusterImageRegistryStore) CreateWithTx(ctx context.Context, spec *mode
 	return c.GetByID(ctx, spec.ID)
 }
 
+func (c *clusterImageRegistryStore) GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
+	var registry models.ClusterImageRegistry
+	if err := c.sessionFactory.New(ctx).Where("organisation_id = ?", orgID).First(&registry).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.NotFound("cluster image registry not found")
+		}
+		return nil, errors.GeneralError("failed to get cluster image registry: %s", err.Error())
+	}
+	return &registry, nil
+}
+
 func (c *clusterImageRegistryStore) GetByID(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
 	var registry models.ClusterImageRegistry
 	if err := c.sessionFactory.New(ctx).Where("id = ?", ID).First(&registry).Error; err != nil {

@@ -8,7 +8,6 @@ Name | Type | Description | Notes
 **OrganisationId** | Pointer to **string** |  | [optional] [readonly] 
 **UserId** | Pointer to **string** |  | [optional] [readonly] 
 **Name** | **string** |  | 
-**WorkspaceName** | **string** |  | 
 **Namespace** | Pointer to **string** |  | [optional] [readonly] 
 **Labels** | Pointer to [**[]Label**](Label.md) |  | [optional] 
 **Annotations** | Pointer to [**[]Annotation**](Annotation.md) |  | [optional] 
@@ -22,7 +21,7 @@ Name | Type | Description | Notes
 
 ### NewStack
 
-`func NewStack(name string, workspaceName string, spec StackSpec, ) *Stack`
+`func NewStack(name string, spec StackSpec, ) *Stack`
 
 NewStack instantiates a new Stack object
 This constructor will assign default values to properties that have it defined,
@@ -130,26 +129,6 @@ and a boolean to check if the value has been set.
 `func (o *Stack) SetName(v string)`
 
 SetName sets Name field to given value.
-
-
-### GetWorkspaceName
-
-`func (o *Stack) GetWorkspaceName() string`
-
-GetWorkspaceName returns the WorkspaceName field if non-nil, zero value otherwise.
-
-### GetWorkspaceNameOk
-
-`func (o *Stack) GetWorkspaceNameOk() (*string, bool)`
-
-GetWorkspaceNameOk returns a tuple with the WorkspaceName field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetWorkspaceName
-
-`func (o *Stack) SetWorkspaceName(v string)`
-
-SetWorkspaceName sets WorkspaceName field to given value.
 
 
 ### GetNamespace

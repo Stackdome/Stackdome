@@ -20,7 +20,6 @@ func PresentStack(s *models.Stack) openapi.Stack {
 		UserId:         &s.UserID,
 		Name:           s.Name,
 		Namespace:      &s.Namespace,
-		WorkspaceName:  s.WorkspaceName,
 		Labels:         presentLabels(s.Labels),
 		Annotations:    presentAnnotations(s.Annotations),
 		Version:        openapi.PtrInt32(int32(s.Version)),
@@ -34,6 +33,7 @@ func PresentStack(s *models.Stack) openapi.Stack {
 func presentStackSpec(w *models.Stack) openapi.StackSpec {
 	return openapi.StackSpec{
 		StackResources: presentStackResources(w.StackResources),
+		Volumes:        presentVolumes(w.Volumes, true),
 	}
 }
 
@@ -84,11 +84,25 @@ func presentBuildConfig(config *models.BuildConfigSpec) *openapi.StackResourceBu
 	return &openapi.StackResourceBuildSpec{
 		ContextPathWithinSource: config.ContextPathWithinSource,
 		DockerfilePath:          config.DockerfilePath,
-		ImageRepositoryUrl:      config.ImageRepositoryUrl,
-		InsecureRegistry:        config.InsecureRegistry,
+		ImageRepository:         presentImageRepository(config),
 		SourceContext:           presentSourceContext(config.SourceContext),
 		SourceRevision:          presentSourceRevision(config.SourceRevision),
 	}
+}
+
+func presentImageRepository(in *models.BuildConfigSpec) openapi.ImageRepository {
+	if in == nil {
+		return openapi.ImageRepository{}
+	}
+	res := openapi.ImageRepository{}
+
+	if in.BuildImageRepository.UseInClusterRegistry {
+		res.UseInternalRegistry = openapi.PtrBool(true)
+	} else {
+		res.UseInternalRegistry = openapi.PtrBool(false)
+		res.ExternalImageRepoUrl = &in.ImageRepositoryUrl
+	}
+	return res
 }
 
 func presentSourceRevision(revision models.BuildSourceRevision) openapi.BuildSourceRevision {
@@ -184,8 +198,7 @@ func presentVolumeMounts(mounts []*models.VolumeMount) []openapi.VolumeMount {
 	for i, mount := range mounts {
 		result[i] = openapi.VolumeMount{
 			StackResourceId:  &mount.StackResourceID,
-			StackStorageId:   &mount.StackResourceID,
-			SourceVolumeId:   mount.SourceVolumeID,
+			SourceVolumeName: mount.SourceVolumeName,
 			SourceVolumeType: presentVolumeSourceType(mount.SourceVolumeType),
 			SourceSubPath:    &mount.SourceSubPath,
 			TargetPath:       mount.TargetPath,
@@ -255,10 +268,10 @@ func presentResourceStatus(status *models.StackResourceStatus) *openapi.StackRes
 func ConvertStack(w *openapi.Stack) *models.Stack {
 	return &models.Stack{
 		Name:           w.Name,
-		WorkspaceName:  w.WorkspaceName,
 		Labels:         convertLabels(w.Labels),
 		Annotations:    convertAnnotations(w.Annotations),
 		StackResources: convertStackResources(w.Spec.StackResources),
+		Volumes:        convertVolumes(w.Spec.Volumes),
 	}
 }
 
@@ -291,14 +304,21 @@ func convertBuildConfig(config *openapi.StackResourceBuildSpec) *models.BuildCon
 	if config == nil {
 		return nil
 	}
-	return &models.BuildConfigSpec{
+	res := &models.BuildConfigSpec{
 		ContextPathWithinSource: config.ContextPathWithinSource,
 		DockerfilePath:          config.DockerfilePath,
-		ImageRepositoryUrl:      config.ImageRepositoryUrl,
-		InsecureRegistry:        config.InsecureRegistry,
 		SourceContext:           convertSourceContext(config.SourceContext),
 		SourceRevision:          convertSourceRevision(config.SourceRevision),
 	}
+	if config.ImageRepository.GetUseInternalRegistry() {
+		res.BuildImageRepository = models.BuildImageRepository{
+			UseInClusterRegistry: true,
+			InsecureRegistry:     true,
+		}
+	} else {
+		res.ImageRepositoryUrl = config.ImageRepository.GetExternalImageRepoUrl()
+	}
+	return res
 }
 
 func convertSourceContext(context openapi.BuildSourceContext) models.BuildContextSource {
@@ -396,9 +416,9 @@ func convertVolumeMounts(mounts []openapi.VolumeMount) []*models.VolumeMount {
 	result := make([]*models.VolumeMount, len(mounts))
 	for i, mount := range mounts {
 		result[i] = &models.VolumeMount{
-			SourceVolumeID: mount.SourceVolumeId,
-			SourceSubPath:  mount.GetSourceSubPath(),
-			TargetPath:     mount.TargetPath,
+			SourceVolumeName: mount.SourceVolumeName,
+			SourceSubPath:    mount.GetSourceSubPath(),
+			TargetPath:       mount.TargetPath,
 		}
 	}
 	return result

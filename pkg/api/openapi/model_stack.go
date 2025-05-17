@@ -21,7 +21,6 @@ type Stack struct {
 	OrganisationId *string      `json:"organisation_id,omitempty"`
 	UserId         *string      `json:"user_id,omitempty"`
 	Name           string       `json:"name"`
-	WorkspaceName  string       `json:"workspace_name"`
 	Namespace      *string      `json:"namespace,omitempty"`
 	Labels         []Label      `json:"labels,omitempty"`
 	Annotations    []Annotation `json:"annotations,omitempty"`
@@ -36,10 +35,9 @@ type Stack struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewStack(name string, workspaceName string, spec StackSpec) *Stack {
+func NewStack(name string, spec StackSpec) *Stack {
 	this := Stack{}
 	this.Name = name
-	this.WorkspaceName = workspaceName
 	this.Spec = spec
 	return &this
 }
@@ -170,30 +168,6 @@ func (o *Stack) GetNameOk() (*string, bool) {
 // SetName sets field value
 func (o *Stack) SetName(v string) {
 	o.Name = v
-}
-
-// GetWorkspaceName returns the WorkspaceName field value
-func (o *Stack) GetWorkspaceName() string {
-	if o == nil {
-		var ret string
-		return ret
-	}
-
-	return o.WorkspaceName
-}
-
-// GetWorkspaceNameOk returns a tuple with the WorkspaceName field value
-// and a boolean to check if the value has been set.
-func (o *Stack) GetWorkspaceNameOk() (*string, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.WorkspaceName, true
-}
-
-// SetWorkspaceName sets field value
-func (o *Stack) SetWorkspaceName(v string) {
-	o.WorkspaceName = v
 }
 
 // GetNamespace returns the Namespace field value if set, zero value otherwise.
@@ -457,9 +431,6 @@ func (o Stack) MarshalJSON() ([]byte, error) {
 	}
 	if true {
 		toSerialize["name"] = o.Name
-	}
-	if true {
-		toSerialize["workspace_name"] = o.WorkspaceName
 	}
 	if o.Namespace != nil {
 		toSerialize["namespace"] = o.Namespace

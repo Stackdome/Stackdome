@@ -22,12 +22,17 @@ type ImageBuild struct {
 }
 
 type BuildConfigSpec struct {
-	SourceContext           BuildContextSource  `json:"source_context"`
-	ContextPathWithinSource string              `json:"context_path_within_source"`
-	DockerfilePath          string              `json:"dockerfile_path"`
-	SourceRevision          BuildSourceRevision `json:"source_revision"`
-	ImageRepositoryUrl      string              `json:"image_repository_url"`
-	InsecureRegistry        bool                `json:"insecure_registry"`
+	SourceContext           BuildContextSource   `json:"source_context"`
+	ContextPathWithinSource string               `json:"context_path_within_source"`
+	DockerfilePath          string               `json:"dockerfile_path"`
+	SourceRevision          BuildSourceRevision  `json:"source_revision"`
+	BuildImageRepository    BuildImageRepository `json:"build_image_repository"`
+	ImageRepositoryUrl      string               `json:"image_repository_url"`
+}
+
+type BuildImageRepository struct {
+	InsecureRegistry     bool `json:"insecure_registry"`
+	UseInClusterRegistry bool `json:"use_in_cluster_registry"`
 }
 
 func (b *BuildConfigSpec) Validate() error {
@@ -36,8 +41,8 @@ func (b *BuildConfigSpec) Validate() error {
 		return errors.New("exactly one of source_context.volume or source_context.git must be specified")
 	}
 	if ctx.Volume != nil {
-		if ctx.Volume.SourceVolumeID == "" || ctx.Volume.SourceVolumeName == "" {
-			return errors.New("source_context.volume: source_volume_id and source_volume_name are required")
+		if ctx.Volume.SourceVolumeName == "" {
+			return errors.New("source_context.volume: source_volume_name are required")
 		}
 	}
 	if ctx.Git != nil {
@@ -60,8 +65,14 @@ func (b *BuildConfigSpec) Validate() error {
 			return errors.New("source_revision.git: at least one of branch, tag, or commit is required")
 		}
 	}
-	if b.ImageRepositoryUrl == "" {
-		return errors.New("image_repository_url is required")
+
+	if b.ImageRepositoryUrl != "" && b.BuildImageRepository.UseInClusterRegistry {
+		return errors.New("image_repository_url cannot be set if use_in_cluster_registry is true")
+	}
+	if b.ImageRepositoryUrl == "" && !b.BuildImageRepository.UseInClusterRegistry {
+		// If the image repository URL is empty, we need to check if the in-cluster registry is set to true
+		// If it is not, we need to return an error
+		return errors.New("image_repository_url is required if use_in_cluster_registry is false")
 	}
 	return nil
 }

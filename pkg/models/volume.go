@@ -27,7 +27,7 @@ type Volume struct {
 	OrganisationID string           `gorm:"not null" json:"organisation_id"`
 	UserID         string           `gorm:"not null" json:"user_id"`
 	Name           string           `gorm:"not null; <-:create" json:"name"`
-	WorkspaceName  string           `gorm:"<-:create" json:"workspace_name"`
+	NamespaceID    string           `gorm:"not null" json:"namespace_id"`
 	Namespace      string           `gorm:"not null;  <-:create" json:"namespace"`
 	Labels         Labels           `gorm:"type:jsonb" json:"labels"`
 	Annotations    Annotations      `gorm:"type:jsonb" json:"annotations"`

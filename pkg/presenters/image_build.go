@@ -22,9 +22,16 @@ func PresentImageBuild(in *models.ImageBuild) openapi.ImageBuild {
 		StackResourceName: in.StackResourceName,
 		BuildContext:      presentSourceContext(in.Spec.SourceContext),
 		SourceRevision:    presentSourceRevision(in.Spec.SourceRevision),
-		ImageRepo:         in.Spec.ImageRepositoryUrl,
+		ImageRepo:         presentImageRepo(in.Spec),
 		Status:            presentImageBuildStatus(in.Status),
 	}
+}
+
+func presentImageRepo(in models.BuildConfigSpec) string {
+	if in.BuildImageRepository.UseInClusterRegistry {
+		return "InClusterRegistry"
+	}
+	return in.ImageRepositoryUrl
 }
 
 func presentImageBuildStatus(status *models.ImageBuildStatus) *openapi.ImageBuildStatus {
