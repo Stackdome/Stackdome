@@ -20,6 +20,9 @@ interface ResourceFormListProps<T> {
     errors: { [field: string]: string | undefined };
   }) => ReactNode;
   addButtonText?: string;
+  autoAddFirstItem?: boolean;
+  emptyText?: string;
+  emptyIcon?: ReactNode;
 }
 
 export default function ResourceFormList<T>({
@@ -28,7 +31,10 @@ export default function ResourceFormList<T>({
   errors,
   createDefaultItem,
   renderItem,
-  addButtonText = "Add Item"
+  addButtonText = "Add Item",
+  autoAddFirstItem = true,
+  emptyText = "None added",
+  emptyIcon
 }: ResourceFormListProps<T>) {
   const [openAccordions, setOpenAccordions] = useState<string[]>(["0"]);
   const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
@@ -36,10 +42,10 @@ export default function ResourceFormList<T>({
 
   // Initialize with a default item if none provided
   useEffect(() => {
-    if (items.length === 0) {
+    if (autoAddFirstItem && items.length === 0) {
       onItemsChange([createDefaultItem()]);
     }
-  }, [items.length, onItemsChange, createDefaultItem]);
+  }, [items.length, onItemsChange, createDefaultItem, autoAddFirstItem]);
 
   useEffect(() => {
     if (lastAddedIndex !== null && itemRefs.current[lastAddedIndex]) {
@@ -132,19 +138,26 @@ export default function ResourceFormList<T>({
         onValueChange={handleValueChange}
         className="rounded-none divide-y"
       >
-        {items.map((item, index) => (
-          <div key={index}>
-            {renderItem({
-              item,
-              index,
-              itemRef: getItemRef(index),
-              isOnlyItem: items.length === 1,
-              onChange: handleItemChange,
-              onRemove: handleRemoveItem,
-              errors: errors[index] || {},
-            })}
+        {items.length === 0 ? (
+          <div className="py-12 text-center text-muted-foreground flex flex-col items-center justify-center">
+            {emptyIcon && <div className="mb-3 flex justify-center">{emptyIcon}</div>}
+            <div className="mb-2 font-medium">{emptyText}</div>
           </div>
-        ))}
+        ) : (
+          items.map((item, index) => (
+            <div key={index} className="relative">
+              {renderItem({
+                item,
+                index,
+                itemRef: getItemRef(index),
+                isOnlyItem: items.length === 1,
+                onChange: handleItemChange,
+                onRemove: handleRemoveItem,
+                errors: errors[index] || {},
+              })}
+            </div>
+          ))
+        )}
       </Accordion>
       <div className="flex justify-center py-4 border-t">
         <Button

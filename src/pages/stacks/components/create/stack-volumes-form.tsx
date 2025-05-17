@@ -1,6 +1,7 @@
 import type { VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
 import ResourceFormList from "@/pages/stacks/components/shared/resource-form-list";
 import StackVolumeItem from "./stack-volume-item";
+import { Database } from "lucide-react";
 
 // Props interface for StackVolumesForm
 interface StackVolumesFormProps {
@@ -55,6 +56,9 @@ export default function StackVolumesForm({
         />
       )}
       addButtonText="Add Volume"
+      autoAddFirstItem={false}
+      emptyText="No volumes added (Optional) "
+      emptyIcon={<Database className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />}
     />
   );
 }

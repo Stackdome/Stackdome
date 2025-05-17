@@ -157,20 +157,6 @@ export default function StackCreatePage() {
     }
   }, [formErrors]);
 
-  const getDefaultVolume = (workspace?: string): Partial<VolumeFormData> => {
-    return {
-      name: "",
-      workspace_name: workspace || "",
-      sourceType: "None",
-      labels: [],
-      spec: {
-        size: "1Gi", // Default size
-        access_mode: "ReadWriteOnce", // Default access mode
-        needs_sync_before_use: false
-      }
-    };
-  };
-
   const handleVolumesChange = useCallback((updatedVolumes: Partial<VolumeFormData>[]) => {
     setFormData(prev => {
       const newFormData = { ...prev };
@@ -548,17 +534,6 @@ export default function StackCreatePage() {
             />
           </CardContent>
         </Card>
-
-        {/* Volume section empty state */}
-        {(!formData.spec?.volumes || formData.spec.volumes.length === 0) && (
-          <div className="bg-muted/30 border border-muted-foreground/20 rounded-lg px-4 py-6 mb-6 text-center text-muted-foreground">
-            <div className="mb-2 font-medium">No volumes defined.</div>
-            <div className="mb-4 text-sm">Add a volume if your stack needs persistent storage. Volumes are optional.</div>
-            <Button variant="outline" size="sm" onClick={() => handleVolumesChange([getDefaultVolume(formData.workspace_name)])}>
-              + Add Volume
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );
