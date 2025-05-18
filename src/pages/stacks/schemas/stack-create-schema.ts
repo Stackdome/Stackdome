@@ -77,6 +77,12 @@ export const StackResourceBuildSpecSchema = z.object({
 
 // Main Schemas
 
+export const VolumeMountSchema = z.object({
+  source_volume_name: z.string().min(1, "Volume name is required"),
+  source_sub_path: z.string().optional(),
+  target_path: z.string().min(1, "Target path is required"),
+});
+
 export const StackResourceSchema = z.object({
   name: z.string().min(1, "Resource name is required"),
   labels: z.array(LabelSchema).optional(),
@@ -86,6 +92,7 @@ export const StackResourceSchema = z.object({
   execution_config: ExecutionConfigSchema.optional(),
   depends_on: z.array(z.string()).optional(),
   ports: z.array(PortSchema).optional(),
+  volume_mounts: z.array(VolumeMountSchema).optional(),
   // UI helper, not part of API spec for StackResource
   sourceType: z.enum(["image", "git"]).optional().default("image"),
   // UI helper fields for git revision, not part of API spec StackResource

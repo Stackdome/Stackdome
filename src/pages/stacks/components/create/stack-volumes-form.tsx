@@ -43,16 +43,16 @@ export default function StackVolumesForm({
       onItemsChange={onVolumesChange}
       errors={errors}
       createDefaultItem={createDefaultVolumeWithWorkspace}
-      renderItem={({ item, index, itemRef, isOnlyItem, onChange, onRemove, errors }) => (
+      renderItem={({ item, index, itemRef, onChange, onRemove, errors }) => (
         <StackVolumeItem
           key={index}
           volume={item}
           index={index}
           itemRef={itemRef}
-          isOnlyVolume={isOnlyItem}
           onChange={onChange}
           onRemove={onRemove}
           errors={errors}
+          allVolumes={volumes}
         />
       )}
       addButtonText="Add Volume"

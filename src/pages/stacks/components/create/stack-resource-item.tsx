@@ -11,8 +11,9 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, X, GitBranch, ImageIcon, Trash2 } from "lucide-react";
-import type { StackResourceData } from "@/pages/stacks/schemas/stack-create-schema";
+import { Plus, X, GitBranch, ImageIcon, Trash2, Database } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import type { StackResourceData, VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
 
 interface StackResourceItemProps {
   resource: Partial<StackResourceData>;
@@ -22,6 +23,7 @@ interface StackResourceItemProps {
   onChange: (index: number, updatedResource: Partial<StackResourceData>) => void;
   onRemove: (index: number) => void;
   errors: { [field: string]: string | undefined };
+  volumes?: Partial<VolumeFormData>[];
 }
 
 const getError = (errors: { [field: string]: string | undefined }, path: string) => {
@@ -53,6 +55,7 @@ export default function StackResourceItem({
   onChange,
   onRemove,
   errors,
+  volumes = []
 }: StackResourceItemProps) {
   // Helper for updating resource fields
   const update = (patch: Partial<StackResourceData>) => {
@@ -134,6 +137,47 @@ export default function StackResourceItem({
         ...resource.execution_config,
         environment_variables: (resource.execution_config?.environment_variables || []).filter((_, i) => i !== envIdx),
       },
+    });
+  };
+
+  // Helper for volume mounts
+  const addVolumeMount = () => {
+    update({
+      volume_mounts: [
+        ...(resource.volume_mounts || []),
+        { source_volume_name: "", source_sub_path: "", target_path: "/mnt" },
+      ],
+    });
+  };
+
+  const updateVolumeMount = (vmIdx: number, patch: Partial<{ source_volume_name: string, source_sub_path: string, target_path: string }>) => {
+    // Check for duplicate target paths if updating target_path
+    if (patch.target_path && resource.volume_mounts) {
+      const isDuplicate = resource.volume_mounts.some(
+        (vm, i) => i !== vmIdx && vm.target_path === patch.target_path
+      );
+
+      if (isDuplicate) {
+        // Show an error using toast or modify the patch to trigger error display
+        toast({
+          title: "Duplicate Target Path",
+          description: "Each volume mount must have a unique target path within a resource.",
+          variant: "destructive",
+        });
+        return; // Don't update if duplicate
+      }
+    }
+
+    update({
+      volume_mounts: (resource.volume_mounts || []).map((vm, i) =>
+        i === vmIdx ? { ...vm, ...patch } : vm
+      ),
+    });
+  };
+
+  const removeVolumeMount = (vmIdx: number) => {
+    update({
+      volume_mounts: (resource.volume_mounts || []).filter((_, i) => i !== vmIdx),
     });
   };
 
@@ -388,6 +432,119 @@ export default function StackResourceItem({
                     )}
                   </div>
                 )}
+              </div>
+              <Separator className="my-4" />
+              {/* Volume Mounts Section */}
+              <div>
+                <h3 className="text-lg font-medium mb-3">Volume Mounts</h3>
+                <div className="grid gap-6 max-w-3xl">
+                  {(resource.volume_mounts || []).map((vm, vmIdx) => (
+                    <div key={vmIdx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`volume-name-${index}-${vmIdx}`} className="text-sm font-medium">
+                            Volume <span className="text-red-500">*</span>
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top">Select the volume to mount</TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Select
+                          value={vm.source_volume_name || ""}
+                          onValueChange={(value) => updateVolumeMount(vmIdx, { source_volume_name: value })}
+                        >
+                          <SelectTrigger
+                            id={`volume-name-${index}-${vmIdx}`}
+                            className={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) ? "border-destructive" : ""}
+                          >
+                            <SelectValue placeholder="Select volume" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(volumes || []).length === 0 ? (
+                              <div className="p-2 text-sm text-muted-foreground">No volumes available</div>
+                            ) : (
+                              (volumes || []).map((vol, vidx) => (
+                                <SelectItem key={vidx} value={vol.name || ""}>
+                                  <div className="flex items-center gap-2">
+                                    <Database className="h-4 w-4" />
+                                    <span>{vol.name || `Volume ${vidx + 1}`}</span>
+                                    {vol.spec?.size && <span className="ml-1 text-xs text-muted-foreground">({vol.spec.size})</span>}
+                                  </div>
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) && (
+                          <p className="text-sm text-destructive">{getError(errors, `volume_mounts.${vmIdx}.source_volume_name`)}</p>
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`volume-subpath-${index}-${vmIdx}`} className="text-sm font-medium">
+                            Sub Path
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top">Optional path within the volume</TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Input
+                          id={`volume-subpath-${index}-${vmIdx}`}
+                          value={vm.source_sub_path || ""}
+                          onChange={(e) => updateVolumeMount(vmIdx, { source_sub_path: e.target.value })}
+                          placeholder="e.g., data/config"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`volume-target-${index}-${vmIdx}`} className="text-sm font-medium">
+                            Target Path <span className="text-red-500">*</span>
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top">Path in container to mount the volume</TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Input
+                          id={`volume-target-${index}-${vmIdx}`}
+                          value={vm.target_path || ""}
+                          onChange={(e) => updateVolumeMount(vmIdx, { target_path: e.target.value })}
+                          placeholder="e.g., /mnt/data"
+                          className={getError(errors, `volume_mounts.${vmIdx}.target_path`) ? "border-destructive" : ""}
+                          required
+                        />
+                        {getError(errors, `volume_mounts.${vmIdx}.target_path`) && (
+                          <p className="text-sm text-destructive">{getError(errors, `volume_mounts.${vmIdx}.target_path`)}</p>
+                        )}
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeVolumeMount(vmIdx)}
+                          title="Remove volume mount"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addVolumeMount}
+                      disabled={(volumes || []).length === 0}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />Add Volume Mount
+                    </Button>
+                    {(volumes || []).length === 0 && (
+                      <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
+                    )}
+                  </div>
+                </div>
               </div>
               <Separator className="my-4" />
               {/* Ports Section */}

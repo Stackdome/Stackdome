@@ -13,10 +13,10 @@ interface StackVolumeItemProps {
   volume: Partial<VolumeFormData>;
   index: number;
   itemRef: (el: HTMLButtonElement | null) => void;
-  isOnlyVolume: boolean;
   onChange: (index: number, updatedVolume: Partial<VolumeFormData>) => void;
   onRemove: (index: number) => void;
   errors: { [field: string]: string | undefined };
+  allVolumes: Partial<VolumeFormData>[];
 }
 
 export default function StackVolumeItem({
@@ -26,12 +26,15 @@ export default function StackVolumeItem({
   onChange,
   onRemove,
   errors,
+  allVolumes,
 }: StackVolumeItemProps) {
   // Helper for updating volume fields
   const update = (patch: Partial<VolumeFormData>) => {
     onChange(index, { ...volume, ...patch });
   };
 
+  // Check for duplicate name
+  const isDuplicate = allVolumes.filter((v) => v.name === volume.name).length > 1;
 
   return (
     <AccordionItem value={String(index)} className="border-0">
@@ -64,10 +67,14 @@ export default function StackVolumeItem({
                 placeholder="Volume name"
                 value={volume.name || ""}
                 onChange={(e) => update({ name: e.target.value })}
-                className={errors.name ? "border-destructive" : ""}
-                aria-invalid={!!errors.name}
+                className={errors.name || isDuplicate ? "border-destructive" : ""}
+                aria-invalid={!!errors.name || isDuplicate}
               />
-              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+              {(errors.name || isDuplicate) && (
+                <p className="text-sm text-destructive">
+                  {errors.name || (isDuplicate ? "Volume name must be unique" : "")}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

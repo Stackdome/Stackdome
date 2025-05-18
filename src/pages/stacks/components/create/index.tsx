@@ -130,6 +130,39 @@ export default function StackCreatePage() {
         };
       }
 
+      // Get current volume names for later comparison
+      const previousVolumeNames = new Set(
+        prev.spec?.volumes?.map(vol => vol.name) || []
+      );
+
+      // Get new volume names after update
+      const updatedVolumeNames = new Set(
+        updatedVolumes.map(vol => vol.name) || []
+      );
+
+      // Find volumes that were removed
+      const removedVolumeNames = Array.from(previousVolumeNames)
+        .filter(name => name && !updatedVolumeNames.has(name)) as string[];
+
+      // If any volumes were removed, we need to unlink them from resources
+      if (removedVolumeNames.length > 0 && newFormData.spec?.stack_resources?.length) {
+        newFormData.spec.stack_resources = newFormData.spec.stack_resources.map(resource => {
+          if (!resource.volume_mounts || resource.volume_mounts.length === 0) {
+            return resource;
+          }
+
+          // Filter out volume mounts that reference the removed volumes
+          const updatedVolumeMounts = resource.volume_mounts.filter(
+            mount => !removedVolumeNames.includes(mount.source_volume_name)
+          );
+
+          return {
+            ...resource,
+            volume_mounts: updatedVolumeMounts
+          };
+        });
+      }
+
       newFormData.spec = {
         ...newFormData.spec,
         volumes: updatedVolumes.map(vol => ({
@@ -517,6 +550,7 @@ export default function StackCreatePage() {
               resources={formData.spec?.stack_resources || []}
               onResourcesChange={handleResourcesChange}
               errors={resourcesErrors}
+              volumes={formData.spec?.volumes || []}
             />
           </CardContent>
         </Card>

@@ -1,4 +1,4 @@
-import type { StackResourceData } from "@/pages/stacks/schemas/stack-create-schema";
+import type { StackResourceData, VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
 import ResourceFormList from "@/pages/stacks/components/shared/resource-form-list";
 import StackResourceItem from "./stack-resource-item";
 
@@ -7,9 +7,8 @@ interface StackResourcesFormProps {
   resources: Partial<StackResourceData>[];
   onResourcesChange: (updatedResources: Partial<StackResourceData>[]) => void;
   errors: { [index: number]: { [field: string]: string | undefined } };
-}
-
-// Helper to create a default new resource, aligning with StackResourceData
+  volumes?: Partial<VolumeFormData>[];
+}  // Helper to create a default new resource, aligning with StackResourceData
 function getDefaultResource(): Partial<StackResourceData> {
   return {
     name: "",
@@ -17,6 +16,7 @@ function getDefaultResource(): Partial<StackResourceData> {
     labels: [],
     depends_on: [],
     ports: [],
+    volume_mounts: [],
     execution_config: { environment_variables: [] },
     build_spec: undefined,
     image_spec: { image: "" },
@@ -27,6 +27,7 @@ export default function StackResourcesForm({
   resources,
   onResourcesChange,
   errors,
+  volumes = []
 }: StackResourcesFormProps) {
   return (
     <ResourceFormList<StackResourceData>
@@ -44,6 +45,7 @@ export default function StackResourcesForm({
           onChange={onChange}
           onRemove={onRemove}
           errors={errors}
+          volumes={volumes}
         />
       )}
       addButtonText="Add Another Resource"
