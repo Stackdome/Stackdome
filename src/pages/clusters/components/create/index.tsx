@@ -1,231 +1,97 @@
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Info, Eye, EyeOff } from "lucide-react";
-import { ClusterSchema } from "../../hooks/use-clusters";
-import type { ClusterFormInput } from "../../hooks/use-clusters";
-import { Switch } from "@/components/ui/switch";
-import { extractErrorMessage } from '@/lib/utils';
+import { useNavigate } from "react-router-dom";
+import ClusterCreateForm from "./cluster-create-form";
+import { createCluster } from "@/api/clusters";
+import type { ClusterData } from "../../hooks/use-clusters";
+import { getCurrentOrganizationId } from "@/helpers/common";
+import { useToast } from "@/components/ui/use-toast";
+import { extractErrorMessage } from "@/lib/utils";
 
-interface Props {
-  onSubmit: (values: ClusterFormInput) => void;
-  loading: boolean;
-  error: string | null;
-  onCancel: () => void;
-}
+export default function ClusterCreatePage() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-export default function ClusterCreatePage({ onSubmit, loading, error, onCancel }: Props) {
-  const [formData, setFormData] = useState<ClusterFormInput>({
-    name: "",
-    cluster_url: "",
-    cluster_ca_data: "",
-    cluster_sa_token: "",
-  });
-  const [createImageRegistry, setCreateImageRegistry] = useState(true);
-  const [showCAData, setShowCAData] = useState(false);
-  const [showSAToken, setShowSAToken] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof ClusterFormInput, string>>>({});
-
-  const validateForm = (): boolean => {
-    const result = ClusterSchema.safeParse(formData);
-    if (!result.success) {
-      const fieldErrors: Partial<Record<keyof ClusterFormInput, string>> = {};
-      result.error.errors.forEach(err => {
-        const field = err.path[0] as keyof ClusterFormInput;
-        fieldErrors[field] = extractErrorMessage(err, err.message);
+  async function handleSubmit(values: ClusterData) {
+    setLoading(true);
+    setError(null);
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) {
+      setLoading(false);
+      const errorMessage = "No organization selected";
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
       });
-      setErrors(fieldErrors);
-      return false;
+      return;
     }
-    setErrors({});
-    return true;
-  };
+    try {
+      // Always send cluster_image_registry as an object or omit it
+      const apiPayload: Omit<ClusterData, 'id'> & { cluster_image_registry?: { name: string; spec: { backend_storage_size: string } } } = { ...values };
+      if (typeof values.cluster_image_registry === 'boolean') {
+        if (values.cluster_image_registry) {
+          apiPayload.cluster_image_registry = { name: "default-registry", spec: { backend_storage_size: "20Gi" } };
+        } else {
+          delete apiPayload.cluster_image_registry;
+        }
+      }
+      await createCluster(orgId, apiPayload);
+      setLoading(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name as keyof ClusterFormInput]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
+      // Show success toast notification
+      toast({
+        title: "Success",
+        description: "Cluster created successfully",
+        variant: "success",
+        duration: 3000,
+      });
+
+      navigate("/clusters");
+    } catch (e: unknown) {
+      console.error("Failed to create cluster:", e);
+
+      const errorMessage = extractErrorMessage(
+        e as Error,
+        "Failed to create cluster. Please check your connection and try again."
+      );
+
+      setError(errorMessage);
+
+      // Show error toast notification
+      toast({
+        title: "Failed to create cluster",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000,
+      });
+
+      setLoading(false);
     }
-  };
+  }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    onSubmit(formData);
-  };
+  function handleCancel() {
+    navigate("/clusters");
+  }
 
   return (
-    <TooltipProvider>
-      <form onSubmit={handleSubmit}>
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>Cluster Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="name">Cluster name <span className="text-destructive">*</span></Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>A descriptive name for your Kubernetes cluster</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Production Cluster"
-                className={`mt-1 ${errors.name ? "border-red-500" : ""}`}
-              />
-              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="cluster_url">API server URL <span className="text-destructive">*</span></Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>The URL of your Kubernetes API server</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <Input
-                id="cluster_url"
-                name="cluster_url"
-                value={formData.cluster_url}
-                onChange={handleChange}
-                placeholder="https://kubernetes.example.com:6443"
-                className={`mt-1 ${errors.cluster_url ? "border-red-500" : ""}`}
-              />
-              {errors.cluster_url && <p className="text-red-500 text-sm mt-1">{errors.cluster_url}</p>}
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="cluster_ca_data">CA certificate <span className="text-destructive">*</span></Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>The base64-encoded certificate authority data</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="relative">
-                <Input
-                  id="cluster_ca_data"
-                  name="cluster_ca_data"
-                  value={formData.cluster_ca_data}
-                  onChange={handleChange}
-                  type={showCAData ? "text" : "password"}
-                  placeholder="Base64-encoded CA certificate"
-                  className={`mt-1 ${errors.cluster_ca_data ? "border-red-500" : ""} pr-10`}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 flex items-center px-3 mt-1 text-gray-500 hover:text-gray-700 focus:outline-none"
-                  onClick={() => setShowCAData(!showCAData)}
-                >
-                  {showCAData ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-              {errors.cluster_ca_data && <p className="text-red-500 text-sm mt-1">{errors.cluster_ca_data}</p>}
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="cluster_sa_token">Service account token <span className="text-destructive">*</span></Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>The service account token for authenticating with your cluster</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="relative">
-                <Input
-                  id="cluster_sa_token"
-                  name="cluster_sa_token"
-                  value={formData.cluster_sa_token}
-                  onChange={handleChange}
-                  type={showSAToken ? "text" : "password"}
-                  placeholder="Service account token"
-                  className={`mt-1 ${errors.cluster_sa_token ? "border-red-500" : ""} pr-10`}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 flex items-center px-3 mt-1 text-gray-500 hover:text-gray-700 focus:outline-none"
-                  onClick={() => setShowSAToken(!showSAToken)}
-                >
-                  {showSAToken ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-              {errors.cluster_sa_token && <p className="text-red-500 text-sm mt-1">{errors.cluster_sa_token}</p>}
-            </div>
-            <div>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="create-image-registry">Create image registry</Label>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>Creates an internal image registry for your builds</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <Switch
-                  id="create-image-registry"
-                  checked={createImageRegistry}
-                  onCheckedChange={setCreateImageRegistry}
-                />
-              </div>
-            </div>
-            {error && (
-              <div className="bg-red-50 text-red-500 p-3 rounded text-sm">
-                {error}
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-between space-x-4">
-            <Button
-              variant="outline"
-              onClick={(e) => {
-                e.preventDefault();
-                onCancel();
-              }}
-              type="button"
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? "Creating..." : "Create"}
-            </Button>
-          </CardFooter>
-        </Card>
-      </form>
-    </TooltipProvider>
+    <div className="p-4 pt-0 h-full">
+      <div className="flex h-[calc(100vh-64px)]">
+        {/* Main Content - Full Width */}
+        <div className="flex-grow p-6 overflow-y-auto">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-xl font-medium mb-6">Create New Cluster</h2>
+            <ClusterCreateForm
+              onSubmit={handleSubmit}
+              loading={loading}
+              error={error}
+              onCancel={handleCancel}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

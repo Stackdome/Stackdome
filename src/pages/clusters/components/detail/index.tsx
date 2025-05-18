@@ -179,7 +179,7 @@ export default function ClusterDetailPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 pt-2">
-                    <Switch checked={!!(cluster as { image_registry_enabled?: boolean }).image_registry_enabled} disabled />
+                    <Switch checked={!!cluster.cluster_image_registry} disabled />
                     <span className="text-xs text-muted-foreground">Stackdome Image Registry</span>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -190,15 +190,49 @@ export default function ClusterDetailPage() {
                       </TooltipContent>
                     </Tooltip>
                   </div>
+                  {cluster.cluster_image_registry && (
+                    <div className="flex items-center gap-6 pl-6 pt-2">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Registry Size</span>
+                        <span className="font-mono text-sm">{cluster.cluster_image_registry.spec?.backend_storage_size || "-"}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Registry Status</span>
+                        <span className="flex items-center gap-2 font-mono text-sm">
+                          {(() => {
+                            const state = cluster.cluster_image_registry.status?.state;
+                            let color = "bg-gray-400";
+                            let label = state || "-";
+                            if (state === "ImageRegistryRunning") {
+                              color = "bg-green-500";
+                              label = "Running";
+                            } else if (state === "ImageRegistryError") {
+                              color = "bg-red-500";
+                              label = "Error";
+                            } else if (state === "ImageRegistryPending") {
+                              color = "bg-gray-400";
+                              label = "Pending";
+                            }
+                            return (
+                              <>
+                                <span className={`inline-block w-2 h-2 rounded-full ${color}`}></span>
+                                <span>{label}</span>
+                              </>
+                            );
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </TooltipProvider>
               </CardContent>
               <div className="flex justify-between items-center pt-4 px-6 pb-6">
                 <div className="text-xs text-muted-foreground">ID: {cluster.id}</div>
                 <Button 
-                  variant="destructive" 
+                  variant="ghost" 
                   size="sm"
                   onClick={() => setShowDeleteDialog(true)}
-                  className="flex items-center"
+                  className="flex items-center text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   <Trash2 className="size-4 mr-2" />
                   Delete Cluster

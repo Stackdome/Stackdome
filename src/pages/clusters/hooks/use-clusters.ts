@@ -12,9 +12,23 @@ export const ClusterSchema = z.object({
   organisation_id: z.string().optional(),
   id: z.string().optional(),
   default: z.boolean().optional(),
+  cluster_image_registry: z.object({
+    name: z.string().min(1, "Image registry name is required"),
+    spec: z.object({
+      backend_storage_size: z.string().min(1, "Registry size is required"),
+    }),
+  }).optional(),
 });
 
-export type ClusterFormInput = z.infer<typeof ClusterSchema>;
+export type ClusterData = z.infer<typeof ClusterSchema>;
+
+function mapClusterFormInputToApiPayload(input: ClusterData): Omit<Cluster, "id"> {
+  const { cluster_image_registry, ...rest } = input;
+  return {
+    ...rest,
+    ...(cluster_image_registry ? { cluster_image_registry: { name: "default-registry" } } : {}),
+  };
+}
 
 export function useClusters() {
   const [clusters, setClusters] = useState<Cluster[]>([]);
@@ -50,14 +64,15 @@ export function useCreateCluster() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Cluster | null>(null);
 
-  const createCluster = useCallback(async (input: ClusterFormInput) => {
+  const createCluster = useCallback(async (input: ClusterData) => {
     if (!orgId) throw new Error("No organization selected");
     setLoading(true);
     setError(null);
     setData(null);
     try {
       const parsed = ClusterSchema.parse({ ...input, organisation_id: orgId });
-      const cluster = await clusterApi.createCluster(orgId, parsed);
+      const apiPayload = mapClusterFormInputToApiPayload(parsed);
+      const cluster = await clusterApi.createCluster(orgId, apiPayload);
       setData(cluster);
       return cluster;
     } catch (e) {
