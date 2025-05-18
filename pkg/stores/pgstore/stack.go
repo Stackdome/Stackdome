@@ -175,12 +175,12 @@ func (w *stackStore) Update(ctx context.Context, id string, spec *models.Stack) 
 		if currentResource, ok := existingResourceMap[resource.Name]; ok {
 			if _, err := w.stackResourceStore.UpdateWithTx(txCtx, currentResource.ID, resource); err != nil {
 				tx.Rollback()
-				return nil, errors.GeneralError("failed to update stack resource: %v", err)
+				return nil, err
 			}
 		} else {
 			if _, err := w.stackResourceStore.CreateWithTx(txCtx, resource); err != nil {
 				tx.Rollback()
-				return nil, errors.GeneralError("failed to create stack resource: %v", err)
+				return nil, err
 			}
 		}
 	}

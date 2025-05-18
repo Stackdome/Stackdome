@@ -352,6 +352,7 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 	var updatedStack *models.Stack
 	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
 		var newlyCreatedVolumesInPatch []*models.Volume
+		volumesMap := make(map[string]*models.Volume)
 		// Create volumes required for this update
 		for _, volume := range spec.Volumes {
 			volume.NamespaceID = existingStack.NamespaceID
@@ -369,8 +370,31 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 				}
 				// Add to the list of newly created volumes
 				newlyCreatedVolumesInPatch = append(newlyCreatedVolumesInPatch, createdVolume)
+				// Add to the map of volumes
+				volumesMap[volume.Name] = createdVolume
 			} else {
 				s.logger.Info(ctx, "Volume '%s' already exists, skipping creation", volume.Name)
+				volumesMap[volume.Name] = existingStackVolumeMap[volume.Name]
+			}
+		}
+
+		// Step 0: Populate volume mounts source IDs in the stack resources.
+		for i := range spec.StackResources {
+			currentResource := spec.StackResources[i]
+			if len(currentResource.VolumeMounts) == 0 {
+				continue
+			}
+			for j := range currentResource.VolumeMounts {
+				currentVolumeMount := currentResource.VolumeMounts[j]
+				if volume, found := volumesMap[currentVolumeMount.SourceVolumeName]; found {
+					if volume.ID == "" {
+						return errors.BadRequest("volume '%s' does not exist", currentVolumeMount.SourceVolumeName)
+					}
+					currentVolumeMount.SourceVolumeID = volume.ID
+					currentVolumeMount.SourceVolumeName = volume.Name
+				} else {
+					return errors.BadRequest("volume '%s' does not exist", currentVolumeMount.SourceVolumeName)
+				}
 			}
 		}
 
@@ -381,22 +405,22 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 			return updateErr
 		}
 
-		// Step 2. Cleanup domains for existing stack resources
+		// Step 3. Cleanup domains for existing stack resources
 		for _, existingStackResource := range existingStack.StackResources {
 			if err := s.domainNameService.DeleteForOwnerWithTx(ctx, existingStackResource.ID, models.OwnerTypeStackResource); err != nil {
 				return errors.GeneralError("failed to delete domains for stack resource '%s': %s", existingStackResource.Name, err.Error())
 			}
 		}
 
-		// Step 3: Populate domains with real IDs
+		// Step 4: Populate domains with real IDs
 		s.populateExposedPortDomainsForStack(ctx, updatedStack, domainToUse)
 
-		// Step 4: Validate domain uniqueness
+		// Step 5: Validate domain uniqueness
 		if err := s.validateExposedPortDomainUniquenessForStackUpdate(ctx, existingStack, updatedStack); err != nil {
 			return err
 		}
 
-		// Step 4: Update domains for each updated stack resource
+		// Step 5: Update domains for each updated stack resource
 		for _, stackResource := range updatedStack.StackResources {
 			// New stack resource added in the update
 			if err := s.createDomainsForStackResource(ctx, stackResource); err != nil {
@@ -411,13 +435,13 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 			}
 		}
 
-		// Step 5: Get updated stack and update in cluster
+		// Step 6: Get updated stack and update in cluster
 		updatedStack, err = s.GetStack(ctx, updatedStack.ID)
 		if err != nil {
 			return errors.GeneralError("failed to get updated stack '%s': %s", updatedStack.ID, err.Error())
 		}
 
-		// Step 6: Update volumes in cluster
+		// Step 7: Update volumes in cluster
 		for _, volume := range newlyCreatedVolumesInPatch {
 			if err := s.volumeService.CreateInCluster(ctx, volume); err != nil {
 				return errors.GeneralError("failed to create volume in cluster: %s", err.Error())
