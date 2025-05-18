@@ -74,6 +74,24 @@ func (v *volumeMountStore) BulkCreateWithTx(ctx context.Context, volumeMounts []
 	if tx == nil {
 		return nil, errors.GeneralError("transaction not found in context")
 	}
+	for _, volumeMount := range volumeMounts {
+		if volumeMount.StackResourceID == "" {
+			return nil, errors.BadRequest("stack_resource_id is required")
+		}
+		if volumeMount.SourceVolumeID == "" {
+			return nil, errors.BadRequest("source_volume_id is required")
+		}
+		if volumeMount.TargetPath == "" {
+			return nil, errors.BadRequest("target_path is required")
+		}
+		if volumeMount.StackID == "" {
+			return nil, errors.BadRequest("stack_id is required")
+		}
+		if volumeMount.SourceVolumeName == "" {
+			return nil, errors.BadRequest("source_volume_name is required")
+		}
+	}
+
 	if err := tx.Model(&models.VolumeMount{}).Create(volumeMounts).Error; err != nil {
 		return nil, errors.GeneralError("failed to create volume mounts: %s", err.Error())
 	}

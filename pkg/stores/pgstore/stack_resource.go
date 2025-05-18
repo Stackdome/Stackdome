@@ -117,7 +117,7 @@ func (w *stackResourceStore) UpdateWithTx(ctx context.Context, ID string, spec *
 			volumeMount.StackID = spec.StackID
 		}
 		if _, err := w.volumeMountStore.BulkCreateWithTx(ctx, spec.VolumeMounts); err != nil {
-			return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
+			return nil, errors.GeneralError("failed to update volume mounts for resource: %s", err.Error())
 		}
 	}
 	return w.GetByID(ctx, ID)
