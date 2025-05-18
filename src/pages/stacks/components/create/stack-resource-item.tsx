@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, X, GitBranch, ImageIcon, Trash2, Database, Upload, FileText, Copy } from "lucide-react";
+import { Plus, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 
@@ -295,13 +295,25 @@ export default function StackResourceItem({
           {resource.sourceType === "git" ? (
             <GitBranch className="h-5 w-5 text-muted-foreground shrink-0" />
           ) : (
-            <ImageIcon className="h-5 w-5 text-muted-foreground shrink-0" />
+            <Box className="h-5 w-5 text-muted-foreground shrink-0" />
           )}
-          <div>
-            <span className="font-medium">{resource.name || `Resource ${index + 1}`}</span>
-            {resource.name === "" && (
-              <span className="ml-2 text-sm text-muted-foreground">(unnamed)</span>
-            )}
+          <div className="flex flex-col">
+            <span className="font-medium">
+              {resource.name || `Resource ${index + 1}`}
+              {resource.name === "" && (
+                <span className="ml-2 text-sm text-muted-foreground">(unnamed)</span>
+              )}
+            </span>
+            <span className="text-xs text-muted-foreground mt-0.5">
+              {/* Show Box image url or git revision details */}
+              {resource.sourceType === "git"
+                ? resource.build_spec?.source_context?.git_repo?.repo_url
+                  ? `${resource.build_spec.source_context.git_repo.repo_url}${resource.build_spec.source_context.git_repo.revision ? ` @ ${resource.build_spec.source_context.git_repo.revision}` : ""}`
+                  : "No git repo configured"
+                : resource.image_spec?.image
+                  ? resource.image_spec.image
+                  : "No image URL configured"}
+            </span>
             {errors._form && (
               <div className="text-sm text-destructive mt-1">{errors._form}</div>
             )}
@@ -382,7 +394,7 @@ export default function StackResourceItem({
                     <Tooltip delayDuration={300}>
                       <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs">
-                        <p>Select how this resource should be built: from a pre-built container image or from a Git repository.</p>
+                        <p>Select how this resource should be built: from a pre-built Box image or from a Git repository.</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -396,7 +408,7 @@ export default function StackResourceItem({
                     <SelectContent>
                       <SelectItem value="image">
                         <div className="flex items-center gap-2">
-                          <ImageIcon size={16} />
+                          <Box size={16} />
                           <span>Container Image</span>
                         </div>
                       </SelectItem>
