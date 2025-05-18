@@ -504,24 +504,6 @@ export default function StackResourceItem({
                 <div className="grid gap-4 max-w-3xl">
                   <div>
                     <div className="flex items-center gap-1 mb-2">
-                      <Label htmlFor={`init-image-${index}`} className="text-sm font-medium">
-                      Init Image
-                      </Label>
-                      <Tooltip delayDuration={300}>
-                        <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
-                        <TooltipContent side="top">Optional image for initialization step</TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <Input
-                      id={`init-image-${index}`}
-                      value={resource.init_spec?.image_spec?.image || ""}
-                      onChange={e => update({ init_spec: { ...resource.init_spec, image_spec: { image: e.target.value } } })}
-                      placeholder="e.g., busybox:latest"
-                      className="max-w-xl"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1 mb-2">
                       <Label htmlFor={`init-command-${index}`} className="text-sm font-medium">
                       Init Command
                       </Label>
