@@ -29,6 +29,8 @@ export default function StackResourcesForm({
   errors,
   volumes = []
 }: StackResourcesFormProps) {
+  const allResources = resources.map((r, idx) => ({ name: r.name || `Resource ${idx + 1}`, index: idx }));
+
   return (
     <ResourceFormList<StackResourceData>
       items={resources}
@@ -46,6 +48,7 @@ export default function StackResourcesForm({
           onRemove={onRemove}
           errors={errors}
           volumes={volumes}
+          allResources={allResources}
         />
       )}
       addButtonText="Add Another Resource"

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, X, GitBranch, ImageIcon, Trash2, Database, Upload, FileText, Copy } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { MultiSelect } from "@/components/multi-select";
 
 import type { StackResourceData, VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
 
@@ -33,6 +34,7 @@ interface StackResourceItemProps {
   onRemove: (index: number) => void;
   errors: { [field: string]: string | undefined };
   volumes?: Partial<VolumeFormData>[];
+  allResources: { name: string; index: number }[];
 }
 
 const getError = (errors: { [field: string]: string | undefined }, path: string) => {
@@ -64,7 +66,8 @@ export default function StackResourceItem({
   onChange,
   onRemove,
   errors,
-  volumes = []
+  volumes = [],
+  allResources
 }: StackResourceItemProps) {
   // Helper for updating resource fields
   const update = (patch: Partial<StackResourceData>) => {
@@ -272,6 +275,16 @@ export default function StackResourceItem({
     });
   };
 
+  // Helper for updating depends_on
+  const updateDependsOn = (dependsOn: string[]) => {
+    update({ depends_on: dependsOn });
+  };
+
+  // Prepare options for depends_on (exclude self, only named resources)
+  const dependsOnOptions = allResources
+    .filter((r) => r.index !== index && r.name && r.name.trim() !== "")
+    .map((r) => ({ label: r.name, value: r.name }));
+
   return (
     <AccordionItem value={String(index)} className="border-0">
       <AccordionTrigger
@@ -340,25 +353,20 @@ export default function StackResourceItem({
                     />
                     {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-1 mb-2">
-                      <Label htmlFor={`depends-on-${index}`} className="text-sm font-medium">
-                      Depends On
-                      </Label>
-                      <Tooltip delayDuration={300}>
-                        <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p>Comma separated list of resource names this depends on. Ensure these resources are defined in your stack.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <Input
-                      id={`depends-on-${index}`}
-                      value={(resource.depends_on || []).join(", ")}
-                      onChange={e => update({ depends_on: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })}
-                      placeholder="e.g., database, redis"
-                      className="max-w-md"
+                  <div className="space-y-2">
+                    <Label>Depends On</Label>
+                    <MultiSelect
+                      options={dependsOnOptions}
+                      onValueChange={updateDependsOn}
+                      defaultValue={resource.depends_on || []}
+                      placeholder={dependsOnOptions.length === 0 ? "No other resources available" : "Select dependencies"}
+                      disabled={dependsOnOptions.length === 0}
+                      className="w-full"
                     />
+                    {errors["depends_on"] && (
+                      <p className="text-sm text-destructive">{errors["depends_on"]}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">Select resources this service depends on. They will be started first.</p>
                   </div>
                 </div>
               </div>
