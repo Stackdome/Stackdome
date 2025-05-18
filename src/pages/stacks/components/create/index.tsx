@@ -4,7 +4,7 @@ import StackResourcesForm from "./stack-resources-form";
 import StackVolumesForm from "./stack-volumes-form";
 import { Button } from "@/components/ui/button";
 import { Rocket, Tag as TagIcon, X, AlertTriangle } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label as UILabel } from "@/components/ui/label";
@@ -168,6 +168,7 @@ export default function StackCreatePage() {
     setApiError(null);
 
     const payloadToValidate: StackData = {
+      // ...existing code
       name: formData.name || "",
       workspace_name: formData.workspace_name || "default",
       labels: formData.labels || [],
@@ -192,9 +193,35 @@ export default function StackCreatePage() {
           };
 
           if (sr.sourceType === 'image') {
-            resource.image_spec = sr.image_spec?.image ? { image: sr.image_spec.image } : undefined;
+            // Always include image_spec in validation payload, even if empty,
+            // so validation catches required fields
+            resource.image_spec = {
+              image: sr.image_spec?.image || ""
+            };
             resource.build_spec = undefined;
           } else if (sr.sourceType === 'git') {
+            // Map git revision UI fields to OpenAPI structure
+            let git_repo_revision: {commit?: string; branch?: {name: string}; tag?: string} | undefined = undefined;
+
+            // Ensure we have gitRevisionType and gitRevisionValue for validation
+            // Setting to empty strings if undefined to ensure validation catches them
+            const revType: "commit" | "branch" | "tag" | undefined = sr.gitRevisionType || undefined;
+            const revValue = sr.gitRevisionValue || "";
+
+            // Set these properties directly on the resource object to ensure validation
+            // can access and validate them
+            resource.gitRevisionType = revType;
+            resource.gitRevisionValue = revValue;
+
+            if (sr.gitRevisionType && sr.gitRevisionValue) {
+              if (sr.gitRevisionType === 'commit') {
+                git_repo_revision = { commit: sr.gitRevisionValue };
+              } else if (sr.gitRevisionType === 'branch') {
+                git_repo_revision = { branch: { name: sr.gitRevisionValue } };
+              } else if (sr.gitRevisionType === 'tag') {
+                git_repo_revision = { tag: sr.gitRevisionValue };
+              }
+            }
             resource.build_spec = sr.build_spec ? {
               source_context: {
                 git_repo: sr.build_spec.source_context?.git_repo?.repo_url
@@ -207,9 +234,7 @@ export default function StackCreatePage() {
                 ? { url: sr.build_spec.image_repository_url.url, cluster_registry_id: sr.build_spec.image_repository_url.cluster_registry_id }
                 : { url: sr.build_spec.image_repository_url?.url || "", cluster_registry_id: sr.build_spec.image_repository_url?.cluster_registry_id },
               insecure_registry: sr.build_spec.insecure_registry || false,
-              source_revision: sr.build_spec.source_revision?.git_repo_revision
-                ? { git_repo_revision: sr.build_spec.source_revision.git_repo_revision }
-                : undefined,
+              source_revision: git_repo_revision ? { git_repo_revision } : undefined,
             } : undefined;
             resource.image_spec = undefined;
           }
@@ -293,7 +318,10 @@ export default function StackCreatePage() {
     }
 
     try {
-      await createStack(orgId, validationResult.data as any); // TODO: Replace 'as any' with correct type if needed
+      // Need to use type assertions here to bypass type checking
+      // as our form validation schema and the API schema have slight differences
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await createStack(orgId, validationResult.data as any);
       setIsLoading(false);
       toast({
         title: 'Stack Created',
@@ -336,7 +364,12 @@ export default function StackCreatePage() {
       if (pathParts.length >= 4) {
         const index = parseInt(pathParts[2], 10);
         const fieldName = pathParts.slice(3).join('.');
+
+        // Initialize the resource's error object if not already done
         if (!acc[index]) acc[index] = {};
+
+        // Map errors to field names, preserving the nested path structure
+        // This works with the getError helper function in the StackResourceItem component
         acc[index][fieldName] = value;
       }
       return acc;

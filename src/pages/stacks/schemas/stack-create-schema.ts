@@ -37,6 +37,13 @@ export const InitSpecSchema = z.object({
 
 // BuildSpec related schemas - focusing on user inputs
 
+export const GitRevisionTypeSchema = z.enum(["commit", "branch", "tag"]);
+
+export const StackResourceFormUISchema = z.object({
+  gitRevisionType: GitRevisionTypeSchema.optional(),
+  gitRevisionValue: z.string().optional(),
+});
+
 export const GitRepoRevisionSchema = z.object({ // User input for BuildSourceRevision.git_repo_revision
   branch: z.object({ name: z.string().optional() }).optional(),
   commit: z.string().optional(),
@@ -79,8 +86,50 @@ export const StackResourceSchema = z.object({
   execution_config: ExecutionConfigSchema.optional(),
   depends_on: z.array(z.string()).optional(),
   ports: z.array(PortSchema).optional(),
-  // UI helper, not part of API spec for StackResource itself
+  // UI helper, not part of API spec for StackResource
   sourceType: z.enum(["image", "git"]).optional().default("image"),
+  // UI helper fields for git revision, not part of API spec StackResource
+  gitRevisionType: GitRevisionTypeSchema.optional(),
+  gitRevisionValue: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // Validate that git revision fields are required when sourceType is git
+  if (data.sourceType === 'git') {
+    if (!data.gitRevisionType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Git revision type is required when using a Git repository',
+        path: ['gitRevisionType'],
+      });
+    }
+
+    if (!data.gitRevisionValue) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Git revision value is required when using a Git repository',
+        path: ['gitRevisionValue'],
+      });
+    }
+
+    // Make sure there's a valid Git repo URL when using Git repository
+    if (!data.build_spec?.source_context?.git_repo?.repo_url) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Git repository URL is required when using a Git repository',
+        path: ['build_spec', 'source_context', 'git_repo', 'repo_url'],
+      });
+    }
+  }
+
+  // Validate that image URL is required when sourceType is image
+  if (data.sourceType === 'image') {
+    if (!data.image_spec?.image) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Container image URL is required',
+        path: ['image_spec', 'image'],
+      });
+    }
+  }
 });
 
 export const VolumeAccessModeSchema = z.enum([

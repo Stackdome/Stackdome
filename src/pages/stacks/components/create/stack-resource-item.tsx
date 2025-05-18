@@ -24,6 +24,27 @@ interface StackResourceItemProps {
   errors: { [field: string]: string | undefined };
 }
 
+const getError = (errors: { [field: string]: string | undefined }, path: string) => {
+  // Check for direct match
+  if (errors[path]) return errors[path];
+
+  // Check if there's a nested error (handles nested objects like image_spec.image)
+  // This makes the UI component work with both flattened and nested error structures
+  for (const key in errors) {
+    if (key === path || key.startsWith(`${path}.`)) {
+      return errors[key];
+    }
+
+    // Handle the reverse case where path is more specific than the error key
+    // For example, if error key is "image_spec" but we're checking for "image_spec.image"
+    if (path.startsWith(`${key}.`)) {
+      return errors[key];
+    }
+  }
+
+  return undefined;
+};
+
 export default function StackResourceItem({
   resource,
   index,
@@ -176,8 +197,13 @@ export default function StackResourceItem({
                       className={`max-w-md ${errors.name ? "border-destructive" : ""}`}
                       placeholder="e.g., web-server, database, cache"
                       aria-invalid={!!errors.name}
+                      onBlur={() => {
+                        if (!resource.name) {
+                          update({ name: "" });
+                        }
+                      }}
                     />
-                    {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+                    {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
                   </div>
                   <div>
                     <div className="flex items-center gap-1 mb-2">
@@ -259,12 +285,18 @@ export default function StackResourceItem({
                         value={resource.image_spec?.image || ""}
                         onChange={e => updateImageSpec({ image: e.target.value })}
                         placeholder="e.g., nginx:latest, your-registry/your-image:v1.0"
-                        className={`max-w-xl ${errors["image_spec.image"] ? "border-destructive" : ""}`}
+                        className={`max-w-xl ${getError(errors, "image_spec.image") ? "border-destructive" : ""}`}
                         required={resource.sourceType === "image"}
-                        aria-invalid={!!errors["image_spec.image"]}
+                        aria-invalid={!!getError(errors, "image_spec.image")}
+                        onBlur={() => {
+                          // Mark as touched to trigger error display on submit
+                          if (resource.sourceType === "image") {
+                            updateImageSpec({ image: resource.image_spec?.image || "" });
+                          }
+                        }}
                       />
-                      {errors["image_spec.image"] && (
-                        <p className="text-sm text-destructive">{errors["image_spec.image"]}</p>
+                      {getError(errors, "image_spec.image") && (
+                        <p className="text-sm text-destructive">{getError(errors, "image_spec.image")}</p>
                       )}
                     </div>
                   </div>
@@ -273,7 +305,7 @@ export default function StackResourceItem({
                     <div>
                       <div className="flex items-center gap-1 mb-2">
                         <Label htmlFor={`git-repo-${index}`} className="text-sm font-medium">
-                        Git Repository URL <span className="text-red-500">*</span>
+                          Git Repository URL <span className="text-red-500">*</span>
                         </Label>
                         <Tooltip delayDuration={300}>
                           <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
@@ -287,15 +319,73 @@ export default function StackResourceItem({
                         value={resource.build_spec?.source_context?.git_repo?.repo_url || ""}
                         onChange={e => updateBuildSpec({ source_context: { git_repo: { repo_url: e.target.value }}})}
                         placeholder="https://github.com/username/repository.git"
-                        className={`max-w-xl ${errors["build_spec.source_context.git_repo.repo_url"] ? "border-destructive" : ""}`}
+                        className={`max-w-xl ${getError(errors, "build_spec.source_context.git_repo.repo_url") ? "border-destructive" : ""}`}
                         required={resource.sourceType === "git"}
-                        aria-invalid={!!errors["build_spec.source_context.git_repo.repo_url"]}
+                        aria-invalid={!!getError(errors, "build_spec.source_context.git_repo.repo_url")}
                       />
-                      {errors["build_spec.source_context.git_repo.repo_url"] && (
-                        <p className="text-sm text-destructive">{errors["build_spec.source_context.git_repo.repo_url"]}</p>
+                      {getError(errors, "build_spec.source_context.git_repo.repo_url") && (
+                        <p className="text-sm text-destructive">{getError(errors, "build_spec.source_context.git_repo.repo_url")}</p>
                       )}
                     </div>
-                    {/* Add more build_spec fields as needed */}
+                    <div>
+                      <div className="flex items-center gap-1 mb-2">
+                        <Label htmlFor={`git-revision-type-${index}`} className="text-sm font-medium">
+                          Git Revision Type <span className="text-red-500">*</span>
+                        </Label>
+                        <Tooltip delayDuration={300}>
+                          <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p>Choose whether to use a commit SHA, branch name, or tag for this build.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <Select
+                        value={resource.gitRevisionType || ""}
+                        onValueChange={val => update({ gitRevisionType: val as typeof resource.gitRevisionType })}
+                      >
+                        <SelectTrigger
+                          id={`git-revision-type-${index}`}
+                          className={`w-[200px] ${getError(errors, "gitRevisionType") ? "border-destructive" : ""}`}
+                        >
+                          <SelectValue placeholder="Select revision type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="commit">Commit</SelectItem>
+                          <SelectItem value="branch">Branch</SelectItem>
+                          <SelectItem value="tag">Tag</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {getError(errors, "gitRevisionType") && (
+                        <p className="text-sm text-destructive mt-1">{getError(errors, "gitRevisionType")}</p>
+                      )}
+                    </div>
+                    {resource.gitRevisionType && (
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`git-revision-value-${index}`} className="text-sm font-medium">
+                            {resource.gitRevisionType === "commit" ? "Commit SHA" : resource.gitRevisionType === "branch" ? "Branch Name" : "Tag Name"} <span className="text-red-500">*</span>
+                          </Label>
+                        </div>
+                        <Input
+                          id={`git-revision-value-${index}`}
+                          value={resource.gitRevisionValue || ""}
+                          onChange={e => update({ gitRevisionValue: e.target.value })}
+                          placeholder={resource.gitRevisionType === "commit" ? "e.g., 1a2b3c4d" : resource.gitRevisionType === "branch" ? "e.g., main" : "e.g., v1.0.0"}
+                          className={`max-w-xl ${getError(errors, "gitRevisionValue") ? "border-destructive" : ""}`}
+                          required={!!resource.gitRevisionType}
+                          aria-invalid={!!getError(errors, "gitRevisionValue")}
+                          onBlur={() => {
+                            // Mark as touched to trigger error display on submit
+                            if (!resource.gitRevisionValue) {
+                              update({ gitRevisionValue: "" });
+                            }
+                          }}
+                        />
+                        {getError(errors, "gitRevisionValue") && (
+                          <p className="text-sm text-destructive mt-1">{getError(errors, "gitRevisionValue")}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
