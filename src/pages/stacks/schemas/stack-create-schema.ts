@@ -229,3 +229,41 @@ export type StackResourceData = z.infer<typeof StackResourceSchema>;
 export type VolumeData = z.infer<typeof VolumeSchema>;
 export type VolumeFormData = z.infer<typeof VolumeFormSchema>;
 
+// FIXME: Remove this helper if OpenAPI spec supports conditional fields (e.g., oneOf) for UI-only fields
+import type { components } from "@/api/types/openapi";
+export type Stack = components["schemas"]["Stack"];
+
+function omitUIFieldsFromResource(resource: StackResourceData): Omit<StackResourceData, "sourceType" | "gitRevisionType" | "gitRevisionValue"> {
+  const rest = { ...resource };
+  delete (rest as Partial<StackResourceData>).sourceType;
+  delete (rest as Partial<StackResourceData>).gitRevisionType;
+  delete (rest as Partial<StackResourceData>).gitRevisionValue;
+  return rest as Omit<StackResourceData, "sourceType" | "gitRevisionType" | "gitRevisionValue">;
+}
+
+function omitUIFieldsFromVolume(volume: VolumeFormData | VolumeData): Omit<VolumeFormData, "sourceType"> | Omit<VolumeData, "sourceType"> {
+  if ("sourceType" in volume) {
+    const rest = { ...volume };
+    delete (rest as Partial<VolumeFormData>).sourceType;
+    return rest as Omit<VolumeFormData, "sourceType">;
+  }
+  return volume;
+}
+
+export function stripUIFieldsFromStackData(stackData: StackData): Stack {
+  const cleanStackResources = stackData.spec.stack_resources.map(omitUIFieldsFromResource);
+  const cleanVolumes = stackData.spec.volumes
+    ? stackData.spec.volumes.map(omitUIFieldsFromVolume)
+    : undefined;
+
+  // Compose the strict Stack type, using correct casing for Volumes
+  return {
+    ...stackData,
+    spec: {
+      ...stackData.spec,
+      stack_resources: cleanStackResources as Stack["spec"]["stack_resources"],
+      ...(cleanVolumes ? { Volumes: cleanVolumes as Stack["spec"]["Volumes"] } : {}),
+    },
+  };
+}
+

@@ -15,6 +15,7 @@ import {
   type StackData,
   type StackResourceData,
   type VolumeFormData,
+  stripUIFieldsFromStackData,
 } from "@/pages/stacks/schemas/stack-create-schema";
 import { createStack } from '@/api/stacks';
 import { getCurrentOrganizationId } from '@/helpers/common';
@@ -318,10 +319,7 @@ export default function StackCreatePage() {
     }
 
     try {
-      // Need to use type assertions here to bypass type checking
-      // as our form validation schema and the API schema have slight differences
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await createStack(orgId, validationResult.data as any);
+      await createStack(orgId, stripUIFieldsFromStackData(validationResult.data));
       setIsLoading(false);
       toast({
         title: 'Stack Created',
