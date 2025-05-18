@@ -105,7 +105,7 @@ export default function StackVolumeItem({
           <div className="space-y-2">
             <Label>Access Mode</Label>
             <Input value="ReadWriteOnce (RWO)" disabled className="bg-muted" />
-            <p className="text-xs text-muted-foreground">ReadWriteOnce: Can be mounted by a single node for read/write.</p>
+            <p className="text-xs text-muted-foreground">ReadWriteOnce: Can be mounted by a single resource for read/write.</p>
           </div>
 
           {/* Remove button always visible at the bottom */}
