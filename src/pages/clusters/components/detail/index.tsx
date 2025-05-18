@@ -83,7 +83,7 @@ export default function ClusterDetailPage() {
       <div className="text-gray-500">Loading cluster details...</div>
     </div>
   );
-  
+
   if (!cluster) return (
     <div className="flex flex-col items-center justify-center h-screen">
       <div className="text-xl font-medium mb-2">Cluster not found</div>
@@ -123,10 +123,10 @@ export default function ClusterDetailPage() {
                       </Tooltip>
                     </div>
                     <div className="relative">
-                      <Input 
-                        value={cluster.cluster_url} 
-                        disabled 
-                        className="font-mono bg-muted" 
+                      <Input
+                        value={cluster.cluster_url}
+                        disabled
+                        className="font-mono bg-muted"
                       />
                     </div>
                   </div>
@@ -143,11 +143,11 @@ export default function ClusterDetailPage() {
                       </Tooltip>
                     </div>
                     <div className="relative">
-                      <Input 
-                        type="password" 
-                        value="••••••••••••••••••••••" 
-                        disabled 
-                        className="font-mono bg-muted" 
+                      <Input
+                        type="password"
+                        value="••••••••••••••••••••••"
+                        disabled
+                        className="font-mono bg-muted"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center px-3">
                         <EyeOff className="h-4 w-4 text-gray-400" />
@@ -167,11 +167,11 @@ export default function ClusterDetailPage() {
                       </Tooltip>
                     </div>
                     <div className="relative">
-                      <Input 
-                        type="password" 
-                        value="••••••••••••••••••••••" 
-                        disabled 
-                        className="font-mono bg-muted" 
+                      <Input
+                        type="password"
+                        value="••••••••••••••••••••••"
+                        disabled
+                        className="font-mono bg-muted"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center px-3">
                         <EyeOff className="h-4 w-4 text-gray-400" />
@@ -228,8 +228,8 @@ export default function ClusterDetailPage() {
               </CardContent>
               <div className="flex justify-between items-center pt-4 px-6 pb-6">
                 <div className="text-xs text-muted-foreground">ID: {cluster.id}</div>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => setShowDeleteDialog(true)}
                   className="flex items-center text-destructive hover:text-destructive hover:bg-destructive/10"
