@@ -16,51 +16,11 @@ import {
   type StackResourceData,
   type VolumeFormData,
 } from "@/pages/stacks/schemas/stack-create-schema";
+import { createStack } from '@/api/stacks';
+import { getCurrentOrganizationId } from '@/helpers/common';
+import { useToast } from '@/components/ui/use-toast';
 
 type FormErrors = { [path: string]: string | undefined };
-
-const mockCreateStackApi = (payload: StackData): Promise<{ success: boolean; error?: string; errors?: FormErrors }> => {
-  console.log("Mock API called with payload:", JSON.stringify(payload, null, 2));
-  return new Promise(resolve => {
-    setTimeout(() => {
-      if (payload.name === "fail_validation") {
-        resolve({
-          success: false,
-          errors: {
-            "name": "This stack name is blacklisted by mock.",
-            "spec.stack_resources.1.name": "Resource name 'db' is too common.",
-            "spec.stack_resources.1._form": "Mock API validation failed for this resource."
-          }
-        });
-      } else if (payload.name === "fail_api_generic") {
-        resolve({ success: false, error: "A generic API error occurred. Please try again." });
-      }
-      else {
-        resolve({ success: true });
-      }
-    }, 1000);
-  });
-};
-
-const setNestedValue = <T extends Record<string, unknown>>(
-  obj: T,
-  path: string,
-  value: unknown
-): T => {
-  const keys = path.split('.');
-  let current = obj as Record<string, unknown>;
-  keys.forEach((key, index) => {
-    if (index === keys.length - 1) {
-      current[key] = value;
-    } else {
-      if (!current[key] || typeof current[key] !== 'object') {
-        current[key] = /^[0-9]+$/.test(keys[index + 1]) ? [] : {};
-      }
-      current = current[key] as Record<string, unknown>;
-    }
-  });
-  return obj;
-};
 
 export default function StackCreatePage() {
   const [formData, setFormData] = useState<Partial<StackData>>({
@@ -77,6 +37,7 @@ export default function StackCreatePage() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleChange = (path: string, value: string | number | boolean | object | null) => {
     setFormData(prev => {
@@ -306,30 +267,62 @@ export default function StackCreatePage() {
         }
       });
 
-      console.log("Form errors:", newErrors);
       setFormErrors(newErrors);
       setIsLoading(false);
-
+      toast({
+        title: 'Validation Error',
+        description: 'Please fix the highlighted errors before submitting the form.',
+        variant: 'destructive',
+      });
       if (Object.keys(newErrors).length > 0 && !apiError) {
-        setApiError("Please fix the highlighted errors before submitting the form");
+        setApiError('Please fix the highlighted errors before submitting the form');
       }
-
       return;
     }
 
-    const response = await mockCreateStackApi(validationResult.data);
-    setIsLoading(false);
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) {
+      setIsLoading(false);
+      toast({
+        title: 'Organization Error',
+        description: 'No organization selected. Please select an organization and try again.',
+        variant: 'destructive',
+      });
+      setApiError('No organization selected.');
+      return;
+    }
 
-    if (response.success) {
-      navigate("/stacks");
-    } else {
-      if (response.errors) {
-        setFormErrors(response.errors);
-      } else if (response.error) {
-        setApiError(response.error);
-      } else {
-        setApiError("An unknown error occurred during stack creation.");
+    try {
+      await createStack(orgId, validationResult.data as any); // TODO: Replace 'as any' with correct type if needed
+      setIsLoading(false);
+      toast({
+        title: 'Stack Created',
+        description: 'Your stack has been successfully created.',
+        variant: 'success',
+      });
+      navigate('/stacks');
+    } catch (error) {
+      setIsLoading(false);
+      let errorMsg = 'An unknown error occurred during stack creation.';
+      // Robust error extraction for axios-like errors, without using 'any'
+      if (
+        error &&
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as Record<string, unknown>).response === 'object' &&
+        (error as { response?: { data?: { message?: unknown } } }).response?.data?.message
+      ) {
+        errorMsg = String((error as { response?: { data?: { message?: unknown } } }).response?.data?.message);
+      } else if (error instanceof Error) {
+        errorMsg = error.message;
       }
+      setApiError(errorMsg);
+      toast({
+        title: 'Stack Creation Failed',
+        description: errorMsg,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -389,7 +382,7 @@ export default function StackCreatePage() {
       {Object.keys(formErrors).length > 0 && (
         <div className="bg-red-500/10 border border-red-500 rounded-lg px-4 py-3 mb-6">
           <h3 className="text-red-500 font-semibold flex items-center">
-            <AlertTriangle className="h-4 w-4 mr-2" />
+            <AlertTriangle className="w-4 mr-2" />
             Please fix errors on the form to deploy.
           </h3>
         </div>
@@ -538,3 +531,23 @@ export default function StackCreatePage() {
     </div>
   );
 }
+
+const setNestedValue = <T extends Record<string, unknown>>(
+  obj: T,
+  path: string,
+  value: unknown
+): T => {
+  const keys = path.split('.');
+  let current = obj as Record<string, unknown>;
+  keys.forEach((key, index) => {
+    if (index === keys.length - 1) {
+      current[key] = value;
+    } else {
+      if (!current[key] || typeof current[key] !== 'object') {
+        current[key] = /^[0-9]+$/.test(keys[index + 1]) ? [] : {};
+      }
+      current = current[key] as Record<string, unknown>;
+    }
+  });
+  return obj;
+};
