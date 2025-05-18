@@ -11,8 +11,17 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, X, GitBranch, ImageIcon, Trash2, Database } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Plus, X, GitBranch, ImageIcon, Trash2, Database, Upload, FileText, Copy } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+
 import type { StackResourceData, VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
 
 interface StackResourceItemProps {
@@ -140,7 +149,6 @@ export default function StackResourceItem({
     });
   };
 
-  // Helper for volume mounts
   const addVolumeMount = () => {
     update({
       volume_mounts: [
@@ -149,6 +157,89 @@ export default function StackResourceItem({
       ],
     });
   };
+
+  // Helper for adding multiple environment variables at once
+  const addMultipleEnvVars = (envVars: Array<{name: string, value: string}>) => {
+    // Filter out empty entries and duplicates
+    const filteredVars = envVars.filter(env => env.name.trim() !== "");
+
+    // Get current env vars
+    const currentVars = resource.execution_config?.environment_variables || [];
+
+    // Create a map of existing var names for quick lookup
+    const existingVarNames = new Set(currentVars.map(env => env.name));
+
+    // Filter out duplicates and add new vars
+    const newVars = filteredVars.filter(env => !existingVarNames.has(env.name));
+
+    if (newVars.length === 0) {
+      toast({
+        title: "No new variables added",
+        description: "All variables already exist or are invalid",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    update({
+      execution_config: {
+        ...resource.execution_config,
+        environment_variables: [
+          ...currentVars,
+          ...newVars
+        ],
+      },
+    });
+
+    toast({
+      title: "Environment variables added",
+      description: `${newVars.length} new variable${newVars.length === 1 ? '' : 's'} added successfully`,
+    });
+  };
+
+  // Parse .env file content or pasted text
+  const parseEnvContent = (content: string): Array<{name: string, value: string}> => {
+    if (!content.trim()) return [];
+
+    const lines = content.split('\n');
+    const envVars: Array<{name: string, value: string}> = [];
+
+    for (const line of lines) {
+      // Skip comments and empty lines
+      const trimmedLine = line.trim();
+      if (!trimmedLine || trimmedLine.startsWith('#')) continue;
+
+      // Parse KEY=VALUE format
+      const match = trimmedLine.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        const [, name, value] = match;
+        envVars.push({
+          name: name.trim(),
+          value: value.trim().replace(/^['"](.*)['"]/g, '$1') // Remove surrounding quotes if present
+        });
+      }
+    }
+
+    return envVars;
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      const envVars = parseEnvContent(content);
+      addMultipleEnvVars(envVars);
+    };
+    reader.readAsText(file);
+
+    // Reset the input
+    event.target.value = '';
+  };
+
+
 
   const updateVolumeMount = (vmIdx: number, patch: Partial<{ source_volume_name: string, source_sub_path: string, target_path: string }>) => {
     // Check for duplicate target paths if updating target_path
@@ -744,10 +835,152 @@ export default function StackResourceItem({
             <TabsContent value="environment" className="pt-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-medium">Environment Variables</h3>
-                <Button variant="outline" size="sm" onClick={addEnvVar}>
-                  <Plus className="h-4 w-4 mr-2" /> Add Variable
-                </Button>
+                <div className="flex gap-2">
+                  {/* Clear all variables button */}
+                  {/* Clear all variables button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (resource.execution_config?.environment_variables?.length > 0) {
+                        update({
+                          execution_config: {
+                            ...resource.execution_config,
+                            environment_variables: []
+                          }
+                        });
+                        toast({
+                          title: "Cleared all environment variables",
+                          description: "All environment variables have been removed",
+                        });
+                      }
+                    }}
+                    disabled={!resource.execution_config?.environment_variables?.length}
+                    className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear All
+                  </Button>
+
+                  {/* Add single variable button */}
+                  <Button variant="ghost" size="sm" onClick={addEnvVar}>
+                    <Plus className="h-4 w-4 mr-2" /> Add Variable
+                  </Button>
+
+                  {/* Paste variables dialog */}
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="gap-2">
+                        <Copy className="h-4 w-4" />
+                        <span>Paste Variables</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="w-[95vw] max-w-4xl p-0 overflow-auto">
+                      <div className="p-6">
+                        {/* Dialog Header */}
+                        <DialogHeader>
+                          <DialogTitle className="text-lg font-medium">
+                            Paste Environment Variables
+                          </DialogTitle>
+                        </DialogHeader>
+
+                        {/* Dialog Content */}
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor={`env-paste-${index}`}
+                              className="text-sm font-medium"
+                            >
+                              Paste in KEY=VALUE format (one per line)
+                            </Label>
+                            <div className="relative">
+                              <Textarea
+                                id={`env-paste-${index}`}
+                                placeholder={
+                                  'DATABASE_URL=postgres://user:pass@localhost:5432/db\n' +
+                                  'API_KEY=your_api_key\n' +
+                                  '# NODE_ENV=development'
+                                }
+                                className="font-mono text-sm min-h-[180px] w-full"
+                              />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Lines starting with # will be ignored as comments
+                            </p>
+                          </div>
+
+                          <Button
+                            onClick={() => {
+                              const textarea = document.getElementById(
+                                `env-paste-${index}`
+                              ) as HTMLTextAreaElement;
+                              const content = textarea.value;
+                              const envVars = parseEnvContent(content);
+
+                              if (envVars.length > 0) {
+                                addMultipleEnvVars(envVars);
+                                textarea.value = '';
+                                // Close the dialog after adding
+                                const closeButton = document.querySelector(
+                                  'button[data-state="open"] + div [data-radix-collection-item]'
+                                ) as HTMLButtonElement;
+                                closeButton?.click();
+                              } else {
+                                toast({
+                                  title: 'No valid variables found',
+                                  description: 'Please enter variables in KEY=VALUE format',
+                                  variant: 'destructive',
+                                });
+                              }
+                            }}
+                            className="w-full bg-black hover:bg-gray-800"
+                          >
+                            Add Variables
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Import from file dialog */}
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <Upload className="h-4 w-4 mr-2" /> Import File
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Import Environment Variables</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="flex flex-col gap-2">
+                          <Label htmlFor={`env-file-upload-${index}`} className="text-sm font-medium">
+                            Upload .env File
+                          </Label>
+                          <div className="flex items-center justify-center w-full">
+                            <label htmlFor={`env-file-upload-${index}`} className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 hover:bg-muted/30">
+                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <FileText className="w-8 h-8 mb-2 text-muted-foreground" />
+                                <p className="mb-2 text-sm text-muted-foreground">Click to upload or drag and drop</p>
+                                <p className="text-xs text-muted-foreground">Supports .env files</p>
+                              </div>
+                              <input
+                                id={`env-file-upload-${index}`}
+                                type="file"
+                                accept=".env,text/plain"
+                                className="hidden"
+                                onChange={handleFileUpload}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
+
               <div className="overflow-x-auto">
                 <table className="min-w-full border border-muted rounded-md">
                   <thead className="bg-muted/30">

@@ -268,9 +268,6 @@ ANOTHER_KEY=another value"
                   rows={4}
                   className="font-mono text-sm"
                 />
-                <p className="text-sm text-muted-foreground">
-                  Add environment variables in KEY=value format, one per line.
-                </p>
               </div>
 
               <Button className="mt-4" onClick={handleSaveSettings}>
