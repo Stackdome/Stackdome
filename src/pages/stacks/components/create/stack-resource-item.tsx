@@ -591,7 +591,6 @@ export default function StackResourceItem({
                           <SelectContent>
                             <SelectItem value="tcp">TCP</SelectItem>
                             <SelectItem value="http">HTTP</SelectItem>
-                            <SelectItem value="udp">UDP</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
