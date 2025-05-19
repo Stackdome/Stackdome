@@ -258,19 +258,29 @@ function omitUIFieldsFromVolume(volume: VolumeFormData | VolumeData): Omit<Volum
 }
 
 export function stripUIFieldsFromStackData(stackData: StackData): Stack {
+  // Process all stack resources by removing UI-only fields
   const cleanStackResources = stackData.spec.stack_resources.map(omitUIFieldsFromResource);
+
+  // Process volumes data if present
   const cleanVolumes = stackData.spec.volumes
     ? stackData.spec.volumes.map(omitUIFieldsFromVolume)
     : undefined;
 
-  // Compose the strict Stack type, using correct casing for Volumes
+  // Create a new clean spec object that will only include API-expected fields
+  const cleanSpec: Partial<Stack["spec"]> = {
+    stack_resources: cleanStackResources as Stack["spec"]["stack_resources"],
+  };
+
+  if (cleanVolumes && cleanVolumes.length > 0) {
+    cleanSpec.Volumes = cleanVolumes as Stack["spec"]["Volumes"];
+  }
+
+  // Combine everything into the final API-compliant object
   return {
-    ...stackData,
-    spec: {
-      ...stackData.spec,
-      stack_resources: cleanStackResources as Stack["spec"]["stack_resources"],
-      ...(cleanVolumes ? { Volumes: cleanVolumes as Stack["spec"]["Volumes"] } : {}),
-    },
+    name: stackData.name,
+    workspace_name: stackData.workspace_name,
+    labels: stackData.labels,
+    spec: cleanSpec as Stack["spec"],
   };
 }
 
