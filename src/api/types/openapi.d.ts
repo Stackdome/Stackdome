@@ -2517,7 +2517,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
-                }
+                };
                 /** @description Internal server error */
                 500: {
                     headers: {
@@ -2804,10 +2804,10 @@ export interface components {
         /** @enum {string} */
         RemoteSyncServerState: "RemoteSyncServerPending" | "RemoteSyncServerCreating" | "RemoteSyncServerCreated" | "RemoteSyncServerReady" | "RemoteSyncServerFailed";
         Volume: {
+            readonly id?: string;
             name: string;
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
-            workspace_name: string;
             spec: components["schemas"]["VolumeSpec"];
             readonly status?: components["schemas"]["VolumeStatus"];
         };
@@ -2880,7 +2880,6 @@ export interface components {
             readonly organisation_id?: string;
             readonly user_id?: string;
             name: string;
-            workspace_name: string;
             readonly namespace?: string;
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
@@ -2898,7 +2897,7 @@ export interface components {
         };
         StackSpec: {
             stack_resources: components["schemas"]["StackResource"][];
-            Volumes?: components["schemas"]["Volume"][];
+            volumes?: components["schemas"]["Volume"][];
         };
         StackStatus: {
             state?: string;
@@ -3019,7 +3018,7 @@ export interface components {
             dockerfile_path: string;
             source_revision: components["schemas"]["BuildSourceRevision"];
             /** @description The image repository to push the built image to */
-            image_repository?: components["schemas"]["ImageRepository"];
+            image_repository: components["schemas"]["ImageRepository"];
         };
         /** @description The image repository to push the built image to */
         ImageRepository: {
@@ -3094,7 +3093,7 @@ export interface components {
             kind?: string;
             href?: string;
         };
-    }
+    };
     responses: never;
     parameters: {
         /** @description The id of record */
