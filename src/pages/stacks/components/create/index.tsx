@@ -202,7 +202,6 @@ export default function StackCreatePage() {
     setApiError(null);
 
     const payloadToValidate: StackData = {
-      // ...existing code
       name: formData.name || "",
       workspace_name: formData.workspace_name || "default",
       labels: formData.labels || [],
@@ -214,6 +213,7 @@ export default function StackCreatePage() {
             labels: sr.labels?.length ? sr.labels : undefined,
             depends_on: sr.depends_on?.length ? sr.depends_on : undefined,
             ports: sr.ports?.length ? sr.ports : undefined,
+            volume_mounts: sr.volume_mounts?.length ? sr.volume_mounts : undefined,
             execution_config: sr.execution_config && (sr.execution_config.command?.length || sr.execution_config.args?.length || sr.execution_config.environment_variables?.length) ? {
               command: sr.execution_config.command?.length ? sr.execution_config.command : undefined,
               args: sr.execution_config.args?.length ? sr.execution_config.args : undefined,
