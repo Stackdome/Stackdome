@@ -303,12 +303,23 @@ export default function StackResourceItem({
               {resource.name === "" && (
                 <span className="ml-2 text-sm text-muted-foreground">(unnamed)</span>
               )}
+              {/* Show revision/branch/tag inline if git */}
+              {resource.sourceType === "git" && resource.gitRevisionType && resource.gitRevisionValue && (
+                <span className="ml-2 text-xs text-muted-foreground font-mono">[
+                  {resource.gitRevisionType === "commit"
+                    ? `SHA: ${resource.gitRevisionValue}`
+                    : (resource.gitRevisionType === "branch"
+                      ? `Branch: ${resource.gitRevisionValue}`
+                      : `Tag: ${resource.gitRevisionValue}`)
+                  }
+                ]</span>
+              )}
             </span>
             <span className="text-xs text-muted-foreground mt-0.5">
-              {/* Show Box image url or git revision details */}
+              {/* Show Box image url or git repo details */}
               {resource.sourceType === "git"
                 ? resource.build_spec?.source_context?.git_repo?.repo_url
-                  ? `${resource.build_spec.source_context.git_repo.repo_url}${resource.build_spec.source_context.git_repo.revision ? ` @ ${resource.build_spec.source_context.git_repo.revision}` : ""}`
+                  ? `${resource.build_spec.source_context.git_repo.repo_url}`
                   : "No git repo configured"
                 : resource.image_spec?.image
                   ? resource.image_spec.image
@@ -862,7 +873,9 @@ export default function StackResourceItem({
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      if (resource.execution_config?.environment_variables?.length > 0) {
+                      // If environment_variables exists and has items
+                      if (resource.execution_config?.environment_variables &&
+                          resource.execution_config.environment_variables.length > 0) {
                         update({
                           execution_config: {
                             ...resource.execution_config,
