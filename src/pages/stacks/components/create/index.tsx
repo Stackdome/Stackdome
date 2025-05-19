@@ -326,6 +326,8 @@ export default function StackCreatePage() {
         }
       });
 
+      console.error('Form validation failed:', newErrors);
+
       setFormErrors(newErrors);
       setIsLoading(false);
       toast({
@@ -362,6 +364,9 @@ export default function StackCreatePage() {
       navigate('/stacks');
     } catch (error) {
       setIsLoading(false);
+
+      console.error('Stack creation API failed:', error);
+
       let errorMsg = 'An unknown error occurred during stack creation.';
       // Robust error extraction for axios-like errors, without using 'any'
       if (
