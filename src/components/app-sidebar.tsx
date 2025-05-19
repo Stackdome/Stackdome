@@ -68,6 +68,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     asChild
                     className={cn(
                       "text-sidebar-foreground/70 text-sm hover:text-sidebar-foreground hover:bg-sidebar-accent",
+                      (location.pathname === "/stacks" || location.pathname === "/stacks/") && "text-sidebar-foreground bg-sidebar-accent"
+                    )}
+                  >
+                    <Link to="/stacks">
+                      <span>Overview</span>
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    asChild
+                    className={cn(
+                      "text-sidebar-foreground/70 text-sm hover:text-sidebar-foreground hover:bg-sidebar-accent",
                       location.pathname.includes("/stacks/create") && "text-sidebar-foreground bg-sidebar-accent"
                     )}
                   >

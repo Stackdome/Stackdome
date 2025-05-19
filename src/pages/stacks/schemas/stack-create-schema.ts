@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Stack } from '../types';
 
 export const LabelSchema = z.object({
   key: z.string().min(1, "Key is required"),
@@ -237,8 +238,6 @@ export type VolumeData = z.infer<typeof VolumeSchema>;
 export type VolumeFormData = z.infer<typeof VolumeFormSchema>;
 
 // FIXME: Remove this helper if OpenAPI spec supports conditional fields (e.g., oneOf) for UI-only fields
-import type { components } from "@/api/types/openapi";
-export type Stack = components["schemas"]["Stack"];
 
 function omitUIFieldsFromResource(resource: StackResourceData): Omit<StackResourceData, "sourceType" | "gitRevisionType" | "gitRevisionValue"> {
   const rest = { ...resource };
@@ -257,7 +256,7 @@ function omitUIFieldsFromVolume(volume: VolumeFormData | VolumeData): Omit<Volum
   return volume;
 }
 
-export function stripUIFieldsFromStackData(stackData: StackData): Stack {
+export function stripUIFieldsFromStackData(stackData: StackData): Omit<Stack, 'workspace_name'> {
   // Process all stack resources by removing UI-only fields
   const cleanStackResources = stackData.spec.stack_resources.map(omitUIFieldsFromResource);
 
@@ -272,13 +271,12 @@ export function stripUIFieldsFromStackData(stackData: StackData): Stack {
   };
 
   if (cleanVolumes && cleanVolumes.length > 0) {
-    cleanSpec.Volumes = cleanVolumes as Stack["spec"]["Volumes"];
+    cleanSpec.volumes = cleanVolumes as Stack["spec"]["volumes"];
   }
 
   // Combine everything into the final API-compliant object
   return {
     name: stackData.name,
-    workspace_name: stackData.workspace_name,
     labels: stackData.labels,
     spec: cleanSpec as Stack["spec"],
   };
