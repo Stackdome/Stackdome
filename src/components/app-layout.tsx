@@ -53,7 +53,7 @@ function AppLayoutContent({
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen max-h-screen w-full overflow-hidden">
+      <div className="flex h-screen max-h-screen w-full overflow-hidden bg-background">
         <AppSidebar />
         <SidebarInset>
           <div className="flex-shrink-0 bg-background rounded-tl-lg rounded-tr-lg">
@@ -85,9 +85,11 @@ function AppLayoutContent({
             <Separator />
           </div>
 
-          {/* Scrollable content area */}
-          <div className="flex-grow overflow-auto scrollbar-hide rounded-bl-lg rounded-br-lg">
-            {children ? children : <Outlet />}
+          {/* Scrollable content area with padding and max-width */}
+          <div className="flex-grow overflow-auto scrollbar-hide rounded-bl-lg rounded-br-lg flex justify-center items-start p-6">
+            <div className="w-full max-w-6xl">
+              {children ? children : <Outlet />}
+            </div>
           </div>
         </SidebarInset>
       </div>
