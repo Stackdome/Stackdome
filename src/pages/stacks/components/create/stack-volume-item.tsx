@@ -6,8 +6,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Trash2 } from "lucide-react";
-import type { VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
+import { HardDrive, Trash2 } from "lucide-react";
+import type { VolumeFormData, StackResourceData } from "@/pages/stacks/schemas/stack-create-schema";
 
 interface StackVolumeItemProps {
   volume: Partial<VolumeFormData>;
@@ -17,6 +17,7 @@ interface StackVolumeItemProps {
   onRemove: (index: number) => void;
   errors: { [field: string]: string | undefined };
   allVolumes: Partial<VolumeFormData>[];
+  allStackResources: Partial<StackResourceData>[];
 }
 
 export default function StackVolumeItem({
@@ -27,6 +28,7 @@ export default function StackVolumeItem({
   onRemove,
   errors,
   allVolumes,
+  allStackResources = [],
 }: StackVolumeItemProps) {
   // Helper for updating volume fields
   const update = (patch: Partial<VolumeFormData>) => {
@@ -36,20 +38,35 @@ export default function StackVolumeItem({
   // Check for duplicate name
   const isDuplicate = allVolumes.filter((v) => v.name === volume.name).length > 1;
 
+  const mountingInfo = volume.name
+    ? allStackResources
+      .map(resource => {
+        if (!resource.name || !resource.volume_mounts) return null;
+        const mountDetail = resource.volume_mounts.find(
+          vm => vm.source_volume_name === volume.name
+        );
+        return mountDetail ? { resourceName: resource.name, targetPath: mountDetail.target_path } : null;
+      })
+      .filter(Boolean) as { resourceName: string; targetPath: string }[]
+    : [];
+
   return (
     <AccordionItem value={String(index)} className="border-0">
       <AccordionTrigger
         ref={itemRef}
         className="px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
       >
-        <div className="flex items-center gap-2 text-left">
-          <div>
+        <div className="flex items-center gap-2 text-left w-full">
+          <HardDrive className="h-5 w-5 text-muted-foreground shrink-0" />
+          <div className="flex flex-col flex-grow min-w-0">
             <span className="font-medium">{volume.name || `Volume ${index + 1}`}</span>
-            {volume.spec?.size && (
-              <span className="ml-2 text-sm text-muted-foreground">({volume.spec.size})</span>
+            {volume.spec?.size ? (
+              <span className="text-sm text-muted-foreground">Size: {volume.spec.size}</span>
+            ) : (
+              <span className="text-sm text-muted-foreground italic">Size not set</span>
             )}
             {errors._form && (
-              <div className="text-sm text-destructive mt-1">{errors._form}</div>
+              <span className="text-xs text-destructive mt-0.5">{errors._form}</span>
             )}
           </div>
         </div>
@@ -107,6 +124,20 @@ export default function StackVolumeItem({
             <Input value="ReadWriteOnce (RWO)" disabled className="bg-muted" />
             <p className="text-xs text-muted-foreground">ReadWriteOnce: Can be mounted by a single resource for read/write.</p>
           </div>
+
+          {/* Mount Details Section */}
+          {mountingInfo.length > 0 && (
+            <div className="pt-4 border-t">
+              <h3 className="text-base font-semibold mb-2 text-foreground">Mount Details</h3>
+              <div className="space-y-1">
+                {mountingInfo.map((mount, mountIdx) => (
+                  <div key={mountIdx} className="text-sm text-muted-foreground">
+                    Mounted by <span className="font-medium text-foreground">{mount.resourceName}</span> at path: <code className="text-xs bg-muted text-muted-foreground p-1 rounded">{mount.targetPath}</code>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Remove button always visible at the bottom */}
           <div className="pt-4 border-t">
