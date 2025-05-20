@@ -56,7 +56,7 @@ export default function StackVolumeItem({
         ref={itemRef}
         className="px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
       >
-        <div className="flex items-center gap-2 text-left w-full">
+        <div className="flex items-center gap-2 text-left flex-grow">
           <HardDrive className="h-5 w-5 text-muted-foreground shrink-0" />
           <div className="flex flex-col flex-grow min-w-0">
             <span className="font-medium">{volume.name || `Volume ${index + 1}`}</span>
@@ -70,6 +70,19 @@ export default function StackVolumeItem({
             )}
           </div>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10 hover:scale-110 transition-transform duration-200 ml-auto opacity-70 hover:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent accordion from toggling when clicking the button
+            onRemove(index);
+          }}
+          title="Remove Volume"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </AccordionTrigger>
       <AccordionContent className="pb-4 pt-2">
         <div className="px-4 space-y-4">
@@ -139,18 +152,7 @@ export default function StackVolumeItem({
             </div>
           )}
 
-          {/* Remove button always visible at the bottom */}
-          <div className="pt-4 border-t">
-            <Button
-              type="button"
-              variant="ghost"
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={() => onRemove(index)}
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Remove Volume
-            </Button>
-          </div>
+          {/* Remove button moved to accordion header */}
         </div>
       </AccordionContent>
     </AccordionItem>

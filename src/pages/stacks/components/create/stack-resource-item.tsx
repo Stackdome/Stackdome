@@ -291,7 +291,7 @@ export default function StackResourceItem({
         ref={itemRef}
         className="px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
       >
-        <div className="flex items-center gap-2 text-left">
+        <div className="flex items-center gap-2 text-left flex-grow">
           {resource.sourceType === "git" ? (
             <GitBranch className="h-5 w-5 text-muted-foreground shrink-0" />
           ) : (
@@ -330,6 +330,21 @@ export default function StackResourceItem({
             )}
           </div>
         </div>
+        {!isOnlyResource && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 hover:scale-110 transition-transform duration-200 ml-auto opacity-70 hover:opacity-100"
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent accordion from toggling when clicking the button
+              onRemove(index);
+            }}
+            title="Remove Resource"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
       </AccordionTrigger>
 
       <AccordionContent className="pb-4 pt-2">
@@ -655,7 +670,7 @@ export default function StackResourceItem({
                   ))}
                   <div>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={addVolumeMount}
                       disabled={(volumes || []).length === 0}
@@ -763,7 +778,7 @@ export default function StackResourceItem({
                     </div>
                   ))}
                   <div>
-                    <Button variant="outline" size="sm" onClick={addPort}>
+                    <Button variant="ghost" size="sm" onClick={addPort}>
                       <Plus className="h-4 w-4 mr-2" />Add Port
                     </Button>
                   </div>
@@ -1070,20 +1085,7 @@ export default function StackResourceItem({
             </TabsContent>
           </Tabs>
 
-          {/* Delete button at bottom */}
-          {!isOnlyResource && (
-            <div className="pt-4 border-t">
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => onRemove(index)}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Remove Resource
-              </Button>
-            </div>
-          )}
+          {/* Delete button moved to accordion header */}
         </div>
       </AccordionContent>
     </AccordionItem>
