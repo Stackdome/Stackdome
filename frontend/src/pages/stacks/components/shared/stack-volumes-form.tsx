@@ -13,8 +13,6 @@ interface StackVolumesFormProps {
   workspace?: string;
   stackResources?: Partial<StackResourceData>[];
   readOnly?: boolean;
-  addButtonText?: string;
-  autoAddFirstItem?: boolean;
 }
 
 function getDefaultVolume(workspace?: string): Partial<VolumeFormData> {
@@ -37,9 +35,7 @@ export default function StackVolumesForm({
   errors,
   workspace,
   stackResources = [],
-  readOnly = false,
-  addButtonText = "Add Volume",
-  autoAddFirstItem = false
+  readOnly = false
 }: StackVolumesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
 
@@ -60,7 +56,7 @@ export default function StackVolumesForm({
   };
 
   return (
-    <>
+    <div>
       <ResourceFormList<VolumeFormData>
         items={volumes}
         onItemsChange={onVolumesChange}
@@ -80,11 +76,23 @@ export default function StackVolumesForm({
             readOnly={readOnly}
           />
         )}
-        addButtonText={addButtonText}
-        autoAddFirstItem={autoAddFirstItem}
         emptyText="No volumes added."
         emptyIcon={<Database className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />}
+        readOnly={readOnly}
       />
+      {/* Only show add button if not readOnly */}
+      {!readOnly && (
+        <div className="flex justify-center mt-4">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onVolumesChange([...volumes, getDefaultVolume(workspace)])}
+            disabled={readOnly}
+          >
+            + Add Volume
+          </Button>
+        </div>
+      )}
       <Dialog open={pendingRemoveIdx !== null} onOpenChange={open => !open && setPendingRemoveIdx(null)}>
         <DialogContent>
           <DialogHeader>
@@ -102,6 +110,6 @@ export default function StackVolumesForm({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

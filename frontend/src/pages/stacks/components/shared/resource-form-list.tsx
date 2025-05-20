@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { ReactNode } from "react";
 import { Accordion } from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
-import { Plus, Container } from "lucide-react";
+import { Container } from "lucide-react";
 
 // Generic form list props that can be used for different types of forms
 interface ResourceFormListProps<T> {
@@ -23,6 +22,7 @@ interface ResourceFormListProps<T> {
   autoAddFirstItem?: boolean;
   emptyText?: string;
   emptyIcon?: ReactNode;
+  readOnly?: boolean;
 }
 
 export default function ResourceFormList<T>({
@@ -31,10 +31,9 @@ export default function ResourceFormList<T>({
   errors,
   createDefaultItem,
   renderItem,
-  addButtonText = "Add Item",
   autoAddFirstItem = false, // default to false for blank state
   emptyText = "No Resources added.",
-  emptyIcon
+  emptyIcon,
 }: ResourceFormListProps<T>) {
   const [openAccordions, setOpenAccordions] = useState<string[]>(["0"]);
   const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
@@ -93,18 +92,6 @@ export default function ResourceFormList<T>({
       });
     }
   }, [lastAddedIndex]);
-
-  // Add a new item to the list
-  const handleAddItem = useCallback(() => {
-    const newItemIndex = items.length;
-    onItemsChange([...items, createDefaultItem()]);
-    setLastAddedIndex(newItemIndex);
-
-    // We dynamically allocate refs as needed
-    if (itemRefs.current.length <= newItemIndex) {
-      itemRefs.current = [...itemRefs.current, null];
-    }
-  }, [items, onItemsChange, createDefaultItem]);
 
   // Update an existing item
   const handleItemChange = useCallback((index: number, updatedItem: Partial<T>) => {
@@ -169,17 +156,7 @@ export default function ResourceFormList<T>({
           </Accordion>
         </div>
       )}
-      <div className="flex justify-center py-4 border-t">
-        <Button
-          variant="ghost"
-          className="flex items-center gap-1"
-          onClick={handleAddItem}
-          type="button"
-        >
-          <Plus className="h-4 w-4" />
-          <span>{addButtonText}</span>
-        </Button>
-      </div>
+
     </div>
   );
 }

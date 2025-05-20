@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getStacksByOrg } from "@/api/stacks";
-import type { Stack } from "@/pages/stacks/types";
+import { useStacks } from "@/pages/stacks/contexts/stack-context";
+import { getCurrentOrganizationId } from "@/helpers/common";
 import {
   Card,
   CardFooter,
@@ -17,10 +18,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatDistanceToNow } from 'date-fns';
-import { getCurrentOrganizationId } from "@/helpers/common";
 
 export default function StacksPage() {
-  const [stacks, setStacks] = useState<Stack[]>([]);
+  const { stacks, setStacks } = useStacks();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -47,7 +47,7 @@ export default function StacksPage() {
       setError("Organization ID not found. Unable to load stacks.");
       setIsLoading(false);
     }
-  }, []);
+  }, [setStacks]);
 
   const handleCreateNewStack = () => {
     navigate("/stacks/create");

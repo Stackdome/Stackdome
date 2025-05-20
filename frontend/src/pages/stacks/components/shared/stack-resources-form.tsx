@@ -11,8 +11,6 @@ interface StackResourcesFormProps {
   errors: { [index: number]: { [field: string]: string | undefined } };
   volumes?: Partial<VolumeFormData>[];
   readOnly?: boolean;
-  addButtonText?: string;
-  autoAddFirstItem?: boolean;
 }
 
 function getDefaultResource(): Partial<StackResourceData> {
@@ -34,9 +32,7 @@ export default function StackResourcesForm({
   onResourcesChange,
   errors,
   volumes = [],
-  readOnly = false,
-  addButtonText = "Add Resource",
-  autoAddFirstItem = false
+  readOnly = false
 }: StackResourcesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
 
@@ -59,10 +55,8 @@ export default function StackResourcesForm({
     }
   };
 
-  const allResources = resources.map((r, idx) => ({ name: r.name || `Resource ${idx + 1}`, index: idx }));
-
   return (
-    <>
+    <div>
       <ResourceFormList<StackResourceData>
         items={resources}
         onItemsChange={onResourcesChange}
@@ -77,14 +71,26 @@ export default function StackResourcesForm({
             onChange={onChange}
             errors={errors}
             volumes={volumes}
-            allResources={allResources}
+            allResources={resources.map((r, i) => ({ name: r.name || `Resource ${i + 1}`, index: i }))}
             readOnly={readOnly}
             onRemove={handleRemove}
           />
         )}
-        addButtonText={addButtonText}
-        autoAddFirstItem={autoAddFirstItem}
+        readOnly={readOnly}
       />
+      {/* Only show add button if not readOnly */}
+      {!readOnly && (
+        <div className="flex justify-center mt-4">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onResourcesChange([...resources, getDefaultResource()])}
+            disabled={readOnly}
+          >
+            + Add Resource
+          </Button>
+        </div>
+      )}
       <Dialog open={pendingRemoveIdx !== null} onOpenChange={open => !open && setPendingRemoveIdx(null)}>
         <DialogContent>
           <DialogHeader>
@@ -97,6 +103,6 @@ export default function StackResourcesForm({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
