@@ -1,0 +1,107 @@
+import type { VolumeFormData, StackResourceData } from "@/pages/stacks/schemas/stack-create-schema";
+import ResourceFormList from "@/pages/stacks/components/shared/resource-form-list";
+import StackVolumeItem from "@/pages/stacks/components/shared/stack-volume-item";
+import { Database } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+interface StackVolumesFormProps {
+  volumes: Partial<VolumeFormData>[];
+  onVolumesChange: (updatedVolumes: Partial<VolumeFormData>[]) => void;
+  errors: { [index: number]: { [field: string]: string | undefined } };
+  workspace?: string;
+  stackResources?: Partial<StackResourceData>[];
+  readOnly?: boolean;
+  addButtonText?: string;
+  autoAddFirstItem?: boolean;
+}
+
+function getDefaultVolume(workspace?: string): Partial<VolumeFormData> {
+  return {
+    name: "",
+    workspace_name: workspace || "",
+    sourceType: "None",
+    labels: [],
+    spec: {
+      size: "1Gi",
+      access_mode: "ReadWriteOnce",
+      needs_sync_before_use: false
+    }
+  };
+}
+
+export default function StackVolumesForm({
+  volumes,
+  onVolumesChange,
+  errors,
+  workspace,
+  stackResources = [],
+  readOnly = false,
+  addButtonText = "Add Volume",
+  autoAddFirstItem = false
+}: StackVolumesFormProps) {
+  const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
+
+  const isVolumeFilled = (vol: Partial<VolumeFormData>) => {
+    return !!(vol.name || vol.spec?.size || vol.labels?.length || vol.spec?.needs_sync_before_use || vol.spec?.access_mode !== undefined);
+  };
+
+  const handleRemove = (idx: number) => {
+    if (isVolumeFilled(volumes[idx])) {
+      setPendingRemoveIdx(idx);
+    } else {
+      onVolumesChange(volumes.filter((_, i) => i !== idx));
+    }
+  };
+
+  const createDefaultVolumeWithWorkspace = () => {
+    return getDefaultVolume(workspace);
+  };
+
+  return (
+    <>
+      <ResourceFormList<VolumeFormData>
+        items={volumes}
+        onItemsChange={onVolumesChange}
+        errors={errors}
+        createDefaultItem={createDefaultVolumeWithWorkspace}
+        renderItem={({ item, index, itemRef, onChange, errors }) => (
+          <StackVolumeItem
+            key={index}
+            volume={item}
+            index={index}
+            itemRef={itemRef}
+            onChange={onChange}
+            onRemove={() => handleRemove(index)}
+            errors={errors}
+            allVolumes={volumes}
+            allStackResources={stackResources}
+            readOnly={readOnly}
+          />
+        )}
+        addButtonText={addButtonText}
+        autoAddFirstItem={autoAddFirstItem}
+        emptyText="No volumes added (Optional) "
+        emptyIcon={<Database className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />}
+      />
+      <Dialog open={pendingRemoveIdx !== null} onOpenChange={open => !open && setPendingRemoveIdx(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Volume?</DialogTitle>
+          </DialogHeader>
+          <div>Are you sure you want to remove this volume? This action cannot be undone.</div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setPendingRemoveIdx(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => {
+              if (pendingRemoveIdx !== null) {
+                onVolumesChange(volumes.filter((_, i) => i !== pendingRemoveIdx));
+                setPendingRemoveIdx(null);
+              }
+            }}>Remove Volume</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
