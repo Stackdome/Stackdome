@@ -17,7 +17,8 @@ interface StackVolumeItemProps {
   onRemove: (index: number) => void;
   errors: { [field: string]: string | undefined };
   allVolumes: Partial<VolumeFormData>[];
-  allStackResources: Partial<StackResourceData>[];
+  allStackResources?: Partial<StackResourceData>[];
+  readOnly?: boolean;
 }
 
 export default function StackVolumeItem({
@@ -29,14 +30,16 @@ export default function StackVolumeItem({
   errors,
   allVolumes,
   allStackResources = [],
+  readOnly = false
 }: StackVolumeItemProps) {
   // Helper for updating volume fields
   const update = (patch: Partial<VolumeFormData>) => {
+    if (readOnly) return; // Don't update if in read-only mode
     onChange(index, { ...volume, ...patch });
   };
 
   // Check for duplicate name
-  const isDuplicate = allVolumes.filter((v) => v.name === volume.name).length > 1;
+  const isDuplicate = allVolumes.filter((v) => v.name?.length && v.name === volume.name).length > 1;
 
   const mountingInfo = volume.name
     ? allStackResources
@@ -57,32 +60,19 @@ export default function StackVolumeItem({
         className="px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
       >
         <div className="flex items-center gap-2 text-left flex-grow">
-          <HardDrive className="h-5 w-5 text-muted-foreground shrink-0" />
           <div className="flex flex-col flex-grow min-w-0">
-            <span className="font-medium">{volume.name || `Volume ${index + 1}`}</span>
-            {volume.spec?.size ? (
-              <span className="text-sm text-muted-foreground">Size: {volume.spec.size}</span>
-            ) : (
-              <span className="text-sm text-muted-foreground italic">Size not set</span>
-            )}
+            <span className="font-medium flex items-center gap-2">
+              <HardDrive className="h-4 w-4 text-muted-foreground" />
+              {volume.name || `Volume ${index + 1}`}
+            </span>
+            <span className="text-sm text-muted-foreground truncate pl-6">
+              {volume.spec?.size ? `${volume.spec.size}` : "No size specified"}
+            </span>
             {errors._form && (
-              <span className="text-xs text-destructive mt-0.5">{errors._form}</span>
+              <span className="text-xs text-destructive mt-0.5 pl-6">{errors._form}</span>
             )}
           </div>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="text-destructive hover:text-destructive hover:bg-destructive/10 hover:scale-110 transition-transform duration-200 ml-auto opacity-70 hover:opacity-100"
-          onClick={(e) => {
-            e.stopPropagation(); // Prevent accordion from toggling when clicking the button
-            onRemove(index);
-          }}
-          title="Remove Volume"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
       </AccordionTrigger>
       <AccordionContent className="pb-4 pt-2">
         <div className="px-4 space-y-4">
@@ -99,6 +89,7 @@ export default function StackVolumeItem({
                 onChange={(e) => update({ name: e.target.value })}
                 className={errors.name || isDuplicate ? "border-destructive" : ""}
                 aria-invalid={!!errors.name || isDuplicate}
+                disabled={readOnly}
               />
               {(errors.name || isDuplicate) && (
                 <p className="text-sm text-destructive">
@@ -125,6 +116,7 @@ export default function StackVolumeItem({
                 })}
                 className={errors["spec.size"] ? "border-destructive" : ""}
                 aria-invalid={!!errors["spec.size"]}
+                disabled={readOnly}
               />
               {errors["spec.size"] && <p className="text-sm text-destructive">{errors["spec.size"]}</p>}
               <p className="text-xs text-muted-foreground">Volume size (e.g., 1Gi, 500Mi)</p>
@@ -152,7 +144,23 @@ export default function StackVolumeItem({
             </div>
           )}
 
-          {/* Remove button moved to accordion header */}
+          {/* Remove button at the end, styled like stack resource item */}
+          {!readOnly && (
+            <div className="flex justify-center items-center mt-8">
+              <span className="flex items-center justify-center w-full py-3 rounded-md bg-muted/70">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-destructive opacity-80 hover:text-destructive"
+                  onClick={() => onRemove(index)}
+                  title="Remove volume"
+                >
+                  <Trash2 className="h-5 w-5 mr-2" />
+                  Remove Volume
+                </Button>
+              </span>
+            </div>
+          )}
         </div>
       </AccordionContent>
     </AccordionItem>

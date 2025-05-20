@@ -1,9 +1,9 @@
 import React, { useState, useCallback, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
-import StackResourcesForm from "./stack-resources-form";
-import StackVolumesForm from "./stack-volumes-form";
+import StackResourcesForm from "../shared/stack-resources-form";
+import StackVolumesForm from "../shared/stack-volumes-form";
 import { Button } from "@/components/ui/button";
-import { Rocket, Tag as TagIcon, X, AlertTriangle } from "lucide-react";
+import { Rocket, X, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
@@ -62,15 +62,11 @@ export default function StackCreatePage() {
   const handleAddLabel = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && currentLabelInput.trim()) {
       e.preventDefault();
-      const labelStr = currentLabelInput.trim();
-      const parts = labelStr.split('=');
-      const key = parts[0].trim();
-      const value = parts.length > 1 ? parts.slice(1).join('=').trim() : "";
-
-      if (key) {
+      const value = currentLabelInput.trim();
+      if (value) {
         setFormData(prev => ({
           ...prev,
-          labels: [...(prev.labels || []), { key, value }],
+          labels: [...(prev.labels || []), { key: "stackdome.io/user-defined-value", value }],
         }));
         setCurrentLabelInput("");
         if (formErrors["labels"]) {
@@ -494,14 +490,13 @@ export default function StackCreatePage() {
                   Labels
                 </UILabel>
                 <div className="flex items-center">
-                  <TagIcon className="h-4 w-4 mr-2 text-muted-foreground" />
                   <Input
                     id="stack-labels"
                     value={currentLabelInput}
                     onChange={handleLabelInputChange}
                     onKeyDown={handleAddLabel}
                     className={`max-w-md ${formErrors.labels ? "border-red-500" : ""}`}
-                    placeholder="e.g., environment=dev or just tag (press Enter to add)"
+                    placeholder="e.g., dev, prod, mytag (press Enter to add)"
                     aria-invalid={!!formErrors.labels}
                   />
                 </div>
@@ -526,7 +521,7 @@ export default function StackCreatePage() {
                         variant="secondary"
                         className="flex items-center gap-1 px-2.5 py-1"
                       >
-                        <span>{label.key}{label.value && label.value !== "" ? `=${label.value}` : ""}</span>
+                        <span>{label.value}</span>
                         <button
                           onClick={() => removeLabel(idx)}
                           className="ml-1 rounded-full hover:bg-secondary-foreground/20 h-4 w-4 flex items-center justify-center"
@@ -544,7 +539,7 @@ export default function StackCreatePage() {
         </Card>
         <Card className="mb-6 rounded-lg">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xl">Define Stack Resources</CardTitle>
+            <CardTitle className="text-xl">Stack Resources</CardTitle>
             <CardDescription className="mt-1">
               Configure the containerized services that make up your stack
             </CardDescription>
@@ -582,7 +577,7 @@ export default function StackCreatePage() {
 
         <Card className="mb-6 rounded-lg">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xl">Define Stack Volumes</CardTitle>
+            <CardTitle className="text-xl">Stack Volumes</CardTitle>
             <CardDescription className="mt-1">
               Configure persistent volumes that your stack resources can use
             </CardDescription>

@@ -1,0 +1,1075 @@
+import {
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Plus, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import { MultiSelect } from "@/components/multi-select";
+
+import type { StackResourceData, VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
+
+interface StackResourceItemProps {
+  resource: Partial<StackResourceData>;
+  index: number;
+  itemRef: (el: HTMLButtonElement | null) => void;
+  onChange: (index: number, updatedResource: Partial<StackResourceData>) => void;
+  onRemove: (index: number) => void;
+  errors: { [field: string]: string | undefined };
+  volumes?: Partial<VolumeFormData>[];
+  allResources?: { name: string; index: number }[];
+  readOnly?: boolean;
+}
+
+const getError = (errors: { [field: string]: string | undefined }, path: string) => {
+  // Check for direct match
+  if (errors[path]) return errors[path];
+
+  // Check if there's a nested error (handles nested objects like image_spec.image)
+  // This makes the UI component work with both flattened and nested error structures
+  for (const key in errors) {
+    if (key === path || key.startsWith(`${path}.`)) {
+      return errors[key];
+    }
+
+    // Handle the reverse case where path is more specific than the error key
+    // For example, if error key is "image_spec" but we're checking for "image_spec.image"
+    if (path.startsWith(`${key}.`)) {
+      return errors[key];
+    }
+  }
+
+  return undefined;
+};
+
+export default function StackResourceItem({
+  resource,
+  index,
+  itemRef,
+  onChange,
+  onRemove,
+  errors,
+  volumes = [],
+  allResources: _allResources,
+  readOnly = false
+}: StackResourceItemProps) {
+  // Helper for updating resource fields
+  const update = (patch: Partial<StackResourceData>) => {
+    if (readOnly) return; // Don't update if in read-only mode
+    onChange(index, { ...resource, ...patch });
+  };
+
+  // Helper for updating nested build_spec
+  const updateBuildSpec = (patch: Partial<NonNullable<StackResourceData["build_spec"]>>) => {
+    if (readOnly) return; // Don't update if in read-only mode
+    const currentBuildSpec = resource.build_spec || {
+      source_context: { git_repo: { repo_url: '' } },
+      context_path_within_source: './',
+      dockerfile_path: 'Dockerfile',
+      image_repository_url: { url: '', cluster_registry_id: '' },
+      insecure_registry: false
+    };
+
+    update({
+      build_spec: { ...currentBuildSpec, ...patch },
+      image_spec: undefined,
+    });
+  };
+  // Helper for updating nested image_spec
+  const updateImageSpec = (patch: Partial<NonNullable<StackResourceData["image_spec"]>>) => {
+    if (readOnly) return; // Don't update if in read-only mode
+    update({
+      image_spec: { ...(resource.image_spec || { image: '' }), ...patch },
+      build_spec: undefined,
+    });
+  };
+
+  // Helper for adding an environment variable
+  const addEnvVar = () => {
+    if (readOnly) return; // Don't add if in read-only mode
+    update({
+      execution_config: {
+        ...resource.execution_config,
+        environment_variables: [
+          ...(resource.execution_config?.environment_variables || []),
+          { name: "", value: "" },
+        ],
+      },
+    });
+  };
+
+  // Helper for updating an environment variable
+  const updateEnvVar = (envIdx: number, name: string, value: string) => {
+    if (readOnly) return; // Don't update if in read-only mode
+    update({
+      execution_config: {
+        ...resource.execution_config,
+        environment_variables: (resource.execution_config?.environment_variables || []).map((env, i) =>
+          i === envIdx ? { name, value } : env
+        ),
+      },
+    });
+  };
+  const removeEnvVar = (envIdx: number) => {
+    if (readOnly) return; // Don't remove if in read-only mode
+    update({
+      execution_config: {
+        ...resource.execution_config,
+        environment_variables: (resource.execution_config?.environment_variables || []).filter((_, i) => i !== envIdx),
+      },
+    });
+  };
+
+  const addVolumeMount = () => {
+    if (readOnly) return; // Don't add if in read-only mode
+    update({
+      volume_mounts: [
+        ...(resource.volume_mounts || []),
+        { source_volume_name: "", source_sub_path: "", target_path: "/mnt" },
+      ],
+    });
+  };
+
+  // Helper for adding multiple environment variables at once
+  const addMultipleEnvVars = (envVars: Array<{name: string, value: string}>) => {
+    if (readOnly) return; // Don't add if in read-only mode
+
+    // Filter out empty entries and duplicates
+    const filteredVars = envVars.filter(env => env.name.trim() !== "");
+
+    // Get current env vars
+    const currentVars = resource.execution_config?.environment_variables || [];
+
+    // Create a map of existing var names for quick lookup
+    const existingVarNames = new Set(currentVars.map(env => env.name));
+
+    // Filter out duplicates and add new vars
+    const newVars = filteredVars.filter(env => !existingVarNames.has(env.name));
+
+    if (newVars.length === 0) {
+      toast({
+        title: "No new variables added",
+        description: "All variables already exist or are invalid",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Update with combined variables
+    update({
+      execution_config: {
+        ...resource.execution_config,
+        environment_variables: [...currentVars, ...newVars]
+      }
+    });
+
+    toast({
+      title: "Environment variables added",
+      description: `Added ${newVars.length} new environment variables`,
+      variant: "default"
+    });
+  };
+
+  // Parse environment variables in KEY=VALUE format with optional comments
+  const parseEnvContent = (content: string): Array<{name: string, value: string}> => {
+    return content.split('\n')
+      .filter(line => line.trim() && !line.trim().startsWith('#'))
+      .map(line => {
+        const [name, ...valueParts] = line.split('=');
+        return {
+          name: name.trim(),
+          value: valueParts.join('=').trim() // Rejoin in case value contains = characters
+        };
+      });
+  };
+
+  // Handler for uploading .env files
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0 || readOnly) return;
+
+    const file = event.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      if (!e.target?.result) return;
+
+      const content = e.target.result.toString();
+      const envVars = parseEnvContent(content);
+      addMultipleEnvVars(envVars);
+    };
+    reader.readAsText(file);
+
+    // Reset the input
+    event.target.value = '';
+  };
+
+
+
+  const updateVolumeMount = (vmIdx: number, patch: Partial<{ source_volume_name: string, source_sub_path: string, target_path: string }>) => {
+    if (readOnly) return; // Don't update if in read-only mode
+
+    // Check for duplicate target paths if updating target_path
+    if (patch.target_path && resource.volume_mounts) {
+      const isDuplicate = resource.volume_mounts.some(
+        (vm, i) => i !== vmIdx && vm.target_path === patch.target_path
+      );
+
+      if (isDuplicate) {
+        // Show an error using toast or modify the patch to trigger error display
+        toast({
+          title: "Duplicate Target Path",
+          description: "Each volume mount must have a unique target path within a resource.",
+          variant: "destructive",
+        });
+        return; // Don't update if duplicate
+      }
+    }
+
+    update({
+      volume_mounts: (resource.volume_mounts || []).map((vm, i) =>
+        i === vmIdx ? { ...vm, ...patch } : vm
+      ),
+    });
+  };
+
+  const removeVolumeMount = (vmIdx: number) => {
+    if (readOnly) return; // Don't remove if in read-only mode
+    update({
+      volume_mounts: (resource.volume_mounts || []).filter((_, i) => i !== vmIdx),
+    });
+  };
+
+  // Helper for updating depends_on
+  const updateDependsOn = (dependsOn: string[]) => {
+    if (readOnly) return; // Don't update if in read-only mode
+    update({ depends_on: dependsOn });
+  };
+
+  // Helper for adding a port
+  const addPort = () => {
+    if (readOnly) return; // Don't add if in read-only mode
+    update({
+      ports: [
+        ...(resource.ports || []),
+        { number: 80, protocol: "tcp", exposed_to_public: false },
+      ],
+    });
+  };
+
+  // Helper for updating a port
+  const updatePort = (pidx: number, patch: Partial<{ number: number, protocol: "http" | "tcp", exposed_to_public: boolean, subdomain_prefix: string }>) => {
+    if (readOnly) return; // Don't update if in read-only mode
+    update({
+      ports: (resource.ports || []).map((port, i) =>
+        i === pidx ? { ...port, ...patch } : port
+      ),
+    });
+  };
+
+  // Helper for removing a port
+  const removePort = (pidx: number) => {
+    if (readOnly) return; // Don't remove if in read-only mode
+    update({
+      ports: (resource.ports || []).filter((_, i) => i !== pidx),
+    });
+  };
+
+  return (
+    <AccordionItem value={String(index)} className="border-0">
+      <AccordionTrigger
+        ref={itemRef}
+        className="px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
+      >
+        <div className="flex items-center gap-2 text-left flex-grow">
+          <div className="flex flex-col flex-grow min-w-0">
+            <span className="font-medium flex items-center gap-2">
+              {resource.sourceType === "image" ? (
+                <Box className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <GitBranch className="h-4 w-4 text-muted-foreground" />
+              )}
+              {resource.name || `Resource ${index + 1}`}
+            </span>
+            <span className="text-sm text-muted-foreground truncate pl-6">
+              {resource.sourceType === "image"
+                ? resource.image_spec?.image || "No image specified"
+                : resource.build_spec?.source_context?.git_repo?.repo_url || "No repository specified"}
+            </span>
+            {errors._form && (
+              <span className="text-xs text-destructive mt-0.5">{errors._form}</span>
+            )}
+          </div>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent className="pb-4 pt-2">
+        <div className="px-4 space-y-4">
+          <Tabs defaultValue="configuration" className="w-full">
+            <div className="mt-1 mb-3">
+              <TabsList className="grid grid-cols-3 w-full">
+                <TabsTrigger value="configuration">Configuration</TabsTrigger>
+                <TabsTrigger value="deployment">Deployment</TabsTrigger>
+                <TabsTrigger value="environment">Environment Variables</TabsTrigger>
+              </TabsList>
+            </div>
+
+            {/* General Section (always at top) */}
+            <TabsContent value="configuration" className="pt-4 space-y-6">
+              <div>
+                <h3 className="text-lg font-medium mb-3">General</h3>
+                <div className="grid gap-4 max-w-3xl">
+                  <div>
+                    <div className="flex items-center gap-1 mb-2">
+                      <Label htmlFor={`resource-name-${index}`} className="text-sm font-medium">
+                        Resource Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Tooltip delayDuration={300}>
+                        <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                        <TooltipContent side="top">A unique name for this resource</TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input
+                      id={`resource-name-${index}`}
+                      placeholder="e.g., api, database, frontend"
+                      value={resource.name || ""}
+                      onChange={e => update({ name: e.target.value })}
+                      className={`max-w-xl ${getError(errors, "name") ? "border-destructive" : ""}`}
+                      required
+                      aria-invalid={!!getError(errors, "name")}
+                      disabled={readOnly}
+                    />
+                    {getError(errors, "name") && (
+                      <p className="text-sm text-destructive mt-1">{getError(errors, "name")}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Depends On</Label>
+                    {_allResources ? (
+                      <MultiSelect
+                        options={_allResources
+                          .filter((r) => r.index !== index && r.name && r.name.trim() !== "")
+                          .map((r) => ({ label: r.name, value: r.name }))}
+                        onValueChange={updateDependsOn}
+                        defaultValue={resource.depends_on || []}
+                        placeholder={_allResources.length <= 1 ? "No other resources available" : "Select dependencies"}
+                        disabled={_allResources.length <= 1 || readOnly}
+                        className="w-full"
+                      />
+                    ) : (
+                      <div className="text-sm text-muted-foreground">No dependency information available</div>
+                    )}
+                    {errors["depends_on"] && (
+                      <p className="text-sm text-destructive">{errors["depends_on"]}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">Select resources this service depends on. They will be started first.</p>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-1 mb-2">
+                      <Label htmlFor={`resource-source-${index}`} className="text-sm font-medium">
+                      Build From <span className="text-red-500">*</span>
+                      </Label>
+                      <Tooltip delayDuration={300}>
+                        <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p>Select how this resource should be built: from a pre-built Box image or from a Git repository.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Select
+                      value={resource.sourceType || "image"}
+                      onValueChange={val => update({ sourceType: val as "image" | "git" })}
+                      disabled={readOnly}
+                    >
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Select source type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="image">
+                          <div className="flex items-center gap-2">
+                            <Box size={16} />
+                            <span>Container Image</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="git">
+                          <div className="flex items-center gap-2">
+                            <GitBranch size={16} />
+                            <span>Git Repository</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {resource.sourceType === "image" ? (
+                    <div className="grid gap-4 max-w-3xl">
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`container-image-${index}`} className="text-sm font-medium">
+                            Container Image <span className="text-red-500">*</span>
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>Docker image URL (e.g., nginx:latest)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Input
+                          id={`container-image-${index}`}
+                          placeholder="e.g., nginx:latest, redis:7"
+                          value={resource.image_spec?.image || ""}
+                          onChange={e => updateImageSpec({ image: e.target.value })}
+                          className={`max-w-xl ${getError(errors, "image_spec.image") ? "border-destructive" : ""}`}
+                          required={resource.sourceType === "image"}
+                          aria-invalid={!!getError(errors, "image_spec.image")}
+                          disabled={readOnly}
+                        />
+                        {getError(errors, "image_spec.image") && (
+                          <p className="text-sm text-destructive mt-1">{getError(errors, "image_spec.image")}</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 max-w-3xl">
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`git-repo-${index}`} className="text-sm font-medium">
+                            Git Repository URL <span className="text-red-500">*</span>
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top">URL to the Git repository for this resource</TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Input
+                          id={`git-repo-${index}`}
+                          value={resource.build_spec?.source_context?.git_repo?.repo_url || ""}
+                          onChange={e => updateBuildSpec({ source_context: { git_repo: { repo_url: e.target.value }}})}
+                          placeholder="https://github.com/username/repository.git"
+                          className={`max-w-xl ${getError(errors, "build_spec.source_context.git_repo.repo_url") ? "border-destructive" : ""}`}
+                          required={resource.sourceType === "git"}
+                          aria-invalid={!!getError(errors, "build_spec.source_context.git_repo.repo_url")}
+                          disabled={readOnly}
+                        />
+                        {getError(errors, "build_spec.source_context.git_repo.repo_url") && (
+                          <p className="text-sm text-destructive">{getError(errors, "build_spec.source_context.git_repo.repo_url")}</p>
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`git-revision-type-${index}`} className="text-sm font-medium">
+                            Git Revision Type <span className="text-red-500">*</span>
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top">Select the type of Git revision to use</TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Select
+                          value={resource.gitRevisionType}
+                          onValueChange={val => update({ gitRevisionType: val as "branch" | "commit" | "tag" })}
+                          disabled={readOnly}
+                        >
+                          <SelectTrigger
+                            id={`git-revision-type-${index}`}
+                            className={`max-w-xl ${getError(errors, "gitRevisionType") ? "border-destructive" : ""}`}
+                          >
+                            <SelectValue placeholder="Select revision type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="branch">Branch</SelectItem>
+                            <SelectItem value="commit">Commit</SelectItem>
+                            <SelectItem value="tag">Tag</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {getError(errors, "gitRevisionType") && (
+                          <p className="text-sm text-destructive mt-1">{getError(errors, "gitRevisionType")}</p>
+                        )}
+                      </div>
+                      {resource.gitRevisionType && (
+                        <div>
+                          <div className="flex items-center gap-1 mb-2">
+                            <Label htmlFor={`git-revision-value-${index}`} className="text-sm font-medium">
+                              {resource.gitRevisionType === "branch"
+                                ? "Branch Name"
+                                : resource.gitRevisionType === "commit"
+                                  ? "Commit Hash"
+                                  : "Tag Name"} <span className="text-red-500">*</span>
+                            </Label>
+                            <Tooltip delayDuration={300}>
+                              <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                              <TooltipContent side="top">
+                                {resource.gitRevisionType === "branch"
+                                  ? "The branch to checkout (e.g., main)"
+                                  : resource.gitRevisionType === "commit"
+                                    ? "The full commit hash to checkout"
+                                    : "The tag to checkout (e.g., v1.0.0)"}
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <Input
+                            id={`git-revision-value-${index}`}
+                            value={resource.gitRevisionValue || ""}
+                            onChange={e => update({ gitRevisionValue: e.target.value })}
+                            placeholder={
+                              resource.gitRevisionType === "branch"
+                                ? "e.g., main, develop"
+                                : resource.gitRevisionType === "commit"
+                                  ? "e.g., a1b2c3d4e5..."
+                                  : "e.g., v1.0.0"
+                            }
+                            className={`max-w-xl ${getError(errors, "gitRevisionValue") ? "border-destructive" : ""}`}
+                            required={!!resource.gitRevisionType}
+                            aria-invalid={!!getError(errors, "gitRevisionValue")}
+                            disabled={readOnly}
+                            onBlur={() => {
+                              // Mark as touched to trigger error display on submit
+                              if (!resource.gitRevisionValue) {
+                                update({ gitRevisionValue: "" });
+                              }
+                            }}
+                          />
+                          {getError(errors, "gitRevisionValue") && (
+                            <p className="text-sm text-destructive mt-1">{getError(errors, "gitRevisionValue")}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <Separator className="my-4" />
+              {/* Volume Mounts Section */}
+              <div>
+                <h3 className="text-lg font-medium mb-3">Volume Mounts</h3>
+                <div className="grid gap-6 max-w-3xl">
+                  {(resource.volume_mounts || []).map((vm, vmIdx) => (
+                    <div key={vmIdx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`volume-name-${index}-${vmIdx}`} className="text-sm font-medium">
+                            Volume <span className="text-red-500">*</span>
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top">Select the volume to mount</TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Select
+                          value={vm.source_volume_name || ""}
+                          onValueChange={(value) => updateVolumeMount(vmIdx, { source_volume_name: value })}
+                          disabled={readOnly}
+                        >
+                          <SelectTrigger
+                            id={`volume-name-${index}-${vmIdx}`}
+                            className={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) ? "border-destructive" : ""}
+                          >
+                            <SelectValue placeholder="Select volume" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(volumes || []).filter(vol => !!vol.name).length === 0 ? (
+                              <div className="p-2 text-sm text-muted-foreground">No volumes available</div>
+                            ) : (
+                              (volumes || []).filter(vol => !!vol.name).map((vol, vidx) => (
+                                <SelectItem key={vidx} value={vol.name!}>
+                                  <div className="flex items-center gap-2">
+                                    <Database className="h-4 w-4" />
+                                    <span>{vol.name}</span>
+                                    {vol.spec?.size && <span className="ml-1 text-xs text-muted-foreground">({vol.spec.size})</span>}
+                                  </div>
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) && (
+                          <p className="text-sm text-destructive">{getError(errors, `volume_mounts.${vmIdx}.source_volume_name`)}</p>
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`volume-subpath-${index}-${vmIdx}`} className="text-sm font-medium">
+                            Sub Path
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top">Optional path within the volume</TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Input
+                          id={`volume-subpath-${index}-${vmIdx}`}
+                          value={vm.source_sub_path || ""}
+                          onChange={(e) => updateVolumeMount(vmIdx, { source_sub_path: e.target.value })}
+                          placeholder="e.g., data/config"
+                          disabled={readOnly}
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`volume-target-${index}-${vmIdx}`} className="text-sm font-medium">
+                            Target Path <span className="text-red-500">*</span>
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top">Path in container to mount the volume</TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Input
+                          id={`volume-target-${index}-${vmIdx}`}
+                          value={vm.target_path || ""}
+                          onChange={(e) => updateVolumeMount(vmIdx, { target_path: e.target.value })}
+                          placeholder="e.g., /mnt/data"
+                          className={getError(errors, `volume_mounts.${vmIdx}.target_path`) ? "border-destructive" : ""}
+                          required
+                          disabled={readOnly}
+                        />
+                        {getError(errors, `volume_mounts.${vmIdx}.target_path`) && (
+                          <p className="text-sm text-destructive">{getError(errors, `volume_mounts.${vmIdx}.target_path`)}</p>
+                        )}
+                      </div>
+                      <div className="flex justify-end">
+                        {!readOnly && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeVolumeMount(vmIdx)}
+                            title="Remove volume mount"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <div>
+                    {!readOnly && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={addVolumeMount}
+                        disabled={(volumes || []).length === 0}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />Add Volume Mount
+                      </Button>
+                    )}
+                    {(volumes || []).length === 0 && (
+                      <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <Separator className="my-4" />
+              {/* Ports Section */}
+              <div>
+                <h3 className="text-lg font-medium mb-3">Ports</h3>
+                <div className="grid gap-6 max-w-3xl">
+                  {(resource.ports || []).map((port, pidx) => (
+                    <div key={pidx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`port-number-${index}-${pidx}`} className="text-sm font-medium">
+                            Port Number <span className="text-red-500">*</span>
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top">Container port number</TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Input
+                          id={`port-number-${index}-${pidx}`}
+                          type="number"
+                          min="1"
+                          max="65535"
+                          value={port.number?.toString() || ""}
+                          onChange={(e) => updatePort(pidx, { number: parseInt(e.target.value) || 0 })}
+                          className={getError(errors, `ports.${pidx}.number`) ? "border-destructive" : ""}
+                          required
+                          disabled={readOnly}
+                        />
+                        {getError(errors, `ports.${pidx}.number`) && (
+                          <p className="text-sm text-destructive">{getError(errors, `ports.${pidx}.number`)}</p>
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`port-protocol-${index}-${pidx}`} className="text-sm font-medium">
+                            Protocol
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top">Port communication protocol</TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Select
+                          value={port.protocol || "tcp"}
+                          onValueChange={(value) => updatePort(pidx, { protocol: value as "tcp" | "http" })}
+                          disabled={readOnly}
+                        >
+                          <SelectTrigger id={`port-protocol-${index}-${pidx}`}>
+                            <SelectValue placeholder="Select protocol" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="tcp">TCP</SelectItem>
+                            <SelectItem value="http">HTTP</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`port-expose-${index}-${pidx}`} className="text-sm font-medium">
+                            Public Access
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top">Make this port accessible from outside the cluster</TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <div className="flex items-center space-x-2 h-[40px]"> {/* Match height with inputs */}
+                          <Switch
+                            id={`port-expose-${index}-${pidx}`}
+                            checked={port.exposed_to_public || false}
+                            onCheckedChange={(checked) => updatePort(pidx, { exposed_to_public: checked })}
+                            disabled={readOnly}
+                          />
+                          <Label htmlFor={`port-expose-${index}-${pidx}`} className="text-sm font-medium cursor-pointer">
+                            {port.exposed_to_public ? "Exposed" : "Internal Only"}
+                          </Label>
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        {!readOnly && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removePort(pidx)}
+                            title="Remove port"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <div>
+                    {!readOnly && (
+                      <Button variant="ghost" size="sm" onClick={addPort}>
+                        <Plus className="h-4 w-4 mr-2" />Add Port
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Deployment Tab */}
+            <TabsContent value="deployment" className="pt-4 space-y-6">
+              {/* Pre-Deploy Section (Init) */}
+              <div>
+                <h3 className="text-lg font-medium mb-3">Pre-Deployment Configuration</h3>
+                <div className="grid gap-4 max-w-3xl">
+                  <div>
+                    <div className="flex items-center gap-1 mb-2">
+                      <Label htmlFor={`init-command-${index}`} className="text-sm font-medium">
+                      Init Command
+                      </Label>
+                      <Tooltip delayDuration={300}>
+                        <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                        <TooltipContent side="top">Pre-deployment init command (comma separated)</TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input
+                      id={`init-command-${index}`}
+                      value={resource.init_spec?.command?.join(",") || ""}
+                      onChange={e => update({ init_spec: { ...resource.init_spec, command: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
+                      placeholder="e.g., sh,/scripts/init.sh"
+                      disabled={readOnly}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1 mb-2">
+                      <Label htmlFor={`init-args-${index}`} className="text-sm font-medium">
+                      Init Arguments
+                      </Label>
+                      <Tooltip delayDuration={300}>
+                        <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                        <TooltipContent side="top">Pre-deployment arguments (comma separated)</TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input
+                      id={`init-args-${index}`}
+                      value={resource.init_spec?.args?.join(",") || ""}
+                      onChange={e => update({ init_spec: { ...resource.init_spec, args: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
+                      placeholder="e.g., arg1,arg2,arg3"
+                      disabled={readOnly}
+                    />
+                  </div>
+                </div>
+              </div>
+              <Separator className="my-4" />
+              {/* Post-Deploy Section (Execution) */}
+              <div>
+                <h3 className="text-lg font-medium mb-3">Main Container Configuration</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                Main container runtime settings
+                </p>
+                <div className="grid gap-4 max-w-3xl">
+                  <div>
+                    <div className="flex items-center gap-1 mb-2">
+                      <Label htmlFor={`exec-command-${index}`} className="text-sm font-medium">
+                      Command
+                      </Label>
+                      <Tooltip delayDuration={300}>
+                        <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                        <TooltipContent side="top">Container runtime command (comma separated)</TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input
+                      id={`exec-command-${index}`}
+                      value={resource.execution_config?.command?.join(",") || ""}
+                      onChange={e => update({ execution_config: { ...resource.execution_config, command: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
+                      placeholder="e.g., node,server.js"
+                      disabled={readOnly}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1 mb-2">
+                      <Label htmlFor={`exec-args-${index}`} className="text-sm font-medium">
+                      Arguments
+                      </Label>
+                      <Tooltip delayDuration={300}>
+                        <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                        <TooltipContent side="top">Container runtime arguments (comma separated)</TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input
+                      id={`exec-args-${index}`}
+                      value={resource.execution_config?.args?.join(",") || ""}
+                      onChange={e => update({ execution_config: { ...resource.execution_config, args: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
+                      placeholder="e.g., --port=3000,--verbose"
+                      disabled={readOnly}
+                    />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Environment Variables Tab */}
+            <TabsContent value="environment" className="pt-4">
+              <div className="flex items-center mb-3">
+                <h3 className="text-lg font-medium">Environment Variables</h3>
+                {!readOnly && (
+                  <div className="ml-auto flex gap-2">
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => {
+                      if (resource.execution_config?.environment_variables?.length) {
+                        update({
+                          execution_config: {
+                            ...resource.execution_config,
+                            environment_variables: []
+                          }
+                        });
+                        toast({
+                          title: "Environment variables cleared",
+                          description: "All environment variables have been removed",
+                        });
+                      }
+                    }} disabled={!(resource.execution_config?.environment_variables?.length)}>
+                      <X className="h-4 w-4 mr-1" />
+                      <span>Clear All</span>
+                    </Button>
+                    {/* Paste Variables button */}
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="gap-2">
+                          <Copy className="h-4 w-4" />
+                          <span>Paste Variables</span>
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="w-[95vw] max-w-4xl p-0 overflow-auto">
+                        <div className="p-6">
+                          <DialogHeader>
+                            <DialogTitle className="text-lg font-medium">
+                              Paste Environment Variables
+                            </DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor={`env-paste-${index}`} className="text-sm font-medium">
+                                Paste in KEY=VALUE format (one per line)
+                              </Label>
+                              <div className="relative">
+                                <Textarea
+                                  id={`env-paste-${index}`}
+                                  placeholder={
+                                    'DATABASE_URL=postgres://user:pass@localhost:5432/db\n' +
+                                    'API_KEY=your_api_key\n' +
+                                    '# NODE_ENV=development'
+                                  }
+                                  className="font-mono text-sm min-h-[180px] w-full"
+                                />
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Lines starting with # will be ignored as comments
+                              </p>
+                            </div>
+                            <Button
+                              onClick={() => {
+                                const textarea = document.getElementById(
+                                  `env-paste-${index}`
+                                ) as HTMLTextAreaElement | null;
+                                if (textarea) {
+                                  const content = textarea.value.trim();
+                                  if (content) {
+                                    const envVars = parseEnvContent(content);
+                                    addMultipleEnvVars(envVars);
+                                  }
+                                }
+                              }}
+                            >
+                              Add Variables
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    {/* Import from file button */}
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <Upload className="h-4 w-4 mr-2" /> Import File
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Import Environment Variables</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="flex flex-col gap-2">
+                            <Label htmlFor={`env-file-upload-${index}`} className="text-sm font-medium">
+                              Upload .env File
+                            </Label>
+                            <div className="flex items-center justify-center w-full">
+                              <label htmlFor={`env-file-upload-${index}`} className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 hover:bg-muted/30">
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                  <FileText className="w-8 h-8 mb-2 text-muted-foreground" />
+                                  <p className="mb-2 text-sm text-muted-foreground">Click to upload or drag and drop</p>
+                                  <p className="text-xs text-muted-foreground">Supports .env files</p>
+                                </div>
+                                <input
+                                  id={`env-file-upload-${index}`}
+                                  type="file"
+                                  accept=".env,text/plain"
+                                  className="hidden"
+                                  onChange={handleFileUpload}
+                                />
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                )}
+              </div>
+              <div className="overflow-x-auto relative">
+                <table className="min-w-full border border-muted rounded-md">
+                  <thead className="bg-muted/30">
+                    <tr>
+                      <th className="text-left px-6 py-3 text-sm">Key</th>
+                      <th className="text-left px-6 py-3 text-sm">Value</th>
+                      <th className="w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(resource.execution_config?.environment_variables || []).length ? (
+                      (resource.execution_config?.environment_variables || []).map((env, envIdx) => (
+                        <tr key={envIdx} className="border-t border-muted">
+                          <td className="px-6 py-3">
+                            <Input
+                              value={env.name || ""}
+                              onChange={(e) => updateEnvVar(envIdx, e.target.value, env.value || "")}
+                              className="max-w-full text-sm font-mono"
+                              placeholder="KEY"
+                              disabled={readOnly}
+                            />
+                          </td>
+                          <td className="px-6 py-3">
+                            <Input
+                              value={env.value || ""}
+                              onChange={(e) => updateEnvVar(envIdx, env.name || "", e.target.value)}
+                              className="max-w-full text-sm font-mono"
+                              placeholder="VALUE"
+                              disabled={readOnly}
+                            />
+                          </td>
+                          <td className="px-6 py-3">
+                            {!readOnly && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => removeEnvVar(envIdx)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={3} className="px-6 py-8 text-center text-muted-foreground">
+                          No environment variables defined
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                {/* Add Variable button inside table, bottom right */}
+                {!readOnly && (
+                  <div className="flex justify-end mt-2">
+                    <Button variant="ghost" size="sm" onClick={addEnvVar} disabled={readOnly}>
+                      <Plus className="h-4 w-4 mr-2" /> Add Variable
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          {!readOnly && (
+            <div className="flex justify-center items-center mt-8">
+              <span className="flex items-center justify-center w-full py-3 rounded-md bg-muted/70">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-destructive opacity-80 hover:text-destructive"
+                  onClick={() => onRemove(index)}
+                  title="Remove resource"
+                >
+                  <Trash2 className="h-5 w-5 mr-2" />
+                  Remove Resource
+                </Button>
+              </span>
+            </div>
+          )}
+        </div>
+      </AccordionContent>
+    </AccordionItem>
+  );
+}

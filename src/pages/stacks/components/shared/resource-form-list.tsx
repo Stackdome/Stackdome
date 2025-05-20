@@ -32,8 +32,8 @@ export default function ResourceFormList<T>({
   createDefaultItem,
   renderItem,
   addButtonText = "Add Item",
-  autoAddFirstItem = true,
-  emptyText = "None added",
+  autoAddFirstItem = false, // default to false for blank state
+  emptyText = "No items added.",
   emptyIcon
 }: ResourceFormListProps<T>) {
   const [openAccordions, setOpenAccordions] = useState<string[]>(["0"]);
