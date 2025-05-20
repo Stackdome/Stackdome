@@ -23,6 +23,7 @@ interface ResourceFormListProps<T> {
   emptyText?: string;
   emptyIcon?: ReactNode;
   readOnly?: boolean;
+  defaultAllCollapsed?: boolean; // If true, all accordions start closed
 }
 
 export default function ResourceFormList<T>({
@@ -34,8 +35,12 @@ export default function ResourceFormList<T>({
   autoAddFirstItem = false, // default to false for blank state
   emptyText = "No Resources added.",
   emptyIcon,
+  defaultAllCollapsed = false,
 }: ResourceFormListProps<T>) {
-  const [openAccordions, setOpenAccordions] = useState<string[]>(["0"]);
+  // Set initial open accordions based on defaultAllCollapsed
+  const [openAccordions, setOpenAccordions] = useState<string[]>(
+    defaultAllCollapsed ? [] : ["0"]
+  );
   const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 

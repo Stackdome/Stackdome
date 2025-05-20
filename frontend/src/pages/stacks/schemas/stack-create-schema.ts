@@ -64,13 +64,13 @@ export const StackResourceBuildSpecSchema = z.object({
   source_context: BuildSourceContextSchema,
   context_path_within_source: z.string().optional().default('./'),
   dockerfile_path: z.string().optional().default('Dockerfile'),
-  source_revision: z.object({ // Simplified, actual revision comes from git_repo_revision within
+  source_revision: z.object({
     git_repo_revision: GitRepoRevisionSchema.optional(),
-    // volume_source_revision is not direct user input for this schema part
   }).optional(),
-  image_repository_url: z.object({ // User input
-    url: z.string().min(1, "Image repository URL is required"),
-    cluster_registry_id: z.string().optional(), // Assuming this might be selected or auto-filled
+  image_repository: z.object({
+    external_image_repo_url: z.string().min(1, "Image repository URL is required"),
+    use_internal_registry: z.boolean().optional(),
+    cluster_registry_id: z.string().optional(),
   }),
   insecure_registry: z.boolean().optional().default(false),
 });
@@ -212,7 +212,6 @@ export const VolumeSchema = z.object({
   name: z.string().min(1, 'Volume name is required'),
   labels: z.array(LabelSchema).optional(),
   annotations: z.array(AnnotationSchema).optional(),
-  workspace_name: z.string().min(1, 'Workspace name is required'),
   spec: VolumeSpecSchema,
 });
 
@@ -244,16 +243,15 @@ function omitUIFieldsFromResource(resource: StackResourceData): Omit<StackResour
   delete (rest as Partial<StackResourceData>).sourceType;
   delete (rest as Partial<StackResourceData>).gitRevisionType;
   delete (rest as Partial<StackResourceData>).gitRevisionValue;
+
   return rest as Omit<StackResourceData, "sourceType" | "gitRevisionType" | "gitRevisionValue">;
 }
 
 function omitUIFieldsFromVolume(volume: VolumeFormData | VolumeData): Omit<VolumeFormData, "sourceType"> | Omit<VolumeData, "sourceType"> {
-  if ("sourceType" in volume) {
-    const rest = { ...volume };
-    delete (rest as Partial<VolumeFormData>).sourceType;
-    return rest as Omit<VolumeFormData, "sourceType">;
-  }
-  return volume;
+  const rest = { ...volume };
+  delete (rest as Partial<VolumeFormData>).sourceType;
+
+  return rest;
 }
 
 export function stripUIFieldsFromStackData(stackData: StackData): Omit<Stack, 'workspace_name'> {

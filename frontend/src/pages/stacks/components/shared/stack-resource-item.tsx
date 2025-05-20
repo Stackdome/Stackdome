@@ -82,10 +82,8 @@ export default function StackResourceItem({
       source_context: { git_repo: { repo_url: '' } },
       context_path_within_source: './',
       dockerfile_path: 'Dockerfile',
-      image_repository_url: { url: '', cluster_registry_id: '' },
-      insecure_registry: false
+      image_repository: { external_image_repo_url: '' },
     };
-
     update({
       build_spec: { ...currentBuildSpec, ...patch },
       image_spec: undefined,
@@ -469,6 +467,32 @@ export default function StackResourceItem({
                         />
                         {getError(errors, "build_spec.source_context.git_repo.repo_url") && (
                           <p className="text-sm text-destructive">{getError(errors, "build_spec.source_context.git_repo.repo_url")}</p>
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1 mb-2">
+                          <Label htmlFor={`external-image-repo-url-${index}`} className="text-sm font-medium">
+                            Image Repository URL <span className="text-red-500">*</span>
+                          </Label>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger tabIndex={-1} className="cursor-help rounded-full bg-muted px-1 text-xs text-muted-foreground">?</TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p>The external container registry URL where images built from this Git repo will be pushed (e.g., ghcr.io/your-org/your-image).</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Input
+                          id={`external-image-repo-url-${index}`}
+                          value={resource.build_spec?.image_repository?.external_image_repo_url || ""}
+                          onChange={e => updateBuildSpec({ image_repository: { external_image_repo_url: e.target.value } })}
+                          placeholder="e.g., ghcr.io/your-org/your-image"
+                          className={`max-w-xl ${getError(errors, "build_spec.image_repository.external_image_repo_url") ? "border-destructive" : ""}`}
+                          required={resource.sourceType === "git"}
+                          aria-invalid={!!getError(errors, "build_spec.image_repository.external_image_repo_url")}
+                          disabled={readOnly}
+                        />
+                        {getError(errors, "build_spec.image_repository.external_image_repo_url") && (
+                          <p className="text-sm text-destructive">{getError(errors, "build_spec.image_repository.external_image_repo_url")}</p>
                         )}
                       </div>
                       <div>

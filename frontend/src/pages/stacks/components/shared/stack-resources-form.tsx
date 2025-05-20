@@ -11,6 +11,7 @@ interface StackResourcesFormProps {
   errors: { [index: number]: { [field: string]: string | undefined } };
   volumes?: Partial<VolumeFormData>[];
   readOnly?: boolean;
+  accordionDefaultOpen?: boolean; // If false, all collapsed by default
 }
 
 function getDefaultResource(): Partial<StackResourceData> {
@@ -32,7 +33,8 @@ export default function StackResourcesForm({
   onResourcesChange,
   errors,
   volumes = [],
-  readOnly = false
+  readOnly = false,
+  accordionDefaultOpen = true,
 }: StackResourcesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
 
@@ -77,6 +79,7 @@ export default function StackResourcesForm({
           />
         )}
         readOnly={readOnly}
+        defaultAllCollapsed={!accordionDefaultOpen}
       />
       {/* Only show add button if not readOnly */}
       {!readOnly && (

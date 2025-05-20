@@ -163,7 +163,6 @@ export default function StackCreatePage() {
         ...newFormData.spec,
         volumes: updatedVolumes.map(vol => ({
           name: vol.name || '',
-          workspace_name: vol.workspace_name || newFormData.workspace_name || 'default',
           labels: vol.labels,
           annotations: vol.annotations,
           spec: {
@@ -260,9 +259,13 @@ export default function StackCreatePage() {
               },
               context_path_within_source: sr.build_spec.context_path_within_source || "./",
               dockerfile_path: sr.build_spec.dockerfile_path || "Dockerfile",
-              image_repository_url: sr.build_spec.image_repository_url?.url
-                ? { url: sr.build_spec.image_repository_url.url, cluster_registry_id: sr.build_spec.image_repository_url.cluster_registry_id }
-                : { url: sr.build_spec.image_repository_url?.url || "", cluster_registry_id: sr.build_spec.image_repository_url?.cluster_registry_id },
+              image_repository: sr.build_spec.image_repository
+                ? {
+                  external_image_repo_url: sr.build_spec.image_repository.external_image_repo_url || "",
+                  use_internal_registry: sr.build_spec.image_repository.use_internal_registry,
+                  cluster_registry_id: sr.build_spec.image_repository.cluster_registry_id,
+                }
+                : { external_image_repo_url: "" },
               insecure_registry: sr.build_spec.insecure_registry || false,
               source_revision: git_repo_revision ? { git_repo_revision } : undefined,
             } : undefined;
@@ -295,7 +298,6 @@ export default function StackCreatePage() {
             })();
             return {
               name: vol.name || "",
-              workspace_name: vol.workspace_name || formData.workspace_name || "default",
               labels: vol.labels?.length ? vol.labels : undefined,
               annotations: vol.annotations?.length ? vol.annotations : undefined,
               spec: {
@@ -588,7 +590,6 @@ export default function StackCreatePage() {
               volumes={formData.spec?.volumes || []}
               onVolumesChange={handleVolumesChange}
               errors={volumesErrors}
-              workspace={formData.workspace_name}
             />
           </CardContent>
         </Card>

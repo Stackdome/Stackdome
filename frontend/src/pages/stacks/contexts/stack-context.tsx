@@ -1,21 +1,12 @@
 import { createContext, useState, useContext } from 'react';
 import type { ReactNode } from 'react';
-
-// Stack type definition
-export interface Stack {
-  id: string;
-  name: string;
-  description?: string;
-  status: 'running' | 'stopped' | 'deploying';
-  template?: string;
-  created: Date;
-  icon?: string;
-}
+import type { Stack } from '@/pages/stacks/types';
 
 // Context type definition
 interface StackContextType {
   stacks: Stack[];
-  addStack: (stack: Omit<Stack, 'id' | 'created' | 'status'>) => void;
+  setStacks: (stacks: Stack[]) => void;
+  addStack: (stack: Omit<Stack, 'id' | 'created_at' | 'status'>) => void;
   removeStack: (id: string) => void;
 }
 
@@ -27,14 +18,15 @@ export function StackProvider({ children }: { children: ReactNode }) {
   const [stacks, setStacks] = useState<Stack[]>([]);
 
   // Add a new stack
-  const addStack = (stackData: Omit<Stack, 'id' | 'created' | 'status'>) => {
+  const addStack = (stackData: Omit<Stack, 'id' | 'created_at' | 'status'>) => {
+    // id, created_at, and status are always set here; spec comes from stackData
     const newStack: Stack = {
       id: `stack-${Date.now()}`,
-      created: new Date(),
-      status: 'running',
+      created_at: new Date().toISOString(),
+      status: { state: 'running' },
       ...stackData,
     };
-    
+
     setStacks((prevStacks) => [...prevStacks, newStack]);
   };
 
@@ -44,7 +36,7 @@ export function StackProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <StackContext.Provider value={{ stacks, addStack, removeStack }}>
+    <StackContext.Provider value={{ stacks, setStacks, addStack, removeStack }}>
       {children}
     </StackContext.Provider>
   );
@@ -53,10 +45,10 @@ export function StackProvider({ children }: { children: ReactNode }) {
 // Custom hook to use the stack context
 export function useStacks() {
   const context = useContext(StackContext);
-  
+
   if (context === undefined) {
     throw new Error('useStacks must be used within a StackProvider');
   }
-  
+
   return context;
 }

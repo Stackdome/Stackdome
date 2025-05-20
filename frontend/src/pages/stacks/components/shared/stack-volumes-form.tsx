@@ -10,15 +10,14 @@ interface StackVolumesFormProps {
   volumes: Partial<VolumeFormData>[];
   onVolumesChange: (updatedVolumes: Partial<VolumeFormData>[]) => void;
   errors: { [index: number]: { [field: string]: string | undefined } };
-  workspace?: string;
   stackResources?: Partial<StackResourceData>[];
   readOnly?: boolean;
+  accordionDefaultOpen?: boolean; // If false, all collapsed by default
 }
 
-function getDefaultVolume(workspace?: string): Partial<VolumeFormData> {
+function getDefaultVolume(): Partial<VolumeFormData> {
   return {
     name: "",
-    workspace_name: workspace || "",
     sourceType: "None",
     labels: [],
     spec: {
@@ -33,9 +32,9 @@ export default function StackVolumesForm({
   volumes,
   onVolumesChange,
   errors,
-  workspace,
   stackResources = [],
-  readOnly = false
+  readOnly = false,
+  accordionDefaultOpen = true,
 }: StackVolumesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
 
@@ -52,7 +51,7 @@ export default function StackVolumesForm({
   };
 
   const createDefaultVolumeWithWorkspace = () => {
-    return getDefaultVolume(workspace);
+    return getDefaultVolume();
   };
 
   return (
@@ -79,6 +78,7 @@ export default function StackVolumesForm({
         emptyText="No volumes added."
         emptyIcon={<Database className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />}
         readOnly={readOnly}
+        defaultAllCollapsed={!accordionDefaultOpen}
       />
       {/* Only show add button if not readOnly */}
       {!readOnly && (
@@ -86,7 +86,7 @@ export default function StackVolumesForm({
           <Button
             type="button"
             variant="ghost"
-            onClick={() => onVolumesChange([...volumes, getDefaultVolume(workspace)])}
+            onClick={() => onVolumesChange([...volumes, getDefaultVolume()])}
             disabled={readOnly}
           >
             + Add Volume
