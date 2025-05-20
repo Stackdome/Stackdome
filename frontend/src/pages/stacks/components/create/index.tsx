@@ -426,7 +426,7 @@ export default function StackCreatePage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Create New Stack</h2>
           <p className="text-muted-foreground mt-1">
-            Define your stack resources to provision infrastructure
+            Define your stack to provision infrastructure
           </p>
         </div>
         <div className="flex items-center gap-3">

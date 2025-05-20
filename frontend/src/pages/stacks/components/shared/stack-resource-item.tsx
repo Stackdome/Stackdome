@@ -781,7 +781,7 @@ export default function StackResourceItem({
             <TabsContent value="deployment" className="pt-4 space-y-6">
               {/* Pre-Deploy Section (Init) */}
               <div>
-                <h3 className="text-lg font-medium mb-3">Pre-Deployment Configuration</h3>
+                <h3 className="text-lg font-medium mb-3">Pre-Deployment step</h3>
                 <div className="grid gap-4 max-w-3xl">
                   <div>
                     <div className="flex items-center gap-1 mb-2">
@@ -824,10 +824,7 @@ export default function StackResourceItem({
               <Separator className="my-4" />
               {/* Post-Deploy Section (Execution) */}
               <div>
-                <h3 className="text-lg font-medium mb-3">Main Container Configuration</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                Main container runtime settings
-                </p>
+                <h3 className="text-lg font-medium mb-3">Main container step</h3>
                 <div className="grid gap-4 max-w-3xl">
                   <div>
                     <div className="flex items-center gap-1 mb-2">
