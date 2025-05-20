@@ -35,8 +35,8 @@ export default function StackResourcesForm({
   errors,
   volumes = [],
   readOnly = false,
-  addButtonText = "Add Another Resource",
-  autoAddFirstItem = true
+  addButtonText = "Add Resource",
+  autoAddFirstItem = false
 }: StackResourcesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
 

@@ -665,7 +665,7 @@ export default function StackResourceItem({
                         onClick={addVolumeMount}
                         disabled={(volumes || []).length === 0}
                       >
-                        <Plus className="h-4 w-4 mr-2" />Add Volume Mount
+                        <Plus className="h-4 w-4 mr-2" />Add Mount
                       </Button>
                     )}
                     {(volumes || []).length === 0 && (
@@ -1058,11 +1058,10 @@ export default function StackResourceItem({
                 <Button
                   type="button"
                   variant="ghost"
-                  className="text-destructive opacity-80 hover:text-destructive"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10"
                   onClick={() => onRemove(index)}
-                  title="Remove resource"
                 >
-                  <Trash2 className="h-5 w-5 mr-2" />
+                  <Trash2 className="h-4 w-4 mr-1" />
                   Remove Resource
                 </Button>
               </span>

@@ -82,7 +82,7 @@ export default function StackVolumesForm({
         )}
         addButtonText={addButtonText}
         autoAddFirstItem={autoAddFirstItem}
-        emptyText="No volumes added (Optional) "
+        emptyText="No volumes added."
         emptyIcon={<Database className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />}
       />
       <Dialog open={pendingRemoveIdx !== null} onOpenChange={open => !open && setPendingRemoveIdx(null)}>
