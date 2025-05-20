@@ -28,4 +28,6 @@ var MigrationList = []*gormigrate.Migration{
 	addSourceVolumeNameToVolumeMounts(),
 	createStackVolumesTable(),
 	addVolumeIDFkConstraintToVolumeMounts(),
+	createOrganisationDomainsTable(),
+	replaceDomainWithStackDomainsTable(),
 }

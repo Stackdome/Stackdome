@@ -8,6 +8,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type dbOrganisationStore struct {
@@ -36,7 +37,7 @@ func (d dbOrganisationStore) Create(ctx context.Context, org *models.Organisatio
 func (d dbOrganisationStore) Get(ctx context.Context, id string) (*models.Organisation, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var org models.Organisation
-	err := grm.Model(&models.Organisation{}).Where("id = ?", id).First(&org).Error
+	err := grm.Model(&models.Organisation{}).Preload(clause.Associations).Where("id = ?", id).First(&org).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NotFound("organisation with id '%s' not found", id)
@@ -49,7 +50,7 @@ func (d dbOrganisationStore) Get(ctx context.Context, id string) (*models.Organi
 func (d dbOrganisationStore) GetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var org models.Organisation
-	err := grm.Model(&models.Organisation{}).Where("\"default\" = ?", true).First(&org).Error
+	err := grm.Model(&models.Organisation{}).Preload(clause.Associations).Where("\"default\" = ?", true).First(&org).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NotFound("default organisation not found")
@@ -70,13 +71,6 @@ func (d dbOrganisationStore) Delete(ctx context.Context, id string) *errors.Serv
 		}
 		return errors.GeneralError("failed to delete organisation: %s", err.Error())
 	}
-
-	err = tx.Where("owner_id = ? AND owner_type = ?", id, models.OwnerTypeOrganisation).Delete(&models.Domain{}).Error
-	if err != nil {
-		tx.Rollback()
-		return errors.GeneralError("failed to delete domains for organisation: %s", err.Error())
-	}
-	tx.Commit()
 	return nil
 }
 

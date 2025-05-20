@@ -20,9 +20,10 @@ type OrganisationService interface {
 }
 
 type organisationService struct {
-	organisationStore stores.OrganisationStore
-	domainNameService DomainsService
-	logger            logger.Logger
+	organisationStore         stores.OrganisationStore
+	organisationDomainService OrganisationDomainsService
+	stackQueryService         StackQueryService
+	logger                    logger.Logger
 }
 
 func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
@@ -30,15 +31,17 @@ func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
 		organisationStore: pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		domainNameService: spec.DomainNameService,
-		logger:            spec.Logger,
+		stackQueryService:         spec.StackQueryService,
+		organisationDomainService: spec.OrganisationDomainService,
+		logger:                    spec.Logger,
 	}
 }
 
 type OrganisationServiceSpec struct {
-	SessionFactory    db.SessionFactory
-	DomainNameService DomainsService
-	Logger            logger.Logger
+	SessionFactory            db.SessionFactory
+	OrganisationDomainService OrganisationDomainsService
+	StackQueryService         StackQueryService
+	Logger                    logger.Logger
 }
 
 func (s *organisationService) GetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {
@@ -62,17 +65,13 @@ func (s *organisationService) Create(ctx context.Context, spec *models.Organisat
 	}
 
 	for _, domain := range spec.Domains {
-		domain.OwnerID = org.ID
-		domain.OwnerType = models.OwnerTypeOrganisation
-		createdDomain, err := s.domainNameService.Create(ctx, domain)
-		if err != nil {
-			s.logger.Errorf("failed to create domain: %v", err)
+		domain.OrganisationID = org.ID
+		if _, err := s.organisationDomainService.Create(ctx, domain); err != nil {
 			return nil, err
 		}
-		org.Domains = append(org.Domains, createdDomain)
 	}
 
-	return org, nil
+	return s.Get(ctx, org.ID)
 }
 
 func (s *organisationService) Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError) {
@@ -81,17 +80,19 @@ func (s *organisationService) Get(ctx context.Context, ID string) (*models.Organ
 		s.logger.Errorf("failed to get organisation: %v", err)
 		return nil, err
 	}
-	domains, err := s.domainNameService.ListByOwner(ctx, ID, models.OwnerTypeOrganisation)
-	if err != nil {
-		s.logger.Errorf("failed to list domains: %v", err)
-		return nil, err
-	}
-	org.Domains = domains
 	return org, nil
 }
 
+// TODO: Org is the root of almost everything, so we need to be careful when deleting it.
 func (s *organisationService) Delete(ctx context.Context, ID string) *errors.ServiceError {
-	err := s.organisationStore.Delete(ctx, ID)
+	stacks, err := s.stackQueryService.GetStacksByOrganisationID(ctx, ID)
+	if err != nil {
+		return err
+	}
+	if len(stacks) > 0 {
+		return errors.BadRequest("cannot delete organisation with stacks")
+	}
+	err = s.organisationStore.Delete(ctx, ID)
 	if err != nil {
 		s.logger.Errorf("failed to delete organisation: %v", err)
 		return err
@@ -115,28 +116,35 @@ func (s *organisationService) Update(ctx context.Context, ID string, spec *model
 		return nil, err
 	}
 
-	for _, domain := range spec.Domains {
-		existing, err := s.domainNameService.GetByFqdn(ctx, domain.Fqdn)
-		if err != nil && err.Code != errors.ErrorNotFound {
-			s.logger.Errorf("failed to check if domain exists: %v", err)
-			return nil, err
-		}
-		if existing != nil {
-			continue
-		}
-		domain.OwnerID = ID
-		domain.OwnerType = models.OwnerTypeOrganisation
-		_, err = s.domainNameService.Create(ctx, domain)
-		if err != nil {
-			s.logger.Errorf("failed to create domain: %v", err)
-			return nil, err
-		}
-	}
-	domains, err := s.domainNameService.ListByOwner(ctx, ID, models.OwnerTypeOrganisation)
+	existingDomains, err := s.organisationDomainService.ListByOrganisationID(ctx, ID)
 	if err != nil {
-		s.logger.Errorf("failed to list domains: %v", err)
 		return nil, err
 	}
-	org.Domains = domains
+
+	existingDomainsMap := make(map[string]struct{})
+	for _, domain := range existingDomains {
+		existingDomainsMap[domain.Domain] = struct{}{}
+	}
+
+	for _, domain := range spec.Domains {
+		if _, exists := existingDomainsMap[domain.Domain]; !exists {
+			domain.OrganisationID = org.ID
+			if _, err := s.organisationDomainService.Create(ctx, domain); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	currentDomainsMap := make(map[string]struct{})
+	for _, domain := range spec.Domains {
+		currentDomainsMap[domain.Domain] = struct{}{}
+	}
+	for _, domain := range existingDomains {
+		if _, exists := currentDomainsMap[domain.Domain]; !exists {
+			if err := s.organisationDomainService.Delete(ctx, domain.ID); err != nil {
+				return nil, err
+			}
+		}
+	}
 	return org, nil
 }

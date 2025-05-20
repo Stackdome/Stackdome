@@ -17,12 +17,12 @@ func PresentOrganisation(in *models.Organisation) openapi.Organisation {
 
 }
 
-func PresentDomains(in []*models.Domain) []openapi.DomainName {
+func PresentDomains(in []*models.OrganisationDomain) []openapi.DomainName {
 	domains := make([]openapi.DomainName, len(in))
 	for i, domain := range in {
 		domains[i] = openapi.DomainName{
 			Id:   &domain.ID,
-			Fqdn: &domain.Fqdn,
+			Fqdn: &domain.Domain,
 		}
 	}
 	return domains
@@ -41,11 +41,11 @@ func ConvertOrganisation(in openapi.Organisation) *models.Organisation {
 	return res
 }
 
-func ConvertDomains(in []openapi.DomainName) []*models.Domain {
-	domains := make([]*models.Domain, len(in))
+func ConvertDomains(in []openapi.DomainName) []*models.OrganisationDomain {
+	domains := make([]*models.OrganisationDomain, len(in))
 	for i, domain := range in {
-		domains[i] = &models.Domain{
-			Fqdn: *domain.Fqdn,
+		domains[i] = &models.OrganisationDomain{
+			Domain: domain.GetFqdn(),
 		}
 	}
 	return domains

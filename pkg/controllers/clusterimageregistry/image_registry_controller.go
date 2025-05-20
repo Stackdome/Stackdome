@@ -23,12 +23,12 @@ const (
 
 type clusterImageRegistryReconciler struct {
 	Client                 client.Client
-	DBImageRegistryService services.ClusterImageRegistryService
+	DBImageRegistryService services.ImageRegistryService
 	Logger                 logger.Logger
 }
 
 type ClusterImageRegistryReconcilerSpec struct {
-	DBImageRegistryService services.ClusterImageRegistryService
+	DBImageRegistryService services.ImageRegistryService
 	Logger                 logger.Logger
 }
 
