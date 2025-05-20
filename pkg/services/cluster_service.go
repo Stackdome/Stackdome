@@ -31,7 +31,7 @@ type clusterService struct {
 	clusterStore         stores.ClusterStore
 	logger               logger.Logger
 	clusterManager       clustermanager.ClusterManager
-	imageRegistryService ClusterImageRegistryService
+	imageRegistryService ImageRegistryService
 }
 
 func NewClusterService(spec ClusterServiceSpec) ClusterService {
@@ -48,7 +48,7 @@ func NewClusterService(spec ClusterServiceSpec) ClusterService {
 type ClusterServiceSpec struct {
 	SessionFactory       db.SessionFactory
 	ClusterManager       clustermanager.ClusterManager
-	ImageRegistryService ClusterImageRegistryService
+	ImageRegistryService ImageRegistryService
 	Logger               logger.Logger
 }
 

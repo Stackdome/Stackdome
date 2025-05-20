@@ -19,6 +19,7 @@ type StackResourceService interface {
 	Update(ctx context.Context, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
 	InternalUpdateWithTx(ctx context.Context, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, resourceID string, status *models.StackResourceStatus) *errors.ServiceError
+	InternalUpdateExposedPortDomainsWithTx(ctx context.Context, resourceID string, stackResource *models.StackResource) *errors.ServiceError
 }
 
 type StackResourceServiceSpec struct {
@@ -74,4 +75,18 @@ func (s *stackResourceService) UpdateStatus(ctx context.Context, resourceID stri
 
 func (s *stackResourceService) InternalUpdateWithTx(ctx context.Context, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
 	return s.stackResourceStore.UpdateWithTx(ctx, resourceID, resource)
+}
+
+func (s *stackResourceService) InternalUpdateExposedPortDomainsWithTx(ctx context.Context, resourceID string, stackResource *models.StackResource) *errors.ServiceError {
+	for _, port := range stackResource.Ports {
+		if port.ExposedToPublic {
+			if port.ExposedFqdn == "" {
+				return errors.GeneralError("port exposed to public but fqdn is empty")
+			}
+			if _, err := s.InternalUpdateWithTx(ctx, resourceID, stackResource); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

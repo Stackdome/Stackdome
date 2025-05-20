@@ -202,15 +202,21 @@ func (d *developmentEnvironment) initializeResourceAccessPolicyManager(ctx conte
 func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	d.Logger.Debugf("Initializing services")
 
-	domainNameService := services.NewDomainsService(services.DomainsServiceSpec{
+	stackDomainService := services.NewStackDomainsService(services.StackDomainsServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         d.Logger,
+	})
+
+	organisationDomainService := services.NewOrganisationDomainsService(services.OrganisationDomainsServiceSpec{
 		SessionFactory: d.DBSession,
 		Logger:         d.Logger,
 	})
 
 	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
-		DomainNameService: domainNameService,
-		SessionFactory:    d.DBSession,
-		Logger:            d.Logger,
+		OrganisationDomainService: organisationDomainService,
+		StackQueryService:         d.Services.StackService,
+		SessionFactory:            d.DBSession,
+		Logger:                    d.Logger,
 	})
 
 	userService := services.NewUserService(services.UserServiceSpec{
@@ -265,7 +271,6 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	stackService := services.NewStackService(services.StackServiceSpec{
 		SessionFactory:         d.DBSession,
 		Logger:                 d.Logger,
-		WorkspaceUserService:   workspaceUserService,
 		VolumeService:          volumeService,
 		OrganisationService:    organisationService,
 		StackResourceService:   stackResourceService,
@@ -284,7 +289,8 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		StackResourceService:        stackResourceService,
 		ImageBuildService:           imageBuildService,
 		ClusterImageRegistryService: clusterImageRegistryService,
-		DomainNameService:           domainNameService,
+		StackDomainService:          stackDomainService,
+		OrganisationDomainService:   organisationDomainService,
 	}
 
 	return nil

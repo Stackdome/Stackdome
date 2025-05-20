@@ -13,12 +13,12 @@ import (
 )
 
 type ClusterImageRegistryHandlerSpec struct {
-	ClusterImageRegistryService services.ClusterImageRegistryService
+	ClusterImageRegistryService services.ImageRegistryService
 	AuthzClient                 auth.AuthorizationClient
 }
 
 type clusterImageRegistryHandler struct {
-	clusterImageRegistryService services.ClusterImageRegistryService
+	clusterImageRegistryService services.ImageRegistryService
 	authzClient                 auth.AuthorizationClient
 }
 

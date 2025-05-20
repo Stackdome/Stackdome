@@ -160,6 +160,10 @@ func GeneralError(reason string, values ...interface{}) *ServiceError {
 	return New(ErrorGeneral, reason, values...)
 }
 
+func InternalServerError(reason string, values ...interface{}) *ServiceError {
+	return New(ErrorInternalServerError, reason, values...)
+}
+
 func Unauthorized(reason string, values ...interface{}) *ServiceError {
 	return New(ErrorUnauthorized, reason, values...)
 }
