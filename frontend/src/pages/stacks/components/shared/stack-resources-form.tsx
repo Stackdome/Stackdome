@@ -1,4 +1,4 @@
-import type { StackResourceData, VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
+import type { FormStackResourceData as StackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import ResourceFormList from "@/pages/stacks/components/shared/resource-form-list";
 import StackResourceItem from "@/pages/stacks/components/shared/stack-resource-item";
 import { Button } from "@/components/ui/button";

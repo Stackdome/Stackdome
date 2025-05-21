@@ -11,12 +11,12 @@ import { Label as UILabel } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
-  StackSchema,
-  type StackData,
-  type StackResourceData,
-  type VolumeFormData,
-  stripUIFieldsFromStackData,
-} from "@/pages/stacks/schemas/stack-create-schema";
+  FormStackSchema as StackSchema,
+  type FormStackData as StackData,
+  type FormStackResourceData as StackResourceData,
+  type FormVolumeExtendedData as VolumeFormData,
+  convertFormStackToApiStack as stripUIFieldsFromStackData,
+} from "@/pages/stacks/schemas/form-schema";
 import { createStack } from '@/api/stacks';
 import { getCurrentOrganizationId } from '@/helpers/common';
 import { useToast } from '@/components/ui/use-toast';

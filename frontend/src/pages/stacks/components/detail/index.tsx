@@ -10,13 +10,13 @@ import StackResourcesForm from "@/pages/stacks/components/shared/stack-resources
 import StackVolumesForm from "@/pages/stacks/components/shared/stack-volumes-form";
 import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resources-detail";
 import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
-import type { StackResourceData, VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
+import type { FormStackResourceData as StackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById } from "@/api/stacks";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import type { z } from "zod";
-import { StackResourceBuildSpecSchema } from "@/pages/stacks/schemas/stack-create-schema";
+import { FormStackResourceBuildSpecSchema as StackResourceBuildSpecSchema } from "@/pages/stacks/schemas/form-schema";
 type StackResourceBuildSpec = z.infer<typeof StackResourceBuildSpecSchema>;
 
 // Helper to map API build_spec to form schema shape

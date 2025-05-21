@@ -10,4 +10,3 @@ export type StackSpec = components["schemas"]["StackSpec"];
 export type StackStatus = components["schemas"]["StackStatus"];
 export type Stack = components["schemas"]["Stack"];
 export type StackList = components["schemas"]["StackList"];
-

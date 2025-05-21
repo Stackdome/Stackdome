@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { HardDrive } from "lucide-react";
-import type { VolumeFormData, StackResourceData } from "@/pages/stacks/schemas/stack-create-schema";
+import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData as StackResourceData } from "@/pages/stacks/schemas/form-schema";
 
 interface StackVolumeDetailProps {
   volume: Partial<VolumeFormData>;

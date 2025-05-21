@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { HardDrive, Trash2 } from "lucide-react";
-import type { VolumeFormData, StackResourceData } from "@/pages/stacks/schemas/stack-create-schema";
+import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData as StackResourceData } from "@/pages/stacks/schemas/form-schema";
 
 interface StackVolumeItemProps {
   volume: Partial<VolumeFormData>;

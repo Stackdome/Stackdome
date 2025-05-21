@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Box, GitBranch } from "lucide-react";
-import type { StackResourceData } from "@/pages/stacks/schemas/stack-create-schema";
+import type { FormStackResourceData as StackResourceData } from "@/pages/stacks/schemas/form-schema";
 
 interface StackResourceDetailProps {
   resource: Partial<StackResourceData>;

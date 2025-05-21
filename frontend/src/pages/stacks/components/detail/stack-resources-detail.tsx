@@ -1,4 +1,4 @@
-import type { StackResourceData } from "@/pages/stacks/schemas/stack-create-schema";
+import type { FormStackResourceData as StackResourceData } from "@/pages/stacks/schemas/form-schema";
 import ResourceDetailList from "@/pages/stacks/components/detail/resource-detail-list";
 import StackResourceDetail from "@/pages/stacks/components/detail/stack-resource-detail";
 import { Container } from "lucide-react";

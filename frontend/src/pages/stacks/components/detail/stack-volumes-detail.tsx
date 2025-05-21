@@ -1,4 +1,4 @@
-import type { StackResourceData, VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
+import type { FormStackResourceData as StackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import ResourceDetailList from "@/pages/stacks/components/detail/resource-detail-list";
 import StackVolumeDetail from "@/pages/stacks/components/detail/stack-volume-detail";
 import { Database } from "lucide-react";

@@ -23,7 +23,7 @@ import { Plus, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy } fro
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 
-import type { StackResourceData, VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
+import type { FormStackResourceData as StackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 
 interface StackResourceItemProps {
   resource: Partial<StackResourceData>;
