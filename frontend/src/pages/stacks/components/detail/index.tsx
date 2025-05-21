@@ -13,6 +13,7 @@ import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-d
 import type { StackResourceData, VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById } from "@/api/stacks";
+import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import type { z } from "zod";
 import { StackResourceBuildSpecSchema } from "@/pages/stacks/schemas/stack-create-schema";
@@ -90,30 +91,46 @@ export default function StackDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [editingResources, setEditingResources] = useState(false);
   const [editingVolumes, setEditingVolumes] = useState(false);
+  const { setCustomLabel, setPathLoading } = useBreadcrumb();
 
   // Find the current stack in context
   const currentStack = stacks.find((stack) => stack.id === id);
 
+  // Update breadcrumb with stack name
   useEffect(() => {
-    if (!currentStack && id) {
+    const path = `/stacks/${id}`;
+
+    if (currentStack) {
+      // If stack is already available in context, use its name for breadcrumb
+      setCustomLabel(path, currentStack.name|| 'Stack Details');
+    } else if (id) {
+      // Set loading state while fetching
+      setPathLoading(path, true);
+
       const orgId = getCurrentOrganizationId();
       if (!orgId) {
         setError("Organization ID not found.");
+        setPathLoading(path, false);
         return;
       }
+
       setLoading(true);
       setError(null);
       getStackById(orgId, id)
         .then((data) => {
           setFetchedStack(data);
           setLoading(false);
+          // Update breadcrumb with fetched stack name
+          setCustomLabel(path, data.name || 'Stack Details');
+          setPathLoading(path, false);
         })
         .catch(() => {
           setError("Failed to load stack. Please try again later.");
           setLoading(false);
+          setPathLoading(path, false);
         });
     }
-  }, [currentStack, id]);
+  }, [currentStack, id, setCustomLabel, setPathLoading]);
 
   const stackToShow = currentStack || fetchedStack;
 
@@ -220,16 +237,17 @@ export default function StackDetailPage() {
           </div>
           <div className="flex gap-3">
             <Button
-              variant={isRunning ? "destructive" : "default"}
-              size="sm"
+              variant="outline"
+              size="lg"
               onClick={toggleRunning}
+              className={isRunning ? "border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" : "border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700"}
             >
               {isRunning ? <Square className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
               {isRunning ? "Stop Stack" : "Start Stack"}
             </Button>
-            <Button variant="default" size="sm">
+            <Button variant="outline" size="lg">
               <Rocket className="mr-2 h-4 w-4" />
-              <span className="font-semibold">Redeploy</span>
+              <span className="font-semibold">Deploy</span>
             </Button>
           </div>
         </div>

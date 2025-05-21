@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, useLocation } from "react-router-dom"
-import { Cloud, Plus } from "lucide-react"
+import { Boxes } from "lucide-react"
 
 import {
   SidebarGroup,
@@ -38,7 +38,7 @@ export function NavClusters() {
           isActive={isClustersActive}
         >
           <Link to={hasCluster && clusters.length === 1 ? `/clusters/${clusters[0].id}` : "/clusters"}>
-            <Cloud />
+            <Boxes/>
             <span>Clusters</span>
           </Link>
         </SidebarMenuButton>
