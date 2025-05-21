@@ -10,7 +10,6 @@ interface StackResourcesFormProps {
   onResourcesChange: (updatedResources: Partial<StackResourceData>[]) => void;
   errors: { [index: number]: { [field: string]: string | undefined } };
   volumes?: Partial<VolumeFormData>[];
-  readOnly?: boolean;
   accordionDefaultOpen?: boolean; // If false, all collapsed by default
 }
 
@@ -33,7 +32,6 @@ export default function StackResourcesForm({
   onResourcesChange,
   errors,
   volumes = [],
-  readOnly = false,
   accordionDefaultOpen = true,
 }: StackResourcesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
@@ -74,26 +72,20 @@ export default function StackResourcesForm({
             errors={errors}
             volumes={volumes}
             allResources={resources.map((r, i) => ({ name: r.name || `Resource ${i + 1}`, index: i }))}
-            readOnly={readOnly}
             onRemove={handleRemove}
           />
         )}
-        readOnly={readOnly}
         defaultAllCollapsed={!accordionDefaultOpen}
       />
-      {/* Only show add button if not readOnly */}
-      {!readOnly && (
-        <div className="flex justify-center mt-4">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => onResourcesChange([...resources, getDefaultResource()])}
-            disabled={readOnly}
-          >
+      <div className="flex justify-center mt-4">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => onResourcesChange([...resources, getDefaultResource()])}
+        >
             + Add Resource
-          </Button>
-        </div>
-      )}
+        </Button>
+      </div>
       <Dialog open={pendingRemoveIdx !== null} onOpenChange={open => !open && setPendingRemoveIdx(null)}>
         <DialogContent>
           <DialogHeader>

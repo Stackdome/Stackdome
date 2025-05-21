@@ -4,8 +4,6 @@ import Signup from "@/pages/signup"
 import StacksPage from "@/pages/stacks"
 import StackCreatePage from "@/pages/stacks/components/create"
 import StackDetailPage from "@/pages/stacks/components/detail"
-import StackActivityPage from "@/pages/stacks/components/activity"
-import StackSettingsPage from "@/pages/stacks/components/settings"
 import ClustersPage from "@/pages/clusters"
 import ClusterCreatePage from "@/pages/clusters/components/create"
 import ClusterDetailPage from "@/pages/clusters/components/detail"
@@ -29,8 +27,6 @@ const router = createBrowserRouter(
         <Route path="/stacks" element={<StacksPage />} />
         <Route path="/stacks/create" element={<StackCreatePage />} />
         <Route path="/stacks/:id" element={<StackDetailPage />} />
-        <Route path="/stacks/:id/activity" element={<StackActivityPage />} />
-        <Route path="/stacks/:id/settings" element={<StackSettingsPage />} />
         <Route path="/clusters" element={<ClustersPage />} />
         <Route path="/clusters/create" element={<ClusterCreatePage />} />
         <Route path="/clusters/:id" element={<ClusterDetailPage />} />

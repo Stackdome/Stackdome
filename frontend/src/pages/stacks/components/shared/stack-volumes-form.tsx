@@ -11,7 +11,6 @@ interface StackVolumesFormProps {
   onVolumesChange: (updatedVolumes: Partial<VolumeFormData>[]) => void;
   errors: { [index: number]: { [field: string]: string | undefined } };
   stackResources?: Partial<StackResourceData>[];
-  readOnly?: boolean;
   accordionDefaultOpen?: boolean; // If false, all collapsed by default
 }
 
@@ -33,66 +32,66 @@ export default function StackVolumesForm({
   onVolumesChange,
   errors,
   stackResources = [],
-  readOnly = false,
   accordionDefaultOpen = true,
 }: StackVolumesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
 
+  // Helper function to check if a volume is being used by resources
+  const isVolumeUsed = (volumeName: string) => {
+    return stackResources.some(res =>
+      res.volume_mounts?.some(vm => vm.source_volume_name === volumeName)
+    );
+  };
+
+  // Helper function to check if a volume has data
   const isVolumeFilled = (vol: Partial<VolumeFormData>) => {
     return !!(vol.name || vol.spec?.size || vol.labels?.length || vol.spec?.needs_sync_before_use || vol.spec?.access_mode !== undefined);
   };
 
-  const handleRemove = (idx: number) => {
-    if (isVolumeFilled(volumes[idx])) {
-      setPendingRemoveIdx(idx);
-    } else {
-      onVolumesChange(volumes.filter((_, i) => i !== idx));
-    }
-  };
-
-  const createDefaultVolumeWithWorkspace = () => {
-    return getDefaultVolume();
-  };
-
   return (
-    <div>
-      <ResourceFormList<VolumeFormData>
-        items={volumes}
-        onItemsChange={onVolumesChange}
-        errors={errors}
-        createDefaultItem={createDefaultVolumeWithWorkspace}
-        renderItem={({ item, index, itemRef, onChange, errors }) => (
+    <div className="space-y-3">
+      <ResourceFormList<Partial<VolumeFormData>>
+        renderItem={({ item, index, itemRef, onChange, onRemove, errors }) => (
           <StackVolumeItem
-            key={index}
             volume={item}
             index={index}
             itemRef={itemRef}
             onChange={onChange}
-            onRemove={() => handleRemove(index)}
+            onRemove={(idx) => {
+              if (item.name && isVolumeUsed(item.name)) {
+                // Show error dialog
+                console.error(`Volume ${item.name} is in use and cannot be removed.`);
+                return;
+              }
+
+              if (isVolumeFilled(item)) {
+                setPendingRemoveIdx(idx);
+              } else {
+                onRemove(idx);
+              }
+            }}
             errors={errors}
             allVolumes={volumes}
             allStackResources={stackResources}
-            readOnly={readOnly}
           />
         )}
+        items={volumes}
+        onItemsChange={onVolumesChange}
+        createDefaultItem={getDefaultVolume}
+        errors={errors}
         emptyText="No volumes added."
         emptyIcon={<Database className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />}
-        readOnly={readOnly}
         defaultAllCollapsed={!accordionDefaultOpen}
       />
-      {/* Only show add button if not readOnly */}
-      {!readOnly && (
-        <div className="flex justify-center mt-4">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => onVolumesChange([...volumes, getDefaultVolume()])}
-            disabled={readOnly}
-          >
-            + Add Volume
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-center mt-4">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => onVolumesChange([...volumes, getDefaultVolume()])}
+        >
+          + Add Volume
+        </Button>
+      </div>
       <Dialog open={pendingRemoveIdx !== null} onOpenChange={open => !open && setPendingRemoveIdx(null)}>
         <DialogContent>
           <DialogHeader>

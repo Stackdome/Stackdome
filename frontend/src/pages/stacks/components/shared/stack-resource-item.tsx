@@ -34,7 +34,6 @@ interface StackResourceItemProps {
   errors: { [field: string]: string | undefined };
   volumes?: Partial<VolumeFormData>[];
   allResources?: { name: string; index: number }[];
-  readOnly?: boolean;
 }
 
 const getError = (errors: { [field: string]: string | undefined }, path: string) => {
@@ -67,31 +66,28 @@ export default function StackResourceItem({
   errors,
   volumes = [],
   allResources: _allResources,
-  readOnly = false
 }: StackResourceItemProps) {
   // Helper for updating resource fields
   const update = (patch: Partial<StackResourceData>) => {
-    if (readOnly) return; // Don't update if in read-only mode
     onChange(index, { ...resource, ...patch });
   };
 
   // Helper for updating nested build_spec
   const updateBuildSpec = (patch: Partial<NonNullable<StackResourceData["build_spec"]>>) => {
-    if (readOnly) return; // Don't update if in read-only mode
     const currentBuildSpec = resource.build_spec || {
       source_context: { git_repo: { repo_url: '' } },
       context_path_within_source: './',
       dockerfile_path: 'Dockerfile',
       image_repository: { external_image_repo_url: '' },
+      insecure_registry: false,
     };
     update({
-      build_spec: { ...currentBuildSpec, ...patch },
+      build_spec: { ...currentBuildSpec, ...patch, insecure_registry: (patch.insecure_registry === undefined) ? false : patch.insecure_registry },
       image_spec: undefined,
     });
   };
   // Helper for updating nested image_spec
   const updateImageSpec = (patch: Partial<NonNullable<StackResourceData["image_spec"]>>) => {
-    if (readOnly) return; // Don't update if in read-only mode
     update({
       image_spec: { ...(resource.image_spec || { image: '' }), ...patch },
       build_spec: undefined,
@@ -100,7 +96,6 @@ export default function StackResourceItem({
 
   // Helper for adding an environment variable
   const addEnvVar = () => {
-    if (readOnly) return; // Don't add if in read-only mode
     update({
       execution_config: {
         ...resource.execution_config,
@@ -114,7 +109,6 @@ export default function StackResourceItem({
 
   // Helper for updating an environment variable
   const updateEnvVar = (envIdx: number, name: string, value: string) => {
-    if (readOnly) return; // Don't update if in read-only mode
     update({
       execution_config: {
         ...resource.execution_config,
@@ -125,7 +119,6 @@ export default function StackResourceItem({
     });
   };
   const removeEnvVar = (envIdx: number) => {
-    if (readOnly) return; // Don't remove if in read-only mode
     update({
       execution_config: {
         ...resource.execution_config,
@@ -135,7 +128,6 @@ export default function StackResourceItem({
   };
 
   const addVolumeMount = () => {
-    if (readOnly) return; // Don't add if in read-only mode
     update({
       volume_mounts: [
         ...(resource.volume_mounts || []),
@@ -146,8 +138,6 @@ export default function StackResourceItem({
 
   // Helper for adding multiple environment variables at once
   const addMultipleEnvVars = (envVars: Array<{name: string, value: string}>) => {
-    if (readOnly) return; // Don't add if in read-only mode
-
     // Filter out empty entries and duplicates
     const filteredVars = envVars.filter(env => env.name.trim() !== "");
 
@@ -199,7 +189,7 @@ export default function StackResourceItem({
 
   // Handler for uploading .env files
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0 || readOnly) return;
+    if (!event.target.files || event.target.files.length === 0) return;
 
     const file = event.target.files[0];
     const reader = new FileReader();
@@ -220,8 +210,6 @@ export default function StackResourceItem({
 
 
   const updateVolumeMount = (vmIdx: number, patch: Partial<{ source_volume_name: string, source_sub_path: string, target_path: string }>) => {
-    if (readOnly) return; // Don't update if in read-only mode
-
     // Check for duplicate target paths if updating target_path
     if (patch.target_path && resource.volume_mounts) {
       const isDuplicate = resource.volume_mounts.some(
@@ -247,7 +235,6 @@ export default function StackResourceItem({
   };
 
   const removeVolumeMount = (vmIdx: number) => {
-    if (readOnly) return; // Don't remove if in read-only mode
     update({
       volume_mounts: (resource.volume_mounts || []).filter((_, i) => i !== vmIdx),
     });
@@ -255,13 +242,11 @@ export default function StackResourceItem({
 
   // Helper for updating depends_on
   const updateDependsOn = (dependsOn: string[]) => {
-    if (readOnly) return; // Don't update if in read-only mode
     update({ depends_on: dependsOn });
   };
 
   // Helper for adding a port
   const addPort = () => {
-    if (readOnly) return; // Don't add if in read-only mode
     update({
       ports: [
         ...(resource.ports || []),
@@ -272,7 +257,6 @@ export default function StackResourceItem({
 
   // Helper for updating a port
   const updatePort = (pidx: number, patch: Partial<{ number: number, protocol: "http" | "tcp", exposed_to_public: boolean, subdomain_prefix: string }>) => {
-    if (readOnly) return; // Don't update if in read-only mode
     update({
       ports: (resource.ports || []).map((port, i) =>
         i === pidx ? { ...port, ...patch } : port
@@ -282,7 +266,6 @@ export default function StackResourceItem({
 
   // Helper for removing a port
   const removePort = (pidx: number) => {
-    if (readOnly) return; // Don't remove if in read-only mode
     update({
       ports: (resource.ports || []).filter((_, i) => i !== pidx),
     });
@@ -307,7 +290,19 @@ export default function StackResourceItem({
             <span className="text-sm text-muted-foreground truncate pl-6">
               {resource.sourceType === "image"
                 ? resource.image_spec?.image || "No image specified"
-                : resource.build_spec?.source_context?.git_repo?.repo_url || "No repository specified"}
+                : (
+                  <>
+                    {resource.build_spec?.source_context?.git_repo?.repo_url || "No repository specified"}
+                    {resource.gitRevisionType && resource.gitRevisionValue && (
+                      <span className="ml-1 text-xs bg-muted/50 px-1.5 py-0.5 rounded-full">
+                        {resource.gitRevisionType === "branch" && "Branch: "}
+                        {resource.gitRevisionType === "tag" && "Tag: "}
+                        {resource.gitRevisionType === "commit" && "SHA: "}
+                        {resource.gitRevisionValue}
+                      </span>
+                    )}
+                  </>
+                )}
             </span>
             {errors._form && (
               <span className="text-xs text-destructive mt-0.5">{errors._form}</span>
@@ -317,17 +312,17 @@ export default function StackResourceItem({
       </AccordionTrigger>
       <AccordionContent className="pb-4 pt-2">
         <div className="px-4 space-y-4">
-          <Tabs defaultValue="configuration" className="w-full">
+          <Tabs defaultValue="general" className="w-full">
             <div className="mt-1 mb-3">
               <TabsList className="grid grid-cols-3 w-full">
-                <TabsTrigger value="configuration">Configuration</TabsTrigger>
+                <TabsTrigger value="general">General</TabsTrigger>
                 <TabsTrigger value="deployment">Deployment</TabsTrigger>
                 <TabsTrigger value="environment">Environment Variables</TabsTrigger>
               </TabsList>
             </div>
 
             {/* General Section (always at top) */}
-            <TabsContent value="configuration" className="pt-4 space-y-6">
+            <TabsContent value="general" className="pt-4 space-y-6">
               <div>
                 <h3 className="text-lg font-medium mb-3">General</h3>
                 <div className="grid gap-4 max-w-3xl">
@@ -349,7 +344,6 @@ export default function StackResourceItem({
                       className={`max-w-xl ${getError(errors, "name") ? "border-destructive" : ""}`}
                       required
                       aria-invalid={!!getError(errors, "name")}
-                      disabled={readOnly}
                     />
                     {getError(errors, "name") && (
                       <p className="text-sm text-destructive mt-1">{getError(errors, "name")}</p>
@@ -366,7 +360,7 @@ export default function StackResourceItem({
                         onValueChange={updateDependsOn}
                         defaultValue={resource.depends_on || []}
                         placeholder={_allResources.length <= 1 ? "No other resources available" : "Select dependencies"}
-                        disabled={_allResources.length <= 1 || readOnly}
+                        disabled={_allResources.length <= 1}
                         className="w-full"
                       />
                     ) : (
@@ -393,7 +387,6 @@ export default function StackResourceItem({
                     <Select
                       value={resource.sourceType || "image"}
                       onValueChange={val => update({ sourceType: val as "image" | "git" })}
-                      disabled={readOnly}
                     >
                       <SelectTrigger className="w-[200px]">
                         <SelectValue placeholder="Select source type" />
@@ -436,7 +429,6 @@ export default function StackResourceItem({
                           className={`max-w-xl ${getError(errors, "image_spec.image") ? "border-destructive" : ""}`}
                           required={resource.sourceType === "image"}
                           aria-invalid={!!getError(errors, "image_spec.image")}
-                          disabled={readOnly}
                         />
                         {getError(errors, "image_spec.image") && (
                           <p className="text-sm text-destructive mt-1">{getError(errors, "image_spec.image")}</p>
@@ -463,7 +455,6 @@ export default function StackResourceItem({
                           className={`max-w-xl ${getError(errors, "build_spec.source_context.git_repo.repo_url") ? "border-destructive" : ""}`}
                           required={resource.sourceType === "git"}
                           aria-invalid={!!getError(errors, "build_spec.source_context.git_repo.repo_url")}
-                          disabled={readOnly}
                         />
                         {getError(errors, "build_spec.source_context.git_repo.repo_url") && (
                           <p className="text-sm text-destructive">{getError(errors, "build_spec.source_context.git_repo.repo_url")}</p>
@@ -489,7 +480,6 @@ export default function StackResourceItem({
                           className={`max-w-xl ${getError(errors, "build_spec.image_repository.external_image_repo_url") ? "border-destructive" : ""}`}
                           required={resource.sourceType === "git"}
                           aria-invalid={!!getError(errors, "build_spec.image_repository.external_image_repo_url")}
-                          disabled={readOnly}
                         />
                         {getError(errors, "build_spec.image_repository.external_image_repo_url") && (
                           <p className="text-sm text-destructive">{getError(errors, "build_spec.image_repository.external_image_repo_url")}</p>
@@ -508,7 +498,6 @@ export default function StackResourceItem({
                         <Select
                           value={resource.gitRevisionType}
                           onValueChange={val => update({ gitRevisionType: val as "branch" | "commit" | "tag" })}
-                          disabled={readOnly}
                         >
                           <SelectTrigger
                             id={`git-revision-type-${index}`}
@@ -561,7 +550,6 @@ export default function StackResourceItem({
                             className={`max-w-xl ${getError(errors, "gitRevisionValue") ? "border-destructive" : ""}`}
                             required={!!resource.gitRevisionType}
                             aria-invalid={!!getError(errors, "gitRevisionValue")}
-                            disabled={readOnly}
                             onBlur={() => {
                               // Mark as touched to trigger error display on submit
                               if (!resource.gitRevisionValue) {
@@ -598,7 +586,6 @@ export default function StackResourceItem({
                         <Select
                           value={vm.source_volume_name || ""}
                           onValueChange={(value) => updateVolumeMount(vmIdx, { source_volume_name: value })}
-                          disabled={readOnly}
                         >
                           <SelectTrigger
                             id={`volume-name-${index}-${vmIdx}`}
@@ -641,7 +628,6 @@ export default function StackResourceItem({
                           value={vm.source_sub_path || ""}
                           onChange={(e) => updateVolumeMount(vmIdx, { source_sub_path: e.target.value })}
                           placeholder="e.g., data/config"
-                          disabled={readOnly}
                         />
                       </div>
                       <div>
@@ -661,37 +647,32 @@ export default function StackResourceItem({
                           placeholder="e.g., /mnt/data"
                           className={getError(errors, `volume_mounts.${vmIdx}.target_path`) ? "border-destructive" : ""}
                           required
-                          disabled={readOnly}
                         />
                         {getError(errors, `volume_mounts.${vmIdx}.target_path`) && (
                           <p className="text-sm text-destructive">{getError(errors, `volume_mounts.${vmIdx}.target_path`)}</p>
                         )}
                       </div>
                       <div className="flex justify-end">
-                        {!readOnly && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeVolumeMount(vmIdx)}
-                            title="Remove volume mount"
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeVolumeMount(vmIdx)}
+                          title="Remove volume mount"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
                       </div>
                     </div>
                   ))}
                   <div>
-                    {!readOnly && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={addVolumeMount}
-                        disabled={(volumes || []).length === 0}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />Add Mount
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={addVolumeMount}
+                      disabled={(volumes || []).length === 0}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />Add Mount
+                    </Button>
                     {(volumes || []).length === 0 && (
                       <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
                     )}
@@ -724,7 +705,6 @@ export default function StackResourceItem({
                           onChange={(e) => updatePort(pidx, { number: parseInt(e.target.value) || 0 })}
                           className={getError(errors, `ports.${pidx}.number`) ? "border-destructive" : ""}
                           required
-                          disabled={readOnly}
                         />
                         {getError(errors, `ports.${pidx}.number`) && (
                           <p className="text-sm text-destructive">{getError(errors, `ports.${pidx}.number`)}</p>
@@ -743,7 +723,6 @@ export default function StackResourceItem({
                         <Select
                           value={port.protocol || "tcp"}
                           onValueChange={(value) => updatePort(pidx, { protocol: value as "tcp" | "http" })}
-                          disabled={readOnly}
                         >
                           <SelectTrigger id={`port-protocol-${index}-${pidx}`}>
                             <SelectValue placeholder="Select protocol" />
@@ -769,7 +748,6 @@ export default function StackResourceItem({
                             id={`port-expose-${index}-${pidx}`}
                             checked={port.exposed_to_public || false}
                             onCheckedChange={(checked) => updatePort(pidx, { exposed_to_public: checked })}
-                            disabled={readOnly}
                           />
                           <Label htmlFor={`port-expose-${index}-${pidx}`} className="text-sm font-medium cursor-pointer">
                             {port.exposed_to_public ? "Exposed" : "Internal Only"}
@@ -777,25 +755,21 @@ export default function StackResourceItem({
                         </div>
                       </div>
                       <div className="flex justify-end">
-                        {!readOnly && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removePort(pidx)}
-                            title="Remove port"
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removePort(pidx)}
+                          title="Remove port"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
                       </div>
                     </div>
                   ))}
                   <div>
-                    {!readOnly && (
-                      <Button variant="ghost" size="sm" onClick={addPort}>
-                        <Plus className="h-4 w-4 mr-2" />Add Port
-                      </Button>
-                    )}
+                    <Button variant="ghost" size="sm" onClick={addPort}>
+                      <Plus className="h-4 w-4 mr-2" />Add Port
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -822,7 +796,6 @@ export default function StackResourceItem({
                       value={resource.init_spec?.command?.join(",") || ""}
                       onChange={e => update({ init_spec: { ...resource.init_spec, command: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
                       placeholder="e.g., sh,/scripts/init.sh"
-                      disabled={readOnly}
                     />
                   </div>
                   <div>
@@ -840,7 +813,6 @@ export default function StackResourceItem({
                       value={resource.init_spec?.args?.join(",") || ""}
                       onChange={e => update({ init_spec: { ...resource.init_spec, args: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
                       placeholder="e.g., arg1,arg2,arg3"
-                      disabled={readOnly}
                     />
                   </div>
                 </div>
@@ -865,7 +837,6 @@ export default function StackResourceItem({
                       value={resource.execution_config?.command?.join(",") || ""}
                       onChange={e => update({ execution_config: { ...resource.execution_config, command: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
                       placeholder="e.g., node,server.js"
-                      disabled={readOnly}
                     />
                   </div>
                   <div>
@@ -883,7 +854,6 @@ export default function StackResourceItem({
                       value={resource.execution_config?.args?.join(",") || ""}
                       onChange={e => update({ execution_config: { ...resource.execution_config, args: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
                       placeholder="e.g., --port=3000,--verbose"
-                      disabled={readOnly}
                     />
                   </div>
                 </div>
@@ -894,118 +864,116 @@ export default function StackResourceItem({
             <TabsContent value="environment" className="pt-4">
               <div className="flex items-center mb-3">
                 <h3 className="text-lg font-medium">Environment Variables</h3>
-                {!readOnly && (
-                  <div className="ml-auto flex gap-2">
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => {
-                      if (resource.execution_config?.environment_variables?.length) {
-                        update({
-                          execution_config: {
-                            ...resource.execution_config,
-                            environment_variables: []
-                          }
-                        });
-                        toast({
-                          title: "Environment variables cleared",
-                          description: "All environment variables have been removed",
-                        });
-                      }
-                    }} disabled={!(resource.execution_config?.environment_variables?.length)}>
-                      <X className="h-4 w-4 mr-1" />
-                      <span>Clear All</span>
-                    </Button>
-                    {/* Paste Variables button */}
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="gap-2">
-                          <Copy className="h-4 w-4" />
-                          <span>Paste Variables</span>
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="w-[95vw] max-w-4xl p-0 overflow-auto">
-                        <div className="p-6">
-                          <DialogHeader>
-                            <DialogTitle className="text-lg font-medium">
-                              Paste Environment Variables
-                            </DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label htmlFor={`env-paste-${index}`} className="text-sm font-medium">
-                                Paste in KEY=VALUE format (one per line)
-                              </Label>
-                              <div className="relative">
-                                <Textarea
-                                  id={`env-paste-${index}`}
-                                  placeholder={
-                                    'DATABASE_URL=postgres://user:pass@localhost:5432/db\n' +
-                                    'API_KEY=your_api_key\n' +
-                                    '# NODE_ENV=development'
-                                  }
-                                  className="font-mono text-sm min-h-[180px] w-full"
-                                />
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                Lines starting with # will be ignored as comments
-                              </p>
-                            </div>
-                            <Button
-                              onClick={() => {
-                                const textarea = document.getElementById(
-                                  `env-paste-${index}`
-                                ) as HTMLTextAreaElement | null;
-                                if (textarea) {
-                                  const content = textarea.value.trim();
-                                  if (content) {
-                                    const envVars = parseEnvContent(content);
-                                    addMultipleEnvVars(envVars);
-                                  }
-                                }
-                              }}
-                            >
-                              Add Variables
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                    {/* Import from file button */}
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <Upload className="h-4 w-4 mr-2" /> Import File
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
+                <div className="ml-auto flex gap-2">
+                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => {
+                    if (resource.execution_config?.environment_variables?.length) {
+                      update({
+                        execution_config: {
+                          ...resource.execution_config,
+                          environment_variables: []
+                        }
+                      });
+                      toast({
+                        title: "Environment variables cleared",
+                        description: "All environment variables have been removed",
+                      });
+                    }
+                  }} disabled={!(resource.execution_config?.environment_variables?.length)}>
+                    <X className="h-4 w-4 mr-1" />
+                    <span>Clear All</span>
+                  </Button>
+                  {/* Paste Variables button */}
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="gap-2">
+                        <Copy className="h-4 w-4" />
+                        <span>Paste Variables</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="w-[95vw] max-w-4xl p-0 overflow-auto">
+                      <div className="p-6">
                         <DialogHeader>
-                          <DialogTitle>Import Environment Variables</DialogTitle>
+                          <DialogTitle className="text-lg font-medium">
+                            Paste Environment Variables
+                          </DialogTitle>
                         </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="flex flex-col gap-2">
-                            <Label htmlFor={`env-file-upload-${index}`} className="text-sm font-medium">
-                              Upload .env File
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`env-paste-${index}`} className="text-sm font-medium">
+                              Paste in KEY=VALUE format (one per line)
                             </Label>
-                            <div className="flex items-center justify-center w-full">
-                              <label htmlFor={`env-file-upload-${index}`} className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 hover:bg-muted/30">
-                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                  <FileText className="w-8 h-8 mb-2 text-muted-foreground" />
-                                  <p className="mb-2 text-sm text-muted-foreground">Click to upload or drag and drop</p>
-                                  <p className="text-xs text-muted-foreground">Supports .env files</p>
-                                </div>
-                                <input
-                                  id={`env-file-upload-${index}`}
-                                  type="file"
-                                  accept=".env,text/plain"
-                                  className="hidden"
-                                  onChange={handleFileUpload}
-                                />
-                              </label>
+                            <div className="relative">
+                              <Textarea
+                                id={`env-paste-${index}`}
+                                placeholder={
+                                  'DATABASE_URL=postgres://user:pass@localhost:5432/db\n' +
+                                  'API_KEY=your_api_key\n' +
+                                  '# NODE_ENV=development'
+                                }
+                                className="font-mono text-sm min-h-[180px] w-full"
+                              />
                             </div>
+                            <p className="text-xs text-muted-foreground">
+                              Lines starting with # will be ignored as comments
+                            </p>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              const textarea = document.getElementById(
+                                `env-paste-${index}`
+                              ) as HTMLTextAreaElement | null;
+                              if (textarea) {
+                                const content = textarea.value.trim();
+                                if (content) {
+                                  const envVars = parseEnvContent(content);
+                                  addMultipleEnvVars(envVars);
+                                }
+                              }
+                            }}
+                          >
+                            Add Variables
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  {/* Import from file button */}
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <Upload className="h-4 w-4 mr-2" /> Import File
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Import Environment Variables</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="flex flex-col gap-2">
+                          <Label htmlFor={`env-file-upload-${index}`} className="text-sm font-medium">
+                            Upload .env File
+                          </Label>
+                          <div className="flex items-center justify-center w-full">
+                            <label htmlFor={`env-file-upload-${index}`} className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 hover:bg-muted/30">
+                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <FileText className="w-8 h-8 mb-2 text-muted-foreground" />
+                                <p className="mb-2 text-sm text-muted-foreground">Click to upload or drag and drop</p>
+                                <p className="text-xs text-muted-foreground">Supports .env files</p>
+                              </div>
+                              <input
+                                id={`env-file-upload-${index}`}
+                                type="file"
+                                accept=".env,text/plain"
+                                className="hidden"
+                                onChange={handleFileUpload}
+                              />
+                            </label>
                           </div>
                         </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
               <div className="overflow-x-auto relative">
                 <table className="min-w-full border border-muted rounded-md">
@@ -1026,7 +994,6 @@ export default function StackResourceItem({
                               onChange={(e) => updateEnvVar(envIdx, e.target.value, env.value || "")}
                               className="max-w-full text-sm font-mono"
                               placeholder="KEY"
-                              disabled={readOnly}
                             />
                           </td>
                           <td className="px-6 py-3">
@@ -1035,20 +1002,17 @@ export default function StackResourceItem({
                               onChange={(e) => updateEnvVar(envIdx, env.name || "", e.target.value)}
                               className="max-w-full text-sm font-mono"
                               placeholder="VALUE"
-                              disabled={readOnly}
                             />
                           </td>
                           <td className="px-6 py-3">
-                            {!readOnly && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => removeEnvVar(envIdx)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => removeEnvVar(envIdx)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                           </td>
                         </tr>
                       ))
@@ -1062,32 +1026,28 @@ export default function StackResourceItem({
                   </tbody>
                 </table>
                 {/* Add Variable button inside table, bottom right */}
-                {!readOnly && (
-                  <div className="flex justify-end mt-2">
-                    <Button variant="ghost" size="sm" onClick={addEnvVar} disabled={readOnly}>
-                      <Plus className="h-4 w-4 mr-2" /> Add Variable
-                    </Button>
-                  </div>
-                )}
+                <div className="flex justify-end mt-2">
+                  <Button variant="ghost" size="sm" onClick={addEnvVar}>
+                    <Plus className="h-4 w-4 mr-2" /> Add Variable
+                  </Button>
+                </div>
               </div>
             </TabsContent>
           </Tabs>
 
-          {!readOnly && (
-            <div className="flex justify-center items-center mt-8">
-              <span className="flex items-center justify-center w-full py-3 rounded-md bg-muted/70">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10"
-                  onClick={() => onRemove(index)}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Remove Resource
-                </Button>
-              </span>
-            </div>
-          )}
+          <div className="flex justify-center items-center mt-8">
+            <span className="flex items-center justify-center w-full py-3 rounded-md bg-muted/70">
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10"
+                onClick={() => onRemove(index)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Remove Resource
+              </Button>
+            </span>
+          </div>
         </div>
       </AccordionContent>
     </AccordionItem>

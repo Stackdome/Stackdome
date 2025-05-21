@@ -3,41 +3,21 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { HardDrive, Trash2, GitBranch } from "lucide-react";
+import { HardDrive, GitBranch } from "lucide-react";
 import type { VolumeFormData, StackResourceData } from "@/pages/stacks/schemas/stack-create-schema";
 
-interface StackVolumeItemProps {
+interface StackVolumeDetailProps {
   volume: Partial<VolumeFormData>;
   index: number;
-  itemRef: (el: HTMLButtonElement | null) => void;
-  onChange: (index: number, updatedVolume: Partial<VolumeFormData>) => void;
-  onRemove: (index: number) => void;
-  errors: { [field: string]: string | undefined };
-  allVolumes: Partial<VolumeFormData>[];
   allStackResources?: Partial<StackResourceData>[];
 }
 
-export default function StackVolumeItem({
+export default function StackVolumeDetail({
   volume,
   index,
-  itemRef,
-  onChange,
-  onRemove,
-  errors,
-  allVolumes,
   allStackResources = [],
-}: StackVolumeItemProps) {
-  // Helper for updating volume fields
-  const update = (patch: Partial<VolumeFormData>) => {
-    onChange(index, { ...volume, ...patch });
-  };
-
-  // Check for duplicate name
-  const isDuplicate = allVolumes.filter((v) => v.name?.length && v.name === volume.name).length > 1;
-
+}: StackVolumeDetailProps) {
+  // Helper to find resources that mount this volume
   const mountingInfo = volume.name
     ? allStackResources
       .map(resource => {
@@ -53,7 +33,6 @@ export default function StackVolumeItem({
   return (
     <AccordionItem value={String(index)} className="border-0">
       <AccordionTrigger
-        ref={itemRef}
         className="px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
       >
         <div className="flex items-center gap-2 text-left flex-grow">
@@ -85,9 +64,6 @@ export default function StackVolumeItem({
                 volume.spec?.size ? `${volume.spec.size}` : "No size specified"
               )}
             </span>
-            {errors._form && (
-              <span className="text-xs text-destructive mt-0.5 pl-6">{errors._form}</span>
-            )}
           </div>
         </div>
       </AccordionTrigger>
@@ -96,52 +72,27 @@ export default function StackVolumeItem({
           {/* Basic info section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor={`volume-name-${index}`}>
-                Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id={`volume-name-${index}`}
-                placeholder="Volume name"
-                value={volume.name || ""}
-                onChange={(e) => update({ name: e.target.value })}
-                className={errors.name || isDuplicate ? "border-destructive" : ""}
-                aria-invalid={!!errors.name || isDuplicate}
-              />
-              {(errors.name || isDuplicate) && (
-                <p className="text-sm text-destructive">
-                  {errors.name || (isDuplicate ? "Volume name must be unique" : "")}
-                </p>
-              )}
+              <div className="mb-1 text-sm font-medium">Name</div>
+              <div className="p-2 bg-muted/30 rounded-md">
+                {volume.name || "Not specified"}
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`volume-size-${index}`}>
-                Size <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id={`volume-size-${index}`}
-                placeholder="e.g., 1Gi, 500Mi"
-                value={volume.spec?.size || ""}
-                onChange={(e) => update({
-                  spec: {
-                    ...volume.spec,
-                    size: e.target.value,
-                    needs_sync_before_use: volume.spec?.needs_sync_before_use ?? false,
-                    access_mode: volume.spec?.access_mode ?? "ReadWriteOnce",
-                  }
-                })}
-                className={errors["spec.size"] ? "border-destructive" : ""}
-                aria-invalid={!!errors["spec.size"]}
-              />
-              {errors["spec.size"] && <p className="text-sm text-destructive">{errors["spec.size"]}</p>}
+              <div className="mb-1 text-sm font-medium">Size</div>
+              <div className="p-2 bg-muted/30 rounded-md">
+                {volume.spec?.size || "Not specified"}
+              </div>
               <p className="text-xs text-muted-foreground">Volume size (e.g., 1Gi, 500Mi)</p>
             </div>
           </div>
 
-          {/* Access Mode (RWO only, disabled) */}
+          {/* Access Mode */}
           <div className="space-y-2">
-            <Label>Access Mode</Label>
-            <Input value="ReadWriteOnce (RWO)" disabled className="bg-muted" />
+            <div className="mb-1 text-sm font-medium">Access Mode</div>
+            <div className="p-2 bg-muted/30 rounded-md">
+              ReadWriteOnce (RWO)
+            </div>
             <p className="text-xs text-muted-foreground">ReadWriteOnce: Can be mounted by a single resource for read/write.</p>
           </div>
 
@@ -159,21 +110,59 @@ export default function StackVolumeItem({
             </div>
           )}
 
-          {/* Remove button at the end, styled like stack resource item */}
-          <div className="flex justify-center items-center mt-8">
-            <span className="flex items-center justify-center w-full py-3 rounded-md bg-muted/70">
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10"
-                onClick={() => onRemove(index)}
-                title="Remove volume"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Remove Volume
-              </Button>
-            </span>
-          </div>
+          {/* Source configuration, if any */}
+          {volume.sourceType && volume.sourceType !== "None" && (
+            <div className="pt-4 border-t">
+              <h3 className="text-base font-semibold mb-2 text-foreground">Volume Source</h3>
+              <div className="mb-1 text-sm font-medium">Source Type</div>
+              <div className="p-2 bg-muted/30 rounded-md">
+                {volume.sourceType}
+              </div>
+
+              {/* Show relevant source details based on type */}
+              {volume.sourceType === "GitRepo" && volume.spec?.source?.git_repo_source && (
+                <>
+                  <div className="mt-2 mb-1 text-sm font-medium">Repository URL</div>
+                  <div className="p-2 bg-muted/30 rounded-md">
+                    {volume.spec.source.git_repo_source.repo_url}
+                  </div>
+                  <div className="mt-2 mb-1 text-sm font-medium">Repository Revision</div>
+                  <div className="p-2 bg-muted/30 rounded-md">
+                    {volume.spec.source.git_repo_source.revision?.branch?.name &&
+                      `Branch: ${volume.spec.source.git_repo_source.revision.branch.name}`}
+                    {volume.spec.source.git_repo_source.revision?.commit &&
+                      `Commit: ${volume.spec.source.git_repo_source.revision.commit}`}
+                    {volume.spec.source.git_repo_source.revision?.tag &&
+                      `Tag: ${volume.spec.source.git_repo_source.revision.tag}`}
+                    {!volume.spec.source.git_repo_source.revision?.branch?.name &&
+                     !volume.spec.source.git_repo_source.revision?.commit &&
+                     !volume.spec.source.git_repo_source.revision?.tag && "main"}
+                  </div>
+                </>
+              )}
+
+              {volume.sourceType === "RemoteDir" && volume.spec?.source?.remote_source && (
+                <>
+                  <div className="mt-2 mb-1 text-sm font-medium">Remote Path</div>
+                  <div className="p-2 bg-muted/30 rounded-md">
+                    {volume.spec.source.remote_source.path || "Not specified"}
+                  </div>
+                </>
+              )}
+
+              {volume.sourceType === "BuildArtifact" && volume.spec?.source?.build_source && (
+                <>
+                  <div className="mt-2 mb-1 text-sm font-medium">Build Artifacts</div>
+                  <div className="p-2 bg-muted/30 rounded-md">
+                    {Array.isArray(volume.spec.source.build_source)
+                      ? volume.spec.source.build_source.map(item =>
+                        item.resource_ref).join(", ")
+                      : "No build artifacts specified"}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </AccordionContent>
     </AccordionItem>

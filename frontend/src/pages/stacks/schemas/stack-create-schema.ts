@@ -238,29 +238,64 @@ export type VolumeFormData = z.infer<typeof VolumeFormSchema>;
 
 // FIXME: Remove this helper if OpenAPI spec supports conditional fields (e.g., oneOf) for UI-only fields
 
-function omitUIFieldsFromResource(resource: StackResourceData): Omit<StackResourceData, "sourceType" | "gitRevisionType" | "gitRevisionValue"> {
+// Remove UI-only fields from a resource before sending to API
+export function removeUIFieldsFromResource(resource: StackResourceData): Omit<StackResourceData, "sourceType" | "gitRevisionType" | "gitRevisionValue"> {
   const rest = { ...resource };
   delete (rest as Partial<StackResourceData>).sourceType;
   delete (rest as Partial<StackResourceData>).gitRevisionType;
   delete (rest as Partial<StackResourceData>).gitRevisionValue;
-
   return rest as Omit<StackResourceData, "sourceType" | "gitRevisionType" | "gitRevisionValue">;
 }
 
-function omitUIFieldsFromVolume(volume: VolumeFormData | VolumeData): Omit<VolumeFormData, "sourceType"> | Omit<VolumeData, "sourceType"> {
+// Remove UI-only fields from a volume before sending to API
+export function removeUIFieldsFromVolume(volume: VolumeFormData | VolumeData): Omit<VolumeFormData, "sourceType"> | Omit<VolumeData, "sourceType"> {
   const rest = { ...volume };
   delete (rest as Partial<VolumeFormData>).sourceType;
-
   return rest;
 }
 
+// Add UI-only fields to a resource from API data for use in forms
+export function addUIFieldsToResource(resource: Omit<StackResourceData, "sourceType" | "gitRevisionType" | "gitRevisionValue">): StackResourceData {
+  const sourceType: "image" | "git" = resource.build_spec ? "git" : "image";
+  let gitRevisionType: "commit" | "branch" | "tag" | undefined = undefined;
+  let gitRevisionValue: string | undefined = undefined;
+  if (resource.build_spec) {
+    const rev = resource.build_spec.source_revision?.git_repo_revision;
+    if (rev?.commit) {
+      gitRevisionType = "commit";
+      gitRevisionValue = rev.commit;
+    } else if (rev?.branch?.name) {
+      gitRevisionType = "branch";
+      gitRevisionValue = rev.branch.name;
+    } else if (rev?.tag) {
+      gitRevisionType = "tag";
+      gitRevisionValue = rev.tag;
+    }
+  }
+  return {
+    ...resource,
+    sourceType,
+    gitRevisionType,
+    gitRevisionValue,
+  };
+}
+
+// Add UI-only fields to a volume from API data for use in forms
+export function addUIFieldsToVolume(volume: Omit<VolumeFormData, "sourceType"> | Omit<VolumeData, "sourceType">): VolumeFormData {
+  return {
+    ...volume,
+    sourceType: "None", // Default for API volumes
+  };
+}
+
+// Update stripUIFieldsFromStackData to use new removeUIFieldsFromResource/Volume
 export function stripUIFieldsFromStackData(stackData: StackData): Omit<Stack, 'workspace_name'> {
   // Process all stack resources by removing UI-only fields
-  const cleanStackResources = stackData.spec.stack_resources.map(omitUIFieldsFromResource);
+  const cleanStackResources = stackData.spec.stack_resources.map(removeUIFieldsFromResource);
 
   // Process volumes data if present
   const cleanVolumes = stackData.spec.volumes
-    ? stackData.spec.volumes.map(omitUIFieldsFromVolume)
+    ? stackData.spec.volumes.map(removeUIFieldsFromVolume)
     : undefined;
 
   // Create a new clean spec object that will only include API-expected fields

@@ -2,16 +2,46 @@ import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Play, Maximize2, Minimize2, Terminal, Square, Rocket } from "lucide-react";
-import { useState } from "react";
+import { Play, Maximize2, Minimize2, Terminal, Square, Rocket, Pencil, Check } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StackResourcesForm from "@/pages/stacks/components/shared/stack-resources-form";
 import StackVolumesForm from "@/pages/stacks/components/shared/stack-volumes-form";
+import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resources-detail";
+import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
 import type { StackResourceData, VolumeFormData } from "@/pages/stacks/schemas/stack-create-schema";
-import type { StackResource, Volume } from "@/pages/stacks/types";
+import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
+import { getStackById } from "@/api/stacks";
+import { getCurrentOrganizationId } from "@/helpers/common";
+import type { z } from "zod";
+import { StackResourceBuildSpecSchema } from "@/pages/stacks/schemas/stack-create-schema";
+type StackResourceBuildSpec = z.infer<typeof StackResourceBuildSpecSchema>;
+
+// Helper to map API build_spec to form schema shape
+function mapBuildSpecToForm(buildSpec: object | undefined): StackResourceBuildSpec | undefined {
+  if (!buildSpec) return undefined;
+  const b = buildSpec as { [key: string]: unknown };
+
+  // Type assertions for proper type handling
+  const imageRepo = b.image_repository as Record<string, unknown> || {};
+
+  return {
+    source_context: b.source_context as Record<string, unknown> || { git_repo: { repo_url: "" } },
+    context_path_within_source: typeof b.context_path_within_source === "string" ? b.context_path_within_source : "./",
+    dockerfile_path: typeof b.dockerfile_path === "string" ? b.dockerfile_path : "Dockerfile",
+    source_revision: b.source_revision as Record<string, unknown> | undefined,
+    image_repository: {
+      external_image_repo_url: typeof imageRepo.external_image_repo_url === "string" ? imageRepo.external_image_repo_url : "",
+      use_internal_registry: typeof imageRepo.use_internal_registry === "boolean" ? imageRepo.use_internal_registry : false,
+      cluster_registry_id: imageRepo.cluster_registry_id as string | undefined,
+    },
+    insecure_registry: typeof b.insecure_registry === "boolean" ? b.insecure_registry : false,
+  };
+}
 
 function mapStackResourceToFormData(resource: StackResource): Partial<StackResourceData> {
+  const build_spec = mapBuildSpecToForm(resource.build_spec);
   return {
     name: resource.name,
     labels: resource.labels,
@@ -22,19 +52,21 @@ function mapStackResourceToFormData(resource: StackResource): Partial<StackResou
     })),
     volume_mounts: resource.volume_mounts,
     execution_config: resource.execution_config,
-    // Only include build_spec and image_spec if they exist and are compatible, else omit
-    sourceType: resource.build_spec ? "git" : "image",
-    gitRevisionType: resource.build_spec?.source_revision?.git_repo_revision?.commit
+    build_spec,
+    image_spec: resource.image_spec,
+    // Only include sourceType and gitRevision fields for UI logic
+    sourceType: build_spec ? "git" : "image",
+    gitRevisionType: build_spec?.source_revision?.git_repo_revision?.commit
       ? "commit"
-      : resource.build_spec?.source_revision?.git_repo_revision?.branch
+      : build_spec?.source_revision?.git_repo_revision?.branch
         ? "branch"
-        : resource.build_spec?.source_revision?.git_repo_revision?.tag
+        : build_spec?.source_revision?.git_repo_revision?.tag
           ? "tag"
           : undefined,
     gitRevisionValue:
-      resource.build_spec?.source_revision?.git_repo_revision?.commit ||
-      resource.build_spec?.source_revision?.git_repo_revision?.branch?.name ||
-      resource.build_spec?.source_revision?.git_repo_revision?.tag ||
+      build_spec?.source_revision?.git_repo_revision?.commit ||
+      build_spec?.source_revision?.git_repo_revision?.branch?.name ||
+      build_spec?.source_revision?.git_repo_revision?.tag ||
       undefined,
   };
 }
@@ -53,14 +85,63 @@ export default function StackDetailPage() {
   const selectedService = searchParams.get("service");
   const [isRunning, setIsRunning] = useState(true);
   const [isLogExpanded, setIsLogExpanded] = useState(false);
+  const [fetchedStack, setFetchedStack] = useState<Stack | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editingResources, setEditingResources] = useState(false);
+  const [editingVolumes, setEditingVolumes] = useState(false);
 
-  // Find the current stack
+  // Find the current stack in context
   const currentStack = stacks.find((stack) => stack.id === id);
+
+  useEffect(() => {
+    if (!currentStack && id) {
+      const orgId = getCurrentOrganizationId();
+      if (!orgId) {
+        setError("Organization ID not found.");
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      getStackById(orgId, id)
+        .then((data) => {
+          setFetchedStack(data);
+          setLoading(false);
+        })
+        .catch(() => {
+          setError("Failed to load stack. Please try again later.");
+          setLoading(false);
+        });
+    }
+  }, [currentStack, id]);
+
+  const stackToShow = currentStack || fetchedStack;
 
   const [resourcesErrors] = useState({}); // No errors in read-only mode
   const [volumesErrors] = useState({});
 
-  if (!currentStack) {
+  if (loading) {
+    return (
+      <div className="flex flex-1 flex-col p-4 pt-0 h-full items-center justify-center">
+        <svg className="animate-spin h-10 w-10 text-primary" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>
+        <p className="mt-2 text-muted-foreground">Loading stack...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-xl font-semibold mb-2">Error</h2>
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <Button asChild>
+          <Link to="/stacks">Return to Stacks</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  if (!stackToShow) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold mb-2">Stack not found</h2>
@@ -72,8 +153,8 @@ export default function StackDetailPage() {
     );
   }
 
-  const resourcesForForm = (currentStack.spec?.stack_resources || []).map(mapStackResourceToFormData);
-  const volumesForForm = (currentStack.spec?.volumes || []).map(mapVolumeToFormData);
+  const resourcesForForm = (stackToShow.spec?.stack_resources || []).map(mapStackResourceToFormData);
+  const volumesForForm = (stackToShow.spec?.volumes || []).map(mapVolumeToFormData);
 
   // Mock logs for the demo
   const logs = [
@@ -113,28 +194,28 @@ export default function StackDetailPage() {
         <div className="flex justify-between items-center">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold">{currentStack.name}</h1>
+              <h1 className="text-2xl font-bold">{stackToShow.name}</h1>
               {/* Status label */}
-              {currentStack.status?.state && (
+              {stackToShow.status?.state && (
                 <span>
-                  {currentStack.status.state.toLowerCase() === 'ready' && (
+                  {stackToShow.status.state.toLowerCase() === 'ready' && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-300">Ready</span>
                   )}
-                  {currentStack.status.state.toLowerCase() === 'pending' && (
+                  {stackToShow.status.state.toLowerCase() === 'pending' && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">Pending</span>
                   )}
-                  {currentStack.status.state.toLowerCase() === 'failed' && (
+                  {stackToShow.status.state.toLowerCase() === 'failed' && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-300">Failed</span>
                   )}
-                  {!['ready','pending','failed'].includes(currentStack.status.state.toLowerCase()) && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300">{currentStack.status.state}</span>
+                  {!['ready','pending','failed'].includes(stackToShow.status.state.toLowerCase()) && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300">{stackToShow.status.state}</span>
                   )}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-4 text-muted-foreground text-sm mb-1">
-              <span>Services: {currentStack.spec?.stack_resources?.length || 0}</span>
-              <span>Volumes: {currentStack.spec?.volumes?.length || 0}</span>
+              <span>Services: {stackToShow.spec?.stack_resources?.length || 0}</span>
+              <span>Volumes: {stackToShow.spec?.volumes?.length || 0}</span>
             </div>
           </div>
           <div className="flex gap-3">
@@ -156,43 +237,92 @@ export default function StackDetailPage() {
       </header>
 
       <Tabs defaultValue="configuration" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="configuration">Configuration</TabsTrigger>
-          <TabsTrigger value="logs">Logs</TabsTrigger>
-          <TabsTrigger value="metrics">Metrics</TabsTrigger>
+        <TabsList className="mb-6 w-full justify-start">
+          <TabsTrigger value="configuration" className="flex-1">Configuration</TabsTrigger>
+          <TabsTrigger value="logs" className="flex-1">Logs</TabsTrigger>
+          <TabsTrigger value="metrics" className="flex-1">Metrics</TabsTrigger>
         </TabsList>
 
-        {/* Configuration Tab: Stack Resources and Volumes (read-only) */}
+        {/* Configuration Tab: Stack Resources and Volumes */}
         <TabsContent value="configuration" className="space-y-8">
           <Card className="mb-6 rounded-lg">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 flex flex-row justify-between items-center">
               <CardTitle className="text-xl">Stack Resources</CardTitle>
-              <CardContent className="p-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditingResources(!editingResources)}
+                className="ml-auto"
+              >
+                {editingResources ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    <span>Done</span>
+                  </>
+                ) : (
+                  <>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    <span>Edit</span>
+                  </>
+                )}
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              {editingResources ? (
                 <StackResourcesForm
                   resources={resourcesForForm}
                   onResourcesChange={() => {}}
                   errors={resourcesErrors}
                   volumes={volumesForForm}
-                  readOnly={true}
                   accordionDefaultOpen={false}
                 />
-              </CardContent>
-            </CardHeader>
+              ) : (
+                <StackResourcesDetail
+                  resources={resourcesForForm}
+                  accordionDefaultOpen={false}
+                />
+              )}
+            </CardContent>
           </Card>
           <Card className="mb-6 rounded-lg">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 flex flex-row justify-between items-center">
               <CardTitle className="text-xl">Stack Volumes</CardTitle>
-              <CardContent className="p-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditingVolumes(!editingVolumes)}
+                className="ml-auto"
+              >
+                {editingVolumes ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    <span>Done</span>
+                  </>
+                ) : (
+                  <>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    <span>Edit</span>
+                  </>
+                )}
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              {editingVolumes ? (
                 <StackVolumesForm
                   volumes={volumesForForm}
                   onVolumesChange={() => {}}
                   errors={volumesErrors}
                   stackResources={resourcesForForm}
-                  readOnly={true}
                   accordionDefaultOpen={false}
                 />
-              </CardContent>
-            </CardHeader>
+              ) : (
+                <StackVolumesDetail
+                  volumes={volumesForForm}
+                  stackResources={resourcesForForm}
+                  accordionDefaultOpen={false}
+                />
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
 
@@ -217,10 +347,10 @@ export default function StackDetailPage() {
               <div className="text-center text-muted-foreground py-12">No logs available.</div>
             ) : (
               <Tabs defaultValue="all">
-                <TabsList>
-                  <TabsTrigger value="all">All Logs</TabsTrigger>
-                  <TabsTrigger value="error">Errors</TabsTrigger>
-                  <TabsTrigger value="info">Info</TabsTrigger>
+                <TabsList className="w-full justify-start">
+                  <TabsTrigger value="all" className="flex-1">All Logs</TabsTrigger>
+                  <TabsTrigger value="error" className="flex-1">Errors</TabsTrigger>
+                  <TabsTrigger value="info" className="flex-1">Info</TabsTrigger>
                 </TabsList>
                 <TabsContent value="all" className="mt-2">
                   <Card>

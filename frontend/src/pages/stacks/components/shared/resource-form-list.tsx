@@ -22,7 +22,6 @@ interface ResourceFormListProps<T> {
   autoAddFirstItem?: boolean;
   emptyText?: string;
   emptyIcon?: ReactNode;
-  readOnly?: boolean;
   defaultAllCollapsed?: boolean; // If true, all accordions start closed
 }
 
