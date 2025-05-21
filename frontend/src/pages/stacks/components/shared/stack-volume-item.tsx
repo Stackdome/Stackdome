@@ -3,10 +3,11 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { HardDrive, Trash2, GitBranch } from "lucide-react";
+import { HardDrive, Trash2 } from "lucide-react";
 import type { VolumeFormData, StackResourceData } from "@/pages/stacks/schemas/stack-create-schema";
 
 interface StackVolumeItemProps {
@@ -59,31 +60,19 @@ export default function StackVolumeItem({
         <div className="flex items-center gap-2 text-left flex-grow">
           <div className="flex flex-col flex-grow min-w-0">
             <span className="font-medium flex items-center gap-2">
-              {volume.sourceType === "GitRepo" ? (
-                <GitBranch className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <HardDrive className="h-4 w-4 text-muted-foreground" />
-              )}
               {volume.name || `Volume ${index + 1}`}
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <span className="h-2 w-2 rounded-full bg-green-500 cursor-help"></span>
+                </TooltipTrigger>
+                <TooltipContent side="top">Volume is available</TooltipContent>
+              </Tooltip>
             </span>
-            <span className="text-sm text-muted-foreground truncate pl-6">
-              {volume.sourceType === "GitRepo" && volume.spec?.source?.git_repo_source ? (
-                <>
-                  {volume.spec.source.git_repo_source.repo_url}
-                  {volume.spec.source.git_repo_source.revision && (
-                    <span className="ml-1 text-xs bg-muted/50 px-1.5 py-0.5 rounded-full">
-                      {volume.spec.source.git_repo_source.revision.branch?.name &&
-                        `Branch: ${volume.spec.source.git_repo_source.revision.branch.name}`}
-                      {volume.spec.source.git_repo_source.revision.tag &&
-                        `Tag: ${volume.spec.source.git_repo_source.revision.tag}`}
-                      {volume.spec.source.git_repo_source.revision.commit &&
-                        `SHA: ${volume.spec.source.git_repo_source.revision.commit}`}
-                    </span>
-                  )}
-                </>
-              ) : (
-                volume.spec?.size ? `${volume.spec.size}` : "No size specified"
-              )}
+            <span className="text-sm text-muted-foreground truncate">
+              <span className="flex items-center gap-1.5">
+                <HardDrive className="h-3.5 w-3.5" />
+                <span>Size: {volume.spec?.size || "Not specified"}</span>
+              </span>
             </span>
             {errors._form && (
               <span className="text-xs text-destructive mt-0.5 pl-6">{errors._form}</span>

@@ -280,18 +280,24 @@ export default function StackResourceItem({
         <div className="flex items-center gap-2 text-left flex-grow">
           <div className="flex flex-col flex-grow min-w-0">
             <span className="font-medium flex items-center gap-2">
-              {resource.sourceType === "image" ? (
-                <Box className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <GitBranch className="h-4 w-4 text-muted-foreground" />
-              )}
               {resource.name || `Resource ${index + 1}`}
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <span className="h-2 w-2 rounded-full bg-blue-500 cursor-help"></span>
+                </TooltipTrigger>
+                <TooltipContent side="top">Resource is active</TooltipContent>
+              </Tooltip>
             </span>
-            <span className="text-sm text-muted-foreground truncate pl-6">
-              {resource.sourceType === "image"
-                ? resource.image_spec?.image || "No image specified"
-                : (
-                  <>
+            <span className="text-sm text-muted-foreground truncate">
+              {resource.sourceType === "image" ? (
+                <span className="flex items-center gap-1.5">
+                  <Box className="h-3.5 w-3.5" />
+                  <span>{resource.image_spec?.image || "No image specified"}</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5">
+                  <GitBranch className="h-3.5 w-3.5" />
+                  <span>
                     {resource.build_spec?.source_context?.git_repo?.repo_url || "No repository specified"}
                     {resource.gitRevisionType && resource.gitRevisionValue && (
                       <span className="ml-1 text-xs bg-muted/50 px-1.5 py-0.5 rounded-full">
@@ -301,11 +307,12 @@ export default function StackResourceItem({
                         {resource.gitRevisionValue}
                       </span>
                     )}
-                  </>
-                )}
+                  </span>
+                </span>
+              )}
             </span>
             {errors._form && (
-              <span className="text-xs text-destructive mt-0.5">{errors._form}</span>
+              <span className="text-xs text-destructive mt-0.5 pl-6">{errors._form}</span>
             )}
           </div>
         </div>
