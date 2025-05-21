@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Cloud, PlusCircle } from "lucide-react";
+import { Boxes , PlusCircle } from "lucide-react";
 import { useClusters } from "./hooks/use-clusters";
 import { ClusterList } from "./components/cluster-list";
 import { ClusterDeleteDialog } from "./components/cluster-delete-dialog";
@@ -67,7 +67,7 @@ export default function ClustersPage() {
         <div className="flex flex-col items-center justify-center h-[80vh] text-center">
           <div className="flex flex-col items-center max-w-md">
             <div className="rounded-full bg-primary/10 p-4 mb-4">
-              <Cloud className="h-8 w-8 text-primary" />
+              <Boxes className="h-8 w-8 text-primary" />
             </div>
             <h2 className="text-2xl font-bold mb-2">No clusters created yet</h2>
             <p className="text-muted-foreground mb-6">
