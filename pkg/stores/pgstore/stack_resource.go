@@ -51,7 +51,7 @@ func (w *stackResourceStore) Create(ctx context.Context, spec *models.StackResou
 	return w.GetByID(ctx, spec.ID)
 }
 
-func (w *stackResourceStore) CreateWithTx(ctx context.Context, spec *models.StackResource) (*models.StackResource, *errors.ServiceError) {
+func (w *stackResourceStore) CreateWithTx(ctx context.Context, spec *models.StackResource, stack *models.Stack) (*models.StackResource, *errors.ServiceError) {
 	tx := db.TxFromContext(ctx)
 	if tx == nil {
 		return nil, errors.GeneralError("transaction not found in context")
@@ -61,9 +61,17 @@ func (w *stackResourceStore) CreateWithTx(ctx context.Context, spec *models.Stac
 	}
 
 	if len(spec.VolumeMounts) > 0 {
+		volumesMap := stack.VolumesMap()
 		for _, volumeMount := range spec.VolumeMounts {
+			referencedVolume, found := volumesMap[volumeMount.SourceVolumeName]
+			if !found || referencedVolume == nil || referencedVolume.ID == "" {
+				return nil, errors.GeneralError(
+					"failed to create stack resource: '%s'. Missing volume '%s'", spec.Name, volumeMount.SourceVolumeName)
+			}
 			volumeMount.StackResourceID = spec.ID
 			volumeMount.StackID = spec.StackID
+			volumeMount.SourceVolumeID = referencedVolume.ID
+			volumeMount.SourceVolumeType = referencedVolume.VolumeSourceType()
 		}
 		if _, err := w.volumeMountStore.BulkCreateWithTx(ctx, spec.VolumeMounts); err != nil {
 			return nil, errors.GeneralError("failed to create stack resource: %s", err.Error())
@@ -72,7 +80,7 @@ func (w *stackResourceStore) CreateWithTx(ctx context.Context, spec *models.Stac
 	return w.GetByID(ctx, spec.ID)
 }
 
-func (w *stackResourceStore) Update(ctx context.Context, ID string, spec *models.StackResource) (*models.StackResource, *errors.ServiceError) {
+func (w *stackResourceStore) Update(ctx context.Context, ID string, spec *models.StackResource, stack *models.Stack) (*models.StackResource, *errors.ServiceError) {
 	tx := w.sessionFactory.New(ctx).Begin()
 	ctx = db.CtxWithTransaction(ctx, tx)
 	// Update all fields except status
@@ -86,19 +94,31 @@ func (w *stackResourceStore) Update(ctx context.Context, ID string, spec *models
 		tx.Rollback()
 		return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
 	}
-	for _, volumeMount := range spec.VolumeMounts {
-		volumeMount.StackID = spec.StackID
-		volumeMount.StackResourceID = ID
-	}
-	if _, err := w.volumeMountStore.BulkCreateWithTx(ctx, spec.VolumeMounts); err != nil {
-		tx.Rollback()
-		return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
+
+	if len(spec.VolumeMounts) > 0 {
+		volumesMap := stack.VolumesMap()
+		for _, volumeMount := range spec.VolumeMounts {
+			referencedVolume, found := volumesMap[volumeMount.SourceVolumeName]
+			if !found || referencedVolume == nil || referencedVolume.ID == "" {
+				tx.Rollback()
+				return nil, errors.GeneralError(
+					"failed to update stack resource: '%s'. Missing volume '%s'", spec.Name, volumeMount.SourceVolumeName)
+			}
+			volumeMount.StackResourceID = ID
+			volumeMount.StackID = spec.StackID
+			volumeMount.SourceVolumeID = referencedVolume.ID
+			volumeMount.SourceVolumeType = referencedVolume.VolumeSourceType()
+		}
+		if _, err := w.volumeMountStore.BulkCreateWithTx(ctx, spec.VolumeMounts); err != nil {
+			tx.Rollback()
+			return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
+		}
 	}
 	tx.Commit()
 	return w.GetByID(ctx, ID)
 }
 
-func (w *stackResourceStore) UpdateWithTx(ctx context.Context, ID string, spec *models.StackResource) (*models.StackResource, *errors.ServiceError) {
+func (w *stackResourceStore) UpdateWithTx(ctx context.Context, ID string, spec *models.StackResource, stack *models.Stack) (*models.StackResource, *errors.ServiceError) {
 	tx := db.TxFromContext(ctx)
 	if tx == nil {
 		return nil, errors.GeneralError("transaction not found in context")
@@ -111,13 +131,22 @@ func (w *stackResourceStore) UpdateWithTx(ctx context.Context, ID string, spec *
 	if err := w.volumeMountStore.DeleteForStackResourceWithTx(ctx, ID); err != nil {
 		return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
 	}
+
 	if len(spec.VolumeMounts) > 0 {
+		volumesMap := stack.VolumesMap()
 		for _, volumeMount := range spec.VolumeMounts {
+			referencedVolume, found := volumesMap[volumeMount.SourceVolumeName]
+			if !found || referencedVolume == nil || referencedVolume.ID == "" {
+				return nil, errors.GeneralError(
+					"failed to update stack resource: '%s'. Missing volume '%s'", spec.Name, volumeMount.SourceVolumeName)
+			}
 			volumeMount.StackResourceID = ID
 			volumeMount.StackID = spec.StackID
+			volumeMount.SourceVolumeID = referencedVolume.ID
+			volumeMount.SourceVolumeType = referencedVolume.VolumeSourceType()
 		}
 		if _, err := w.volumeMountStore.BulkCreateWithTx(ctx, spec.VolumeMounts); err != nil {
-			return nil, errors.GeneralError("failed to update volume mounts for resource: %s", err.Error())
+			return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
 		}
 	}
 	return w.GetByID(ctx, ID)

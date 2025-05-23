@@ -16,10 +16,8 @@ type StackResourceService interface {
 	GetByStackID(ctx context.Context, stackID string) ([]*models.StackResource, *errors.ServiceError)
 	GetByID(ctx context.Context, ID string) (*models.StackResource, *errors.ServiceError)
 	GetByStackIDAndResourceName(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError)
-	Update(ctx context.Context, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
-	InternalUpdateWithTx(ctx context.Context, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, resourceID string, status *models.StackResourceStatus) *errors.ServiceError
-	InternalUpdateExposedPortDomainsWithTx(ctx context.Context, resourceID string, stackResource *models.StackResource) *errors.ServiceError
+	InternalUpdateExposedPortDomainsWithTx(ctx context.Context, resourceID string, stackResource *models.StackResource, stack *models.Stack) *errors.ServiceError
 }
 
 type StackResourceServiceSpec struct {
@@ -65,25 +63,17 @@ func (s *stackResourceService) GetByStackIDAndResourceName(ctx context.Context, 
 	return s.stackResourceStore.GetByStackIDAndResourceName(ctx, stackID, resourceName)
 }
 
-func (s *stackResourceService) Update(ctx context.Context, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
-	return s.stackResourceStore.Update(ctx, resourceID, resource)
-}
-
 func (s *stackResourceService) UpdateStatus(ctx context.Context, resourceID string, status *models.StackResourceStatus) *errors.ServiceError {
 	return s.stackResourceStore.UpdateStatus(ctx, resourceID, status)
 }
 
-func (s *stackResourceService) InternalUpdateWithTx(ctx context.Context, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
-	return s.stackResourceStore.UpdateWithTx(ctx, resourceID, resource)
-}
-
-func (s *stackResourceService) InternalUpdateExposedPortDomainsWithTx(ctx context.Context, resourceID string, stackResource *models.StackResource) *errors.ServiceError {
+func (s *stackResourceService) InternalUpdateExposedPortDomainsWithTx(ctx context.Context, resourceID string, stackResource *models.StackResource, stack *models.Stack) *errors.ServiceError {
 	for _, port := range stackResource.Ports {
 		if port.ExposedToPublic {
 			if port.ExposedFqdn == "" {
 				return errors.GeneralError("port exposed to public but fqdn is empty")
 			}
-			if _, err := s.InternalUpdateWithTx(ctx, resourceID, stackResource); err != nil {
+			if _, err := s.stackResourceStore.UpdateWithTx(ctx, resourceID, stackResource, stack); err != nil {
 				return err
 			}
 		}

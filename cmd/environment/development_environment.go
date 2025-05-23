@@ -228,14 +228,14 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OrganisationService:         organisationService,
 	})
 
-	clusterImageRegistryService := services.NewClusterImageRegistryService(services.ClusterImageRegistryServiceSpec{
+	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
 		SessionFactory: d.DBSession,
 		Logger:         d.Logger,
 	})
 
 	clusterService := services.NewClusterService(services.ClusterServiceSpec{
 		ClusterManager:       d.ClusterManager,
-		ImageRegistryService: clusterImageRegistryService,
+		ImageRegistryService: imageRegistryService,
 		SessionFactory:       d.DBSession,
 		Logger:               d.Logger,
 	})
@@ -275,7 +275,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OrganisationService:    organisationService,
 		StackResourceService:   stackResourceService,
 		ClusterService:         clusterService,
-		ClusterRegistryService: clusterImageRegistryService,
+		ClusterRegistryService: imageRegistryService,
 		NamespaceService:       namespaceService,
 	})
 
@@ -288,9 +288,10 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		StackService:                stackService,
 		StackResourceService:        stackResourceService,
 		ImageBuildService:           imageBuildService,
-		ClusterImageRegistryService: clusterImageRegistryService,
+		ClusterImageRegistryService: imageRegistryService,
 		StackDomainService:          stackDomainService,
 		OrganisationDomainService:   organisationDomainService,
+		NamespaceService:            namespaceService,
 	}
 
 	return nil
@@ -330,13 +331,16 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 		ClusterService: d.Services.ClusterService,
 	})
 
+	deps := services.ClusterResourceServiceDeps{
+		ClusterStackService:     clusterStackService,
+		ClusterNamespaceService: clusterNamespaceService,
+		ClusterVolumeService:    volumeClusterResourceService,
+	}
+
 	d.Services.WorkspaceUserService.InjectClusterResourceService(workspaceUserClusterResourceService)
 	d.Services.VolumeService.InjectClusterResourceService(volumeClusterResourceService)
-	d.Services.StackService.InjectClusterResourceServiceDeps(services.ClusterResourceServiceDeps{
-		ClusterStackService:     clusterStackService,
-		NamespaceClusterService: clusterNamespaceService,
-		VolumeClusterService:    volumeClusterResourceService,
-	})
+	d.Services.StackService.InjectClusterResourceServiceDeps(deps)
+	d.Services.NamespaceService.InjectClusterResourceServiceDeps(deps)
 	d.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	return nil
 }

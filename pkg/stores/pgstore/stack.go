@@ -45,7 +45,7 @@ func (w *stackStore) Create(ctx context.Context, spec *models.Stack) (*models.St
 	for _, resource := range spec.StackResources {
 		resource.StackID = spec.ID
 		resource.UserID = spec.UserID
-		if _, err := w.stackResourceStore.CreateWithTx(ctx, resource); err != nil {
+		if _, err := w.stackResourceStore.CreateWithTx(ctx, resource, spec); err != nil {
 			tx.Rollback()
 			return nil, errors.GeneralError("failed to create stack: errored creating stack resource '%s': %v", resource.Name, err)
 		}
@@ -65,7 +65,7 @@ func (w *stackStore) CreateWithTx(ctx context.Context, spec *models.Stack) (*mod
 	}
 	for _, resource := range spec.StackResources {
 		resource.StackID = spec.ID
-		if _, err := w.stackResourceStore.CreateWithTx(ctx, resource); err != nil {
+		if _, err := w.stackResourceStore.CreateWithTx(ctx, resource, spec); err != nil {
 			return nil, errors.GeneralError("failed to create stack: create stack resource: %v", err)
 		}
 	}
@@ -173,12 +173,12 @@ func (w *stackStore) Update(ctx context.Context, id string, spec *models.Stack) 
 		resource.StackID = existingStack.ID
 		resource.UserID = existingStack.UserID
 		if currentResource, ok := existingResourceMap[resource.Name]; ok {
-			if _, err := w.stackResourceStore.UpdateWithTx(txCtx, currentResource.ID, resource); err != nil {
+			if _, err := w.stackResourceStore.UpdateWithTx(txCtx, currentResource.ID, resource, spec); err != nil {
 				tx.Rollback()
 				return nil, err
 			}
 		} else {
-			if _, err := w.stackResourceStore.CreateWithTx(txCtx, resource); err != nil {
+			if _, err := w.stackResourceStore.CreateWithTx(txCtx, resource, spec); err != nil {
 				tx.Rollback()
 				return nil, err
 			}
@@ -218,11 +218,11 @@ func (w *stackStore) UpdateWithTx(ctx context.Context, id string, spec *models.S
 		patchResource.StackID = existingStack.ID
 		patchResource.UserID = existingStack.UserID
 		if existingResource, ok := existingResourceMap[patchResource.Name]; ok {
-			if _, err := w.stackResourceStore.UpdateWithTx(ctx, existingResource.ID, patchResource); err != nil {
+			if _, err := w.stackResourceStore.UpdateWithTx(ctx, existingResource.ID, patchResource, spec); err != nil {
 				return nil, errors.GeneralError("failed to update stack resource: %v", err)
 			}
 		} else {
-			if _, err := w.stackResourceStore.CreateWithTx(ctx, patchResource); err != nil {
+			if _, err := w.stackResourceStore.CreateWithTx(ctx, patchResource, spec); err != nil {
 				return nil, errors.GeneralError("failed to create stack resource: %v", err)
 			}
 		}

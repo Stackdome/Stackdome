@@ -102,15 +102,17 @@ func (s *organisationService) Delete(ctx context.Context, ID string) *errors.Ser
 
 // Update updates an organisation
 func (s *organisationService) Update(ctx context.Context, ID string, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
-	updatedOrg, err := s.Get(ctx, ID)
+	existing, err := s.Get(ctx, ID)
 	if err != nil {
 		return nil, err
 	}
-	updatedOrg.Name = spec.Name
-	// We dont want to set the default organisation by orgs created through the external API.
-	updatedOrg.Default = false
 
-	org, err := s.organisationStore.Update(ctx, ID, updatedOrg)
+	if spec.Name != "" && existing.Name != spec.Name {
+		return nil, errors.BadRequest("organisation name cannot be updated")
+	}
+
+	spec.Name = existing.Name
+	org, err := s.organisationStore.Update(ctx, ID, spec)
 	if err != nil {
 		s.logger.Errorf("failed to update organisation: %v", err)
 		return nil, err
@@ -146,5 +148,5 @@ func (s *organisationService) Update(ctx context.Context, ID string, spec *model
 			}
 		}
 	}
-	return org, nil
+	return s.Get(ctx, org.ID)
 }

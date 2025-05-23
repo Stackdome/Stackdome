@@ -29,6 +29,8 @@ type VolumeService interface {
 	DeleteWithTx(ctx context.Context, ID string) *errors.ServiceError
 	ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError)
 	UpdateVolumeInUseByStackWithTx(ctx context.Context, volumeID string, stackID string) *errors.ServiceError
+	CreateVolumesInDBForStackWithTx(ctx context.Context, stack *models.Stack) ([]*models.Volume, *errors.ServiceError)
+	UpdateVolumesInDBForStackWithTx(ctx context.Context, patch *models.Stack, existingStack *models.Stack) ([]*models.Volume, *errors.ServiceError)
 }
 
 type VolumeServiceSpec struct {
@@ -79,6 +81,45 @@ func (s *volumeService) ListVolumesUsedByStack(ctx context.Context, stackID stri
 		return nil, err
 	}
 	return volumes, nil
+}
+
+func (s *volumeService) CreateVolumesInDBForStackWithTx(ctx context.Context, stack *models.Stack) ([]*models.Volume, *errors.ServiceError) {
+	createdVolumes := make([]*models.Volume, 0)
+	for _, volume := range stack.Volumes {
+		volume.NamespaceID = stack.NamespaceID
+		volume.OrganisationID = stack.OrganisationID
+		volume.UserID = stack.UserID
+		volume.Namespace = stack.Namespace
+
+		createdVolume, err := s.CreateInDbWithTx(ctx, volume)
+		if err != nil {
+			return nil, errors.GeneralError("failed to create volume '%s': %s", volume.Name, err.Error())
+		}
+		createdVolumes = append(createdVolumes, createdVolume)
+	}
+	return createdVolumes, nil
+}
+
+func (s *volumeService) UpdateVolumesInDBForStackWithTx(ctx context.Context, patch *models.Stack, existingStack *models.Stack) ([]*models.Volume, *errors.ServiceError) {
+	existingVolumesMap := existingStack.VolumesMap()
+	newlyCreatedVolumes := make([]*models.Volume, 0)
+	for _, volume := range patch.Volumes {
+		volume.NamespaceID = existingStack.NamespaceID
+		volume.OrganisationID = existingStack.OrganisationID
+		volume.UserID = existingStack.UserID
+		volume.Namespace = existingStack.Namespace
+		if _, found := existingVolumesMap[volume.Name]; found {
+			// Updating existing volumes currently not implemented.
+			// NOOP
+		} else {
+			createdVolume, err := s.CreateInDbWithTx(ctx, volume)
+			if err != nil {
+				return nil, errors.GeneralError("failed to create volume '%s': %s", volume.Name, err.Error())
+			}
+			newlyCreatedVolumes = append(newlyCreatedVolumes, createdVolume)
+		}
+	}
+	return newlyCreatedVolumes, nil
 }
 
 func (s *volumeService) UpdateVolumeInUseByStackWithTx(ctx context.Context, volumeID string, stackID string) *errors.ServiceError {

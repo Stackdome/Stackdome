@@ -115,3 +115,14 @@ func (s *Stack) ExposedPortFqdnMap() map[string]map[int]string {
 	}
 	return exposedPortFqdnMap
 }
+
+func (s *Stack) HasExposedPorts() bool {
+	for i := range s.StackResources {
+		for j := range s.StackResources[i].Ports {
+			if s.StackResources[i].Ports[j].ExposedToPublic {
+				return true
+			}
+		}
+	}
+	return false
+}
