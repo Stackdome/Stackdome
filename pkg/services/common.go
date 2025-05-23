@@ -6,8 +6,15 @@ type ClusterResourceServiceInjectable interface {
 	InjectClusterResourceServiceDeps(deps ClusterResourceServiceDeps)
 }
 
+// To be emdedded in services that require cluster resource service dependencies.
 type ClusterResourceServiceDeps struct {
 	ClusterStackService     clusterresource.ClusterStackService
-	NamespaceClusterService clusterresource.NamespaceClusterResourceService
-	VolumeClusterService    clusterresource.VolumeClusterResourceService
+	ClusterNamespaceService clusterresource.NamespaceClusterResourceService
+	ClusterVolumeService    clusterresource.VolumeClusterResourceService
+}
+
+func (s *ClusterResourceServiceDeps) InjectClusterResourceServiceDeps(deps ClusterResourceServiceDeps) {
+	s.ClusterStackService = deps.ClusterStackService
+	s.ClusterNamespaceService = deps.ClusterNamespaceService
+	s.ClusterVolumeService = deps.ClusterVolumeService
 }
