@@ -423,28 +423,36 @@ export default function StackCreatePage() {
     }, {});
 
   return (
-    <div className="px-4 pt-6 pb-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Create New Stack</h2>
-          <p className="text-muted-foreground mt-1">
-            Define your stack to provision infrastructure
-          </p>
+    <div className="p-6">
+      <header className="mb-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-2xl font-bold">Create New Stack</h1>
+            </div>
+            <div className="flex items-center gap-4 text-muted-foreground text-sm mb-1">
+              <span>Define your stack to provision infrastructure</span>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" size="lg" onClick={() => {
+              if (window.history.length > 2 && window.history.state && window.history.state.idx !== 0) {
+                navigate(-1);
+              } else {
+                navigate("/stacks", { replace: true });
+              }
+            }}>
+              <X className="mr-2 h-4 w-4" />
+              Cancel
+            </Button>
+            <Button variant="default" size="lg" onClick={handleSubmit} disabled={isLoading}>
+              <Rocket className="mr-2 h-4 w-4" />
+              <span className="font-semibold">{isLoading ? "Deploying..." : "Deploy"}</span>
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => {
-            if (window.history.length > 2 && window.history.state && window.history.state.idx !== 0) {
-              navigate(-1);
-            } else {
-              navigate("/stacks", { replace: true });
-            }
-          }}>Cancel</Button>
-          <Button variant="default" onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? "Deploying..." : <><Rocket className="mr-2 h-4 w-4" /> Deploy</>}
-          </Button>
-        </div>
-      </div>
-      <Separator className="my-6" />
+        <Separator className="mt-4" />
+      </header>
 
       {Object.keys(formErrors).length > 0 && (
         <div className="bg-red-500/10 border border-red-500 rounded-lg px-4 py-3 mb-6">

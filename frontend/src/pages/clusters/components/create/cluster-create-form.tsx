@@ -14,10 +14,9 @@ interface Props {
   onSubmit: (values: ClusterData) => void;
   loading: boolean;
   error: string | null;
-  onCancel: () => void;
 }
 
-export default function ClusterCreateForm({ onSubmit, loading, error, onCancel }: Props) {
+export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
   // Use a local type for form state to allow the registry object
   type ClusterFormState = Omit<ClusterData, 'cluster_image_registry'> & {
     cluster_image_registry?: {
@@ -112,9 +111,9 @@ export default function ClusterCreateForm({ onSubmit, loading, error, onCancel }
   return (
     <TooltipProvider>
       <form onSubmit={handleSubmit}>
-        <Card className="w-full">
+        <Card className="w-full rounded-lg">
           <CardHeader>
-            <CardTitle>Cluster Details</CardTitle>
+            <CardTitle className="text-xl">Cluster Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
@@ -275,20 +274,9 @@ export default function ClusterCreateForm({ onSubmit, loading, error, onCancel }
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex justify-between space-x-4">
-            <Button
-              variant="outline"
-              onClick={(e) => {
-                e.preventDefault();
-                onCancel();
-              }}
-              type="button"
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? "Creating..." : "Create"}
+          <CardFooter className="flex justify-end">
+            <Button type="submit" disabled={loading} className="px-8">
+              {loading ? "Creating..." : "Create Cluster"}
             </Button>
           </CardFooter>
         </Card>

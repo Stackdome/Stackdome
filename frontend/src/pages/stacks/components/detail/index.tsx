@@ -196,7 +196,7 @@ export default function StackDetailPage() {
               {isRunning ? <Square className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
               {isRunning ? "Stop Stack" : "Start Stack"}
             </Button>
-            <Button variant="outline" size="lg">
+            <Button variant="default" size="lg">
               <Rocket className="mr-2 h-4 w-4" />
               <span className="font-semibold">Deploy</span>
             </Button>

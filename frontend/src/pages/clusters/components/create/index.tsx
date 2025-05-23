@@ -6,6 +6,9 @@ import type { ClusterData } from "../../hooks/use-clusters";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useToast } from "@/components/ui/use-toast";
 import { extractErrorMessage } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 export default function ClusterCreatePage() {
   const [loading, setLoading] = useState(false);
@@ -77,20 +80,33 @@ export default function ClusterCreatePage() {
   }
 
   return (
-    <div className="p-4 pt-0 h-full">
-      <div className="flex h-[calc(100vh-64px)]">
-        {/* Main Content - Full Width */}
-        <div className="flex-grow p-6 overflow-y-auto">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-xl font-medium mb-6">Create New Cluster</h2>
-            <ClusterCreateForm
-              onSubmit={handleSubmit}
-              loading={loading}
-              error={error}
-              onCancel={handleCancel}
-            />
+    <div className="p-6">
+      <header className="mb-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-2xl font-bold">Create New Cluster</h1>
+            </div>
+            <div className="flex items-center gap-4 text-muted-foreground text-sm mb-1">
+              <span>Configure your Kubernetes cluster connection</span>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" size="lg" onClick={handleCancel}>
+              <X className="mr-2 h-4 w-4" />
+              Cancel
+            </Button>
           </div>
         </div>
+        <Separator className="mt-4" />
+      </header>
+
+      <div className="max-w-3xl">
+        <ClusterCreateForm
+          onSubmit={handleSubmit}
+          loading={loading}
+          error={error}
+        />
       </div>
     </div>
   );
