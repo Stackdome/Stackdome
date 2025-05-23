@@ -200,24 +200,36 @@ export default function ClusterDetailPage() {
                         <span className="text-xs text-muted-foreground">Registry Status</span>
                         <span className="flex items-center gap-2 font-mono text-sm">
                           {(() => {
-                            const state = cluster.cluster_image_registry.status?.state;
-                            let color = "bg-gray-400";
-                            let label = state || "-";
+                            const state = cluster.cluster_image_registry.status?.state || "Unknown";
+                            let color = "bg-gray-500";
+
                             if (state === "ImageRegistryRunning") {
                               color = "bg-green-500";
-                              label = "Running";
                             } else if (state === "ImageRegistryError") {
                               color = "bg-red-500";
-                              label = "Error";
                             } else if (state === "ImageRegistryPending") {
-                              color = "bg-gray-400";
-                              label = "Pending";
+                              color = "bg-yellow-500";
                             }
+
                             return (
-                              <>
-                                <span className={`inline-block w-2 h-2 rounded-full ${color}`}></span>
-                                <span>{label}</span>
-                              </>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`inline-block w-2 h-2 rounded-full ${color}`}></span>
+                                    {state === "ImageRegistryRunning" && <span>Running</span>}
+                                    {state === "ImageRegistryError" && <span>Error</span>}
+                                    {state === "ImageRegistryPending" && <span>Pending</span>}
+                                    {!["ImageRegistryRunning", "ImageRegistryError", "ImageRegistryPending"].includes(state) && <span>{state}</span>}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="capitalize">
+                                    {state === "ImageRegistryRunning" ? "Running" :
+                                      state === "ImageRegistryError" ? "Error" :
+                                        state === "ImageRegistryPending" ? "Pending" : state}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
                             );
                           })()}
                         </span>

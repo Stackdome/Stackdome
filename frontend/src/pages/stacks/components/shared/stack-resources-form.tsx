@@ -1,4 +1,4 @@
-import type { FormStackResourceData as StackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData  , FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import ResourceFormList from "@/pages/stacks/components/shared/resource-form-list";
 import StackResourceItem from "@/pages/stacks/components/shared/stack-resource-item";
 import { Button } from "@/components/ui/button";
@@ -6,14 +6,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useState } from "react";
 
 interface StackResourcesFormProps {
-  resources: Partial<StackResourceData>[];
-  onResourcesChange: (updatedResources: Partial<StackResourceData>[]) => void;
+  resources: Partial<FormStackResourceData>[];
+  onResourcesChange: (updatedResources: Partial<FormStackResourceData>[]) => void;
   errors: { [index: number]: { [field: string]: string | undefined } };
   volumes?: Partial<VolumeFormData>[];
   accordionDefaultOpen?: boolean; // If false, all collapsed by default
 }
 
-function getDefaultResource(): Partial<StackResourceData> {
+function getDefaultResource(): Partial<FormStackResourceData> {
   return {
     name: "",
     sourceType: "image",
@@ -36,7 +36,7 @@ export default function StackResourcesForm({
 }: StackResourcesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
 
-  const isResourceFilled = (res: Partial<StackResourceData>) => {
+  const isResourceFilled = (res: Partial<FormStackResourceData>) => {
     return !!(res.name || res.ports?.length || res.volume_mounts?.length || res.labels?.length || res.depends_on?.length || res.execution_config?.environment_variables?.length || res.build_spec || (res.image_spec && res.image_spec.image));
   };
 
@@ -57,7 +57,7 @@ export default function StackResourcesForm({
 
   return (
     <div>
-      <ResourceFormList<StackResourceData>
+      <ResourceFormList<Partial<FormStackResourceData>>
         items={resources}
         onItemsChange={onResourcesChange}
         errors={errors}

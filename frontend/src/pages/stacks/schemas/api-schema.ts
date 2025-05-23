@@ -3,103 +3,93 @@
  * These are the "raw" schemas that represent what the API expects to receive and returns
  */
 import { z } from 'zod';
-import type { components } from '@/api/types/openapi';
 
-/**
- * API Schema types - direct aliases to OpenAPI component schemas
- * These represent the raw API data structures
- */
-export type ApiLabel = components["schemas"]["Label"];
-export type ApiAnnotation = components["schemas"]["Annotation"];
-export type ApiPort = components["schemas"]["Port"];
-export type ApiImageSpec = components["schemas"]["ImageSpec"];
-export type ApiEnvVar = components["schemas"]["EnvVar"];
-export type ApiExecutionConfig = components["schemas"]["ExecutionConfig"];
-export type ApiInitSpec = components["schemas"]["InitSpec"];
-export type ApiStackResourceBuildSpec = components["schemas"]["StackResourceBuildSpec"];
-export type ApiGitRepoRevision = components["schemas"]["GitRepoRevision"];
-export type ApiVolumeMount = components["schemas"]["VolumeMount"];
-export type ApiStackResource = components["schemas"]["StackResource"];
-export type ApiVolumeSource = components["schemas"]["VolumeSource"];
-export type ApiVolumeSpec = components["schemas"]["VolumeSpec"];
-export type ApiVolume = components["schemas"]["Volume"];
-export type ApiStackSpec = components["schemas"]["StackSpec"];
-export type ApiStack = components["schemas"]["Stack"];
 
 /**
  * Basic API schema definitions - bare minimum validation reflecting API models
  * These schemas provide minimal validation just to ensure type safety
  */
-export const ApiLabelSchema = z.object({
-  key: z.string(),
-  value: z.string(),
+const ApiLabelSchema = z.object({
+  key: z.string().min(1, "Key is required"),
+  value: z.string().min(1, "Value is required"),
 });
 
-export const ApiAnnotationSchema = ApiLabelSchema;
+const ApiAnnotationSchema = ApiLabelSchema;
 
-export const ApiPortSchema = z.object({
-  number: z.number().int(),
-  protocol: z.enum(['tcp', 'http']).optional(),
-  exposed_to_public: z.boolean().optional(),
+const ApiPortSchema = z.object({
+  number: z.number().int().min(1, "Port number is required"),
+  protocol: z.enum(['tcp', 'http']).optional().default("tcp"),
+  exposed_to_public: z.boolean().optional().default(false),
   subdomain_prefix: z.string().optional(),
 });
 
-export const ApiImageSpecSchema = z.object({
-  image: z.string(),
+const ApiImageSpecSchema = z.object({
+  image: z.string().min(1, "Image URL is required"),
 });
 
-export const ApiEnvVarSchema = z.object({
-  name: z.string(),
+const ApiEnvVarSchema = z.object({
+  name: z.string().min(1, "Environment variable name is required"),
   value: z.string(),
 });
 
-export const ApiExecutionConfigSchema = z.object({
+const ApiExecutionConfigSchema = z.object({
   command: z.array(z.string()).optional(),
   args: z.array(z.string()).optional(),
   environment_variables: z.array(ApiEnvVarSchema).optional(),
 });
 
-export const ApiInitSpecSchema = z.object({
+const ApiInitSpecSchema = z.object({
   image_spec: ApiImageSpecSchema.optional(),
   command: z.array(z.string()).optional(),
   args: z.array(z.string()).optional(),
 });
 
-export const ApiGitRepoRevisionSchema = z.object({
-  branch: z.object({ name: z.string().optional() }).optional(),
-  commit: z.string().optional(),
-  tag: z.string().optional(),
+const ApiGitRepoRevisionSchema = z
+  .object({
+    branch: z.object({ name: z.string().optional() }).optional(),
+    commit: z.string().optional(),
+    tag: z.string().optional(),
+  })
+  .refine((data) => data.branch?.name || data.commit || data.tag, {
+    message:
+      "At least one of branch, commit, or tag must be provided for Git revision.",
+  });
+
+const ApiBuildSourceContextSchema = z.object({
+  git_repo: z
+    .object({
+      repo_url: z.string().url("Invalid Git repository URL"),
+    })
+    .optional(),
 });
 
-export const ApiBuildSourceContextSchema = z.object({
-  git_repo: z.object({
-    repo_url: z.string(),
-  }).optional(),
-});
-
-export const ApiStackResourceBuildSpecSchema = z.object({
+const ApiStackResourceBuildSpecSchema = z.object({
   source_context: ApiBuildSourceContextSchema,
-  context_path_within_source: z.string().optional(),
-  dockerfile_path: z.string().optional(),
+  context_path_within_source: z.string().optional().default("./"),
+  dockerfile_path: z.string().optional().default("Dockerfile"),
+  // Make source_revision always present and always with both keys
   source_revision: z.object({
+    volume_source_revision: z.object({ current_volume_hash: z.string() }).optional(),
     git_repo_revision: ApiGitRepoRevisionSchema.optional(),
-  }).optional(),
+  }),
   image_repository: z.object({
-    external_image_repo_url: z.string(),
+    external_image_repo_url: z
+      .string()
+      .min(1, "Image repository URL is required"),
     use_internal_registry: z.boolean().optional(),
     cluster_registry_id: z.string().optional(),
   }),
-  insecure_registry: z.boolean().optional(),
+  insecure_registry: z.boolean().optional().default(false),
 });
 
-export const ApiVolumeMountSchema = z.object({
-  source_volume_name: z.string(),
+const ApiVolumeMountSchema = z.object({
+  source_volume_name: z.string().min(1, "Volume name is required"),
   source_sub_path: z.string().optional(),
-  target_path: z.string(),
+  target_path: z.string().min(1, "Target path is required"),
 });
 
-export const ApiStackResourceSchema = z.object({
-  name: z.string(),
+const ApiStackResourceSchema = z.object({
+  name: z.string().min(1, "Resource name is required"),
   labels: z.array(ApiLabelSchema).optional(),
   build_spec: ApiStackResourceBuildSpecSchema.optional(),
   image_spec: ApiImageSpecSchema.optional(),
@@ -110,64 +100,93 @@ export const ApiStackResourceSchema = z.object({
   volume_mounts: z.array(ApiVolumeMountSchema).optional(),
 });
 
-export const ApiVolumeSourceTypeSchema = z.enum([
+const ApiVolumeSourceTypeSchema = z.enum([
   'RemoteDir',
   'BuildArtifact',
   'GitRepo'
 ]);
 
-export const ApiRemoteSourceSchema = z.object({
-  path: z.string(),
-  current_directory_hash: z.string().optional(),
+const ApiRemoteSourceSchema = z.object({
+  path: z.string().min(1, "Path is required"),
+  current_directory_hash: z.string().default(""),
 });
 
-export const ApiBuildArtifactSchema = z.object({
-  resource_ref: z.string(),
-  source_path: z.string(),
-  destination_path: z.string(),
+const ApiBuildArtifactSchema = z.object({
+  resource_ref: z.string().min(1, "Resource reference is required"),
+  source_path: z.string().min(1, "Source path is required"),
+  destination_path: z.string().min(1, "Destination path is required"),
 });
 
-export const ApiGitRepoSourceSchema = z.object({
-  repo_url: z.string(),
+const ApiGitRepoSourceSchema = z.object({
+  repo_url: z.string().url("Invalid Git repository URL"),
   revision: ApiGitRepoRevisionSchema,
 });
 
-export const ApiVolumeSourceSchema = z.object({
+const ApiVolumeSourceSchema = z.object({
   git_repo_source: ApiGitRepoSourceSchema.optional(),
   source_type: ApiVolumeSourceTypeSchema,
   remote_source: ApiRemoteSourceSchema.optional(),
   build_source: z.array(ApiBuildArtifactSchema).optional(),
 });
 
-export const ApiVolumeAccessModeSchema = z.enum([
+const ApiVolumeAccessModeSchema = z.enum([
   'ReadWriteOnce',
   'ReadWriteMany',
   'ReadOnlyMany'
 ]);
 
-export const ApiVolumeSpecSchema = z.object({
-  size: z.string(),
+const ApiVolumeSpecSchema = z.object({
+  size: z.string().min(1, "Volume size is required"),
   storage_class: z.string().optional(),
-  needs_sync_before_use: z.boolean().optional(),
-  access_mode: ApiVolumeAccessModeSchema,
+  // needs_sync_before_use is required and must always be a boolean
+  needs_sync_before_use: z.boolean().default(false),
+  access_mode: ApiVolumeAccessModeSchema.default("ReadWriteOnce"),
   source: ApiVolumeSourceSchema.optional(),
 });
 
-export const ApiVolumeSchema = z.object({
-  name: z.string(),
+const ApiVolumeSchema = z.object({
+  name: z.string().min(1, "Volume name is required"),
   labels: z.array(ApiLabelSchema).optional(),
   annotations: z.array(ApiAnnotationSchema).optional(),
   spec: ApiVolumeSpecSchema,
 });
 
-export const ApiStackSpecSchema = z.object({
-  stack_resources: z.array(ApiStackResourceSchema),
+const ApiStackSpecSchema = z.object({
+  stack_resources: z.array(ApiStackResourceSchema).min(1, "At least one stack resource is required"),
   volumes: z.array(ApiVolumeSchema).optional(),
 });
 
-export const ApiStackSchema = z.object({
-  name: z.string(),
-  workspace_name: z.string(),
+const ApiStackSchema = z.object({
+  name: z.string().min(1, "Stack name is required"),
+  workspace_name: z.string().min(1, "Workspace name is required"),
   labels: z.array(ApiLabelSchema).optional(),
   spec: ApiStackSpecSchema,
 });
+
+// Status schemas for StackResource and Volume (for use in detail components)
+const ApiStackResourceStatusSchema = z.object({
+  public_ingress: z.array(z.any()).optional(),
+  internal_service_name: z.string().optional(),
+  last_restart_request_processed_at: z.string().optional(),
+  state: z.string().optional(),
+  observed_version: z.number().optional(),
+  conditions: z.array(z.any()).optional(),
+});
+
+const ApiVolumeStatusSchema = z.object({
+  conditions: z.array(z.any()).optional(),
+  phase: z.string().optional(),
+  build_artifact_syncs: z.array(z.any()).optional(),
+  last_synced_git_revision: z.string().optional(),
+  last_remote_sync_hash: z.string().optional(),
+});
+
+export {
+  ApiStackResourceSchema,
+  ApiVolumeSourceSchema,
+  ApiVolumeSpecSchema,
+  ApiVolumeSchema,
+  ApiStackSchema,
+  ApiStackResourceStatusSchema,
+  ApiVolumeStatusSchema,
+};

@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { HardDrive, Trash2 } from "lucide-react";
-import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData as StackResourceData } from "@/pages/stacks/schemas/form-schema";
+import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData   } from "@/pages/stacks/schemas/form-schema";
+import type { z } from "zod";
+import { ApiVolumeStatusSchema } from "@/pages/stacks/schemas/api-schema";
 
 interface StackVolumeItemProps {
   volume: Partial<VolumeFormData>;
@@ -18,7 +20,7 @@ interface StackVolumeItemProps {
   onRemove: (index: number) => void;
   errors: { [field: string]: string | undefined };
   allVolumes: Partial<VolumeFormData>[];
-  allStackResources?: Partial<StackResourceData>[];
+  allStackResources?: Partial<FormStackResourceData>[];
 }
 
 export default function StackVolumeItem({
@@ -38,6 +40,17 @@ export default function StackVolumeItem({
 
   // Check for duplicate name
   const isDuplicate = allVolumes.filter((v) => v.name?.length && v.name === volume.name).length > 1;
+
+  // Determine status color based on volume.status.phase
+  const statusObj = (volume.status ?? {}) as z.infer<typeof ApiVolumeStatusSchema>;
+  const status = statusObj.phase?.toLowerCase() || 'pending';
+  let statusColor = 'bg-yellow-500';
+
+  if (status === 'ready') {
+    statusColor = 'bg-green-500';
+  } else if (status === 'failed') {
+    statusColor = 'bg-red-500';
+  }
 
   const mountingInfo = volume.name
     ? allStackResources
@@ -63,9 +76,11 @@ export default function StackVolumeItem({
               {volume.name || `Volume ${index + 1}`}
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
-                  <span className="h-2 w-2 rounded-full bg-green-500 cursor-help"></span>
+                  <span className={`h-2 w-2 rounded-full ${statusColor}`}></span>
                 </TooltipTrigger>
-                <TooltipContent side="top">Volume is available</TooltipContent>
+                <TooltipContent side="top">
+                  <p className="capitalize">{status}</p>
+                </TooltipContent>
               </Tooltip>
             </span>
             <span className="text-sm text-muted-foreground truncate">

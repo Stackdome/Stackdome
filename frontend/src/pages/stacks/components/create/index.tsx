@@ -11,11 +11,11 @@ import { Label as UILabel } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
-  FormStackSchema as StackSchema,
-  type FormStackData as StackData,
-  type FormStackResourceData as StackResourceData,
-  type FormVolumeExtendedData as VolumeFormData,
-  convertFormStackToApiStack as stripUIFieldsFromStackData,
+  FormStackSchema,
+  type FormStackData,
+  type FormStackResourceData,
+  type FormVolumeExtendedData,
+  convertFormStackToApiStack,
 } from "@/pages/stacks/schemas/form-schema";
 import { createStack } from '@/api/stacks';
 import { getCurrentOrganizationId } from '@/helpers/common';
@@ -24,7 +24,7 @@ import { useToast } from '@/components/ui/use-toast';
 type FormErrors = { [path: string]: string | undefined };
 
 export default function StackCreatePage() {
-  const [formData, setFormData] = useState<Partial<StackData>>({
+  const [formData, setFormData] = useState<Partial<FormStackData>>({
     name: "",
     workspace_name: "default",
     labels: [],
@@ -42,7 +42,7 @@ export default function StackCreatePage() {
 
   const handleChange = (path: string, value: string | number | boolean | object | null) => {
     setFormData(prev => {
-      const newState = JSON.parse(JSON.stringify(prev)) as Partial<StackData>;
+      const newState = JSON.parse(JSON.stringify(prev)) as Partial<FormStackData>;
       setNestedValue(newState, path, value);
       return newState;
     });
@@ -93,12 +93,12 @@ export default function StackCreatePage() {
     });
   };
 
-  const handleResourcesChange = useCallback((updatedResources: Partial<StackResourceData>[]) => {
+  const handleResourcesChange = useCallback((updatedResources: Partial<FormStackResourceData>[]) => {
     setFormData(prev => ({
       ...prev,
       spec: {
         ...(prev.spec || {}),
-        stack_resources: updatedResources as StackResourceData[],
+        stack_resources: updatedResources as FormStackResourceData[],
       }
     }));
     if (formErrors["spec.stack_resources"]) {
@@ -115,7 +115,7 @@ export default function StackCreatePage() {
     }
   }, [formErrors]);
 
-  const handleVolumesChange = useCallback((updatedVolumes: Partial<VolumeFormData>[]) => {
+  const handleVolumesChange = useCallback((updatedVolumes: Partial<FormVolumeExtendedData>[]) => {
     setFormData(prev => {
       const newFormData = { ...prev };
 
@@ -168,7 +168,7 @@ export default function StackCreatePage() {
           spec: {
             size: vol.spec?.size || '',
             storage_class: vol.spec?.storage_class,
-            needs_sync_before_use: vol.spec?.needs_sync_before_use || false,
+            needs_sync_before_use: vol.spec?.needs_sync_before_use ?? false,
             access_mode: vol.spec?.access_mode || 'ReadWriteOnce',
             source: vol.spec?.source
           }
@@ -196,13 +196,13 @@ export default function StackCreatePage() {
     setIsLoading(true);
     setApiError(null);
 
-    const payloadToValidate: StackData = {
+    const payloadToValidate: FormStackData = {
       name: formData.name || "",
       workspace_name: formData.workspace_name || "default",
       labels: formData.labels || [],
       spec: {
         stack_resources: (formData.spec?.stack_resources || []).map(sr => {
-          const resource: StackResourceData = {
+          const resource: FormStackResourceData = {
             name: sr.name || "",
             sourceType: sr.sourceType || 'image',
             labels: sr.labels?.length ? sr.labels : undefined,
@@ -267,7 +267,7 @@ export default function StackCreatePage() {
                 }
                 : { external_image_repo_url: "" },
               insecure_registry: sr.build_spec.insecure_registry || false,
-              source_revision: git_repo_revision ? { git_repo_revision } : undefined,
+              source_revision: { volume_source_revision: undefined, git_repo_revision },
             } : undefined;
             resource.image_spec = undefined;
           }
@@ -279,7 +279,7 @@ export default function StackCreatePage() {
         volumes: (formData.spec?.volumes || [])
           .map(vol => {
             const sourceConfig = (() => {
-              const typedVol = vol as VolumeFormData;
+              const typedVol = vol as FormVolumeExtendedData;
               if (!typedVol.sourceType || typedVol.sourceType === 'None') {
                 return {};
               }
@@ -303,7 +303,7 @@ export default function StackCreatePage() {
               spec: {
                 size: vol.spec?.size || "",
                 storage_class: vol.spec?.storage_class,
-                needs_sync_before_use: vol.spec?.needs_sync_before_use || false,
+                needs_sync_before_use: vol.spec?.needs_sync_before_use ?? false,
                 access_mode: vol.spec?.access_mode || "ReadWriteOnce",
                 ...sourceConfig
               }
@@ -312,7 +312,7 @@ export default function StackCreatePage() {
       }
     };
 
-    const validationResult = StackSchema.safeParse(payloadToValidate);
+    const validationResult = FormStackSchema.safeParse(payloadToValidate);
 
     if (!validationResult.success) {
       const newErrors: FormErrors = {};
@@ -352,7 +352,7 @@ export default function StackCreatePage() {
     }
 
     try {
-      await createStack(orgId, stripUIFieldsFromStackData(validationResult.data));
+      await createStack(orgId, convertFormStackToApiStack(validationResult.data));
       setIsLoading(false);
       toast({
         title: 'Stack Created',

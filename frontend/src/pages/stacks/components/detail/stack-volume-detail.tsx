@@ -5,12 +5,14 @@ import {
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { HardDrive } from "lucide-react";
-import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData as StackResourceData } from "@/pages/stacks/schemas/form-schema";
+import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData   } from "@/pages/stacks/schemas/form-schema";
+import type { z } from "zod";
+import { ApiVolumeStatusSchema } from "@/pages/stacks/schemas/api-schema";
 
 interface StackVolumeDetailProps {
   volume: Partial<VolumeFormData>;
   index: number;
-  allStackResources?: Partial<StackResourceData>[];
+  allStackResources?: Partial<FormStackResourceData>[];
 }
 
 export default function StackVolumeDetail({
@@ -18,6 +20,17 @@ export default function StackVolumeDetail({
   index,
   allStackResources = [],
 }: StackVolumeDetailProps) {
+  // Determine status color based on volume.status.phase
+  const statusObj = (volume.status ?? {}) as z.infer<typeof ApiVolumeStatusSchema>;
+  const status = statusObj.phase?.toLowerCase() || 'pending';
+  let statusColor = 'bg-yellow-500'; // Default for pending
+
+  if (status === 'ready' || status === 'running') {
+    statusColor = 'bg-green-500';
+  } else if (status === 'failed') {
+    statusColor = 'bg-red-500';
+  }
+
   // Helper to find resources that mount this volume
   const mountingInfo = volume.name
     ? allStackResources
@@ -42,9 +55,11 @@ export default function StackVolumeDetail({
               {volume.name || `Volume ${index + 1}`}
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
-                  <span className="h-2 w-2 rounded-full bg-green-500 cursor-help"></span>
+                  <span className={`h-2 w-2 rounded-full ${statusColor}`}></span>
                 </TooltipTrigger>
-                <TooltipContent side="top">Volume is available</TooltipContent>
+                <TooltipContent side="top">
+                  <p className="capitalize">{status}</p>
+                </TooltipContent>
               </Tooltip>
             </span>
             <span className="text-sm text-muted-foreground truncate">

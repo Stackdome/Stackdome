@@ -1,7 +1,7 @@
 import { Route, RouterProvider, createBrowserRouter, createRoutesFromElements } from "react-router-dom"
 import Login from "@/pages/login"
 import Signup from "@/pages/signup"
-import StacksPage from "@/pages/stacks"
+import StacksPage from "@/pages/stacks/components/list"
 import StackCreatePage from "@/pages/stacks/components/create"
 import StackDetailPage from "@/pages/stacks/components/detail"
 import ClustersPage from "@/pages/clusters"

@@ -1,4 +1,4 @@
-import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData as StackResourceData } from "@/pages/stacks/schemas/form-schema";
+import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData   } from "@/pages/stacks/schemas/form-schema";
 import ResourceFormList from "@/pages/stacks/components/shared/resource-form-list";
 import StackVolumeItem from "@/pages/stacks/components/shared/stack-volume-item";
 import { Database } from "lucide-react";
@@ -10,7 +10,7 @@ interface StackVolumesFormProps {
   volumes: Partial<VolumeFormData>[];
   onVolumesChange: (updatedVolumes: Partial<VolumeFormData>[]) => void;
   errors: { [index: number]: { [field: string]: string | undefined } };
-  stackResources?: Partial<StackResourceData>[];
+  stackResources?: Partial<FormStackResourceData>[];
   accordionDefaultOpen?: boolean; // If false, all collapsed by default
 }
 

@@ -7,10 +7,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Box, GitBranch } from "lucide-react";
-import type { FormStackResourceData as StackResourceData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
+import type { z } from "zod";
+import type { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
 
 interface StackResourceDetailProps {
-  resource: Partial<StackResourceData>;
+  resource: Partial<FormStackResourceData>;
   index: number;
 }
 
@@ -18,6 +20,16 @@ export default function StackResourceDetail({
   resource,
   index,
 }: StackResourceDetailProps) {
+  const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
+  const status = statusObj.state?.toLowerCase() || 'pending';
+  let statusColor = 'bg-yellow-500';
+
+  if (status === 'ready' || status === 'running') {
+    statusColor = 'bg-green-500';
+  } else if (status === 'failed') {
+    statusColor = 'bg-red-500';
+  }
+
   return (
     <AccordionItem value={String(index)} className="border-0">
       <AccordionTrigger
@@ -29,9 +41,11 @@ export default function StackResourceDetail({
               {resource.name || `Resource ${index + 1}`}
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
-                  <span className="h-2 w-2 rounded-full bg-blue-500 cursor-help"></span>
+                  <span className={`h-2 w-2 rounded-full ${statusColor}`}></span>
                 </TooltipTrigger>
-                <TooltipContent side="top">Resource is active</TooltipContent>
+                <TooltipContent side="top">
+                  <p className="capitalize">{status}</p>
+                </TooltipContent>
               </Tooltip>
             </span>
             <span className="text-sm text-muted-foreground truncate">

@@ -10,73 +10,24 @@ import StackResourcesForm from "@/pages/stacks/components/shared/stack-resources
 import StackVolumesForm from "@/pages/stacks/components/shared/stack-volumes-form";
 import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resources-detail";
 import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
-import type { FormStackResourceData as StackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData  , FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById } from "@/api/stacks";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import type { z } from "zod";
-import { FormStackResourceBuildSpecSchema as StackResourceBuildSpecSchema } from "@/pages/stacks/schemas/form-schema";
-type StackResourceBuildSpec = z.infer<typeof StackResourceBuildSpecSchema>;
+import { Tooltip, TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
+import { convertApiResourceToFormResource, convertApiVolumeToFormVolume } from "@/pages/stacks/schemas/form-schema";
+import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/schemas/api-schema";
 
 // Helper to map API build_spec to form schema shape
-function mapBuildSpecToForm(buildSpec: object | undefined): StackResourceBuildSpec | undefined {
-  if (!buildSpec) return undefined;
-  const b = buildSpec as { [key: string]: unknown };
 
-  // Type assertions for proper type handling
-  const imageRepo = b.image_repository as Record<string, unknown> || {};
-
-  return {
-    source_context: b.source_context as Record<string, unknown> || { git_repo: { repo_url: "" } },
-    context_path_within_source: typeof b.context_path_within_source === "string" ? b.context_path_within_source : "./",
-    dockerfile_path: typeof b.dockerfile_path === "string" ? b.dockerfile_path : "Dockerfile",
-    source_revision: b.source_revision as Record<string, unknown> | undefined,
-    image_repository: {
-      external_image_repo_url: typeof imageRepo.external_image_repo_url === "string" ? imageRepo.external_image_repo_url : "",
-      use_internal_registry: typeof imageRepo.use_internal_registry === "boolean" ? imageRepo.use_internal_registry : false,
-      cluster_registry_id: imageRepo.cluster_registry_id as string | undefined,
-    },
-    insecure_registry: typeof b.insecure_registry === "boolean" ? b.insecure_registry : false,
-  };
+function mapStackResourceToFormData(resource: StackResource): FormStackResourceData {
+  return convertApiResourceToFormResource(resource as z.infer<typeof ApiStackResourceSchema>);
 }
 
-function mapStackResourceToFormData(resource: StackResource): Partial<StackResourceData> {
-  const build_spec = mapBuildSpecToForm(resource.build_spec);
-  return {
-    name: resource.name,
-    labels: resource.labels,
-    depends_on: resource.depends_on,
-    ports: resource.ports?.map((port) => ({
-      ...port,
-      protocol: port.protocol === "http" ? "http" : "tcp",
-    })),
-    volume_mounts: resource.volume_mounts,
-    execution_config: resource.execution_config,
-    build_spec,
-    image_spec: resource.image_spec,
-    // Only include sourceType and gitRevision fields for UI logic
-    sourceType: build_spec ? "git" : "image",
-    gitRevisionType: build_spec?.source_revision?.git_repo_revision?.commit
-      ? "commit"
-      : build_spec?.source_revision?.git_repo_revision?.branch
-        ? "branch"
-        : build_spec?.source_revision?.git_repo_revision?.tag
-          ? "tag"
-          : undefined,
-    gitRevisionValue:
-      build_spec?.source_revision?.git_repo_revision?.commit ||
-      build_spec?.source_revision?.git_repo_revision?.branch?.name ||
-      build_spec?.source_revision?.git_repo_revision?.tag ||
-      undefined,
-  };
-}
-
-function mapVolumeToFormData(volume: Volume): Partial<VolumeFormData> {
-  return {
-    ...volume,
-    sourceType: "None", // OpenAPI volumes do not have UI sourceType, so default to None
-  };
+function mapVolumeToFormData(volume: Volume): VolumeFormData {
+  return convertApiVolumeToFormVolume(volume as z.infer<typeof ApiVolumeSchema> & { status?: unknown });
 }
 
 export default function StackDetailPage() {
@@ -170,7 +121,7 @@ export default function StackDetailPage() {
     );
   }
 
-  const resourcesForForm = (stackToShow.spec?.stack_resources || []).map(mapStackResourceToFormData);
+  const resourcesForForm: FormStackResourceData[] = (stackToShow?.spec.stack_resources || []).map(mapStackResourceToFormData);
   const volumesForForm = (stackToShow.spec?.volumes || []).map(mapVolumeToFormData);
 
   // Mock logs for the demo
@@ -423,10 +374,17 @@ export default function StackDetailPage() {
                 <CardHeader className="bg-gray-50 pb-3">
                   <div className="flex justify-between">
                     <CardTitle className="text-sm font-medium">{service}</CardTitle>
-                    <div className="flex items-center">
-                      <div className="h-2 w-2 rounded-full mr-1 bg-green-500"></div>
-                      <span className="text-xs">Running</span>
-                    </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center">
+                          <div className="h-2 w-2 rounded-full mr-1 bg-green-500"></div>
+                          <span className="text-xs">Running</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="capitalize">Running</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-3">

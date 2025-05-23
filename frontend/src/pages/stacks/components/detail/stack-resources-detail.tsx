@@ -1,10 +1,10 @@
-import type { FormStackResourceData as StackResourceData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData   } from "@/pages/stacks/schemas/form-schema";
 import ResourceDetailList from "@/pages/stacks/components/detail/resource-detail-list";
 import StackResourceDetail from "@/pages/stacks/components/detail/stack-resource-detail";
 import { Container } from "lucide-react";
 
 interface StackResourcesDetailProps {
-  resources: Partial<StackResourceData>[];
+  resources: Partial<FormStackResourceData>[];
   accordionDefaultOpen?: boolean;
 }
 
@@ -14,7 +14,7 @@ export default function StackResourcesDetail({
 }: StackResourcesDetailProps) {
   return (
     <div>
-      <ResourceDetailList<Partial<StackResourceData>>
+      <ResourceDetailList<Partial<FormStackResourceData>>
         items={resources}
         renderItem={({ item, index }) => (
           <StackResourceDetail

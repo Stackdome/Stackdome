@@ -22,14 +22,16 @@ import {
 import { Plus, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
+import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
+import type { z } from "zod";
 
-import type { FormStackResourceData as StackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData  , FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 
 interface StackResourceItemProps {
-  resource: Partial<StackResourceData>;
+  resource: Partial<FormStackResourceData>;
   index: number;
   itemRef: (el: HTMLButtonElement | null) => void;
-  onChange: (index: number, updatedResource: Partial<StackResourceData>) => void;
+  onChange: (index: number, updatedResource: Partial<FormStackResourceData>) => void;
   onRemove: (index: number) => void;
   errors: { [field: string]: string | undefined };
   volumes?: Partial<VolumeFormData>[];
@@ -68,26 +70,37 @@ export default function StackResourceItem({
   allResources: _allResources,
 }: StackResourceItemProps) {
   // Helper for updating resource fields
-  const update = (patch: Partial<StackResourceData>) => {
+  const update = (patch: Partial<FormStackResourceData>) => {
     onChange(index, { ...resource, ...patch });
   };
 
   // Helper for updating nested build_spec
-  const updateBuildSpec = (patch: Partial<NonNullable<StackResourceData["build_spec"]>>) => {
+  const updateBuildSpec = (patch: Partial<NonNullable<FormStackResourceData["build_spec"]>>) => {
     const currentBuildSpec = resource.build_spec || {
       source_context: { git_repo: { repo_url: '' } },
       context_path_within_source: './',
       dockerfile_path: 'Dockerfile',
       image_repository: { external_image_repo_url: '' },
       insecure_registry: false,
+      source_revision: { volume_source_revision: undefined, git_repo_revision: undefined },
+    };
+    // Always provide both keys for source_revision
+    const mergedSourceRevision = {
+      volume_source_revision: patch.source_revision?.volume_source_revision ?? currentBuildSpec.source_revision?.volume_source_revision,
+      git_repo_revision: patch.source_revision?.git_repo_revision ?? currentBuildSpec.source_revision?.git_repo_revision,
     };
     update({
-      build_spec: { ...currentBuildSpec, ...patch, insecure_registry: (patch.insecure_registry === undefined) ? false : patch.insecure_registry },
+      build_spec: {
+        ...currentBuildSpec,
+        ...patch,
+        insecure_registry: patch.insecure_registry === undefined ? false : patch.insecure_registry,
+        source_revision: mergedSourceRevision,
+      },
       image_spec: undefined,
     });
   };
   // Helper for updating nested image_spec
-  const updateImageSpec = (patch: Partial<NonNullable<StackResourceData["image_spec"]>>) => {
+  const updateImageSpec = (patch: Partial<NonNullable<FormStackResourceData["image_spec"]>>) => {
     update({
       image_spec: { ...(resource.image_spec || { image: '' }), ...patch },
       build_spec: undefined,
@@ -271,6 +284,16 @@ export default function StackResourceItem({
     });
   };
 
+  // Status color logic
+  const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
+  const status = statusObj.state?.toLowerCase() || 'pending';
+  let statusColor = 'bg-yellow-500';
+  if (status === 'ready' || status === 'running') {
+    statusColor = 'bg-green-500';
+  } else if (status === 'failed') {
+    statusColor = 'bg-red-500';
+  }
+
   return (
     <AccordionItem value={String(index)} className="border-0">
       <AccordionTrigger
@@ -283,9 +306,11 @@ export default function StackResourceItem({
               {resource.name || `Resource ${index + 1}`}
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
-                  <span className="h-2 w-2 rounded-full bg-blue-500 cursor-help"></span>
+                  <span className={`h-2 w-2 rounded-full ${statusColor}`}></span>
                 </TooltipTrigger>
-                <TooltipContent side="top">Resource is active</TooltipContent>
+                <TooltipContent side="top">
+                  <p className="capitalize">{statusObj.state || 'Pending'}</p>
+                </TooltipContent>
               </Tooltip>
             </span>
             <span className="text-sm text-muted-foreground truncate">
