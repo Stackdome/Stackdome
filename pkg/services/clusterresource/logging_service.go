@@ -1,29 +1,33 @@
 package clusterresource
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"sort"
 	"sync"
 	"time"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/clients"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/interfaces"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/samber/lo"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/kubectl/pkg/polymorphichelpers"
-	"k8s.io/kubectl/pkg/util/podutils"
-	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+const (
+	DefaultLogStreamBufferSize     = 1000
+	DefaultStreamTimeoutDuration   = 20 * time.Minute
+	DefaultLogStreamRateLimit      = 50 * time.Millisecond
+	DefaultLogStreamRateLimitBurst = 200
+)
+
+type ResourceError struct {
+	ResourceName string
+	Error        error
+}
 
 type ClusterLoggingService interface {
 	// GetLogsForResources retrieves logs for the specified resources in the cluster.
@@ -49,12 +53,6 @@ type LoggingServiceSpec struct {
 	ClusterService DBClusterService
 	ClusterManager clustermanager.ClusterManager
 	Logger         logger.Logger
-}
-
-type LogStreamer struct {
-	clientSet      *kubernetes.Clientset
-	resourcePodMap map[string]*corev1.Pod
-	logOptions     *corev1.PodLogOptions
 }
 
 type StreamedLog struct {
@@ -89,160 +87,170 @@ func (s *loggingService) GetLogsForResources(ctx context.Context, orgID string, 
 		return nil, cerr
 	}
 
-	clientset, kerr := kubernetes.NewForConfig(restConfig)
-	if kerr != nil {
-		return nil, kerr
-	}
-
 	client, cerr := s.clusterManager.GetClient(cluster.ID)
 	if cerr != nil {
 		return nil, cerr
 	}
 
-	targetResourcePodMap := make(map[string]*corev1.Pod)
-	unReadyResources := []string{}
-	for _, resource := range resources {
-		if resource.Status.State == models.StackResourcePhaseReady && resource.Status.InternalServiceName != nil {
-			pod, err := s.attachablePodFromService(ctx, clientset, client, *resource.Status.InternalServiceName, resource.Namespace)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get attachable pod for resource %s: %v", resource.Name, err)
-			}
-			if pod != nil {
-				targetResourcePodMap[resource.Name] = pod
-			} else {
-				unReadyResources = append(unReadyResources, resource.Name)
-			}
-		} else {
-			unReadyResources = append(unReadyResources, resource.Name)
-		}
-	}
-	if len(targetResourcePodMap) == 0 {
-		return nil, fmt.Errorf("resources are not ready: %v", unReadyResources)
+	k8sclient, cerr := clients.NewKubernetesClient(clients.KubernetesClientSpec{
+		RestConfig:              restConfig,
+		ControllerRuntimeClient: client,
+		Logger:                  s.logger,
+	})
+	if cerr != nil {
+		return nil, fmt.Errorf("failed to create Kubernetes client: %v", cerr)
 	}
 
-	podLogOptions := &corev1.PodLogOptions{}
-	if options.Follow() {
-		podLogOptions.Follow = true
+	readyResources := lo.Filter(resources, func(resource *models.StackResource, _ int) bool {
+		return resource.Status.State == models.StackResourcePhaseReady && resource.Status.InternalServiceName != nil
+	})
+
+	unreadyResources, _ := lo.Difference(resources, readyResources)
+	if len(unreadyResources) == len(resources) {
+		unreadyResourceNames := lo.Map(unreadyResources, func(r *models.StackResource, _ int) string { return r.Name })
+		return nil, fmt.Errorf("no resources are ready for logging: %v", unreadyResourceNames)
 	}
-	if options.TailLines() != 0 {
-		podLogOptions.TailLines = ptr.To(int64(options.TailLines()))
+
+	resourcePodMap, errors := s.resolveResourcePods(ctx, k8sclient, readyResources)
+	if len(errors) > 0 {
+		s.logger.Warnf("resource pod resolution failures: %v", errors)
 	}
-	if options.Since() != "" {
-		since, err := time.ParseDuration(options.Since())
-		if err == nil {
-			podLogOptions.SinceSeconds = ptr.To(int64(since.Seconds()))
-		} else {
-			s.logger.Warnf("failed to parse 'since' duration: %v. Ignoring passed since options", err)
-		}
+
+	if len(resourcePodMap) == 0 {
+		return nil, fmt.Errorf("no attachable pods found for ready resources")
 	}
 
 	return &LogStreamer{
-		resourcePodMap: targetResourcePodMap,
-		logOptions:     podLogOptions,
-		clientSet:      clientset,
+		resourcePodMap: resourcePodMap,
+		k8sclient:      k8sclient,
+		logOptions:     options,
+		Logger:         s.logger,
+		streamConfig: LogStreamConfig{
+			LogStreamBufferSize:   DefaultLogStreamBufferSize,
+			StreamTimeoutDuration: DefaultStreamTimeoutDuration,
+			rateLimiter:           rate.NewLimiter(rate.Every(DefaultLogStreamRateLimit), DefaultLogStreamRateLimitBurst),
+		},
 	}, nil
 }
 
+func (s *loggingService) resolveResourcePods(ctx context.Context, k8sclient clients.KubernetesClient, resources []*models.StackResource) (map[string]*corev1.Pod, []ResourceError) {
+	resourcePodMap := make(map[string]*corev1.Pod)
+	var errors []ResourceError
+
+	for _, resource := range resources {
+		pod, err := k8sclient.AttachablePodFromService(ctx, types.NamespacedName{
+			Name:      *resource.Status.InternalServiceName,
+			Namespace: resource.Namespace,
+		})
+		if err != nil {
+			errors = append(errors, ResourceError{
+				ResourceName: resource.Name,
+				Error:        err,
+			})
+			s.logger.Errorf("failed to get pod for resource %s: %v", resource.Name, err)
+			continue
+		}
+		if pod != nil {
+			resourcePodMap[resource.Name] = pod
+		} else {
+			errors = append(errors, ResourceError{
+				ResourceName: resource.Name,
+				Error:        fmt.Errorf("no attachable pod found"),
+			})
+		}
+	}
+	return resourcePodMap, errors
+}
+
+type LogStreamer struct {
+	k8sclient      clients.KubernetesClient
+	resourcePodMap map[string]*corev1.Pod
+	logOptions     LoggingParams
+	streamConfig   LogStreamConfig
+	Logger         logger.Logger
+}
+
+type LogStreamConfig struct {
+	LogStreamBufferSize   int
+	StreamTimeoutDuration time.Duration
+	rateLimiter           *rate.Limiter
+}
+
 func (s *LogStreamer) Stream(ctx context.Context) (<-chan interfaces.StreamObject, error) {
-	streamerChan := make(chan interfaces.StreamObject)
-	var wg sync.WaitGroup
+	streamerChan := make(chan interfaces.StreamObject, s.streamConfig.LogStreamBufferSize)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, s.streamConfig.StreamTimeoutDuration)
+
+	podResourceStreamMap := make(map[string]<-chan *clients.LogLine)
 	for resourceName, pod := range s.resourcePodMap {
-		req := s.clientSet.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, s.logOptions)
-		wg.Add(1)
-		go func(resourceName string, req *rest.Request) {
-			defer wg.Done()
-			podLog, err := req.Stream(ctx)
-			if err != nil {
-				if err == context.Canceled {
-					obj := &StreamedLog{
-						err: context.Canceled,
-					}
-					safeWriteToChannel(ctx, streamerChan, obj)
-				}
-				return
-			}
-			reader := bufio.NewReader(podLog)
-			defer podLog.Close()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-				}
-
-				line, err := reader.ReadString('\n')
-				if err == io.EOF {
-					return
-				}
-				if err == context.Canceled {
-					return
-				}
-
-				if err != nil {
-					obj := &StreamedLog{
-						err: fmt.Errorf("error reading log line: %v", err),
-					}
-					safeWriteToChannel(ctx, streamerChan, obj)
-					return
-				}
-				var obj *StreamedLog
-				var jsonLine string
-				if err := json.Unmarshal([]byte(line), &jsonLine); err != nil {
-					obj = &StreamedLog{
-						data: fmt.Sprintf("[%s] %s", resourceName, line),
-						err:  nil,
-					}
-				} else {
-					obj = &StreamedLog{
-						data: fmt.Sprintf("[%s] %s", resourceName, jsonLine),
-						err:  nil,
-					}
-				}
-				safeWriteToChannel(ctx, streamerChan, obj)
-			}
-		}(resourceName, req)
+		podLogChan, err := s.k8sclient.StreamPodLogs(ctxWithTimeout, pod, s.logOptions)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("failed to stream logs for resource '%s': %v", resourceName, err)
+		}
+		podResourceStreamMap[resourceName] = podLogChan
 	}
 
+	var wg sync.WaitGroup
+	for resourceName, podLogChan := range podResourceStreamMap {
+		wg.Add(1)
+		go func(resourceName string, podLogChan <-chan *clients.LogLine) {
+			defer wg.Done()
+			for {
+				select {
+				case <-ctxWithTimeout.Done():
+					return
+				case logLine, ok := <-podLogChan:
+					if !ok {
+						return
+					}
+					if logLine.Error != nil {
+						s.safeWriteToChannel(ctxWithTimeout, streamerChan, &StreamedLog{err: resourceNamePrefixedError(resourceName, logLine.Error)})
+						continue
+					}
+					s.safeWriteToChannel(ctxWithTimeout, streamerChan, &StreamedLog{data: resourceNamePrefixedLogLine(resourceName, logLine.Data)})
+				}
+			}
+		}(resourceName, podLogChan)
+	}
 	go func() {
 		wg.Wait()
+		cancel()
 		close(streamerChan)
 	}()
 	return streamerChan, nil
 }
 
-func safeWriteToChannel(ctx context.Context, ch chan<- interfaces.StreamObject, obj interfaces.StreamObject) {
+func resourceNamePrefixedLogLine(prefix string, line string) string {
+	return fmt.Sprintf("[%s]: %s", prefix, line)
+}
+
+func resourceNamePrefixedError(prefix string, err error) error {
+	return fmt.Errorf("[%s]: %w", prefix, err)
+}
+
+func (s *LogStreamer) safeWriteToChannel(ctx context.Context, ch chan<- interfaces.StreamObject, obj interfaces.StreamObject) {
 	select {
 	case <-ctx.Done():
 		return
 	case ch <- obj:
+		return
+	default:
+		// Channel full
+		s.Logger.Infof("log stream channel is full, applying rate limiting..")
 	}
-}
 
-func (k *loggingService) attachablePodFromService(ctx context.Context, clientset *kubernetes.Clientset, ctrlrmtimeClient client.Client, serviceName string, serviceNamespace string) (*corev1.Pod, error) {
-	svc := &corev1.Service{}
-	if err := ctrlrmtimeClient.Get(
-		ctx, types.NamespacedName{
-			Name:      serviceName,
-			Namespace: serviceNamespace,
-		},
-		svc,
-	); err != nil {
-		return nil, err
+	if err := s.streamConfig.rateLimiter.Wait(ctx); err != nil {
+		s.Logger.Errorf("rate limiter wait failed: %v", err)
+		return
 	}
-	attachablePod, err := attachablePodForObject(clientset, svc, time.Second*10)
-	if err != nil {
-		return nil, err
+	// Try again after waiting for the rate limiter.
+	select {
+	case <-ctx.Done():
+		return
+	case ch <- obj:
+		return
+	default:
+		// Channel is stil full, drop the message
+		s.Logger.Warnf("log stream channel is full, dropping message")
 	}
-	return attachablePod, nil
-
-}
-
-func attachablePodForObject(client *kubernetes.Clientset, object runtime.Object, timeout time.Duration) (*corev1.Pod, error) {
-	namespace, selector, err := polymorphichelpers.SelectorsForObject(object)
-	if err != nil {
-		return nil, fmt.Errorf("cannot attach to %T: %v", object, err)
-	}
-	sortBy := func(pods []*corev1.Pod) sort.Interface { return sort.Reverse(podutils.ActivePods(pods)) }
-	pod, _, err := polymorphichelpers.GetFirstPod(client.CoreV1(), namespace, selector.String(), timeout, sortBy)
-	return pod, err
 }
