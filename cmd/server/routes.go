@@ -11,6 +11,7 @@ import (
 
 func (s apiServer) routes() *mux.Router {
 	mainRouter := mux.NewRouter()
+
 	mainRouter.NotFoundHandler = http.HandlerFunc(api.SendNotFound)
 	services := s.environment.Environment().Services
 	logger := s.environment.Environment().Logger
@@ -43,6 +44,7 @@ func (s apiServer) routes() *mux.Router {
 		StackService:         services.StackService,
 		StackResourceService: services.StackResourceService,
 		ImageBuildService:    services.ImageBuildService,
+		LoggingService:       services.LoggingService,
 		AuthzClient:          authzClient,
 		Logger:               logger,
 	})
@@ -50,6 +52,7 @@ func (s apiServer) routes() *mux.Router {
 	stackResourceHandler := handlers.NewStackResourceHandler(handlers.StackResourceHandlerSpec{
 		StackResourceService: services.StackResourceService,
 		StackService:         services.StackService,
+		LoggingService:       services.LoggingService,
 		AuthzClient:          authzClient,
 	})
 
@@ -115,30 +118,32 @@ func (s apiServer) routes() *mux.Router {
 	workspaceUsersRouter.HandleFunc("/{id}", workspaceUserHandler.Update).Methods(http.MethodPut)
 	workspaceUsersRouter.HandleFunc("/{id}", workspaceUserHandler.Delete).Methods(http.MethodDelete)
 
-	workspaceStorageRouter := organizationsRouter.PathPrefix("/{org_id}/volumes").Subrouter()
-	workspaceStorageRouter.Use(authenticationMiddleware.AuthenticateUser)
-	workspaceStorageRouter.HandleFunc("", volumeHandler.Create).Methods(http.MethodPost)
-	workspaceStorageRouter.HandleFunc("/current", volumeHandler.GetByID).Methods(http.MethodGet)
-	workspaceStorageRouter.HandleFunc("/{id}", volumeHandler.GetByID).Methods(http.MethodGet)
+	stackStorageRouter := organizationsRouter.PathPrefix("/{org_id}/volumes").Subrouter()
+	stackStorageRouter.Use(authenticationMiddleware.AuthenticateUser)
+	stackStorageRouter.HandleFunc("", volumeHandler.Create).Methods(http.MethodPost)
+	stackStorageRouter.HandleFunc("/current", volumeHandler.GetByID).Methods(http.MethodGet)
+	stackStorageRouter.HandleFunc("/{id}", volumeHandler.GetByID).Methods(http.MethodGet)
 	// workspaceStorageRouter.HandleFunc("/{id}", storageHandler.Update).Methods(http.MethodPut)
-	workspaceStorageRouter.HandleFunc("/{id}", volumeHandler.Delete).Methods(http.MethodDelete)
+	stackStorageRouter.HandleFunc("/{id}", volumeHandler.Delete).Methods(http.MethodDelete)
 
-	workspaceRouter := organizationsRouter.PathPrefix("/{org_id}/stacks").Subrouter()
-	workspaceRouter.Use(authenticationMiddleware.AuthenticateUser)
-	workspaceRouter.HandleFunc("", stackHandler.Create).Methods(http.MethodPost)
-	workspaceRouter.HandleFunc("", stackHandler.ListByOrganisationID).Methods(http.MethodGet)
-	workspaceRouter.HandleFunc("/current", stackHandler.ListByUser).Methods(http.MethodGet)
-	workspaceRouter.HandleFunc("/{id}", stackHandler.GetByID).Methods(http.MethodGet)
-	workspaceRouter.HandleFunc("/{id}", stackHandler.Update).Methods(http.MethodPut)
-	workspaceRouter.HandleFunc("/{id}", stackHandler.Delete).Methods(http.MethodDelete)
+	stackRouter := organizationsRouter.PathPrefix("/{org_id}/stacks").Subrouter()
+	stackRouter.Use(authenticationMiddleware.AuthenticateUser)
+	stackRouter.HandleFunc("", stackHandler.Create).Methods(http.MethodPost)
+	stackRouter.HandleFunc("", stackHandler.ListByOrganisationID).Methods(http.MethodGet)
+	stackRouter.HandleFunc("/current", stackHandler.ListByUser).Methods(http.MethodGet)
+	stackRouter.HandleFunc("/{id}", stackHandler.GetByID).Methods(http.MethodGet)
+	stackRouter.HandleFunc("/{id}/logs", stackHandler.StreamLogs).Methods(http.MethodGet)
+	stackRouter.HandleFunc("/{id}", stackHandler.Update).Methods(http.MethodPut)
+	stackRouter.HandleFunc("/{id}", stackHandler.Delete).Methods(http.MethodDelete)
 	// Resources
-	workspaceRouter.HandleFunc("/{id}/resources", stackResourceHandler.List).Methods(http.MethodGet)
-	workspaceRouter.HandleFunc("/{id}/resources/{resource_name}", stackResourceHandler.GetByResourceName).Methods(http.MethodGet)
+	stackRouter.HandleFunc("/{id}/resources", stackResourceHandler.List).Methods(http.MethodGet)
+	stackRouter.HandleFunc("/{id}/resources/{resource_name}", stackResourceHandler.GetByResourceName).Methods(http.MethodGet)
+	stackRouter.HandleFunc("/{id}/resources/{resource_name}/logs", stackResourceHandler.StreamLogs).Methods(http.MethodGet)
 
 	// Builds
-	workspaceRouter.HandleFunc("/{id}/resources/{resource_name}/builds", imageBuildHandler.ListByResourceName).Methods(http.MethodGet)
-	workspaceRouter.HandleFunc("/{id}/builds", imageBuildHandler.ListByStackID).Methods(http.MethodGet)
-	workspaceRouter.HandleFunc("/{id}/builds/{build_id}", imageBuildHandler.GetByID).Methods(http.MethodGet)
+	stackRouter.HandleFunc("/{id}/resources/{resource_name}/builds", imageBuildHandler.ListByResourceName).Methods(http.MethodGet)
+	stackRouter.HandleFunc("/{id}/builds", imageBuildHandler.ListByStackID).Methods(http.MethodGet)
+	stackRouter.HandleFunc("/{id}/builds/{build_id}", imageBuildHandler.GetByID).Methods(http.MethodGet)
 
 	return mainRouter
 }

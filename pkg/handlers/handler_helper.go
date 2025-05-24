@@ -3,12 +3,14 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"reflect"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/handlers/validation"
+	"github.com/ashishmax31/stackdome-api-server/pkg/interfaces"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 )
 
@@ -108,6 +110,59 @@ func handleGet(w http.ResponseWriter, r *http.Request, cfg *handlerConfig) {
 	}
 }
 
+func handleServerSideStream(w http.ResponseWriter, r *http.Request, cfg *handlerConfig) {
+	if cfg.ErrorHandler == nil {
+		cfg.ErrorHandler = handleError
+	}
+
+	result, serviceErr := cfg.Action()
+	if serviceErr != nil {
+		cfg.ErrorHandler(r.Context(), w, serviceErr)
+		return
+	}
+
+	streamable, ok := result.(interfaces.ServerSideStreamable)
+	if !ok {
+		cfg.ErrorHandler(r.Context(), w, errors.InternalServerError("Invalid response type"))
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		cfg.ErrorHandler(r.Context(), w, errors.InternalServerError("Streaming unsupported"))
+		return
+	}
+
+	streamer, err := streamable.Stream(r.Context())
+	if err != nil {
+		cfg.ErrorHandler(r.Context(), w, errors.InternalServerError("Unable to create streamer: %s", err))
+		return
+	}
+	addStreamHeaders(w)
+	for {
+		select {
+		case <-r.Context().Done():
+			// Client disconnected
+			return
+		case streamObject, ok := <-streamer:
+			if !ok {
+				// Stream ended
+				return
+			}
+			if err := streamObject.Error(); err != nil {
+				fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
+				flusher.Flush()
+				return
+			}
+			data := streamObject.Data()
+			if data != "" {
+				fmt.Fprintf(w, "data: %s\n\n", data)
+				flusher.Flush()
+			}
+		}
+	}
+}
+
 func handleList(w http.ResponseWriter, r *http.Request, cfg *handlerConfig) {
 	if cfg.ErrorHandler == nil {
 		cfg.ErrorHandler = handleError
@@ -149,4 +204,12 @@ func determineListRange(obj interface{}, page int, size int) (list []interface{}
 	}
 
 	return list, total
+}
+
+func addStreamHeaders(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Transfer-Encoding", "chunked")
+	w.WriteHeader(http.StatusOK)
 }

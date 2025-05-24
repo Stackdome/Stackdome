@@ -40,7 +40,7 @@ func presentStackResourceStatus(status *models.StackResourceStatus) *openapi.Sta
 		return nil
 	}
 	return &openapi.StackResourceStatus{
-		State:                         &status.State,
+		State:                         ptr.To(string(status.State)),
 		ObservedVersion:               ptr.To(int32(status.ObservedVersion)),
 		Conditions:                    presentConditions(status.Conditions),
 		PublicIngress:                 presentIngress(status.PublicIngresses),

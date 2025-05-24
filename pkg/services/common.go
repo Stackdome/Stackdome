@@ -11,10 +11,12 @@ type ClusterResourceServiceDeps struct {
 	ClusterStackService     clusterresource.ClusterStackService
 	ClusterNamespaceService clusterresource.NamespaceClusterResourceService
 	ClusterVolumeService    clusterresource.VolumeClusterResourceService
+	ClusterLoggingService   clusterresource.ClusterLoggingService
 }
 
 func (s *ClusterResourceServiceDeps) InjectClusterResourceServiceDeps(deps ClusterResourceServiceDeps) {
 	s.ClusterStackService = deps.ClusterStackService
 	s.ClusterNamespaceService = deps.ClusterNamespaceService
 	s.ClusterVolumeService = deps.ClusterVolumeService
+	s.ClusterLoggingService = deps.ClusterLoggingService
 }

@@ -27,13 +27,16 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdStacksGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksGet) | **Get** /api/v1/organizations/{org_id}/stacks | List all Stacks for an organization
 [**ApiV1OrganizationsOrgIdStacksIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdDelete) | **Delete** /api/v1/organizations/{org_id}/stacks/{id} | Delete a Stack
 [**ApiV1OrganizationsOrgIdStacksIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdGet) | **Get** /api/v1/organizations/{org_id}/stacks/{id} | Get a specific Stack
+[**ApiV1OrganizationsOrgIdStacksIdLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdLogsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{id}/logs | Get logs for a Stack
 [**ApiV1OrganizationsOrgIdStacksIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdPut) | **Put** /api/v1/organizations/{org_id}/stacks/{id} | Update a Stack
 [**ApiV1OrganizationsOrgIdStacksPost**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksPost) | **Post** /api/v1/organizations/{org_id}/stacks | Create a new stack
 [**ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/builds/{build_id} | Get a specific build under a stack
 [**ApiV1OrganizationsOrgIdStacksStackIdBuildsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdBuildsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/builds | List all builds under a stack
 [**ApiV1OrganizationsOrgIdStacksStackIdResourcesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources | List all StackResources under a Stack
 [**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}/builds | List all builds for a StackResource
+[**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id} | Get a specific StackResource
 [**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut) | **Put** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id} | Update a StackResource
+[**ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/logs | Get logs for a StackResource
 [**ApiV1OrganizationsOrgIdVolumesCurrentGet**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesCurrentGet) | **Get** /api/v1/organizations/{org_id}/volumes/current | List of volumes for the current user
 [**ApiV1OrganizationsOrgIdVolumesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesGet) | **Get** /api/v1/organizations/{org_id}/volumes | List all volumes in an organization.
 [**ApiV1OrganizationsOrgIdVolumesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesIdDelete) | **Delete** /api/v1/organizations/{org_id}/volumes/{id} | Delete a volume
@@ -1661,6 +1664,83 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
+## ApiV1OrganizationsOrgIdStacksIdLogsGet
+
+> *os.File ApiV1OrganizationsOrgIdStacksIdLogsGet(ctx, orgId, id).Follow(follow).Tail(tail).Since(since).Execute()
+
+Get logs for a Stack
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+    follow := true // bool |  (optional) (default to false)
+    tail := int32(56) // int32 |  (optional) (default to 100)
+    since := "since_example" // string |  (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdLogsGet(context.Background(), orgId, id).Follow(follow).Tail(tail).Since(since).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksIdLogsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdStacksIdLogsGet`: *os.File
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksIdLogsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksIdLogsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **follow** | **bool** |  | [default to false]
+ **tail** | **int32** |  | [default to 100]
+ **since** | **string** |  | 
+
+### Return type
+
+[***os.File**](*os.File.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: text/event-stream, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## ApiV1OrganizationsOrgIdStacksIdPut
 
 > Stack ApiV1OrganizationsOrgIdStacksIdPut(ctx, orgId, id).Stack(stack).Execute()
@@ -2094,6 +2174,80 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
+## ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet
+
+> StackResource ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet(ctx, orgId, stackId, id).Execute()
+
+Get a specific StackResource
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    stackId := "stackId_example" // string | The ID of the stack
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet(context.Background(), orgId, stackId, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet`: StackResource
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**stackId** | **string** | The ID of the stack | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksStackIdResourcesIdGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**StackResource**](StackResource.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut
 
 > StackResource ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut(ctx, orgId, stackId, id).StackResource(stackResource).Execute()
@@ -2164,6 +2318,86 @@ Name | Type | Description  | Notes
 
 - **Content-Type**: application/json
 - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet
+
+> *os.File ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet(ctx, orgId, stackId, resourceName).Follow(follow).Tail(tail).Since(since).Execute()
+
+Get logs for a StackResource
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    stackId := "stackId_example" // string | The ID of the stack
+    resourceName := "resourceName_example" // string | 
+    follow := true // bool |  (optional) (default to false)
+    tail := int32(56) // int32 |  (optional) (default to 100)
+    since := "since_example" // string |  (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet(context.Background(), orgId, stackId, resourceName).Follow(follow).Tail(tail).Since(since).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet`: *os.File
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**stackId** | **string** | The ID of the stack | 
+**resourceName** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **follow** | **bool** |  | [default to false]
+ **tail** | **int32** |  | [default to 100]
+ **since** | **string** |  | 
+
+### Return type
+
+[***os.File**](*os.File.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: text/event-stream, application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)

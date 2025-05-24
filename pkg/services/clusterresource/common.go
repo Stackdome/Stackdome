@@ -71,3 +71,8 @@ type DBWorkspaceUserService interface {
 type DBOrganisationService interface {
 	Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError)
 }
+
+type DBStackResourceService interface {
+	GetByStackResourceID(ctx context.Context, stackResourceID string) (*models.StackResource, *errors.ServiceError)
+	GetByStackID(ctx context.Context, stackID string) ([]*models.StackResource, *errors.ServiceError)
+}

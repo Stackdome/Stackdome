@@ -53,8 +53,6 @@ func NewAPIServer(env environment.EnvImpl) Server {
 		env,
 	)
 
-	mainHandler = loggingMiddleware(mainHandler)
-
 	// Setup CORS
 	mainHandler = gorillahandlers.CORS(
 		gorillahandlers.AllowedOrigins([]string{"*"}),
