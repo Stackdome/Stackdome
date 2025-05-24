@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate:openapi-types": "openapi-typescript ../../stackdome-api-server/config/openapi/stackdome_api.yaml -o src/api/types/openapi.d.ts"
+    "generate:openapi-types": "openapi-typescript ../config/openapi/stackdome_api.yaml -o src/api/types/openapi.d.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.10",

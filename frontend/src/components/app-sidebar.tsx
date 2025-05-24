@@ -4,6 +4,7 @@ import { Command } from "lucide-react"
 
 import { NavStacks } from "@/components/nav-stacks"
 import { NavClusters } from "@/components/nav-clusters"
+import { NavDomains } from "@/components/nav-domains"
 import { NavUser } from "@/components/nav-user"
 import { getCurrentUser } from "@/helpers/common"
 import {
@@ -16,6 +17,8 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
 } from "@/components/ui/sidebar"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -50,8 +53,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarContent>
         <SidebarGroup>
-          <NavStacks />
-          <NavClusters />
+          <SidebarGroupLabel>Platform</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <NavStacks />
+            <NavClusters />
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <NavDomains />
+          </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
