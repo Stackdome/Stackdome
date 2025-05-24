@@ -279,6 +279,12 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		NamespaceService:       namespaceService,
 	})
 
+	loggingService := services.NewLoggingService(services.LoggingServiceSpec{
+		ClusterService:       clusterService,
+		StackResourceService: stackResourceService,
+		Logger:               d.Logger,
+	})
+
 	d.Services = Services{
 		UserService:                 userService,
 		WorkspaceUserService:        workspaceUserService,
@@ -292,6 +298,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		StackDomainService:          stackDomainService,
 		OrganisationDomainService:   organisationDomainService,
 		NamespaceService:            namespaceService,
+		LoggingService:              loggingService,
 	}
 
 	return nil
@@ -331,16 +338,24 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 		ClusterService: d.Services.ClusterService,
 	})
 
+	clusterLoggingService := clusterresource.NewLoggingService(clusterresource.LoggingServiceSpec{
+		ClusterManager: d.ClusterManager,
+		ClusterService: d.Services.ClusterService,
+		Logger:         d.Logger,
+	})
+
 	deps := services.ClusterResourceServiceDeps{
 		ClusterStackService:     clusterStackService,
 		ClusterNamespaceService: clusterNamespaceService,
 		ClusterVolumeService:    volumeClusterResourceService,
+		ClusterLoggingService:   clusterLoggingService,
 	}
 
 	d.Services.WorkspaceUserService.InjectClusterResourceService(workspaceUserClusterResourceService)
 	d.Services.VolumeService.InjectClusterResourceService(volumeClusterResourceService)
 	d.Services.StackService.InjectClusterResourceServiceDeps(deps)
 	d.Services.NamespaceService.InjectClusterResourceServiceDeps(deps)
+	d.Services.LoggingService.InjectClusterResourceServiceDeps(deps)
 	d.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	return nil
 }

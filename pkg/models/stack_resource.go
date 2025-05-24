@@ -31,18 +31,26 @@ type StackResource struct {
 	UpdatedAt       time.Time
 }
 
+type StackResourceState string
+
+const (
+	StackResourcePhasePending StackResourceState = "Pending"
+	StackResourcePhaseReady   StackResourceState = "Ready"
+	StackResourcePhaseFailed  StackResourceState = "Failed"
+)
+
 type Dependencies []string
 
 type Ports []Port
 
 type StackResourceStatus struct {
-	State                         string      `json:"state"`
-	ObservedVersion               int64       `json:"observed_version"`
-	Conditions                    []Condition `json:"conditions"`
-	PublicIngresses               []Ingress   `json:"public_ingresses"`
-	InternalServiceName           *string     `json:"internal_service_name,omitempty"`
-	LastObservedStatusHash        string      `json:"last_observed_status_hash,omitempty"`
-	LastRestartRequestProcessedAt *time.Time  `json:"last_restart_request_processed_at,omitempty"`
+	State                         StackResourceState `json:"state"`
+	ObservedVersion               int64              `json:"observed_version"`
+	Conditions                    []Condition        `json:"conditions"`
+	PublicIngresses               []Ingress          `json:"public_ingresses"`
+	InternalServiceName           *string            `json:"internal_service_name,omitempty"`
+	LastObservedStatusHash        string             `json:"last_observed_status_hash,omitempty"`
+	LastRestartRequestProcessedAt *time.Time         `json:"last_restart_request_processed_at,omitempty"`
 }
 
 type Ingress struct {

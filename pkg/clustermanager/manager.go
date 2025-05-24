@@ -31,6 +31,7 @@ import (
 type ClusterManager interface {
 	RegisterCluster(cluster *models.Cluster) error
 	GetClient(clusterID string) (client.Client, error)
+	GetRestConfig(clusterID string) (*rest.Config, error)
 	IsClusterRegistered(clusterID string) bool
 	UnregisterCluster(clusterID string) error
 	Start(ctx context.Context)
@@ -49,6 +50,7 @@ type ClusterControl struct {
 	cluster     *models.Cluster
 	clusterID   string
 	client      client.Client
+	restConfig  *rest.Config
 	serviceID   suture.ServiceToken
 	controllers []Controller
 }
@@ -161,6 +163,7 @@ func (cm *ClusterManagerImpl) RegisterCluster(cluster *models.Cluster) error {
 		cluster:     cluster,
 		clusterID:   cluster.ID,
 		client:      client,
+		restConfig:  restConfig,
 		controllers: cm.controllersToRegister,
 	}
 
@@ -180,6 +183,18 @@ func (cm *ClusterManagerImpl) GetClient(clusterID string) (client.Client, error)
 		return nil, fmt.Errorf("cluster %s not registered", clusterID)
 	}
 	return clusterCtrl.client, nil
+}
+
+// GetRestConfig retrieves the rest config for a given cluster
+func (cm *ClusterManagerImpl) GetRestConfig(clusterID string) (*rest.Config, error) {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	clusterCtrl, ok := cm.registeredClusters[clusterID]
+	if !ok {
+		return nil, fmt.Errorf("cluster %s not registered", clusterID)
+	}
+	return clusterCtrl.restConfig, nil
 }
 
 // IsClusterRegistered checks if a cluster is registered

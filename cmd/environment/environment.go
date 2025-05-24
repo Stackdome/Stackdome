@@ -52,4 +52,5 @@ type Services struct {
 	StackDomainService          services.StackDomainsService
 	OrganisationDomainService   services.OrganisationDomainsService
 	NamespaceService            services.NamespaceService
+	LoggingService              services.LoggingService
 }

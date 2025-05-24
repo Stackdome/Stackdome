@@ -1327,6 +1327,67 @@ paths:
       security:
       - Bearer: []
       summary: Update a Stack
+  /api/v1/organizations/{org_id}/stacks/{id}/logs:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: follow
+        required: false
+        schema:
+          default: false
+          type: boolean
+        style: form
+      - explode: true
+        in: query
+        name: tail
+        required: false
+        schema:
+          default: 100
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: since
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                format: binary
+                type: string
+          description: Stream of log lines via Server-Sent Events (SSE)
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get logs for a Stack
   /api/v1/organizations/{org_id}/stacks/current:
     get:
       parameters:
@@ -1394,6 +1455,50 @@ paths:
       - Bearer: []
       summary: List all StackResources under a Stack
   /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The ID of the stack
+        explode: false
+        in: path
+        name: stack_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackResource'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a specific StackResource
     put:
       parameters:
       - description: The ID of the organization
@@ -1450,6 +1555,74 @@ paths:
       security:
       - Bearer: []
       summary: Update a StackResource
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/logs:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The ID of the stack
+        explode: false
+        in: path
+        name: stack_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: resource_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: follow
+        required: false
+        schema:
+          default: false
+          type: boolean
+        style: form
+      - explode: true
+        in: query
+        name: tail
+        required: false
+        schema:
+          default: 100
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: since
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                format: binary
+                type: string
+          description: Stream of log lines via Server-Sent Events (SSE)
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get logs for a StackResource
   /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}/builds:
     get:
       parameters:

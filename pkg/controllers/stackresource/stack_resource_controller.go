@@ -111,7 +111,7 @@ func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 func mapClusterStatusToServerStatus(clusterInstance *corev1alpha1.StackResource) *models.StackResourceStatus {
 	res := &models.StackResourceStatus{
 		LastObservedStatusHash: clusterInstance.Status.StatusHash,
-		State:                  string(clusterInstance.Status.Phase),
+		State:                  mapStackResourceState(clusterInstance.Status.Phase),
 		Conditions:             models.ConvertConditions(clusterInstance.Status.Conditions),
 		PublicIngresses:        mapToPublicIngresses(clusterInstance.Status.ExternalAddress),
 		ObservedVersion:        clusterInstance.Status.ObservedStackdomeServerObjectGeneration,
@@ -121,6 +121,19 @@ func mapClusterStatusToServerStatus(clusterInstance *corev1alpha1.StackResource)
 		res.LastRestartRequestProcessedAt = ptr.To(clusterInstance.Status.LastRestartRequestProcessedAt.UTC())
 	}
 	return res
+}
+
+func mapStackResourceState(in corev1alpha1.StackResourcePhase) models.StackResourceState {
+	switch in {
+	case corev1alpha1.StackResourcePhasePending:
+		return models.StackResourcePhasePending
+	case corev1alpha1.StackResourcePhaseReady:
+		return models.StackResourcePhaseReady
+	case corev1alpha1.StackResourcePhaseFailed:
+		return models.StackResourcePhaseFailed
+	default:
+		return models.StackResourcePhasePending
+	}
 }
 
 func mapToPublicIngresses(externalAddresses []corev1alpha1.ExternalAddress) []models.Ingress {

@@ -3,6 +3,7 @@ package presenters
 import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"k8s.io/utils/ptr"
 )
 
 func PresentStackList(stacks []*models.Stack) []openapi.Stack {
@@ -258,7 +259,7 @@ func presentResourceStatus(status *models.StackResourceStatus) *openapi.StackRes
 		return nil
 	}
 	return &openapi.StackResourceStatus{
-		State:           &status.State,
+		State:           ptr.To(string(status.State)),
 		ObservedVersion: openapi.PtrInt32(int32(status.ObservedVersion)),
 		Conditions:      presentConditions(status.Conditions),
 	}
