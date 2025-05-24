@@ -16,7 +16,7 @@ import { getStackById } from "@/api/stacks";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import type { z } from "zod";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { convertApiResourceToFormResource, convertApiVolumeToFormVolume } from "@/pages/stacks/schemas/form-schema";
 import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/schemas/api-schema";
 
