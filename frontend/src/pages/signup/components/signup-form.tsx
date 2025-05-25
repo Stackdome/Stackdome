@@ -4,24 +4,27 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Loader2 } from "lucide-react"
 import { useSignup } from '../hooks/use-signup';
 import type { UserSignupRequest, UserSignupResponse } from '@/api/users';
 import type { SignupFormData } from '../types';
 import { signupSchema } from '../types';
 import { setAuthSession } from '@/helpers/common';
+import { getErrorMessage } from '@/api/client';
 
 export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const [formData, setFormData] = useState<SignupFormData>({ 
-    email: "", 
+  const [formData, setFormData] = useState<SignupFormData>({
+    email: "",
     password: "",
     confirmPassword: "",
     name: "",
     organisationName: ""
   });
   const [errors, setErrors] = useState<Partial<SignupFormData>>({});
+  const [serverError, setServerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { signup } = useSignup();
   const navigate = useNavigate();
@@ -47,6 +50,7 @@ export function SignupForm({
     if (errors[name as keyof SignupFormData]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
+    setServerError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,6 +58,7 @@ export function SignupForm({
     if (!validateForm()) return;
     setIsLoading(true);
     setErrors({});
+    setServerError(null);
     try {
       const payload: UserSignupRequest = {
         name: formData.name,
@@ -67,7 +72,7 @@ export function SignupForm({
       }
       navigate("/dashboard");
     } catch (err) {
-      setErrors(prev => ({ ...prev, email: (err as Error)?.message || 'Signup failed' }));
+      setServerError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -82,6 +87,9 @@ export function SignupForm({
       <div className="grid gap-6">
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4">
+            {serverError && (
+              <div className="text-red-500 text-sm text-center">{serverError}</div>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="name">Name</Label>
               <Input
@@ -93,7 +101,7 @@ export function SignupForm({
                 className={errors.name ? "border-red-500" : ""}
               />
               {errors.name && (
-                <p className="text-red-500 text-sm">{errors.name}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
               )}
             </div>
             <div className="grid gap-2">
@@ -107,7 +115,7 @@ export function SignupForm({
                 className={errors.organisationName ? "border-red-500" : ""}
               />
               {errors.organisationName && (
-                <p className="text-red-500 text-sm">{errors.organisationName}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.organisationName}</p>
               )}
             </div>
             <div className="grid gap-2">
@@ -124,7 +132,7 @@ export function SignupForm({
                 className={errors.email ? "border-red-500" : ""}
               />
               {errors.email && (
-                <p className="text-red-500 text-sm">{errors.email}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
               )}
             </div>
             <div className="grid gap-2">
@@ -139,7 +147,7 @@ export function SignupForm({
                 className={errors.password ? "border-red-500" : ""}
               />
               {errors.password && (
-                <p className="text-red-500 text-sm">{errors.password}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
               )}
             </div>
             <div className="grid gap-2">
@@ -154,16 +162,13 @@ export function SignupForm({
                 className={errors.confirmPassword ? "border-red-500" : ""}
               />
               {errors.confirmPassword && (
-                <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
               )}
             </div>
             <Button type="submit" className="w-full mt-2" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                  <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" />
                   Creating account...
                 </>
               ) : (

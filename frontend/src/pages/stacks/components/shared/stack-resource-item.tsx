@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy, Info } from "lucide-react";
+import { PlusCircle, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy, Info } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
@@ -724,7 +724,7 @@ export default function StackResourceItem({
                         onClick={addVolumeMount}
                         disabled={(volumes || []).length === 0}
                       >
-                        <Plus className="h-4 w-4 mr-2" />Add Mount
+                        <PlusCircle className="h-4 w-4 mr-2" />Add Mount
                       </Button>
                       {(volumes || []).length === 0 && (
                         <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
@@ -827,7 +827,7 @@ export default function StackResourceItem({
                     ))}
                     <div>
                       <Button variant="ghost" size="sm" onClick={addPort}>
-                        <Plus className="h-4 w-4 mr-2" />Add Port
+                        <PlusCircle className="h-4 w-4 mr-2" />Add Port
                       </Button>
                     </div>
                   </div>
@@ -1095,7 +1095,7 @@ export default function StackResourceItem({
                   {/* Add Variable button inside table, bottom right */}
                   <div className="flex justify-end mt-2">
                     <Button variant="ghost" size="sm" onClick={addEnvVar}>
-                      <Plus className="h-4 w-4 mr-2" /> Add Variable
+                      <PlusCircle className="h-4 w-4 mr-2" /> Add Variable
                     </Button>
                   </div>
                 </div>

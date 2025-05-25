@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { z } from "zod";
 import type { Cluster } from "../types";
+import { getErrorMessage, isNotFoundError } from "@/api/client";
 import * as clusterApi from "@/api/clusters";
 
 export const ClusterSchema = z.object({
@@ -44,8 +45,13 @@ export function useClusters() {
     try {
       const data = await clusterApi.getClusters(orgId);
       setClusters(data.items || []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
+    } catch (e: unknown) {
+      if (isNotFoundError(e)) {
+        // Treat "not found" as empty state, not an error
+        setClusters([]);
+      } else {
+        setError(getErrorMessage(e));
+      }
     } finally {
       setLoading(false);
     }
@@ -76,7 +82,7 @@ export function useCreateCluster() {
       setData(cluster);
       return cluster;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
+      setError(getErrorMessage(e));
       throw e;
     } finally {
       setLoading(false);
@@ -102,7 +108,7 @@ export function useDeleteCluster() {
       setSuccess(true);
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
+      setError(getErrorMessage(e));
       throw e;
     } finally {
       setLoading(false);

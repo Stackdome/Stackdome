@@ -5,7 +5,6 @@ import StacksPage from "@/pages/stacks/components/list"
 import StackCreatePage from "@/pages/stacks/components/create"
 import StackDetailPage from "@/pages/stacks/components/detail"
 import ClustersPage from "@/pages/clusters"
-import ClusterCreatePage from "@/pages/clusters/components/create"
 import ClusterDetailPage from "@/pages/clusters/components/detail"
 import DomainsPage from "@/pages/domains"
 import { StackProvider } from "@/pages/stacks/contexts/stack-context"
@@ -29,7 +28,6 @@ const router = createBrowserRouter(
         <Route path="/stacks/create" element={<StackCreatePage />} />
         <Route path="/stacks/:id" element={<StackDetailPage />} />
         <Route path="/clusters" element={<ClustersPage />} />
-        <Route path="/clusters/create" element={<ClusterCreatePage />} />
         <Route path="/clusters/:id" element={<ClusterDetailPage />} />
         <Route path="/domains" element={<DomainsPage />} />
       </Route>

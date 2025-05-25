@@ -22,6 +22,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { logoutAndRedirect } from "@/helpers/common"
 
 export function NavUser({
   user,
@@ -60,7 +61,7 @@ export function NavUser({
             align="end"
             sideOffset={4}
           >
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => logoutAndRedirect()}>
               <LogOut />
               Log out
             </DropdownMenuItem>

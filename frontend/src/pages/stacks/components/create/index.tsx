@@ -19,6 +19,7 @@ import {
 } from "@/pages/stacks/schemas/form-schema";
 import { createStack } from '@/api/stacks';
 import { getCurrentOrganizationId } from '@/helpers/common';
+import { getErrorMessage } from '@/api/client';
 import { useToast } from '@/components/ui/use-toast';
 
 type FormErrors = { [path: string]: string | undefined };
@@ -365,20 +366,7 @@ export default function StackCreatePage() {
 
       console.error('Stack creation API failed:', error);
 
-      let errorMsg = 'An unknown error occurred during stack creation.';
-      // Robust error extraction for axios-like errors, without using 'any'
-      if (
-        error &&
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as Record<string, unknown>).response === 'object' &&
-        (error as { response?: { data?: { message?: unknown } } }).response?.data?.message
-      ) {
-        errorMsg = String((error as { response?: { data?: { message?: unknown } } }).response?.data?.message);
-      } else if (error instanceof Error) {
-        errorMsg = error.message;
-      }
+      const errorMsg = getErrorMessage(error);
       setApiError(errorMsg);
       toast({
         title: 'Stack Creation Failed',

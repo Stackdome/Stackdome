@@ -1,7 +1,7 @@
 import * as React from "react";
 import {
   Command,
-  Plus,
+  PlusCircle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -79,7 +79,7 @@ export function ProjectSidebar({ sections, children }: ProjectSidebarProps) {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton asChild>
                         <Link to={section.addHref}>
-                          <Plus className="size-4" />
+                          <PlusCircle className="size-4" />
                           <span>{section.addLabel || `Add new ${section.label}`}</span>
                         </Link>
                       </SidebarMenuSubButton>

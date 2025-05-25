@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Globe, Plus } from "lucide-react";
+import { AlertCircle, Globe, PlusCircle, Loader2 } from "lucide-react";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import {
   Card,
@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Separator } from "@/components/ui/separator";
 import * as organizationApi from "@/api/organizations";
 import type { Organization } from "@/api/organizations";
+import { getErrorMessage } from "@/api/client";
 import { type DomainName, createDomainFromForm } from "./schemas/api-schema";
 import DomainListItem from "./components/domain-list-item";
 import AddDomainDialog from "./components/add-domain-dialog";
@@ -44,10 +45,10 @@ export default function DomainsPage() {
       try {
         const data = await organizationApi.getOrganization(orgId);
         setOrganization(data);
-        setCustomLabel(currentPath, "Domain configuration");
+        setCustomLabel(currentPath, "Domains");
       } catch (err) {
         console.error("Failed to load organization:", err);
-        setError("Failed to load domains. Please try again later.");
+        setError(getErrorMessage(err));
       } finally {
         setLoading(false);
         setPathLoading(currentPath, false);
@@ -78,15 +79,12 @@ export default function DomainsPage() {
 
       setOrganization(updatedOrg);
 
-      toast({
-        title: "Domain configured",
-        description: "Domain configuration has been saved successfully.",
-      });
+
     } catch (err) {
       console.error("Failed to update domains:", err);
       toast({
         title: "Error",
-        description: "Failed to save domain configuration. Please try again.",
+        description: getErrorMessage(err),
         variant: "destructive",
       });
     } finally {
@@ -100,6 +98,10 @@ export default function DomainsPage() {
     const updatedDomains = [...(organization.domains || []), newDomain];
     handleDomainsChange(updatedDomains);
     setShowAddDialog(false);
+    toast({
+      title: "Domain added",
+      description: "Domain configuration added successfully.",
+    });
   };
 
   const handleRemoveDomain = (index: number) => {
@@ -111,18 +113,15 @@ export default function DomainsPage() {
 
     toast({
       title: "Domain deleted",
-      description: "The domain has been removed from your configuration.",
+      description: "The domain configuration removed from your configuration.",
       variant: "destructive",
     });
   };
 
   if (loading) {
     return (
-      <div className="flex flex-1 flex-col p-4 pt-0 h-full items-center justify-center">
-        <svg className="animate-spin h-10 w-10 text-primary" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-        </svg>
+      <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <p className="mt-2 text-muted-foreground">Loading domains...</p>
       </div>
     );
@@ -150,7 +149,7 @@ export default function DomainsPage() {
           <div className="flex justify-between items-center">
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-2xl font-bold">Domain configuration</h1>
+                <h1 className="text-2xl font-bold">Domain management</h1>
               </div>
             </div>
           </div>
@@ -160,7 +159,6 @@ export default function DomainsPage() {
         <Card className="rounded-lg">
           <CardHeader className="pb-3">
             <CardTitle className="text-xl flex items-center gap-2">
-              <Globe className="h-5 w-5" />
               Domains
             </CardTitle>
           </CardHeader>
@@ -171,7 +169,7 @@ export default function DomainsPage() {
                 <h3 className="text-xl font-medium mb-2">No domain configured</h3>
                 <p className="text-muted-foreground mb-6">Configure a domain for your organization.</p>
                 <Button onClick={() => setShowAddDialog(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <PlusCircle className="mr-2 h-4 w-4" />
                   Add Domain
                 </Button>
               </div>

@@ -1,14 +1,15 @@
 import { useState } from "react";
 import * as userApi from "@/api/users";
 import type { components } from "@/api/types/openapi";
+import { getErrorMessage } from "@/api/client";
 
 type UserSignupRequest = components["schemas"]["UserSignupRequest"];
-type User = components["schemas"]["User"];
+type UserSignupResponse = components["schemas"]["UserSignupResponse"];
 
 export function useSignup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserSignupResponse | null>(null);
 
   const signup = async (data: UserSignupRequest) => {
     setLoading(true);
@@ -18,7 +19,7 @@ export function useSignup() {
       setUser(result);
       return result;
     } catch (err: unknown) {
-      setError((err as Error)?.message || "Signup failed");
+      setError(getErrorMessage(err));
       throw err;
     } finally {
       setLoading(false);

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { getStacksByOrg } from "@/api/stacks";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { getCurrentOrganizationId } from "@/helpers/common";
+import { getErrorMessage } from "@/api/client";
 import {
   Card,
   CardFooter,
@@ -37,7 +38,7 @@ export default function StacksPage() {
           setStacks(data.items || []);
         } catch (err) {
           console.error("Failed to fetch stacks:", err);
-          setError("Failed to load stacks. Please try again later.");
+          setError(getErrorMessage(err));
         }
         setIsLoading(false);
       };
@@ -55,7 +56,7 @@ export default function StacksPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-1 flex-col p-4 pt-0 h-full items-center justify-center">
+      <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <p className="mt-2 text-muted-foreground">Loading stacks...</p>
       </div>
@@ -96,7 +97,7 @@ export default function StacksPage() {
           <>
             <div className="flex justify-between items-center py-4">
               <h1 className="text-2xl font-semibold">Stacks</h1>
-              <Button onClick={handleCreateNewStack} variant="outline">
+              <Button onClick={handleCreateNewStack} size="lg">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add New Stack
               </Button>

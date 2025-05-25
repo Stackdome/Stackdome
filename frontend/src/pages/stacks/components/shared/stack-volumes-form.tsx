@@ -1,7 +1,7 @@
 import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData   } from "@/pages/stacks/schemas/form-schema";
 import ResourceFormList from "@/pages/stacks/components/shared/resource-form-list";
 import StackVolumeItem from "@/pages/stacks/components/shared/stack-volume-item";
-import { Database } from "lucide-react";
+import { Database, PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -89,7 +89,8 @@ export default function StackVolumesForm({
           variant="ghost"
           onClick={() => onVolumesChange([...volumes, getDefaultVolume()])}
         >
-          + Add Volume
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Volume
         </Button>
       </div>
       <Dialog open={pendingRemoveIdx !== null} onOpenChange={open => !open && setPendingRemoveIdx(null)}>

@@ -4,6 +4,7 @@ import StackResourceItem from "@/pages/stacks/components/shared/stack-resource-i
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useState } from "react";
+import { PlusCircle } from "lucide-react";
 
 interface StackResourcesFormProps {
   resources: Partial<FormStackResourceData>[];
@@ -83,7 +84,8 @@ export default function StackResourcesForm({
           variant="ghost"
           onClick={() => onResourcesChange([...resources, getDefaultResource()])}
         >
-            + Add Resource
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Resource
         </Button>
       </div>
       <Dialog open={pendingRemoveIdx !== null} onOpenChange={open => !open && setPendingRemoveIdx(null)}>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import * as userApi from "@/api/users";
 import type { LoginRequest, LoginResponse } from "@/api/users";
+import { getErrorMessage } from "@/api/client";
 
 export function useLogin() {
   const [loading, setLoading] = useState(false);
@@ -15,7 +16,7 @@ export function useLogin() {
       setUser(result);
       return result;
     } catch (err: unknown) {
-      setError((err as Error)?.message || "Login failed");
+      setError(getErrorMessage(err));
       throw err;
     } finally {
       setLoading(false);

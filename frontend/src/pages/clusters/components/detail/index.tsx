@@ -4,8 +4,9 @@ import { useDeleteCluster } from "../../hooks/use-clusters";
 import * as clusterApi from "@/api/clusters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2, AlertCircle, Info, EyeOff } from "lucide-react";
+import { Trash2, AlertCircle, Info, EyeOff, Loader2 } from "lucide-react";
 import { getCurrentOrganizationId } from "@/helpers/common";
+import { getErrorMessage } from "@/api/client";
 import {
   Card,
   CardContent,
@@ -72,7 +73,7 @@ export default function ClusterDetailPage() {
       console.error("Failed to delete cluster:", err);
       toast({
         title: "Failed to delete cluster",
-        description: err instanceof Error ? err.message : "Failed to delete cluster. Please try again.",
+        description: getErrorMessage(err),
         variant: "destructive",
         duration: 5000,
       });
@@ -80,8 +81,9 @@ export default function ClusterDetailPage() {
   };
 
   if (loading) return (
-    <div className="flex items-center justify-center h-screen">
-      <div className="text-gray-500">Loading cluster details...</div>
+    <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
+      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <p className="mt-2 text-muted-foreground">Loading cluster details...</p>
     </div>
   );
 

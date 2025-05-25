@@ -65,7 +65,7 @@ export default function AddDomainDialog({
 
     // Add the domain
     onAddDomain({ fqdn: normalizedDomain });
-    
+
     // Reset state
     setDomainFqdn("");
     setError(null);

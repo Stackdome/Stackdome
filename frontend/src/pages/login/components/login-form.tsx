@@ -4,10 +4,12 @@ import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Loader2 } from "lucide-react"
 import { useLogin } from '../hooks/use-login';
 import type { LoginFormData } from '../types';
 import { loginSchema } from '../types';
 import { setAuthSession } from '@/helpers/common';
+import { getErrorMessage } from '@/api/client';
 
 export function LoginForm({
   className,
@@ -56,18 +58,7 @@ export function LoginForm({
       }
       navigate("/dashboard");
     } catch (err) {
-      let errorMsg = 'Login failed';
-      if (typeof err === 'object' && err !== null) {
-        const maybeResponse = (err as { response?: { data?: { message?: string } } }).response;
-        if (maybeResponse?.data?.message) {
-          errorMsg = maybeResponse.data.message;
-        } else if ('message' in err && typeof (err as { message?: string }).message === 'string') {
-          errorMsg = (err as { message?: string }).message!;
-        }
-      } else if (typeof err === 'string') {
-        errorMsg = err;
-      }
-      setServerError(errorMsg);
+      setServerError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -123,10 +114,7 @@ export function LoginForm({
               <Button type="submit" className="w-full mt-2" disabled={isLoading}>
                 {isLoading ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+                    <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" />
                     Logging in...
                   </>
                 ) : (
