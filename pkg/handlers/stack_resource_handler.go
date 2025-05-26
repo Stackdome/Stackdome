@@ -20,12 +20,14 @@ type StackResourceHandlerSpec struct {
 	Logger               logger.Logger
 	StackService         services.StackService
 	LoggingService       services.LoggingService
+	MetricsService       services.MetricsService
 	AuthzClient          auth.AuthorizationClient
 }
 
 type stackResourceHandler struct {
 	stackResourceService services.StackResourceService
 	loggingService       services.LoggingService
+	metricsService       services.MetricsService
 	logger               logger.Logger
 	stackService         services.StackService
 	authzClient          auth.AuthorizationClient
@@ -37,6 +39,7 @@ func NewStackResourceHandler(spec StackResourceHandlerSpec) *stackResourceHandle
 		logger:               spec.Logger,
 		stackService:         spec.StackService,
 		loggingService:       spec.LoggingService,
+		metricsService:       spec.MetricsService,
 		authzClient:          spec.AuthzClient,
 	}
 }
@@ -125,6 +128,56 @@ func (h *stackResourceHandler) StreamLogs(w http.ResponseWriter, r *http.Request
 		},
 	}
 	handleServerSideStream(w, r, cfg)
+}
+
+func (h *stackResourceHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			ctx := r.Context()
+			stackID := mux.Vars(r)["id"]
+			orgID := mux.Vars(r)["org_id"]
+			resourceName := mux.Vars(r)["resource_name"]
+
+			currentUser, uerr := auth.GetCurrentUserFromCtx(ctx)
+			if uerr != nil {
+				return nil, errors.Unauthorized("failed to fetch current user")
+			}
+
+			stack, serr := h.stackService.GetStack(ctx, stackID)
+			if serr != nil {
+				return nil, serr
+			}
+
+			allowed, accessErr := h.authzClient.AuthorizeResourceAccess(
+				currentUser,
+				auth.Stack,
+				stackID,
+				stack.UserID,
+				models.ResourceAccessModeRead,
+			)
+			if accessErr != nil {
+				return nil, errors.Unauthorized("failed to authorize access: %s", accessErr.Error())
+			}
+			if !allowed {
+				return nil, errors.Unauthorized("user '%s' is not allowed to get metrics for resource '%s'", currentUser.ID, resourceName)
+			}
+
+			stream := r.URL.Query().Get("stream") == "true"
+			if stream {
+				streamer, err := h.metricsService.StreamMetricsForStackResource(ctx, orgID, stackID, resourceName)
+				if err != nil {
+					return nil, errors.GeneralError("failed to get metrics for resource '%s': %s", resourceName, err.Error())
+				}
+				return streamer, nil
+			}
+			metrics, err := h.metricsService.GetMetricsForStackResource(ctx, orgID, stackID, resourceName)
+			if err != nil {
+				return nil, errors.GeneralError("failed to get metrics for resource '%s': %s", resourceName, err.Error())
+			}
+			return presenters.PresentResourceMetrics(metrics), nil
+		},
+	}
+	handleStreamOrGet(w, r, cfg)
 }
 
 // List fetches all workspace resources

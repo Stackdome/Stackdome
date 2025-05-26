@@ -285,6 +285,13 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:               d.Logger,
 	})
 
+	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
+		ClusterService:       clusterService,
+		StackResourceService: stackResourceService,
+		StackService:         stackService,
+		Logger:               d.Logger,
+	})
+
 	d.Services = Services{
 		UserService:                 userService,
 		WorkspaceUserService:        workspaceUserService,
@@ -299,6 +306,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OrganisationDomainService:   organisationDomainService,
 		NamespaceService:            namespaceService,
 		LoggingService:              loggingService,
+		MetricsService:              metricsService,
 	}
 
 	return nil
@@ -344,11 +352,18 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 		Logger:         d.Logger,
 	})
 
+	clusterMetricsService := clusterresource.NewClusterMetricsService(clusterresource.ClusterMetricsServiceSpec{
+		ClusterManager: d.ClusterManager,
+		ClusterService: d.Services.ClusterService,
+		Logger:         d.Logger,
+	})
+
 	deps := services.ClusterResourceServiceDeps{
 		ClusterStackService:     clusterStackService,
 		ClusterNamespaceService: clusterNamespaceService,
 		ClusterVolumeService:    volumeClusterResourceService,
 		ClusterLoggingService:   clusterLoggingService,
+		ClusterMetricsService:   clusterMetricsService,
 	}
 
 	d.Services.WorkspaceUserService.InjectClusterResourceService(workspaceUserClusterResourceService)
@@ -356,6 +371,7 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 	d.Services.StackService.InjectClusterResourceServiceDeps(deps)
 	d.Services.NamespaceService.InjectClusterResourceServiceDeps(deps)
 	d.Services.LoggingService.InjectClusterResourceServiceDeps(deps)
+	d.Services.MetricsService.InjectClusterResourceServiceDeps(deps)
 	d.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	return nil
 }

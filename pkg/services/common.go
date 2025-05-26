@@ -12,6 +12,7 @@ type ClusterResourceServiceDeps struct {
 	ClusterNamespaceService clusterresource.NamespaceClusterResourceService
 	ClusterVolumeService    clusterresource.VolumeClusterResourceService
 	ClusterLoggingService   clusterresource.ClusterLoggingService
+	ClusterMetricsService   clusterresource.ClusterMetricsService
 }
 
 func (s *ClusterResourceServiceDeps) InjectClusterResourceServiceDeps(deps ClusterResourceServiceDeps) {
@@ -19,4 +20,5 @@ func (s *ClusterResourceServiceDeps) InjectClusterResourceServiceDeps(deps Clust
 	s.ClusterNamespaceService = deps.ClusterNamespaceService
 	s.ClusterVolumeService = deps.ClusterVolumeService
 	s.ClusterLoggingService = deps.ClusterLoggingService
+	s.ClusterMetricsService = deps.ClusterMetricsService
 }

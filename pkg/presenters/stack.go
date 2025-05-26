@@ -43,7 +43,7 @@ func presentStackStatus(status *models.StackStatus) *openapi.StackStatus {
 		return nil
 	}
 	return &openapi.StackStatus{
-		State:           &status.State,
+		State:           ptr.To(string(status.State)),
 		ObservedVersion: openapi.PtrInt32(int32(status.ObservedVersion)),
 		Conditions:      presentConditions(status.Conditions),
 	}

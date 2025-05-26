@@ -1388,6 +1388,59 @@ paths:
       security:
       - Bearer: []
       summary: Get logs for a Stack
+  /api/v1/organizations/{org_id}/stacks/{id}/metrics:
+    get:
+      description: "Returns metrics for a stack. If `stream=true` is passed, the server\
+        \ responds using Server-Sent Events (SSE).\n"
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: stream
+        required: false
+        schema:
+          default: false
+          type: boolean
+        style: form
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                format: binary
+                type: string
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceMetrics'
+          description: |
+            - Returns a `ResourceMetrics` object when `stream=false`.
+            - Returns a stream of metrics via Server-Sent Events (SSE) when `stream=true`.
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get metrics for a Stack
   /api/v1/organizations/{org_id}/stacks/current:
     get:
       parameters:
@@ -1623,6 +1676,67 @@ paths:
       security:
       - Bearer: []
       summary: Get logs for a StackResource
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/metrics:
+    get:
+      description: "Returns metrics for a StackResource. If `stream=true` is passed,\
+        \ the server responds using Server-Sent Events (SSE).\n"
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The ID of the stack
+        explode: false
+        in: path
+        name: stack_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: resource_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Whether to stream metrics via Server-Sent Events (SSE)
+        explode: true
+        in: query
+        name: stream
+        required: false
+        schema:
+          default: false
+          type: boolean
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceMetrics'
+            text/event-stream:
+              schema:
+                format: binary
+                type: string
+          description: |
+            - Returns a `ResourceMetrics` object when `stream=false`.
+            - Returns a stream of metrics via Server-Sent Events (SSE) when `stream=true`.
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get metrics for a StackResource
   /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}/builds:
     get:
       parameters:
@@ -4820,6 +4934,42 @@ components:
       - stack_resource_id
       - stack_resource_name
       type: object
+    ResourceMetrics:
+      example:
+        node_capacities:
+        - storage_capacity: storage_capacity
+          node_name: node_name
+          cpu_capacity: cpu_capacity
+          memory_capacity: memory_capacity
+        - storage_capacity: storage_capacity
+          node_name: node_name
+          cpu_capacity: cpu_capacity
+          memory_capacity: memory_capacity
+        assigned_nodes:
+        - assigned_nodes
+        - assigned_nodes
+        memory_usage: memory_usage
+        cpu_usage: cpu_usage
+        timestamp: 2000-01-23T04:56:07.000+00:00
+      properties:
+        assigned_nodes:
+          items:
+            type: string
+          type: array
+        cpu_usage:
+          description: CPU usage in millicores
+          type: string
+        memory_usage:
+          description: Memory usage in bytes
+          type: string
+        node_capacities:
+          items:
+            $ref: '#/components/schemas/ResourceMetrics_node_capacities_inner'
+          type: array
+        timestamp:
+          format: date-time
+          type: string
+      type: object
     ImageBuildList:
       example:
         total: 0
@@ -5577,6 +5727,25 @@ components:
         name:
           type: string
         head_sha:
+          type: string
+      type: object
+    ResourceMetrics_node_capacities_inner:
+      example:
+        storage_capacity: storage_capacity
+        node_name: node_name
+        cpu_capacity: cpu_capacity
+        memory_capacity: memory_capacity
+      properties:
+        node_name:
+          type: string
+        cpu_capacity:
+          description: CPU capacity in millicores
+          type: string
+        memory_capacity:
+          description: Memory capacity in bytes
+          type: string
+        storage_capacity:
+          description: Storage capacity in bytes
           type: string
       type: object
     BuildSourceContext_volume:

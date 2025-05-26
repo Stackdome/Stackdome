@@ -110,6 +110,24 @@ func handleGet(w http.ResponseWriter, r *http.Request, cfg *handlerConfig) {
 	}
 }
 
+func handleStreamOrGet(w http.ResponseWriter, r *http.Request, cfg *handlerConfig) {
+	if cfg.ErrorHandler == nil {
+		cfg.ErrorHandler = handleError
+	}
+
+	result, serviceErr := cfg.Action()
+	if serviceErr != nil {
+		cfg.ErrorHandler(r.Context(), w, serviceErr)
+		return
+	}
+	streamable, ok := result.(interfaces.ServerSideStreamable)
+	if ok {
+		internalStreamHandler(w, r, streamable, cfg)
+		return
+	}
+	writeJSONResponse(w, http.StatusOK, result)
+}
+
 func handleServerSideStream(w http.ResponseWriter, r *http.Request, cfg *handlerConfig) {
 	if cfg.ErrorHandler == nil {
 		cfg.ErrorHandler = handleError
@@ -127,6 +145,10 @@ func handleServerSideStream(w http.ResponseWriter, r *http.Request, cfg *handler
 		return
 	}
 
+	internalStreamHandler(w, r, streamable, cfg)
+}
+
+func internalStreamHandler(w http.ResponseWriter, r *http.Request, streamable interfaces.ServerSideStreamable, cfg *handlerConfig) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		cfg.ErrorHandler(r.Context(), w, errors.InternalServerError("Streaming unsupported"))

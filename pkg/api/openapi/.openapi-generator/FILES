@@ -55,6 +55,8 @@ docs/RemoteSyncServerList.md
 docs/RemoteSyncServerSpec.md
 docs/RemoteSyncServerState.md
 docs/RemoteSyncServerStatus.md
+docs/ResourceMetrics.md
+docs/ResourceMetricsNodeCapacitiesInner.md
 docs/SSHConfig.md
 docs/Stack.md
 docs/StackList.md
@@ -132,6 +134,8 @@ model_remote_sync_server_list.go
 model_remote_sync_server_spec.go
 model_remote_sync_server_state.go
 model_remote_sync_server_status.go
+model_resource_metrics.go
+model_resource_metrics_node_capacities_inner.go
 model_ssh_config.go
 model_stack.go
 model_stack_list.go

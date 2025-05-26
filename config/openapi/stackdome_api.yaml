@@ -1203,6 +1203,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/stacks/{id}/metrics:
+    get:
+      summary: Get metrics for a Stack
+      description: |
+            Returns metrics for a stack. If `stream=true` is passed, the server responds using Server-Sent Events (SSE).
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+        - in: query
+          name: stream
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: |
+            - Returns a `ResourceMetrics` object when `stream=false`.
+            - Returns a stream of metrics via Server-Sent Events (SSE) when `stream=true`.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceMetrics'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   # List of all stacks for the current user
   /api/v1/organizations/{org_id}/stacks/current:
     get:
@@ -1345,6 +1382,50 @@ paths:
         '200':
           description: Stream of log lines via Server-Sent Events (SSE)
           content:
+            text/event-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/metrics:
+    get:
+      summary: Get metrics for a StackResource
+      description: |
+        Returns metrics for a StackResource. If `stream=true` is passed, the server responds using Server-Sent Events (SSE).
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/stack_id'
+        - in: path
+          name: resource_name
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: stream
+          description: Whether to stream metrics via Server-Sent Events (SSE)
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: |
+            - Returns a `ResourceMetrics` object when `stream=false`.
+            - Returns a stream of metrics via Server-Sent Events (SSE) when `stream=true`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceMetrics'
+            # If stream is true, return SSE stream
             text/event-stream:
               schema:
                 type: string
@@ -2129,7 +2210,38 @@ components:
         updated_at:
           type: string
           format: date-time
-
+    ResourceMetrics:
+      type: object
+      properties:
+        assigned_nodes:
+          type: array
+          items:
+            type: string
+        cpu_usage:
+          type: string
+          description: CPU usage in millicores
+        memory_usage:
+          type: string
+          description: Memory usage in bytes
+        node_capacities:
+          type: array
+          items:
+            type: object
+            properties:
+              node_name:
+                type: string
+              cpu_capacity:
+                type: string
+                description: CPU capacity in millicores
+              memory_capacity:
+                type: string
+                description: Memory capacity in bytes
+              storage_capacity:
+                type: string
+                description: Storage capacity in bytes
+        timestamp:
+          type: string
+          format: date-time
     ImageBuildList:
       type: object
       properties:

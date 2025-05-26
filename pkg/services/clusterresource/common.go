@@ -5,9 +5,18 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+)
+
+const (
+	DefaultLogStreamBufferSize     = 1000
+	DefaultStreamTimeoutDuration   = 20 * time.Minute
+	DefaultLogStreamRateLimit      = 200 * time.Millisecond
+	DefaultLogStreamRateLimitBurst = 100
+	MaxLogStreamErrors             = 50
 )
 
 type ClusterResourceError struct {

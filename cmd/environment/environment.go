@@ -53,4 +53,5 @@ type Services struct {
 	OrganisationDomainService   services.OrganisationDomainsService
 	NamespaceService            services.NamespaceService
 	LoggingService              services.LoggingService
+	MetricsService              services.MetricsService
 }
