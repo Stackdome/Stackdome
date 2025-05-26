@@ -20,6 +20,7 @@ type StackHandlerSpec struct {
 	StackResourceService services.StackResourceService
 	ImageBuildService    services.ImageBuildService
 	LoggingService       services.LoggingService
+	MetricsService       services.MetricsService
 	AuthzClient          auth.AuthorizationClient
 	Logger               logger.Logger
 }
@@ -29,6 +30,7 @@ type stackHandler struct {
 	stackResourceService services.StackResourceService
 	imageBuildService    services.ImageBuildService
 	loggingService       services.LoggingService
+	metricsService       services.MetricsService
 	authzClient          auth.AuthorizationClient
 	logger               logger.Logger
 }
@@ -39,6 +41,7 @@ func NewStackHandler(spec StackHandlerSpec) *stackHandler {
 		stackService:         spec.StackService,
 		imageBuildService:    spec.ImageBuildService,
 		loggingService:       spec.LoggingService,
+		metricsService:       spec.MetricsService,
 		authzClient:          spec.AuthzClient,
 		logger:               spec.Logger,
 	}
@@ -121,6 +124,55 @@ func (h *stackHandler) StreamLogs(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	handleServerSideStream(w, r, cfg)
+}
+
+func (h *stackHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			ctx := r.Context()
+			stackID := mux.Vars(r)["id"]
+			orgID := mux.Vars(r)["org_id"]
+
+			currentUser, uerr := auth.GetCurrentUserFromCtx(ctx)
+			if uerr != nil {
+				return nil, errors.Unauthorized("failed to fetch current user")
+			}
+
+			stack, serr := h.stackService.GetStack(ctx, stackID)
+			if serr != nil {
+				return nil, serr
+			}
+
+			allowed, accessErr := h.authzClient.AuthorizeResourceAccess(
+				currentUser,
+				auth.Stack,
+				stackID,
+				stack.UserID,
+				models.ResourceAccessModeRead,
+			)
+			if accessErr != nil {
+				return nil, errors.Unauthorized("failed to authorize access: %s", accessErr.Error())
+			}
+			if !allowed {
+				return nil, errors.Unauthorized("user '%s' is not allowed to get stack metrics '%s'", currentUser.ID, stack.Name)
+			}
+
+			stream := r.URL.Query().Get("stream") == "true"
+			if stream {
+				streamer, err := h.metricsService.StreamMetricsForStack(ctx, orgID, stackID)
+				if err != nil {
+					return nil, errors.GeneralError("failed to stream metrics for stack '%s': %s", stack.Name, err.Error())
+				}
+				return streamer, nil
+			}
+			res, err := h.metricsService.GetMetricsForStack(ctx, orgID, stackID)
+			if err != nil {
+				return nil, errors.GeneralError("failed to get metrics for stack '%s': %s", stack.Name, err.Error())
+			}
+			return presenters.PresentResourceMetrics(res), nil
+		},
+	}
+	handleStreamOrGet(w, r, cfg)
 }
 
 func (h *stackHandler) ListByUser(w http.ResponseWriter, r *http.Request) {

@@ -28,6 +28,7 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdStacksIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdDelete) | **Delete** /api/v1/organizations/{org_id}/stacks/{id} | Delete a Stack
 [**ApiV1OrganizationsOrgIdStacksIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdGet) | **Get** /api/v1/organizations/{org_id}/stacks/{id} | Get a specific Stack
 [**ApiV1OrganizationsOrgIdStacksIdLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdLogsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{id}/logs | Get logs for a Stack
+[**ApiV1OrganizationsOrgIdStacksIdMetricsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdMetricsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{id}/metrics | Get metrics for a Stack
 [**ApiV1OrganizationsOrgIdStacksIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdPut) | **Put** /api/v1/organizations/{org_id}/stacks/{id} | Update a Stack
 [**ApiV1OrganizationsOrgIdStacksPost**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksPost) | **Post** /api/v1/organizations/{org_id}/stacks | Create a new stack
 [**ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/builds/{build_id} | Get a specific build under a stack
@@ -37,6 +38,7 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id} | Get a specific StackResource
 [**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut) | **Put** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id} | Update a StackResource
 [**ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/logs | Get logs for a StackResource
+[**ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/metrics | Get metrics for a StackResource
 [**ApiV1OrganizationsOrgIdVolumesCurrentGet**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesCurrentGet) | **Get** /api/v1/organizations/{org_id}/volumes/current | List of volumes for the current user
 [**ApiV1OrganizationsOrgIdVolumesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesGet) | **Get** /api/v1/organizations/{org_id}/volumes | List all volumes in an organization.
 [**ApiV1OrganizationsOrgIdVolumesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesIdDelete) | **Delete** /api/v1/organizations/{org_id}/volumes/{id} | Delete a volume
@@ -1741,6 +1743,81 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
+## ApiV1OrganizationsOrgIdStacksIdMetricsGet
+
+> *os.File ApiV1OrganizationsOrgIdStacksIdMetricsGet(ctx, orgId, id).Stream(stream).Execute()
+
+Get metrics for a Stack
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+    stream := true // bool |  (optional) (default to false)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdMetricsGet(context.Background(), orgId, id).Stream(stream).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksIdMetricsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdStacksIdMetricsGet`: *os.File
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksIdMetricsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksIdMetricsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **stream** | **bool** |  | [default to false]
+
+### Return type
+
+[***os.File**](*os.File.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: text/event-stream, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## ApiV1OrganizationsOrgIdStacksIdPut
 
 > Stack ApiV1OrganizationsOrgIdStacksIdPut(ctx, orgId, id).Stack(stack).Execute()
@@ -2398,6 +2475,84 @@ Name | Type | Description  | Notes
 
 - **Content-Type**: Not defined
 - **Accept**: text/event-stream, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet
+
+> ResourceMetrics ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet(ctx, orgId, stackId, resourceName).Stream(stream).Execute()
+
+Get metrics for a StackResource
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    stackId := "stackId_example" // string | The ID of the stack
+    resourceName := "resourceName_example" // string | 
+    stream := true // bool | Whether to stream metrics via Server-Sent Events (SSE) (optional) (default to false)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet(context.Background(), orgId, stackId, resourceName).Stream(stream).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet`: ResourceMetrics
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**stackId** | **string** | The ID of the stack | 
+**resourceName** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **stream** | **bool** | Whether to stream metrics via Server-Sent Events (SSE) | [default to false]
+
+### Return type
+
+[**ResourceMetrics**](ResourceMetrics.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json, text/event-stream
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)

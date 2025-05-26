@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	corev1 "k8s.io/api/core/v1"
+	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/kubectl/pkg/polymorphichelpers"
@@ -19,32 +21,37 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	metrics "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
-type LogLine struct {
-	Data  string `json:"data"`
-	Error error  `json:"error"`
+type MetricsStreamOptions interface {
+	// PollInterval specifies how often to poll for metrics updates.
+	PollInterval() time.Duration
+	// MaxErrors returns the maximum number of errors to log before stopping the stream.
+	MaxErrors() int
 }
 
-type PodLogOptions interface {
-	// Follow indicates whether to follow the log stream.
+type PodLogStreamOptions interface {
 	Follow() bool
-	// TailLines specifies the number of lines to tail from the end of the log.
 	TailLines() int
-	// Since specifies the time from which to start streaming logs.
 	Since() string
+	// MaxErrors returns the maximum number of errors to log before stopping the stream.
+	MaxErrors() int
 }
 
 type KubernetesClient interface {
-	// AttachablePodFromService retrieves an attachable pod for a given service.
 	AttachablePodFromService(ctx context.Context, svcKey types.NamespacedName) (*corev1.Pod, error)
-	StreamPodLogs(ctx context.Context, pod *corev1.Pod, logOpts PodLogOptions) (<-chan *LogLine, error)
+	StreamPodLogs(ctx context.Context, pod *corev1.Pod, logOpts PodLogStreamOptions) (<-chan *LogStreamObject, error)
+
+	GetNamespaceMetrics(ctx context.Context, namespace string) (*MetricsStreamObject, error)
+	StreamNamespaceMetrics(ctx context.Context, namespace string, metricsStreamOpts MetricsStreamOptions) (<-chan *MetricsStreamObject, error)
 }
 
 type kubernetesClient struct {
 	clientSet               *kubernetes.Clientset
 	controllerRuntimeClient client.Client
 	logger                  logger.Logger
+	restConfig              *rest.Config
 }
 
 type KubernetesClientSpec struct {
@@ -73,6 +80,7 @@ func NewKubernetesClient(spec KubernetesClientSpec) (KubernetesClient, error) {
 		clientSet:               clientset,
 		controllerRuntimeClient: spec.ControllerRuntimeClient,
 		logger:                  spec.Logger,
+		restConfig:              spec.RestConfig,
 	}, nil
 }
 
@@ -88,7 +96,7 @@ func (k *kubernetesClient) AttachablePodFromService(ctx context.Context, svcKey 
 	return attachablePod, nil
 }
 
-func (k *kubernetesClient) StreamPodLogs(ctx context.Context, pod *corev1.Pod, logOpts PodLogOptions) (<-chan *LogLine, error) {
+func (k *kubernetesClient) StreamPodLogs(ctx context.Context, pod *corev1.Pod, logOpts PodLogStreamOptions) (<-chan *LogStreamObject, error) {
 	logOptions := &corev1.PodLogOptions{}
 	if logOpts.Since() != "" {
 		sinceTime, err := time.ParseDuration(logOpts.Since())
@@ -107,10 +115,11 @@ func (k *kubernetesClient) StreamPodLogs(ctx context.Context, pod *corev1.Pod, l
 		return nil, fmt.Errorf("failed to get logs for pod %s/%s: %w", pod.Namespace, pod.Name, err)
 	}
 	reader := bufio.NewReader(stream)
-	logChannel := make(chan *LogLine)
+	logChannel := make(chan *LogStreamObject)
 	go func() {
 		defer close(logChannel)
 		defer stream.Close()
+		numStreamErrors := 0
 		for {
 			select {
 			case <-ctx.Done():
@@ -122,15 +131,129 @@ func (k *kubernetesClient) StreamPodLogs(ctx context.Context, pod *corev1.Pod, l
 				if err == context.Canceled || err == context.DeadlineExceeded {
 					return
 				}
+				if numStreamErrors >= logOpts.MaxErrors() {
+					k.logger.Warnf("maximum number of stream errors reached (%d), stopping log stream", logOpts.MaxErrors())
+					safeWriteToChannel(ctx, logChannel, &LogStreamObject{Error: fmt.Errorf("maximum number of stream errors reached")})
+					return
+				}
 				k.logger.Errorf("error reading log line: %v", err)
-				safeWriteToChannel(ctx, logChannel, &LogLine{Error: fmt.Errorf("error reading log line: %v", err)})
+				safeWriteToChannel(ctx, logChannel, &LogStreamObject{Error: fmt.Errorf("error reading log line: %v", err)})
+				numStreamErrors++
+				continue
 			}
 			if line != "" {
-				safeWriteToChannel(ctx, logChannel, &LogLine{Data: line})
+				safeWriteToChannel(ctx, logChannel, &LogStreamObject{Data: line})
 			}
 		}
 	}()
 	return logChannel, nil
+}
+
+func (k *kubernetesClient) GetNamespaceMetrics(ctx context.Context, namespace string) (*MetricsStreamObject, error) {
+	metricsClient, err := metrics.NewForConfig(k.restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeCapacityMap, err := k.getNodeCapacityMap(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get node capacity map: %w", err)
+	}
+
+	podMetricsList, err := metricsClient.MetricsV1beta1().PodMetricses(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	//  add assigned node as an annotation to each pod metric
+	for i := range podMetricsList.Items {
+		podMetrics := &podMetricsList.Items[i]
+		pod, err := k.clientSet.CoreV1().Pods(namespace).Get(ctx, podMetrics.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get pod %s/%s: %w", namespace, podMetrics.Name, err)
+		}
+		if pod.Spec.NodeName != "" {
+			if podMetrics.Annotations == nil {
+				podMetrics.Annotations = make(map[string]string)
+			}
+			podMetrics.Annotations[models.AssignedNodeAnnotation] = pod.Spec.NodeName
+		}
+	}
+
+	return &MetricsStreamObject{
+		NamespaceMetrics: podMetricsList.Items,
+		NodeCapacityMap:  nodeCapacityMap,
+	}, nil
+}
+
+func (k *kubernetesClient) StreamNamespaceMetrics(ctx context.Context, namespace string, metricsStreamOpts MetricsStreamOptions) (<-chan *MetricsStreamObject, error) {
+	metricsClient, err := metrics.NewForConfig(k.restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// Hit the api first to ensure the metrics server is available
+	_, err = metricsClient.MetricsV1beta1().PodMetricses(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		if k8sapierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("metrics server not installed: %w", err)
+		}
+		if k8sapierrors.IsServiceUnavailable(err) {
+			return nil, fmt.Errorf("metrics server is unavailable: %w", err)
+		}
+		return nil, err
+	}
+
+	streamChannel := make(chan *MetricsStreamObject)
+	k.logger.Infof("starting metrics stream for namespace %s with poll interval %s", namespace, metricsStreamOpts.PollInterval().String())
+	pollingTicker := time.NewTicker(metricsStreamOpts.PollInterval())
+
+	ticker := make(chan struct{})
+	firstTickChan := make(chan struct{}, 1)
+	go func() {
+		defer close(ticker)
+		defer close(firstTickChan)
+		defer pollingTicker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-pollingTicker.C:
+				ticker <- struct{}{}
+			case <-firstTickChan:
+				ticker <- struct{}{}
+			}
+		}
+	}()
+
+	firstTickChan <- struct{}{} // Trigger the first tick immediately
+	go func() {
+		defer close(streamChannel)
+		numStreamErrors := 0
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker:
+				podMetricsList, err := metricsClient.MetricsV1beta1().PodMetricses(namespace).List(ctx, metav1.ListOptions{})
+				if err != nil {
+					if numStreamErrors >= metricsStreamOpts.MaxErrors() {
+						k.logger.Warnf("maximum number of stream errors reached (%d), stopping metrics stream", metricsStreamOpts.MaxErrors())
+						safeWriteToChannel(ctx, streamChannel, &MetricsStreamObject{Error: fmt.Errorf("maximum number of stream errors reached")})
+						return
+					}
+					k.logger.Errorf("error fetching pod metrics: %v", err)
+					safeWriteToChannel(ctx, streamChannel, &MetricsStreamObject{Error: fmt.Errorf("error fetching pod metrics: %v", err)})
+					numStreamErrors++
+					continue
+				}
+				safeWriteToChannel(ctx, streamChannel, &MetricsStreamObject{
+					NamespaceMetrics: podMetricsList.Items,
+				})
+			}
+		}
+	}()
+	return streamChannel, nil
 }
 
 func (k *kubernetesClient) attachablePodForObject(object runtime.Object, timeout time.Duration) (*corev1.Pod, error) {
@@ -143,7 +266,20 @@ func (k *kubernetesClient) attachablePodForObject(object runtime.Object, timeout
 	return pod, err
 }
 
-func safeWriteToChannel(ctx context.Context, ch chan<- *LogLine, obj *LogLine) {
+func (k *kubernetesClient) getNodeCapacityMap(ctx context.Context) (map[string]corev1.ResourceList, error) {
+	nodes, err := k.clientSet.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	nodeCapacityMap := make(map[string]corev1.ResourceList)
+	for _, node := range nodes.Items {
+		nodeCapacityMap[node.Name] = node.Status.Capacity
+	}
+	return nodeCapacityMap, nil
+}
+
+func safeWriteToChannel[T any](ctx context.Context, ch chan<- *T, obj *T) {
 	select {
 	case <-ctx.Done():
 		return

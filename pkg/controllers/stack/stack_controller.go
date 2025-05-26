@@ -111,10 +111,23 @@ func (w *stackReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 
 func mapClusterObjStatusToDBObjStatus(clusterInstance *corev1alpha1.Stack) *models.StackStatus {
 	return &models.StackStatus{
-		State:                  string(clusterInstance.Status.Phase),
+		State:                  mapStackState(clusterInstance.Status.Phase),
 		ObservedVersion:        clusterInstance.Status.ObservedStackdomeServerObjectGeneration,
 		Conditions:             models.ConvertConditions(clusterInstance.Status.Conditions),
 		LastObservedStatusHash: clusterInstance.Status.StatusHash,
+	}
+}
+
+func mapStackState(in corev1alpha1.StackPhase) models.StackState {
+	switch in {
+	case corev1alpha1.StackPending:
+		return models.StackPending
+	case corev1alpha1.StackReady:
+		return models.StackReady
+	case corev1alpha1.StackFailed:
+		return models.StackFailed
+	default:
+		return models.StackPending
 	}
 }
 

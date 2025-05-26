@@ -17,13 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-const (
-	DefaultLogStreamBufferSize     = 1000
-	DefaultStreamTimeoutDuration   = 20 * time.Minute
-	DefaultLogStreamRateLimit      = 50 * time.Millisecond
-	DefaultLogStreamRateLimitBurst = 200
-)
-
 type ResourceError struct {
 	ResourceName string
 	Error        error
@@ -87,14 +80,14 @@ func (s *loggingService) GetLogsForResources(ctx context.Context, orgID string, 
 		return nil, cerr
 	}
 
-	client, cerr := s.clusterManager.GetClient(cluster.ID)
+	ctrlRuntimeclient, cerr := s.clusterManager.GetClient(cluster.ID)
 	if cerr != nil {
 		return nil, cerr
 	}
 
 	k8sclient, cerr := clients.NewKubernetesClient(clients.KubernetesClientSpec{
 		RestConfig:              restConfig,
-		ControllerRuntimeClient: client,
+		ControllerRuntimeClient: ctrlRuntimeclient,
 		Logger:                  s.logger,
 	})
 	if cerr != nil {
@@ -123,12 +116,13 @@ func (s *loggingService) GetLogsForResources(ctx context.Context, orgID string, 
 	return &LogStreamer{
 		resourcePodMap: resourcePodMap,
 		k8sclient:      k8sclient,
-		logOptions:     options,
 		Logger:         s.logger,
 		streamConfig: LogStreamConfig{
-			LogStreamBufferSize:   DefaultLogStreamBufferSize,
-			StreamTimeoutDuration: DefaultStreamTimeoutDuration,
+			logStreamBufferSize:   DefaultLogStreamBufferSize,
+			streamTimeoutDuration: DefaultStreamTimeoutDuration,
 			rateLimiter:           rate.NewLimiter(rate.Every(DefaultLogStreamRateLimit), DefaultLogStreamRateLimitBurst),
+			logOptions:            options,
+			maxLogStreamErrors:    MaxLogStreamErrors,
 		},
 	}, nil
 }
@@ -165,24 +159,41 @@ func (s *loggingService) resolveResourcePods(ctx context.Context, k8sclient clie
 type LogStreamer struct {
 	k8sclient      clients.KubernetesClient
 	resourcePodMap map[string]*corev1.Pod
-	logOptions     LoggingParams
 	streamConfig   LogStreamConfig
 	Logger         logger.Logger
 }
 
 type LogStreamConfig struct {
-	LogStreamBufferSize   int
-	StreamTimeoutDuration time.Duration
+	logStreamBufferSize   int
+	streamTimeoutDuration time.Duration
 	rateLimiter           *rate.Limiter
+	logOptions            LoggingParams
+	maxLogStreamErrors    int
+}
+
+var _ clients.PodLogStreamOptions = &LogStreamConfig{}
+
+func (s *LogStreamConfig) Follow() bool {
+	return s.logOptions.Follow()
+}
+func (s *LogStreamConfig) TailLines() int {
+	return s.logOptions.TailLines()
+}
+func (s *LogStreamConfig) Since() string {
+	return s.logOptions.Since()
+}
+func (s *LogStreamConfig) MaxErrors() int {
+	return s.maxLogStreamErrors
 }
 
 func (s *LogStreamer) Stream(ctx context.Context) (<-chan interfaces.StreamObject, error) {
-	streamerChan := make(chan interfaces.StreamObject, s.streamConfig.LogStreamBufferSize)
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, s.streamConfig.StreamTimeoutDuration)
+	streamerChan := make(chan interfaces.StreamObject, s.streamConfig.logStreamBufferSize)
+	// Clients will have to reconnect after this duration.
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, s.streamConfig.streamTimeoutDuration)
 
-	podResourceStreamMap := make(map[string]<-chan *clients.LogLine)
+	podResourceStreamMap := make(map[string]<-chan *clients.LogStreamObject)
 	for resourceName, pod := range s.resourcePodMap {
-		podLogChan, err := s.k8sclient.StreamPodLogs(ctxWithTimeout, pod, s.logOptions)
+		podLogChan, err := s.k8sclient.StreamPodLogs(ctxWithTimeout, pod, &s.streamConfig)
 		if err != nil {
 			cancel()
 			return nil, fmt.Errorf("failed to stream logs for resource '%s': %v", resourceName, err)
@@ -193,7 +204,7 @@ func (s *LogStreamer) Stream(ctx context.Context) (<-chan interfaces.StreamObjec
 	var wg sync.WaitGroup
 	for resourceName, podLogChan := range podResourceStreamMap {
 		wg.Add(1)
-		go func(resourceName string, podLogChan <-chan *clients.LogLine) {
+		go func(resourceName string, podLogChan <-chan *clients.LogStreamObject) {
 			defer wg.Done()
 			for {
 				select {

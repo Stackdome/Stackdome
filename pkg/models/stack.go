@@ -12,6 +12,14 @@ const (
 	StackIDLabel = "stack.stackdome.io/id"
 )
 
+type StackState string
+
+const (
+	StackReady   StackState = "Ready"
+	StackPending StackState = "Pending"
+	StackFailed  StackState = "Failed"
+)
+
 type Stack struct {
 	ID             string      `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 	OrganisationID string      `gorm:"not null"`
@@ -30,7 +38,7 @@ type Stack struct {
 }
 
 type StackStatus struct {
-	State                  string      `json:"state"`
+	State                  StackState  `json:"state"`
 	ObservedVersion        int64       `json:"observed_version"`
 	Conditions             []Condition `json:"conditions"`
 	LastObservedStatusHash string      `json:"last_observed_status_hash,omitempty"`
