@@ -97,6 +97,11 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversiddelete) | **Delete** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Delete a RemoteSyncServer object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversidget) | **Get** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Get a specific RemoteSyncServer object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdPut**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversidput) | **Put** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Update a RemoteSyncServer object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsGet**](docs/DefaultApi.md#apiv1organizationsorgidsecretsget) | **Get** /api/v1/organizations/{org_id}/secrets | List all secrets for an organization
+*DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidsecretsiddelete) | **Delete** /api/v1/organizations/{org_id}/secrets/{id} | Delete a secret object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsIdGet**](docs/DefaultApi.md#apiv1organizationsorgidsecretsidget) | **Get** /api/v1/organizations/{org_id}/secrets/{id} | Get a specific secret object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsIdPut**](docs/DefaultApi.md#apiv1organizationsorgidsecretsidput) | **Put** /api/v1/organizations/{org_id}/secrets/{id} | Update a secret object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsPost**](docs/DefaultApi.md#apiv1organizationsorgidsecretspost) | **Post** /api/v1/organizations/{org_id}/secrets | Create a new secret
 *DefaultApi* | [**ApiV1OrganizationsOrgIdStacksCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidstackscurrentget) | **Get** /api/v1/organizations/{org_id}/stacks/current | List all stacks of the current user
 *DefaultApi* | [**ApiV1OrganizationsOrgIdStacksGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksget) | **Get** /api/v1/organizations/{org_id}/stacks | List all Stacks for an organization
 *DefaultApi* | [**ApiV1OrganizationsOrgIdStacksIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidstacksiddelete) | **Delete** /api/v1/organizations/{org_id}/stacks/{id} | Delete a Stack
@@ -183,6 +188,10 @@ Class | Method | HTTP request | Description
  - [ResourceMetrics](docs/ResourceMetrics.md)
  - [ResourceMetricsNodeCapacitiesInner](docs/ResourceMetricsNodeCapacitiesInner.md)
  - [SSHConfig](docs/SSHConfig.md)
+ - [Secret](docs/Secret.md)
+ - [SecretData](docs/SecretData.md)
+ - [SecretList](docs/SecretList.md)
+ - [SecretType](docs/SecretType.md)
  - [Stack](docs/Stack.md)
  - [StackList](docs/StackList.md)
  - [StackResource](docs/StackResource.md)

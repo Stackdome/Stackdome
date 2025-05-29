@@ -2156,6 +2156,538 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdRemoteSyncServersIdPutExecute
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiApiV1OrganizationsOrgIdSecretsGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+}
+
+func (r ApiApiV1OrganizationsOrgIdSecretsGetRequest) Execute() (*SecretList, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdSecretsGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdSecretsGet List all secrets for an organization
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId
+	@return ApiApiV1OrganizationsOrgIdSecretsGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsGet(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdSecretsGetRequest {
+	return ApiApiV1OrganizationsOrgIdSecretsGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return SecretList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsGetExecute(r ApiApiV1OrganizationsOrgIdSecretsGetRequest) (*SecretList, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *SecretList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdSecretsGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/secrets"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdSecretsIdDeleteRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdSecretsIdDeleteRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdSecretsIdDeleteExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdSecretsIdDelete Delete a secret object
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId
+	@param id
+	@return ApiApiV1OrganizationsOrgIdSecretsIdDeleteRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsIdDelete(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdSecretsIdDeleteRequest {
+	return ApiApiV1OrganizationsOrgIdSecretsIdDeleteRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsIdDeleteExecute(r ApiApiV1OrganizationsOrgIdSecretsIdDeleteRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdSecretsIdDelete")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/secrets/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdSecretsIdGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdSecretsIdGetRequest) Execute() (*Secret, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdSecretsIdGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdSecretsIdGet Get a specific secret object
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId
+	@param id
+	@return ApiApiV1OrganizationsOrgIdSecretsIdGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsIdGet(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdSecretsIdGetRequest {
+	return ApiApiV1OrganizationsOrgIdSecretsIdGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return Secret
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsIdGetExecute(r ApiApiV1OrganizationsOrgIdSecretsIdGetRequest) (*Secret, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Secret
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdSecretsIdGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/secrets/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdSecretsIdPutRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+	secret     *Secret
+}
+
+func (r ApiApiV1OrganizationsOrgIdSecretsIdPutRequest) Secret(secret Secret) ApiApiV1OrganizationsOrgIdSecretsIdPutRequest {
+	r.secret = &secret
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdSecretsIdPutRequest) Execute() (*Secret, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdSecretsIdPutExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdSecretsIdPut Update a secret object
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId
+	@param id
+	@return ApiApiV1OrganizationsOrgIdSecretsIdPutRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsIdPut(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdSecretsIdPutRequest {
+	return ApiApiV1OrganizationsOrgIdSecretsIdPutRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return Secret
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsIdPutExecute(r ApiApiV1OrganizationsOrgIdSecretsIdPutRequest) (*Secret, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPut
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Secret
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdSecretsIdPut")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/secrets/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.secret == nil {
+		return localVarReturnValue, nil, reportError("secret is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.secret
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdSecretsPostRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	secret     *Secret
+}
+
+func (r ApiApiV1OrganizationsOrgIdSecretsPostRequest) Secret(secret Secret) ApiApiV1OrganizationsOrgIdSecretsPostRequest {
+	r.secret = &secret
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdSecretsPostRequest) Execute() (*Secret, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdSecretsPostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdSecretsPost Create a new secret
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId
+	@return ApiApiV1OrganizationsOrgIdSecretsPostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsPost(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdSecretsPostRequest {
+	return ApiApiV1OrganizationsOrgIdSecretsPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return Secret
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsPostExecute(r ApiApiV1OrganizationsOrgIdSecretsPostRequest) (*Secret, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Secret
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdSecretsPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/secrets"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.secret == nil {
+		return localVarReturnValue, nil, reportError("secret is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.secret
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiApiV1OrganizationsOrgIdStacksCurrentGetRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService

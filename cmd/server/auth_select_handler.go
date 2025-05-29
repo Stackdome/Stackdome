@@ -35,6 +35,7 @@ func NewAuthSelectHandler(spec AuthSelectorHandlerSpec) *AuthSelectorHandler {
 		mainHandler:    spec.MainHandler,
 		defaultHandler: spec.DefaultAuthHandler,
 		publicPaths:    publicExprs,
+		selections:     make([]*HandlerSelection, 0),
 	}
 }
 

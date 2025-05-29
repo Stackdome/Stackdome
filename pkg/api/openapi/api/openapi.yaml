@@ -584,6 +584,172 @@ paths:
       security:
       - Bearer: []
       summary: Update a cluster object
+  /api/v1/organizations/{org_id}/secrets:
+    get:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecretList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all secrets for an organization
+    post:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Secret'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Secret'
+          description: Secret created successfully
+        "400":
+          description: Invalid request payload
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Create a new secret
+  /api/v1/organizations/{org_id}/secrets/{id}:
+    delete:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Secret deleted successfully
+        "404":
+          description: Secret not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete a secret object
+    get:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Secret'
+          description: Successful operation
+        "404":
+          description: Secret not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a specific secret object
+    put:
+      parameters:
+      - explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Secret'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Secret'
+          description: Secret updated successfully
+        "400":
+          description: Invalid request payload
+        "404":
+          description: Secret not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update a secret object
   /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries:
     get:
       parameters:
@@ -5091,6 +5257,111 @@ components:
           type: string
         build_source_revision:
           type: string
+      type: object
+    Secret:
+      additionalProperties: false
+      example:
+        organisation_id: organisation_id
+        data:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        name: name
+        description: description
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
+        type: null
+      properties:
+        id:
+          readOnly: true
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        organisation_id:
+          readOnly: true
+          type: string
+        type:
+          $ref: '#/components/schemas/SecretType'
+        data:
+          items:
+            $ref: '#/components/schemas/SecretData'
+          type: array
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+        updated_at:
+          format: date-time
+          readOnly: true
+          type: string
+      required:
+      - data
+      - name
+      - type
+      type: object
+    SecretList:
+      example:
+        total: 0
+        items:
+        - organisation_id: organisation_id
+          data:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          name: name
+          description: description
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          type: null
+        - organisation_id: organisation_id
+          data:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          name: name
+          description: description
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          type: null
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Secret'
+          type: array
+        total:
+          type: integer
+      type: object
+    SecretType:
+      enum:
+      - Generic
+      - DockerRegistry
+      - GitCredentials
+      - UsernamePassword
+      - Token
+      - SSHKey
+      type: string
+    SecretData:
+      example:
+        value: value
+        key: key
+      properties:
+        key:
+          description: The key for the secret data
+          type: string
+        value:
+          description: "The value for the secret data, base64 encoded if necessary"
+          type: string
+      required:
+      - key
+      - value
       type: object
     ClusterImageRegistryList:
       properties:

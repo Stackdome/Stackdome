@@ -9,10 +9,6 @@ import (
 
 type interpolationValidation struct{}
 
-type InterpolationValidation interface {
-	ValidateStackInterpolations(in *models.Stack) error
-}
-
 func NewInterpolationValidation() *interpolationValidation {
 	return &interpolationValidation{}
 }

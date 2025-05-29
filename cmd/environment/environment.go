@@ -54,4 +54,6 @@ type Services struct {
 	NamespaceService            services.NamespaceService
 	LoggingService              services.LoggingService
 	MetricsService              services.MetricsService
+	SecretService               services.SecretService
+	EncryptionService           services.EncryptionService
 }

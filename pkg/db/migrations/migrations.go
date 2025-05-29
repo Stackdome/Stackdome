@@ -30,4 +30,5 @@ var MigrationList = []*gormigrate.Migration{
 	addVolumeIDFkConstraintToVolumeMounts(),
 	createOrganisationDomainsTable(),
 	replaceDomainWithStackDomainsTable(),
+	createSecretsTable(),
 }

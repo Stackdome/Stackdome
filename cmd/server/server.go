@@ -78,6 +78,10 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 		},
 		DefaultAuthHandler: auth.NewJwtAuthnHandler(mainHandler, []byte(env.Environment().Config.JwtSecret)),
 	})
+	authenticationHandler.Add(
+		auth.NewJwtCookieAuthnHandler(mainHandler, []byte(env.Environment().Config.JwtSecret)),
+		auth.CanAuthenticateWithCookie,
+	)
 
 	return authenticationHandler
 }
