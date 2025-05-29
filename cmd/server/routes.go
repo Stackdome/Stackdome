@@ -75,6 +75,12 @@ func (s apiServer) routes() *mux.Router {
 		AuthzClient:                 authzClient,
 	})
 
+	secretHandler := handlers.NewSecretHandler(handlers.SecretHandlerSpec{
+		SecretService: services.SecretService,
+		AuthzClient:   authzClient,
+		Logger:        logger,
+	})
+
 	authenticationMiddleware := auth.NewAuthMiddleware(services.UserService)
 
 	apiV1Router := mainRouter.PathPrefix("/api/v1").Subrouter()
@@ -89,6 +95,15 @@ func (s apiServer) routes() *mux.Router {
 	organizationsRouter.HandleFunc("/default", organizationHandler.GetDefault).Methods(http.MethodGet)
 	organizationsRouter.HandleFunc("/{id}", organizationHandler.GetByID).Methods(http.MethodGet)
 	organizationsRouter.HandleFunc("/{id}", organizationHandler.Update).Methods(http.MethodPut)
+
+	// Secret routes
+	secretRouter := organizationsRouter.PathPrefix("/{org_id}/secrets").Subrouter()
+	secretRouter.Use(authenticationMiddleware.AuthenticateUser)
+	secretRouter.HandleFunc("", secretHandler.ListByOrganisationID).Methods(http.MethodGet)
+	secretRouter.HandleFunc("", secretHandler.Create).Methods(http.MethodPost)
+	secretRouter.HandleFunc("/{id}", secretHandler.GetByID).Methods(http.MethodGet)
+	secretRouter.HandleFunc("/{id}", secretHandler.Update).Methods(http.MethodPut)
+	secretRouter.HandleFunc("/{id}", secretHandler.Delete).Methods(http.MethodDelete)
 
 	// Cluster routes
 	clusterRouter := apiV1Router.PathPrefix("/organizations/{org_id}/clusters").Subrouter()

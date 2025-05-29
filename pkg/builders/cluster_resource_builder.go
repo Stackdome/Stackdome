@@ -164,11 +164,6 @@ func setInitSpec(resourceSpecCr *corev1alpha1.StackResourceSpec, stackResource *
 			Command: stackResource.Init.Command,
 			Args:    stackResource.Init.Args,
 		}
-		if stackResource.Init.ImageConfig != nil {
-			resourceSpecCr.Init.ImageSpec = &corev1alpha1.ImageSpec{
-				Image: stackResource.Init.ImageConfig.Image,
-			}
-		}
 	}
 }
 

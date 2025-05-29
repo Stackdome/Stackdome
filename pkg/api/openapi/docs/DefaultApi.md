@@ -23,6 +23,11 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete) | **Delete** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Delete a RemoteSyncServer object
 [**ApiV1OrganizationsOrgIdRemoteSyncServersIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdRemoteSyncServersIdGet) | **Get** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Get a specific RemoteSyncServer object
 [**ApiV1OrganizationsOrgIdRemoteSyncServersIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdRemoteSyncServersIdPut) | **Put** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Update a RemoteSyncServer object
+[**ApiV1OrganizationsOrgIdSecretsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdSecretsGet) | **Get** /api/v1/organizations/{org_id}/secrets | List all secrets for an organization
+[**ApiV1OrganizationsOrgIdSecretsIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdSecretsIdDelete) | **Delete** /api/v1/organizations/{org_id}/secrets/{id} | Delete a secret object
+[**ApiV1OrganizationsOrgIdSecretsIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdSecretsIdGet) | **Get** /api/v1/organizations/{org_id}/secrets/{id} | Get a specific secret object
+[**ApiV1OrganizationsOrgIdSecretsIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdSecretsIdPut) | **Put** /api/v1/organizations/{org_id}/secrets/{id} | Update a secret object
+[**ApiV1OrganizationsOrgIdSecretsPost**](DefaultApi.md#ApiV1OrganizationsOrgIdSecretsPost) | **Post** /api/v1/organizations/{org_id}/secrets | Create a new secret
 [**ApiV1OrganizationsOrgIdStacksCurrentGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksCurrentGet) | **Get** /api/v1/organizations/{org_id}/stacks/current | List all stacks of the current user
 [**ApiV1OrganizationsOrgIdStacksGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksGet) | **Get** /api/v1/organizations/{org_id}/stacks | List all Stacks for an organization
 [**ApiV1OrganizationsOrgIdStacksIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdDelete) | **Delete** /api/v1/organizations/{org_id}/stacks/{id} | Delete a Stack
@@ -1371,6 +1376,357 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**RemoteSyncServer**](RemoteSyncServer.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdSecretsGet
+
+> SecretList ApiV1OrganizationsOrgIdSecretsGet(ctx, orgId).Execute()
+
+List all secrets for an organization
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsGet(context.Background(), orgId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdSecretsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdSecretsGet`: SecretList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdSecretsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdSecretsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+### Return type
+
+[**SecretList**](SecretList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdSecretsIdDelete
+
+> ApiV1OrganizationsOrgIdSecretsIdDelete(ctx, orgId, id).Execute()
+
+Delete a secret object
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | 
+    id := "id_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsIdDelete(context.Background(), orgId, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdSecretsIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** |  | 
+**id** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdSecretsIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdSecretsIdGet
+
+> Secret ApiV1OrganizationsOrgIdSecretsIdGet(ctx, orgId, id).Execute()
+
+Get a specific secret object
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | 
+    id := "id_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsIdGet(context.Background(), orgId, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdSecretsIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdSecretsIdGet`: Secret
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdSecretsIdGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** |  | 
+**id** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdSecretsIdGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**Secret**](Secret.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdSecretsIdPut
+
+> Secret ApiV1OrganizationsOrgIdSecretsIdPut(ctx, orgId, id).Secret(secret).Execute()
+
+Update a secret object
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | 
+    id := "id_example" // string | 
+    secret := *openapiclient.NewSecret("Name_example", openapiclient.SecretType("Generic"), []openapiclient.SecretData{*openapiclient.NewSecretData("Key_example", "Value_example")}) // Secret | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsIdPut(context.Background(), orgId, id).Secret(secret).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdSecretsIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdSecretsIdPut`: Secret
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdSecretsIdPut`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** |  | 
+**id** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdSecretsIdPutRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **secret** | [**Secret**](Secret.md) |  | 
+
+### Return type
+
+[**Secret**](Secret.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdSecretsPost
+
+> Secret ApiV1OrganizationsOrgIdSecretsPost(ctx, orgId).Secret(secret).Execute()
+
+Create a new secret
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | 
+    secret := *openapiclient.NewSecret("Name_example", openapiclient.SecretType("Generic"), []openapiclient.SecretData{*openapiclient.NewSecretData("Key_example", "Value_example")}) // Secret | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsPost(context.Background(), orgId).Secret(secret).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdSecretsPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdSecretsPost`: Secret
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdSecretsPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdSecretsPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **secret** | [**Secret**](Secret.md) |  | 
+
+### Return type
+
+[**Secret**](Secret.md)
 
 ### Authorization
 
