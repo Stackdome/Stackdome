@@ -28,6 +28,7 @@ type BuildConfigSpec struct {
 	SourceRevision          BuildSourceRevision  `json:"source_revision"`
 	BuildImageRepository    BuildImageRepository `json:"build_image_repository"`
 	ImageRepositoryUrl      string               `json:"image_repository_url"`
+	RegistrySecretRef       *SecretReference     `json:"registry_secret_ref,omitempty"` // Push credentials
 }
 
 type BuildImageRepository struct {

@@ -32,10 +32,22 @@ const (
 
 	// Cluster
 	Cluster AuthorizableResource = "Cluster"
+
+	// Secret
+	Secret AuthorizableResource = "Secret"
 )
+
+type AuthorizationRequest struct {
+	User            *models.User
+	ResourceType    AuthorizableResource
+	ResourceID      string
+	ResourceOwnerID string
+	Action          models.ResourceAccessMode
+}
 
 type AuthorizationClient interface {
 	AuthorizeResourceAccess(user *models.User, resourceType AuthorizableResource, resourceID string, resourceOwnerID string, action models.ResourceAccessMode) (bool, error)
+	AuthorizeResourceAccessRequest(req AuthorizationRequest) (bool, error)
 }
 
 type AuthorizerBackend interface {
@@ -54,6 +66,10 @@ func NewAuthorizationHandler(spec AuthorizationHanlderSpec) AuthorizationClient 
 	return &authorizationHandler{
 		authorizerBackend: spec.AuthorizerBackend,
 	}
+}
+
+func (a *authorizationHandler) AuthorizeResourceAccessRequest(req AuthorizationRequest) (bool, error) {
+	return a.AuthorizeResourceAccess(req.User, req.ResourceType, req.ResourceID, req.ResourceOwnerID, req.Action)
 }
 
 func (a *authorizationHandler) AuthorizeResourceAccess(
