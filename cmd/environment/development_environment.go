@@ -292,6 +292,18 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:               d.Logger,
 	})
 
+	encryptionService, err := services.NewAESEncryptionService(services.EncryptionServiceSpec{
+		Masterkey: d.Config.EncryptionKey,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create encryption service: %w", err)
+	}
+	secretService := services.NewSecretService(services.SecretServiceSpec{
+		SessionFactory:    d.DBSession,
+		Logger:            d.Logger,
+		EncryptionService: encryptionService,
+	})
+
 	d.Services = Services{
 		UserService:                 userService,
 		WorkspaceUserService:        workspaceUserService,
@@ -307,6 +319,8 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		NamespaceService:            namespaceService,
 		LoggingService:              loggingService,
 		MetricsService:              metricsService,
+		EncryptionService:           encryptionService,
+		SecretService:               secretService,
 	}
 
 	return nil

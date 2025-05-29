@@ -58,6 +58,10 @@ docs/RemoteSyncServerStatus.md
 docs/ResourceMetrics.md
 docs/ResourceMetricsNodeCapacitiesInner.md
 docs/SSHConfig.md
+docs/Secret.md
+docs/SecretData.md
+docs/SecretList.md
+docs/SecretType.md
 docs/Stack.md
 docs/StackList.md
 docs/StackResource.md
@@ -136,6 +140,10 @@ model_remote_sync_server_state.go
 model_remote_sync_server_status.go
 model_resource_metrics.go
 model_resource_metrics_node_capacities_inner.go
+model_secret.go
+model_secret_data.go
+model_secret_list.go
+model_secret_type.go
 model_ssh_config.go
 model_stack.go
 model_stack_list.go

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type SSLMode string
@@ -14,10 +15,11 @@ const (
 )
 
 type ApplicationConfig struct {
-	Server    *ServerConfig   `json:"server"`
-	Database  *DatabaseConfig `json:"database"`
-	JwtSecret string          `json:"jwt_secret"`
-	LogLevel  string          `json:"log_level"`
+	Server        *ServerConfig   `json:"server"`
+	Database      *DatabaseConfig `json:"database"`
+	JwtSecret     string          `json:"jwt_secret"`
+	EncryptionKey string          `json:"encryption_key"`
+	LogLevel      string          `json:"log_level"`
 }
 
 func (c *ApplicationConfig) LoadEnvVariables() {
@@ -26,12 +28,17 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 
 	val, found := os.LookupEnv(JWT_SECRET)
 	if found {
-		c.JwtSecret = val
+		c.JwtSecret = strings.TrimSpace(val)
 	}
 
 	val, found = os.LookupEnv(LOG_LEVEL)
 	if found {
-		c.LogLevel = val
+		c.LogLevel = strings.TrimSpace(val)
+	}
+
+	val, found = os.LookupEnv(ENCRYPTION_KEY)
+	if found {
+		c.EncryptionKey = strings.TrimSpace(val)
 	}
 }
 
@@ -48,6 +55,15 @@ func (c *ApplicationConfig) Validate() error {
 		func() error {
 			if c.LogLevel == "" {
 				return fmt.Errorf("log level is required")
+			}
+			return nil
+		},
+		func() error {
+			if c.EncryptionKey == "" {
+				return fmt.Errorf("encryption key is required")
+			}
+			if len(c.EncryptionKey) < 64 || len(c.EncryptionKey) > 1024 {
+				return fmt.Errorf("encryption key must be at least 64 characters and at most 1024 characters for security")
 			}
 			return nil
 		},

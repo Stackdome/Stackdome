@@ -5,25 +5,17 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
 )
 
-type OrganisationDomainService interface {
-	ListByOrganisationID(ctx context.Context, orgID string) ([]*models.OrganisationDomain, *errors.ServiceError)
-}
-
-type StackValidator interface {
-	ValidateForCreate(ctx context.Context, spec *models.Stack) *errors.ServiceError
-	ValidateForUpdate(ctx context.Context, existing *models.Stack, spec *models.Stack) *errors.ServiceError
-}
-
 type stackValidator struct {
-	interpolationValidator InterpolationValidation
-	domainService          OrganisationDomainService
+	interpolationValidator validator.InterpolationValidation
+	domainService          validator.OrganisationDomainService
 }
 
 func NewStackValidator(
-	domainService OrganisationDomainService,
-) StackValidator {
+	domainService validator.OrganisationDomainService,
+) validator.StackValidator {
 	return &stackValidator{
 		interpolationValidator: NewInterpolationValidation(),
 		domainService:          domainService,

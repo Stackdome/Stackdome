@@ -9,6 +9,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
 	stackvalidator "github.com/ashishmax31/stackdome-api-server/pkg/validator/stack"
 )
 
@@ -45,7 +46,7 @@ type stackService struct {
 	sessionFactory         db.SessionFactory
 	volumeService          VolumeService
 	organisationService    OrganisationService
-	stackValidator         stackvalidator.StackValidator
+	stackValidator         validator.StackValidator
 	domainNameService      StackDomainsService
 	stackResourceService   StackResourceService
 	namespaceService       NamespaceService
