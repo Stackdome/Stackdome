@@ -149,16 +149,18 @@ func (s apiServer) routes() *mux.Router {
 	stackRouter.HandleFunc("", stackHandler.ListByOrganisationID).Methods(http.MethodGet)
 	stackRouter.HandleFunc("/current", stackHandler.ListByUser).Methods(http.MethodGet)
 	stackRouter.HandleFunc("/{id}", stackHandler.GetByID).Methods(http.MethodGet)
-	stackRouter.HandleFunc("/{id}/logs", stackHandler.StreamLogs).Methods(http.MethodGet)
-	stackRouter.HandleFunc("/{id}/metrics", stackHandler.GetMetrics).Methods(http.MethodGet)
+
+	stackLogsRouter := apiV1Router.PathPrefix("/organizations/{org_id}/stacks").Subrouter()
+	stackLogsRouter.HandleFunc("/{id}/logs", stackHandler.StreamLogs).Methods(http.MethodGet)
+	stackLogsRouter.HandleFunc("/{id}/metrics", stackHandler.GetMetrics).Methods(http.MethodGet)
 
 	stackRouter.HandleFunc("/{id}", stackHandler.Update).Methods(http.MethodPut)
 	stackRouter.HandleFunc("/{id}", stackHandler.Delete).Methods(http.MethodDelete)
 	// Resources
 	stackRouter.HandleFunc("/{id}/resources", stackResourceHandler.List).Methods(http.MethodGet)
 	stackRouter.HandleFunc("/{id}/resources/{resource_name}", stackResourceHandler.GetByResourceName).Methods(http.MethodGet)
-	stackRouter.HandleFunc("/{id}/resources/{resource_name}/logs", stackResourceHandler.StreamLogs).Methods(http.MethodGet)
-	stackRouter.HandleFunc("/{id}/resources/{resource_name}/metrics", stackResourceHandler.GetMetrics).Methods(http.MethodGet)
+	stackLogsRouter.HandleFunc("/{id}/resources/{resource_name}/logs", stackResourceHandler.StreamLogs).Methods(http.MethodGet)
+	stackLogsRouter.HandleFunc("/{id}/resources/{resource_name}/metrics", stackResourceHandler.GetMetrics).Methods(http.MethodGet)
 
 	// Builds
 	stackRouter.HandleFunc("/{id}/resources/{resource_name}/builds", imageBuildHandler.ListByResourceName).Methods(http.MethodGet)
