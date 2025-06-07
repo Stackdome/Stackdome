@@ -37,6 +37,16 @@ type Stack struct {
 	UpdatedAt      time.Time
 }
 
+// hasImageBuilds
+func (s *Stack) HasImageBuilds() bool {
+	for _, resource := range s.StackResources {
+		if resource.BuildConfig != nil && (*resource.BuildConfig != BuildConfigSpec{}) {
+			return true
+		}
+	}
+	return false
+}
+
 type StackStatus struct {
 	State                  StackState  `json:"state"`
 	ObservedVersion        int64       `json:"observed_version"`
