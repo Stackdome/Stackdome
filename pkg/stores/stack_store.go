@@ -13,8 +13,11 @@ type StackStore interface {
 	GetByID(ctx context.Context, id string) (*models.Stack, *errors.ServiceError)
 	GetByName(ctx context.Context, Name string, userID string) (*models.Stack, *errors.ServiceError)
 	Update(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
+	UpdateRevision(ctx context.Context, id string, revision string) *errors.ServiceError
+	InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError)
 	UpdateWithTx(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, id string, status *models.StackStatus) *errors.ServiceError
+	UpdateForDelete(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	DeleteWithTx(ctx context.Context, id string) *errors.ServiceError
 	Delete(ctx context.Context, id string) *errors.ServiceError
 	ListByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError)

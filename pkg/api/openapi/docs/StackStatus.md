@@ -5,7 +5,8 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **State** | Pointer to **string** |  | [optional] 
-**ObservedVersion** | Pointer to **int32** |  | [optional] 
+**Message** | Pointer to **string** |  | [optional] 
+**ObservedRevision** | Pointer to **string** |  | [optional] 
 **Conditions** | Pointer to [**[]Condition**](Condition.md) |  | [optional] 
 
 ## Methods
@@ -52,30 +53,55 @@ SetState sets State field to given value.
 
 HasState returns a boolean if a field has been set.
 
-### GetObservedVersion
+### GetMessage
 
-`func (o *StackStatus) GetObservedVersion() int32`
+`func (o *StackStatus) GetMessage() string`
 
-GetObservedVersion returns the ObservedVersion field if non-nil, zero value otherwise.
+GetMessage returns the Message field if non-nil, zero value otherwise.
 
-### GetObservedVersionOk
+### GetMessageOk
 
-`func (o *StackStatus) GetObservedVersionOk() (*int32, bool)`
+`func (o *StackStatus) GetMessageOk() (*string, bool)`
 
-GetObservedVersionOk returns a tuple with the ObservedVersion field if it's non-nil, zero value otherwise
+GetMessageOk returns a tuple with the Message field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetObservedVersion
+### SetMessage
 
-`func (o *StackStatus) SetObservedVersion(v int32)`
+`func (o *StackStatus) SetMessage(v string)`
 
-SetObservedVersion sets ObservedVersion field to given value.
+SetMessage sets Message field to given value.
 
-### HasObservedVersion
+### HasMessage
 
-`func (o *StackStatus) HasObservedVersion() bool`
+`func (o *StackStatus) HasMessage() bool`
 
-HasObservedVersion returns a boolean if a field has been set.
+HasMessage returns a boolean if a field has been set.
+
+### GetObservedRevision
+
+`func (o *StackStatus) GetObservedRevision() string`
+
+GetObservedRevision returns the ObservedRevision field if non-nil, zero value otherwise.
+
+### GetObservedRevisionOk
+
+`func (o *StackStatus) GetObservedRevisionOk() (*string, bool)`
+
+GetObservedRevisionOk returns a tuple with the ObservedRevision field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetObservedRevision
+
+`func (o *StackStatus) SetObservedRevision(v string)`
+
+SetObservedRevision sets ObservedRevision field to given value.
+
+### HasObservedRevision
+
+`func (o *StackStatus) HasObservedRevision() bool`
+
+HasObservedRevision returns a boolean if a field has been set.
 
 ### GetConditions
 

@@ -8,11 +8,14 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/config"
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
+	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/clusterimageregistry"
 	imagebuildcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/imagebuild"
 	stackcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stack"
 	stackresourcecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stackresource"
+	"github.com/ashishmax31/stackdome-api-server/pkg/worker/stack"
+	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
 
 	volumecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/volume"
 	workspaceusercontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceuser"
@@ -65,11 +68,12 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 		d.initializeResourceAccessPolicyManager,
 		d.loadServices,
 		d.initializeClusterManager,
+		d.initializeWorkerManager,
 		d.injectClusterResourceServices,
 		// d.initializeDefaultOrgAndCluster,
 		d.initializeBaseResourceAccessPolicies,
 		d.ensureDefaultPlatformAdminUser,
-		d.startClusterManager,
+		d.startManagers,
 	}
 
 	for _, step := range initializerSteps {
@@ -85,6 +89,31 @@ func (d *developmentEnvironment) InitDatabase(ctx context.Context) error {
 	if err := d.setupDatabase(ctx); err != nil {
 		return fmt.Errorf("failed to setup database: %w", err)
 	}
+	return nil
+}
+
+func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) error {
+	d.Logger.Debugf("Initializing worker manager")
+	d.WorkerManager = workermanager.NewWorkerManager(workermanager.WorkerManagerSpec{
+		Environment: d.Env.Name,
+	})
+
+	stackWorker := stack.NewStackWorker(stack.StackWorkerSpec{
+		StackService:     d.Services.StackService,
+		SecretService:    d.Services.SecretService,
+		ClusterManager:   d.ClusterManager,
+		VolumeService:    d.Services.VolumeService,
+		NamespaceService: d.Services.NamespaceService,
+		Env:              d.Env.Name,
+		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
+			SecretService: d.Services.SecretService,
+		}),
+		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{
+			SecretFetcher: d.Services.SecretService,
+		}),
+	})
+
+	d.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
 	return nil
 }
 
@@ -202,6 +231,18 @@ func (d *developmentEnvironment) initializeResourceAccessPolicyManager(ctx conte
 func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	d.Logger.Debugf("Initializing services")
 
+	encryptionService, err := services.NewAESEncryptionService(services.EncryptionServiceSpec{
+		Masterkey: d.Config.EncryptionKey,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create encryption service: %w", err)
+	}
+	secretService := services.NewSecretService(services.SecretServiceSpec{
+		SessionFactory:    d.DBSession,
+		Logger:            d.Logger,
+		EncryptionService: encryptionService,
+	})
+
 	stackDomainService := services.NewStackDomainsService(services.StackDomainsServiceSpec{
 		SessionFactory: d.DBSession,
 		Logger:         d.Logger,
@@ -277,6 +318,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		ClusterService:         clusterService,
 		ClusterRegistryService: imageRegistryService,
 		NamespaceService:       namespaceService,
+		SecretService:          secretService,
 	})
 
 	loggingService := services.NewLoggingService(services.LoggingServiceSpec{
@@ -290,18 +332,6 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		StackResourceService: stackResourceService,
 		StackService:         stackService,
 		Logger:               d.Logger,
-	})
-
-	encryptionService, err := services.NewAESEncryptionService(services.EncryptionServiceSpec{
-		Masterkey: d.Config.EncryptionKey,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create encryption service: %w", err)
-	}
-	secretService := services.NewSecretService(services.SecretServiceSpec{
-		SessionFactory:    d.DBSession,
-		Logger:            d.Logger,
-		EncryptionService: encryptionService,
 	})
 
 	d.Services = Services{
@@ -380,6 +410,10 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 		ClusterMetricsService:   clusterMetricsService,
 	}
 
+	dep := services.BackgroundJobEnqueuerDep{
+		BackgroundJobEnqueuer: d.WorkerManager,
+	}
+
 	d.Services.WorkspaceUserService.InjectClusterResourceService(workspaceUserClusterResourceService)
 	d.Services.VolumeService.InjectClusterResourceService(volumeClusterResourceService)
 	d.Services.StackService.InjectClusterResourceServiceDeps(deps)
@@ -387,6 +421,7 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 	d.Services.LoggingService.InjectClusterResourceServiceDeps(deps)
 	d.Services.MetricsService.InjectClusterResourceServiceDeps(deps)
 	d.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
+	d.Services.StackService.InjectBackgroundJobEnqueuer(dep)
 	return nil
 }
 
@@ -458,7 +493,7 @@ func (d *developmentEnvironment) ensureDefaultPlatformAdminUser(ctx context.Cont
 	return nil
 }
 
-func (d *developmentEnvironment) startClusterManager(ctx context.Context) error {
+func (d *developmentEnvironment) startManagers(ctx context.Context) error {
 	d.Logger.Debugf("Starting cluster manager")
 	// Add clusters to the manager when booting up.
 	clusters, err := d.Services.ClusterService.InternalListAllClusters(ctx)
@@ -473,7 +508,9 @@ func (d *developmentEnvironment) startClusterManager(ctx context.Context) error 
 	}
 
 	d.ClusterManager.Start(ctx)
-	return nil
+
+	d.Logger.Debugf("Starting worker manager")
+	return d.WorkerManager.Start(ctx)
 }
 
 func initializeClusterClient(cfg *config.ClusterConfig) (client.Client, error) {

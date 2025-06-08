@@ -1,4 +1,3 @@
-// filepath: pkg/db/migrations/202505262153_create_table_secrets.go
 package migrations
 
 import (

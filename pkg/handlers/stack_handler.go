@@ -364,12 +364,12 @@ func (h *stackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 				return nil, errors.Unauthorized("user '%s' is not allowed to delete stack '%s'", currentUser.ID, id)
 			}
 
-			serr = h.stackService.DeleteStack(ctx, id)
+			stack, serr := h.stackService.DeleteStack(ctx, id)
 			if serr != nil {
 				return nil, serr
 			}
-			return nil, nil
+			return presenters.PresentStack(stack), nil
 		},
 	}
-	handleDelete(w, r, cfg, http.StatusNoContent)
+	handleDelete(w, r, cfg, http.StatusAccepted)
 }

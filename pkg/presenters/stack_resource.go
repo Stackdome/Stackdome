@@ -21,7 +21,6 @@ func PresentStackResource(r *models.StackResource) openapi.StackResource {
 		Name:            r.Name,
 		Labels:          presentLabels(r.Labels),
 		Annotations:     presentAnnotations(r.Annotations),
-		Version:         openapi.PtrInt32(int32(r.Version)),
 		BuildSpec:       presentBuildConfig(r.BuildConfig),
 		ImageSpec:       presentImageConfig(r.ImageConfig),
 		InitSpec:        presentInitConfig(r.Init),
@@ -41,7 +40,7 @@ func presentStackResourceStatus(status *models.StackResourceStatus) *openapi.Sta
 	}
 	return &openapi.StackResourceStatus{
 		State:                         ptr.To(string(status.State)),
-		ObservedVersion:               ptr.To(int32(status.ObservedVersion)),
+		ObservedRevision:              &status.ObservedCrRevision,
 		Conditions:                    presentConditions(status.Conditions),
 		PublicIngress:                 presentIngress(status.PublicIngresses),
 		InternalServiceName:           status.InternalServiceName,

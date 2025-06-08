@@ -22,8 +22,8 @@ func PresentStack(s *models.Stack) openapi.Stack {
 		Name:           s.Name,
 		Namespace:      &s.Namespace,
 		Labels:         presentLabels(s.Labels),
+		Revision:       &s.CrRevision,
 		Annotations:    presentAnnotations(s.Annotations),
-		Version:        openapi.PtrInt32(int32(s.Version)),
 		Spec:           presentStackSpec(s),
 		Status:         presentStackStatus(s.Status),
 		CreatedAt:      &s.CreatedAt,
@@ -42,11 +42,15 @@ func presentStackStatus(status *models.StackStatus) *openapi.StackStatus {
 	if status == nil {
 		return nil
 	}
-	return &openapi.StackStatus{
-		State:           ptr.To(string(status.State)),
-		ObservedVersion: openapi.PtrInt32(int32(status.ObservedVersion)),
-		Conditions:      presentConditions(status.Conditions),
+	res := &openapi.StackStatus{
+		State:            ptr.To(string(status.State)),
+		ObservedRevision: &status.ObservedCrRevision,
+		Conditions:       presentConditions(status.Conditions),
 	}
+	if status.LastValidationRun != nil && !status.LastValidationRun.Passed {
+		res.Message = &status.LastValidationRun.Message
+	}
+	return res
 }
 
 func presentStackResources(resources []*models.StackResource) []openapi.StackResource {
@@ -64,7 +68,6 @@ func presentStackResource(r *models.StackResource) openapi.StackResource {
 		Name:            r.Name,
 		Labels:          presentLabels(r.Labels),
 		Annotations:     presentAnnotations(r.Annotations),
-		Version:         openapi.PtrInt32(int32(r.Version)),
 		BuildSpec:       presentBuildConfig(r.BuildConfig),
 		ImageSpec:       presentImageConfig(r.ImageConfig),
 		InitSpec:        presentInitConfig(r.Init),
@@ -88,6 +91,7 @@ func presentBuildConfig(config *models.BuildConfigSpec) *openapi.StackResourceBu
 		ImageRepository:         presentImageRepository(config),
 		SourceContext:           presentSourceContext(config.SourceContext),
 		SourceRevision:          presentSourceRevision(config.SourceRevision),
+		RegistryPushSecret:      presentSecretRef(config.RegistrySecretRef),
 	}
 }
 
@@ -146,7 +150,8 @@ func presentSourceContext(context models.BuildContextSource) openapi.BuildSource
 		}
 	case context.Git != nil:
 		res.GitRepo = &openapi.BuildSourceContextGitRepo{
-			RepoUrl: context.Git.RepoURL,
+			RepoUrl:   context.Git.RepoURL,
+			GitSecret: presentSecretRef(context.Git.GitSecretRef),
 		}
 	}
 	return res
@@ -157,7 +162,16 @@ func presentImageConfig(config *models.ImageConfigSpec) *openapi.ImageSpec {
 		return nil
 	}
 	return &openapi.ImageSpec{
-		Image: config.Image,
+		Image:      config.Image,
+		PullSecret: presentSecretRef(config.PullSecretRef),
+	}
+}
+func presentSecretRef(ref *models.SecretReference) *openapi.SecretRef {
+	if ref == nil {
+		return nil
+	}
+	return &openapi.SecretRef{
+		SecretId: ref.SecretID,
 	}
 }
 
@@ -166,9 +180,8 @@ func presentInitConfig(config *models.InitConfig) *openapi.InitSpec {
 		return nil
 	}
 	return &openapi.InitSpec{
-		Command:   config.Command,
-		Args:      config.Args,
-		ImageSpec: presentImageConfig(config.ImageConfig),
+		Command: config.Command,
+		Args:    config.Args,
 	}
 }
 
@@ -259,9 +272,9 @@ func presentResourceStatus(status *models.StackResourceStatus) *openapi.StackRes
 		return nil
 	}
 	return &openapi.StackResourceStatus{
-		State:           ptr.To(string(status.State)),
-		ObservedVersion: openapi.PtrInt32(int32(status.ObservedVersion)),
-		Conditions:      presentConditions(status.Conditions),
+		State:            ptr.To(string(status.State)),
+		ObservedRevision: &status.ObservedCrRevision,
+		Conditions:       presentConditions(status.Conditions),
 	}
 }
 
@@ -319,6 +332,7 @@ func convertBuildConfig(config *openapi.StackResourceBuildSpec) *models.BuildCon
 	} else {
 		res.ImageRepositoryUrl = config.ImageRepository.GetExternalImageRepoUrl()
 	}
+	res.RegistrySecretRef = convertSecretRef(config.RegistryPushSecret)
 	return res
 }
 
@@ -332,7 +346,8 @@ func convertSourceContext(context openapi.BuildSourceContext) models.BuildContex
 		}
 	case context.GitRepo != nil:
 		res.Git = &models.GitBuildSource{
-			RepoURL: context.GitRepo.RepoUrl,
+			RepoURL:      context.GitRepo.RepoUrl,
+			GitSecretRef: convertSecretRef(context.GitRepo.GitSecret),
 		}
 	}
 	return res
@@ -377,7 +392,17 @@ func convertImageConfig(config *openapi.ImageSpec) *models.ImageConfigSpec {
 	}
 
 	return &models.ImageConfigSpec{
-		Image: config.Image,
+		Image:         config.Image,
+		PullSecretRef: convertSecretRef(config.PullSecret),
+	}
+}
+
+func convertSecretRef(ref *openapi.SecretRef) *models.SecretReference {
+	if ref == nil {
+		return nil
+	}
+	return &models.SecretReference{
+		SecretID: ref.SecretId,
 	}
 }
 
@@ -396,10 +421,27 @@ func convertExecutionConfig(config *openapi.ExecutionConfig) *models.ExecutionCo
 		return nil
 	}
 	return &models.ExecutionConfig{
-		Command: config.Command,
-		Args:    config.Args,
-		Env:     convertEnvVars(config.EnvironmentVariables),
+		Command:            config.Command,
+		Args:               config.Args,
+		Env:                convertEnvVars(config.EnvironmentVariables),
+		EnvVarsFromSecrets: convertEnvVarsFromSecret(config.EnvironmentVariablesFromSecret),
 	}
+}
+
+func convertEnvVarsFromSecret(envVars []openapi.EnvVarFromSecret) []models.EnvSecretReference {
+	if envVars == nil {
+		return nil
+	}
+	result := make([]models.EnvSecretReference, len(envVars))
+	for i, env := range envVars {
+		result[i] = models.EnvSecretReference{
+			SecretID:  env.SecretRef.SecretId,
+			SecretKey: env.Key,
+			EnvName:   env.Name,
+		}
+	}
+	return result
+
 }
 
 func convertEnvVars(envVars []openapi.EnvVar) []models.EnvVar {

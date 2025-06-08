@@ -1396,8 +1396,12 @@ paths:
           type: string
         style: simple
       responses:
-        "204":
-          description: Stack deleted successfully
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stack'
+          description: Stack deletion initiated successfully
         "401":
           description: Unauthorized
         "500":
@@ -3102,7 +3106,6 @@ components:
           key: key
         created_at: 2000-01-23T04:56:07.000+00:00
         id: id
-        version: 0
         spec:
           stack_resources:
           - depends_on:
@@ -3122,6 +3125,8 @@ components:
               - command
               image_spec:
                 image: image
+                pull_secret:
+                  secret_id: secret_id
             execution_config:
               args:
               - args
@@ -3134,6 +3139,15 @@ components:
               command:
               - command
               - command
+              environment_variables_from_secret:
+              - secret_ref:
+                  secret_id: secret_id
+                name: name
+                key: key
+              - secret_ref:
+                  secret_id: secret_id
+                name: name
+                key: key
             volume_mounts:
             - stack_resource_id: stack_resource_id
               source_volume_name: source_volume_name
@@ -3146,20 +3160,20 @@ components:
               source_sub_path: source_sub_path
               target_path: target_path
             ports:
-            - number: 1
+            - number: 0
               protocol: protocol
               exposed_to_public: true
               subdomain_prefix: subdomain_prefix
-            - number: 1
+            - number: 0
               protocol: protocol
               exposed_to_public: true
               subdomain_prefix: subdomain_prefix
-            version: 6
             labels:
             - value: value
               key: key
             - value: value
               key: key
+            revision: revision
             stack_id: stack_id
             name: name
             lifecycle_config:
@@ -3177,6 +3191,8 @@ components:
               image_repository:
                 external_image_repo_url: external_image_repo_url
                 use_internal_registry: true
+              registry_push_secret:
+                secret_id: secret_id
               context_path_within_source: context_path_within_source
               dockerfile_path: dockerfile_path
               source_context:
@@ -3185,12 +3201,15 @@ components:
                   id: id
                 git_repo:
                   repo_url: repo_url
+                  git_secret:
+                    secret_id: secret_id
             id: id
             stateful: true
             image_spec:
               image: image
+              pull_secret:
+                secret_id: secret_id
             status:
-              observed_version: 5
               last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
               internal_service_name: internal_service_name
               state: state
@@ -3207,10 +3226,11 @@ components:
                 message: message
                 observed_generation: 1
                 status: status
+              observed_revision: observed_revision
               public_ingress:
-              - target_port: 5
+              - target_port: 6
                 url: url
-              - target_port: 5
+              - target_port: 6
                 url: url
           - depends_on:
             - depends_on
@@ -3229,6 +3249,8 @@ components:
               - command
               image_spec:
                 image: image
+                pull_secret:
+                  secret_id: secret_id
             execution_config:
               args:
               - args
@@ -3241,6 +3263,15 @@ components:
               command:
               - command
               - command
+              environment_variables_from_secret:
+              - secret_ref:
+                  secret_id: secret_id
+                name: name
+                key: key
+              - secret_ref:
+                  secret_id: secret_id
+                name: name
+                key: key
             volume_mounts:
             - stack_resource_id: stack_resource_id
               source_volume_name: source_volume_name
@@ -3253,20 +3284,20 @@ components:
               source_sub_path: source_sub_path
               target_path: target_path
             ports:
-            - number: 1
+            - number: 0
               protocol: protocol
               exposed_to_public: true
               subdomain_prefix: subdomain_prefix
-            - number: 1
+            - number: 0
               protocol: protocol
               exposed_to_public: true
               subdomain_prefix: subdomain_prefix
-            version: 6
             labels:
             - value: value
               key: key
             - value: value
               key: key
+            revision: revision
             stack_id: stack_id
             name: name
             lifecycle_config:
@@ -3284,6 +3315,8 @@ components:
               image_repository:
                 external_image_repo_url: external_image_repo_url
                 use_internal_registry: true
+              registry_push_secret:
+                secret_id: secret_id
               context_path_within_source: context_path_within_source
               dockerfile_path: dockerfile_path
               source_context:
@@ -3292,12 +3325,15 @@ components:
                   id: id
                 git_repo:
                   repo_url: repo_url
+                  git_secret:
+                    secret_id: secret_id
             id: id
             stateful: true
             image_spec:
               image: image
+              pull_secret:
+                secret_id: secret_id
             status:
-              observed_version: 5
               last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
               internal_service_name: internal_service_name
               state: state
@@ -3314,10 +3350,11 @@ components:
                 message: message
                 observed_generation: 1
                 status: status
+              observed_revision: observed_revision
               public_ingress:
-              - target_port: 5
+              - target_port: 6
                 url: url
-              - target_port: 5
+              - target_port: 6
                 url: url
           volumes:
           - name: name
@@ -3447,9 +3484,10 @@ components:
           key: key
         - value: value
           key: key
+        revision: revision
         status:
-          observed_version: 2
           state: state
+          message: message
           conditions:
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -3463,6 +3501,7 @@ components:
             message: message
             observed_generation: 1
             status: status
+          observed_revision: observed_revision
       properties:
         id:
           readOnly: true
@@ -3486,9 +3525,9 @@ components:
           items:
             $ref: '#/components/schemas/Annotation'
           type: array
-        version:
+        revision:
           readOnly: true
-          type: integer
+          type: string
         spec:
           $ref: '#/components/schemas/StackSpec'
         status:
@@ -3507,7 +3546,7 @@ components:
       type: object
     StackList:
       example:
-        total: 7
+        total: 1
         items:
         - organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
@@ -3521,7 +3560,6 @@ components:
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          version: 0
           spec:
             stack_resources:
             - depends_on:
@@ -3541,6 +3579,8 @@ components:
                 - command
                 image_spec:
                   image: image
+                  pull_secret:
+                    secret_id: secret_id
               execution_config:
                 args:
                 - args
@@ -3553,6 +3593,15 @@ components:
                 command:
                 - command
                 - command
+                environment_variables_from_secret:
+                - secret_ref:
+                    secret_id: secret_id
+                  name: name
+                  key: key
+                - secret_ref:
+                    secret_id: secret_id
+                  name: name
+                  key: key
               volume_mounts:
               - stack_resource_id: stack_resource_id
                 source_volume_name: source_volume_name
@@ -3565,20 +3614,20 @@ components:
                 source_sub_path: source_sub_path
                 target_path: target_path
               ports:
-              - number: 1
+              - number: 0
                 protocol: protocol
                 exposed_to_public: true
                 subdomain_prefix: subdomain_prefix
-              - number: 1
+              - number: 0
                 protocol: protocol
                 exposed_to_public: true
                 subdomain_prefix: subdomain_prefix
-              version: 6
               labels:
               - value: value
                 key: key
               - value: value
                 key: key
+              revision: revision
               stack_id: stack_id
               name: name
               lifecycle_config:
@@ -3596,6 +3645,8 @@ components:
                 image_repository:
                   external_image_repo_url: external_image_repo_url
                   use_internal_registry: true
+                registry_push_secret:
+                  secret_id: secret_id
                 context_path_within_source: context_path_within_source
                 dockerfile_path: dockerfile_path
                 source_context:
@@ -3604,12 +3655,15 @@ components:
                     id: id
                   git_repo:
                     repo_url: repo_url
+                    git_secret:
+                      secret_id: secret_id
               id: id
               stateful: true
               image_spec:
                 image: image
+                pull_secret:
+                  secret_id: secret_id
               status:
-                observed_version: 5
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 internal_service_name: internal_service_name
                 state: state
@@ -3626,10 +3680,11 @@ components:
                   message: message
                   observed_generation: 1
                   status: status
+                observed_revision: observed_revision
                 public_ingress:
-                - target_port: 5
+                - target_port: 6
                   url: url
-                - target_port: 5
+                - target_port: 6
                   url: url
             - depends_on:
               - depends_on
@@ -3648,6 +3703,8 @@ components:
                 - command
                 image_spec:
                   image: image
+                  pull_secret:
+                    secret_id: secret_id
               execution_config:
                 args:
                 - args
@@ -3660,6 +3717,15 @@ components:
                 command:
                 - command
                 - command
+                environment_variables_from_secret:
+                - secret_ref:
+                    secret_id: secret_id
+                  name: name
+                  key: key
+                - secret_ref:
+                    secret_id: secret_id
+                  name: name
+                  key: key
               volume_mounts:
               - stack_resource_id: stack_resource_id
                 source_volume_name: source_volume_name
@@ -3672,20 +3738,20 @@ components:
                 source_sub_path: source_sub_path
                 target_path: target_path
               ports:
-              - number: 1
+              - number: 0
                 protocol: protocol
                 exposed_to_public: true
                 subdomain_prefix: subdomain_prefix
-              - number: 1
+              - number: 0
                 protocol: protocol
                 exposed_to_public: true
                 subdomain_prefix: subdomain_prefix
-              version: 6
               labels:
               - value: value
                 key: key
               - value: value
                 key: key
+              revision: revision
               stack_id: stack_id
               name: name
               lifecycle_config:
@@ -3703,6 +3769,8 @@ components:
                 image_repository:
                   external_image_repo_url: external_image_repo_url
                   use_internal_registry: true
+                registry_push_secret:
+                  secret_id: secret_id
                 context_path_within_source: context_path_within_source
                 dockerfile_path: dockerfile_path
                 source_context:
@@ -3711,12 +3779,15 @@ components:
                     id: id
                   git_repo:
                     repo_url: repo_url
+                    git_secret:
+                      secret_id: secret_id
               id: id
               stateful: true
               image_spec:
                 image: image
+                pull_secret:
+                  secret_id: secret_id
               status:
-                observed_version: 5
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 internal_service_name: internal_service_name
                 state: state
@@ -3733,10 +3804,11 @@ components:
                   message: message
                   observed_generation: 1
                   status: status
+                observed_revision: observed_revision
                 public_ingress:
-                - target_port: 5
+                - target_port: 6
                   url: url
-                - target_port: 5
+                - target_port: 6
                   url: url
             volumes:
             - name: name
@@ -3866,9 +3938,10 @@ components:
             key: key
           - value: value
             key: key
+          revision: revision
           status:
-            observed_version: 2
             state: state
+            message: message
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -3882,6 +3955,7 @@ components:
               message: message
               observed_generation: 1
               status: status
+            observed_revision: observed_revision
         - organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
           user_id: user_id
@@ -3894,7 +3968,6 @@ components:
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          version: 0
           spec:
             stack_resources:
             - depends_on:
@@ -3914,6 +3987,8 @@ components:
                 - command
                 image_spec:
                   image: image
+                  pull_secret:
+                    secret_id: secret_id
               execution_config:
                 args:
                 - args
@@ -3926,6 +4001,15 @@ components:
                 command:
                 - command
                 - command
+                environment_variables_from_secret:
+                - secret_ref:
+                    secret_id: secret_id
+                  name: name
+                  key: key
+                - secret_ref:
+                    secret_id: secret_id
+                  name: name
+                  key: key
               volume_mounts:
               - stack_resource_id: stack_resource_id
                 source_volume_name: source_volume_name
@@ -3938,20 +4022,20 @@ components:
                 source_sub_path: source_sub_path
                 target_path: target_path
               ports:
-              - number: 1
+              - number: 0
                 protocol: protocol
                 exposed_to_public: true
                 subdomain_prefix: subdomain_prefix
-              - number: 1
+              - number: 0
                 protocol: protocol
                 exposed_to_public: true
                 subdomain_prefix: subdomain_prefix
-              version: 6
               labels:
               - value: value
                 key: key
               - value: value
                 key: key
+              revision: revision
               stack_id: stack_id
               name: name
               lifecycle_config:
@@ -3969,6 +4053,8 @@ components:
                 image_repository:
                   external_image_repo_url: external_image_repo_url
                   use_internal_registry: true
+                registry_push_secret:
+                  secret_id: secret_id
                 context_path_within_source: context_path_within_source
                 dockerfile_path: dockerfile_path
                 source_context:
@@ -3977,12 +4063,15 @@ components:
                     id: id
                   git_repo:
                     repo_url: repo_url
+                    git_secret:
+                      secret_id: secret_id
               id: id
               stateful: true
               image_spec:
                 image: image
+                pull_secret:
+                  secret_id: secret_id
               status:
-                observed_version: 5
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 internal_service_name: internal_service_name
                 state: state
@@ -3999,10 +4088,11 @@ components:
                   message: message
                   observed_generation: 1
                   status: status
+                observed_revision: observed_revision
                 public_ingress:
-                - target_port: 5
+                - target_port: 6
                   url: url
-                - target_port: 5
+                - target_port: 6
                   url: url
             - depends_on:
               - depends_on
@@ -4021,6 +4111,8 @@ components:
                 - command
                 image_spec:
                   image: image
+                  pull_secret:
+                    secret_id: secret_id
               execution_config:
                 args:
                 - args
@@ -4033,6 +4125,15 @@ components:
                 command:
                 - command
                 - command
+                environment_variables_from_secret:
+                - secret_ref:
+                    secret_id: secret_id
+                  name: name
+                  key: key
+                - secret_ref:
+                    secret_id: secret_id
+                  name: name
+                  key: key
               volume_mounts:
               - stack_resource_id: stack_resource_id
                 source_volume_name: source_volume_name
@@ -4045,20 +4146,20 @@ components:
                 source_sub_path: source_sub_path
                 target_path: target_path
               ports:
-              - number: 1
+              - number: 0
                 protocol: protocol
                 exposed_to_public: true
                 subdomain_prefix: subdomain_prefix
-              - number: 1
+              - number: 0
                 protocol: protocol
                 exposed_to_public: true
                 subdomain_prefix: subdomain_prefix
-              version: 6
               labels:
               - value: value
                 key: key
               - value: value
                 key: key
+              revision: revision
               stack_id: stack_id
               name: name
               lifecycle_config:
@@ -4076,6 +4177,8 @@ components:
                 image_repository:
                   external_image_repo_url: external_image_repo_url
                   use_internal_registry: true
+                registry_push_secret:
+                  secret_id: secret_id
                 context_path_within_source: context_path_within_source
                 dockerfile_path: dockerfile_path
                 source_context:
@@ -4084,12 +4187,15 @@ components:
                     id: id
                   git_repo:
                     repo_url: repo_url
+                    git_secret:
+                      secret_id: secret_id
               id: id
               stateful: true
               image_spec:
                 image: image
+                pull_secret:
+                  secret_id: secret_id
               status:
-                observed_version: 5
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 internal_service_name: internal_service_name
                 state: state
@@ -4106,10 +4212,11 @@ components:
                   message: message
                   observed_generation: 1
                   status: status
+                observed_revision: observed_revision
                 public_ingress:
-                - target_port: 5
+                - target_port: 6
                   url: url
-                - target_port: 5
+                - target_port: 6
                   url: url
             volumes:
             - name: name
@@ -4239,9 +4346,10 @@ components:
             key: key
           - value: value
             key: key
+          revision: revision
           status:
-            observed_version: 2
             state: state
+            message: message
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -4255,6 +4363,7 @@ components:
               message: message
               observed_generation: 1
               status: status
+            observed_revision: observed_revision
       properties:
         items:
           items:
@@ -4283,6 +4392,8 @@ components:
             - command
             image_spec:
               image: image
+              pull_secret:
+                secret_id: secret_id
           execution_config:
             args:
             - args
@@ -4295,6 +4406,15 @@ components:
             command:
             - command
             - command
+            environment_variables_from_secret:
+            - secret_ref:
+                secret_id: secret_id
+              name: name
+              key: key
+            - secret_ref:
+                secret_id: secret_id
+              name: name
+              key: key
           volume_mounts:
           - stack_resource_id: stack_resource_id
             source_volume_name: source_volume_name
@@ -4307,20 +4427,20 @@ components:
             source_sub_path: source_sub_path
             target_path: target_path
           ports:
-          - number: 1
+          - number: 0
             protocol: protocol
             exposed_to_public: true
             subdomain_prefix: subdomain_prefix
-          - number: 1
+          - number: 0
             protocol: protocol
             exposed_to_public: true
             subdomain_prefix: subdomain_prefix
-          version: 6
           labels:
           - value: value
             key: key
           - value: value
             key: key
+          revision: revision
           stack_id: stack_id
           name: name
           lifecycle_config:
@@ -4338,6 +4458,8 @@ components:
             image_repository:
               external_image_repo_url: external_image_repo_url
               use_internal_registry: true
+            registry_push_secret:
+              secret_id: secret_id
             context_path_within_source: context_path_within_source
             dockerfile_path: dockerfile_path
             source_context:
@@ -4346,12 +4468,15 @@ components:
                 id: id
               git_repo:
                 repo_url: repo_url
+                git_secret:
+                  secret_id: secret_id
           id: id
           stateful: true
           image_spec:
             image: image
+            pull_secret:
+              secret_id: secret_id
           status:
-            observed_version: 5
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             internal_service_name: internal_service_name
             state: state
@@ -4368,10 +4493,11 @@ components:
               message: message
               observed_generation: 1
               status: status
+            observed_revision: observed_revision
             public_ingress:
-            - target_port: 5
+            - target_port: 6
               url: url
-            - target_port: 5
+            - target_port: 6
               url: url
         - depends_on:
           - depends_on
@@ -4390,6 +4516,8 @@ components:
             - command
             image_spec:
               image: image
+              pull_secret:
+                secret_id: secret_id
           execution_config:
             args:
             - args
@@ -4402,6 +4530,15 @@ components:
             command:
             - command
             - command
+            environment_variables_from_secret:
+            - secret_ref:
+                secret_id: secret_id
+              name: name
+              key: key
+            - secret_ref:
+                secret_id: secret_id
+              name: name
+              key: key
           volume_mounts:
           - stack_resource_id: stack_resource_id
             source_volume_name: source_volume_name
@@ -4414,20 +4551,20 @@ components:
             source_sub_path: source_sub_path
             target_path: target_path
           ports:
-          - number: 1
+          - number: 0
             protocol: protocol
             exposed_to_public: true
             subdomain_prefix: subdomain_prefix
-          - number: 1
+          - number: 0
             protocol: protocol
             exposed_to_public: true
             subdomain_prefix: subdomain_prefix
-          version: 6
           labels:
           - value: value
             key: key
           - value: value
             key: key
+          revision: revision
           stack_id: stack_id
           name: name
           lifecycle_config:
@@ -4445,6 +4582,8 @@ components:
             image_repository:
               external_image_repo_url: external_image_repo_url
               use_internal_registry: true
+            registry_push_secret:
+              secret_id: secret_id
             context_path_within_source: context_path_within_source
             dockerfile_path: dockerfile_path
             source_context:
@@ -4453,12 +4592,15 @@ components:
                 id: id
               git_repo:
                 repo_url: repo_url
+                git_secret:
+                  secret_id: secret_id
           id: id
           stateful: true
           image_spec:
             image: image
+            pull_secret:
+              secret_id: secret_id
           status:
-            observed_version: 5
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             internal_service_name: internal_service_name
             state: state
@@ -4475,10 +4617,11 @@ components:
               message: message
               observed_generation: 1
               status: status
+            observed_revision: observed_revision
             public_ingress:
-            - target_port: 5
+            - target_port: 6
               url: url
-            - target_port: 5
+            - target_port: 6
               url: url
         volumes:
         - name: name
@@ -4617,8 +4760,8 @@ components:
       type: object
     StackStatus:
       example:
-        observed_version: 2
         state: state
+        message: message
         conditions:
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -4632,11 +4775,14 @@ components:
           message: message
           observed_generation: 1
           status: status
+        observed_revision: observed_revision
       properties:
         state:
           type: string
-        observed_version:
-          type: integer
+        message:
+          type: string
+        observed_revision:
+          type: string
         conditions:
           items:
             $ref: '#/components/schemas/Condition'
@@ -4661,6 +4807,8 @@ components:
           - command
           image_spec:
             image: image
+            pull_secret:
+              secret_id: secret_id
         execution_config:
           args:
           - args
@@ -4673,6 +4821,15 @@ components:
           command:
           - command
           - command
+          environment_variables_from_secret:
+          - secret_ref:
+              secret_id: secret_id
+            name: name
+            key: key
+          - secret_ref:
+              secret_id: secret_id
+            name: name
+            key: key
         volume_mounts:
         - stack_resource_id: stack_resource_id
           source_volume_name: source_volume_name
@@ -4685,20 +4842,20 @@ components:
           source_sub_path: source_sub_path
           target_path: target_path
         ports:
-        - number: 1
+        - number: 0
           protocol: protocol
           exposed_to_public: true
           subdomain_prefix: subdomain_prefix
-        - number: 1
+        - number: 0
           protocol: protocol
           exposed_to_public: true
           subdomain_prefix: subdomain_prefix
-        version: 6
         labels:
         - value: value
           key: key
         - value: value
           key: key
+        revision: revision
         stack_id: stack_id
         name: name
         lifecycle_config:
@@ -4716,6 +4873,8 @@ components:
           image_repository:
             external_image_repo_url: external_image_repo_url
             use_internal_registry: true
+          registry_push_secret:
+            secret_id: secret_id
           context_path_within_source: context_path_within_source
           dockerfile_path: dockerfile_path
           source_context:
@@ -4724,12 +4883,15 @@ components:
               id: id
             git_repo:
               repo_url: repo_url
+              git_secret:
+                secret_id: secret_id
         id: id
         stateful: true
         image_spec:
           image: image
+          pull_secret:
+            secret_id: secret_id
         status:
-          observed_version: 5
           last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
           internal_service_name: internal_service_name
           state: state
@@ -4746,10 +4908,11 @@ components:
             message: message
             observed_generation: 1
             status: status
+          observed_revision: observed_revision
           public_ingress:
-          - target_port: 5
+          - target_port: 6
             url: url
-          - target_port: 5
+          - target_port: 6
             url: url
       properties:
         id:
@@ -4768,9 +4931,9 @@ components:
           items:
             $ref: '#/components/schemas/Annotation'
           type: array
-        version:
+        revision:
           readOnly: true
-          type: integer
+          type: string
         build_spec:
           $ref: '#/components/schemas/StackResourceBuildSpec'
         image_spec:
@@ -4821,6 +4984,8 @@ components:
             - command
             image_spec:
               image: image
+              pull_secret:
+                secret_id: secret_id
           execution_config:
             args:
             - args
@@ -4833,6 +4998,15 @@ components:
             command:
             - command
             - command
+            environment_variables_from_secret:
+            - secret_ref:
+                secret_id: secret_id
+              name: name
+              key: key
+            - secret_ref:
+                secret_id: secret_id
+              name: name
+              key: key
           volume_mounts:
           - stack_resource_id: stack_resource_id
             source_volume_name: source_volume_name
@@ -4845,20 +5019,20 @@ components:
             source_sub_path: source_sub_path
             target_path: target_path
           ports:
-          - number: 1
+          - number: 0
             protocol: protocol
             exposed_to_public: true
             subdomain_prefix: subdomain_prefix
-          - number: 1
+          - number: 0
             protocol: protocol
             exposed_to_public: true
             subdomain_prefix: subdomain_prefix
-          version: 6
           labels:
           - value: value
             key: key
           - value: value
             key: key
+          revision: revision
           stack_id: stack_id
           name: name
           lifecycle_config:
@@ -4876,6 +5050,8 @@ components:
             image_repository:
               external_image_repo_url: external_image_repo_url
               use_internal_registry: true
+            registry_push_secret:
+              secret_id: secret_id
             context_path_within_source: context_path_within_source
             dockerfile_path: dockerfile_path
             source_context:
@@ -4884,12 +5060,15 @@ components:
                 id: id
               git_repo:
                 repo_url: repo_url
+                git_secret:
+                  secret_id: secret_id
           id: id
           stateful: true
           image_spec:
             image: image
+            pull_secret:
+              secret_id: secret_id
           status:
-            observed_version: 5
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             internal_service_name: internal_service_name
             state: state
@@ -4906,10 +5085,11 @@ components:
               message: message
               observed_generation: 1
               status: status
+            observed_revision: observed_revision
             public_ingress:
-            - target_port: 5
+            - target_port: 6
               url: url
-            - target_port: 5
+            - target_port: 6
               url: url
         - depends_on:
           - depends_on
@@ -4928,6 +5108,8 @@ components:
             - command
             image_spec:
               image: image
+              pull_secret:
+                secret_id: secret_id
           execution_config:
             args:
             - args
@@ -4940,6 +5122,15 @@ components:
             command:
             - command
             - command
+            environment_variables_from_secret:
+            - secret_ref:
+                secret_id: secret_id
+              name: name
+              key: key
+            - secret_ref:
+                secret_id: secret_id
+              name: name
+              key: key
           volume_mounts:
           - stack_resource_id: stack_resource_id
             source_volume_name: source_volume_name
@@ -4952,20 +5143,20 @@ components:
             source_sub_path: source_sub_path
             target_path: target_path
           ports:
-          - number: 1
+          - number: 0
             protocol: protocol
             exposed_to_public: true
             subdomain_prefix: subdomain_prefix
-          - number: 1
+          - number: 0
             protocol: protocol
             exposed_to_public: true
             subdomain_prefix: subdomain_prefix
-          version: 6
           labels:
           - value: value
             key: key
           - value: value
             key: key
+          revision: revision
           stack_id: stack_id
           name: name
           lifecycle_config:
@@ -4983,6 +5174,8 @@ components:
             image_repository:
               external_image_repo_url: external_image_repo_url
               use_internal_registry: true
+            registry_push_secret:
+              secret_id: secret_id
             context_path_within_source: context_path_within_source
             dockerfile_path: dockerfile_path
             source_context:
@@ -4991,12 +5184,15 @@ components:
                 id: id
               git_repo:
                 repo_url: repo_url
+                git_secret:
+                  secret_id: secret_id
           id: id
           stateful: true
           image_spec:
             image: image
+            pull_secret:
+              secret_id: secret_id
           status:
-            observed_version: 5
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             internal_service_name: internal_service_name
             state: state
@@ -5013,10 +5209,11 @@ components:
               message: message
               observed_generation: 1
               status: status
+            observed_revision: observed_revision
             public_ingress:
-            - target_port: 5
+            - target_port: 6
               url: url
-            - target_port: 5
+            - target_port: 6
               url: url
       properties:
         items:
@@ -5049,6 +5246,8 @@ components:
             id: id
           git_repo:
             repo_url: repo_url
+            git_secret:
+              secret_id: secret_id
         id: id
         stack_resource_name: stack_resource_name
         status:
@@ -5161,6 +5360,8 @@ components:
               id: id
             git_repo:
               repo_url: repo_url
+              git_secret:
+                secret_id: secret_id
           id: id
           stack_resource_name: stack_resource_name
           status:
@@ -5201,6 +5402,8 @@ components:
               id: id
             git_repo:
               repo_url: repo_url
+              git_secret:
+                secret_id: secret_id
           id: id
           stack_resource_name: stack_resource_name
           status:
@@ -5476,7 +5679,6 @@ components:
       type: string
     StackResourceStatus:
       example:
-        observed_version: 5
         last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
         internal_service_name: internal_service_name
         state: state
@@ -5493,10 +5695,11 @@ components:
           message: message
           observed_generation: 1
           status: status
+        observed_revision: observed_revision
         public_ingress:
-        - target_port: 5
+        - target_port: 6
           url: url
-        - target_port: 5
+        - target_port: 6
           url: url
       properties:
         public_ingress:
@@ -5510,8 +5713,8 @@ components:
           type: string
         state:
           type: string
-        observed_version:
-          type: integer
+        observed_revision:
+          type: string
         conditions:
           items:
             $ref: '#/components/schemas/Condition'
@@ -5519,7 +5722,7 @@ components:
       type: object
     Ingress:
       example:
-        target_port: 5
+        target_port: 6
         url: url
       properties:
         url:
@@ -5559,7 +5762,7 @@ components:
       type: string
     Port:
       example:
-        number: 1
+        number: 0
         protocol: protocol
         exposed_to_public: true
         subdomain_prefix: subdomain_prefix
@@ -5599,6 +5802,8 @@ components:
         image_repository:
           external_image_repo_url: external_image_repo_url
           use_internal_registry: true
+        registry_push_secret:
+          secret_id: secret_id
         context_path_within_source: context_path_within_source
         dockerfile_path: dockerfile_path
         source_context:
@@ -5607,6 +5812,8 @@ components:
             id: id
           git_repo:
             repo_url: repo_url
+            git_secret:
+              secret_id: secret_id
       properties:
         source_context:
           $ref: '#/components/schemas/BuildSourceContext'
@@ -5618,6 +5825,8 @@ components:
           $ref: '#/components/schemas/BuildSourceRevision'
         image_repository:
           $ref: '#/components/schemas/ImageRepository'
+        registry_push_secret:
+          $ref: '#/components/schemas/SecretRef'
       required:
       - context_path_within_source
       - dockerfile_path
@@ -5644,6 +5853,8 @@ components:
           id: id
         git_repo:
           repo_url: repo_url
+          git_secret:
+            secret_id: secret_id
       properties:
         volume:
           $ref: '#/components/schemas/BuildSourceContext_volume'
@@ -5670,11 +5881,25 @@ components:
       additionalProperties: false
       example:
         image: image
+        pull_secret:
+          secret_id: secret_id
       properties:
         image:
           type: string
+        pull_secret:
+          $ref: '#/components/schemas/SecretRef'
       required:
       - image
+      type: object
+    SecretRef:
+      additionalProperties: false
+      example:
+        secret_id: secret_id
+      properties:
+        secret_id:
+          type: string
+      required:
+      - secret_id
       type: object
     InitSpec:
       additionalProperties: false
@@ -5687,6 +5912,8 @@ components:
         - command
         image_spec:
           image: image
+          pull_secret:
+            secret_id: secret_id
       properties:
         image_spec:
           $ref: '#/components/schemas/ImageSpec'
@@ -5712,6 +5939,15 @@ components:
         command:
         - command
         - command
+        environment_variables_from_secret:
+        - secret_ref:
+            secret_id: secret_id
+          name: name
+          key: key
+        - secret_ref:
+            secret_id: secret_id
+          name: name
+          key: key
       properties:
         command:
           items:
@@ -5725,6 +5961,30 @@ components:
           items:
             $ref: '#/components/schemas/EnvVar'
           type: array
+        environment_variables_from_secret:
+          items:
+            $ref: '#/components/schemas/EnvVarFromSecret'
+          type: array
+      type: object
+    EnvVarFromSecret:
+      additionalProperties: false
+      example:
+        secret_ref:
+          secret_id: secret_id
+        name: name
+        key: key
+      properties:
+        name:
+          type: string
+        secret_ref:
+          $ref: '#/components/schemas/SecretRef'
+        key:
+          description: The key in the secret to use for this environment variable
+          type: string
+      required:
+      - key
+      - name
+      - secret_ref
       type: object
     EnvVar:
       additionalProperties: false
@@ -6034,9 +6294,13 @@ components:
     BuildSourceContext_git_repo:
       example:
         repo_url: repo_url
+        git_secret:
+          secret_id: secret_id
       properties:
         repo_url:
           type: string
+        git_secret:
+          $ref: '#/components/schemas/SecretRef'
       required:
       - repo_url
       type: object

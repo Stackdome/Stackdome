@@ -19,6 +19,7 @@ type NamespaceService interface {
 	CreateInDBWithTx(ctx context.Context, ns *models.Namespace) (*models.Namespace, *errors.ServiceError)
 	Get(ctx context.Context, id string) (*models.Namespace, *errors.ServiceError)
 	DeleteFromDB(ctx context.Context, id string) *errors.ServiceError
+	InternalDeleteFromDB(ctx context.Context, id string) *errors.ServiceError
 	DeleteFromDBWithTx(ctx context.Context, id string) *errors.ServiceError
 	UpdateInDB(ctx context.Context, id string, ns *models.Namespace) (*models.Namespace, *errors.ServiceError)
 	ListByOrganisation(ctx context.Context, organisationID string) ([]*models.Namespace, *errors.ServiceError)
@@ -95,6 +96,16 @@ func (s *namespaceService) Get(ctx context.Context, id string) (*models.Namespac
 
 func (s *namespaceService) DeleteFromDB(ctx context.Context, id string) *errors.ServiceError {
 	return s.namespacesStore.Delete(ctx, id)
+}
+
+func (s *namespaceService) InternalDeleteFromDB(ctx context.Context, id string) *errors.ServiceError {
+	if err := s.DeleteFromDB(ctx, id); err != nil {
+		if err.Is404() {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *namespaceService) DeleteFromDBWithTx(ctx context.Context, id string) *errors.ServiceError {

@@ -8,6 +8,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,6 +25,7 @@ type clusterStackService struct {
 	clusterService      DBClusterService
 	clusterManager      clustermanager.ClusterManager
 	organisationService DBOrganisationService
+	secretService       DBSecretService
 	logger              logger.Logger
 }
 
@@ -32,6 +34,7 @@ type ClusterStackServiceSpec struct {
 	OrganisationService DBOrganisationService
 	UserService         DBUserService
 	ClusterManager      clustermanager.ClusterManager
+	SecretService       DBSecretService
 	Logger              logger.Logger
 }
 
@@ -40,6 +43,7 @@ func NewClusterStackService(spec ClusterStackServiceSpec) ClusterStackService {
 		clusterService:      spec.ClusterService,
 		clusterManager:      spec.ClusterManager,
 		organisationService: spec.OrganisationService,
+		secretService:       spec.SecretService,
 		logger:              spec.Logger,
 	}
 }
@@ -57,7 +61,10 @@ func (s *clusterStackService) CreateStackInCluster(ctx context.Context, stack *m
 		return newError("failed to get cluster client", clientGetErr)
 	}
 
-	desiredCR := s.desiredObjectInCluster(stack)
+	desiredCR, berr := s.desiredObjectInCluster(stack)
+	if berr != nil {
+		return newError("failed to build desired stackCR", berr)
+	}
 
 	if err := clusterClient.Create(ctx, desiredCR); err != nil {
 		s.logger.Errorf("failed to create workspaceCR in cluster: %v", err)
@@ -116,7 +123,10 @@ func (s *clusterStackService) UpdateStackInCluster(ctx context.Context, stack *m
 		return newError("failed to get cluster client", clientGetErr)
 	}
 
-	desiredstackCR := s.desiredObjectInCluster(stack)
+	desiredstackCR, berr := s.desiredObjectInCluster(stack)
+	if berr != nil {
+		return newError("failed to build desired stackCR", berr)
+	}
 	var existingstackCR corev1alpha1.Stack
 
 	if err := clusterClient.Get(ctx, client.ObjectKeyFromObject(desiredstackCR), &existingstackCR); err != nil {
@@ -132,24 +142,28 @@ func (s *clusterStackService) UpdateStackInCluster(ctx context.Context, stack *m
 	return nil
 }
 
-func (s *clusterStackService) desiredObjectInCluster(stack *models.Stack) *corev1alpha1.Stack {
+func (s *clusterStackService) desiredObjectInCluster(stack *models.Stack) (*corev1alpha1.Stack, error) {
 	stackCR := &corev1alpha1.Stack{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      stack.Name,
 			Namespace: stack.Namespace,
 			Labels: map[string]string{
 				models.StackIDLabel:           stack.ID,
-				models.ObjectServerGeneration: fmt.Sprintf("%d", stack.Version),
+				models.ObjectServerGeneration: stack.CrRevision,
 			},
 		},
-		Spec: corev1alpha1.StackSpec{
-			StackResources: desiredStackResources(stack),
-		},
+		Spec: corev1alpha1.StackSpec{},
 	}
-	return stackCR
+
+	stackResources, err := s.desiredStackResources(stack)
+	if err != nil {
+		return nil, err
+	}
+	stackCR.Spec.StackResources = stackResources
+	return stackCR, nil
 }
 
-func desiredStackResources(stack *models.Stack) []corev1alpha1.StackResourceTemplate {
+func (s *clusterStackService) desiredStackResources(stack *models.Stack) ([]corev1alpha1.StackResourceTemplate, error) {
 	var resources []corev1alpha1.StackResourceTemplate
 	for _, stackResource := range stack.StackResources {
 		resource := corev1alpha1.StackResourceTemplate{
@@ -169,21 +183,32 @@ func desiredStackResources(stack *models.Stack) []corev1alpha1.StackResourceTemp
 			resource.Spec.RestartRequest = &metav1.Time{Time: stackResource.LifecycleConfig.RestartRequestTime.UTC()}
 		}
 
-		setBuildSpec(&resource, stackResource)
-		setImageSpec(&resource, stackResource)
+		if err := s.setBuildSpec(&resource, stackResource); err != nil {
+			return nil, err
+		}
+		if err := s.setImageSpec(&resource, stackResource); err != nil {
+			return nil, err
+		}
 		setInitSpec(&resource, stackResource)
 		setVolumeMounts(&resource, stackResource)
 		setPorts(&resource, stackResource)
-		setEnvVars(&resource, stackResource)
+		if err := s.setEnvVars(&resource, stackResource); err != nil {
+			return nil, err
+		}
 		resources = append(resources, resource)
 	}
-	return resources
+	return resources, nil
 }
 
-func setBuildSpec(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) {
+func (s *clusterStackService) setBuildSpec(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) error {
 	if stackResource.BuildConfig != nil {
+		buildSourceCtx, err := s.buildBuildSourceContext(stackResource.BuildConfig.SourceContext)
+		if err != nil {
+			return err
+		}
+
 		resourceTemplateCr.Spec.BuildSpec = &corev1alpha1.StackResourceBuildSpec{
-			SourceContext:  buildBuildSourceContext(stackResource.BuildConfig.SourceContext),
+			SourceContext:  *buildSourceCtx,
 			SourceRevision: buildBuildSourceRevision(stackResource.BuildConfig.SourceRevision),
 			BuildContext:   stackResource.BuildConfig.ContextPathWithinSource,
 			DockerFilePath: stackResource.BuildConfig.DockerfilePath,
@@ -194,7 +219,22 @@ func setBuildSpec(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackR
 		if stackResource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
 			resourceTemplateCr.Spec.BuildSpec.Registry.Insecure = true
 		}
+		if stackResource.BuildConfig.RegistrySecretRef != nil {
+			secret, err := s.secretService.InternalGetByID(context.Background(), stackResource.BuildConfig.RegistrySecretRef.SecretID)
+			if err != nil {
+				return fmt.Errorf("failed to get registry secret: %w", err)
+			}
+			resourceTemplateCr.Spec.BuildSpec.Registry.Auth = &corev1alpha1.RegistryAuth{
+				DockerConfigAuth: &corev1alpha1.DockerConfigAuth{
+					SecretKey: corev1.DockerConfigJsonKey,
+					SecretRef: &corev1.SecretReference{
+						Name: secret.ClusterSecretName(),
+					},
+				},
+			}
+		}
 	}
+	return nil
 }
 
 func buildBuildSourceRevision(sourceRevision models.BuildSourceRevision) corev1alpha1.SourceRevisionSpec {
@@ -227,29 +267,79 @@ func buildBuildSourceRevision(sourceRevision models.BuildSourceRevision) corev1a
 	return corev1alpha1.SourceRevisionSpec{}
 }
 
-func buildBuildSourceContext(sourceContext models.BuildContextSource) corev1alpha1.BuildContextSource {
+func (s *clusterStackService) buildBuildSourceContext(sourceContext models.BuildContextSource) (*corev1alpha1.BuildContextSource, error) {
 	if sourceContext.Volume != nil {
-		return corev1alpha1.BuildContextSource{
+		return &corev1alpha1.BuildContextSource{
 			Volume: &corev1alpha1.VolumeSource{
 				Name: sourceContext.Volume.SourceVolumeName,
 			},
-		}
+		}, nil
 	} else if sourceContext.Git != nil {
-		return corev1alpha1.BuildContextSource{
+		if sourceContext.Git.GitSecretRef != nil {
+			secret, err := s.secretService.InternalGetByID(context.Background(), sourceContext.Git.GitSecretRef.SecretID)
+			if err != nil {
+				return nil, err
+			}
+			return &corev1alpha1.BuildContextSource{
+				Git: &corev1alpha1.GitRepoSource{
+					RepoUrl: sourceContext.Git.RepoURL,
+					Auth: &corev1alpha1.GitAuth{
+						UsernamePasswordAuthRef: &corev1alpha1.CredentialSecretKeyPair{
+							SecretRef: corev1.SecretReference{
+								Name: secret.ClusterSecretName(),
+							},
+							UsernameKey: models.UsernameSecretKey,
+							PasswordKey: models.PasswordSecretKey,
+						},
+					},
+				},
+			}, nil
+		}
+		return &corev1alpha1.BuildContextSource{
 			Git: &corev1alpha1.GitRepoSource{
 				RepoUrl: sourceContext.Git.RepoURL,
 			},
-		}
+		}, nil
 	}
-	return corev1alpha1.BuildContextSource{}
+	return nil, nil
 }
 
-func setImageSpec(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) {
+func (s *clusterStackService) setImageSpec(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) error {
 	if stackResource.ImageConfig != nil {
 		resourceTemplateCr.Spec.ImageSpec = &corev1alpha1.ImageSpec{
 			Image: stackResource.ImageConfig.Image,
 		}
+
+		if stackResource.ImageConfig.PullSecretRef != nil {
+			secret, err := s.secretService.InternalGetByID(context.Background(), stackResource.ImageConfig.PullSecretRef.SecretID)
+			if err != nil {
+				return fmt.Errorf("failed to get image pull secret: %w", err)
+			}
+			resourceTemplateCr.Spec.ImageSpec.PullAuth = &corev1alpha1.RegistryAuth{
+				DockerConfigAuth: &corev1alpha1.DockerConfigAuth{
+					SecretKey: corev1.DockerConfigJsonKey,
+					SecretRef: &corev1.SecretReference{
+						Name: secret.ClusterSecretName(),
+					},
+				},
+			}
+		}
 	}
+	return nil
+}
+
+func (s *clusterStackService) setEnvVars(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) error {
+	if stackResource.ExecutionConfig != nil && len(stackResource.ExecutionConfig.Env) > 0 {
+		resourceTemplateCr.Spec.EnvironmentVariables = make([]corev1alpha1.EnvironmentVariables, len(stackResource.ExecutionConfig.Env))
+		for i, envVar := range stackResource.ExecutionConfig.Env {
+			resourceTemplateCr.Spec.EnvironmentVariables[i] = corev1alpha1.EnvironmentVariables{
+				Name:  envVar.Name,
+				Value: envVar.Value,
+			}
+		}
+	}
+
+	return nil
 }
 
 func setInitSpec(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) {
@@ -257,11 +347,6 @@ func setInitSpec(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackRe
 		resourceTemplateCr.Spec.Init = &corev1alpha1.InitSpec{
 			Command: stackResource.Init.Command,
 			Args:    stackResource.Init.Args,
-		}
-		if stackResource.Init.ImageConfig != nil {
-			resourceTemplateCr.Spec.Init.ImageSpec = &corev1alpha1.ImageSpec{
-				Image: stackResource.Init.ImageConfig.Image,
-			}
 		}
 	}
 }
@@ -290,18 +375,6 @@ func setPorts(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResou
 			}
 			if port.ExposedToPublic {
 				resourceTemplateCr.Spec.Ports[i].FQDN = port.ExposedFqdn
-			}
-		}
-	}
-}
-
-func setEnvVars(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) {
-	if stackResource.ExecutionConfig != nil && len(stackResource.ExecutionConfig.Env) > 0 {
-		resourceTemplateCr.Spec.EnvironmentVariables = make([]corev1alpha1.EnvironmentVariables, len(stackResource.ExecutionConfig.Env))
-		for i, envVar := range stackResource.ExecutionConfig.Env {
-			resourceTemplateCr.Spec.EnvironmentVariables[i] = corev1alpha1.EnvironmentVariables{
-				Name:  envVar.Name,
-				Value: envVar.Value,
 			}
 		}
 	}

@@ -15,10 +15,6 @@ type InterpolationValidation interface {
 	ValidateStackInterpolations(in *models.Stack) error
 }
 
-type OrganisationDomainService interface {
-	ListByOrganisationID(ctx context.Context, orgID string) ([]*models.OrganisationDomain, *errors.ServiceError)
-}
-
 type StackValidator interface {
 	ValidateForCreate(ctx context.Context, spec *models.Stack) *errors.ServiceError
 	ValidateForUpdate(ctx context.Context, existing *models.Stack, spec *models.Stack) *errors.ServiceError

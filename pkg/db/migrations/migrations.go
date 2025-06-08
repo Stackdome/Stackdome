@@ -31,4 +31,8 @@ var MigrationList = []*gormigrate.Migration{
 	createOrganisationDomainsTable(),
 	replaceDomainWithStackDomainsTable(),
 	createSecretsTable(),
+	createSecretUsageTable(),
+	addClusterIdToStackTable(),
+	addDeletionTimestampToStackTable(),
+	addStackCRHashToStackTable(),
 }

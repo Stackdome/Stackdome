@@ -27,6 +27,7 @@ docs/Condition.md
 docs/DefaultApi.md
 docs/DomainName.md
 docs/EnvVar.md
+docs/EnvVarFromSecret.md
 docs/Error.md
 docs/ErrorAllOf.md
 docs/ErrorList.md
@@ -61,6 +62,7 @@ docs/SSHConfig.md
 docs/Secret.md
 docs/SecretData.md
 docs/SecretList.md
+docs/SecretRef.md
 docs/SecretType.md
 docs/Stack.md
 docs/StackList.md
@@ -110,6 +112,7 @@ model_cluster_list.go
 model_condition.go
 model_domain_name.go
 model_env_var.go
+model_env_var_from_secret.go
 model_error.go
 model_error_all_of.go
 model_error_list.go
@@ -143,6 +146,7 @@ model_resource_metrics_node_capacities_inner.go
 model_secret.go
 model_secret_data.go
 model_secret_list.go
+model_secret_ref.go
 model_secret_type.go
 model_ssh_config.go
 model_stack.go

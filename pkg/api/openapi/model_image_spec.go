@@ -16,7 +16,8 @@ import (
 
 // ImageSpec struct for ImageSpec
 type ImageSpec struct {
-	Image string `json:"image"`
+	Image      string     `json:"image"`
+	PullSecret *SecretRef `json:"pull_secret,omitempty"`
 }
 
 // NewImageSpec instantiates a new ImageSpec object
@@ -61,10 +62,45 @@ func (o *ImageSpec) SetImage(v string) {
 	o.Image = v
 }
 
+// GetPullSecret returns the PullSecret field value if set, zero value otherwise.
+func (o *ImageSpec) GetPullSecret() SecretRef {
+	if o == nil || o.PullSecret == nil {
+		var ret SecretRef
+		return ret
+	}
+	return *o.PullSecret
+}
+
+// GetPullSecretOk returns a tuple with the PullSecret field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ImageSpec) GetPullSecretOk() (*SecretRef, bool) {
+	if o == nil || o.PullSecret == nil {
+		return nil, false
+	}
+	return o.PullSecret, true
+}
+
+// HasPullSecret returns a boolean if a field has been set.
+func (o *ImageSpec) HasPullSecret() bool {
+	if o != nil && o.PullSecret != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetPullSecret gets a reference to the given SecretRef and assigns it to the PullSecret field.
+func (o *ImageSpec) SetPullSecret(v SecretRef) {
+	o.PullSecret = &v
+}
+
 func (o ImageSpec) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["image"] = o.Image
+	}
+	if o.PullSecret != nil {
+		toSerialize["pull_secret"] = o.PullSecret
 	}
 	return json.Marshal(toSerialize)
 }

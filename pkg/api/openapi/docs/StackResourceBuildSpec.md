@@ -9,6 +9,7 @@ Name | Type | Description | Notes
 **DockerfilePath** | **string** |  | 
 **SourceRevision** | [**BuildSourceRevision**](BuildSourceRevision.md) |  | 
 **ImageRepository** | [**ImageRepository**](ImageRepository.md) |  | 
+**RegistryPushSecret** | Pointer to [**SecretRef**](SecretRef.md) |  | [optional] 
 
 ## Methods
 
@@ -128,6 +129,31 @@ and a boolean to check if the value has been set.
 
 SetImageRepository sets ImageRepository field to given value.
 
+
+### GetRegistryPushSecret
+
+`func (o *StackResourceBuildSpec) GetRegistryPushSecret() SecretRef`
+
+GetRegistryPushSecret returns the RegistryPushSecret field if non-nil, zero value otherwise.
+
+### GetRegistryPushSecretOk
+
+`func (o *StackResourceBuildSpec) GetRegistryPushSecretOk() (*SecretRef, bool)`
+
+GetRegistryPushSecretOk returns a tuple with the RegistryPushSecret field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRegistryPushSecret
+
+`func (o *StackResourceBuildSpec) SetRegistryPushSecret(v SecretRef)`
+
+SetRegistryPushSecret sets RegistryPushSecret field to given value.
+
+### HasRegistryPushSecret
+
+`func (o *StackResourceBuildSpec) HasRegistryPushSecret() bool`
+
+HasRegistryPushSecret returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

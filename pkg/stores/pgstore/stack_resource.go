@@ -152,6 +152,20 @@ func (w *stackResourceStore) UpdateWithTx(ctx context.Context, ID string, spec *
 	return w.GetByID(ctx, ID)
 }
 
+func (w *stackResourceStore) UpdatePortsWithTx(ctx context.Context, resourceID string, resource *models.StackResource) *errors.ServiceError {
+	tx := db.TxFromContext(ctx)
+	if tx == nil {
+		return errors.GeneralError("transaction not found in context")
+	}
+	// Update ports for the stack resource
+	if err := tx.Model(&models.StackResource{}).Where("id = ?", resourceID).Updates(map[string]interface{}{
+		"ports": resource.Ports,
+	}).Error; err != nil {
+		return errors.GeneralError("failed to update stack resource ports: %s", err.Error())
+	}
+	return nil
+}
+
 func (w *stackResourceStore) UpdateStatus(ctx context.Context, ID string, status *models.StackResourceStatus) *errors.ServiceError {
 	if err := w.sessionFactory.New(ctx).Model(&models.StackResource{}).Where("id = ?", ID).UpdateColumn("status", status).Error; err != nil {
 		return errors.GeneralError("failed to update stack resource status: %s", err.Error())

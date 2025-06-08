@@ -24,7 +24,7 @@ type Stack struct {
 	Namespace      *string      `json:"namespace,omitempty"`
 	Labels         []Label      `json:"labels,omitempty"`
 	Annotations    []Annotation `json:"annotations,omitempty"`
-	Version        *int32       `json:"version,omitempty"`
+	Revision       *string      `json:"revision,omitempty"`
 	Spec           StackSpec    `json:"spec"`
 	Status         *StackStatus `json:"status,omitempty"`
 	CreatedAt      *time.Time   `json:"created_at,omitempty"`
@@ -266,36 +266,36 @@ func (o *Stack) SetAnnotations(v []Annotation) {
 	o.Annotations = v
 }
 
-// GetVersion returns the Version field value if set, zero value otherwise.
-func (o *Stack) GetVersion() int32 {
-	if o == nil || o.Version == nil {
-		var ret int32
+// GetRevision returns the Revision field value if set, zero value otherwise.
+func (o *Stack) GetRevision() string {
+	if o == nil || o.Revision == nil {
+		var ret string
 		return ret
 	}
-	return *o.Version
+	return *o.Revision
 }
 
-// GetVersionOk returns a tuple with the Version field value if set, nil otherwise
+// GetRevisionOk returns a tuple with the Revision field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *Stack) GetVersionOk() (*int32, bool) {
-	if o == nil || o.Version == nil {
+func (o *Stack) GetRevisionOk() (*string, bool) {
+	if o == nil || o.Revision == nil {
 		return nil, false
 	}
-	return o.Version, true
+	return o.Revision, true
 }
 
-// HasVersion returns a boolean if a field has been set.
-func (o *Stack) HasVersion() bool {
-	if o != nil && o.Version != nil {
+// HasRevision returns a boolean if a field has been set.
+func (o *Stack) HasRevision() bool {
+	if o != nil && o.Revision != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetVersion gets a reference to the given int32 and assigns it to the Version field.
-func (o *Stack) SetVersion(v int32) {
-	o.Version = &v
+// SetRevision gets a reference to the given string and assigns it to the Revision field.
+func (o *Stack) SetRevision(v string) {
+	o.Revision = &v
 }
 
 // GetSpec returns the Spec field value
@@ -441,8 +441,8 @@ func (o Stack) MarshalJSON() ([]byte, error) {
 	if o.Annotations != nil {
 		toSerialize["annotations"] = o.Annotations
 	}
-	if o.Version != nil {
-		toSerialize["version"] = o.Version
+	if o.Revision != nil {
+		toSerialize["revision"] = o.Revision
 	}
 	if true {
 		toSerialize["spec"] = o.Spec

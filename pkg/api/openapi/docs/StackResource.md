@@ -9,7 +9,7 @@ Name | Type | Description | Notes
 **Name** | **string** |  | 
 **Labels** | Pointer to [**[]Label**](Label.md) |  | [optional] 
 **Annotations** | Pointer to [**[]Annotation**](Annotation.md) |  | [optional] 
-**Version** | Pointer to **int32** |  | [optional] [readonly] 
+**Revision** | Pointer to **string** |  | [optional] [readonly] 
 **BuildSpec** | Pointer to [**StackResourceBuildSpec**](StackResourceBuildSpec.md) |  | [optional] 
 **ImageSpec** | Pointer to [**ImageSpec**](ImageSpec.md) |  | [optional] 
 **InitSpec** | Pointer to [**InitSpec**](InitSpec.md) |  | [optional] 
@@ -160,30 +160,30 @@ SetAnnotations sets Annotations field to given value.
 
 HasAnnotations returns a boolean if a field has been set.
 
-### GetVersion
+### GetRevision
 
-`func (o *StackResource) GetVersion() int32`
+`func (o *StackResource) GetRevision() string`
 
-GetVersion returns the Version field if non-nil, zero value otherwise.
+GetRevision returns the Revision field if non-nil, zero value otherwise.
 
-### GetVersionOk
+### GetRevisionOk
 
-`func (o *StackResource) GetVersionOk() (*int32, bool)`
+`func (o *StackResource) GetRevisionOk() (*string, bool)`
 
-GetVersionOk returns a tuple with the Version field if it's non-nil, zero value otherwise
+GetRevisionOk returns a tuple with the Revision field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetVersion
+### SetRevision
 
-`func (o *StackResource) SetVersion(v int32)`
+`func (o *StackResource) SetRevision(v string)`
 
-SetVersion sets Version field to given value.
+SetRevision sets Revision field to given value.
 
-### HasVersion
+### HasRevision
 
-`func (o *StackResource) HasVersion() bool`
+`func (o *StackResource) HasRevision() bool`
 
-HasVersion returns a boolean if a field has been set.
+HasRevision returns a boolean if a field has been set.
 
 ### GetBuildSpec
 

@@ -9,6 +9,7 @@ import (
 	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
+	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -26,6 +27,7 @@ type Env struct {
 	BootstrapConfig             *config.BootstrapConfig
 	Clients                     Clients
 	ClusterManager              clustermanager.ClusterManager
+	WorkerManager               workermanager.WorkerManager
 	ResourceAccessPolicyManager resourceaccess.ResourceAccessPolicyManager
 	Logger                      applogger.Logger
 }

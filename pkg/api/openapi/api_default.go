@@ -2935,7 +2935,7 @@ type ApiApiV1OrganizationsOrgIdStacksIdDeleteRequest struct {
 	id         string
 }
 
-func (r ApiApiV1OrganizationsOrgIdStacksIdDeleteRequest) Execute() (*http.Response, error) {
+func (r ApiApiV1OrganizationsOrgIdStacksIdDeleteRequest) Execute() (*Stack, *http.Response, error) {
 	return r.ApiService.ApiV1OrganizationsOrgIdStacksIdDeleteExecute(r)
 }
 
@@ -2957,16 +2957,19 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdStacksIdDelete(ctx context.Co
 }
 
 // Execute executes the request
-func (a *DefaultApiService) ApiV1OrganizationsOrgIdStacksIdDeleteExecute(r ApiApiV1OrganizationsOrgIdStacksIdDeleteRequest) (*http.Response, error) {
+//
+//	@return Stack
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdStacksIdDeleteExecute(r ApiApiV1OrganizationsOrgIdStacksIdDeleteRequest) (*Stack, *http.Response, error) {
 	var (
-		localVarHTTPMethod = http.MethodDelete
-		localVarPostBody   interface{}
-		formFiles          []formFile
+		localVarHTTPMethod  = http.MethodDelete
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *Stack
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdStacksIdDelete")
 	if err != nil {
-		return nil, &GenericOpenAPIError{error: err.Error()}
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
 	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/stacks/{id}"
@@ -2996,19 +2999,19 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdStacksIdDeleteExecute(r ApiAp
 	}
 	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
 	if err != nil {
-		return nil, err
+		return localVarReturnValue, nil, err
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(req)
 	if err != nil || localVarHTTPResponse == nil {
-		return localVarHTTPResponse, err
+		return localVarReturnValue, localVarHTTPResponse, err
 	}
 
 	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
 	localVarHTTPResponse.Body.Close()
 	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
 	if err != nil {
-		return localVarHTTPResponse, err
+		return localVarReturnValue, localVarHTTPResponse, err
 	}
 
 	if localVarHTTPResponse.StatusCode >= 300 {
@@ -3021,14 +3024,23 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdStacksIdDeleteExecute(r ApiAp
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
-				return localVarHTTPResponse, newErr
+				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
 		}
-		return localVarHTTPResponse, newErr
+		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
 
-	return localVarHTTPResponse, nil
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
 type ApiApiV1OrganizationsOrgIdStacksIdGetRequest struct {

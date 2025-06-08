@@ -5,6 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Image** | **string** |  | 
+**PullSecret** | Pointer to [**SecretRef**](SecretRef.md) |  | [optional] 
 
 ## Methods
 
@@ -44,6 +45,31 @@ and a boolean to check if the value has been set.
 
 SetImage sets Image field to given value.
 
+
+### GetPullSecret
+
+`func (o *ImageSpec) GetPullSecret() SecretRef`
+
+GetPullSecret returns the PullSecret field if non-nil, zero value otherwise.
+
+### GetPullSecretOk
+
+`func (o *ImageSpec) GetPullSecretOk() (*SecretRef, bool)`
+
+GetPullSecretOk returns a tuple with the PullSecret field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetPullSecret
+
+`func (o *ImageSpec) SetPullSecret(v SecretRef)`
+
+SetPullSecret sets PullSecret field to given value.
+
+### HasPullSecret
+
+`func (o *ImageSpec) HasPullSecret() bool`
+
+HasPullSecret returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

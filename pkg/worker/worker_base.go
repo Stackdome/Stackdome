@@ -11,7 +11,7 @@ import (
 // BaseWorker implements generic functionalities for a worker.
 // Actual workers types are supposed to embed this type in them.
 type BaseWorker struct {
-	Queue       workqueue.RateLimitingInterface
+	Queue       workqueue.TypedRateLimitingInterface[Operand]
 	WorkerName  string
 	WorkerError WorkerError
 	logger      logger.Logger
@@ -23,8 +23,12 @@ func NewBaseWorker(workerName string, env string) BaseWorker {
 		WorkerName:  workerName,
 		logger:      logger.NewLoggerWithPrefix(context.Background(), workerName),
 		WorkerError: NewWorkerError(workerName),
-		Queue: workqueue.NewNamedRateLimitingQueue(
-			workqueue.DefaultControllerRateLimiter(), workerName),
+		Queue: workqueue.NewTypedRateLimitingQueueWithConfig[Operand](
+			workqueue.DefaultTypedControllerRateLimiter[Operand](),
+			workqueue.TypedRateLimitingQueueConfig[Operand]{
+				Name: workerName,
+			},
+		),
 		Env: env,
 	}
 }
@@ -47,6 +51,6 @@ func (w *BaseWorker) Logger() logger.Logger {
 	return w.logger
 }
 
-func (w *BaseWorker) WorkQueue() workqueue.RateLimitingInterface {
+func (w *BaseWorker) WorkQueue() workqueue.TypedRateLimitingInterface[Operand] {
 	return w.Queue
 }

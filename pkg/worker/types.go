@@ -35,7 +35,7 @@ type Worker interface {
 	Execute(ctx context.Context, operand Operand) (Result, *errors.ServiceError)
 	EnqueueNow(operand Operand)
 	EnqueueAfter(Operand Operand, after time.Duration)
-	WorkQueue() workqueue.RateLimitingInterface
+	WorkQueue() workqueue.TypedRateLimitingInterface[Operand]
 	// Function that returns the list of operands to be passed to the workers execute method.
 	GetInput(context.Context) ([]Operand, *errors.ServiceError)
 	Logger() logger.Logger

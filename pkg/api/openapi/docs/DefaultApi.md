@@ -1884,7 +1884,7 @@ Name | Type | Description  | Notes
 
 ## ApiV1OrganizationsOrgIdStacksIdDelete
 
-> ApiV1OrganizationsOrgIdStacksIdDelete(ctx, orgId, id).Execute()
+> Stack ApiV1OrganizationsOrgIdStacksIdDelete(ctx, orgId, id).Execute()
 
 Delete a Stack
 
@@ -1911,6 +1911,8 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksIdDelete``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
+    // response from `ApiV1OrganizationsOrgIdStacksIdDelete`: Stack
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksIdDelete`: %v\n", resp)
 }
 ```
 
@@ -1935,7 +1937,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
- (empty response body)
+[**Stack**](Stack.md)
 
 ### Authorization
 

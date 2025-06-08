@@ -26,10 +26,6 @@ func NewJwtCookieAuthnHandler(next http.Handler, JWTsecret []byte) http.Handler 
 }
 
 func CanAuthenticateWithCookie(r *http.Request) bool {
-	cookies := r.Cookies()
-	for _, cookie := range cookies {
-		fmt.Println("Cookie Name:", cookie.Name, "Value:", cookie.Value)
-	}
 	// Check if the request has the authentication cookie
 	cookie, err := r.Cookie(DefaultAuthCookieName)
 	if err != nil {

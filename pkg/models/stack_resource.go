@@ -31,12 +31,44 @@ type StackResource struct {
 	UpdatedAt       time.Time
 }
 
+func (s *StackResource) HasImagePullSecrets() bool {
+	if s.ImageConfig != nil && s.ImageConfig.PullSecretRef != nil {
+		return true
+	}
+	return false
+}
+
+// HasImagePushSecrets checks if any stack resource has an image push secret configured.
+func (s *StackResource) HasImagePushSecrets() bool {
+	if s.BuildConfig != nil && s.BuildConfig.RegistrySecretRef != nil {
+		return true
+	}
+	return false
+}
+
+func (s *StackResource) HasGitCredentials() bool {
+	if s.BuildConfig != nil &&
+		s.BuildConfig.SourceContext.Git != nil &&
+		s.BuildConfig.SourceContext.Git.GitSecretRef != nil {
+		return true
+	}
+	return false
+}
+
+func (s *StackResource) HasEnvVarsFromSecret() bool {
+	if s.ExecutionConfig != nil && len(s.ExecutionConfig.EnvVarsFromSecrets) > 0 {
+		return true
+	}
+	return false
+}
+
 type StackResourceState string
 
 const (
 	StackResourcePhasePending StackResourceState = "Pending"
 	StackResourcePhaseReady   StackResourceState = "Ready"
 	StackResourcePhaseFailed  StackResourceState = "Failed"
+	StackResourcePhaseUnknown StackResourceState = "Error"
 )
 
 type Dependencies []string
@@ -45,7 +77,8 @@ type Ports []Port
 
 type StackResourceStatus struct {
 	State                         StackResourceState `json:"state"`
-	ObservedVersion               int64              `json:"observed_version"`
+	Message                       string             `json:"message"`
+	ObservedCrRevision            string             `json:"observed_cr_revision"`
 	Conditions                    []Condition        `json:"conditions"`
 	PublicIngresses               []Ingress          `json:"public_ingresses"`
 	InternalServiceName           *string            `json:"internal_service_name,omitempty"`
@@ -72,7 +105,9 @@ type LifecycleConfig struct {
 }
 
 type ImageConfigSpec struct {
-	Image string `json:"image"`
+	Image           string           `json:"image"`
+	ImagePullPolicy string           `json:"image_pull_policy,omitempty"`
+	PullSecretRef   *SecretReference `json:"pull_secret_ref,omitempty"`
 }
 
 func (i ImageConfigSpec) Validate() error {
@@ -83,20 +118,27 @@ func (i ImageConfigSpec) Validate() error {
 }
 
 type InitConfig struct {
-	ImageConfig *ImageConfigSpec `json:"image_config"`
-	Command     []string         `json:"command"`
-	Args        []string         `json:"args"`
+	Command []string `json:"command"`
+	Args    []string `json:"args"`
 }
 
 type ExecutionConfig struct {
-	Command []string `json:"command,omitempty"`
-	Args    []string `json:"args,omitempty"`
-	Env     []EnvVar `json:"env,omitempty"`
+	Command            []string             `json:"command,omitempty"`
+	Args               []string             `json:"args,omitempty"`
+	Env                []EnvVar             `json:"env,omitempty"`
+	EnvVarsFromSecrets []EnvSecretReference `json:"env_vars_from_secrets,omitempty"`
 }
 
 type EnvVar struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
+}
+
+// EnvSecretReference maps a secret key to an environment variable
+type EnvSecretReference struct {
+	SecretID  string `json:"secret_id"`  // Id of the secret
+	SecretKey string `json:"secret_key"` // Key within the secret
+	EnvName   string `json:"env_name"`   // Target environment variable name
 }
 
 func (v *StackResource) VolumeMountMap() map[string]*VolumeMount {

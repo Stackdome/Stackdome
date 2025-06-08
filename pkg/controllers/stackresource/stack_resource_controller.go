@@ -114,7 +114,7 @@ func mapClusterStatusToServerStatus(clusterInstance *corev1alpha1.StackResource)
 		State:                  mapStackResourceState(clusterInstance.Status.Phase),
 		Conditions:             models.ConvertConditions(clusterInstance.Status.Conditions),
 		PublicIngresses:        mapToPublicIngresses(clusterInstance.Status.ExternalAddress),
-		ObservedVersion:        clusterInstance.Status.ObservedStackdomeServerObjectGeneration,
+		ObservedCrRevision:     clusterInstance.Status.ObservedStackdomeServerObjectRevision,
 		InternalServiceName:    clusterInstance.Status.InternalAddress,
 	}
 	if clusterInstance.Status.LastRestartRequestProcessedAt != nil {

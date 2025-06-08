@@ -55,7 +55,7 @@ func (s *secretValidator) ValidateSecretData(secret *models.Secret) *errors.Serv
 
 // validateDockerRegistrySecret validates Docker registry secret data
 func (s *secretValidator) validateDockerRegistrySecret(secret *models.Secret) *errors.ServiceError {
-	requiredFields := []string{"registry", "username", "password"}
+	requiredFields := []string{models.RegistrySecretKey, models.UsernameSecretKey, models.PasswordSecretKey}
 
 	for _, field := range requiredFields {
 		if value, exists := secret.Data[field]; !exists || strings.TrimSpace(value) == "" {
@@ -78,9 +78,9 @@ func (s *secretValidator) validateDockerRegistrySecret(secret *models.Secret) *e
 // validateGitCredentialsSecret validates Git credentials secret data
 func (s *secretValidator) validateGitCredentialsSecret(secret *models.Secret) *errors.ServiceError {
 	// Git credentials can be one of: username/password, token.
-	hasUsernamePassword := secret.Data["username"] != "" && secret.Data["password"] != ""
-	hasToken := secret.Data["token"] != ""
-	hasSSHKey := secret.Data["ssh_private_key"] != ""
+	hasUsernamePassword := secret.Data[models.UsernameSecretKey] != "" && secret.Data[models.PasswordSecretKey] != ""
+	hasToken := secret.Data[models.TokenSecretKey] != ""
+	hasSSHKey := secret.Data[models.SshSecretKey] != ""
 
 	if hasSSHKey {
 		return errors.BadRequest("git credentials secret doesnt support ssh_private_key")
@@ -95,7 +95,7 @@ func (s *secretValidator) validateGitCredentialsSecret(secret *models.Secret) *e
 
 // validateUsernamePasswordSecret validates username/password secret data
 func (s *secretValidator) validateUsernamePasswordSecret(secret *models.Secret) *errors.ServiceError {
-	requiredFields := []string{"username", "password"}
+	requiredFields := []string{models.UsernameSecretKey, models.PasswordSecretKey}
 
 	for _, field := range requiredFields {
 		if value, exists := secret.Data[field]; !exists || strings.TrimSpace(value) == "" {
@@ -108,11 +108,11 @@ func (s *secretValidator) validateUsernamePasswordSecret(secret *models.Secret) 
 
 // validateTokenSecret validates token secret data
 func (s *secretValidator) validateTokenSecret(secret *models.Secret) *errors.ServiceError {
-	if value, exists := secret.Data["token"]; !exists || strings.TrimSpace(value) == "" {
+	if value, exists := secret.Data[models.TokenSecretKey]; !exists || strings.TrimSpace(value) == "" {
 		return errors.BadRequest("token secret requires field: token")
 	}
 
-	token := secret.Data["token"]
+	token := secret.Data[models.TokenSecretKey]
 	if len(token) < 8 {
 		return errors.BadRequest("token must be at least 8 characters long")
 	}
@@ -122,11 +122,11 @@ func (s *secretValidator) validateTokenSecret(secret *models.Secret) *errors.Ser
 
 // validateSSHKeySecret validates SSH key secret data
 func (s *secretValidator) validateSSHKeySecret(secret *models.Secret) *errors.ServiceError {
-	if value, exists := secret.Data["ssh_private_key"]; !exists || strings.TrimSpace(value) == "" {
+	if value, exists := secret.Data[models.SshSecretKey]; !exists || strings.TrimSpace(value) == "" {
 		return errors.BadRequest("SSH key secret requires field: ssh_private_key")
 	}
 
-	sshKey := secret.Data["ssh_private_key"]
+	sshKey := secret.Data[models.SshSecretKey]
 	if !strings.Contains(sshKey, "-----BEGIN") || !strings.Contains(sshKey, "-----END") {
 		return errors.BadRequest("ssh_private_key must be in PEM format")
 	}
