@@ -6,6 +6,23 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type loggerInCtx string
+
+const (
+	loggerKey loggerInCtx = "logger"
+)
+
+func AddLoggerToContext(ctx context.Context, logger Logger) context.Context {
+	return context.WithValue(ctx, loggerKey, logger)
+}
+
+func GetLoggerFromContext(ctx context.Context) Logger {
+	if logger, ok := ctx.Value(loggerKey).(Logger); ok {
+		return logger
+	}
+	return NewLogger()
+}
+
 type Logger interface {
 	SetLevel(level logrus.Level) Logger
 

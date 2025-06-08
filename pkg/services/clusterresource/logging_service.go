@@ -88,7 +88,7 @@ func (s *loggingService) GetLogsForResources(ctx context.Context, orgID string, 
 	k8sclient, cerr := clients.NewKubernetesClient(clients.KubernetesClientSpec{
 		RestConfig:              restConfig,
 		ControllerRuntimeClient: ctrlRuntimeclient,
-		Logger:                  s.logger,
+		Logger:                  logger.NewLoggerWithPrefix(ctx, "kubernetes-client"),
 	})
 	if cerr != nil {
 		return nil, fmt.Errorf("failed to create Kubernetes client: %v", cerr)

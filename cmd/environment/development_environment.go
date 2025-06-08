@@ -70,7 +70,6 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 		d.initializeClusterManager,
 		d.initializeWorkerManager,
 		d.injectClusterResourceServices,
-		// d.initializeDefaultOrgAndCluster,
 		d.initializeBaseResourceAccessPolicies,
 		d.ensureDefaultPlatformAdminUser,
 		d.startManagers,
@@ -140,7 +139,7 @@ func (d *developmentEnvironment) setupLogger(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("invalid log level '%s': %w", d.Config.LogLevel, err)
 	}
-	d.Logger = applogger.NewLoggerWithPrefix(ctx, "applicationLogger").SetLevel(logLevel)
+	d.Logger = applogger.NewLoggerWithPrefix(ctx, "api-server").SetLevel(logLevel)
 	d.Logger.Debugf("Logger initialized with level: %s", logLevel.String())
 	return nil
 }

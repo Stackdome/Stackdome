@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"sort"
 	"time"
 
@@ -129,6 +130,10 @@ func (k *kubernetesClient) StreamPodLogs(ctx context.Context, pod *corev1.Pod, l
 			line, err := reader.ReadString('\n')
 			if err != nil {
 				if err == context.Canceled || err == context.DeadlineExceeded {
+					return
+				}
+				if err == io.EOF {
+					k.logger.Debugf("log stream for pod %s/%s ended", pod.Namespace, pod.Name)
 					return
 				}
 				if numStreamErrors >= logOpts.MaxErrors() {

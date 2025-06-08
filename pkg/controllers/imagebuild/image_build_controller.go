@@ -74,30 +74,30 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	imageBuild := &buildsv1alpha1.ImageBuild{}
 	if err := r.Client.Get(ctx, req.NamespacedName, imageBuild); err != nil {
 		if errors.IsNotFound(err) {
-			r.Logger.Infof("ImageBuild %s not found", req.NamespacedName)
+			r.Logger.Infof("imageBuild %v not found", req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
-	r.Logger.Infof("Reconciling image build", "image_build", req.NamespacedName)
+	r.Logger.Infof("reconciling image build: %v", req.NamespacedName)
 
 	stackID, ok := imageBuild.Labels[models.StackIDLabel]
 	if !ok {
-		r.Logger.Errorf("ImageBuild %s does not have stack ID label", req.NamespacedName)
+		r.Logger.Errorf("imageBuild %v does not have stack ID label", req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
 
 	dbStackResouce, err := r.DBResourceService.GetByStackIDAndResourceName(ctx, stackID, imageBuild.Spec.ResourceName)
 	if err != nil {
-		r.Logger.Errorf("Failed to get stack resource %s for build '%s'", imageBuild.Spec.ResourceName, client.ObjectKeyFromObject(imageBuild).String())
+		r.Logger.Errorf("failed to get stack resource %s for build '%s'", imageBuild.Spec.ResourceName, client.ObjectKeyFromObject(imageBuild).String())
 		return ctrl.Result{}, err
 	}
 
 	dbResourceBuild, err := r.DBImageBuildService.GetByID(ctx, imageBuild.Name)
 	if err != nil {
 		if err.Code == apperrors.ErrorNotFound {
-			r.Logger.Infof("ResourceBuild %s not found in DB, creating a new build", imageBuild.Name)
+			r.Logger.Infof("imageBuild %s not found in DB, creating a new build", imageBuild.Name)
 			return ctrl.Result{Requeue: true}, r.createImageBuildInDB(ctx, imageBuild, dbStackResouce)
 		}
 		return ctrl.Result{}, err

@@ -74,12 +74,12 @@ func (w *stackResourceReconciler) Name() string {
 }
 
 func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	w.logger.Infof("Reconciling stack resource", "stack_resource", req.NamespacedName)
+	w.logger.Infof("Reconciling stack resource: %v", req.NamespacedName)
 
 	stackResourceCr := &corev1alpha1.StackResource{}
 	if err := w.client.Get(ctx, req.NamespacedName, stackResourceCr); err != nil {
 		if errors.IsNotFound(err) {
-			w.logger.Infof("StackResource %s not found", req.NamespacedName)
+			w.logger.Infof("StackResource %v not found", req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err

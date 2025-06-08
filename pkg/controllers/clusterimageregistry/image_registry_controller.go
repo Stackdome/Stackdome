@@ -64,26 +64,26 @@ func (r *clusterImageRegistryReconciler) Name() string {
 }
 
 func (r *clusterImageRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	r.Logger.Infof("reconciling cluster image registry: %v", req.NamespacedName)
+
 	registryCr := &registryv1alpha1.ClusterRegistry{}
 	if err := r.Client.Get(ctx, req.NamespacedName, registryCr); err != nil {
 		if errors.IsNotFound(err) {
-			r.Logger.Infof("cluster registry %s not found", req.NamespacedName)
+			r.Logger.Infof("cluster registry %v not found", req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
-	r.Logger.Infof("Reconciling cluster registry", "cluster_image_registry", req.NamespacedName)
-
 	registryID, ok := registryCr.Labels[models.ImageRegistryIDLabel]
 	if !ok {
-		r.Logger.Errorf("ClusterRegistry %s does not have cluster registry ID label", req.NamespacedName)
+		r.Logger.Errorf("clusterRegistry %v does not have cluster registry ID label", req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
 
 	dbImageRegistry, err := r.DBImageRegistryService.Get(ctx, registryID)
 	if err != nil {
-		r.Logger.Error(ctx, "Failed to get cluster image registry from DB", "error", err)
+		r.Logger.Error(ctx, "failed to get cluster image registry from DB: %v", err)
 		return ctrl.Result{}, err
 	}
 
