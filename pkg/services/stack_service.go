@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"time"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -11,14 +13,19 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
 	stackvalidator "github.com/ashishmax31/stackdome-api-server/pkg/validator/stack"
+	"k8s.io/utils/ptr"
 )
 
 type StackService interface {
 	CreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.StackStatus) *errors.ServiceError
-	DeleteStack(ctx context.Context, ID string) *errors.ServiceError
+	DeleteStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
+	UpdateStackCrRevision(ctx context.Context, ID string, revision string) *errors.ServiceError
+	InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError)
+	InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError
 	ClusterResourceServiceInjectable
+	BackgroundJobEnqueuerInjectable
 	StackQueryService
 }
 
@@ -37,6 +44,7 @@ type StackServiceSpec struct {
 	StackResourceService   StackResourceService
 	ClusterRegistryService ImageRegistryService
 	NamespaceService       NamespaceService
+	SecretService          SecretService
 	Logger                 logger.Logger
 }
 
@@ -49,10 +57,14 @@ type stackService struct {
 	stackValidator         validator.StackValidator
 	domainNameService      StackDomainsService
 	stackResourceService   StackResourceService
+	clusterResourceBuidler builders.ClusterResourceBuilder
 	namespaceService       NamespaceService
+	clusterService         ClusterService
+	secretService          SecretService
 	clusterRegistryService ImageRegistryService
 	defaultingService      DefaultingService[*models.Stack]
 	ClusterResourceServiceDeps
+	BackgroundJobEnqueuerDep
 }
 
 func NewStackService(spec StackServiceSpec) StackService {
@@ -69,16 +81,24 @@ func NewStackService(spec StackServiceSpec) StackService {
 		stackStore: pgstore.NewStackStore(&pgstore.StackStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		volumeService:          spec.VolumeService,
-		organisationService:    spec.OrganisationService,
-		logger:                 spec.Logger,
-		sessionFactory:         spec.SessionFactory,
-		stackValidator:         stackvalidator.NewStackValidator(organisationDomainService),
+		clusterService:      spec.ClusterService,
+		volumeService:       spec.VolumeService,
+		organisationService: spec.OrganisationService,
+		logger:              spec.Logger,
+		sessionFactory:      spec.SessionFactory,
+		stackValidator: stackvalidator.NewStackValidator(stackvalidator.StackValidatorSpec{
+			DomainService: organisationDomainService,
+			SecretService: spec.SecretService,
+		}),
 		stackResourceService:   spec.StackResourceService,
 		clusterRegistryService: spec.ClusterRegistryService,
 		namespaceService:       spec.NamespaceService,
 		domainNameService:      stackDomainNameService,
-		defaultingService:      NewStackDefaultingService(),
+		secretService:          spec.SecretService,
+		clusterResourceBuidler: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
+			SecretService: spec.SecretService,
+		}),
+		defaultingService: NewStackDefaultingService(),
 	}
 }
 
@@ -87,16 +107,23 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 	if existingStack != nil {
 		return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
 	}
-
+	s.logger.Infof("running validation for stack creation: %s", spec.Name)
 	if err := s.stackValidator.ValidateForCreate(ctx, spec); err != nil {
 		return nil, err
 	}
+	s.logger.Infof("validation passed for stack creation: %s", spec.Name)
 	// Setup namespace
 	namespaceForStack, err := s.namespaceService.PrepareNamespaceForStack(ctx, spec)
 	if err != nil {
 		return nil, errors.GeneralError("failed to prepare namespace for stack '%s': %s", spec.Name, err.Error())
 	}
 	spec.Namespace = namespaceForStack.Name
+
+	cluster, err := s.clusterService.GetClusterForOrg(ctx, spec.OrganisationID)
+	if err != nil {
+		return nil, errors.GeneralError("failed to get cluster for organisation '%s': %s", spec.OrganisationID, err.Error())
+	}
+	spec.ClusterID = cluster.ID
 
 	// Set default values
 	spec, dErr := s.defaultingService.PopulateDefaultValues(spec)
@@ -112,6 +139,11 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 		return nil, errors.GeneralError("failed to populate in-cluster registry URLs for stack '%s': %s", spec.Name, err.Error())
 	}
 
+	spec.Status = &models.StackStatus{
+		State:   models.StackPending,
+		Message: "Stack is being created",
+	}
+
 	var createdStack *models.Stack
 	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
 		// Step 1: Create stack and dependencies in DB
@@ -119,29 +151,17 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 		if err != nil {
 			return err
 		}
-		// Step 2: Create namespace in cluster
-		if err := s.namespaceService.CreateInCluster(ctx, namespaceForStack); err != nil {
-			return errors.GeneralError("failed to create namespace in cluster: %s", err.Error())
-		}
-
-		// Step 3: Create volumes in cluster
-		for _, volume := range createdStack.Volumes {
-			if err := s.volumeService.CreateInCluster(ctx, volume); err != nil {
-				return errors.GeneralError("failed to create volume in cluster: %s", err.Error())
-			}
-		}
-
-		// Step 4: Create stack in cluster
-		if err := s.ClusterStackService.CreateStackInCluster(ctx, createdStack); err != nil {
-			return errors.GeneralError("failed to create stack in cluster: %s", err.Error())
-		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	return s.GetStack(ctx, createdStack.ID)
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.Stack{
+		ID: createdStack.ID,
+	}); err != nil {
+		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", spec.Name, err.Error())
+	}
+	return createdStack, nil
 }
 
 // Creates stack and all its dependencies in DB wrapped in a transaction. (ctx should be a transaction context)
@@ -174,6 +194,7 @@ func (s *stackService) createStackAndDepsInDbWithTx(ctx context.Context, spec *m
 		}
 	}
 
+	createdStack.Volumes = createdVolumes
 	// Step 5: Populate and save the domans for the stack resources with exposed ports.
 	if err := s.domainNameService.PopulateAndSaveExposedPortDomainsForStackWithTx(ctx, createdStack); err != nil {
 		return nil, err
@@ -181,14 +202,29 @@ func (s *stackService) createStackAndDepsInDbWithTx(ctx context.Context, spec *m
 
 	// Step 6: Update stack resources with subdomain prefixes from step 5.
 	for _, stackResource := range createdStack.StackResources {
-		err := s.stackResourceService.InternalUpdateExposedPortDomainsWithTx(ctx, stackResource.ID, stackResource, createdStack)
+		err := s.stackResourceService.InternalUpdateExposedPortDomainsWithTx(ctx, stackResource.ID, stackResource)
 		if err != nil {
 			return nil, errors.GeneralError(
 				"failed to update stack resource '%s' with generated subdomain prefix: %s",
 				stackResource.Name, err.Error())
 		}
 	}
-	return s.GetStack(ctx, createdStack.ID)
+	stack, err := s.GetStack(ctx, createdStack.ID)
+	if err != nil {
+		return nil, errors.GeneralError("failed to get created stack '%s': %s", createdStack.Name, err.Error())
+	}
+
+	// Step 7: Build and update the CR hash for the stack
+	crHash, cerr := s.clusterResourceBuidler.GetStackCRHash(stack)
+	if cerr != nil {
+		return nil, errors.GeneralError("failed to build stack CR hash for stack '%s': %s", stack.Name, cerr.Error())
+	}
+
+	stack.CrRevision = crHash
+	if err := s.UpdateStackCrRevision(ctx, stack.ID, crHash); err != nil {
+		return nil, errors.GeneralError("failed to update stack CR revision for stack '%s': %s", stack.Name, err.Error())
+	}
+	return stack, nil
 }
 
 func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
@@ -203,6 +239,7 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 	}
 	// set namespace
 	spec.Namespace = existingStack.Namespace
+	spec.ClusterID = existingStack.ClusterID
 
 	// Set default values and populate fields
 	spec, derr := s.defaultingService.PopulateDefaultValues(spec)
@@ -212,7 +249,6 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 
 	s.populateAssociations(ctx, spec)
 
-	existingVolumes := existingStack.VolumesMap()
 	// Update stack and domains within transaction
 	var updatedStack *models.Stack
 	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
@@ -221,26 +257,16 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 		if err != nil {
 			return err
 		}
-		// Step 6: Update volumes in cluster
-		for _, volume := range updatedStack.Volumes {
-			// Check if the volume is new or existing
-			// If it is new, create it in the cluster
-			if _, ok := existingVolumes[volume.Name]; !ok {
-				if err := s.volumeService.CreateInCluster(ctx, volume); err != nil {
-					return errors.GeneralError("failed to create volume in cluster: %s", err.Error())
-				}
-			}
-		}
-		// We dont delete volumes not present in this update request.We let them be.
-		// either user will delete them or we will delete them when stack is deleted.
-		if err := s.ClusterStackService.UpdateStackInCluster(ctx, updatedStack); err != nil {
-			return errors.GeneralError("failed to update stack in cluster: %s", err.Error())
-		}
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
+	}
+
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.Stack{
+		ID: updatedStack.ID,
+	}); err != nil {
+		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", spec.Name, err.Error())
 	}
 
 	return updatedStack, nil
@@ -271,6 +297,8 @@ func (s *stackService) updateStackAndDepsInDbWithTx(ctx context.Context, spec *m
 		return nil, updateErr
 	}
 
+	updatedStack.Volumes = volumesForStack
+
 	// Step 4: Populate and save the domains for the stack resources with exposed ports.
 	if err := s.domainNameService.PopulateAndSaveExposedPortDomainsForStackWithTx(ctx, updatedStack); err != nil {
 		return nil, err
@@ -278,7 +306,7 @@ func (s *stackService) updateStackAndDepsInDbWithTx(ctx context.Context, spec *m
 
 	// Step 5: Update stack resources with subdomain prefixes from step 5.
 	for _, stackResource := range updatedStack.StackResources {
-		err = s.stackResourceService.InternalUpdateExposedPortDomainsWithTx(ctx, stackResource.ID, stackResource, updatedStack)
+		err = s.stackResourceService.InternalUpdateExposedPortDomainsWithTx(ctx, stackResource.ID, stackResource)
 		if err != nil {
 			return nil, errors.GeneralError(
 				"failed to update stack resource '%s' with domain information: %s",
@@ -287,7 +315,22 @@ func (s *stackService) updateStackAndDepsInDbWithTx(ctx context.Context, spec *m
 	}
 
 	// Step 5: Get updated stack and update in cluster
-	return s.GetStack(ctx, updatedStack.ID)
+	stack, err := s.GetStack(ctx, updatedStack.ID)
+	if err != nil {
+		return nil, errors.GeneralError("failed to get updated stack '%s': %s", updatedStack.Name, err.Error())
+	}
+
+	// Step 6: Build and update the CR hash for the stack
+	crHash, cerr := s.clusterResourceBuidler.GetStackCRHash(stack)
+	if cerr != nil {
+		return nil, errors.GeneralError("failed to build stack CR hash for stack '%s': %s", stack.Name, cerr.Error())
+	}
+
+	stack.CrRevision = crHash
+	if err := s.UpdateStackCrRevision(ctx, stack.ID, crHash); err != nil {
+		return nil, errors.GeneralError("failed to update stack CR revision for stack '%s': %s", stack.Name, err.Error())
+	}
+	return stack, nil
 }
 
 func (s *stackService) GetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError) {
@@ -314,6 +357,14 @@ func (s *stackService) GetStacksByUserID(ctx context.Context, userID string) ([]
 	return stacks, nil
 }
 
+func (s *stackService) InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError) {
+	stacks, err := s.stackStore.InternalList(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return stacks, nil
+}
+
 func (s *stackService) GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError) {
 	stacks, err := s.stackStore.ListByOrganisationID(ctx, organisationID)
 	if err != nil {
@@ -322,54 +373,51 @@ func (s *stackService) GetStacksByOrganisationID(ctx context.Context, organisati
 	return stacks, nil
 }
 
-func (s *stackService) DeleteStack(ctx context.Context, ID string) *errors.ServiceError {
+func (s *stackService) DeleteStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError) {
 	stack, err := s.GetStack(ctx, ID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		// Step 1: Delete from cluster
-		if err := s.ClusterStackService.DeleteStackInCluster(ctx, stack); err != nil {
-			return errors.GeneralError("failed to delete stack in cluster: %s", err.Error())
-		}
-
-		// Step 2: Delete the stack from database
-		if err := s.stackStore.DeleteWithTx(ctx, ID); err != nil {
-			return err
-		}
-
-		// Step 3: Delete volumes in cluster in DB.
-		for _, volume := range stack.Volumes {
-			if err := s.volumeService.DeleteWithTx(ctx, volume.ID); err != nil {
-				return errors.GeneralError("failed to delete volume in cluster: %s", err.Error())
-			}
-		}
-		// Step 4: Delete the namespace from cluster
-		if err := s.ClusterNamespaceService.DeleteNamespaceInCluster(ctx, &models.Namespace{
-			ID:             stack.NamespaceID,
-			Name:           stack.Namespace,
-			OrganisationID: stack.OrganisationID,
-		}); err != nil {
-			return errors.GeneralError("failed to delete namespace in cluster: %s", err.Error())
-		}
-
-		// Step 5: Delete the namespace from database
-		if err := s.namespaceService.DeleteFromDBWithTx(ctx, stack.NamespaceID); err != nil {
-			return errors.GeneralError("failed to delete namespace in database: %s", err.Error())
-		}
-		return nil
-	})
+	if stack.Status.State == models.StackDeleting {
+		return stack, nil
+	}
+	stack.DeletionTimestamp = ptr.To(time.Now().UTC())
+	stack.Status.State = models.StackDeleting
+	stack.Status.Message = "Stack is being deleted"
+	stackMarkedForDelete, err := s.stackStore.UpdateForDelete(ctx, ID, stack)
 	if err != nil {
-		return err
+		return nil, errors.GeneralError("failed to update stack '%s' for deletion: %s", stack.Name, err.Error())
 	}
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.Stack{
+		ID: stack.ID,
+	}); err != nil {
+		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", stack.Name, err.Error())
+	}
+	return stackMarkedForDelete, nil
+}
 
+func (s *stackService) InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError {
+	err := s.stackStore.Delete(ctx, ID)
+	if err != nil {
+		if err.Is404() {
+			// If the stack is not found, we can return nil as it is already deleted.
+			return nil
+		}
+		return errors.GeneralError("failed to delete stack with ID '%s' from database: %s", ID, err.Error())
+	}
 	return nil
 }
 
 func (s *stackService) UpdateStatus(ctx context.Context, ID string, status *models.StackStatus) *errors.ServiceError {
 	err := s.stackStore.UpdateStatus(ctx, ID, status)
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *stackService) UpdateStackCrRevision(ctx context.Context, ID string, revision string) *errors.ServiceError {
+	if err := s.stackStore.UpdateRevision(ctx, ID, revision); err != nil {
 		return err
 	}
 	return nil

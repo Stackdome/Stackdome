@@ -16,9 +16,10 @@ import (
 
 // StackStatus struct for StackStatus
 type StackStatus struct {
-	State           *string     `json:"state,omitempty"`
-	ObservedVersion *int32      `json:"observed_version,omitempty"`
-	Conditions      []Condition `json:"conditions,omitempty"`
+	State            *string     `json:"state,omitempty"`
+	Message          *string     `json:"message,omitempty"`
+	ObservedRevision *string     `json:"observed_revision,omitempty"`
+	Conditions       []Condition `json:"conditions,omitempty"`
 }
 
 // NewStackStatus instantiates a new StackStatus object
@@ -70,36 +71,68 @@ func (o *StackStatus) SetState(v string) {
 	o.State = &v
 }
 
-// GetObservedVersion returns the ObservedVersion field value if set, zero value otherwise.
-func (o *StackStatus) GetObservedVersion() int32 {
-	if o == nil || o.ObservedVersion == nil {
-		var ret int32
+// GetMessage returns the Message field value if set, zero value otherwise.
+func (o *StackStatus) GetMessage() string {
+	if o == nil || o.Message == nil {
+		var ret string
 		return ret
 	}
-	return *o.ObservedVersion
+	return *o.Message
 }
 
-// GetObservedVersionOk returns a tuple with the ObservedVersion field value if set, nil otherwise
+// GetMessageOk returns a tuple with the Message field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StackStatus) GetObservedVersionOk() (*int32, bool) {
-	if o == nil || o.ObservedVersion == nil {
+func (o *StackStatus) GetMessageOk() (*string, bool) {
+	if o == nil || o.Message == nil {
 		return nil, false
 	}
-	return o.ObservedVersion, true
+	return o.Message, true
 }
 
-// HasObservedVersion returns a boolean if a field has been set.
-func (o *StackStatus) HasObservedVersion() bool {
-	if o != nil && o.ObservedVersion != nil {
+// HasMessage returns a boolean if a field has been set.
+func (o *StackStatus) HasMessage() bool {
+	if o != nil && o.Message != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetObservedVersion gets a reference to the given int32 and assigns it to the ObservedVersion field.
-func (o *StackStatus) SetObservedVersion(v int32) {
-	o.ObservedVersion = &v
+// SetMessage gets a reference to the given string and assigns it to the Message field.
+func (o *StackStatus) SetMessage(v string) {
+	o.Message = &v
+}
+
+// GetObservedRevision returns the ObservedRevision field value if set, zero value otherwise.
+func (o *StackStatus) GetObservedRevision() string {
+	if o == nil || o.ObservedRevision == nil {
+		var ret string
+		return ret
+	}
+	return *o.ObservedRevision
+}
+
+// GetObservedRevisionOk returns a tuple with the ObservedRevision field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackStatus) GetObservedRevisionOk() (*string, bool) {
+	if o == nil || o.ObservedRevision == nil {
+		return nil, false
+	}
+	return o.ObservedRevision, true
+}
+
+// HasObservedRevision returns a boolean if a field has been set.
+func (o *StackStatus) HasObservedRevision() bool {
+	if o != nil && o.ObservedRevision != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetObservedRevision gets a reference to the given string and assigns it to the ObservedRevision field.
+func (o *StackStatus) SetObservedRevision(v string) {
+	o.ObservedRevision = &v
 }
 
 // GetConditions returns the Conditions field value if set, zero value otherwise.
@@ -139,8 +172,11 @@ func (o StackStatus) MarshalJSON() ([]byte, error) {
 	if o.State != nil {
 		toSerialize["state"] = o.State
 	}
-	if o.ObservedVersion != nil {
-		toSerialize["observed_version"] = o.ObservedVersion
+	if o.Message != nil {
+		toSerialize["message"] = o.Message
+	}
+	if o.ObservedRevision != nil {
+		toSerialize["observed_revision"] = o.ObservedRevision
 	}
 	if o.Conditions != nil {
 		toSerialize["conditions"] = o.Conditions

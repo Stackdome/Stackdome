@@ -14,11 +14,14 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator/secret"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SecretService interface {
 	Create(ctx context.Context, secret *models.Secret) (*models.Secret, *errors.ServiceError)
 	GetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError)
+	// InternalGetByID is used internally to get the secret with decrypted data.
+	InternalGetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError)
 	GetByName(ctx context.Context, organisationID, name string) (*models.Secret, *errors.ServiceError)
 	Update(ctx context.Context, id string, secret *models.Secret) (*models.Secret, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
@@ -28,30 +31,48 @@ type SecretService interface {
 	ValidateSecretExists(ctx context.Context, secretID string) (bool, *errors.ServiceError)
 	GetSecretKeys(ctx context.Context, secretID string) ([]string, *errors.ServiceError)
 	ValidateSecretHasKeys(ctx context.Context, secretID string, requiredKeys []string) (bool, []string, *errors.ServiceError)
+	ValidateGitSecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError
+	ValidateImageRegistrySecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError
+	CreateSecretUsage(ctx context.Context, secretID string, stackID string) *errors.ServiceError
+	GetSecretUsageBySecretIDAndStackID(ctx context.Context, secretID, stackID string) (*models.SecretUsage, *errors.ServiceError)
+	GetSecretUsageByStackID(ctx context.Context, stackID string) ([]*models.SecretUsage, *errors.ServiceError)
+	DeleteSecretUsage(ctx context.Context, secretID, stackID string) *errors.ServiceError
+}
+
+type ClusterClientGetter interface {
+	GetClient(clusterID string) (client.Client, error)
 }
 
 type SecretServiceSpec struct {
-	SessionFactory    db.SessionFactory
-	EncryptionService EncryptionService
-	Logger            logger.Logger
+	SessionFactory      db.SessionFactory
+	EncryptionService   EncryptionService
+	ClusterClientGetter ClusterClientGetter
+	Logger              logger.Logger
 }
 
 type secretService struct {
-	secretStore       stores.SecretStore
-	encryptionService EncryptionService
-	validator         validator.SecretValidator
-	logger            logger.Logger
+	secretStore         stores.SecretStore
+	secretUsageStore    stores.SecretUsageStore
+	encryptionService   EncryptionService
+	validator           validator.SecretValidator
+	clusterClientGetter ClusterClientGetter
+	logger              logger.Logger
 }
 
 func NewSecretService(spec SecretServiceSpec) SecretService {
-	return &secretService{
+	s := &secretService{
 		secretStore: pgstore.NewSecretStore(pgstore.SecretStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		validator:         secret.NewSecretValidator(),
-		encryptionService: spec.EncryptionService,
-		logger:            spec.Logger,
+		secretUsageStore: pgstore.NewSecretUsageStore(pgstore.SecretUsageStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
+		validator:           secret.NewSecretValidator(),
+		encryptionService:   spec.EncryptionService,
+		clusterClientGetter: spec.ClusterClientGetter,
+		logger:              spec.Logger,
 	}
+	return s
 }
 
 func (s *secretService) Create(ctx context.Context, secret *models.Secret) (*models.Secret, *errors.ServiceError) {
@@ -83,8 +104,56 @@ func (s *secretService) GetByID(ctx context.Context, ID string) (*models.Secret,
 	if err != nil {
 		return nil, err
 	}
+	return secret, nil
+}
+
+func (s *secretService) InternalGetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError) {
+	secret, err := s.secretStore.GetByID(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+	// Decrypt the secret data for internal use
+	if err := s.decryptSecretData(secret); err != nil {
+		return nil, err
+	}
 
 	return secret, nil
+}
+
+func (s *secretService) CreateSecretUsage(ctx context.Context, secretID string, stackID string) *errors.ServiceError {
+	secretUsage := &models.SecretUsage{
+		SecretID: secretID,
+		StackID:  stackID,
+	}
+
+	_, err := s.secretUsageStore.Create(ctx, secretUsage)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *secretService) GetSecretUsageBySecretIDAndStackID(ctx context.Context, secretID, stackID string) (*models.SecretUsage, *errors.ServiceError) {
+	secretUsage, err := s.secretUsageStore.GetBySecretIDAndStackID(ctx, secretID, stackID)
+	if err != nil {
+		return nil, err
+	}
+	return secretUsage, nil
+}
+
+func (s *secretService) GetSecretUsageByStackID(ctx context.Context, stackID string) ([]*models.SecretUsage, *errors.ServiceError) {
+	secretUsages, err := s.secretUsageStore.GetByStackID(ctx, stackID)
+	if err != nil {
+		return nil, err
+	}
+	return secretUsages, nil
+}
+
+func (s *secretService) DeleteSecretUsage(ctx context.Context, secretID, stackID string) *errors.ServiceError {
+	if err := s.secretUsageStore.Delete(ctx, secretID, stackID); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *secretService) GetByName(ctx context.Context, organisationID, name string) (*models.Secret, *errors.ServiceError) {
@@ -132,6 +201,15 @@ func (s *secretService) Update(ctx context.Context, id string, secret *models.Se
 }
 
 func (s *secretService) Delete(ctx context.Context, ID string) *errors.ServiceError {
+	usages, err := s.secretUsageStore.GetBySecretID(ctx, ID)
+	if err != nil {
+		return errors.GeneralError("failed to fetch secret usages for secret ID %s: %s", ID, err.Error())
+	}
+
+	if len(usages) > 0 {
+		return errors.BadRequest("secret with ID '%s' is in use by stacks", ID)
+	}
+
 	if err := s.secretStore.Delete(ctx, ID); err != nil {
 		return err
 	}
@@ -223,7 +301,7 @@ func (s *secretService) generateDataHash(data map[string]string) string {
 	return base64.StdEncoding.EncodeToString(hash[:])
 }
 
-func (s *secretService) ValidateDockerRegistrySecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError {
+func (s *secretService) ValidateImageRegistrySecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError {
 	requiredKeys := []string{"registry", "username", "password"}
 	hasKeys, missingKeys, err := s.ValidateSecretHasKeys(ctx, secretID, requiredKeys)
 

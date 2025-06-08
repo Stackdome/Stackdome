@@ -6,35 +6,43 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/samber/lo"
 )
 
 const (
-	StackIDLabel = "stack.stackdome.io/id"
+	StackIDLabel       = "stack.stackdome.io/id"
+	StackIDAnnotation  = "stack.stackdome.io/id"
+	StackRevisionLabel = "stack.stackdome.io/revision"
 )
 
 type StackState string
 
 const (
-	StackReady   StackState = "Ready"
-	StackPending StackState = "Pending"
-	StackFailed  StackState = "Failed"
+	StackReady    StackState = "Ready"
+	StackDeleting StackState = "Deleting"
+	StackPending  StackState = "Pending"
+	StackFailed   StackState = "Failed"
+	StackError    StackState = "Error"
 )
 
 type Stack struct {
-	ID             string      `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
-	OrganisationID string      `gorm:"not null"`
-	UserID         string      `gorm:"not null"`
-	Name           string      `gorm:"not null;<-:create"`
-	NamespaceID    string      `gorm:"not null"`
-	Namespace      string      `gorm:"unique;not null;<-:create"`
-	Labels         Labels      `gorm:"type:jsonb"`
-	Annotations    Annotations `gorm:"type:jsonb"`
-	Version        int
-	StackResources []*StackResource `gorm:"foreignKey:StackID"`
-	Volumes        []*Volume        `gorm:"-"`
-	Status         *StackStatus     `gorm:"type:jsonb"`
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID                string      `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
+	OrganisationID    string      `gorm:"not null"`
+	ClusterID         string      `gorm:"not null"`
+	UserID            string      `gorm:"not null"`
+	Name              string      `gorm:"not null;<-:create"`
+	NamespaceID       string      `gorm:"not null"`
+	Namespace         string      `gorm:"unique;not null;<-:create"`
+	Labels            Labels      `gorm:"type:jsonb"`
+	Annotations       Annotations `gorm:"type:jsonb"`
+	CrRevision        string
+	StackResources    []*StackResource `gorm:"foreignKey:StackID"`
+	Volumes           []*Volume        `gorm:"-"`
+	Status            *StackStatus     `gorm:"type:jsonb"`
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	DeletionTimestamp *time.Time `gorm:"default:NULL"`
 }
 
 // hasImageBuilds
@@ -48,10 +56,20 @@ func (s *Stack) HasImageBuilds() bool {
 }
 
 type StackStatus struct {
-	State                  StackState  `json:"state"`
-	ObservedVersion        int64       `json:"observed_version"`
-	Conditions             []Condition `json:"conditions"`
-	LastObservedStatusHash string      `json:"last_observed_status_hash,omitempty"`
+	State                  StackState     `json:"state"`
+	Message                string         `json:"message"`
+	ObservedCrRevision     string         `json:"observed_cr_revision"`
+	Conditions             []Condition    `json:"conditions"`
+	LastObservedStatusHash string         `json:"last_observed_status_hash"`
+	LastValidationRun      *ValidationRun `json:"last_validation_run"`
+}
+
+type ValidationRun struct {
+	// List of validation types that were run.
+	ValidationTypes []string `json:"validation_types"`
+	StackRevision   string   `json:"stack_revision"`
+	Passed          bool     `json:"passed"`
+	Message         string   `json:"message"`
 }
 
 func (ws *StackStatus) Scan(value interface{}) error {
@@ -81,6 +99,39 @@ func (ws *Stack) VolumesMap() map[string]*Volume {
 		volumeMap[ws.Volumes[i].Name] = ws.Volumes[i]
 	}
 	return volumeMap
+}
+
+func (ws *Stack) SecretsInUse() []string {
+	res := make([]string, 0)
+	for _, resource := range ws.StackResources {
+		if resource.HasGitCredentials() {
+			if resource.BuildConfig != nil && resource.BuildConfig.SourceContext.Git != nil &&
+				resource.BuildConfig.SourceContext.Git.GitSecretRef != nil {
+				res = append(res, resource.BuildConfig.SourceContext.Git.GitSecretRef.SecretID)
+			}
+		}
+
+		if resource.HasImagePullSecrets() {
+			if resource.ImageConfig != nil && resource.ImageConfig.PullSecretRef != nil {
+				res = append(res, resource.ImageConfig.PullSecretRef.SecretID)
+			}
+		}
+
+		if resource.HasImagePushSecrets() {
+			if resource.BuildConfig != nil && resource.BuildConfig.RegistrySecretRef != nil {
+				res = append(res, resource.BuildConfig.RegistrySecretRef.SecretID)
+			}
+		}
+
+		if resource.HasEnvVarsFromSecret() {
+			if resource.ExecutionConfig != nil && len(resource.ExecutionConfig.EnvVarsFromSecrets) > 0 {
+				for _, secretRef := range resource.ExecutionConfig.EnvVarsFromSecrets {
+					res = append(res, secretRef.SecretID)
+				}
+			}
+		}
+	}
+	return lo.Uniq(res)
 }
 
 func (ws *Stack) HasVolumeMounts() bool {
@@ -143,4 +194,66 @@ func (s *Stack) HasExposedPorts() bool {
 		}
 	}
 	return false
+}
+
+func (s *Stack) HasImagePullSecrets() bool {
+	for i := range s.StackResources {
+		if s.StackResources[i].HasImagePullSecrets() {
+			return true
+		}
+	}
+	return false
+}
+
+// HasImagePushSecrets checks if any stack resource has an image push secret configured.
+func (s *Stack) HasImagePushSecrets() bool {
+	for i := range s.StackResources {
+		if s.StackResources[i].HasImagePushSecrets() {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Stack) HasGitCredentials() bool {
+	for i := range s.StackResources {
+		if s.StackResources[i].HasGitCredentials() {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Stack) GetGitCredentialsMap() map[string]string {
+	gitCredentialsMap := make(map[string]string)
+	for i := range s.StackResources {
+		if s.StackResources[i].BuildConfig != nil &&
+			s.StackResources[i].BuildConfig.SourceContext.Git != nil &&
+			s.StackResources[i].BuildConfig.SourceContext.Git.GitSecretRef != nil {
+			gitCredentialsMap[s.StackResources[i].BuildConfig.SourceContext.Git.RepoURL] = s.StackResources[i].BuildConfig.SourceContext.Git.GitSecretRef.SecretID
+		}
+	}
+	return gitCredentialsMap
+}
+
+// returns a map of image names to their pull secret IDs
+func (s *Stack) GetImagePullSecretIDMap() map[string]string {
+	imagePullSecretMap := make(map[string]string)
+	for i := range s.StackResources {
+		if s.StackResources[i].ImageConfig != nil && s.StackResources[i].ImageConfig.PullSecretRef != nil {
+			imagePullSecretMap[s.StackResources[i].ImageConfig.Image] = s.StackResources[i].ImageConfig.PullSecretRef.SecretID
+		}
+	}
+	return imagePullSecretMap
+}
+
+// GetImagePushSecretIDMap returns a map of image repository URLs to their push secret IDs.
+func (s *Stack) GetImagePushSecretIDMap() map[string]string {
+	imagePushSecretMap := make(map[string]string)
+	for i := range s.StackResources {
+		if s.StackResources[i].BuildConfig != nil && s.StackResources[i].BuildConfig.RegistrySecretRef != nil {
+			imagePushSecretMap[s.StackResources[i].BuildConfig.ImageRepositoryUrl] = s.StackResources[i].BuildConfig.RegistrySecretRef.SecretID
+		}
+	}
+	return imagePushSecretMap
 }

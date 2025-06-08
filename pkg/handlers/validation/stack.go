@@ -13,7 +13,6 @@ func ValidateStack(in *openapi.Stack) Validate {
 		validateLabels(&in.Labels),
 		validateAnnotations(&in.Annotations),
 		validateNotEmpty(in, "Name", "name"),
-		validateNotEmpty(in, "WorkspaceName", "workspace_name"),
 		validateEmpty(in, "Namespace", "namespace"),
 		validateStackSpec(in),
 	})
@@ -35,9 +34,6 @@ func validateStackSpec(in *openapi.Stack) Validate {
 
 func validateStackResource(in *openapi.StackResource, stack *openapi.Stack) *errors.ServiceError {
 	if err := validateEmpty(in, "Id", "id")(); err != nil {
-		return err
-	}
-	if err := validateEmpty(in, "Version", "version")(); err != nil {
 		return err
 	}
 	if err := validateNotEmpty(in, "Name", "name")(); err != nil {

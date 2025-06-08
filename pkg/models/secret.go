@@ -4,7 +4,16 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
+)
+
+const (
+	RegistrySecretKey = "registry"
+	UsernameSecretKey = "username"
+	PasswordSecretKey = "password"
+	SshSecretKey      = "ssh_private_key"
+	TokenSecretKey    = "token"
 )
 
 type SecretType string
@@ -16,6 +25,11 @@ const (
 	SecretTypeUsernamePassword SecretType = "UsernamePassword"
 	SecretTypeToken            SecretType = "Token"
 	SecretTypeSSHKey           SecretType = "SSHKey"
+)
+
+const (
+	SecretDataHashAnnotation = "stackdome.io/secret-data-hash"
+	SecretIDAnnotation       = "stackdome.io/secret-id"
 )
 
 type SecretKeys []string
@@ -50,8 +64,24 @@ type Secret struct {
 	Data map[string]string `gorm:"-" json:"data,omitempty"`
 }
 
-// SecretReference points to a secret and optionally maps specific keys
+// SecretReference points to a secret
 type SecretReference struct {
-	SecretID    string            `json:"secret_id"`              // UUID of the secret
-	KeyMappings map[string]string `json:"key_mappings,omitempty"` // secret_key in db -> target_key mapping in k8s.
+	SecretID string `json:"secret_id"` // UUID of the secret
+}
+
+func (s *Secret) ClusterSecretName() string {
+	switch s.Type {
+	case SecretTypeDockerRegistry:
+		return fmt.Sprintf("docker-registry-%s", s.Name)
+	case SecretTypeGitCredentials:
+		return fmt.Sprintf("git-credentials-%s", s.Name)
+	case SecretTypeUsernamePassword:
+		return fmt.Sprintf("username-password-%s", s.Name)
+	case SecretTypeToken:
+		return fmt.Sprintf("token-%s", s.Name)
+	case SecretTypeSSHKey:
+		return fmt.Sprintf("ssh-key-%s", s.Name)
+	default:
+		return fmt.Sprintf("generic-secret-%s", s.Name)
+	}
 }

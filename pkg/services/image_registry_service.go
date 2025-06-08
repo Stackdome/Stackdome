@@ -69,10 +69,7 @@ func (s *clusterImageRegistryService) ListByClusterID(ctx context.Context, clust
 }
 
 func (s *clusterImageRegistryService) PopulateInClusterRegistryUrlsForStack(ctx context.Context, stack *models.Stack) *errors.ServiceError {
-	if !stack.HasImageBuilds() {
-		return nil // No image builds, no need to populate registry URLs
-	}
-	if stack.UsesInClusterRegistry() {
+	if !stack.UsesInClusterRegistry() {
 		return nil
 	}
 	clusterRegistry, err := s.GetForOrg(ctx, stack.OrganisationID)

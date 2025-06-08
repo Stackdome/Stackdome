@@ -8,7 +8,7 @@ Name | Type | Description | Notes
 **InternalServiceName** | Pointer to **string** |  | [optional] 
 **LastRestartRequestProcessedAt** | Pointer to **time.Time** |  | [optional] 
 **State** | Pointer to **string** |  | [optional] 
-**ObservedVersion** | Pointer to **int32** |  | [optional] 
+**ObservedRevision** | Pointer to **string** |  | [optional] 
 **Conditions** | Pointer to [**[]Condition**](Condition.md) |  | [optional] 
 
 ## Methods
@@ -130,30 +130,30 @@ SetState sets State field to given value.
 
 HasState returns a boolean if a field has been set.
 
-### GetObservedVersion
+### GetObservedRevision
 
-`func (o *StackResourceStatus) GetObservedVersion() int32`
+`func (o *StackResourceStatus) GetObservedRevision() string`
 
-GetObservedVersion returns the ObservedVersion field if non-nil, zero value otherwise.
+GetObservedRevision returns the ObservedRevision field if non-nil, zero value otherwise.
 
-### GetObservedVersionOk
+### GetObservedRevisionOk
 
-`func (o *StackResourceStatus) GetObservedVersionOk() (*int32, bool)`
+`func (o *StackResourceStatus) GetObservedRevisionOk() (*string, bool)`
 
-GetObservedVersionOk returns a tuple with the ObservedVersion field if it's non-nil, zero value otherwise
+GetObservedRevisionOk returns a tuple with the ObservedRevision field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetObservedVersion
+### SetObservedRevision
 
-`func (o *StackResourceStatus) SetObservedVersion(v int32)`
+`func (o *StackResourceStatus) SetObservedRevision(v string)`
 
-SetObservedVersion sets ObservedVersion field to given value.
+SetObservedRevision sets ObservedRevision field to given value.
 
-### HasObservedVersion
+### HasObservedRevision
 
-`func (o *StackResourceStatus) HasObservedVersion() bool`
+`func (o *StackResourceStatus) HasObservedRevision() bool`
 
-HasObservedVersion returns a boolean if a field has been set.
+HasObservedRevision returns a boolean if a field has been set.
 
 ### GetConditions
 

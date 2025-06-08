@@ -7,6 +7,7 @@ toolchain go1.24.3
 require (
 	github.com/casbin/casbin/v2 v2.103.0
 	github.com/casbin/gorm-adapter/v3 v3.32.0
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/getkin/kin-openapi v0.126.0
 	github.com/go-git/go-git/v5 v5.16.0
 	github.com/go-gormigrate/gormigrate/v2 v2.1.2
@@ -37,7 +38,7 @@ require (
 	k8s.io/metrics v0.33.1
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/controller-runtime v0.20.4
-	stackdome.io/cluster-agent v0.4.3-alpha
+	stackdome.io/cluster-agent v0.4.5-alpha
 )
 
 require (
@@ -55,7 +56,6 @@ require (
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/docker/cli v28.1.1+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
@@ -168,4 +168,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace stackdome.io/cluster-agent => github.com/ashishmax31/cluster-agent v0.4.3-alpha
+replace stackdome.io/cluster-agent => github.com/ashishmax31/cluster-agent v0.4.5-alpha

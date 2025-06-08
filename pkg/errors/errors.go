@@ -122,6 +122,9 @@ func (e *ServiceError) Error() string {
 }
 
 func (e *ServiceError) AsError() error {
+	if e == nil {
+		return nil
+	}
 	return fmt.Errorf(e.Error())
 }
 

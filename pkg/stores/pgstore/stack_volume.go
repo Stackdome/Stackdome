@@ -109,6 +109,9 @@ func (s *stackVolumeStore) ListVolumesByStackID(ctx context.Context, stackID str
 	if err != nil {
 		return nil, errors.GeneralError("failed to list stack_volumes: %s", err.Error())
 	}
+	if len(svs) == 0 {
+		return nil, nil
+	}
 	volumeIDs := make([]string, len(svs))
 	for i, sv := range svs {
 		volumeIDs[i] = sv.VolumeID

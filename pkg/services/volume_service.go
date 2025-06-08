@@ -26,6 +26,8 @@ type VolumeService interface {
 	UpdateRemoteSourceRevision(ctx context.Context, ID string, revision models.RemoteDirSource) (*models.Volume, *errors.ServiceError)
 	InjectClusterResourceService(volumeClusterService clusterresource.VolumeClusterResourceService)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
+	InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError
+	InternalDeleteVolumesUsedByStackFromDB(ctx context.Context, stackID string) *errors.ServiceError
 	DeleteWithTx(ctx context.Context, ID string) *errors.ServiceError
 	ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError)
 	UpdateVolumeInUseByStackWithTx(ctx context.Context, volumeID string, stackID string) *errors.ServiceError
@@ -321,6 +323,40 @@ func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 	if deleteErr != nil {
 		s.logger.Errorf("failed to delete volume: %v", deleteErr)
 		return deleteErr
+	}
+	return nil
+}
+
+func (s *volumeService) InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError {
+	_, err := s.volumeStore.GetByID(ctx, ID)
+	if err != nil {
+		return err
+	}
+	volumeMounts, err := s.volumeMountStore.ListBySourceVolumeID(ctx, ID)
+	if err != nil {
+		return err
+	}
+	if len(volumeMounts) > 0 {
+		return errors.BadRequest("cannot delete volume with mounts")
+	}
+	if err := s.volumeStore.Delete(ctx, ID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *volumeService) InternalDeleteVolumesUsedByStackFromDB(ctx context.Context, stackID string) *errors.ServiceError {
+	volumesUsedByStack, err := s.ListVolumesUsedByStack(ctx, stackID)
+	if err != nil {
+		return err
+	}
+	for _, volume := range volumesUsedByStack {
+		if err := s.InternalDeleteFromDB(ctx, volume.ID); err != nil {
+			if err.Is404() {
+				continue
+			}
+			return err
+		}
 	}
 	return nil
 }

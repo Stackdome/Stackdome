@@ -105,7 +105,8 @@ type VolumeBuildSource struct {
 }
 
 type GitBuildSource struct {
-	RepoURL string `json:"repo_url"`
+	RepoURL      string           `json:"repo_url"`
+	GitSecretRef *SecretReference `json:"git_secret_ref,omitempty"` // Git credentials for private repositories
 }
 
 type ImageBuildStatus struct {

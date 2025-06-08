@@ -15,6 +15,7 @@ type StackResourceStore interface {
 	GetByStackIDAndResourceName(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError)
 	Update(ctx context.Context, resourceID string, resource *models.StackResource, stack *models.Stack) (*models.StackResource, *errors.ServiceError)
 	UpdateWithTx(ctx context.Context, resourceID string, resource *models.StackResource, stack *models.Stack) (*models.StackResource, *errors.ServiceError)
+	UpdatePortsWithTx(ctx context.Context, resourceID string, resource *models.StackResource) *errors.ServiceError
 	UpdateStatus(ctx context.Context, resourceID string, status *models.StackResourceStatus) *errors.ServiceError
 	DeleteWithTx(ctx context.Context, ID string) *errors.ServiceError
 	Delete(ctx context.Context, ID string) *errors.ServiceError

@@ -97,8 +97,15 @@ func (w *stackReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 		return ctrl.Result{}, serr
 	}
 
-	if dbStack.Status == nil || stackCr.Status.StatusHash != dbStack.Status.LastObservedStatusHash {
+	if dbStack.Status == nil {
+		dbStack.Status = &models.StackStatus{}
+	}
+	currentStackState := dbStack.Status.State
+	currentStackCrState := mapStackState(stackCr.Status.Phase)
+	if stackCr.Status.StatusHash != dbStack.Status.LastObservedStatusHash || currentStackState != currentStackCrState {
+		lastValidationRun := dbStack.Status.LastValidationRun
 		dbStack.Status = mapClusterObjStatusToDBObjStatus(stackCr)
+		dbStack.Status.LastValidationRun = lastValidationRun
 		serr = w.StackService.UpdateStatus(ctx, stackID, dbStack.Status)
 		if serr != nil {
 			w.Log.Errorf("Failed to update stack '%s' status : %s", dbStack.ID, serr)
@@ -112,7 +119,7 @@ func (w *stackReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 func mapClusterObjStatusToDBObjStatus(clusterInstance *corev1alpha1.Stack) *models.StackStatus {
 	return &models.StackStatus{
 		State:                  mapStackState(clusterInstance.Status.Phase),
-		ObservedVersion:        clusterInstance.Status.ObservedStackdomeServerObjectGeneration,
+		ObservedCrRevision:     clusterInstance.Status.ObservedStackdomeServerObjectRevision,
 		Conditions:             models.ConvertConditions(clusterInstance.Status.Conditions),
 		LastObservedStatusHash: clusterInstance.Status.StatusHash,
 	}

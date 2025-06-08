@@ -54,6 +54,34 @@ func (w *stackStore) Create(ctx context.Context, spec *models.Stack) (*models.St
 	return w.GetByID(ctx, spec.ID)
 }
 
+func (w *stackStore) UpdateRevision(ctx context.Context, id string, revision string) *errors.ServiceError {
+	tx := w.sessionFactory.New(ctx)
+	if err := tx.Model(&models.Stack{}).Where("id = ?", id).UpdateColumn("cr_revision", revision).Error; err != nil {
+		return errors.GeneralError("failed to update stack revision: %s", err.Error())
+	}
+	return nil
+}
+
+func (w *stackStore) InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError) {
+	var stacks []*models.Stack
+	if err := w.sessionFactory.New(ctx).Where(query, args...).Omit(clause.Associations).Find(&stacks).Error; err != nil {
+		return nil, errors.GeneralError("failed to list stacks: %s", err.Error())
+	}
+	for _, stack := range stacks {
+		resources, err := w.stackResourceStore.GetByStackID(ctx, stack.ID)
+		if err != nil {
+			return nil, errors.GeneralError("failed to get stack resources: %v", err)
+		}
+		stack.StackResources = resources
+		stackVolumes, err := w.stackVolumeStore.ListVolumesByStackID(ctx, stack.ID)
+		if err != nil {
+			return nil, errors.GeneralError("failed to get stack volumes: %v", err)
+		}
+		stack.Volumes = stackVolumes
+	}
+	return stacks, nil
+}
+
 func (w *stackStore) CreateWithTx(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
 	tx := db.TxFromContext(ctx)
 	if tx == nil {
@@ -197,6 +225,18 @@ func (w *stackStore) Update(ctx context.Context, id string, spec *models.Stack) 
 		}
 	}
 	tx.Commit()
+	return w.GetByID(ctx, id)
+}
+
+func (w *stackStore) UpdateForDelete(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
+	_, err := w.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := w.sessionFactory.New(ctx).Model(
+		&models.Stack{}).Omit(clause.Associations).Where("id = ?", id).Updates(spec).Error; err != nil {
+		return nil, errors.GeneralError("failed to update stack: %s", err.Error())
+	}
 	return w.GetByID(ctx, id)
 }
 

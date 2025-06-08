@@ -69,6 +69,10 @@ type DBClusterService interface {
 	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
 }
 
+type DBSecretService interface {
+	InternalGetByID(ctx context.Context, secretID string) (*models.Secret, *errors.ServiceError)
+}
+
 type DBUserService interface {
 	Get(ctx context.Context, userID string) (*models.User, *errors.ServiceError)
 }

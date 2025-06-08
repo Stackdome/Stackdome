@@ -1,0 +1,80 @@
+package stack
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	corev1 "k8s.io/api/core/v1"
+	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+type namespaceReconciler struct {
+	clusterManager   clustermanager.ClusterManager
+	namespaceService namespaceService
+}
+
+type NamespaceReconcilerSpec struct {
+	ClusterManager   clustermanager.ClusterManager
+	NamespaceService namespaceService
+}
+
+func NewNamespaceReconciler(spec NamespaceReconcilerSpec) *namespaceReconciler {
+	return &namespaceReconciler{
+		clusterManager:   spec.ClusterManager,
+		namespaceService: spec.NamespaceService,
+	}
+}
+
+func (r *namespaceReconciler) Reconcile(ctx context.Context, stack *models.Stack) (subReconcilerResult, error) {
+	clusterClient, cerr := r.clusterManager.GetClient(stack.ClusterID)
+	if cerr != nil {
+		return resultNil, fmt.Errorf("failed to get cluster client for cluster %s: %w", stack.ClusterID, cerr)
+	}
+
+	namespace, err := r.namespaceService.Get(ctx, stack.NamespaceID)
+	if err != nil {
+		return resultNil, err
+	}
+
+	desiredNamespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        namespace.Name,
+			Labels:      labelsToMap(namespace.Labels),
+			Annotations: annotationsToMap(namespace.Annotations),
+		},
+	}
+
+	existingNamespace := &corev1.Namespace{}
+	if err := clusterClient.Get(ctx, client.ObjectKey{Name: namespace.Name}, existingNamespace); err != nil {
+		if k8sapierrors.IsNotFound(err) {
+			return resultNil, clusterClient.Create(ctx, desiredNamespace)
+		}
+		return resultNil, fmt.Errorf("failed to get namespace %s: %w", namespace.Name, err)
+	}
+
+	return resultNil, nil
+}
+
+func (r *namespaceReconciler) Name() string {
+	return "namespace-reconciler"
+}
+
+func labelsToMap(labels models.Labels) map[string]string {
+	m := make(map[string]string)
+	for _, l := range labels {
+		m[l.Key] = l.Value
+	}
+	return m
+}
+
+func annotationsToMap(annotations models.Annotations) map[string]string {
+	m := make(map[string]string)
+	for _, a := range annotations {
+		m[a.Key] = a.Value
+	}
+	return m
+}
