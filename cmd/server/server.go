@@ -11,6 +11,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/cmd/environment"
 	"github.com/ashishmax31/stackdome-api-server/config/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
+	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/golang/glog"
 	gorillahandlers "github.com/gorilla/handlers"
 )
@@ -59,6 +60,7 @@ func NewAPIServer(env environment.EnvImpl) Server {
 	)(mainHandler)
 
 	mainHandler = removeTrailingSlash(mainHandler)
+	mainHandler = injectLoggerMiddleware(mainHandler, env.Environment().Logger)
 
 	s.httpServer = &http.Server{
 		Addr:        env.Environment().Config.Server.BindAddress,
@@ -67,6 +69,16 @@ func NewAPIServer(env environment.EnvImpl) Server {
 	}
 
 	return s
+}
+
+func injectLoggerMiddleware(next http.Handler, logger applogger.Logger) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := applogger.AddLoggerToContext(r.Context(), logger)
+		r = r.WithContext(ctx)
+		logger.Infof("Received request: %s %s", r.Method, r.URL.Path)
+		next.ServeHTTP(w, r)
+		logger.Infof("Response sent for: %s %s", r.Method, r.URL.Path)
+	})
 }
 
 func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.EnvImpl) http.Handler {

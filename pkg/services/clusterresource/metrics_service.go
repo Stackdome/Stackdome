@@ -124,7 +124,7 @@ func (s *clusterMetricsService) GetMetricsForResource(ctx context.Context, orgID
 	k8sClient, cerr := clients.NewKubernetesClient(clients.KubernetesClientSpec{
 		RestConfig:              restConfig,
 		ControllerRuntimeClient: clusterClient,
-		Logger:                  s.logger,
+		Logger:                  logger.NewLoggerWithPrefix(ctx, "kubernetes-client"),
 	})
 	if cerr != nil {
 		return nil, newError("failed to create Kubernetes client", cerr)

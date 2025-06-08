@@ -72,7 +72,7 @@ func (w *stackReconciler) Name() string {
 
 // Reconcile reconciles the workspace storage resource
 func (w *stackReconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
-	w.Log.Infof("Reconciling stack %s", req.NamespacedName)
+	w.Log.Infof("Reconciling stack %v", req.NamespacedName)
 	stackCr := &corev1alpha1.Stack{}
 	if err := w.Client.Get(ctx, req.NamespacedName, stackCr); err != nil {
 		if errors.IsNotFound(err) {
