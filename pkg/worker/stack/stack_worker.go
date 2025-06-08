@@ -44,6 +44,7 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 		subReconcilers: []subReconciler{
 			NewDeprovisionReconciler(DeprovisionReconcilerSpec{
 				StackService:     spec.StackService,
+				SecretService:    spec.SecretService,
 				NamespaceService: spec.NamespaceService,
 				Logger:           logger.NewLoggerWithPrefix(context.Background(), "stack-deprovision-reconciler"),
 				VolumeService:    spec.VolumeService,

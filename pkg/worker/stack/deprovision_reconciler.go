@@ -22,6 +22,7 @@ const (
 type deprovisionReconciler struct {
 	stackService     stackService
 	volumeService    volumeService
+	secretService    secretService
 	namespaceService namespaceService
 	logger           logger.Logger
 	clusterManager   clustermanager.ClusterManager
@@ -30,6 +31,7 @@ type deprovisionReconciler struct {
 type DeprovisionReconcilerSpec struct {
 	StackService     stackService
 	NamespaceService namespaceService
+	SecretService    secretService
 	Logger           logger.Logger
 	VolumeService    volumeService
 	ClusterManager   clustermanager.ClusterManager
@@ -38,6 +40,7 @@ type DeprovisionReconcilerSpec struct {
 func NewDeprovisionReconciler(spec DeprovisionReconcilerSpec) *deprovisionReconciler {
 	return &deprovisionReconciler{
 		stackService:     spec.StackService,
+		secretService:    spec.SecretService,
 		namespaceService: spec.NamespaceService,
 		logger:           spec.Logger,
 		volumeService:    spec.VolumeService,
@@ -118,6 +121,32 @@ func (r *deprovisionReconciler) deleteClusterResources(ctx context.Context, stac
 			return fmt.Errorf("failed to delete volume CR '%s' in namespace '%s': %w", volume.Name, stack.Namespace, err)
 		}
 	}
+
+	// delete secrets
+	for _, secretID := range stack.SecretsInUse() {
+		secret, err := r.secretService.InternalGetByID(ctx, secretID)
+		if err != nil {
+			if err.Is404() {
+				continue // secret already deleted
+			}
+			return err.AsError()
+		}
+		secretObj := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secret.ClusterSecretName(),
+				Namespace: stack.Namespace,
+			},
+		}
+		r.logger.Infof("deleting secret '%s' in namespace '%s'", secretObj.Name, stack.Namespace)
+		if err := clusterClient.Delete(
+			ctx, secretObj,
+			&client.DeleteOptions{
+				PropagationPolicy: ptr.To(metav1.DeletePropagationForeground),
+			}); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("failed to delete secret '%s' in namespace '%s': %w", secret.Name, stack.Namespace, err)
+		}
+	}
+
 	// delete namespace
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
