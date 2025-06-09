@@ -89,12 +89,13 @@ const api = axios.create({
   },
 });
 
-// Add interceptor to include Authorization header if token exists
+// Add interceptor to include Authorization header and cookie if token exists
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('authToken');
   if (token) {
     config.headers = config.headers || {};
     config.headers['Authorization'] = `Bearer ${token}`;
+    document.cookie = `auth_token=${token}; path=/; secure; samesite=strict`;
   }
   return config;
 });

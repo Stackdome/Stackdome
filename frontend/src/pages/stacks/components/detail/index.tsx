@@ -1,8 +1,8 @@
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Play, Maximize2, Minimize2, Terminal, Square, Rocket, Pencil, Check, Loader2 } from "lucide-react";
+import { Play, Square, Rocket, Pencil, Check, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +10,7 @@ import StackResourcesForm from "@/pages/stacks/components/shared/stack-resources
 import StackVolumesForm from "@/pages/stacks/components/shared/stack-volumes-form";
 import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resources-detail";
 import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
+import { StackLogsTab } from "@/pages/stacks/components/logging";
 import type { FormStackResourceData  , FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById } from "@/api/stacks";
@@ -33,10 +34,7 @@ function mapVolumeToFormData(volume: Volume): VolumeFormData {
 export default function StackDetailPage() {
   const { id } = useParams();
   const { stacks } = useStacks();
-  const [searchParams] = useSearchParams();
-  const selectedService = searchParams.get("service");
   const [isRunning, setIsRunning] = useState(true);
-  const [isLogExpanded, setIsLogExpanded] = useState(false);
   const [fetchedStack, setFetchedStack] = useState<Stack | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,19 +122,6 @@ export default function StackDetailPage() {
   const resourcesForForm: FormStackResourceData[] = (stackToShow?.spec.stack_resources || []).map(mapStackResourceToFormData);
   const volumesForForm = (stackToShow.spec?.volumes || []).map(mapVolumeToFormData);
 
-  // Mock logs for the demo
-  const logs = [
-    { time: "10:15:32", service: "frontend", message: "Server started on port 3000" },
-    { time: "10:15:33", service: "backend", message: "Connected to database" },
-    { time: "10:15:35", service: "database", message: "Initializing database schema" },
-    { time: "10:15:40", service: "frontend", message: "Proxying requests to backend" },
-    { time: "10:15:45", service: "backend", message: "REST API ready on /api/v1" },
-    { time: "10:16:00", service: "database", message: "Schema initialization complete" },
-    { time: "10:16:10", service: "frontend", message: "Rendering application" },
-    { time: "10:16:15", service: "backend", message: "Processing request: GET /api/v1/users" },
-    { time: "10:16:16", service: "backend", message: "Request completed: 200 OK (10ms)" },
-  ];
-
   // Mock metrics data
   const metrics = {
     cpu: "0.5%",
@@ -145,15 +130,8 @@ export default function StackDetailPage() {
     network: "1.2 Mbps",
   };
 
-  // Filter logs by selected service if applicable
-  const filteredLogs = selectedService ? logs.filter((log) => log.service === selectedService) : logs;
-
   const toggleRunning = () => {
     setIsRunning(!isRunning);
-  };
-
-  const toggleLogExpanded = () => {
-    setIsLogExpanded(!isLogExpanded);
   };
 
   return (
@@ -297,73 +275,15 @@ export default function StackDetailPage() {
 
         {/* Logs Tab */}
         <TabsContent value="logs">
-          <div className={isLogExpanded ? "fixed inset-0 bg-white z-50 p-6" : ""}>
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-lg font-semibold">
-                <Terminal className="inline-block mr-2 h-5 w-5" />
-                {selectedService ? `${selectedService} Logs` : "Stack Logs"}
-              </h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleLogExpanded}
-              >
-                {isLogExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-              </Button>
-            </div>
-            {/* Loading/blank/error state example: */}
-            {logs.length === 0 ? (
-              <div className="text-center text-muted-foreground py-12">No logs available.</div>
-            ) : (
-              <Tabs defaultValue="all">
-                <TabsList className="w-full justify-start">
-                  <TabsTrigger value="all" className="flex-1">All Logs</TabsTrigger>
-                  <TabsTrigger value="error" className="flex-1">Errors</TabsTrigger>
-                  <TabsTrigger value="info" className="flex-1">Info</TabsTrigger>
-                </TabsList>
-                <TabsContent value="all" className="mt-2">
-                  <Card>
-                    <CardContent className="p-0">
-                      <div className={`font-mono text-xs ${isLogExpanded ? "h-[calc(100vh-200px)]" : "h-64"} overflow-auto bg-gray-900 text-gray-100 p-4`}>
-                        {filteredLogs.map((log, index) => (
-                          <div key={index} className="mb-1">
-                            <span className="text-gray-400">[{log.time}]</span>{" "}
-                            <span className="text-blue-400">[{log.service}]</span>{" "}
-                            <span>{log.message}</span>
-                          </div>
-                        ))}
-                        <div className="h-4 w-2 bg-white animate-pulse inline-block"></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                <TabsContent value="error" className="mt-2">
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-muted-foreground text-center py-8">
-                        No errors found
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                <TabsContent value="info" className="mt-2">
-                  <Card>
-                    <CardContent className="p-0">
-                      <div className={`font-mono text-xs ${isLogExpanded ? "h-[calc(100vh-200px)]" : "h-64"} overflow-auto bg-gray-900 text-gray-100 p-4`}>
-                        {filteredLogs.filter(log => !log.message.includes("error")).map((log, index) => (
-                          <div key={index} className="mb-1">
-                            <span className="text-gray-400">[{log.time}]</span>{" "}
-                            <span className="text-blue-400">[{log.service}]</span>{" "}
-                            <span>{log.message}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            )}
-          </div>
+          {stackToShow.id ? (
+            <StackLogsTab
+              stackId={stackToShow.id}
+              organizationId={stackToShow.organisation_id || getCurrentOrganizationId() || ''}
+              resources={stackToShow.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
+            />
+          ) : (
+            <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
+          )}
         </TabsContent>
 
         {/* Metrics Tab */}
