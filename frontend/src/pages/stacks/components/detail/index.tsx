@@ -279,6 +279,7 @@ export default function StackDetailPage() {
             <StackLogsTab
               stackId={stackToShow.id}
               organizationId={stackToShow.organisation_id || getCurrentOrganizationId() || ''}
+              resources={stackToShow.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
             />
           ) : (
             <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
