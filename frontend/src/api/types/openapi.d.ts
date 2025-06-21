@@ -1097,6 +1097,297 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{org_id}/secrets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all secrets for an organization */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    org_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SecretList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Create a new secret */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    org_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Secret"];
+                };
+            };
+            responses: {
+                /** @description Secret created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Secret"];
+                    };
+                };
+                /** @description Invalid request payload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/secrets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a specific secret object */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    org_id: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Secret"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Secret not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        /** Update a secret object */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    org_id: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Secret"];
+                };
+            };
+            responses: {
+                /** @description Secret updated successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Secret"];
+                    };
+                };
+                /** @description Invalid request payload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Secret not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        /** Delete a secret object */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    org_id: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Secret deleted successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Secret not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries": {
         parameters: {
             query?: never;
@@ -2264,12 +2555,14 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Stack deleted successfully */
-                204: {
+                /** @description Stack deletion initiated successfully */
+                202: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Stack"];
+                    };
                 };
                 /** @description Unauthorized */
                 401: {
@@ -2327,6 +2620,72 @@ export interface paths {
                     };
                     content: {
                         "text/event-stream": string;
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/stacks/{id}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get metrics for a Stack
+         * @description Returns metrics for a stack. If `stream=true` is passed, the server responds using Server-Sent Events (SSE).
+         *
+         */
+        get: {
+            parameters: {
+                query?: {
+                    stream?: boolean;
+                };
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description - Returns a `ResourceMetrics` object when `stream=false`.
+                 *     - Returns a stream of metrics via Server-Sent Events (SSE) when `stream=true`.
+                 *      */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": string;
+                        "application/json": components["schemas"]["ResourceMetrics"];
                     };
                 };
                 /** @description Unauthorized */
@@ -2615,6 +2974,74 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
+                        "text/event-stream": string;
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get metrics for a StackResource
+         * @description Returns metrics for a StackResource. If `stream=true` is passed, the server responds using Server-Sent Events (SSE).
+         *
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Whether to stream metrics via Server-Sent Events (SSE) */
+                    stream?: boolean;
+                };
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The ID of the stack */
+                    stack_id: components["parameters"]["stack_id"];
+                    resource_name: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description - Returns a `ResourceMetrics` object when `stream=false`.
+                 *     - Returns a stream of metrics via Server-Sent Events (SSE) when `stream=true`.
+                 *      */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ResourceMetrics"];
                         "text/event-stream": string;
                     };
                 };
@@ -3049,7 +3476,7 @@ export interface components {
             readonly namespace?: string;
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
-            readonly version?: number;
+            readonly revision?: string;
             spec: components["schemas"]["StackSpec"];
             readonly status?: components["schemas"]["StackStatus"];
             /** Format: date-time */
@@ -3067,7 +3494,8 @@ export interface components {
         };
         StackStatus: {
             state?: string;
-            observed_version?: number;
+            message?: string;
+            observed_revision?: string;
             conditions?: components["schemas"]["Condition"][];
         };
         StackResource: {
@@ -3076,7 +3504,7 @@ export interface components {
             name: string;
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
-            readonly version?: number;
+            readonly revision?: string;
             build_spec?: components["schemas"]["StackResourceBuildSpec"];
             image_spec?: components["schemas"]["ImageSpec"];
             init_spec?: components["schemas"]["InitSpec"];
@@ -3107,6 +3535,24 @@ export interface components {
             /** Format: date-time */
             updated_at?: string;
         };
+        ResourceMetrics: {
+            assigned_nodes?: string[];
+            /** @description CPU usage in millicores */
+            cpu_usage?: string;
+            /** @description Memory usage in bytes */
+            memory_usage?: string;
+            node_capacities?: {
+                node_name?: string;
+                /** @description CPU capacity in millicores */
+                cpu_capacity?: string;
+                /** @description Memory capacity in bytes */
+                memory_capacity?: string;
+                /** @description Storage capacity in bytes */
+                storage_capacity?: string;
+            }[];
+            /** Format: date-time */
+            timestamp?: string;
+        };
         ImageBuildList: {
             items?: components["schemas"]["ImageBuild"][];
             total?: number;
@@ -3116,6 +3562,30 @@ export interface components {
             conditions?: components["schemas"]["Condition"][];
             image_url?: string;
             build_source_revision?: string;
+        };
+        Secret: {
+            readonly id?: string;
+            name: string;
+            description?: string;
+            readonly organisation_id?: string;
+            type: components["schemas"]["SecretType"];
+            data: components["schemas"]["SecretData"][];
+            /** Format: date-time */
+            readonly created_at?: string;
+            /** Format: date-time */
+            readonly updated_at?: string;
+        };
+        SecretList: {
+            items?: components["schemas"]["Secret"][];
+            total?: number;
+        };
+        /** @enum {string} */
+        SecretType: "Generic" | "DockerRegistry" | "GitCredentials" | "UsernamePassword" | "Token" | "SSHKey";
+        SecretData: {
+            /** @description The key for the secret data */
+            key: string;
+            /** @description The value for the secret data, base64 encoded if necessary */
+            value: string;
         };
         ClusterImageRegistryList: {
             items?: components["schemas"]["ClusterImageRegistry"][];
@@ -3152,7 +3622,7 @@ export interface components {
             /** Format: date-time */
             last_restart_request_processed_at?: string;
             state?: string;
-            observed_version?: number;
+            observed_revision?: string;
             conditions?: components["schemas"]["Condition"][];
         };
         Ingress: {
@@ -3185,6 +3655,7 @@ export interface components {
             source_revision: components["schemas"]["BuildSourceRevision"];
             /** @description The image repository to push the built image to */
             image_repository: components["schemas"]["ImageRepository"];
+            registry_push_secret?: components["schemas"]["SecretRef"];
         };
         /** @description The image repository to push the built image to */
         ImageRepository: {
@@ -3198,6 +3669,7 @@ export interface components {
             };
             git_repo?: {
                 repo_url: string;
+                git_secret?: components["schemas"]["SecretRef"];
             };
         };
         BuildSourceRevision: {
@@ -3208,6 +3680,10 @@ export interface components {
         };
         ImageSpec: {
             image: string;
+            pull_secret?: components["schemas"]["SecretRef"];
+        };
+        SecretRef: {
+            secret_id: string;
         };
         InitSpec: {
             image_spec?: components["schemas"]["ImageSpec"];
@@ -3218,6 +3694,13 @@ export interface components {
             command?: string[];
             args?: string[];
             environment_variables?: components["schemas"]["EnvVar"][];
+            environment_variables_from_secret?: components["schemas"]["EnvVarFromSecret"][];
+        };
+        EnvVarFromSecret: {
+            name: string;
+            secret_ref: components["schemas"]["SecretRef"];
+            /** @description The key in the secret to use for this environment variable */
+            key: string;
         };
         EnvVar: {
             name: string;
