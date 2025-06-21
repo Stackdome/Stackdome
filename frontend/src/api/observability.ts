@@ -69,6 +69,14 @@ export async function getStackMetrics(organizationId: string, stackId: string) {
   return res.data;
 }
 
+export function buildStackMetricsStreamUrl(
+  organizationId: string,
+  stackId: string
+): string {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+  return `${baseUrl}/organizations/${organizationId}/stacks/${stackId}/metrics?stream=true`;
+}
+
 export async function getStackResourceMetrics(
   organizationId: string,
   stackId: string,
@@ -76,4 +84,13 @@ export async function getStackResourceMetrics(
 ) {
   const res = await api.get(`/organizations/${organizationId}/stacks/${stackId}/resources/${resourceId}/metrics`);
   return res.data;
+}
+
+export function buildStackResourceMetricsStreamUrl(
+  organizationId: string,
+  stackId: string,
+  resourceName: string
+): string {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+  return `${baseUrl}/organizations/${organizationId}/stacks/${stackId}/resources/${resourceName}/metrics?stream=true`;
 }

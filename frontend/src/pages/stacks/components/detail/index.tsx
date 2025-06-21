@@ -10,14 +10,14 @@ import StackResourcesForm from "@/pages/stacks/components/shared/stack-resources
 import StackVolumesForm from "@/pages/stacks/components/shared/stack-volumes-form";
 import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resources-detail";
 import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
-import { StackLogsTab } from "@/pages/stacks/components/logging";
+import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
+import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
 import type { FormStackResourceData  , FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById } from "@/api/stacks";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import type { z } from "zod";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { convertApiResourceToFormResource, convertApiVolumeToFormVolume } from "@/pages/stacks/schemas/form-schema";
 import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/schemas/api-schema";
 
@@ -121,14 +121,6 @@ export default function StackDetailPage() {
 
   const resourcesForForm: FormStackResourceData[] = (stackToShow?.spec.stack_resources || []).map(mapStackResourceToFormData);
   const volumesForForm = (stackToShow.spec?.volumes || []).map(mapVolumeToFormData);
-
-  // Mock metrics data
-  const metrics = {
-    cpu: "0.5%",
-    memory: "256MB / 1GB",
-    storage: "10GB / 20GB",
-    network: "1.2 Mbps",
-  };
 
   const toggleRunning = () => {
     setIsRunning(!isRunning);
@@ -288,44 +280,15 @@ export default function StackDetailPage() {
 
         {/* Metrics Tab */}
         <TabsContent value="metrics">
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            {["frontend", "backend", "database"].map((service) => (
-              <Card key={service} className="overflow-hidden">
-                <CardHeader className="bg-gray-50 pb-3">
-                  <div className="flex justify-between">
-                    <CardTitle className="text-sm font-medium">{service}</CardTitle>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center">
-                          <div className="h-2 w-2 rounded-full mr-1 bg-green-500"></div>
-                          <span className="text-xs">Running</span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="capitalize">Running</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">CPU:</span>
-                      <span>{metrics.cpu}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Memory:</span>
-                      <span>{metrics.memory}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Storage:</span>
-                      <span>{metrics.storage}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {stackToShow.id ? (
+            <StackMetricsTab
+              stackId={stackToShow.id}
+              organizationId={stackToShow.organisation_id || getCurrentOrganizationId() || ''}
+              resources={stackToShow.spec.stack_resources || []}
+            />
+          ) : (
+            <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
