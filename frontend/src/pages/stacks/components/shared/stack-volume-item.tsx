@@ -73,7 +73,6 @@ export default function StackVolumeItem({
         <div className="flex items-center gap-2 text-left flex-grow">
           <div className="flex flex-col flex-grow min-w-0">
             <span className="font-medium flex items-center gap-2">
-              {volume.name || `Volume ${index + 1}`}
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
                   <span className={`h-2 w-2 rounded-full ${statusColor}`}></span>
@@ -82,11 +81,12 @@ export default function StackVolumeItem({
                   <p className="capitalize">{status}</p>
                 </TooltipContent>
               </Tooltip>
+              {volume.name || `Volume ${index + 1}`}
             </span>
             <span className="text-sm text-muted-foreground truncate">
               <span className="flex items-center gap-1.5">
                 <HardDrive className="h-3.5 w-3.5" />
-                <span>Size: {volume.spec?.size || "Not specified"}</span>
+                <span>{volume.spec?.size || "Not specified"}</span>
               </span>
             </span>
             {errors._form && (

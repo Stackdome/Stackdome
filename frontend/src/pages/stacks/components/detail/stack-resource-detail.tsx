@@ -5,8 +5,10 @@ import {
 } from "@/components/ui/accordion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Box, GitBranch } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { Box, GitBranch, ExternalLink, Copy } from "lucide-react";
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 import type { z } from "zod";
 import type { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
@@ -20,6 +22,7 @@ export default function StackResourceDetail({
   resource,
   index,
 }: StackResourceDetailProps) {
+  const { toast } = useToast();
   const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
   const status = statusObj.state?.toLowerCase() || 'pending';
   let statusColor = 'bg-yellow-500';
@@ -30,6 +33,52 @@ export default function StackResourceDetail({
     statusColor = 'bg-red-500';
   }
 
+  const ensureAbsoluteUrl = (url: string): string => {
+    if (!url) return url;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // If URL starts with '//', assume it's protocol-relative
+    if (url.startsWith('//')) {
+      return `https:${url}`;
+    }
+    // If URL looks like a domain, add https://
+    if (url.includes('.') && !url.startsWith('/')) {
+      return `https://${url}`;
+    }
+    return url;
+  };
+
+  const publicUrls = (statusObj.public_ingress || [])
+    .map((ingress: { url?: string }) => ingress.url)
+    .filter((url: string | undefined): url is string => url !== undefined && url.trim() !== '')
+    .map(ensureAbsoluteUrl);
+
+  const firstPublicUrl = publicUrls[0];
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        description: "Copied to clipboard",
+      });
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      toast({
+        description: "Failed to copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getUrlForPort = (portNumber: number): string | undefined => {
+    const url = (statusObj.public_ingress || [])
+      .find((ingress: { target_port?: number; url?: string }) =>
+        ingress.target_port === portNumber
+      )?.url;
+    return url ? ensureAbsoluteUrl(url) : undefined;
+  };
+
   return (
     <AccordionItem value={String(index)} className="border-0">
       <AccordionTrigger
@@ -38,7 +87,6 @@ export default function StackResourceDetail({
         <div className="flex items-center gap-2 text-left flex-grow">
           <div className="flex flex-col flex-grow min-w-0">
             <span className="font-medium flex items-center gap-2">
-              {resource.name || `Resource ${index + 1}`}
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
                   <span className={`h-2 w-2 rounded-full ${statusColor}`}></span>
@@ -47,6 +95,25 @@ export default function StackResourceDetail({
                   <p className="capitalize">{status}</p>
                 </TooltipContent>
               </Tooltip>
+              {resource.name || `Resource ${index + 1}`}
+              {firstPublicUrl && (
+                <Tooltip delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <a
+                      href={firstPublicUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>Open URL: {firstPublicUrl}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </span>
             <span className="text-sm text-muted-foreground truncate">
               {resource.sourceType === "image" ? (
@@ -166,6 +233,69 @@ export default function StackResourceDetail({
               </div>
               <Separator className="my-4" />
 
+              {/* Ingress Section */}
+              <div>
+                <h3 className="text-lg font-medium mb-3">Ingress</h3>
+                {resource.ports && resource.ports.length > 0 ? (
+                  <div className="grid gap-3 w-full">
+                    {resource.ports.map((port, pidx) => {
+                      const portUrl = getUrlForPort(port.number);
+                      return (
+                        <div key={pidx} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-3 rounded-md bg-muted/10 border">
+                          <div className="md:col-span-2">
+                            <div className="mb-1 text-sm font-medium">URL</div>
+                            {portUrl ? (
+                              <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
+                                <button
+                                  onClick={() => window.open(portUrl, '_blank', 'noopener,noreferrer')}
+                                  className="flex-1 text-sm font-mono break-all text-blue-600 hover:text-blue-800 hover:underline text-left cursor-pointer bg-transparent border-none p-0"
+                                >
+                                  {portUrl}
+                                </button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="shrink-0 h-6 w-6 p-0"
+                                  onClick={() => copyToClipboard(portUrl)}
+                                  title="Copy URL"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="p-2 bg-muted/30 rounded-md text-sm text-muted-foreground">
+                                {port.exposed_to_public ? "Pending..." : "Not exposed"}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="mb-1 text-sm font-medium">Port</div>
+                            <div className="p-2 bg-muted/30 rounded-md">
+                              {port.number}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="mb-1 text-sm font-medium">Protocol</div>
+                            <div className="p-2 bg-muted/30 rounded-md">
+                              {port.protocol || "TCP"}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="mb-1 text-sm font-medium">Public Access</div>
+                            <div className="p-2 bg-muted/30 rounded-md">
+                              {port.exposed_to_public ? "Exposed" : "Internal Only"}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No ports configured</div>
+                )}
+              </div>
+              <Separator className="my-4" />
+
               {/* Volume Mounts Section */}
               <div>
                 <h3 className="text-lg font-medium mb-3">Volume Mounts</h3>
@@ -196,40 +326,6 @@ export default function StackResourceDetail({
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground">No volume mounts configured</div>
-                )}
-              </div>
-              <Separator className="my-4" />
-
-              {/* Ports Section */}
-              <div>
-                <h3 className="text-lg font-medium mb-3">Ports</h3>
-                {resource.ports && resource.ports.length > 0 ? (
-                  <div className="grid gap-3 max-w-3xl">
-                    {resource.ports.map((port, pidx) => (
-                      <div key={pidx} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 rounded-md bg-muted/10 border">
-                        <div>
-                          <div className="mb-1 text-sm font-medium">Port</div>
-                          <div className="p-2 bg-muted/30 rounded-md">
-                            {port.number}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="mb-1 text-sm font-medium">Protocol</div>
-                          <div className="p-2 bg-muted/30 rounded-md">
-                            {port.protocol || "TCP"}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="mb-1 text-sm font-medium">Access</div>
-                          <div className="p-2 bg-muted/30 rounded-md">
-                            {port.exposed_to_public ? "Exposed" : "Internal Only"}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">No ports configured</div>
                 )}
               </div>
             </TabsContent>
