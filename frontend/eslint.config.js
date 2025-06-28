@@ -25,6 +25,13 @@ export default tseslint.config(
       ],
       'indent': ['error', 2, { 'SwitchCase': 1 }],
       'no-trailing-spaces': ['error'],
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', {
+        varsIgnorePattern: '^_',
+        argsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+      }],
     },
   },
 )
