@@ -57,14 +57,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarGroupContent>
             <NavStacks />
-            <NavClusters />
             <NavSecrets />
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Settings</SidebarGroupLabel>
-          <SidebarGroupContent>
+            <NavClusters />
             <NavDomains />
           </SidebarGroupContent>
         </SidebarGroup>

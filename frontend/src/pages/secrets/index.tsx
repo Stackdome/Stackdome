@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Key, PlusCircle, AlertCircle, Loader2 } from "lucide-react";
+import { PlusCircle, AlertCircle, Loader2, KeyRound } from "lucide-react";
 import { useSecrets } from "./hooks/use-secrets";
 import { SecretList } from "./components/secret-list";
 import { SecretDeleteDialog } from "./components/secret-delete-dialog";
@@ -165,14 +165,14 @@ export default function SecretsPage() {
         <Card className="rounded-lg">
           <CardHeader className="pb-3">
             <CardTitle className="text-xl flex items-center gap-2">
-              <Key className="h-5 w-5" />
+              <KeyRound className="h-5 w-5" />
               Organization Secrets
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {secrets.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <Key className="h-12 w-12 mb-4 text-muted-foreground" />
+                <KeyRound className="h-12 w-12 mb-4 text-muted-foreground" />
                 <h3 className="text-xl font-medium mb-2">No secrets found</h3>
                 <p className="text-muted-foreground mb-6">Create your first secret to securely store sensitive data.</p>
                 <Button onClick={() => setShowAddDialog(true)}>

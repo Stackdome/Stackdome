@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, useLocation } from "react-router-dom"
-import { Key } from "lucide-react"
+import { KeyRound } from "lucide-react"
 
 import {
   SidebarMenu,
@@ -22,7 +22,7 @@ export function NavSecrets() {
           isActive={isSecretsActive}
         >
           <Link to="/secrets">
-            <Key />
+            <KeyRound />
             <span>Secrets</span>
           </Link>
         </SidebarMenuButton>
