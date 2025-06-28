@@ -6,6 +6,7 @@ import StackCreatePage from "@/pages/stacks/components/create"
 import StackDetailPage from "@/pages/stacks/components/detail"
 import ClustersPage from "@/pages/clusters"
 import ClusterDetailPage from "@/pages/clusters/components/detail"
+import SecretsPage from "@/pages/secrets"
 import DomainsPage from "@/pages/domains"
 import { StackProvider } from "@/pages/stacks/contexts/stack-context"
 import { logoutAndRedirect } from "@/helpers/common"
@@ -29,6 +30,7 @@ const router = createBrowserRouter(
         <Route path="/stacks/:id" element={<StackDetailPage />} />
         <Route path="/clusters" element={<ClustersPage />} />
         <Route path="/clusters/:id" element={<ClusterDetailPage />} />
+        <Route path="/secrets" element={<SecretsPage />} />
         <Route path="/domains" element={<DomainsPage />} />
       </Route>
       <Route path="/login" element={<Login />} />
