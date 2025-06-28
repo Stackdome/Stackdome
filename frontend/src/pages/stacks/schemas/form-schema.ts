@@ -145,24 +145,24 @@ type FormVolumeExtendedData = z.infer<typeof FormVolumeExtendedSchema> & {
 function convertFormResourceToApiResource(
   resource: FormStackResourceData
 ): StackResourceUpdateRequest {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const { sourceType, gitRevisionType, gitRevisionValue, status, ...rest } = resource;
-  
+
   // Clean volume_mounts to remove read-only fields (stack_resource_id and source_volume_type)
   const cleanedVolumeMounts = rest.volume_mounts?.map((volumeMount) => {
     // Remove read-only fields from volume mount
     const {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       stack_resource_id,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       source_volume_type,
       ...cleanVolumeMount
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } = volumeMount as any;
-    
+
     return cleanVolumeMount;
   });
-  
+
   return {
     ...rest,
     volume_mounts: cleanedVolumeMounts
@@ -173,7 +173,7 @@ function convertFormResourceToApiResource(
 function convertFormVolumeToApiVolume(
   volume: FormVolumeExtendedData | FormVolumeData
 ): VolumeUpdateRequest {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const { sourceType, status, ...rest } = volume as FormVolumeExtendedData;
   // Ensure needs_sync_before_use is always present and boolean
   // Ensure remote_source.current_directory_hash and path are always present and strings if remote_source exists
@@ -266,7 +266,7 @@ function convertFormStackToApiStack(
     const hasName = resource.name && resource.name.trim() !== '';
     const hasImage = resource.image_spec?.image && resource.image_spec.image.trim() !== '';
     const hasBuildSpec = resource.build_spec?.source_revision;
-    
+
     return hasName && (hasImage || hasBuildSpec);
   });
 

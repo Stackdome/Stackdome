@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Rocket, Pencil, Check, Loader2, X } from "lucide-react";
+import { Rocket, Pencil, Loader2, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,7 +26,7 @@ import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/sch
 
 function mapStackResourceToFormData(resource: StackResource): FormStackResourceData {
   // Remove read-only fields before converting to form data
-  const { id: _id, stack_id: _stackId, revision: _revision, status: _status, ...writableResource } = resource;
+  const { id: _id, stack_id: _stackId, revision: _revision, ...writableResource } = resource;
 
   const cleanedVolumeMounts = writableResource.volume_mounts?.map((volumeMount) => {
     const { stack_resource_id: _stackResourceId, source_volume_type: _sourceVolumeType, ...cleanVolumeMount } = volumeMount;
@@ -43,7 +43,7 @@ function mapStackResourceToFormData(resource: StackResource): FormStackResourceD
 
 function mapVolumeToFormData(volume: Volume): VolumeFormData {
   // Remove read-only fields before converting to form data
-  const { id: _id, status: _status, ...writableVolume } = volume;
+  const { id: _id, ...writableVolume } = volume;
   return convertApiVolumeToFormVolume(writableVolume as z.infer<typeof ApiVolumeSchema> & { status?: unknown });
 }
 
@@ -288,31 +288,25 @@ export default function StackDetailPage() {
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      Deploying...
                     </>
                   ) : (
                     <>
-                      <Check className="mr-2 h-4 w-4" />
-                      Save Changes
+                      <Rocket className="mr-2 h-4 w-4" />
+                      Deploy
                     </>
                   )}
                 </Button>
               </>
             ) : (
-              <>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleEditToggle}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-                <Button variant="default" size="lg">
-                  <Rocket className="mr-2 h-4 w-4" />
-                  <span className="font-semibold">Deploy</span>
-                </Button>
-              </>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleEditToggle}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
             )}
           </div>
         </div>
