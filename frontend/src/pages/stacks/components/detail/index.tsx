@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Play, Square, Rocket, Pencil, Check, Loader2 } from "lucide-react";
+import { Rocket, Pencil, Loader2, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,35 +12,61 @@ import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resourc
 import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
-import type { FormStackResourceData  , FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
-import { getStackById } from "@/api/stacks";
+import { getStackById, updateStack } from "@/api/stacks";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import type { z } from "zod";
-import { convertApiResourceToFormResource, convertApiVolumeToFormVolume } from "@/pages/stacks/schemas/form-schema";
+import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convertFormStackToApiStack } from "@/pages/stacks/schemas/form-schema";
+import { useToast } from "@/components/ui/use-toast";
 import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/schemas/api-schema";
 
 // Helper to map API build_spec to form schema shape
 
 function mapStackResourceToFormData(resource: StackResource): FormStackResourceData {
-  return convertApiResourceToFormResource(resource as z.infer<typeof ApiStackResourceSchema>);
+  // Remove read-only fields before converting to form data
+  const { id: _id, stack_id: _stackId, revision: _revision, ...writableResource } = resource;
+
+  const cleanedVolumeMounts = writableResource.volume_mounts?.map((volumeMount) => {
+    const { stack_resource_id: _stackResourceId, source_volume_type: _sourceVolumeType, ...cleanVolumeMount } = volumeMount;
+    return cleanVolumeMount;
+  });
+
+  const resourceWithCleanedMounts = {
+    ...writableResource,
+    volume_mounts: cleanedVolumeMounts
+  };
+
+  return convertApiResourceToFormResource(resourceWithCleanedMounts as z.infer<typeof ApiStackResourceSchema> & { status?: unknown });
 }
 
 function mapVolumeToFormData(volume: Volume): VolumeFormData {
-  return convertApiVolumeToFormVolume(volume as z.infer<typeof ApiVolumeSchema> & { status?: unknown });
+  // Remove read-only fields before converting to form data
+  const { id: _id, ...writableVolume } = volume;
+  return convertApiVolumeToFormVolume(writableVolume as z.infer<typeof ApiVolumeSchema> & { status?: unknown });
 }
 
 export default function StackDetailPage() {
   const { id } = useParams();
   const { stacks } = useStacks();
-  const [isRunning, setIsRunning] = useState(true);
   const [fetchedStack, setFetchedStack] = useState<Stack | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingResources, setEditingResources] = useState(false);
-  const [editingVolumes, setEditingVolumes] = useState(false);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editFormData, setEditFormData] = useState<{
+    resources: FormStackResourceData[];
+    volumes: VolumeFormData[];
+  } | null>(null);
+  const [validationErrors, setValidationErrors] = useState<{
+    resources: { [index: number]: { [field: string]: string | undefined } };
+    volumes: { [index: number]: { [field: string]: string | undefined } };
+  }>({ resources: {}, volumes: {} });
+
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
+  const { toast } = useToast();
 
   // Find the current stack in context
   const currentStack = stacks.find((stack) => stack.id === id);
@@ -83,8 +109,93 @@ export default function StackDetailPage() {
 
   const stackToShow = currentStack || fetchedStack;
 
-  const [resourcesErrors] = useState({}); // No errors in read-only mode
-  const [volumesErrors] = useState({});
+  const initializeEditForm = () => {
+    if (!stackToShow) return;
+
+    const resourcesForForm: FormStackResourceData[] = (stackToShow.spec.stack_resources || []).map(mapStackResourceToFormData);
+    const volumesForForm = (stackToShow.spec?.volumes || []).map(mapVolumeToFormData);
+
+    setEditFormData({
+      resources: resourcesForForm,
+      volumes: volumesForForm
+    });
+  };
+
+  const handleEditToggle = () => {
+    if (!isEditing) {
+      initializeEditForm();
+      setIsEditing(true);
+    } else {
+      // Cancel edit mode
+      setIsEditing(false);
+      setEditFormData(null);
+      setValidationErrors({ resources: {}, volumes: {} });
+    }
+  };
+
+  const handleSave = async () => {
+    if (!stackToShow || !editFormData || !id) return;
+
+    setIsSaving(true);
+    setValidationErrors({ resources: {}, volumes: {} });
+
+    try {
+      const orgId = getCurrentOrganizationId();
+      if (!orgId) {
+        throw new Error("Organization ID not found");
+      }
+
+      // Convert form data to API format
+      const formStackData: FormStackData = {
+        name: stackToShow.name || '',
+        labels: stackToShow.labels || [],
+        spec: {
+          stack_resources: editFormData.resources,
+          volumes: editFormData.volumes
+        }
+      };
+
+      const apiData = convertFormStackToApiStack(formStackData);
+      const updatedStack = await updateStack(orgId, id, apiData);
+
+      // Update local state
+      setFetchedStack(updatedStack);
+      setIsEditing(false);
+      setEditFormData(null);
+
+      toast({
+        title: "Stack updated successfully",
+        description: "Your stack configuration has been saved.",
+        variant: "default"
+      });
+
+    } catch (error) {
+      console.error('Failed to update stack:', error);
+      toast({
+        title: "Failed to update stack",
+        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleResourcesChange = (updatedResources: Partial<FormStackResourceData>[]) => {
+    if (!editFormData) return;
+    setEditFormData({
+      ...editFormData,
+      resources: updatedResources as FormStackResourceData[]
+    });
+  };
+
+  const handleVolumesChange = (updatedVolumes: Partial<VolumeFormData>[]) => {
+    if (!editFormData) return;
+    setEditFormData({
+      ...editFormData,
+      volumes: updatedVolumes as VolumeFormData[]
+    });
+  };
 
   if (loading) {
     return (
@@ -122,54 +233,81 @@ export default function StackDetailPage() {
   const resourcesForForm: FormStackResourceData[] = (stackToShow?.spec.stack_resources || []).map(mapStackResourceToFormData);
   const volumesForForm = (stackToShow.spec?.volumes || []).map(mapVolumeToFormData);
 
-  const toggleRunning = () => {
-    setIsRunning(!isRunning);
-  };
-
   return (
     <div className="p-6">
       <header className="mb-6">
         <div className="flex justify-between items-center">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold">{stackToShow.name}</h1>
-              {/* Status label */}
-              {stackToShow.status?.state && (
-                <span>
-                  {stackToShow.status.state.toLowerCase() === 'ready' && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-300">Ready</span>
-                  )}
-                  {stackToShow.status.state.toLowerCase() === 'pending' && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">Pending</span>
-                  )}
-                  {stackToShow.status.state.toLowerCase() === 'failed' && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-300">Failed</span>
-                  )}
-                  {!['ready','pending','failed'].includes(stackToShow.status.state.toLowerCase()) && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300">{stackToShow.status.state}</span>
-                  )}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-4 text-muted-foreground text-sm mb-1">
-              <span>Services: {stackToShow.spec?.stack_resources?.length || 0}</span>
-              <span>Volumes: {stackToShow.spec?.volumes?.length || 0}</span>
+          <div className="flex items-center gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-2xl font-bold">{stackToShow.name}</h1>
+                {/* Status label */}
+                {stackToShow.status?.state && (
+                  <span>
+                    {stackToShow.status.state.toLowerCase() === 'ready' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-300">Ready</span>
+                    )}
+                    {stackToShow.status.state.toLowerCase() === 'pending' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">Pending</span>
+                    )}
+                    {stackToShow.status.state.toLowerCase() === 'failed' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-300">Failed</span>
+                    )}
+                    {!['ready','pending','failed'].includes(stackToShow.status.state.toLowerCase()) && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300">{stackToShow.status.state}</span>
+                    )}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-4 text-muted-foreground text-sm mb-1">
+                <span>Services: {stackToShow.spec?.stack_resources?.length || 0}</span>
+                <span>Volumes: {stackToShow.spec?.volumes?.length || 0}</span>
+              </div>
             </div>
           </div>
+
           <div className="flex gap-3">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={toggleRunning}
-              className={isRunning ? "border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" : "border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700"}
-            >
-              {isRunning ? <Square className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-              {isRunning ? "Stop Stack" : "Start Stack"}
-            </Button>
-            <Button variant="default" size="lg">
-              <Rocket className="mr-2 h-4 w-4" />
-              <span className="font-semibold">Deploy</span>
-            </Button>
+            {/* Edit Mode Toggle */}
+            {isEditing ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleEditToggle}
+                  disabled={isSaving}
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  size="lg"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deploying...
+                    </>
+                  ) : (
+                    <>
+                      <Rocket className="mr-2 h-4 w-4" />
+                      Deploy
+                    </>
+                  )}
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleEditToggle}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            )}
           </div>
         </div>
         <Separator className="mt-4" />
@@ -185,34 +323,16 @@ export default function StackDetailPage() {
         {/* Configuration Tab: Stack Resources and Volumes */}
         <TabsContent value="configuration" className="space-y-8">
           <Card className="mb-6 rounded-lg">
-            <CardHeader className="pb-3 flex flex-row justify-between items-center">
+            <CardHeader className="pb-3">
               <CardTitle className="text-xl">Stack Resources</CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditingResources(!editingResources)}
-                className="ml-auto"
-              >
-                {editingResources ? (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    <span>Done</span>
-                  </>
-                ) : (
-                  <>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    <span>Edit</span>
-                  </>
-                )}
-              </Button>
             </CardHeader>
             <CardContent className="p-0">
-              {editingResources ? (
+              {isEditing ? (
                 <StackResourcesForm
-                  resources={resourcesForForm}
-                  onResourcesChange={() => {}}
-                  errors={resourcesErrors}
-                  volumes={volumesForForm}
+                  resources={editFormData?.resources || []}
+                  onResourcesChange={handleResourcesChange}
+                  errors={validationErrors.resources}
+                  volumes={editFormData?.volumes || []}
                   accordionDefaultOpen={false}
                 />
               ) : (
@@ -223,35 +343,18 @@ export default function StackDetailPage() {
               )}
             </CardContent>
           </Card>
+
           <Card className="mb-6 rounded-lg">
-            <CardHeader className="pb-3 flex flex-row justify-between items-center">
+            <CardHeader className="pb-3">
               <CardTitle className="text-xl">Stack Volumes</CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditingVolumes(!editingVolumes)}
-                className="ml-auto"
-              >
-                {editingVolumes ? (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    <span>Done</span>
-                  </>
-                ) : (
-                  <>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    <span>Edit</span>
-                  </>
-                )}
-              </Button>
             </CardHeader>
             <CardContent className="p-0">
-              {editingVolumes ? (
+              {isEditing ? (
                 <StackVolumesForm
-                  volumes={volumesForForm}
-                  onVolumesChange={() => {}}
-                  errors={volumesErrors}
-                  stackResources={resourcesForForm}
+                  volumes={editFormData?.volumes || []}
+                  onVolumesChange={handleVolumesChange}
+                  errors={validationErrors.volumes}
+                  stackResources={editFormData?.resources || []}
                   accordionDefaultOpen={false}
                 />
               ) : (
