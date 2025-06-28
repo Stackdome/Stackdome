@@ -5,6 +5,32 @@ import type { StackList } from "@/pages/stacks/types";
 export type Stack = components["schemas"]["Stack"];
 export type StackResource = components["schemas"]["StackResource"];
 export type StackResourceList = components["schemas"]["StackResourceList"];
+export type Volume = components["schemas"]["Volume"];
+export type VolumeMount = components["schemas"]["VolumeMount"];
+
+// Create update request types that exclude read-only fields
+export type VolumeMountUpdateRequest = Omit<VolumeMount,
+  'stack_resource_id' | 'source_volume_type'
+>;
+
+export type StackResourceUpdateRequest = Omit<StackResource,
+  'id' | 'stack_id' | 'revision' | 'status'
+> & {
+  volume_mounts?: VolumeMountUpdateRequest[];
+};
+
+export type VolumeUpdateRequest = Omit<Volume,
+  'id' | 'status'
+>;
+
+export type StackUpdateRequest = Omit<Stack,
+  'id' | 'organisation_id' | 'user_id' | 'namespace' | 'revision' | 'status' | 'created_at' | 'updated_at'
+> & {
+  spec: {
+    stack_resources: StackResourceUpdateRequest[];
+    volumes?: VolumeUpdateRequest[];
+  };
+};
 
 export async function getStacksByOrg(orgId: string): Promise<StackList> {
   const response = await api.get<StackList>(
@@ -20,6 +46,11 @@ export async function createStack(orgId: string, input: Stack): Promise<Stack> {
 
 export async function getStackById(orgId: string, stackId: string): Promise<Stack> {
   const response = await api.get<Stack>(`/organizations/${orgId}/stacks/${stackId}`);
+  return response.data;
+}
+
+export async function updateStack(orgId: string, stackId: string, input: StackUpdateRequest): Promise<Stack> {
+  const response = await api.put<Stack>(`/organizations/${orgId}/stacks/${stackId}`, input);
   return response.data;
 }
 

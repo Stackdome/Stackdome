@@ -10,6 +10,7 @@ import {
   ApiVolumeSchema,
   ApiStackSchema,
 } from "./api-schema";
+import type { StackUpdateRequest, StackResourceUpdateRequest, VolumeUpdateRequest } from "@/api/stacks";
 
 /**
  * Form-specific UI schema additions
@@ -143,22 +144,35 @@ type FormVolumeExtendedData = z.infer<typeof FormVolumeExtendedSchema> & {
 // Remove UI-only fields from a resource before sending to API
 function convertFormResourceToApiResource(
   resource: FormStackResourceData
-): Omit<
-  FormStackResourceData,
-  "sourceType" | "gitRevisionType" | "gitRevisionValue" | "status"
-> {
+): StackResourceUpdateRequest {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { sourceType, gitRevisionType, gitRevisionValue, status, ...rest } = resource;
-  return rest as Omit<
-    FormStackResourceData,
-    "sourceType" | "gitRevisionType" | "gitRevisionValue" | "status"
-  >;
+  
+  // Clean volume_mounts to remove read-only fields (stack_resource_id and source_volume_type)
+  const cleanedVolumeMounts = rest.volume_mounts?.map((volumeMount) => {
+    // Remove read-only fields from volume mount
+    const {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      stack_resource_id,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      source_volume_type,
+      ...cleanVolumeMount
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } = volumeMount as any;
+    
+    return cleanVolumeMount;
+  });
+  
+  return {
+    ...rest,
+    volume_mounts: cleanedVolumeMounts
+  } as StackResourceUpdateRequest;
 }
 
 // Remove UI-only fields from a volume before sending to API
 function convertFormVolumeToApiVolume(
   volume: FormVolumeExtendedData | FormVolumeData
-): Omit<typeof volume, "sourceType" | "status"> {
+): VolumeUpdateRequest {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { sourceType, status, ...rest } = volume as FormVolumeExtendedData;
   // Ensure needs_sync_before_use is always present and boolean
@@ -245,9 +259,19 @@ function convertApiVolumeToFormVolume(
 // Convert a form stack to API stack for submission
 function convertFormStackToApiStack(
   stackData: FormStackData
-): Omit<z.infer<typeof ApiStackSchema>, "id" | "created_at" | "status"> { // Use inferred type
-  // Process all stack resources by removing UI-only fields
-  const apiStackResources = stackData.spec.stack_resources.map(resource => {
+): StackUpdateRequest {
+  // Filter out empty or invalid resources (resources with empty names or no image)
+  const validResources = stackData.spec.stack_resources.filter(resource => {
+    // A resource is valid if it has a name and either an image or build_spec
+    const hasName = resource.name && resource.name.trim() !== '';
+    const hasImage = resource.image_spec?.image && resource.image_spec.image.trim() !== '';
+    const hasBuildSpec = resource.build_spec?.source_revision;
+    
+    return hasName && (hasImage || hasBuildSpec);
+  });
+
+  // Process all valid stack resources by removing UI-only fields
+  const apiStackResources = validResources.map(resource => {
     // Always provide both keys for source_revision if build_spec is present
     if (resource.build_spec) {
       const gitRepoRev = resource.build_spec.source_revision?.git_repo_revision;
@@ -259,9 +283,14 @@ function convertFormStackToApiStack(
     return convertFormResourceToApiResource(resource);
   });
 
+  // Filter out empty or invalid volumes (volumes with empty names)
+  const validVolumes = stackData.spec.volumes?.filter(volume => {
+    return volume.name && volume.name.trim() !== '';
+  });
+
   // Process volumes data if present
-  const apiVolumes = stackData.spec.volumes
-    ? stackData.spec.volumes.map(convertFormVolumeToApiVolume)
+  const apiVolumes = validVolumes && validVolumes.length > 0
+    ? validVolumes.map(convertFormVolumeToApiVolume)
     : undefined;
 
   // Create a new clean spec object that will only include API-expected fields
@@ -273,7 +302,6 @@ function convertFormStackToApiStack(
   // Combine everything into the final API-compliant object
   return {
     name: stackData.name,
-    workspace_name: stackData.workspace_name,
     labels: stackData.labels,
     spec: apiSpec,
   };

@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PlusCircle, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy, Info, ExternalLink } from "lucide-react";
+import { PlusCircle, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy, Info } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
@@ -294,13 +294,6 @@ export default function StackResourceItem({
     statusColor = 'bg-red-500';
   }
 
-  // Extract public URLs from the resource status (for header icon only)
-  const publicUrls = (statusObj.public_ingress || [])
-    .map((ingress: { url?: string }) => ingress.url)
-    .filter((url: string | undefined): url is string => url !== undefined && url.trim() !== '');
-  
-  const firstPublicUrl = publicUrls[0];
-
   return (
     <TooltipProvider>
       <AccordionItem value={String(index)} className="border-0">
@@ -320,24 +313,6 @@ export default function StackResourceItem({
                   </TooltipContent>
                 </Tooltip>
                 {resource.name || `Resource ${index + 1}`}
-                {firstPublicUrl && (
-                  <Tooltip delayDuration={300}>
-                    <TooltipTrigger asChild>
-                      <a
-                        href={firstPublicUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>Open URL: {firstPublicUrl}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
               </span>
               <span className="text-sm text-muted-foreground truncate">
                 {resource.sourceType === "image" ? (
@@ -639,106 +614,6 @@ export default function StackResourceItem({
                   </div>
                 </div>
                 <Separator className="my-4" />
-                {/* Ingress Section */}
-                <div>
-                  <h3 className="text-lg font-medium mb-3">Ingress</h3>
-                  <div className="grid gap-6 max-w-3xl">
-                    {(resource.ports || []).map((port, pidx) => (
-                      <div key={pidx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
-                        <div>
-                          <div className="flex items-center gap-1 mb-2">
-                            <Label htmlFor={`port-number-${index}-${pidx}`} className="text-sm font-medium">
-                            Port Number <span className="text-red-500">*</span>
-                            </Label>
-                            <Tooltip delayDuration={300}>
-                              <TooltipTrigger asChild>
-                                <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                              </TooltipTrigger>
-                              <TooltipContent side="top">Container port number</TooltipContent>
-                            </Tooltip>
-                          </div>
-                          <Input
-                            id={`port-number-${index}-${pidx}`}
-                            type="number"
-                            min="1"
-                            max="65535"
-                            value={port.number?.toString() || ""}
-                            onChange={(e) => updatePort(pidx, { number: parseInt(e.target.value) || 0 })}
-                            className={getError(errors, `ports.${pidx}.number`) ? "border-destructive" : ""}
-                            required
-                          />
-                          {getError(errors, `ports.${pidx}.number`) && (
-                            <p className="text-sm text-destructive">{getError(errors, `ports.${pidx}.number`)}</p>
-                          )}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1 mb-2">
-                            <Label htmlFor={`port-protocol-${index}-${pidx}`} className="text-sm font-medium">
-                            Protocol
-                            </Label>
-                            <Tooltip delayDuration={300}>
-                              <TooltipTrigger asChild>
-                                <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                              </TooltipTrigger>
-                              <TooltipContent side="top">Port communication protocol</TooltipContent>
-                            </Tooltip>
-                          </div>
-                          <Select
-                            value={port.protocol || "tcp"}
-                            onValueChange={(value) => updatePort(pidx, { protocol: value as "tcp" | "http" })}
-                          >
-                            <SelectTrigger id={`port-protocol-${index}-${pidx}`}>
-                              <SelectValue placeholder="Select protocol" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="tcp">TCP</SelectItem>
-                              <SelectItem value="http">HTTP</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1 mb-2">
-                            <Label htmlFor={`port-expose-${index}-${pidx}`} className="text-sm font-medium">
-                            Public Access
-                            </Label>
-                            <Tooltip delayDuration={300}>
-                              <TooltipTrigger asChild>
-                                <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                              </TooltipTrigger>
-                              <TooltipContent side="top">Make this port accessible from outside the cluster</TooltipContent>
-                            </Tooltip>
-                          </div>
-                          <div className="flex items-center space-x-2 h-[40px]"> {/* Match height with inputs */}
-                            <Switch
-                              id={`port-expose-${index}-${pidx}`}
-                              checked={port.exposed_to_public || false}
-                              onCheckedChange={(checked) => updatePort(pidx, { exposed_to_public: checked })}
-                            />
-                            <Label htmlFor={`port-expose-${index}-${pidx}`} className="text-sm font-medium cursor-pointer">
-                              {port.exposed_to_public ? "Exposed" : "Internal Only"}
-                            </Label>
-                          </div>
-                        </div>
-                        <div className="flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removePort(pidx)}
-                            title="Remove port"
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    <div>
-                      <Button variant="ghost" size="sm" onClick={addPort}>
-                        <PlusCircle className="h-4 w-4 mr-2" />Add Port
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <Separator className="my-4" />
                 {/* Volume Mounts Section */}
                 <div>
                   <h3 className="text-lg font-medium mb-3">Volume Mounts</h3>
@@ -854,6 +729,106 @@ export default function StackResourceItem({
                       {(volumes || []).length === 0 && (
                         <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
                       )}
+                    </div>
+                  </div>
+                </div>
+                <Separator className="my-4" />
+                {/* Ports Section */}
+                <div>
+                  <h3 className="text-lg font-medium mb-3">Ports</h3>
+                  <div className="grid gap-6 max-w-3xl">
+                    {(resource.ports || []).map((port, pidx) => (
+                      <div key={pidx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
+                        <div>
+                          <div className="flex items-center gap-1 mb-2">
+                            <Label htmlFor={`port-number-${index}-${pidx}`} className="text-sm font-medium">
+                            Port Number <span className="text-red-500">*</span>
+                            </Label>
+                            <Tooltip delayDuration={300}>
+                              <TooltipTrigger asChild>
+                                <Info className="size-3.5 text-muted-foreground cursor-pointer" />
+                              </TooltipTrigger>
+                              <TooltipContent side="top">Container port number</TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <Input
+                            id={`port-number-${index}-${pidx}`}
+                            type="number"
+                            min="1"
+                            max="65535"
+                            value={port.number?.toString() || ""}
+                            onChange={(e) => updatePort(pidx, { number: parseInt(e.target.value) || 0 })}
+                            className={getError(errors, `ports.${pidx}.number`) ? "border-destructive" : ""}
+                            required
+                          />
+                          {getError(errors, `ports.${pidx}.number`) && (
+                            <p className="text-sm text-destructive">{getError(errors, `ports.${pidx}.number`)}</p>
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1 mb-2">
+                            <Label htmlFor={`port-protocol-${index}-${pidx}`} className="text-sm font-medium">
+                            Protocol
+                            </Label>
+                            <Tooltip delayDuration={300}>
+                              <TooltipTrigger asChild>
+                                <Info className="size-3.5 text-muted-foreground cursor-pointer" />
+                              </TooltipTrigger>
+                              <TooltipContent side="top">Port communication protocol</TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <Select
+                            value={port.protocol || "tcp"}
+                            onValueChange={(value) => updatePort(pidx, { protocol: value as "tcp" | "http" })}
+                          >
+                            <SelectTrigger id={`port-protocol-${index}-${pidx}`}>
+                              <SelectValue placeholder="Select protocol" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="tcp">TCP</SelectItem>
+                              <SelectItem value="http">HTTP</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1 mb-2">
+                            <Label htmlFor={`port-expose-${index}-${pidx}`} className="text-sm font-medium">
+                            Public Access
+                            </Label>
+                            <Tooltip delayDuration={300}>
+                              <TooltipTrigger asChild>
+                                <Info className="size-3.5 text-muted-foreground cursor-pointer" />
+                              </TooltipTrigger>
+                              <TooltipContent side="top">Make this port accessible from outside the cluster</TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <div className="flex items-center space-x-2 h-[40px]"> {/* Match height with inputs */}
+                            <Switch
+                              id={`port-expose-${index}-${pidx}`}
+                              checked={port.exposed_to_public || false}
+                              onCheckedChange={(checked) => updatePort(pidx, { exposed_to_public: checked })}
+                            />
+                            <Label htmlFor={`port-expose-${index}-${pidx}`} className="text-sm font-medium cursor-pointer">
+                              {port.exposed_to_public ? "Exposed" : "Internal Only"}
+                            </Label>
+                          </div>
+                        </div>
+                        <div className="flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removePort(pidx)}
+                            title="Remove port"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    <div>
+                      <Button variant="ghost" size="sm" onClick={addPort}>
+                        <PlusCircle className="h-4 w-4 mr-2" />Add Port
+                      </Button>
                     </div>
                   </div>
                 </div>

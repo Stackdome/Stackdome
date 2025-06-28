@@ -158,7 +158,6 @@ const ApiStackSpecSchema = z.object({
 
 const ApiStackSchema = z.object({
   name: z.string().min(1, "Stack name is required"),
-  workspace_name: z.string().min(1, "Workspace name is required"),
   labels: z.array(ApiLabelSchema).optional(),
   spec: ApiStackSpecSchema,
 });
