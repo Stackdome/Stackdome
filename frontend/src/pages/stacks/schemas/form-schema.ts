@@ -17,12 +17,32 @@ import type { StackUpdateRequest, StackResourceUpdateRequest, VolumeUpdateReques
  */
 const FormGitRevisionTypeSchema = z.enum(["commit", "branch", "tag"]);
 
+const FormEnvVarSchema = z.object({
+  name: z.string().min(1, "Environment variable name is required"),
+  value: z.string(),
+  // UI-only fields for secret functionality
+  useSecret: z.boolean().optional().default(false),
+  selectedSecretId: z.string().optional(),
+  selectedSecretKey: z.string().optional(),
+});
+
 const FormStackResourceSchema = ApiStackResourceSchema.extend({
   // UI helper, not part of API spec for StackResource
   sourceType: z.enum(["image", "git"]).optional().default("image"),
   // UI helper fields for git revision, not part of API spec StackResource
   gitRevisionType: FormGitRevisionTypeSchema.optional(),
   gitRevisionValue: z.string().optional(),
+  // UI helper fields for secrets, not part of API spec StackResource
+  useImageSecret: z.boolean().optional().default(false),
+  selectedImageSecretId: z.string().optional(),
+  useGitSecret: z.boolean().optional().default(false),
+  selectedGitSecretId: z.string().optional(),
+  // Override execution_config to use our form env var schema
+  execution_config: z.object({
+    command: z.array(z.string()).optional(),
+    args: z.array(z.string()).optional(),
+    environment_variables: z.array(FormEnvVarSchema).optional(),
+  }).optional(),
 }).superRefine((data, ctx) => {
   // Validate that git revision fields are required when sourceType is git
   if (data.sourceType === "git") {
@@ -146,7 +166,17 @@ function convertFormResourceToApiResource(
   resource: FormStackResourceData
 ): StackResourceUpdateRequest {
 
-  const { sourceType, gitRevisionType, gitRevisionValue, status, ...rest } = resource;
+  const {
+    sourceType,
+    gitRevisionType,
+    gitRevisionValue,
+    useImageSecret,
+    selectedImageSecretId,
+    useGitSecret,
+    selectedGitSecretId,
+    status,
+    ...rest
+  } = resource;
 
   // Clean volume_mounts to remove read-only fields (stack_resource_id and source_volume_type)
   const cleanedVolumeMounts = rest.volume_mounts?.map((volumeMount) => {
@@ -163,9 +193,26 @@ function convertFormResourceToApiResource(
     return cleanVolumeMount;
   });
 
+  // Process environment variables to separate regular and secret-based ones
+  const processedExecutionConfig = rest.execution_config ? {
+    ...rest.execution_config,
+    environment_variables: rest.execution_config.environment_variables?.filter(envVar => !envVar.useSecret).map(envVar => ({
+      name: envVar.name,
+      value: envVar.value,
+    })),
+    environment_variables_from_secret: rest.execution_config.environment_variables?.filter(envVar => envVar.useSecret && envVar.selectedSecretId && envVar.selectedSecretKey).map(envVar => ({
+      name: envVar.name,
+      secret_ref: {
+        secret_id: envVar.selectedSecretId!
+      },
+      key: envVar.selectedSecretKey!,
+    })),
+  } : undefined;
+
   return {
     ...rest,
-    volume_mounts: cleanedVolumeMounts
+    volume_mounts: cleanedVolumeMounts,
+    execution_config: processedExecutionConfig,
   } as StackResourceUpdateRequest;
 }
 
@@ -226,6 +273,33 @@ function convertApiResourceToFormResource(
     }
   }
 
+  // Process environment variables to combine regular and secret-based ones
+  const processedEnvVars = [
+    // Regular environment variables
+    ...(resource.execution_config?.environment_variables || []).map(envVar => ({
+      name: envVar.name,
+      value: envVar.value,
+      useSecret: false,
+      selectedSecretId: undefined,
+      selectedSecretKey: undefined,
+    })),
+    // Environment variables from secrets
+    ...(resource.execution_config?.environment_variables_from_secret || []).map(envVar => ({
+      name: envVar.name,
+      value: '', // Empty value when using secret
+      useSecret: true,
+      selectedSecretId: envVar.secret_ref.secret_id,
+      selectedSecretKey: envVar.key,
+    })),
+  ];
+
+  // Detect if secrets are being used
+  const useImageSecret = Boolean(resource.image_spec?.pull_secret?.secret_id);
+  const selectedImageSecretId = resource.image_spec?.pull_secret?.secret_id;
+
+  const useGitSecret = Boolean(resource.build_spec?.source_context?.git_repo?.git_secret?.secret_id);
+  const selectedGitSecretId = resource.build_spec?.source_context?.git_repo?.git_secret?.secret_id;
+
   // Ensure all required fields are present, defaulting as needed
   return {
     ...resource,
@@ -233,6 +307,14 @@ function convertApiResourceToFormResource(
     sourceType,
     gitRevisionType,
     gitRevisionValue,
+    useImageSecret,
+    selectedImageSecretId,
+    useGitSecret,
+    selectedGitSecretId,
+    execution_config: resource.execution_config ? {
+      ...resource.execution_config,
+      environment_variables: processedEnvVars,
+    } : undefined,
     status: resource.status ?? {},
   };
 }
@@ -280,7 +362,31 @@ function convertFormStackToApiStack(
         git_repo_revision: gitRepoRev,
       };
     }
-    return convertFormResourceToApiResource(resource);
+
+    // Add secret references before conversion
+    const resourceWithSecrets = { ...resource };
+
+    // Add image pull secret if selected
+    if (resource.sourceType === 'image' && resource.useImageSecret && resource.selectedImageSecretId) {
+      resourceWithSecrets.image_spec = {
+        image: resourceWithSecrets.image_spec?.image || '',
+        ...resourceWithSecrets.image_spec,
+        pull_secret: {
+          secret_id: resource.selectedImageSecretId
+        }
+      };
+    }
+
+    // Add git secret if selected
+    if (resource.sourceType === 'git' && resource.useGitSecret && resource.selectedGitSecretId) {
+      if (resourceWithSecrets.build_spec?.source_context?.git_repo) {
+        resourceWithSecrets.build_spec.source_context.git_repo.git_secret = {
+          secret_id: resource.selectedGitSecretId
+        };
+      }
+    }
+
+    return convertFormResourceToApiResource(resourceWithSecrets);
   });
 
   // Filter out empty or invalid volumes (volumes with empty names)

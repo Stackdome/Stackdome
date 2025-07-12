@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useState } from "react";
 import { PlusCircle } from "lucide-react";
+import { useSecrets } from "../../hooks/use-secrets";
 
 interface StackResourcesFormProps {
   resources: Partial<FormStackResourceData>[];
@@ -36,6 +37,7 @@ export default function StackResourcesForm({
   accordionDefaultOpen = true,
 }: StackResourcesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
+  const secrets = useSecrets();
 
   const isResourceFilled = (res: Partial<FormStackResourceData>) => {
     return !!(res.name || res.ports?.length || res.volume_mounts?.length || res.labels?.length || res.depends_on?.length || res.execution_config?.environment_variables?.length || res.build_spec || (res.image_spec && res.image_spec.image));
@@ -74,6 +76,7 @@ export default function StackResourcesForm({
             volumes={volumes}
             allResources={resources.map((r, i) => ({ name: r.name || `Resource ${i + 1}`, index: i }))}
             onRemove={handleRemove}
+            secrets={secrets}
           />
         )}
         defaultAllCollapsed={!accordionDefaultOpen}

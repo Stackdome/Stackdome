@@ -26,6 +26,7 @@ import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema"
 import type { z } from "zod";
 
 import type { FormStackResourceData  , FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
+import type { UseSecretsReturn } from "../../hooks/use-secrets";
 
 interface StackResourceItemProps {
   resource: Partial<FormStackResourceData>;
@@ -36,6 +37,7 @@ interface StackResourceItemProps {
   errors: { [field: string]: string | undefined };
   volumes?: Partial<VolumeFormData>[];
   allResources?: { name: string; index: number }[];
+  secrets: UseSecretsReturn;
 }
 
 const getError = (errors: { [field: string]: string | undefined }, path: string) => {
@@ -68,6 +70,7 @@ export default function StackResourceItem({
   errors,
   volumes = [],
   allResources: _allResources,
+  secrets,
 }: StackResourceItemProps) {
   // Helper for updating resource fields
   const update = (patch: Partial<FormStackResourceData>) => {
@@ -114,19 +117,19 @@ export default function StackResourceItem({
         ...resource.execution_config,
         environment_variables: [
           ...(resource.execution_config?.environment_variables || []),
-          { name: "", value: "" },
+          { name: "", value: "", useSecret: false, selectedSecretId: undefined, selectedSecretKey: undefined },
         ],
       },
     });
   };
 
   // Helper for updating an environment variable
-  const updateEnvVar = (envIdx: number, name: string, value: string) => {
+  const updateEnvVar = (envIdx: number, updates: Partial<{ name: string; value: string; useSecret: boolean; selectedSecretId: string; selectedSecretKey: string }>) => {
     update({
       execution_config: {
         ...resource.execution_config,
         environment_variables: (resource.execution_config?.environment_variables || []).map((env, i) =>
-          i === envIdx ? { name, value } : env
+          i === envIdx ? { ...env, ...updates } : env
         ),
       },
     });
@@ -160,8 +163,15 @@ export default function StackResourceItem({
     // Create a map of existing var names for quick lookup
     const existingVarNames = new Set(currentVars.map(env => env.name));
 
-    // Filter out duplicates and add new vars
-    const newVars = filteredVars.filter(env => !existingVarNames.has(env.name));
+    // Filter out duplicates and add new vars with default secret fields
+    const newVars = filteredVars
+      .filter(env => !existingVarNames.has(env.name))
+      .map(env => ({
+        ...env,
+        useSecret: false,
+        selectedSecretId: undefined,
+        selectedSecretKey: undefined,
+      }));
 
     if (newVars.length === 0) {
       toast({
@@ -473,6 +483,65 @@ export default function StackResourceItem({
                             <p className="text-sm text-destructive mt-1">{getError(errors, "image_spec.image")}</p>
                           )}
                         </div>
+
+                        {/* Docker Registry Secret Section */}
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id={`use-image-secret-${index}`}
+                              checked={resource.useImageSecret || false}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  update({ useImageSecret: checked });
+                                } else {
+                                  update({
+                                    useImageSecret: false,
+                                    selectedImageSecretId: undefined
+                                  });
+                                }
+                              }}
+                              disabled={secrets.isLoading}
+                            />
+                            <Label htmlFor={`use-image-secret-${index}`} className="text-sm font-medium">
+                              Use secret
+                            </Label>
+                          </div>
+
+                          {resource.useImageSecret && (
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">
+                                Select secret
+                              </Label>
+                              <Select
+                                value={resource.selectedImageSecretId || ""}
+                                onValueChange={(value) => update({ selectedImageSecretId: value })}
+                                disabled={secrets.isLoading || secrets.dockerRegistrySecrets.length === 0}
+                              >
+                                <SelectTrigger className="w-full max-w-xl">
+                                  <SelectValue
+                                    placeholder={
+                                      secrets.dockerRegistrySecrets.length === 0
+                                        ? "No docker registry secrets available"
+                                        : "Select Docker registry secret"
+                                    }
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {secrets.dockerRegistrySecrets.map((secret) => (
+                                    <SelectItem key={secret.id} value={secret.id!}>
+                                      {secret.name}
+                                      {secret.description && (
+                                        <span className="text-muted-foreground ml-2">
+                                          - {secret.description}
+                                        </span>
+                                      )}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <div className="grid gap-4 max-w-3xl">
@@ -501,8 +570,67 @@ export default function StackResourceItem({
                             <p className="text-sm text-destructive">{getError(errors, "build_spec.source_context.git_repo.repo_url")}</p>
                           )}
                         </div>
+
+                        {/* Git Credentials Secret Section */}
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id={`use-git-secret-${index}`}
+                              checked={resource.useGitSecret || false}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  update({ useGitSecret: checked });
+                                } else {
+                                  update({
+                                    useGitSecret: false,
+                                    selectedGitSecretId: undefined
+                                  });
+                                }
+                              }}
+                              disabled={secrets.isLoading}
+                            />
+                            <Label htmlFor={`use-git-secret-${index}`} className="text-sm font-medium">
+                              Use secret
+                            </Label>
+                          </div>
+
+                          {resource.useGitSecret && (
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">
+                                Select secret
+                              </Label>
+                              <Select
+                                value={resource.selectedGitSecretId || ""}
+                                onValueChange={(value) => update({ selectedGitSecretId: value })}
+                                disabled={secrets.isLoading || secrets.gitSecrets.length === 0}
+                              >
+                                <SelectTrigger className="w-full max-w-xl">
+                                  <SelectValue
+                                    placeholder={
+                                      secrets.gitSecrets.length === 0
+                                        ? "No Git credentials secrets available"
+                                        : "Select Git credentials"
+                                    }
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {secrets.gitSecrets.map((secret) => (
+                                    <SelectItem key={secret.id} value={secret.id!}>
+                                      {secret.name}
+                                      {secret.description && (
+                                        <span className="text-muted-foreground ml-2">
+                                          - {secret.description}
+                                        </span>
+                                      )}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
                         <div>
-                          <div className="flex items-center gap-1 mb-2">
+                          <div className="flex items-ce nter gap-1 mb-2">
                             <Label htmlFor={`external-image-repo-url-${index}`} className="text-sm font-medium">
                             Image Repository URL <span className="text-red-500">*</span>
                             </Label>
@@ -1042,62 +1170,139 @@ export default function StackResourceItem({
                     </Dialog>
                   </div>
                 </div>
-                <div className="overflow-x-auto relative">
-                  <table className="min-w-full border border-muted rounded-md">
-                    <thead className="bg-muted/30">
-                      <tr>
-                        <th className="text-left px-6 py-3 text-sm">Key</th>
-                        <th className="text-left px-6 py-3 text-sm">Value</th>
-                        <th className="w-12"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(resource.execution_config?.environment_variables || []).length ? (
-                        (resource.execution_config?.environment_variables || []).map((env, envIdx) => (
-                          <tr key={envIdx} className="border-t border-muted">
-                            <td className="px-6 py-3">
-                              <Input
-                                value={env.name || ""}
-                                onChange={(e) => updateEnvVar(envIdx, e.target.value, env.value || "")}
-                                className="max-w-full text-sm font-mono"
-                                placeholder="KEY"
-                              />
-                            </td>
-                            <td className="px-6 py-3">
-                              <Input
-                                value={env.value || ""}
-                                onChange={(e) => updateEnvVar(envIdx, env.name || "", e.target.value)}
-                                className="max-w-full text-sm font-mono"
-                                placeholder="VALUE"
-                              />
-                            </td>
-                            <td className="px-6 py-3">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => removeEnvVar(envIdx)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={3} className="px-6 py-8 text-center text-muted-foreground">
-                          No environment variables defined
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                  {/* Add Variable button inside table, bottom right */}
-                  <div className="flex justify-end mt-2">
-                    <Button variant="ghost" size="sm" onClick={addEnvVar}>
-                      <PlusCircle className="h-4 w-4 mr-2" /> Add Variable
-                    </Button>
+                <div className="border border-muted rounded-md">
+                  {/* Header Row */}
+                  <div className="grid grid-cols-12 gap-2 p-3 border-b bg-muted/30 text-sm font-medium">
+                    <div className="col-span-3">Key</div>
+                    <div className="col-span-6">Value</div>
+                    <div className="col-span-2 text-center">Use Secret</div>
+                    <div className="col-span-1"></div>
                   </div>
+
+                  {/* Environment Variables Rows */}
+                  {(resource.execution_config?.environment_variables || []).length ? (
+                    (resource.execution_config?.environment_variables || []).map((env, envIdx) => (
+                      <div key={envIdx} className="grid grid-cols-12 gap-2 p-3 border-b last:border-b-0 items-start">
+                        {/* Key Input - Fixed width */}
+                        <div className="col-span-3">
+                          <Input
+                            value={env.name || ""}
+                            onChange={(e) => updateEnvVar(envIdx, { name: e.target.value })}
+                            className="w-full text-sm font-mono"
+                            placeholder="KEY"
+                          />
+                        </div>
+
+                        {/* Value Input/Secret Selection - Fixed width */}
+                        <div className="col-span-6">
+                          {env.useSecret ? (
+                            <div className="space-y-2">
+                              <Select
+                                value={env.selectedSecretId || ""}
+                                onValueChange={(value) => updateEnvVar(envIdx, { selectedSecretId: value, selectedSecretKey: undefined })}
+                                disabled={secrets.isLoading || secrets.secrets.filter(s => s.type === 'Generic').length === 0}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder={
+                                    secrets.secrets.filter(s => s.type === 'Generic').length === 0
+                                      ? "No generic secrets available"
+                                      : "select secret..."
+                                  } />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {secrets.secrets.filter(s => s.type === 'Generic').map((secret) => (
+                                    <SelectItem key={secret.id} value={secret.id!}>
+                                      {secret.name}
+                                      {secret.description && (
+                                        <span className="text-muted-foreground ml-2">
+                                          - {secret.description}
+                                        </span>
+                                      )}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {env.selectedSecretId && (() => {
+                                const selectedSecret = secrets.secrets.find(s => s.id === env.selectedSecretId);
+                                const availableKeys = selectedSecret?.data?.map(d => d.key) || [];
+
+                                return (
+                                  <Select
+                                    value={env.selectedSecretKey || ""}
+                                    onValueChange={(value) => updateEnvVar(envIdx, { selectedSecretKey: value })}
+                                    disabled={availableKeys.length === 0}
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder={
+                                        availableKeys.length === 0
+                                          ? "No keys available in secret"
+                                          : "select key..."
+                                      } />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {availableKeys.map((key) => (
+                                        <SelectItem key={key} value={key}>
+                                          {key}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            <Input
+                              value={env.value || ""}
+                              onChange={(e) => updateEnvVar(envIdx, { value: e.target.value })}
+                              className="w-full text-sm font-mono"
+                              placeholder="VALUE"
+                            />
+                          )}
+                        </div>
+
+                        {/* Use Secret Toggle - Fixed width */}
+                        <div className="col-span-2 flex justify-center items-start pt-2">
+                          <Switch
+                            checked={env.useSecret || false}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                updateEnvVar(envIdx, { useSecret: true, value: '' });
+                              } else {
+                                updateEnvVar(envIdx, {
+                                  useSecret: false,
+                                  selectedSecretId: undefined,
+                                  selectedSecretKey: undefined
+                                });
+                              }
+                            }}
+                            disabled={secrets.isLoading}
+                          />
+                        </div>
+
+                        {/* Remove Button - Fixed width */}
+                        <div className="col-span-1 flex justify-center items-start pt-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => removeEnvVar(envIdx)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">
+                      No environment variables defined
+                    </div>
+                  )}
+                </div>
+                {/* Add Variable button */}
+                <div className="flex justify-end mt-2">
+                  <Button variant="ghost" size="sm" onClick={addEnvVar}>
+                    <PlusCircle className="h-4 w-4 mr-2" /> Add Variable
+                  </Button>
                 </div>
               </TabsContent>
             </Tabs>

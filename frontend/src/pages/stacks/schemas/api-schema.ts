@@ -23,8 +23,13 @@ const ApiPortSchema = z.object({
   subdomain_prefix: z.string().optional(),
 });
 
+const ApiSecretRefSchema = z.object({
+  secret_id: z.string(),
+});
+
 const ApiImageSpecSchema = z.object({
   image: z.string().min(1, "Image URL is required"),
+  pull_secret: ApiSecretRefSchema.optional(),
 });
 
 const ApiEnvVarSchema = z.object({
@@ -32,10 +37,17 @@ const ApiEnvVarSchema = z.object({
   value: z.string(),
 });
 
+const ApiEnvVarFromSecretSchema = z.object({
+  name: z.string().min(1, "Environment variable name is required"),
+  secret_ref: ApiSecretRefSchema,
+  key: z.string().min(1, "Secret key is required"),
+});
+
 const ApiExecutionConfigSchema = z.object({
   command: z.array(z.string()).optional(),
   args: z.array(z.string()).optional(),
   environment_variables: z.array(ApiEnvVarSchema).optional(),
+  environment_variables_from_secret: z.array(ApiEnvVarFromSecretSchema).optional(),
 });
 
 const ApiInitSpecSchema = z.object({
@@ -59,6 +71,7 @@ const ApiBuildSourceContextSchema = z.object({
   git_repo: z
     .object({
       repo_url: z.string().url("Invalid Git repository URL"),
+      git_secret: ApiSecretRefSchema.optional(),
     })
     .optional(),
 });
@@ -188,4 +201,7 @@ export {
   ApiStackSchema,
   ApiStackResourceStatusSchema,
   ApiVolumeStatusSchema,
+  ApiEnvVarSchema,
+  ApiEnvVarFromSecretSchema,
+  ApiExecutionConfigSchema,
 };

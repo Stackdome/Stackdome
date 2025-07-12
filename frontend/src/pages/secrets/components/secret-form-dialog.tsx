@@ -35,9 +35,6 @@ const SECRET_TYPES: { value: SecretType; label: string }[] = [
   { value: "Generic", label: "Generic" },
   { value: "DockerRegistry", label: "Docker Registry" },
   { value: "GitCredentials", label: "Git Credentials" },
-  { value: "UsernamePassword", label: "Username/Password" },
-  { value: "Token", label: "Token" },
-  { value: "SSHKey", label: "SSH Key" },
 ];
 
 export function SecretFormDialog({
