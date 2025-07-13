@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  # This service has no image or build spec - should fail conversion
+  invalid-service:
+    ports:
+      - "8080:80"
+    environment:
+      - NODE_ENV=production
+
+  # This service has both image and build - should cause warnings
+  conflicted-service:
+    image: nginx:latest
+    build: .
+    ports:
+      - "80:80"
