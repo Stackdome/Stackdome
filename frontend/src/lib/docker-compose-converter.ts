@@ -330,34 +330,35 @@ function convertLabels(
 }
 
 /**
- * Convert Docker Compose ports
+ * Convert Docker Compose ports to StackResource port specifications
+ * The internal port (container port) is what gets exposed to public, not the external host port
  */
 function convertPorts(
   ports: DockerComposeService['ports'],
   serviceName: string,
   warnings: ConversionWarning[]
-): Array<{ number: number; protocol: "tcp" | "http"; exposed_to_public: boolean; subdomain_prefix?: string }> {
+): Array<{ number: number; protocol: 'tcp' | 'http'; exposed_to_public: boolean }> {
   if (!ports || !Array.isArray(ports)) return [];
 
-  const convertedPorts: Array<{ number: number; protocol: "tcp" | "http"; exposed_to_public: boolean; subdomain_prefix?: string }> = [];
+  const convertedPorts: Array<{ number: number; protocol: 'tcp' | 'http'; exposed_to_public: boolean }> = [];
 
   ports.forEach((port, index) => {
     try {
       if (typeof port === 'string') {
-        // Parse string formats like "80:80", "8080", "127.0.0.1:8080:80"
+        // Parse string formats like "80:80", "8080:3000", "127.0.0.1:8080:80"
         const parts = port.split(':');
-        let targetPort: number;
-        const protocol: "tcp" | "http" = 'http'; // Default to HTTP
+        let internalPort: number;
+        const protocol = 'http'; // Always use lowercase http
 
         if (parts.length === 1) {
-          // Format: "8080"
-          targetPort = parseInt(parts[0], 10);
+          // Format: "8080" - port is both external and internal
+          internalPort = parseInt(parts[0], 10);
         } else if (parts.length === 2) {
-          // Format: "80:80"
-          targetPort = parseInt(parts[1], 10);
+          // Format: "8080:3000" - use internal port (3000), external port is just Docker host mapping
+          internalPort = parseInt(parts[1], 10);
         } else if (parts.length === 3) {
-          // Format: "127.0.0.1:8080:80"
-          targetPort = parseInt(parts[2], 10);
+          // Format: "127.0.0.1:8080:3000" - use internal port (3000)
+          internalPort = parseInt(parts[2], 10);
           warnings.push({
             type: 'partial',
             message: `Port binding with host IP (${parts[0]}) is not supported. Using default binding.`,
@@ -368,18 +369,18 @@ function convertPorts(
           throw new Error(`Invalid port format: ${port}`);
         }
 
-        if (isNaN(targetPort)) {
+        if (isNaN(internalPort)) {
           throw new Error(`Invalid port number: ${port}`);
         }
 
         convertedPorts.push({
-          number: targetPort,
+          number: internalPort,
           protocol,
           exposed_to_public: true,
         });
 
       } else if (typeof port === 'number') {
-        // Direct port number
+        // Direct port number - treat as both external and internal
         convertedPorts.push({
           number: port,
           protocol: 'http',
@@ -387,16 +388,18 @@ function convertPorts(
         });
 
       } else if (typeof port === 'object' && port !== null) {
-        // Object format (long syntax)
-        const targetPort = typeof port.target === 'number' ? port.target : parseInt(String(port.target), 10);
+        // Object format (long syntax) - use target port (internal) for public exposure
+        const internalPort = typeof port.target === 'number'
+          ? port.target
+          : parseInt(String(port.target), 10);
 
-        if (isNaN(targetPort)) {
-          throw new Error(`Invalid target port in object format`);
+        if (isNaN(internalPort)) {
+          throw new Error(`Invalid port number in object format`);
         }
 
         convertedPorts.push({
-          number: targetPort,
-          protocol: port.protocol === 'udp' ? 'tcp' : 'http',
+          number: internalPort,
+          protocol: 'http', // Always use http
           exposed_to_public: true,
         });
 
@@ -410,10 +413,10 @@ function convertPorts(
         }
       }
 
-    } catch (_error) {
+    } catch (error) {
       warnings.push({
         type: 'partial',
-        message: `Failed to convert port at index ${index}: ${(_error as Error).message}`,
+        message: `Failed to convert port at index ${index}: ${(error as Error).message}`,
         service: serviceName,
         dockerComposeField: 'ports',
       });
@@ -430,10 +433,10 @@ function convertVolumeMounts(
   volumes: DockerComposeService['volumes'],
   serviceName: string,
   warnings: ConversionWarning[]
-): Array<{ source_volume_name: string; target_path: string; source_sub_path?: string }> {
+): Array<{ source_volume_name: string; target_path: string }> {
   if (!volumes || !Array.isArray(volumes)) return [];
 
-  const volumeMounts: Array<{ source_volume_name: string; target_path: string; source_sub_path?: string }> = [];
+  const volumeMounts: Array<{ source_volume_name: string; target_path: string }> = [];
 
   volumes.forEach((volume, index) => {
     try {
@@ -445,7 +448,6 @@ function convertVolumeMounts(
           const source = parts[0];
           const target = parts[1];
           const options = parts[2];
-          const readOnly = options?.includes('ro');
 
           // Check if this is a named volume (doesn't start with . or /)
           if (!source.startsWith('/') && !source.startsWith('./') && !source.startsWith('../')) {
@@ -455,10 +457,11 @@ function convertVolumeMounts(
               target_path: target,
             });
 
-            if (readOnly) {
+            // Add a warning about read-only mounts since StackDome doesn't support them
+            if (options?.includes('ro')) {
               warnings.push({
-                type: 'partial',
-                message: `Read-only volume mount option is not supported. Volume '${source}' will be mounted as read-write.`,
+                type: 'unsupported',
+                message: `Read-only volume mount option ':ro' is not supported in StackDome. Volume '${source}' will be mounted as read-write.`,
                 service: serviceName,
                 dockerComposeField: 'volumes',
               });
@@ -491,10 +494,11 @@ function convertVolumeMounts(
               target_path: volume.target,
             });
 
-            if (volume.read_only) {
+            // Add a warning about read-only mounts since StackDome doesn't support them
+            if (volume.read_only === true) {
               warnings.push({
-                type: 'partial',
-                message: `Read-only volume mount option is not supported. Volume '${volume.source}' will be mounted as read-write.`,
+                type: 'unsupported',
+                message: `Read-only volume mount option is not supported in StackDome. Volume '${volume.source}' will be mounted as read-write.`,
                 service: serviceName,
                 dockerComposeField: 'volumes',
               });
@@ -517,10 +521,10 @@ function convertVolumeMounts(
         }
       }
 
-    } catch (_error) {
+    } catch (error) {
       warnings.push({
         type: 'partial',
-        message: `Failed to convert volume at index ${index}: ${(_error as Error).message}`,
+        message: `Failed to convert volume at index ${index}: ${(error as Error).message}`,
         service: serviceName,
         dockerComposeField: 'volumes',
       });
@@ -606,12 +610,12 @@ function convertEnvironmentVariables(
 function convertCommand(
   command: DockerComposeService['command'],
   warnings: ConversionWarning[]
-): string[] | undefined {
-  if (!command) return undefined;
+): string[] {
+  if (!command) return [];
 
   if (typeof command === 'string') {
-    // Split string into array by spaces (simple approach)
-    return command.split(' ').filter(part => part.trim() !== '');
+    // Split string command into array
+    return command.split(' ').filter(part => part.length > 0);
   } else if (Array.isArray(command)) {
     return command;
   } else {
@@ -620,7 +624,7 @@ function convertCommand(
       message: 'Invalid command format. Please review and set manually.',
       dockerComposeField: 'command',
     });
-    return undefined;
+    return [];
   }
 }
 
@@ -745,12 +749,12 @@ function handleUnsupportedServiceFeatures(
   ];
 
   unsupportedFeatures.forEach(({ field, message }) => {
-    if (service[field as keyof DockerComposeService] !== undefined && service[field as keyof DockerComposeService] !== null) {
+    if (service[field] !== undefined && service[field] !== null) {
       warnings.push({
         type: 'unsupported',
         message,
         service: serviceName,
-        dockerComposeField: String(field),
+        dockerComposeField: field as string,
       });
     }
   });

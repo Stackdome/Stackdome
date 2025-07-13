@@ -483,6 +483,92 @@ describe('convertServiceToStackResource', () => {
     expect(resultArray.success).toBe(true);
     expect(resultArray.data!.execution_config.command).toEqual(['npm', 'run', 'start:prod']);
   });
+
+  it('should map internal ports as exposed when external mapping exists', () => {
+    const service: DockerComposeService = {
+      image: 'nginx:latest',
+      ports: [
+        '8080:80',       // External port 8080 mapped to internal 80 -> expose internal 80
+        '443:443',       // External port 443 mapped to internal 443 -> expose internal 443
+        '3000:3000',     // External port 3000 mapped to internal 3000 -> expose internal 3000
+        '9000:8000',     // External port 9000 mapped to internal 8000 -> expose internal 8000
+      ],
+    };
+
+    const result = convertServiceToStackResource('web-server', service);
+
+    expect(result.success).toBe(true);
+    expect(result.data!.ports).toHaveLength(4);
+
+    // Check that internal ports are exposed, not external ports
+    expect(result.data!.ports[0]).toEqual({
+      number: 80,      // Internal port, not external 8080
+      protocol: 'http',
+      exposed_to_public: true,
+    });
+
+    expect(result.data!.ports[1]).toEqual({
+      number: 443,     // Internal port (same as external in this case)
+      protocol: 'http',
+      exposed_to_public: true,
+    });
+
+    expect(result.data!.ports[2]).toEqual({
+      number: 3000,    // Internal port (same as external in this case)
+      protocol: 'http',
+      exposed_to_public: true,
+    });
+
+    expect(result.data!.ports[3]).toEqual({
+      number: 8000,    // Internal port, not external 9000
+      protocol: 'http',
+      exposed_to_public: true,
+    });
+  });
+
+  it('should handle internal-only ports without external mapping', () => {
+    const service: DockerComposeService = {
+      image: 'redis:latest',
+      expose: [6379], // Internal port only, no external mapping
+    };
+
+    const result = convertServiceToStackResource('cache', service);
+
+    expect(result.success).toBe(true);
+    // Since expose doesn't provide external mapping, no ports should be created
+    // or if ports are created, they should not be exposed to public
+    expect(result.data!.ports).toHaveLength(0);
+  });
+
+  it('should use internal port when external mapping differs', () => {
+    const service: DockerComposeService = {
+      image: 'api:latest',
+      ports: [
+        '8080:3000',     // External 8080 maps to internal 3000 -> expose internal 3000
+        '9090:4000',     // External 9090 maps to internal 4000 -> expose internal 4000
+      ],
+    };
+
+    const result = convertServiceToStackResource('api-server', service);
+
+    expect(result.success).toBe(true);
+    expect(result.data!.ports).toHaveLength(2);
+
+    // The internal port should be exposed, not the external port
+    expect(result.data!.ports[0]).toEqual({
+      number: 3000,    // Internal port, not external 8080
+      protocol: 'http',
+      exposed_to_public: true,
+    });
+
+    expect(result.data!.ports[1]).toEqual({
+      number: 4000,    // Internal port, not external 9090
+      protocol: 'http',
+      exposed_to_public: true,
+    });
+  });
+
+
 });
 
 describe('convertVolumeToStackVolume', () => {
