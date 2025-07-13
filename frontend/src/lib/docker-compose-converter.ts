@@ -20,6 +20,20 @@ export interface ConversionResult {
   errors?: ConversionError[];
 }
 
+export interface ServiceConversionResult {
+  success: boolean;
+  data?: FormStackResourceData;
+  warnings?: ConversionWarning[];
+  errors?: ConversionError[];
+}
+
+export interface VolumeConversionResult {
+  success: boolean;
+  data?: FormVolumeExtendedData;
+  warnings?: ConversionWarning[];
+  errors?: ConversionError[];
+}
+
 export interface ConversionWarning {
   type: 'unsupported' | 'partial' | 'defaults';
   message: string;
@@ -147,7 +161,7 @@ export function convertDockerComposeToStackData(
 export function convertServiceToStackResource(
   serviceName: string,
   service: DockerComposeService
-): ConversionResult & { data?: FormStackResourceData } {
+): ServiceConversionResult {
   const warnings: ConversionWarning[] = [];
   const errors: ConversionError[] = [];
 
@@ -218,7 +232,7 @@ export function convertServiceToStackResource(
 export function convertVolumeToStackVolume(
   volumeName: string,
   volume: DockerComposeVolume
-): ConversionResult & { data?: FormVolumeExtendedData } {
+): VolumeConversionResult {
   const warnings: ConversionWarning[] = [];
 
   try {
@@ -283,29 +297,29 @@ export function convertVolumeToStackVolume(
 function convertLabels(
   labels: DockerComposeService['labels'],
   warnings: ConversionWarning[]
-): Array<{ name: string; value: string }> {
+): Array<{ key: string; value: string }> {
   if (!labels) return [];
 
   try {
     if (Array.isArray(labels)) {
       // Handle array format: ["key=value", "key2=value2"]
       return labels.map(label => {
-        const [name, ...valueParts] = label.split('=');
+        const [key, ...valueParts] = label.split('=');
         return {
-          name: name || '',
+          key: key || '',
           value: valueParts.join('=') || '',
         };
       });
     } else if (typeof labels === 'object') {
       // Handle object format: { key: "value", key2: "value2" }
-      return Object.entries(labels).map(([name, value]) => ({
-        name,
+      return Object.entries(labels).map(([key, value]) => ({
+        key,
         value: String(value),
       }));
     }
 
     return [];
-  } catch (error) {
+  } catch {
     warnings.push({
       type: 'partial',
       message: 'Failed to convert some labels. Please review and add them manually.',
@@ -322,10 +336,10 @@ function convertPorts(
   ports: DockerComposeService['ports'],
   serviceName: string,
   warnings: ConversionWarning[]
-): Array<{ name: string; port: number; protocol: string; exposed: boolean }> {
+): Array<{ number: number; protocol: "tcp" | "http"; exposed_to_public: boolean; subdomain_prefix?: string }> {
   if (!ports || !Array.isArray(ports)) return [];
 
-  const convertedPorts: Array<{ name: string; port: number; protocol: string; exposed: boolean }> = [];
+  const convertedPorts: Array<{ number: number; protocol: "tcp" | "http"; exposed_to_public: boolean; subdomain_prefix?: string }> = [];
 
   ports.forEach((port, index) => {
     try {
@@ -333,7 +347,7 @@ function convertPorts(
         // Parse string formats like "80:80", "8080", "127.0.0.1:8080:80"
         const parts = port.split(':');
         let targetPort: number;
-        const protocol = 'HTTP'; // Default to HTTP
+        const protocol: "tcp" | "http" = 'http'; // Default to HTTP
 
         if (parts.length === 1) {
           // Format: "8080"
@@ -359,19 +373,17 @@ function convertPorts(
         }
 
         convertedPorts.push({
-          name: `port-${targetPort}`,
-          port: targetPort,
+          number: targetPort,
           protocol,
-          exposed: true,
+          exposed_to_public: true,
         });
 
       } else if (typeof port === 'number') {
         // Direct port number
         convertedPorts.push({
-          name: `port-${port}`,
-          port: port,
-          protocol: 'HTTP',
-          exposed: true,
+          number: port,
+          protocol: 'http',
+          exposed_to_public: true,
         });
 
       } else if (typeof port === 'object' && port !== null) {
@@ -383,10 +395,9 @@ function convertPorts(
         }
 
         convertedPorts.push({
-          name: `port-${targetPort}`,
-          port: targetPort,
-          protocol: port.protocol === 'udp' ? 'UDP' : 'HTTP',
-          exposed: true,
+          number: targetPort,
+          protocol: port.protocol === 'udp' ? 'tcp' : 'http',
+          exposed_to_public: true,
         });
 
         if (port.mode && port.mode !== 'ingress') {
@@ -399,10 +410,10 @@ function convertPorts(
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       warnings.push({
         type: 'partial',
-        message: `Failed to convert port at index ${index}: ${(error as Error).message}`,
+        message: `Failed to convert port at index ${index}: ${(_error as Error).message}`,
         service: serviceName,
         dockerComposeField: 'ports',
       });
@@ -419,10 +430,10 @@ function convertVolumeMounts(
   volumes: DockerComposeService['volumes'],
   serviceName: string,
   warnings: ConversionWarning[]
-): Array<{ volume_name: string; mount_path: string; read_only?: boolean }> {
+): Array<{ source_volume_name: string; target_path: string; source_sub_path?: string }> {
   if (!volumes || !Array.isArray(volumes)) return [];
 
-  const volumeMounts: Array<{ volume_name: string; mount_path: string; read_only?: boolean }> = [];
+  const volumeMounts: Array<{ source_volume_name: string; target_path: string; source_sub_path?: string }> = [];
 
   volumes.forEach((volume, index) => {
     try {
@@ -440,10 +451,18 @@ function convertVolumeMounts(
           if (!source.startsWith('/') && !source.startsWith('./') && !source.startsWith('../')) {
             // Named volume - this maps to StackDome volumes
             volumeMounts.push({
-              volume_name: source,
-              mount_path: target,
-              read_only: readOnly,
+              source_volume_name: source,
+              target_path: target,
             });
+
+            if (readOnly) {
+              warnings.push({
+                type: 'partial',
+                message: `Read-only volume mount option is not supported. Volume '${source}' will be mounted as read-write.`,
+                service: serviceName,
+                dockerComposeField: 'volumes',
+              });
+            }
           } else {
             // Host path or relative path - not directly supported
             warnings.push({
@@ -468,10 +487,18 @@ function convertVolumeMounts(
           if (volume.type === 'volume') {
             // Named volume
             volumeMounts.push({
-              volume_name: volume.source,
-              mount_path: volume.target,
-              read_only: volume.read_only,
+              source_volume_name: volume.source,
+              target_path: volume.target,
             });
+
+            if (volume.read_only) {
+              warnings.push({
+                type: 'partial',
+                message: `Read-only volume mount option is not supported. Volume '${volume.source}' will be mounted as read-write.`,
+                service: serviceName,
+                dockerComposeField: 'volumes',
+              });
+            }
           } else if (volume.type === 'bind') {
             warnings.push({
               type: 'unsupported',
@@ -490,10 +517,10 @@ function convertVolumeMounts(
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       warnings.push({
         type: 'partial',
-        message: `Failed to convert volume at index ${index}: ${(error as Error).message}`,
+        message: `Failed to convert volume at index ${index}: ${(_error as Error).message}`,
         service: serviceName,
         dockerComposeField: 'volumes',
       });
@@ -530,7 +557,7 @@ function convertEnvironmentVariables(
               });
             }
           }
-        } catch (error) {
+        } catch {
           warnings.push({
             type: 'partial',
             message: `Failed to convert environment variable at index ${index}`,
@@ -551,7 +578,7 @@ function convertEnvironmentVariables(
       });
     }
 
-  } catch (error) {
+  } catch {
     warnings.push({
       type: 'partial',
       message: 'Failed to convert some environment variables. Please review and add them manually.',
@@ -579,13 +606,14 @@ function convertEnvironmentVariables(
 function convertCommand(
   command: DockerComposeService['command'],
   warnings: ConversionWarning[]
-): string | undefined {
+): string[] | undefined {
   if (!command) return undefined;
 
   if (typeof command === 'string') {
-    return command;
+    // Split string into array by spaces (simple approach)
+    return command.split(' ').filter(part => part.trim() !== '');
   } else if (Array.isArray(command)) {
-    return command.join(' ');
+    return command;
   } else {
     warnings.push({
       type: 'partial',
@@ -717,12 +745,12 @@ function handleUnsupportedServiceFeatures(
   ];
 
   unsupportedFeatures.forEach(({ field, message }) => {
-    if (service[field] !== undefined && service[field] !== null) {
+    if (service[field as keyof DockerComposeService] !== undefined && service[field as keyof DockerComposeService] !== null) {
       warnings.push({
         type: 'unsupported',
         message,
         service: serviceName,
-        dockerComposeField: field,
+        dockerComposeField: String(field),
       });
     }
   });

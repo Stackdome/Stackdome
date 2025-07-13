@@ -8,7 +8,6 @@ import {
   extractNetworks,
   getDockerComposeSummary,
   createSampleDockerCompose,
-  type ParseError,
 } from "../src/lib/docker-compose-parser";
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -372,7 +371,7 @@ describe('fixture-based parsing tests', () => {
         { name: 'invalid', yaml: invalidComposeYaml }
       ];
 
-      fixtures.forEach(({ name, yaml }) => {
+      fixtures.forEach(({ name: _name, yaml }) => {
         const result = parseAndValidateDockerCompose(yaml);
 
         // All our fixtures should parse successfully (conversion may have issues)

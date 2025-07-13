@@ -14,7 +14,7 @@ import {
 } from '../src/lib/docker-compose-converter';
 import { parseDockerCompose } from '../src/lib/docker-compose-parser';
 import type { DockerComposeFile, DockerComposeService } from '../src/types/docker-compose';
-import type { FormStackData, FormStackResourceData, FormVolumeExtendedData } from '../src/pages/stacks/schemas/form-schema';
+import type { FormStackResourceData, FormVolumeExtendedData } from '../src/pages/stacks/schemas/form-schema';
 
 // Simple fixture loaders
 const simpleComposeYaml = readFileSync(join(__dirname, 'fixtures/simple-docker-compose.yml'), 'utf-8');
@@ -89,10 +89,9 @@ describe('convertDockerComposeToStackData', () => {
     expect(resource.image_spec?.image).toBe('nginx:latest');
     expect(resource.ports).toHaveLength(1);
     expect(resource.ports[0]).toEqual({
-      name: 'port-80',
-      port: 80,
-      protocol: 'HTTP',
-      exposed: true,
+      number: 80,
+      protocol: 'http',
+      exposed_to_public: true,
     });
     expect(resource.execution_config.environment_variables).toHaveLength(1);
     expect(resource.execution_config.environment_variables[0]).toEqual({
@@ -131,7 +130,7 @@ describe('convertDockerComposeToStackData', () => {
     expect(resource.build_spec).toBeDefined();
     expect(resource.build_spec!.context_path_within_source).toBe('./api');
     expect(resource.build_spec!.dockerfile_path).toBe('Dockerfile.prod');
-    expect(resource.execution_config.command).toBe('npm start');
+    expect(resource.execution_config.command).toEqual(['npm', 'start']);
     expect(resource.execution_config.environment_variables).toHaveLength(2);
 
     // Should have warnings about build args and placeholders
@@ -176,9 +175,8 @@ describe('convertDockerComposeToStackData', () => {
     const resource = result.data!.spec.stack_resources[0];
     expect(resource.volume_mounts).toHaveLength(1);
     expect(resource.volume_mounts[0]).toEqual({
-      volume_name: 'db-data',
-      mount_path: '/var/lib/postgresql/data',
-      read_only: undefined,
+      source_volume_name: 'db-data',
+      target_path: '/var/lib/postgresql/data',
     });
   });
 
@@ -325,8 +323,8 @@ describe('convertServiceToStackResource', () => {
     expect(result.data!.sourceType).toBe('image');
     expect(result.data!.image_spec?.image).toBe('redis:6-alpine');
     expect(result.data!.labels).toEqual([
-      { name: 'app.version', value: '1.0.0' },
-      { name: 'environment', value: 'production' },
+      { key: 'app.version', value: '1.0.0' },
+      { key: 'environment', value: 'production' },
     ]);
   });
 
@@ -343,7 +341,7 @@ describe('convertServiceToStackResource', () => {
     expect(result.data!.sourceType).toBe('git');
     expect(result.data!.build_spec).toBeDefined();
     expect(result.data!.build_spec!.context_path_within_source).toBe('./backend');
-    expect(result.data!.execution_config.command).toBe('npm run start:prod');
+    expect(result.data!.execution_config.command).toEqual(['npm', 'run', 'start:prod']);
   });
 
   it('should fail when neither image nor build is specified', () => {
@@ -378,16 +376,14 @@ describe('convertServiceToStackResource', () => {
     expect(result.success).toBe(true);
     expect(result.data!.ports).toHaveLength(4);
     expect(result.data!.ports[0]).toEqual({
-      name: 'port-80',
-      port: 80,
-      protocol: 'HTTP',
-      exposed: true,
+      number: 80,
+      protocol: 'http',
+      exposed_to_public: true,
     });
     expect(result.data!.ports[3]).toEqual({
-      name: 'port-3000',
-      port: 3000,
-      protocol: 'HTTP',
-      exposed: true,
+      number: 3000,
+      protocol: 'http',
+      exposed_to_public: true,
     });
   });
 
@@ -417,19 +413,16 @@ describe('convertServiceToStackResource', () => {
     expect(result.success).toBe(true);
     expect(result.data!.volume_mounts).toHaveLength(3); // Only named volumes
     expect(result.data!.volume_mounts[0]).toEqual({
-      volume_name: 'db-data',
-      mount_path: '/var/lib/postgresql/data',
-      read_only: undefined,
+      source_volume_name: 'db-data',
+      target_path: '/var/lib/postgresql/data',
     });
     expect(result.data!.volume_mounts[1]).toEqual({
-      volume_name: 'logs',
-      mount_path: '/var/log',
-      read_only: true,
+      source_volume_name: 'logs',
+      target_path: '/var/log',
     });
     expect(result.data!.volume_mounts[2]).toEqual({
-      volume_name: 'config-data',
-      mount_path: '/etc/config',
-      read_only: true,
+      source_volume_name: 'config-data',
+      target_path: '/etc/config',
     });
 
     // Should have warnings about unsupported bind mounts
@@ -485,10 +478,10 @@ describe('convertServiceToStackResource', () => {
     const resultArray = convertServiceToStackResource('app2', serviceArray);
 
     expect(resultString.success).toBe(true);
-    expect(resultString.data!.execution_config.command).toBe('npm start');
+    expect(resultString.data!.execution_config.command).toEqual(['npm', 'start']);
 
     expect(resultArray.success).toBe(true);
-    expect(resultArray.data!.execution_config.command).toBe('npm run start:prod');
+    expect(resultArray.data!.execution_config.command).toEqual(['npm', 'run', 'start:prod']);
   });
 });
 

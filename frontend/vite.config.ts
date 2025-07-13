@@ -25,5 +25,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node', // Node.js environment for pure unit tests
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
   },
 })
