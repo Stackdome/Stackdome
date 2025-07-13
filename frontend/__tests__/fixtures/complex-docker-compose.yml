@@ -1,0 +1,79 @@
+version: '3.8'
+name: 'complex-app'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        NODE_VERSION: "18"
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - API_URL=http://api:3000
+    depends_on:
+      - api
+    networks:
+      - app-network
+    restart: always
+
+  api:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://db:5432/myapp
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - api-logs:/var/log/app
+      - ./config:/app/config:ro
+    depends_on:
+      - database
+      - redis
+    networks:
+      - app-network
+      - db-network
+    secrets:
+      - db-password
+
+  database:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: myapp
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - db-network
+    secrets:
+      - db-password
+
+  redis:
+    image: redis:6-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+
+volumes:
+  db-data:
+    driver: local
+  redis-data:
+    driver: local
+  api-logs:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
+  db-network:
+    driver: bridge
+
+secrets:
+  db-password:
+    file: ./secrets/db_password.txt
