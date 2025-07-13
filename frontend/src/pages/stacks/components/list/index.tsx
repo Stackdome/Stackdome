@@ -19,12 +19,26 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatDistanceToNow } from 'date-fns';
+import { DockerComposeImportDropdown } from "@/pages/stacks/components/shared/import-dropdown";
+import DockerComposeImportDialog from "@/pages/stacks/components/shared/docker-compose-import-dialog";
+import { useDockerComposeImport } from "@/pages/stacks/hooks/use-docker-compose-import";
 
 export default function StacksPage() {
   const { stacks, setStacks } = useStacks();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // Import functionality
+  const {
+    isLoading: isImportLoading,
+    error: importError,
+    isDialogOpen: isImportDialogOpen,
+    openDialog: openImportDialog,
+    closeDialog: closeImportDialog,
+    handleImport,
+    clearError: clearImportError,
+  } = useDockerComposeImport();
 
   useEffect(() => {
     const currentOrgId = getCurrentOrganizationId();
@@ -87,20 +101,33 @@ export default function StacksPage() {
               <p className="text-muted-foreground mb-6">
                 Deploy your first stack to get started.
               </p>
-              <Button onClick={handleCreateNewStack}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create New Stack
-              </Button>
+              <div className="flex gap-3">
+                <Button onClick={handleCreateNewStack}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Create New Stack
+                </Button>
+                <DockerComposeImportDropdown
+                  onDockerComposeImport={openImportDialog}
+                  variant="outline"
+                />
+              </div>
             </div>
           </div>
         ) : (
           <>
             <div className="flex justify-between items-center py-4">
               <h1 className="text-2xl font-semibold">Stacks</h1>
-              <Button onClick={handleCreateNewStack} size="lg">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add New Stack
-              </Button>
+              <div className="flex gap-2">
+                <DockerComposeImportDropdown
+                  onDockerComposeImport={openImportDialog}
+                  variant="outline"
+                  size="lg"
+                />
+                <Button onClick={handleCreateNewStack} size="lg">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add New Stack
+                </Button>
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 mt-0">
               {stacks.map((stack) => {
@@ -150,6 +177,16 @@ export default function StacksPage() {
             </div>
           </>
         )}
+
+        {/* Docker Compose Import Dialog */}
+        <DockerComposeImportDialog
+          open={isImportDialogOpen}
+          onOpenChange={closeImportDialog}
+          onImport={handleImport}
+          isLoading={isImportLoading}
+          error={importError}
+          onClearError={clearImportError}
+        />
       </div>
     </TooltipProvider>
   );

@@ -1,5 +1,5 @@
-import React, { useState, useCallback, Fragment } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useCallback, Fragment, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import StackResourcesForm from "../shared/stack-resources-form";
 import StackVolumesForm from "../shared/stack-volumes-form";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,6 @@ type FormErrors = { [path: string]: string | undefined };
 export default function StackCreatePage() {
   const [formData, setFormData] = useState<Partial<FormStackData>>({
     name: "",
-    workspace_name: "default",
     labels: [],
     spec: {
       stack_resources: [],
@@ -39,7 +38,21 @@ export default function StackCreatePage() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  // Handle imported data from navigation state
+  useEffect(() => {
+    const importedData = location.state?.importedData;
+    const importSource = location.state?.importSource;
+
+    if (importedData && importSource === 'docker-compose') {
+      setFormData(importedData);
+
+      // Clear the navigation state to prevent re-importing on refresh
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.state, navigate, location.pathname]);
 
   const handleChange = (path: string, value: string | number | boolean | object | null) => {
     setFormData(prev => {
@@ -199,13 +212,14 @@ export default function StackCreatePage() {
 
     const payloadToValidate: FormStackData = {
       name: formData.name || "",
-      workspace_name: formData.workspace_name || "default",
       labels: formData.labels || [],
       spec: {
         stack_resources: (formData.spec?.stack_resources || []).map(sr => {
           const resource: FormStackResourceData = {
             name: sr.name || "",
             sourceType: sr.sourceType || 'image',
+            useImageSecret: sr.useImageSecret || false,
+            useGitSecret: sr.useGitSecret || false,
             labels: sr.labels?.length ? sr.labels : undefined,
             depends_on: sr.depends_on?.length ? sr.depends_on : undefined,
             ports: sr.ports?.length ? sr.ports : undefined,
