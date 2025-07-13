@@ -14,7 +14,7 @@
     "generate:openapi-types": "openapi-typescript ../config/openapi/stackdome_api.yaml -o src/api/types/openapi.d.ts",
     "generate:compose-types": "tsx scripts/generate-compose-types.ts",
     "update:compose-schema": "curl -o schemas/compose-spec.json https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json",
-    "check:compose-conversion": "tsx ../scripts/check-compose-conversion.ts"
+    "check:compose-conversion": "tsx scripts/check-compose-conversion.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.10",
