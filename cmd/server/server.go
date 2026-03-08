@@ -87,6 +87,7 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 		PublicPaths: []string{
 			"^/api/v1/user-signup",
 			"^/api/v1/auth",
+			"^/health",
 		},
 		DefaultAuthHandler: auth.NewJwtAuthnHandler(mainHandler, []byte(env.Environment().Config.JwtSecret)),
 	})

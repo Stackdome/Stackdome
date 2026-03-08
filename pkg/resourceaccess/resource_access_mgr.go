@@ -29,6 +29,7 @@ type CasbinResourceAccessPolicyManagerConfig struct {
 	DBConnectionString     string
 	EnableDebugLog         bool
 	PolicyAutoLoadInterval time.Duration
+	PolicyFilePath         string
 }
 
 func NewResourceAccessPolicyManager(cfg CasbinResourceAccessPolicyManagerConfig) (ResourceAccessPolicyManager, error) {
@@ -40,7 +41,7 @@ func NewResourceAccessPolicyManager(cfg CasbinResourceAccessPolicyManagerConfig)
 	}
 
 	// Create enforcer with our model and the gorm adapter
-	enforcer, err := casbin.NewSyncedCachedEnforcer("pkg/resourceaccess/casbin_model.conf", adapter)
+	enforcer, err := casbin.NewSyncedCachedEnforcer(cfg.PolicyFilePath, adapter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create casbin enforcer: %w", err)
 	}

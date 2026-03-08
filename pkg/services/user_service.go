@@ -73,6 +73,7 @@ func (u usersService) GetDefaultUser(ctx context.Context) (*models.User, *errors
 }
 
 func (u usersService) Create(ctx context.Context, user *models.User) (*openapi.UserSignupResponse, *errors.ServiceError) {
+	u.logger.Infof("Creating user with email: %s", user.Email)
 	if len(user.Password) < 8 {
 		return nil, errors.BadRequest("password must be at least 8 characters")
 	}
@@ -87,6 +88,9 @@ func (u usersService) Create(ctx context.Context, user *models.User) (*openapi.U
 	}
 
 	if user.OrganisationID == "" {
+		if user.Organisation == nil {
+			return nil, errors.BadRequest("organisation is required")
+		}
 		// We create an organisation for the user if organisation ID is not provided.
 		createdOrganisation, err := u.organisationService.Create(ctx, user.Organisation)
 		if err != nil {

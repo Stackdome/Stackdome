@@ -66,9 +66,8 @@ func (h *jwtCookieAuthnHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 
 		return h.JWTSecret, nil
 	})
-
 	if err != nil {
-		handleError(w, errors.ErrorUnauthorized, "Invalid token")
+		handleError(w, errors.ErrorUnauthorized, fmt.Sprintf("token parse error: %s", err.Error()))
 		return
 	}
 

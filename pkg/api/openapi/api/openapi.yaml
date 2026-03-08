@@ -2035,6 +2035,628 @@ paths:
       security:
       - Bearer: []
       summary: Get a specific build under a stack
+  /api/v1/organizations/{org_id}/object-stores:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStoreList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all ObjectStores for an organization
+    post:
+      description: Add a new ObjectStore configuration for storing PostgreSQL backups
+        and WAL files
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectStore'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStore'
+          description: ObjectStore created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ObjectStore already exists
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Add a new ObjectStore for backup storage
+  /api/v1/organizations/{org_id}/object-stores/{id}:
+    delete:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: ObjectStore deleted successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: ObjectStore not found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ObjectStore is in use by PostgresAddons
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete an ObjectStore
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStore'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "404":
+          description: ObjectStore not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a specific ObjectStore
+    put:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectStore'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStore'
+          description: ObjectStore updated successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "404":
+          description: ObjectStore not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update an ObjectStore
+  /api/v1/organizations/{org_id}/addons/postgres:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostgresAddonList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all PostgresAddons for under an organization
+    post:
+      description: Create a new PostgreSQL database cluster addon
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostgresAddon'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostgresAddon'
+          description: PostgresAddon created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: PostgresAddon already exists
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Create a new PostgresAddon
+  /api/v1/organizations/{org_id}/addons/postgres/{id}:
+    delete:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostgresAddon'
+          description: PostgresAddon deletion initiated successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: PostgresAddon not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete a PostgresAddon
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostgresAddon'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: PostgresAddon not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a specific PostgresAddon
+    put:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostgresAddon'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostgresAddon'
+          description: PostgresAddon updated successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: PostgresAddon not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update a PostgresAddon
+  /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/backup:
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_api_v1_organizations__org_id__addons_postgres__id__actions_backup_post_request'
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/_api_v1_organizations__org_id__addons_postgres__id__actions_backup_post_202_response'
+          description: Backup request accepted
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: PostgresAddon not found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Backup already in progress
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Trigger an immediate backup
+  /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/fence:
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_api_v1_organizations__org_id__addons_postgres__id__actions_fence_post_request'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/_api_v1_organizations__org_id__addons_postgres__id__actions_fence_post_200_response'
+          description: Fencing operation successful
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: PostgresAddon not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Fence or unfence the PostgreSQL cluster
+  /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/hibernate:
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_api_v1_organizations__org_id__addons_postgres__id__actions_hibernate_post_request'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/_api_v1_organizations__org_id__addons_postgres__id__actions_hibernate_post_200_response'
+          description: Hibernation operation successful
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: PostgresAddon not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Hibernate or wake the PostgreSQL cluster
+  /api/v1/organizations/{org_id}/addons/postgres/{id}/backups:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 20
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostgresBackupList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "404":
+          description: PostgresAddon not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List backups for a PostgresAddon
 components:
   parameters:
     id:
@@ -6090,6 +6712,1132 @@ components:
         href:
           type: string
       type: object
+    ObjectStore:
+      example:
+        organisation_id: organisation_id
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        name: name
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
+        spec:
+          destination_path: destination_path
+          retention_policy: 7d
+          configuration:
+            gcs_credentials:
+              service_account_key: service_account_key
+            s3_credentials:
+              access_key_id: access_key_id
+              endpoint_url: endpoint_url
+              secret_access_key: secret_access_key
+              region: region
+            azure_credentials:
+              connection_string: connection_string
+        status:
+          state: Pending
+          message: message
+      properties:
+        id:
+          readOnly: true
+          type: string
+        organisation_id:
+          readOnly: true
+          type: string
+        name:
+          description: Unique name for this object store configuration
+          type: string
+        spec:
+          $ref: '#/components/schemas/ObjectStoreSpec'
+        status:
+          $ref: '#/components/schemas/ObjectStoreStatus'
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+        updated_at:
+          format: date-time
+          readOnly: true
+          type: string
+      required:
+      - name
+      - spec
+      type: object
+    ObjectStoreList:
+      example:
+        total: 0
+        items:
+        - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          name: name
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          spec:
+            destination_path: destination_path
+            retention_policy: 7d
+            configuration:
+              gcs_credentials:
+                service_account_key: service_account_key
+              s3_credentials:
+                access_key_id: access_key_id
+                endpoint_url: endpoint_url
+                secret_access_key: secret_access_key
+                region: region
+              azure_credentials:
+                connection_string: connection_string
+          status:
+            state: Pending
+            message: message
+        - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          name: name
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          spec:
+            destination_path: destination_path
+            retention_policy: 7d
+            configuration:
+              gcs_credentials:
+                service_account_key: service_account_key
+              s3_credentials:
+                access_key_id: access_key_id
+                endpoint_url: endpoint_url
+                secret_access_key: secret_access_key
+                region: region
+              azure_credentials:
+                connection_string: connection_string
+          status:
+            state: Pending
+            message: message
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ObjectStore'
+          type: array
+        total:
+          type: integer
+      type: object
+    ObjectStoreSpec:
+      example:
+        destination_path: destination_path
+        retention_policy: 7d
+        configuration:
+          gcs_credentials:
+            service_account_key: service_account_key
+          s3_credentials:
+            access_key_id: access_key_id
+            endpoint_url: endpoint_url
+            secret_access_key: secret_access_key
+            region: region
+          azure_credentials:
+            connection_string: connection_string
+      properties:
+        configuration:
+          $ref: '#/components/schemas/ObjectStoreConfiguration'
+        destination_path:
+          description: "Storage destination URL (e.g., s3://bucket/path, https://account.blob.core.windows.net/container/path)"
+          type: string
+        retention_policy:
+          default: 7d
+          description: "Retention policy (e.g., '1d', '7d', '30d')"
+          pattern: "^[1-9][0-9]*[dwm]$"
+          type: string
+      required:
+      - configuration
+      - destination_path
+      type: object
+    ObjectStoreConfiguration:
+      example:
+        gcs_credentials:
+          service_account_key: service_account_key
+        s3_credentials:
+          access_key_id: access_key_id
+          endpoint_url: endpoint_url
+          secret_access_key: secret_access_key
+          region: region
+        azure_credentials:
+          connection_string: connection_string
+      properties:
+        s3_credentials:
+          $ref: '#/components/schemas/S3Credentials'
+        azure_credentials:
+          $ref: '#/components/schemas/AzureCredentials'
+        gcs_credentials:
+          $ref: '#/components/schemas/GCSCredentials'
+      type: object
+    S3Credentials:
+      example:
+        access_key_id: access_key_id
+        endpoint_url: endpoint_url
+        secret_access_key: secret_access_key
+        region: region
+      properties:
+        access_key_id:
+          description: Reference to secret containing AWS access key ID
+          type: string
+        secret_access_key:
+          description: Reference to secret containing AWS secret access key
+          type: string
+        region:
+          description: AWS region
+          type: string
+        endpoint_url:
+          description: Custom S3 endpoint URL for S3-compatible storage
+          type: string
+      required:
+      - access_key_id
+      - region
+      - secret_access_key
+      type: object
+    AzureCredentials:
+      example:
+        connection_string: connection_string
+      properties:
+        connection_string:
+          description: Reference to secret containing Azure Blob Storage connection
+            string
+          type: string
+      required:
+      - connection_string
+      type: object
+    GCSCredentials:
+      example:
+        service_account_key: service_account_key
+      properties:
+        service_account_key:
+          description: Reference to secret containing GCS service account key JSON
+          type: string
+      required:
+      - service_account_key
+      type: object
+    WALConfiguration:
+      properties:
+        compression:
+          default: gzip
+          description: Compression type for WAL files
+          enum:
+          - gzip
+          - lz4
+          - zstd
+          type: string
+      type: object
+    ObjectStoreStatus:
+      example:
+        state: Pending
+        message: message
+      properties:
+        state:
+          enum:
+          - Pending
+          - Ready
+          - Error
+          type: string
+        message:
+          type: string
+      type: object
+    PostgresAddon:
+      example:
+        annotations:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        created_at: 2000-01-23T04:56:07.000+00:00
+        spec:
+          databases:
+          - extensions:
+            - vector
+            - vector
+            name: name
+          - extensions:
+            - vector
+            - vector
+            name: name
+          backup:
+            object_store_id: object_store_id
+            schedule: 0 0 0 * * 0
+            wal_archiving: true
+            enabled: false
+          instances:
+            count: 1
+            placement:
+              node_selector:
+                key: node_selector
+              tolerations:
+              - effect: effect
+                value: value
+                key: key
+                operator: operator
+              - effect: effect
+                value: value
+                key: key
+                operator: operator
+              topology_key: kubernetes.io/hostname
+              policy: preferred
+          configuration:
+            enable_superuser_access: false
+            parameters:
+              max_connections: "200"
+              shared_buffers: 256MB
+              work_mem: 4MB
+          resources:
+            memory:
+              request: request
+              limit: limit
+            cpu:
+              request: request
+              limit: limit
+          initialization:
+            import_from_external:
+              database: database
+              databases_to_import:
+              - databases_to_import
+              - databases_to_import
+              port: 5
+              host: host
+              password_secret_id: password_secret_id
+              ssl_mode: require
+              username: username
+            restore_from_object_store:
+              object_store_id: object_store_id
+              source_postgres_addon_id: source_postgres_addon_id
+              recovery_target_time: 2000-01-23T04:56:07.000+00:00
+            type: new
+            restore_from_backup:
+              backup_id: backup_id
+          storage:
+            storage_class: storage_class
+            size: size
+          version:
+            major: 13
+            minor: 6
+            enable_auto_minor_upgrade: true
+            enable_auto_major_upgrade: false
+        labels:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        revision: revision
+        organisation_id: organisation_id
+        cluster_id: cluster_id
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        user_id: user_id
+        name: name
+        namespace: namespace
+        id: id
+        status:
+          phase: phase
+          connection_info:
+            databases:
+            - owner: owner
+              name: name
+            - owner: owner
+              name: name
+            port: 2
+            credentials:
+              app_user_secrets:
+                key: app_user_secrets
+              ca_certificate_secret_id: ca_certificate_secret_id
+              superuser_secret_id: superuser_secret_id
+            host: host
+          state: Pending
+          message: message
+          conditions:
+          - reason: reason
+            last_transition_time: 2000-01-23T04:56:07.000+00:00
+            type: type
+            message: message
+            observed_generation: 1
+            status: status
+          - reason: reason
+            last_transition_time: 2000-01-23T04:56:07.000+00:00
+            type: type
+            message: message
+            observed_generation: 1
+            status: status
+          cluster_info:
+            version: version
+          observed_revision: observed_revision
+          observed_generation: 5
+      properties:
+        id:
+          readOnly: true
+          type: string
+        organisation_id:
+          readOnly: true
+          type: string
+        user_id:
+          readOnly: true
+          type: string
+        cluster_id:
+          readOnly: true
+          type: string
+        name:
+          description: Unique name for this PostgreSQL cluster
+          type: string
+        namespace:
+          readOnly: true
+          type: string
+        labels:
+          items:
+            $ref: '#/components/schemas/Label'
+          type: array
+        annotations:
+          items:
+            $ref: '#/components/schemas/Annotation'
+          type: array
+        revision:
+          readOnly: true
+          type: string
+        spec:
+          $ref: '#/components/schemas/PostgresAddonSpec'
+        status:
+          $ref: '#/components/schemas/PostgresAddonStatus'
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+        updated_at:
+          format: date-time
+          readOnly: true
+          type: string
+      required:
+      - name
+      - spec
+      type: object
+    PostgresAddonList:
+      example:
+        total: 7
+        items:
+        - annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
+          spec:
+            databases:
+            - extensions:
+              - vector
+              - vector
+              name: name
+            - extensions:
+              - vector
+              - vector
+              name: name
+            backup:
+              object_store_id: object_store_id
+              schedule: 0 0 0 * * 0
+              wal_archiving: true
+              enabled: false
+            instances:
+              count: 1
+              placement:
+                node_selector:
+                  key: node_selector
+                tolerations:
+                - effect: effect
+                  value: value
+                  key: key
+                  operator: operator
+                - effect: effect
+                  value: value
+                  key: key
+                  operator: operator
+                topology_key: kubernetes.io/hostname
+                policy: preferred
+            configuration:
+              enable_superuser_access: false
+              parameters:
+                max_connections: "200"
+                shared_buffers: 256MB
+                work_mem: 4MB
+            resources:
+              memory:
+                request: request
+                limit: limit
+              cpu:
+                request: request
+                limit: limit
+            initialization:
+              import_from_external:
+                database: database
+                databases_to_import:
+                - databases_to_import
+                - databases_to_import
+                port: 5
+                host: host
+                password_secret_id: password_secret_id
+                ssl_mode: require
+                username: username
+              restore_from_object_store:
+                object_store_id: object_store_id
+                source_postgres_addon_id: source_postgres_addon_id
+                recovery_target_time: 2000-01-23T04:56:07.000+00:00
+              type: new
+              restore_from_backup:
+                backup_id: backup_id
+            storage:
+              storage_class: storage_class
+              size: size
+            version:
+              major: 13
+              minor: 6
+              enable_auto_minor_upgrade: true
+              enable_auto_major_upgrade: false
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          revision: revision
+          organisation_id: organisation_id
+          cluster_id: cluster_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          name: name
+          namespace: namespace
+          id: id
+          status:
+            phase: phase
+            connection_info:
+              databases:
+              - owner: owner
+                name: name
+              - owner: owner
+                name: name
+              port: 2
+              credentials:
+                app_user_secrets:
+                  key: app_user_secrets
+                ca_certificate_secret_id: ca_certificate_secret_id
+                superuser_secret_id: superuser_secret_id
+              host: host
+            state: Pending
+            message: message
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            cluster_info:
+              version: version
+            observed_revision: observed_revision
+            observed_generation: 5
+        - annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
+          spec:
+            databases:
+            - extensions:
+              - vector
+              - vector
+              name: name
+            - extensions:
+              - vector
+              - vector
+              name: name
+            backup:
+              object_store_id: object_store_id
+              schedule: 0 0 0 * * 0
+              wal_archiving: true
+              enabled: false
+            instances:
+              count: 1
+              placement:
+                node_selector:
+                  key: node_selector
+                tolerations:
+                - effect: effect
+                  value: value
+                  key: key
+                  operator: operator
+                - effect: effect
+                  value: value
+                  key: key
+                  operator: operator
+                topology_key: kubernetes.io/hostname
+                policy: preferred
+            configuration:
+              enable_superuser_access: false
+              parameters:
+                max_connections: "200"
+                shared_buffers: 256MB
+                work_mem: 4MB
+            resources:
+              memory:
+                request: request
+                limit: limit
+              cpu:
+                request: request
+                limit: limit
+            initialization:
+              import_from_external:
+                database: database
+                databases_to_import:
+                - databases_to_import
+                - databases_to_import
+                port: 5
+                host: host
+                password_secret_id: password_secret_id
+                ssl_mode: require
+                username: username
+              restore_from_object_store:
+                object_store_id: object_store_id
+                source_postgres_addon_id: source_postgres_addon_id
+                recovery_target_time: 2000-01-23T04:56:07.000+00:00
+              type: new
+              restore_from_backup:
+                backup_id: backup_id
+            storage:
+              storage_class: storage_class
+              size: size
+            version:
+              major: 13
+              minor: 6
+              enable_auto_minor_upgrade: true
+              enable_auto_major_upgrade: false
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          revision: revision
+          organisation_id: organisation_id
+          cluster_id: cluster_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          name: name
+          namespace: namespace
+          id: id
+          status:
+            phase: phase
+            connection_info:
+              databases:
+              - owner: owner
+                name: name
+              - owner: owner
+                name: name
+              port: 2
+              credentials:
+                app_user_secrets:
+                  key: app_user_secrets
+                ca_certificate_secret_id: ca_certificate_secret_id
+                superuser_secret_id: superuser_secret_id
+              host: host
+            state: Pending
+            message: message
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            cluster_info:
+              version: version
+            observed_revision: observed_revision
+            observed_generation: 5
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/PostgresAddon'
+          type: array
+        total:
+          type: integer
+      type: object
+    PostgresAddonSpec:
+      example:
+        databases:
+        - extensions:
+          - vector
+          - vector
+          name: name
+        - extensions:
+          - vector
+          - vector
+          name: name
+        backup:
+          object_store_id: object_store_id
+          schedule: 0 0 0 * * 0
+          wal_archiving: true
+          enabled: false
+        instances:
+          count: 1
+          placement:
+            node_selector:
+              key: node_selector
+            tolerations:
+            - effect: effect
+              value: value
+              key: key
+              operator: operator
+            - effect: effect
+              value: value
+              key: key
+              operator: operator
+            topology_key: kubernetes.io/hostname
+            policy: preferred
+        configuration:
+          enable_superuser_access: false
+          parameters:
+            max_connections: "200"
+            shared_buffers: 256MB
+            work_mem: 4MB
+        resources:
+          memory:
+            request: request
+            limit: limit
+          cpu:
+            request: request
+            limit: limit
+        initialization:
+          import_from_external:
+            database: database
+            databases_to_import:
+            - databases_to_import
+            - databases_to_import
+            port: 5
+            host: host
+            password_secret_id: password_secret_id
+            ssl_mode: require
+            username: username
+          restore_from_object_store:
+            object_store_id: object_store_id
+            source_postgres_addon_id: source_postgres_addon_id
+            recovery_target_time: 2000-01-23T04:56:07.000+00:00
+          type: new
+          restore_from_backup:
+            backup_id: backup_id
+        storage:
+          storage_class: storage_class
+          size: size
+        version:
+          major: 13
+          minor: 6
+          enable_auto_minor_upgrade: true
+          enable_auto_major_upgrade: false
+      properties:
+        version:
+          $ref: '#/components/schemas/PostgresVersion'
+        instances:
+          $ref: '#/components/schemas/PostgresInstances'
+        storage:
+          $ref: '#/components/schemas/PostgresStorage'
+        resources:
+          $ref: '#/components/schemas/PostgresResources'
+        backup:
+          $ref: '#/components/schemas/PostgresBackupConfig'
+        initialization:
+          $ref: '#/components/schemas/PostgresInitialization'
+        databases:
+          items:
+            $ref: '#/components/schemas/PostgresDatabase'
+          type: array
+        configuration:
+          $ref: '#/components/schemas/PostgresConfiguration'
+      required:
+      - instances
+      - storage
+      - version
+      type: object
+    PostgresVersion:
+      example:
+        major: 13
+        minor: 6
+        enable_auto_minor_upgrade: true
+        enable_auto_major_upgrade: false
+      properties:
+        major:
+          description: PostgreSQL major version
+          maximum: 17
+          minimum: 13
+          type: integer
+        minor:
+          description: PostgreSQL minor version
+          type: integer
+        enable_auto_minor_upgrade:
+          default: true
+          description: Enable automatic minor version upgrades
+          type: boolean
+        enable_auto_major_upgrade:
+          default: false
+          description: Enable automatic major version upgrades
+          type: boolean
+      required:
+      - major
+      type: object
+    PostgresInstances:
+      example:
+        count: 1
+        placement:
+          node_selector:
+            key: node_selector
+          tolerations:
+          - effect: effect
+            value: value
+            key: key
+            operator: operator
+          - effect: effect
+            value: value
+            key: key
+            operator: operator
+          topology_key: kubernetes.io/hostname
+          policy: preferred
+      properties:
+        count:
+          description: Number of PostgreSQL instances
+          maximum: 5
+          minimum: 1
+          type: integer
+        placement:
+          $ref: '#/components/schemas/PostgresInstances_placement'
+      required:
+      - count
+      type: object
+    PostgresStorage:
+      example:
+        storage_class: storage_class
+        size: size
+      properties:
+        size:
+          description: "Storage size (e.g., 10Gi, 100Gi)"
+          pattern: "^[0-9]+[KMGTP]i?$"
+          type: string
+        storage_class:
+          description: Kubernetes storage class name
+          type: string
+      required:
+      - size
+      - storage_class
+      type: object
+    PostgresResources:
+      example:
+        memory:
+          request: request
+          limit: limit
+        cpu:
+          request: request
+          limit: limit
+      properties:
+        cpu:
+          $ref: '#/components/schemas/PostgresResources_cpu'
+        memory:
+          $ref: '#/components/schemas/PostgresResources_memory'
+      type: object
+    PostgresBackupConfig:
+      example:
+        object_store_id: object_store_id
+        schedule: 0 0 0 * * 0
+        wal_archiving: true
+        enabled: false
+      properties:
+        enabled:
+          default: false
+          description: Enable backup functionality
+          type: boolean
+        object_store_id:
+          description: Reference to ObjectStore for backup storage
+          type: string
+        schedule:
+          default: 0 0 0 * * 0
+          description: Cron schedule for automated backups
+          type: string
+        wal_archiving:
+          default: true
+          description: Enable WAL archiving for point-in-time recovery
+          type: boolean
+      type: object
+    PostgresInitialization:
+      example:
+        import_from_external:
+          database: database
+          databases_to_import:
+          - databases_to_import
+          - databases_to_import
+          port: 5
+          host: host
+          password_secret_id: password_secret_id
+          ssl_mode: require
+          username: username
+        restore_from_object_store:
+          object_store_id: object_store_id
+          source_postgres_addon_id: source_postgres_addon_id
+          recovery_target_time: 2000-01-23T04:56:07.000+00:00
+        type: new
+        restore_from_backup:
+          backup_id: backup_id
+      properties:
+        type:
+          default: new
+          enum:
+          - new
+          - restore_from_backup
+          - restore_from_object_store
+          - import_from_external
+          type: string
+        restore_from_backup:
+          $ref: '#/components/schemas/PostgresInitialization_restore_from_backup'
+        restore_from_object_store:
+          $ref: '#/components/schemas/PostgresInitialization_restore_from_object_store'
+        import_from_external:
+          $ref: '#/components/schemas/PostgresInitialization_import_from_external'
+      type: object
+    PostgresDatabase:
+      example:
+        extensions:
+        - vector
+        - vector
+        name: name
+      properties:
+        name:
+          description: Database name
+          type: string
+        extensions:
+          description: PostgreSQL extensions to enable
+          items:
+            enum:
+            - vector
+            type: string
+          type: array
+      required:
+      - name
+      type: object
+    PostgresConfiguration:
+      example:
+        enable_superuser_access: false
+        parameters:
+          max_connections: "200"
+          shared_buffers: 256MB
+          work_mem: 4MB
+      properties:
+        enable_superuser_access:
+          default: false
+          description: Enable superuser access to the database
+          type: boolean
+        parameters:
+          additionalProperties:
+            type: string
+          description: PostgreSQL configuration parameters
+          example:
+            max_connections: "200"
+            shared_buffers: 256MB
+            work_mem: 4MB
+          type: object
+      type: object
+    PostgresAddonStatus:
+      example:
+        phase: phase
+        connection_info:
+          databases:
+          - owner: owner
+            name: name
+          - owner: owner
+            name: name
+          port: 2
+          credentials:
+            app_user_secrets:
+              key: app_user_secrets
+            ca_certificate_secret_id: ca_certificate_secret_id
+            superuser_secret_id: superuser_secret_id
+          host: host
+        state: Pending
+        message: message
+        conditions:
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 1
+          status: status
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 1
+          status: status
+        cluster_info:
+          version: version
+        observed_revision: observed_revision
+        observed_generation: 5
+      properties:
+        state:
+          enum:
+          - Pending
+          - Creating
+          - Initializing
+          - Ready
+          - Updating
+          - Backing Up
+          - Restoring
+          - Error
+          - Deleting
+          - Hibernated
+          - Fenced
+          type: string
+        message:
+          type: string
+        phase:
+          type: string
+        conditions:
+          items:
+            $ref: '#/components/schemas/Condition'
+          type: array
+        observed_revision:
+          type: string
+        observed_generation:
+          type: integer
+        cluster_info:
+          $ref: '#/components/schemas/PostgresClusterInfo'
+        connection_info:
+          $ref: '#/components/schemas/PostgresConnectionInfo'
+      type: object
+    PostgresClusterInfo:
+      example:
+        version: version
+      properties:
+        version:
+          description: Current PostgreSQL version
+          type: string
+      type: object
+    PostgresConnectionInfo:
+      example:
+        databases:
+        - owner: owner
+          name: name
+        - owner: owner
+          name: name
+        port: 2
+        credentials:
+          app_user_secrets:
+            key: app_user_secrets
+          ca_certificate_secret_id: ca_certificate_secret_id
+          superuser_secret_id: superuser_secret_id
+        host: host
+      properties:
+        host:
+          description: Primary host endpoint
+          type: string
+        port:
+          default: 5432
+          type: integer
+        databases:
+          items:
+            $ref: '#/components/schemas/PostgresConnectionInfo_databases_inner'
+          type: array
+        credentials:
+          $ref: '#/components/schemas/PostgresConnectionInfo_credentials'
+      type: object
+    PostgresBackup:
+      example:
+        phase: pending
+        completed_at: 2000-01-23T04:56:07.000+00:00
+        size_bytes: 0
+        postgres_addon_id: postgres_addon_id
+        name: name
+        description: description
+        started_at: 2000-01-23T04:56:07.000+00:00
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
+        type: scheduled
+        error: error
+      properties:
+        id:
+          description: Unique backup identifier
+          type: string
+        postgres_addon_id:
+          description: ID of the PostgreSQL addon this backup belongs to
+          type: string
+        name:
+          description: Human-readable backup name
+          type: string
+        description:
+          description: Optional backup description
+          type: string
+        type:
+          description: How the backup was initiated
+          enum:
+          - scheduled
+          - manual
+          - pre_upgrade
+          type: string
+        phase:
+          description: Current backup status
+          enum:
+          - pending
+          - running
+          - completed
+          - failed
+          type: string
+        started_at:
+          description: When the backup started
+          format: date-time
+          type: string
+        completed_at:
+          description: When the backup completed (if finished)
+          format: date-time
+          type: string
+        error:
+          description: Error message if backup failed
+          type: string
+        size_bytes:
+          description: Backup size in bytes (if available)
+          type: integer
+        created_at:
+          description: When the backup record was created
+          format: date-time
+          type: string
+      type: object
+    PostgresBackupList:
+      example:
+        total: 6
+        items:
+        - phase: pending
+          completed_at: 2000-01-23T04:56:07.000+00:00
+          size_bytes: 0
+          postgres_addon_id: postgres_addon_id
+          name: name
+          description: description
+          started_at: 2000-01-23T04:56:07.000+00:00
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          type: scheduled
+          error: error
+        - phase: pending
+          completed_at: 2000-01-23T04:56:07.000+00:00
+          size_bytes: 0
+          postgres_addon_id: postgres_addon_id
+          name: name
+          description: description
+          started_at: 2000-01-23T04:56:07.000+00:00
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          type: scheduled
+          error: error
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/PostgresBackup'
+          type: array
+        total:
+          type: integer
+      type: object
     _api_v1_organizations__org_id__clusters__cluster_id__image_registries_get_200_response:
       example:
         total: 0
@@ -6240,6 +7988,61 @@ components:
         total:
           type: integer
       type: object
+    _api_v1_organizations__org_id__addons_postgres__id__actions_backup_post_request:
+      properties:
+        description:
+          description: Optional description for this backup
+          type: string
+      type: object
+    _api_v1_organizations__org_id__addons_postgres__id__actions_backup_post_202_response:
+      example:
+        backup_id: backup_id
+        message: message
+      properties:
+        message:
+          type: string
+        backup_id:
+          type: string
+      type: object
+    _api_v1_organizations__org_id__addons_postgres__id__actions_fence_post_request:
+      properties:
+        fence:
+          description: "true to fence the cluster, false to unfence"
+          type: boolean
+        reason:
+          description: Reason for fencing/unfencing
+          type: string
+      required:
+      - fence
+      type: object
+    _api_v1_organizations__org_id__addons_postgres__id__actions_fence_post_200_response:
+      example:
+        fenced: true
+        message: message
+      properties:
+        message:
+          type: string
+        fenced:
+          type: boolean
+      type: object
+    _api_v1_organizations__org_id__addons_postgres__id__actions_hibernate_post_request:
+      properties:
+        hibernate:
+          description: "true to hibernate, false to wake"
+          type: boolean
+      required:
+      - hibernate
+      type: object
+    _api_v1_organizations__org_id__addons_postgres__id__actions_hibernate_post_200_response:
+      example:
+        hibernated: true
+        message: message
+      properties:
+        message:
+          type: string
+        hibernated:
+          type: boolean
+      type: object
     WorkspaceUserStatus_provisioned_namespaces_inner:
       example:
         namespace: namespace
@@ -6320,6 +8123,181 @@ components:
         reason:
           type: string
         operation_id:
+          type: string
+      type: object
+    PostgresInstances_placement_tolerations_inner:
+      example:
+        effect: effect
+        value: value
+        key: key
+        operator: operator
+      properties:
+        key:
+          type: string
+        operator:
+          type: string
+        value:
+          type: string
+        effect:
+          type: string
+      type: object
+    PostgresInstances_placement:
+      example:
+        node_selector:
+          key: node_selector
+        tolerations:
+        - effect: effect
+          value: value
+          key: key
+          operator: operator
+        - effect: effect
+          value: value
+          key: key
+          operator: operator
+        topology_key: kubernetes.io/hostname
+        policy: preferred
+      properties:
+        topology_key:
+          default: kubernetes.io/hostname
+          description: Topology key for instance spreading
+          type: string
+        policy:
+          default: preferred
+          description: Instance placement policy
+          enum:
+          - preferred
+          - required
+          type: string
+        node_selector:
+          additionalProperties:
+            type: string
+          description: Node selector for instance placement
+          type: object
+        tolerations:
+          items:
+            $ref: '#/components/schemas/PostgresInstances_placement_tolerations_inner'
+          type: array
+      type: object
+    PostgresResources_cpu:
+      example:
+        request: request
+        limit: limit
+      properties:
+        request:
+          description: "CPU request (e.g., 100m, 1)"
+          type: string
+        limit:
+          description: CPU limit
+          type: string
+      type: object
+    PostgresResources_memory:
+      example:
+        request: request
+        limit: limit
+      properties:
+        request:
+          description: "Memory request (e.g., 256Mi, 1Gi)"
+          type: string
+        limit:
+          description: Memory limit
+          type: string
+      type: object
+    PostgresInitialization_restore_from_backup:
+      example:
+        backup_id: backup_id
+      properties:
+        backup_id:
+          description: ID of backup to restore from
+          type: string
+      type: object
+    PostgresInitialization_restore_from_object_store:
+      example:
+        object_store_id: object_store_id
+        source_postgres_addon_id: source_postgres_addon_id
+        recovery_target_time: 2000-01-23T04:56:07.000+00:00
+      properties:
+        object_store_id:
+          description: Object store containing the backup
+          type: string
+        source_postgres_addon_id:
+          description: Source PostgresAddon that created the backup
+          type: string
+        recovery_target_time:
+          description: Point-in-time recovery target
+          format: date-time
+          type: string
+      type: object
+    PostgresInitialization_import_from_external:
+      example:
+        database: database
+        databases_to_import:
+        - databases_to_import
+        - databases_to_import
+        port: 5
+        host: host
+        password_secret_id: password_secret_id
+        ssl_mode: require
+        username: username
+      properties:
+        host:
+          type: string
+        port:
+          default: 5432
+          type: integer
+        database:
+          type: string
+        username:
+          type: string
+        password_secret_id:
+          description: Secret containing the password
+          type: string
+        ssl_mode:
+          default: require
+          enum:
+          - disable
+          - require
+          - verify-ca
+          - verify-full
+          type: string
+        databases_to_import:
+          description: Specific databases to import
+          items:
+            type: string
+          type: array
+      required:
+      - database
+      - host
+      - password_secret_id
+      - port
+      - username
+      type: object
+    PostgresConnectionInfo_databases_inner:
+      example:
+        owner: owner
+        name: name
+      properties:
+        name:
+          type: string
+        owner:
+          type: string
+      type: object
+    PostgresConnectionInfo_credentials:
+      example:
+        app_user_secrets:
+          key: app_user_secrets
+        ca_certificate_secret_id: ca_certificate_secret_id
+        superuser_secret_id: superuser_secret_id
+      properties:
+        superuser_secret_id:
+          description: Secret containing superuser credentials
+          type: string
+        app_user_secrets:
+          additionalProperties:
+            type: string
+          description: Map of database to app user secret IDs
+          type: object
+        ca_certificate_secret_id:
+          description: Secret containing CA certificate
           type: string
       type: object
   securitySchemes:

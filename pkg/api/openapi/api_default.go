@@ -989,6 +989,1145 @@ func (a *DefaultApiService) ApiV1OrganizationsIdRemoteSyncServersPostExecute(r A
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiApiV1OrganizationsOrgIdAddonsPostgresGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresGetRequest) Execute() (*PostgresAddonList, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdAddonsPostgresGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdAddonsPostgresGet List all PostgresAddons for under an organization
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@return ApiApiV1OrganizationsOrgIdAddonsPostgresGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresGet(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdAddonsPostgresGetRequest {
+	return ApiApiV1OrganizationsOrgIdAddonsPostgresGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return PostgresAddonList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresGetExecute(r ApiApiV1OrganizationsOrgIdAddonsPostgresGetRequest) (*PostgresAddonList, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *PostgresAddonList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdAddonsPostgresGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/addons/postgres"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest struct {
+	ctx                                                             context.Context
+	ApiService                                                      *DefaultApiService
+	orgId                                                           string
+	id                                                              string
+	apiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest *ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest) ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest(apiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest) ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest {
+	r.apiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest = &apiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest) Execute() (*ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost Trigger an immediate backup
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest {
+	return ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostExecute(r ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest) (*ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/addons/postgres/{id}/actions/backup"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.apiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 409 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest struct {
+	ctx                                                            context.Context
+	ApiService                                                     *DefaultApiService
+	orgId                                                          string
+	id                                                             string
+	apiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest *ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest) ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest(apiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest) ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest {
+	r.apiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest = &apiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest) Execute() (*ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost200Response, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost Fence or unfence the PostgreSQL cluster
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest {
+	return ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost200Response
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostExecute(r ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest) (*ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost200Response, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost200Response
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/addons/postgres/{id}/actions/fence"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.apiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest == nil {
+		return localVarReturnValue, nil, reportError("apiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.apiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest struct {
+	ctx                                                                context.Context
+	ApiService                                                         *DefaultApiService
+	orgId                                                              string
+	id                                                                 string
+	apiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest *ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest) ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest(apiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest) ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest {
+	r.apiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest = &apiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest) Execute() (*ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost200Response, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost Hibernate or wake the PostgreSQL cluster
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest {
+	return ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost200Response
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostExecute(r ApiApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest) (*ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost200Response, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost200Response
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/addons/postgres/{id}/actions/hibernate"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.apiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest == nil {
+		return localVarReturnValue, nil, reportError("apiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.apiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+	limit      *int32
+	offset     *int32
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetRequest) Limit(limit int32) ApiApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetRequest {
+	r.limit = &limit
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetRequest) Offset(offset int32) ApiApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetRequest {
+	r.offset = &offset
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetRequest) Execute() (*PostgresBackupList, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet List backups for a PostgresAddon
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetRequest {
+	return ApiApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return PostgresBackupList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetExecute(r ApiApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetRequest) (*PostgresBackupList, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *PostgresBackupList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/addons/postgres/{id}/backups"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.limit != nil {
+		localVarQueryParams.Add("limit", parameterToString(*r.limit, ""))
+	}
+	if r.offset != nil {
+		localVarQueryParams.Add("offset", parameterToString(*r.offset, ""))
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdAddonsPostgresIdDeleteRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdDeleteRequest) Execute() (*PostgresAddon, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdDeleteExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdAddonsPostgresIdDelete Delete a PostgresAddon
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdAddonsPostgresIdDeleteRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdDelete(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdAddonsPostgresIdDeleteRequest {
+	return ApiApiV1OrganizationsOrgIdAddonsPostgresIdDeleteRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return PostgresAddon
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdDeleteExecute(r ApiApiV1OrganizationsOrgIdAddonsPostgresIdDeleteRequest) (*PostgresAddon, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodDelete
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *PostgresAddon
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdDelete")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/addons/postgres/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdAddonsPostgresIdGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdGetRequest) Execute() (*PostgresAddon, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdAddonsPostgresIdGet Get a specific PostgresAddon
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdAddonsPostgresIdGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdGet(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdAddonsPostgresIdGetRequest {
+	return ApiApiV1OrganizationsOrgIdAddonsPostgresIdGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return PostgresAddon
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdGetExecute(r ApiApiV1OrganizationsOrgIdAddonsPostgresIdGetRequest) (*PostgresAddon, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *PostgresAddon
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/addons/postgres/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdAddonsPostgresIdPutRequest struct {
+	ctx           context.Context
+	ApiService    *DefaultApiService
+	orgId         string
+	id            string
+	postgresAddon *PostgresAddon
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdPutRequest) PostgresAddon(postgresAddon PostgresAddon) ApiApiV1OrganizationsOrgIdAddonsPostgresIdPutRequest {
+	r.postgresAddon = &postgresAddon
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresIdPutRequest) Execute() (*PostgresAddon, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdPutExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdAddonsPostgresIdPut Update a PostgresAddon
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdAddonsPostgresIdPutRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdPut(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdAddonsPostgresIdPutRequest {
+	return ApiApiV1OrganizationsOrgIdAddonsPostgresIdPutRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return PostgresAddon
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresIdPutExecute(r ApiApiV1OrganizationsOrgIdAddonsPostgresIdPutRequest) (*PostgresAddon, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPut
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *PostgresAddon
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdAddonsPostgresIdPut")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/addons/postgres/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.postgresAddon == nil {
+		return localVarReturnValue, nil, reportError("postgresAddon is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.postgresAddon
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdAddonsPostgresPostRequest struct {
+	ctx           context.Context
+	ApiService    *DefaultApiService
+	orgId         string
+	postgresAddon *PostgresAddon
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresPostRequest) PostgresAddon(postgresAddon PostgresAddon) ApiApiV1OrganizationsOrgIdAddonsPostgresPostRequest {
+	r.postgresAddon = &postgresAddon
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdAddonsPostgresPostRequest) Execute() (*PostgresAddon, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdAddonsPostgresPostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdAddonsPostgresPost Create a new PostgresAddon
+
+Create a new PostgreSQL database cluster addon
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@return ApiApiV1OrganizationsOrgIdAddonsPostgresPostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresPost(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdAddonsPostgresPostRequest {
+	return ApiApiV1OrganizationsOrgIdAddonsPostgresPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return PostgresAddon
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAddonsPostgresPostExecute(r ApiApiV1OrganizationsOrgIdAddonsPostgresPostRequest) (*PostgresAddon, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *PostgresAddon
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdAddonsPostgresPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/addons/postgres"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.postgresAddon == nil {
+		return localVarReturnValue, nil, reportError("postgresAddon is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.postgresAddon
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 409 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGetRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
@@ -1721,6 +2860,625 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdClustersIdPutExecute(r ApiApi
 		newErr := &GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdObjectStoresGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+}
+
+func (r ApiApiV1OrganizationsOrgIdObjectStoresGetRequest) Execute() (*ObjectStoreList, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdObjectStoresGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdObjectStoresGet List all ObjectStores for an organization
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@return ApiApiV1OrganizationsOrgIdObjectStoresGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdObjectStoresGet(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdObjectStoresGetRequest {
+	return ApiApiV1OrganizationsOrgIdObjectStoresGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return ObjectStoreList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdObjectStoresGetExecute(r ApiApiV1OrganizationsOrgIdObjectStoresGetRequest) (*ObjectStoreList, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *ObjectStoreList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdObjectStoresGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/object-stores"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdObjectStoresIdDeleteRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdObjectStoresIdDeleteRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdObjectStoresIdDeleteExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdObjectStoresIdDelete Delete an ObjectStore
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdObjectStoresIdDeleteRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdObjectStoresIdDelete(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdObjectStoresIdDeleteRequest {
+	return ApiApiV1OrganizationsOrgIdObjectStoresIdDeleteRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdObjectStoresIdDeleteExecute(r ApiApiV1OrganizationsOrgIdObjectStoresIdDeleteRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdObjectStoresIdDelete")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/object-stores/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 409 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdObjectStoresIdGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdObjectStoresIdGetRequest) Execute() (*ObjectStore, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdObjectStoresIdGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdObjectStoresIdGet Get a specific ObjectStore
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdObjectStoresIdGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdObjectStoresIdGet(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdObjectStoresIdGetRequest {
+	return ApiApiV1OrganizationsOrgIdObjectStoresIdGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return ObjectStore
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdObjectStoresIdGetExecute(r ApiApiV1OrganizationsOrgIdObjectStoresIdGetRequest) (*ObjectStore, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *ObjectStore
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdObjectStoresIdGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/object-stores/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdObjectStoresIdPutRequest struct {
+	ctx         context.Context
+	ApiService  *DefaultApiService
+	orgId       string
+	id          string
+	objectStore *ObjectStore
+}
+
+func (r ApiApiV1OrganizationsOrgIdObjectStoresIdPutRequest) ObjectStore(objectStore ObjectStore) ApiApiV1OrganizationsOrgIdObjectStoresIdPutRequest {
+	r.objectStore = &objectStore
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdObjectStoresIdPutRequest) Execute() (*ObjectStore, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdObjectStoresIdPutExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdObjectStoresIdPut Update an ObjectStore
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdObjectStoresIdPutRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdObjectStoresIdPut(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdObjectStoresIdPutRequest {
+	return ApiApiV1OrganizationsOrgIdObjectStoresIdPutRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return ObjectStore
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdObjectStoresIdPutExecute(r ApiApiV1OrganizationsOrgIdObjectStoresIdPutRequest) (*ObjectStore, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPut
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *ObjectStore
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdObjectStoresIdPut")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/object-stores/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.objectStore == nil {
+		return localVarReturnValue, nil, reportError("objectStore is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.objectStore
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdObjectStoresPostRequest struct {
+	ctx         context.Context
+	ApiService  *DefaultApiService
+	orgId       string
+	objectStore *ObjectStore
+}
+
+func (r ApiApiV1OrganizationsOrgIdObjectStoresPostRequest) ObjectStore(objectStore ObjectStore) ApiApiV1OrganizationsOrgIdObjectStoresPostRequest {
+	r.objectStore = &objectStore
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdObjectStoresPostRequest) Execute() (*ObjectStore, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdObjectStoresPostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdObjectStoresPost Add a new ObjectStore for backup storage
+
+Add a new ObjectStore configuration for storing PostgreSQL backups and WAL files
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@return ApiApiV1OrganizationsOrgIdObjectStoresPostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdObjectStoresPost(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdObjectStoresPostRequest {
+	return ApiApiV1OrganizationsOrgIdObjectStoresPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return ObjectStore
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdObjectStoresPostExecute(r ApiApiV1OrganizationsOrgIdObjectStoresPostRequest) (*ObjectStore, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *ObjectStore
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdObjectStoresPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/object-stores"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.objectStore == nil {
+		return localVarReturnValue, nil, reportError("objectStore is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.objectStore
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 409 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

@@ -1,0 +1,528 @@
+package services
+
+import (
+	"context"
+	"time"
+
+	"github.com/ashishmax31/stackdome-api-server/pkg/db"
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
+	"github.com/ashishmax31/stackdome-api-server/pkg/validator/postgresaddon"
+)
+
+type PostgresAddonService interface {
+	CreatePostgresAddon(ctx context.Context, postgresAddon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError)
+	GetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
+	GetPostgresAddonByName(ctx context.Context, organisationID, name string) (*models.PostgresAddon, *errors.ServiceError)
+	UpdatePostgresAddon(ctx context.Context, id string, postgresAddon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError)
+	DeletePostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
+	ListPostgresAddonsByOrganisation(ctx context.Context, organisationID string) ([]*models.PostgresAddon, *errors.ServiceError)
+	UpdatePostgresAddonStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError
+
+	// Lifecycle operations
+	TriggerBackup(ctx context.Context, id string) *errors.ServiceError
+	TriggerHibernate(ctx context.Context, id string, enabled bool) *errors.ServiceError
+	TriggerFence(ctx context.Context, id string, enabled bool) *errors.ServiceError
+
+	// Backup operations
+	ListBackups(ctx context.Context, postgresAddonID string) ([]*models.PostgresBackup, *errors.ServiceError)
+
+	// Internal operations
+	InternalDeleteFromDB(ctx context.Context, id string) *errors.ServiceError
+	InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError)
+
+	BackgroundJobEnqueuerInjectable
+	ClusterResourceServiceInjectable
+}
+
+type PostgresAddonServiceSpec struct {
+	SessionFactory        db.SessionFactory
+	ObjectStoreService    ObjectStoreService
+	ClusterService        ClusterService
+	NamespaceService      NamespaceService
+	PostgresBackupService PostgresBackupService
+	Logger                logger.Logger
+}
+
+type postgresAddonService struct {
+	postgresAddonStore stores.PostgresAddonStore
+	databaseService    PostgresAddonDatabaseService
+	backupService      PostgresBackupService
+	namespaceService   NamespaceService
+	clusterService     ClusterService
+	objectStoreService ObjectStoreService
+	validator          validator.PostgresAddonValidator
+	logger             logger.Logger
+	sessionFactory     db.SessionFactory
+
+	BackgroundJobEnqueuerDep
+	ClusterResourceServiceDeps
+}
+
+func NewPostgresAddonService(spec PostgresAddonServiceSpec) PostgresAddonService {
+	postgresAddonStore := pgstore.NewPostgresAddonStore(pgstore.PostgresAddonStoreSpec{
+		SessionFactory: spec.SessionFactory,
+	})
+
+	databaseService := NewPostgresAddonDatabaseService(PostgresAddonDatabaseServiceSpec{
+		SessionFactory: spec.SessionFactory,
+		Logger:         spec.Logger,
+	})
+
+	return &postgresAddonService{
+		postgresAddonStore: postgresAddonStore,
+		databaseService:    databaseService,
+		backupService:      spec.PostgresBackupService,
+		clusterService:     spec.ClusterService,
+		namespaceService:   spec.NamespaceService,
+		objectStoreService: spec.ObjectStoreService,
+		validator:          postgresaddon.NewPostgresAddonValidator(),
+		logger:             spec.Logger,
+		sessionFactory:     spec.SessionFactory,
+	}
+}
+
+func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgresAddon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
+	// Validate input
+	if err := s.validator.ValidateForCreate(ctx, postgresAddon); err != nil {
+		return nil, err
+	}
+
+	namespace, err := s.namespaceService.PrepareNamespaceForAddon(ctx, postgresAddon, postgresAddon.OrganisationID)
+	if err != nil {
+		return nil, errors.GeneralError("failed to prepare namespace for PostgreSQL addon: %s", err.Error())
+	}
+
+	cluster, err := s.clusterService.GetClusterForOrg(ctx, postgresAddon.OrganisationID)
+	if err != nil {
+		return nil, errors.GeneralError("failed to get cluster for organisation '%s': %s", postgresAddon.OrganisationID, err.Error())
+	}
+	postgresAddon.ClusterID = cluster.ID
+	postgresAddon.Namespace = namespace.Name
+
+	// Check if PostgreSQL addon with same name already exists
+	existingPostgresAddon, _ := s.GetPostgresAddonByName(ctx, postgresAddon.OrganisationID, postgresAddon.Name)
+	if existingPostgresAddon != nil {
+		return nil, errors.Conflict("PostgreSQL addon with name '%s' already exists", postgresAddon.Name)
+	}
+
+	// Validate BackupConfig object store if specified
+	if postgresAddon.BackupConfig.ObjectStoreID != "" {
+		exists, err := s.objectStoreService.ValidateObjectStoreExists(ctx, postgresAddon.BackupConfig.ObjectStoreID)
+		if err != nil {
+			return nil, errors.GeneralError("failed to validate backup object store: %s", err.Error())
+		}
+		if !exists {
+			return nil, errors.BadRequest("backup object store with ID '%s' does not exist", postgresAddon.BackupConfig.ObjectStoreID)
+		}
+	}
+
+	// Validate Initialization if specified
+	if (postgresAddon.Initialization != models.PostgresInitialization{}) {
+		if postgresAddon.Initialization.RestoreFromBackup != nil {
+			exists, err := s.backupService.ValidateBackupExists(ctx, postgresAddon.Initialization.RestoreFromBackup.BackupID)
+			if err != nil {
+				return nil, errors.GeneralError("failed to validate initialization backup: %s", err.Error())
+			}
+			if !exists {
+				return nil, errors.BadRequest("initialization backup with ID '%s' does not exist", postgresAddon.Initialization.RestoreFromBackup.BackupID)
+			}
+		}
+
+		if postgresAddon.Initialization.RestoreFromObjectStore != nil {
+			exists, err := s.objectStoreService.ValidateObjectStoreExists(ctx, postgresAddon.Initialization.RestoreFromObjectStore.ObjectStoreID)
+			if err != nil {
+				return nil, errors.GeneralError("failed to validate initialization object store: %s", err.Error())
+			}
+			if !exists {
+				return nil, errors.BadRequest("initialization object store with ID '%s' does not exist", postgresAddon.Initialization.RestoreFromObjectStore.ObjectStoreID)
+			}
+		}
+	}
+
+	// Set default lifecycle config if not provided
+	if (postgresAddon.LifecycleConfig == models.PostgresLifecycleConfig{}) {
+		postgresAddon.LifecycleConfig = models.PostgresLifecycleConfig{
+			HibernationEnabled: false,
+			FencingEnabled:     false,
+		}
+	}
+
+	// Set initial status
+	postgresAddon.Status = models.PostgresAddonStatus{
+		State:   "Pending",
+		Message: "PostgreSQL addon is being created",
+	}
+
+	var createdPostgresAddon *models.PostgresAddon
+	err = s.postgresAddonStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		// Create namespace
+		createdNamepace, err := s.namespaceService.CreateInDBWithTx(ctx, namespace)
+		if err != nil {
+			return errors.GeneralError("failed to create namespace for PostgreSQL addon: %s", err.Error())
+		}
+		postgresAddon.NamespaceID = createdNamepace.ID
+		// Create PostgreSQL addon within transaction
+		var createErr *errors.ServiceError
+		createdPostgresAddon, createErr = s.postgresAddonStore.CreateWithTx(ctx, postgresAddon)
+		if createErr != nil {
+			return createErr
+		}
+		// Create databases within same transaction
+		for _, db := range postgresAddon.Databases {
+			db.PostgresAddonID = createdPostgresAddon.ID
+			_, createErr := s.databaseService.CreateWithTx(ctx, &db)
+			if createErr != nil {
+				return createErr
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the complete addon with databases loaded
+	createdPostgresAddon, err = s.GetPostgresAddon(ctx, createdPostgresAddon.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return createdPostgresAddon, nil
+}
+
+func (s *postgresAddonService) GetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError) {
+	return s.postgresAddonStore.GetByID(ctx, id)
+}
+
+func (s *postgresAddonService) GetPostgresAddonByName(ctx context.Context, organisationID, name string) (*models.PostgresAddon, *errors.ServiceError) {
+	return s.postgresAddonStore.GetByName(ctx, organisationID, name)
+}
+
+func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id string, postgresAddon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
+	existingPostgresAddon, err := s.GetPostgresAddon(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate update using validator
+	if err := s.validator.ValidateForUpdate(ctx, existingPostgresAddon, postgresAddon); err != nil {
+		return nil, err
+	}
+
+	postgresAddon.ClusterID = existingPostgresAddon.ClusterID
+	postgresAddon.NamespaceID = existingPostgresAddon.NamespaceID
+	postgresAddon.Namespace = existingPostgresAddon.Namespace
+
+	// Validate BackupConfig object store if specified
+	if postgresAddon.BackupConfig.ObjectStoreID != "" {
+		exists, err := s.objectStoreService.ValidateObjectStoreExists(ctx, postgresAddon.BackupConfig.ObjectStoreID)
+		if err != nil {
+			return nil, errors.GeneralError("failed to validate backup object store: %s", err.Error())
+		}
+		if !exists {
+			return nil, errors.BadRequest("backup object store with ID '%s' does not exist", postgresAddon.BackupConfig.ObjectStoreID)
+		}
+	}
+
+	var updatedPostgresAddon *models.PostgresAddon
+	err = s.postgresAddonStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		// Update PostgreSQL addon within transaction
+		var updateErr *errors.ServiceError
+		updatedPostgresAddon, updateErr = s.postgresAddonStore.UpdateWithTx(ctx, postgresAddon)
+		if updateErr != nil {
+			return updateErr
+		}
+
+		// Handle database changes with proper diff logic within same transaction
+		updateErr = s.updateDatabasesWithDiff(ctx, updatedPostgresAddon.ID, existingPostgresAddon.Databases, postgresAddon.Databases)
+		if updateErr != nil {
+			return updateErr
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedPostgresAddon, nil
+}
+
+func (s *postgresAddonService) updateDatabasesWithDiff(ctx context.Context, postgresAddonID string, existingDatabases, newDatabases []models.PostgresAddonDatabase) *errors.ServiceError {
+	// Create maps for efficient lookup
+	existingMap := make(map[string]models.PostgresAddonDatabase)
+	for _, db := range existingDatabases {
+		existingMap[db.Name] = db
+	}
+
+	newMap := make(map[string]models.PostgresAddonDatabase)
+	for _, db := range newDatabases {
+		newMap[db.Name] = db
+	}
+
+	// Handle creates and updates
+	for _, newDb := range newDatabases {
+		if existingDb, exists := existingMap[newDb.Name]; exists {
+			// Update existing database if extensions changed
+			if !s.extensionsEqual(existingDb.Extensions, newDb.Extensions) {
+				newDb.ID = existingDb.ID
+				newDb.PostgresAddonID = postgresAddonID
+				_, err := s.databaseService.UpdateWithTx(ctx, existingDb.ID, &newDb)
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			// Create new database
+			newDb.PostgresAddonID = postgresAddonID
+			_, err := s.databaseService.CreateWithTx(ctx, &newDb)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Handle deletes
+	for _, existingDb := range existingDatabases {
+		if _, exists := newMap[existingDb.Name]; !exists {
+			err := s.databaseService.DeleteWithTx(ctx, existingDb.ID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *postgresAddonService) extensionsEqual(a, b models.PostgresExtensions) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	aMap := make(map[string]bool)
+	for _, ext := range a {
+		aMap[ext] = true
+	}
+
+	for _, ext := range b {
+		if !aMap[ext] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError) {
+	postgresAddon, err := s.GetPostgresAddon(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Mark for deletion
+	postgresAddon.Status.State = "Deleting"
+	postgresAddon.Status.Message = "PostgreSQL addon is being deleted"
+
+	err = s.postgresAddonStore.UpdateStatus(ctx, id, &postgresAddon.Status)
+	if err != nil {
+		return nil, errors.GeneralError("failed to update PostgreSQL addon status for deletion: %s", err.Error())
+	}
+
+	return postgresAddon, nil
+}
+
+func (s *postgresAddonService) ListPostgresAddonsByOrganisation(ctx context.Context, organisationID string) ([]*models.PostgresAddon, *errors.ServiceError) {
+	return s.postgresAddonStore.ListByOrganisation(ctx, organisationID)
+}
+
+func (s *postgresAddonService) UpdatePostgresAddonStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError {
+	return s.postgresAddonStore.UpdateStatus(ctx, id, status)
+}
+
+// Lifecycle operations - accept updated models and persist lifecycle config changes
+func (s *postgresAddonService) RequestPostgresAddonBackup(ctx context.Context, id string) *errors.ServiceError {
+	now := time.Now().UTC()
+	return s.postgresAddonStore.UpdateBackupRequestedAt(ctx, id, &now)
+}
+
+func (s *postgresAddonService) HibernatePostgresAddon(ctx context.Context, id string, lifecycleConfig models.PostgresLifecycleConfig) *errors.ServiceError {
+	// Get existing addon
+	existingAddon, err := s.GetPostgresAddon(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	// Update lifecycle config
+	existingAddon.LifecycleConfig = lifecycleConfig
+
+	// Persist the lifecycle config change
+	_, err = s.postgresAddonStore.Update(ctx, existingAddon)
+	if err != nil {
+		return err
+	}
+
+	// Enqueue background job for hibernation
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
+		ID: id,
+	}); err != nil {
+		return errors.GeneralError("failed to enqueue hibernation job for PostgreSQL addon '%s': %s", existingAddon.Name, err.Error())
+	}
+
+	return nil
+}
+
+func (s *postgresAddonService) WakePostgresAddon(ctx context.Context, id string, lifecycleConfig models.PostgresLifecycleConfig) *errors.ServiceError {
+	// Get existing addon
+	existingAddon, err := s.GetPostgresAddon(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	// Update lifecycle config
+	existingAddon.LifecycleConfig = lifecycleConfig
+
+	// Persist the lifecycle config change
+	_, err = s.postgresAddonStore.Update(ctx, existingAddon)
+	if err != nil {
+		return err
+	}
+
+	// Enqueue background job for waking
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
+		ID: id,
+	}); err != nil {
+		return errors.GeneralError("failed to enqueue wake job for PostgreSQL addon '%s': %s", existingAddon.Name, err.Error())
+	}
+
+	return nil
+}
+
+func (s *postgresAddonService) FencePostgresAddon(ctx context.Context, id string, lifecycleConfig models.PostgresLifecycleConfig) *errors.ServiceError {
+	// Get existing addon
+	existingAddon, err := s.GetPostgresAddon(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	// Update lifecycle config
+	existingAddon.LifecycleConfig = lifecycleConfig
+
+	// Persist the lifecycle config change
+	_, err = s.postgresAddonStore.Update(ctx, existingAddon)
+	if err != nil {
+		return err
+	}
+
+	// Enqueue background job for fencing
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
+		ID: id,
+	}); err != nil {
+		return errors.GeneralError("failed to enqueue fencing job for PostgreSQL addon '%s': %s", existingAddon.Name, err.Error())
+	}
+
+	return nil
+}
+
+func (s *postgresAddonService) UnfencePostgresAddon(ctx context.Context, id string, lifecycleConfig models.PostgresLifecycleConfig) *errors.ServiceError {
+	// Get existing addon
+	existingAddon, err := s.GetPostgresAddon(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	// Update lifecycle config
+	existingAddon.LifecycleConfig = lifecycleConfig
+
+	// Persist the lifecycle config change
+	_, err = s.postgresAddonStore.Update(ctx, existingAddon)
+	if err != nil {
+		return err
+	}
+
+	// Enqueue background job for unfencing
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
+		ID: id,
+	}); err != nil {
+		return errors.GeneralError("failed to enqueue unfencing job for PostgreSQL addon '%s': %s", existingAddon.Name, err.Error())
+	}
+
+	return nil
+}
+
+// Internal operations
+func (s *postgresAddonService) InternalDeleteFromDB(ctx context.Context, id string) *errors.ServiceError {
+	err := s.postgresAddonStore.Delete(ctx, id)
+	if err != nil {
+		if err.Is404() {
+			return nil // Already deleted
+		}
+		return errors.GeneralError("failed to delete PostgreSQL addon with ID '%s' from database: %s", id, err.Error())
+	}
+	return nil
+}
+
+func (s *postgresAddonService) InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError) {
+	return s.postgresAddonStore.InternalList(ctx, query, args...)
+}
+
+// Composition services
+func (s *postgresAddonService) DatabaseService() PostgresAddonDatabaseService {
+	return s.databaseService
+}
+
+// TODO: Implement PostgresAddonBackupService
+// func (s *postgresAddonService) BackupService() PostgresAddonBackupService {
+//	return s.backupService
+// }
+
+// TriggerBackup triggers a backup for the postgres addon
+func (s *postgresAddonService) TriggerBackup(ctx context.Context, id string) *errors.ServiceError {
+	// Update the backup requested timestamp
+	now := time.Now()
+	return s.postgresAddonStore.UpdateBackupRequestedAt(ctx, id, &now)
+}
+
+// TriggerHibernate triggers hibernation for the postgres addon
+func (s *postgresAddonService) TriggerHibernate(ctx context.Context, id string, enabled bool) *errors.ServiceError {
+	// Get the current postgres addon
+	postgresAddon, err := s.GetPostgresAddon(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	// Update lifecycle config
+	postgresAddon.LifecycleConfig.HibernationEnabled = enabled
+
+	// Update the postgres addon
+	_, err = s.UpdatePostgresAddon(ctx, id, postgresAddon)
+	return err
+}
+
+// TriggerFence triggers fencing for the postgres addon
+func (s *postgresAddonService) TriggerFence(ctx context.Context, id string, enabled bool) *errors.ServiceError {
+	// Get the current postgres addon
+	postgresAddon, err := s.GetPostgresAddon(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	// Update lifecycle config
+	postgresAddon.LifecycleConfig.FencingEnabled = enabled
+
+	// Update the postgres addon
+	_, err = s.UpdatePostgresAddon(ctx, id, postgresAddon)
+	return err
+}
+
+// ListBackups lists all backups for a postgres addon
+func (s *postgresAddonService) ListBackups(ctx context.Context, postgresAddonID string) ([]*models.PostgresBackup, *errors.ServiceError) {
+	// TODO: Implement when PostgresAddonBackupService is available
+	// For now, return empty list
+	return []*models.PostgresBackup{}, nil
+}

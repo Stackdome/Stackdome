@@ -17,6 +17,7 @@ type EnvImpl interface {
 	Init(context.Context) error
 	InitDatabase(context.Context) error
 	Environment() *Env
+	Shutdown(context.Context) error
 }
 
 type Env struct {
@@ -58,4 +59,6 @@ type Services struct {
 	MetricsService              services.MetricsService
 	SecretService               services.SecretService
 	EncryptionService           services.EncryptionService
+	ObjectStoreService          services.ObjectStoreService
+	PostgresAddonService        services.PostgresAddonService
 }

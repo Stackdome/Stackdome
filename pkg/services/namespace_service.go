@@ -25,6 +25,7 @@ type NamespaceService interface {
 	ListByOrganisation(ctx context.Context, organisationID string) ([]*models.Namespace, *errors.ServiceError)
 	ListByStack(ctx context.Context, stackID string) ([]*models.Namespace, *errors.ServiceError)
 	PrepareNamespaceForStack(ctx context.Context, stack *models.Stack) (*models.Namespace, *errors.ServiceError)
+	PrepareNamespaceForAddon(ctx context.Context, addon models.Addon, orgID string) (*models.Namespace, *errors.ServiceError)
 	ClusterResourceServiceInjectable
 }
 
@@ -56,6 +57,16 @@ func (s *namespaceService) PrepareNamespaceForStack(ctx context.Context, stack *
 	}
 	namespace.AddDefaultLabels()
 
+	return namespace, nil
+}
+
+func (s *namespaceService) PrepareNamespaceForAddon(ctx context.Context, addon models.Addon, organisationID string) (*models.Namespace, *errors.ServiceError) {
+	// Generate a unique namespace for the addon
+	namespace := &models.Namespace{
+		Name:           fmt.Sprintf("stackdome-addons-%s-%s", addon.Type(), addon.AddonName()),
+		OrganisationID: organisationID,
+	}
+	namespace.AddDefaultLabels()
 	return namespace, nil
 }
 
