@@ -19,6 +19,11 @@ func TestIntegration(t *testing.T) {
 	RunSpecs(t, "Integration Test Suite")
 }
 
+var _ = BeforeEach(func() {
+	By("Clearing test data")
+	Expect(env.Database.ClearData(context.Background())).To(Succeed())
+})
+
 var _ = BeforeSuite(func() {
 	err := godotenv.Load("../../.env")
 	Expect(err).NotTo(HaveOccurred(), "Failed to load .env file for integration tests")

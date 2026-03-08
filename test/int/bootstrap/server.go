@@ -1,0 +1,140 @@
+package bootstrap
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/ashishmax31/stackdome-api-server/cmd/environment"
+	"github.com/ashishmax31/stackdome-api-server/cmd/server"
+	"github.com/ashishmax31/stackdome-api-server/config"
+	"github.com/ashishmax31/stackdome-api-server/pkg/db"
+	"github.com/go-logr/logr"
+)
+
+const (
+	ServerPort = 8987
+)
+
+type ServerManager struct {
+	config         *config.ApplicationConfig
+	env            environment.EnvImpl
+	apiServer      server.Server
+	baseURL        string
+	port           int
+	sessionFactory db.SessionFactory
+	logger         logr.Logger
+}
+
+func NewServerManager(sessionFactory db.SessionFactory, dbConfig *config.DatabaseConfig, logger logr.Logger) *ServerManager {
+	return &ServerManager{
+		config: &config.ApplicationConfig{
+			Server: &config.ServerConfig{
+				Hostname:    "localhost",
+				BindAddress: fmt.Sprintf("0.0.0.0:%d", ServerPort),
+			},
+			Database: dbConfig,
+		},
+		port:           ServerPort,
+		baseURL:        fmt.Sprintf("http://localhost:%d", ServerPort),
+		sessionFactory: sessionFactory,
+		logger:         logger,
+	}
+}
+
+func (sm *ServerManager) Bootstrap(ctx context.Context, dbConfig *config.DatabaseConfig) error {
+	sm.logger.Info("Starting server bootstrap")
+
+	// Create context with 5-minute timeout for server bootstrap
+	bootstrapCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	// Create test environment
+	env := environment.NewTestEnvironment(sm.sessionFactory, dbConfig, environment.WithApplicationConfig(sm.config))
+
+	// Initialize environment
+	if err := env.Init(bootstrapCtx); err != nil {
+		return fmt.Errorf("failed to initialize environment: %w", err)
+	}
+
+	sm.env = env
+
+	// Create and start server
+	sm.apiServer = server.NewAPIServer(env)
+
+	// Start server in background using Listen + Serve pattern
+	listener, err := sm.apiServer.Listen()
+	if err != nil {
+		return fmt.Errorf("failed to start listener: %w", err)
+	}
+
+	go func() {
+		sm.logger.Info("Starting API server", "address", sm.config.Server.BindAddress)
+		sm.apiServer.Serve(listener)
+	}()
+	sm.logger.Info("API server started", "address", sm.config.Server.BindAddress)
+	// Wait for server to be ready
+
+	ctxWithTimeout, cancel := context.WithTimeout(bootstrapCtx, 20*time.Second)
+	defer cancel()
+	if err := sm.waitForReady(ctxWithTimeout); err != nil {
+		return fmt.Errorf("server failed to start: %w", err)
+	}
+
+	sm.logger.Info("Server bootstrap completed successfully", "baseURL", sm.baseURL)
+	return nil
+}
+
+func (sm *ServerManager) GetBaseURL() string {
+	return sm.baseURL
+}
+
+func (sm *ServerManager) GetEnvironment() environment.EnvImpl {
+	return sm.env
+}
+
+func (sm *ServerManager) waitForReady(ctx context.Context) error {
+	healthURL := fmt.Sprintf("%s/health", sm.baseURL)
+
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			resp, err := http.Get(healthURL)
+			if err == nil && resp.StatusCode == http.StatusOK {
+				resp.Body.Close()
+				return nil
+			}
+			if resp != nil {
+				resp.Body.Close()
+			}
+		}
+	}
+}
+
+func (sm *ServerManager) Cleanup(ctx context.Context) error {
+	if sm.apiServer != nil {
+		sm.logger.Info("Shutting down API server")
+		if err := sm.apiServer.Stop(); err != nil {
+			sm.logger.Error(err, "Failed to stop API server")
+			return fmt.Errorf("failed to stop server: %w", err)
+		}
+		sm.logger.Info("Server shutdown completed")
+	}
+
+	// Shutdown the environment to cleanup resources
+	if sm.env != nil {
+		sm.logger.Info("Shutting down test environment")
+		if err := sm.env.Shutdown(ctx); err != nil {
+			sm.logger.Error(err, "Failed to shutdown environment")
+			return fmt.Errorf("failed to shutdown environment: %w", err)
+		}
+	}
+
+	return nil
+}
