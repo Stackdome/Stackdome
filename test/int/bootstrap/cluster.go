@@ -34,50 +34,15 @@ func NewClusterManagerWithLogger(logger logr.Logger) *ClusterManager {
 func (cm *ClusterManager) Bootstrap(ctx context.Context) error {
 	cm.logger.Info("Starting cluster bootstrap")
 
-	// Get kubeconfig from environment - this is required
-	kubeconfig := os.Getenv("TEST_KUBECONFIG")
-	if kubeconfig == "" {
-		return fmt.Errorf("TEST_KUBECONFIG not set - cluster must be created before running tests. Run 'mage cluster:create' first")
+	// Check for external cluster first
+	if kubeconfig := os.Getenv("TEST_KUBECONFIG"); kubeconfig != "" {
+		cm.logger.Info("TEST_KUBECONFIG detected, using external cluster", "kubeconfig", kubeconfig)
+		return cm.useExistingCluster(ctx, kubeconfig)
 	}
 
-	// Verify the kubeconfig file exists
-	if _, err := os.Stat(kubeconfig); os.IsNotExist(err) {
-		return fmt.Errorf("kubeconfig file does not exist at %s - ensure cluster is created. Run 'mage cluster:create' first", kubeconfig)
-	}
-
-	cm.logger.Info("Using Mage-managed test cluster", "kubeconfig", kubeconfig)
-
-	// Create cluster configuration using DefaultClusterConfig
-	config := testutil.DefaultClusterConfig("stackdome-int-test", cm.logger)
-
-	// Create test cluster instance
-	cm.cluster = testutil.NewTestCluster(config)
-
-	// Deploy CRDs and cluster agent
-	bootstrapCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
-	// Verify cluster is accessible
-	cm.logger.Info("Verifying cluster accessibility")
-	if _, err := cm.cluster.GetKubeClient(); err != nil {
-		return fmt.Errorf("failed to connect to cluster - ensure cluster is running: %w", err)
-	}
-
-	// Deploy cluster agent
-	cm.logger.Info("Deploying cluster agent")
-	imageTag := getClusterAgentImageTag()
-	if err := cm.cluster.DeployClusterAgent(bootstrapCtx, imageTag); err != nil {
-		return fmt.Errorf("failed to deploy cluster agent: %w", err)
-	}
-
-	// Wait for cluster agent to be ready
-	cm.logger.Info("Waiting for cluster agent to be ready")
-	if err := cm.waitForClusterAgentReady(bootstrapCtx); err != nil {
-		return fmt.Errorf("cluster agent not ready: %w", err)
-	}
-
-	cm.logger.Info("Cluster bootstrap completed successfully")
-	return nil
+	// Fall back to creating new cluster
+	cm.logger.Info("TEST_KUBECONFIG not set, creating new test cluster")
+	return cm.createNewCluster(ctx)
 }
 
 func (cm *ClusterManager) GetCluster() *testutil.TestCluster {
