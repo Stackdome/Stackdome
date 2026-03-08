@@ -82,8 +82,8 @@ func (cm *ClusterManager) useExistingCluster(ctx context.Context, kubeconfig str
 	config := &testutil.ClusterConfig{
 		Name:             "external-cluster",
 		CacheDir:         ".cache/test-clusters",
-		NodeCount:        1,                // Not used for external cluster
-		InstallOperators: false,            // Don't install, assume already there
+		NodeCount:        1,     // Not used for external cluster
+		InstallOperators: false, // Don't install, assume already there
 		ContainerRuntime: "docker",
 		Logger:           cm.logger,
 	}
