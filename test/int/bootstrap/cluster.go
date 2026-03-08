@@ -103,6 +103,44 @@ func (cm *ClusterManager) loadKubeconfig(kubeconfig string) (*rest.Config, error
 	return kubeConfig.ClientConfig()
 }
 
+func (cm *ClusterManager) createNewCluster(ctx context.Context) error {
+	cm.logger.Info("Creating new Kind cluster for integration tests")
+
+	// Create cluster configuration
+	config := testutil.DefaultClusterConfig("stackdome-int-test", cm.logger)
+
+	// Create test cluster instance
+	cm.cluster = testutil.NewTestCluster(config)
+
+	// Bootstrap context with timeout
+	bootstrapCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	// Create cluster and deploy all dependencies (operators + CRDs)
+	cm.logger.Info("Setting up test cluster (this may take 5-10 minutes)")
+	if err := cm.cluster.Setup(bootstrapCtx); err != nil {
+		return fmt.Errorf("failed to setup test cluster: %w", err)
+	}
+
+	cm.logger.Info("Test cluster created successfully")
+
+	// Deploy cluster agent
+	cm.logger.Info("Deploying cluster agent")
+	imageTag := getClusterAgentImageTag()
+	if err := cm.cluster.DeployClusterAgent(bootstrapCtx, imageTag); err != nil {
+		return fmt.Errorf("failed to deploy cluster agent: %w", err)
+	}
+
+	// Wait for cluster agent to be ready
+	cm.logger.Info("Waiting for cluster agent to be ready")
+	if err := cm.waitForClusterAgentReady(bootstrapCtx); err != nil {
+		return fmt.Errorf("cluster agent not ready: %w", err)
+	}
+
+	cm.logger.Info("Cluster bootstrap completed successfully")
+	return nil
+}
+
 func (cm *ClusterManager) GetCluster() *testutil.TestCluster {
 	return cm.cluster
 }
