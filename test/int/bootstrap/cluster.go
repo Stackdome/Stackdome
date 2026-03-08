@@ -16,8 +16,9 @@ import (
 )
 
 type ClusterManager struct {
-	cluster *testutil.TestCluster
-	logger  logr.Logger
+	cluster        *testutil.TestCluster
+	logger         logr.Logger
+	createdCluster bool // Track if we created the cluster
 }
 
 func NewClusterManager() *ClusterManager {
@@ -138,6 +139,7 @@ func (cm *ClusterManager) createNewCluster(ctx context.Context) error {
 	}
 
 	cm.logger.Info("Cluster bootstrap completed successfully")
+	cm.createdCluster = true // Mark that we created this cluster
 	return nil
 }
 
@@ -146,14 +148,26 @@ func (cm *ClusterManager) GetCluster() *testutil.TestCluster {
 }
 
 func (cm *ClusterManager) Cleanup(ctx context.Context) error {
-	if cm.cluster != nil {
-		// Always skip cluster teardown - cluster is managed by Mage
-		cm.logger.Info("Skipping cluster teardown - cluster is managed by Mage. Use 'mage cluster:delete' to remove cluster")
-
-		// We could optionally clean up deployed test resources here
-		// but for now, let the Mage cluster management handle everything
+	if cm.cluster == nil {
+		return nil
 	}
-	return nil
+
+	// Only cleanup if we created the cluster (not external)
+	if !cm.createdCluster {
+		cm.logger.Info("Skipping cluster cleanup - using external cluster managed by Mage")
+		return nil
+	}
+
+	// Check if user wants to keep cluster for debugging
+	if os.Getenv("KEEP_CLUSTER") == "true" {
+		cm.logger.Info("KEEP_CLUSTER=true, preserving test cluster for debugging")
+		cm.logger.Info("To delete later, run: kind delete cluster --name stackdome-int-test")
+		return nil
+	}
+
+	// Cleanup cluster we created
+	cm.logger.Info("Cleaning up test cluster")
+	return cm.cluster.Teardown(ctx)
 }
 
 func (cm *ClusterManager) waitForClusterAgentReady(ctx context.Context) error {
