@@ -84,7 +84,12 @@ GCSCredentials:
 
 ## Model Layer
 
-The model in `pkg/models/object_store.go` already has the correct structure:
+The model in `pkg/models/object_store.go` requires the following changes:
+
+1. **AzureCredentials** - Remove `StorageAccountKey` and `StorageSASToken` fields (simplified to connection string only)
+2. **GCSCredentials** - Fix JSON tag from `serviceAccountKey` to `serviceAccountCredentials`
+
+Updated model structure:
 
 ```go
 type S3Credentials struct {
@@ -108,7 +113,16 @@ type GCSCredentials struct {
 
 File: `pkg/presenters/object_store.go`
 
-Add helper functions for SecretReference conversion:
+**Current state:** The presenter treats credential fields as strings (e.g., `in.S3Credentials.GetAccessKeyId()` returns a string). This must be completely rewritten to handle `SecretReference` objects.
+
+**Required changes:**
+
+1. Add helper functions for SecretReference conversion
+2. Rewrite `convertObjectStoreConfiguration` to use SecretReference conversion
+3. Rewrite `presentObjectStoreConfiguration` to use SecretReference presentation
+4. Remove GCS `ServiceAccountKey` reference, use `ServiceAccountCredentials`
+
+Add helper functions:
 
 ```go
 func convertSecretReference(in openapi.SecretReference) models.SecretReference {
@@ -131,6 +145,15 @@ Update `convertObjectStoreConfiguration` and `presentObjectStoreConfiguration` t
 ## Validator Changes
 
 File: `pkg/validator/objectstore/object_store_validator.go`
+
+**Current state:** The validator compares credential fields as strings (e.g., `s3.AccessKeyID == ""`). It also has Azure-specific validation that checks for `AccountName=` and `AccountKey=` within connection strings, and GCS validation that checks if the value starts with `{` for JSON. These string-based validations must be completely replaced with SecretReference validation.
+
+**Required changes:**
+
+1. Add `validateSecretReference` helper function
+2. Rewrite `validateS3Configuration` to validate SecretReference fields
+3. Rewrite `validateAzureConfiguration` to validate SecretReference field (remove connection string content validation)
+4. Rewrite `validateGCSConfiguration` to validate SecretReference field (remove JSON format validation)
 
 Add SecretReference validation helper:
 

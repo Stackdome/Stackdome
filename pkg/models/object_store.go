@@ -30,18 +30,19 @@ type ObjectStoreConfiguration struct {
 }
 
 type S3Credentials struct {
-	AccessKeyID     string `json:"accessKeyId"`
-	SecretAccessKey string `json:"secretAccessKey"`
-	Region          string `json:"region"`
-	Endpoint        string `json:"endpoint,omitempty"`
+	AccessKeyID     SecretReference `json:"accessKeyId"`
+	SecretAccessKey SecretReference `json:"secretAccessKey"`
+	Region          string          `json:"region"`
+	Endpoint        string          `json:"endpoint,omitempty"`
 }
 
 type AzureCredentials struct {
-	ConnectionString string `json:"connectionString"`
+	ConnectionString   SecretReference `json:"connectionString"`
+	StorageAccountName string          `json:"storageAccountName"`
 }
 
 type GCSCredentials struct {
-	ServiceAccountKey string `json:"serviceAccountKey"`
+	ServiceAccountCredentials SecretReference `json:"serviceAccountCredentials"`
 }
 
 type ObjectStoreStatus struct {
