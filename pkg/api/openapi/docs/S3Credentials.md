@@ -4,8 +4,8 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**AccessKeyId** | **string** | Reference to secret containing AWS access key ID | 
-**SecretAccessKey** | **string** | Reference to secret containing AWS secret access key | 
+**AccessKeyId** | [**SecretReference**](SecretReference.md) |  | 
+**SecretAccessKey** | [**SecretReference**](SecretReference.md) |  | 
 **Region** | **string** | AWS region | 
 **EndpointUrl** | Pointer to **string** | Custom S3 endpoint URL for S3-compatible storage | [optional] 
 
@@ -13,7 +13,7 @@ Name | Type | Description | Notes
 
 ### NewS3Credentials
 
-`func NewS3Credentials(accessKeyId string, secretAccessKey string, region string, ) *S3Credentials`
+`func NewS3Credentials(accessKeyId SecretReference, secretAccessKey SecretReference, region string, ) *S3Credentials`
 
 NewS3Credentials instantiates a new S3Credentials object
 This constructor will assign default values to properties that have it defined,
@@ -30,40 +30,40 @@ but it doesn't guarantee that properties required by API are set
 
 ### GetAccessKeyId
 
-`func (o *S3Credentials) GetAccessKeyId() string`
+`func (o *S3Credentials) GetAccessKeyId() SecretReference`
 
 GetAccessKeyId returns the AccessKeyId field if non-nil, zero value otherwise.
 
 ### GetAccessKeyIdOk
 
-`func (o *S3Credentials) GetAccessKeyIdOk() (*string, bool)`
+`func (o *S3Credentials) GetAccessKeyIdOk() (*SecretReference, bool)`
 
 GetAccessKeyIdOk returns a tuple with the AccessKeyId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetAccessKeyId
 
-`func (o *S3Credentials) SetAccessKeyId(v string)`
+`func (o *S3Credentials) SetAccessKeyId(v SecretReference)`
 
 SetAccessKeyId sets AccessKeyId field to given value.
 
 
 ### GetSecretAccessKey
 
-`func (o *S3Credentials) GetSecretAccessKey() string`
+`func (o *S3Credentials) GetSecretAccessKey() SecretReference`
 
 GetSecretAccessKey returns the SecretAccessKey field if non-nil, zero value otherwise.
 
 ### GetSecretAccessKeyOk
 
-`func (o *S3Credentials) GetSecretAccessKeyOk() (*string, bool)`
+`func (o *S3Credentials) GetSecretAccessKeyOk() (*SecretReference, bool)`
 
 GetSecretAccessKeyOk returns a tuple with the SecretAccessKey field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetSecretAccessKey
 
-`func (o *S3Credentials) SetSecretAccessKey(v string)`
+`func (o *S3Credentials) SetSecretAccessKey(v SecretReference)`
 
 SetSecretAccessKey sets SecretAccessKey field to given value.
 

@@ -16,10 +16,8 @@ import (
 
 // S3Credentials struct for S3Credentials
 type S3Credentials struct {
-	// Reference to secret containing AWS access key ID
-	AccessKeyId string `json:"access_key_id"`
-	// Reference to secret containing AWS secret access key
-	SecretAccessKey string `json:"secret_access_key"`
+	AccessKeyId     SecretReference `json:"access_key_id"`
+	SecretAccessKey SecretReference `json:"secret_access_key"`
 	// AWS region
 	Region string `json:"region"`
 	// Custom S3 endpoint URL for S3-compatible storage
@@ -30,7 +28,7 @@ type S3Credentials struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewS3Credentials(accessKeyId string, secretAccessKey string, region string) *S3Credentials {
+func NewS3Credentials(accessKeyId SecretReference, secretAccessKey SecretReference, region string) *S3Credentials {
 	this := S3Credentials{}
 	this.AccessKeyId = accessKeyId
 	this.SecretAccessKey = secretAccessKey
@@ -47,9 +45,9 @@ func NewS3CredentialsWithDefaults() *S3Credentials {
 }
 
 // GetAccessKeyId returns the AccessKeyId field value
-func (o *S3Credentials) GetAccessKeyId() string {
+func (o *S3Credentials) GetAccessKeyId() SecretReference {
 	if o == nil {
-		var ret string
+		var ret SecretReference
 		return ret
 	}
 
@@ -58,7 +56,7 @@ func (o *S3Credentials) GetAccessKeyId() string {
 
 // GetAccessKeyIdOk returns a tuple with the AccessKeyId field value
 // and a boolean to check if the value has been set.
-func (o *S3Credentials) GetAccessKeyIdOk() (*string, bool) {
+func (o *S3Credentials) GetAccessKeyIdOk() (*SecretReference, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -66,14 +64,14 @@ func (o *S3Credentials) GetAccessKeyIdOk() (*string, bool) {
 }
 
 // SetAccessKeyId sets field value
-func (o *S3Credentials) SetAccessKeyId(v string) {
+func (o *S3Credentials) SetAccessKeyId(v SecretReference) {
 	o.AccessKeyId = v
 }
 
 // GetSecretAccessKey returns the SecretAccessKey field value
-func (o *S3Credentials) GetSecretAccessKey() string {
+func (o *S3Credentials) GetSecretAccessKey() SecretReference {
 	if o == nil {
-		var ret string
+		var ret SecretReference
 		return ret
 	}
 
@@ -82,7 +80,7 @@ func (o *S3Credentials) GetSecretAccessKey() string {
 
 // GetSecretAccessKeyOk returns a tuple with the SecretAccessKey field value
 // and a boolean to check if the value has been set.
-func (o *S3Credentials) GetSecretAccessKeyOk() (*string, bool) {
+func (o *S3Credentials) GetSecretAccessKeyOk() (*SecretReference, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -90,7 +88,7 @@ func (o *S3Credentials) GetSecretAccessKeyOk() (*string, bool) {
 }
 
 // SetSecretAccessKey sets field value
-func (o *S3Credentials) SetSecretAccessKey(v string) {
+func (o *S3Credentials) SetSecretAccessKey(v SecretReference) {
 	o.SecretAccessKey = v
 }
 

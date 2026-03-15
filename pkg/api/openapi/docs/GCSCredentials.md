@@ -4,13 +4,13 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**ServiceAccountKey** | **string** | Reference to secret containing GCS service account key JSON | 
+**ServiceAccountCredentials** | [**SecretReference**](SecretReference.md) |  | 
 
 ## Methods
 
 ### NewGCSCredentials
 
-`func NewGCSCredentials(serviceAccountKey string, ) *GCSCredentials`
+`func NewGCSCredentials(serviceAccountCredentials SecretReference, ) *GCSCredentials`
 
 NewGCSCredentials instantiates a new GCSCredentials object
 This constructor will assign default values to properties that have it defined,
@@ -25,24 +25,24 @@ NewGCSCredentialsWithDefaults instantiates a new GCSCredentials object
 This constructor will only assign default values to properties that have it defined,
 but it doesn't guarantee that properties required by API are set
 
-### GetServiceAccountKey
+### GetServiceAccountCredentials
 
-`func (o *GCSCredentials) GetServiceAccountKey() string`
+`func (o *GCSCredentials) GetServiceAccountCredentials() SecretReference`
 
-GetServiceAccountKey returns the ServiceAccountKey field if non-nil, zero value otherwise.
+GetServiceAccountCredentials returns the ServiceAccountCredentials field if non-nil, zero value otherwise.
 
-### GetServiceAccountKeyOk
+### GetServiceAccountCredentialsOk
 
-`func (o *GCSCredentials) GetServiceAccountKeyOk() (*string, bool)`
+`func (o *GCSCredentials) GetServiceAccountCredentialsOk() (*SecretReference, bool)`
 
-GetServiceAccountKeyOk returns a tuple with the ServiceAccountKey field if it's non-nil, zero value otherwise
+GetServiceAccountCredentialsOk returns a tuple with the ServiceAccountCredentials field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetServiceAccountKey
+### SetServiceAccountCredentials
 
-`func (o *GCSCredentials) SetServiceAccountKey(v string)`
+`func (o *GCSCredentials) SetServiceAccountCredentials(v SecretReference)`
 
-SetServiceAccountKey sets ServiceAccountKey field to given value.
+SetServiceAccountCredentials sets ServiceAccountCredentials field to given value.
 
 
 

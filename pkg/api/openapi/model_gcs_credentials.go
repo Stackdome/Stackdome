@@ -16,17 +16,16 @@ import (
 
 // GCSCredentials struct for GCSCredentials
 type GCSCredentials struct {
-	// Reference to secret containing GCS service account key JSON
-	ServiceAccountKey string `json:"service_account_key"`
+	ServiceAccountCredentials SecretReference `json:"service_account_credentials"`
 }
 
 // NewGCSCredentials instantiates a new GCSCredentials object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewGCSCredentials(serviceAccountKey string) *GCSCredentials {
+func NewGCSCredentials(serviceAccountCredentials SecretReference) *GCSCredentials {
 	this := GCSCredentials{}
-	this.ServiceAccountKey = serviceAccountKey
+	this.ServiceAccountCredentials = serviceAccountCredentials
 	return &this
 }
 
@@ -38,34 +37,34 @@ func NewGCSCredentialsWithDefaults() *GCSCredentials {
 	return &this
 }
 
-// GetServiceAccountKey returns the ServiceAccountKey field value
-func (o *GCSCredentials) GetServiceAccountKey() string {
+// GetServiceAccountCredentials returns the ServiceAccountCredentials field value
+func (o *GCSCredentials) GetServiceAccountCredentials() SecretReference {
 	if o == nil {
-		var ret string
+		var ret SecretReference
 		return ret
 	}
 
-	return o.ServiceAccountKey
+	return o.ServiceAccountCredentials
 }
 
-// GetServiceAccountKeyOk returns a tuple with the ServiceAccountKey field value
+// GetServiceAccountCredentialsOk returns a tuple with the ServiceAccountCredentials field value
 // and a boolean to check if the value has been set.
-func (o *GCSCredentials) GetServiceAccountKeyOk() (*string, bool) {
+func (o *GCSCredentials) GetServiceAccountCredentialsOk() (*SecretReference, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return &o.ServiceAccountKey, true
+	return &o.ServiceAccountCredentials, true
 }
 
-// SetServiceAccountKey sets field value
-func (o *GCSCredentials) SetServiceAccountKey(v string) {
-	o.ServiceAccountKey = v
+// SetServiceAccountCredentials sets field value
+func (o *GCSCredentials) SetServiceAccountCredentials(v SecretReference) {
+	o.ServiceAccountCredentials = v
 }
 
 func (o GCSCredentials) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
-		toSerialize["service_account_key"] = o.ServiceAccountKey
+		toSerialize["service_account_credentials"] = o.ServiceAccountCredentials
 	}
 	return json.Marshal(toSerialize)
 }

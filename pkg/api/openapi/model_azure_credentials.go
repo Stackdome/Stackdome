@@ -16,15 +16,16 @@ import (
 
 // AzureCredentials struct for AzureCredentials
 type AzureCredentials struct {
-	// Reference to secret containing Azure Blob Storage connection string
-	ConnectionString string `json:"connection_string"`
+	ConnectionString SecretReference `json:"connection_string"`
+	// Azure storage account name
+	StorageAccountName *string `json:"storage_account_name,omitempty"`
 }
 
 // NewAzureCredentials instantiates a new AzureCredentials object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewAzureCredentials(connectionString string) *AzureCredentials {
+func NewAzureCredentials(connectionString SecretReference) *AzureCredentials {
 	this := AzureCredentials{}
 	this.ConnectionString = connectionString
 	return &this
@@ -39,9 +40,9 @@ func NewAzureCredentialsWithDefaults() *AzureCredentials {
 }
 
 // GetConnectionString returns the ConnectionString field value
-func (o *AzureCredentials) GetConnectionString() string {
+func (o *AzureCredentials) GetConnectionString() SecretReference {
 	if o == nil {
-		var ret string
+		var ret SecretReference
 		return ret
 	}
 
@@ -50,7 +51,7 @@ func (o *AzureCredentials) GetConnectionString() string {
 
 // GetConnectionStringOk returns a tuple with the ConnectionString field value
 // and a boolean to check if the value has been set.
-func (o *AzureCredentials) GetConnectionStringOk() (*string, bool) {
+func (o *AzureCredentials) GetConnectionStringOk() (*SecretReference, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -58,14 +59,49 @@ func (o *AzureCredentials) GetConnectionStringOk() (*string, bool) {
 }
 
 // SetConnectionString sets field value
-func (o *AzureCredentials) SetConnectionString(v string) {
+func (o *AzureCredentials) SetConnectionString(v SecretReference) {
 	o.ConnectionString = v
+}
+
+// GetStorageAccountName returns the StorageAccountName field value if set, zero value otherwise.
+func (o *AzureCredentials) GetStorageAccountName() string {
+	if o == nil || o.StorageAccountName == nil {
+		var ret string
+		return ret
+	}
+	return *o.StorageAccountName
+}
+
+// GetStorageAccountNameOk returns a tuple with the StorageAccountName field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AzureCredentials) GetStorageAccountNameOk() (*string, bool) {
+	if o == nil || o.StorageAccountName == nil {
+		return nil, false
+	}
+	return o.StorageAccountName, true
+}
+
+// HasStorageAccountName returns a boolean if a field has been set.
+func (o *AzureCredentials) HasStorageAccountName() bool {
+	if o != nil && o.StorageAccountName != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetStorageAccountName gets a reference to the given string and assigns it to the StorageAccountName field.
+func (o *AzureCredentials) SetStorageAccountName(v string) {
+	o.StorageAccountName = &v
 }
 
 func (o AzureCredentials) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["connection_string"] = o.ConnectionString
+	}
+	if o.StorageAccountName != nil {
+		toSerialize["storage_account_name"] = o.StorageAccountName
 	}
 	return json.Marshal(toSerialize)
 }

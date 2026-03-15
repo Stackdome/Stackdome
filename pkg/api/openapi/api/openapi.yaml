@@ -6724,14 +6724,23 @@ components:
           retention_policy: 7d
           configuration:
             gcs_credentials:
-              service_account_key: service_account_key
+              service_account_credentials:
+                secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+                key: key
             s3_credentials:
-              access_key_id: access_key_id
+              access_key_id:
+                secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+                key: key
               endpoint_url: endpoint_url
-              secret_access_key: secret_access_key
+              secret_access_key:
+                secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+                key: key
               region: region
             azure_credentials:
-              connection_string: connection_string
+              storage_account_name: storage_account_name
+              connection_string:
+                secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+                key: key
         status:
           state: Pending
           message: message
@@ -6775,14 +6784,23 @@ components:
             retention_policy: 7d
             configuration:
               gcs_credentials:
-                service_account_key: service_account_key
+                service_account_credentials:
+                  secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+                  key: key
               s3_credentials:
-                access_key_id: access_key_id
+                access_key_id:
+                  secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+                  key: key
                 endpoint_url: endpoint_url
-                secret_access_key: secret_access_key
+                secret_access_key:
+                  secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+                  key: key
                 region: region
               azure_credentials:
-                connection_string: connection_string
+                storage_account_name: storage_account_name
+                connection_string:
+                  secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+                  key: key
           status:
             state: Pending
             message: message
@@ -6796,14 +6814,23 @@ components:
             retention_policy: 7d
             configuration:
               gcs_credentials:
-                service_account_key: service_account_key
+                service_account_credentials:
+                  secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+                  key: key
               s3_credentials:
-                access_key_id: access_key_id
+                access_key_id:
+                  secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+                  key: key
                 endpoint_url: endpoint_url
-                secret_access_key: secret_access_key
+                secret_access_key:
+                  secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+                  key: key
                 region: region
               azure_credentials:
-                connection_string: connection_string
+                storage_account_name: storage_account_name
+                connection_string:
+                  secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+                  key: key
           status:
             state: Pending
             message: message
@@ -6821,14 +6848,23 @@ components:
         retention_policy: 7d
         configuration:
           gcs_credentials:
-            service_account_key: service_account_key
+            service_account_credentials:
+              secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+              key: key
           s3_credentials:
-            access_key_id: access_key_id
+            access_key_id:
+              secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+              key: key
             endpoint_url: endpoint_url
-            secret_access_key: secret_access_key
+            secret_access_key:
+              secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+              key: key
             region: region
           azure_credentials:
-            connection_string: connection_string
+            storage_account_name: storage_account_name
+            connection_string:
+              secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+              key: key
       properties:
         configuration:
           $ref: '#/components/schemas/ObjectStoreConfiguration'
@@ -6847,14 +6883,23 @@ components:
     ObjectStoreConfiguration:
       example:
         gcs_credentials:
-          service_account_key: service_account_key
+          service_account_credentials:
+            secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            key: key
         s3_credentials:
-          access_key_id: access_key_id
+          access_key_id:
+            secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            key: key
           endpoint_url: endpoint_url
-          secret_access_key: secret_access_key
+          secret_access_key:
+            secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            key: key
           region: region
         azure_credentials:
-          connection_string: connection_string
+          storage_account_name: storage_account_name
+          connection_string:
+            secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            key: key
       properties:
         s3_credentials:
           $ref: '#/components/schemas/S3Credentials'
@@ -6865,17 +6910,19 @@ components:
       type: object
     S3Credentials:
       example:
-        access_key_id: access_key_id
+        access_key_id:
+          secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          key: key
         endpoint_url: endpoint_url
-        secret_access_key: secret_access_key
+        secret_access_key:
+          secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          key: key
         region: region
       properties:
         access_key_id:
-          description: Reference to secret containing AWS access key ID
-          type: string
+          $ref: '#/components/schemas/SecretReference'
         secret_access_key:
-          description: Reference to secret containing AWS secret access key
-          type: string
+          $ref: '#/components/schemas/SecretReference'
         region:
           description: AWS region
           type: string
@@ -6889,24 +6936,45 @@ components:
       type: object
     AzureCredentials:
       example:
-        connection_string: connection_string
+        storage_account_name: storage_account_name
+        connection_string:
+          secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          key: key
       properties:
         connection_string:
-          description: Reference to secret containing Azure Blob Storage connection
-            string
+          $ref: '#/components/schemas/SecretReference'
+        storage_account_name:
+          description: Azure storage account name
           type: string
       required:
       - connection_string
       type: object
     GCSCredentials:
       example:
-        service_account_key: service_account_key
+        service_account_credentials:
+          secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          key: key
       properties:
-        service_account_key:
-          description: Reference to secret containing GCS service account key JSON
+        service_account_credentials:
+          $ref: '#/components/schemas/SecretReference'
+      required:
+      - service_account_credentials
+      type: object
+    SecretReference:
+      example:
+        secret_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        key: key
+      properties:
+        secret_id:
+          description: UUID of the Stackdome secret
+          format: uuid
+          type: string
+        key:
+          description: Key within the secret containing the value
           type: string
       required:
-      - service_account_key
+      - key
+      - secret_id
       type: object
     WALConfiguration:
       properties:
@@ -6954,7 +7022,7 @@ components:
           backup:
             object_store_id: object_store_id
             schedule: 0 0 0 * * 0
-            wal_archiving: true
+            wal_archiving: false
             enabled: false
           instances:
             count: 1
@@ -7127,7 +7195,7 @@ components:
             backup:
               object_store_id: object_store_id
               schedule: 0 0 0 * * 0
-              wal_archiving: true
+              wal_archiving: false
               enabled: false
             instances:
               count: 1
@@ -7250,7 +7318,7 @@ components:
             backup:
               object_store_id: object_store_id
               schedule: 0 0 0 * * 0
-              wal_archiving: true
+              wal_archiving: false
               enabled: false
             instances:
               count: 1
@@ -7376,7 +7444,7 @@ components:
         backup:
           object_store_id: object_store_id
           schedule: 0 0 0 * * 0
-          wal_archiving: true
+          wal_archiving: false
           enabled: false
         instances:
           count: 1
@@ -7545,7 +7613,7 @@ components:
       example:
         object_store_id: object_store_id
         schedule: 0 0 0 * * 0
-        wal_archiving: true
+        wal_archiving: false
         enabled: false
       properties:
         enabled:
@@ -7560,7 +7628,7 @@ components:
           description: Cron schedule for automated backups
           type: string
         wal_archiving:
-          default: true
+          default: false
           description: Enable WAL archiving for point-in-time recovery
           type: boolean
       type: object

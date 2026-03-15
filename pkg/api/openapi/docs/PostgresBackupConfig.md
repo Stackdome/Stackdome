@@ -7,7 +7,7 @@ Name | Type | Description | Notes
 **Enabled** | Pointer to **bool** | Enable backup functionality | [optional] [default to false]
 **ObjectStoreId** | Pointer to **string** | Reference to ObjectStore for backup storage | [optional] 
 **Schedule** | Pointer to **string** | Cron schedule for automated backups | [optional] [default to "0 0 0 * * 0"]
-**WalArchiving** | Pointer to **bool** | Enable WAL archiving for point-in-time recovery | [optional] [default to true]
+**WalArchiving** | Pointer to **bool** | Enable WAL archiving for point-in-time recovery | [optional] [default to false]
 
 ## Methods
 

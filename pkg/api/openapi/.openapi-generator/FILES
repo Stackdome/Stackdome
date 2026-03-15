@@ -102,6 +102,7 @@ docs/Secret.md
 docs/SecretData.md
 docs/SecretList.md
 docs/SecretRef.md
+docs/SecretReference.md
 docs/SecretType.md
 docs/Stack.md
 docs/StackList.md
@@ -226,6 +227,7 @@ model_secret.go
 model_secret_data.go
 model_secret_list.go
 model_secret_ref.go
+model_secret_reference.go
 model_secret_type.go
 model_ssh_config.go
 model_stack.go

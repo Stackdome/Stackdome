@@ -246,6 +246,7 @@ Class | Method | HTTP request | Description
  - [SecretData](docs/SecretData.md)
  - [SecretList](docs/SecretList.md)
  - [SecretRef](docs/SecretRef.md)
+ - [SecretReference](docs/SecretReference.md)
  - [SecretType](docs/SecretType.md)
  - [Stack](docs/Stack.md)
  - [StackList](docs/StackList.md)

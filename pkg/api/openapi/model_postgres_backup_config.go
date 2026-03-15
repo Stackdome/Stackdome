@@ -36,7 +36,7 @@ func NewPostgresBackupConfig() *PostgresBackupConfig {
 	this.Enabled = &enabled
 	var schedule string = "0 0 0 * * 0"
 	this.Schedule = &schedule
-	var walArchiving bool = true
+	var walArchiving bool = false
 	this.WalArchiving = &walArchiving
 	return &this
 }
@@ -50,7 +50,7 @@ func NewPostgresBackupConfigWithDefaults() *PostgresBackupConfig {
 	this.Enabled = &enabled
 	var schedule string = "0 0 0 * * 0"
 	this.Schedule = &schedule
-	var walArchiving bool = true
+	var walArchiving bool = false
 	this.WalArchiving = &walArchiving
 	return &this
 }
