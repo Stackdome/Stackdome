@@ -29,17 +29,9 @@ func (v *objectStoreValidator) ValidateForCreate(ctx context.Context, spec *mode
 }
 
 func (v *objectStoreValidator) ValidateForUpdate(ctx context.Context, existing *models.ObjectStore, spec *models.ObjectStore) *errors.ServiceError {
-	// Validate immutable fields
-	if err := v.validateImmutableFields(existing, spec); err != nil {
-		return err
-	}
-
-	// Run create validation on the new spec
-	if err := v.ValidateForCreate(ctx, spec); err != nil {
-		return err
-	}
-
-	return nil
+	// Only validate immutable field changes
+	// Full validation is done by the service after preserving immutable fields
+	return v.validateImmutableFields(existing, spec)
 }
 
 func (v *objectStoreValidator) validateBasicFields(spec *models.ObjectStore) *errors.ServiceError {
@@ -163,11 +155,13 @@ func (v *objectStoreValidator) validateGCSConfiguration(gcs *models.GCSCredentia
 }
 
 func (v *objectStoreValidator) validateImmutableFields(existing *models.ObjectStore, spec *models.ObjectStore) *errors.ServiceError {
-	if existing.Name != spec.Name {
+	// Only check name if it's set in the spec (non-empty)
+	if spec.Name != "" && existing.Name != spec.Name {
 		return errors.BadRequest("Object store name cannot be changed")
 	}
 
-	if existing.OrganisationID != spec.OrganisationID {
+	// Only check OrganisationID if it's set in the spec (non-empty)
+	if spec.OrganisationID != "" && existing.OrganisationID != spec.OrganisationID {
 		return errors.BadRequest("Object store organisation ID cannot be changed")
 	}
 

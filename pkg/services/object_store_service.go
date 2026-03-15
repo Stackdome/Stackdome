@@ -139,13 +139,18 @@ func (s *objectStoreService) Update(ctx context.Context, id string, objectStore 
 		return nil, err
 	}
 
-	// Preserve immutable fields
+	// Validate immutable field changes before overwriting
+	if err := s.validator.ValidateForUpdate(ctx, existingObjectStore, objectStore); err != nil {
+		return nil, err
+	}
+
+	// Preserve immutable fields (must be done AFTER validation check)
 	objectStore.ID = existingObjectStore.ID
 	objectStore.OrganisationID = existingObjectStore.OrganisationID
-	objectStore.Name = existingObjectStore.Name // Names are immutable
+	objectStore.Name = existingObjectStore.Name
 
-	// Validate update
-	if err := s.validator.ValidateForUpdate(ctx, existingObjectStore, objectStore); err != nil {
+	// Validate the full spec including configuration
+	if err := s.validator.ValidateForCreate(ctx, objectStore); err != nil {
 		return nil, err
 	}
 
