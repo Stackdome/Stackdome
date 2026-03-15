@@ -16,6 +16,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+const (
+	testClusterName = "stackdome-int-test"
+)
+
 type ClusterManager struct {
 	cluster        *testutil.TestCluster
 	logger         logr.Logger
@@ -121,8 +125,15 @@ func (cm *ClusterManager) loadKubeconfig(kubeconfig string) (*rest.Config, error
 func (cm *ClusterManager) createNewCluster(ctx context.Context) error {
 	cm.logger.Info("Creating new Kind cluster for integration tests")
 
+	// Delete existing cluster if it exists to ensure clean state
+	cm.logger.Info("Checking for existing cluster", "name", testClusterName)
+	if err := cm.deleteClusterIfExists(ctx); err != nil {
+		cm.logger.Info("Warning: failed to delete existing cluster", "error", err.Error())
+		// Continue anyway - cluster might not exist
+	}
+
 	// Create cluster configuration
-	config := testutil.DefaultClusterConfig("stackdome-int-test", cm.logger)
+	config := testutil.DefaultClusterConfig(testClusterName, cm.logger)
 
 	// Create test cluster instance
 	cm.cluster = testutil.NewTestCluster(config)
@@ -175,13 +186,31 @@ func (cm *ClusterManager) Cleanup(ctx context.Context) error {
 	// Check if user wants to keep cluster for debugging
 	if os.Getenv("KEEP_CLUSTER") == "true" {
 		cm.logger.Info("KEEP_CLUSTER=true, preserving test cluster for debugging")
-		cm.logger.Info("To delete later, run: kind delete cluster --name stackdome-int-test")
+		cm.logger.Info("To delete later, run: kind delete cluster --name", "name", testClusterName)
 		return nil
 	}
 
 	// Cleanup cluster we created
 	cm.logger.Info("Cleaning up test cluster")
 	return cm.cluster.Teardown(ctx)
+}
+
+func (cm *ClusterManager) deleteClusterIfExists(ctx context.Context) error {
+	// Use testutil directly to check and delete cluster
+	// This handles orphaned clusters better than trying to get a kube client
+	config := testutil.DefaultClusterConfig(testClusterName, cm.logger)
+	tempCluster := testutil.NewTestCluster(config)
+
+	// Attempt to delete - Teardown is idempotent and handles non-existent clusters gracefully
+	cm.logger.Info("Attempting to delete any existing cluster", "name", testClusterName)
+	if err := tempCluster.Teardown(ctx); err != nil {
+		// Log but don't fail - cluster might not exist
+		cm.logger.Info("Cluster deletion completed with note", "note", err.Error())
+	} else {
+		cm.logger.Info("Cluster deleted successfully (if it existed)")
+	}
+
+	return nil
 }
 
 func (cm *ClusterManager) waitForClusterAgentReady(ctx context.Context) error {
