@@ -72,6 +72,16 @@ func (v *objectStoreValidator) validateBasicFields(spec *models.ObjectStore) *er
 	return nil
 }
 
+func (v *objectStoreValidator) validateSecretReference(ref models.SecretReference, fieldName string) *errors.ServiceError {
+	if ref.SecretID == "" {
+		return errors.BadRequest("%s secret_id cannot be empty", fieldName)
+	}
+	if ref.Key == "" {
+		return errors.BadRequest("%s key cannot be empty", fieldName)
+	}
+	return nil
+}
+
 func (v *objectStoreValidator) validateConfiguration(spec *models.ObjectStore) *errors.ServiceError {
 	credentialCount := 0
 
@@ -108,12 +118,12 @@ func (v *objectStoreValidator) validateConfiguration(spec *models.ObjectStore) *
 }
 
 func (v *objectStoreValidator) validateS3Configuration(s3 *models.S3Credentials) *errors.ServiceError {
-	if s3.AccessKeyID == "" {
-		return errors.BadRequest("S3 access key ID cannot be empty")
+	if err := v.validateSecretReference(s3.AccessKeyID, "S3 access key ID"); err != nil {
+		return err
 	}
 
-	if s3.SecretAccessKey == "" {
-		return errors.BadRequest("S3 secret access key cannot be empty")
+	if err := v.validateSecretReference(s3.SecretAccessKey, "S3 secret access key"); err != nil {
+		return err
 	}
 
 	if s3.Region == "" {
@@ -128,7 +138,6 @@ func (v *objectStoreValidator) validateS3Configuration(s3 *models.S3Credentials)
 
 	// Validate endpoint if specified
 	if s3.Endpoint != "" {
-		// Basic URL validation
 		if !strings.HasPrefix(s3.Endpoint, "http://") && !strings.HasPrefix(s3.Endpoint, "https://") {
 			return errors.BadRequest("S3 endpoint must be a valid URL with http:// or https:// prefix")
 		}
@@ -138,26 +147,16 @@ func (v *objectStoreValidator) validateS3Configuration(s3 *models.S3Credentials)
 }
 
 func (v *objectStoreValidator) validateAzureConfiguration(azure *models.AzureCredentials) *errors.ServiceError {
-	if azure.ConnectionString == "" {
-		return errors.BadRequest("Azure connection string cannot be empty")
-	}
-
-	// Basic validation of connection string format
-	if !strings.Contains(azure.ConnectionString, "AccountName=") || !strings.Contains(azure.ConnectionString, "AccountKey=") {
-		return errors.BadRequest("Azure connection string must contain AccountName and AccountKey")
+	if err := v.validateSecretReference(azure.ConnectionString, "Azure connection string"); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func (v *objectStoreValidator) validateGCSConfiguration(gcs *models.GCSCredentials) *errors.ServiceError {
-	if gcs.ServiceAccountKey == "" {
-		return errors.BadRequest("GCS service account key cannot be empty")
-	}
-
-	// Validate service account key format (should be valid JSON)
-	if !strings.HasPrefix(strings.TrimSpace(gcs.ServiceAccountKey), "{") {
-		return errors.BadRequest("GCS service account key must be valid JSON")
+	if err := v.validateSecretReference(gcs.ServiceAccountCredentials, "GCS service account credentials"); err != nil {
+		return err
 	}
 
 	return nil
