@@ -339,6 +339,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 
 	objectStoreService := services.NewObjectStoreService(services.ObjectStoreServiceSpec{
 		SessionFactory: d.DBSession,
+		SecretService:  secretService,
 		Logger:         d.Logger,
 	})
 
