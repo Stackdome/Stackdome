@@ -94,6 +94,122 @@ func GetPostgresAddonExpectError(client *openapi.APIClient, orgID, addonID strin
 	return apiErr
 }
 
+// Secret CRUD operations for Ginkgo tests
+
+func CreateSecret(client *openapi.APIClient, orgID string, secret *openapi.Secret) *openapi.Secret {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdSecretsPost(ctx, orgID).Secret(*secret).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to create secret")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected secret response")
+
+	return resp
+}
+
+func GetSecret(client *openapi.APIClient, orgID, secretID string) *openapi.Secret {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdSecretsIdGet(ctx, orgID, secretID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to get secret")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected secret response")
+
+	return resp
+}
+
+func DeleteSecret(client *openapi.APIClient, orgID, secretID string) {
+	ctx := context.Background()
+	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdSecretsIdDelete(ctx, orgID, secretID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to delete secret")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusNoContent), "unexpected status code")
+}
+
+// ObjectStore CRUD operations for Ginkgo tests
+
+func CreateObjectStore(client *openapi.APIClient, orgID string, store *openapi.ObjectStore) *openapi.ObjectStore {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresPost(ctx, orgID).ObjectStore(*store).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to create object store")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected object store response")
+
+	return resp
+}
+
+func GetObjectStore(client *openapi.APIClient, orgID, storeID string) *openapi.ObjectStore {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdGet(ctx, orgID, storeID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to get object store")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected object store response")
+
+	return resp
+}
+
+func ListObjectStores(client *openapi.APIClient, orgID string) *openapi.ObjectStoreList {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresGet(ctx, orgID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to list object stores")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected object store list response")
+
+	return resp
+}
+
+func UpdateObjectStore(client *openapi.APIClient, orgID, storeID string, store *openapi.ObjectStore) *openapi.ObjectStore {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdPut(ctx, orgID, storeID).ObjectStore(*store).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to update object store")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected object store response")
+
+	return resp
+}
+
+func DeleteObjectStore(client *openapi.APIClient, orgID, storeID string) {
+	ctx := context.Background()
+	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdDelete(ctx, orgID, storeID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to delete object store")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusNoContent), "unexpected status code")
+}
+
+// Error testing helpers for ObjectStore
+
+func CreateObjectStoreExpectError(client *openapi.APIClient, orgID string, store *openapi.ObjectStore, expectedStatus int) *openapi.GenericOpenAPIError {
+	ctx := context.Background()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresPost(ctx, orgID).ObjectStore(*store).Execute()
+	Expect(err).To(HaveOccurred(), "expected error")
+	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+
+	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
+
+	return apiErr
+}
+
+func GetObjectStoreExpectError(client *openapi.APIClient, orgID, storeID string, expectedStatus int) *openapi.GenericOpenAPIError {
+	ctx := context.Background()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdGet(ctx, orgID, storeID).Execute()
+	Expect(err).To(HaveOccurred(), "expected error")
+	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+
+	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
+
+	return apiErr
+}
+
+func UpdateObjectStoreExpectError(client *openapi.APIClient, orgID, storeID string, store *openapi.ObjectStore, expectedStatus int) *openapi.GenericOpenAPIError {
+	ctx := context.Background()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdPut(ctx, orgID, storeID).ObjectStore(*store).Execute()
+	Expect(err).To(HaveOccurred(), "expected error")
+	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+
+	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
+
+	return apiErr
+}
+
 // Assertion helpers for OpenAPI models using Ginkgo matchers
 func ExpectPostgresAddonEqual(expected, actual *openapi.PostgresAddon) {
 	Expect(actual.GetName()).To(Equal(expected.GetName()), "addon name mismatch")

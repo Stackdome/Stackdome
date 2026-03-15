@@ -120,3 +120,101 @@ func CreatePostgresAddonWithHA(name string) *openapi.PostgresAddon {
 
 	return addon
 }
+
+// Secret factory functions
+
+// CreateGenericSecret creates a generic secret with key-value pairs
+func CreateGenericSecret(name string, data map[string]string) *openapi.Secret {
+	secretData := make([]openapi.SecretData, 0, len(data))
+	for k, v := range data {
+		secretData = append(secretData, *openapi.NewSecretData(k, v))
+	}
+	return openapi.NewSecret(name, openapi.GENERIC, secretData)
+}
+
+// CreateS3CredentialsSecret creates a secret with S3 access credentials
+func CreateS3CredentialsSecret(name string) *openapi.Secret {
+	data := []openapi.SecretData{
+		*openapi.NewSecretData("access_key_id", "AKIAIOSFODNN7EXAMPLE"),
+		*openapi.NewSecretData("secret_access_key", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"),
+	}
+	return openapi.NewSecret(name, openapi.GENERIC, data)
+}
+
+// CreateAzureCredentialsSecret creates a secret with Azure connection string
+func CreateAzureCredentialsSecret(name string) *openapi.Secret {
+	data := []openapi.SecretData{
+		*openapi.NewSecretData("connection_string", "DefaultEndpointsProtocol=https;AccountName=test;AccountKey=testkey;EndpointSuffix=core.windows.net"),
+	}
+	return openapi.NewSecret(name, openapi.GENERIC, data)
+}
+
+// CreateGCSCredentialsSecret creates a secret with GCS service account credentials
+func CreateGCSCredentialsSecret(name string) *openapi.Secret {
+	data := []openapi.SecretData{
+		*openapi.NewSecretData("service_account_credentials", `{"type":"service_account","project_id":"test-project"}`),
+	}
+	return openapi.NewSecret(name, openapi.GENERIC, data)
+}
+
+// ObjectStore factory functions
+
+// CreateObjectStoreWithS3 creates an ObjectStore with S3 credentials
+func CreateObjectStoreWithS3(name string, secretID string) *openapi.ObjectStore {
+	accessKeyRef := *openapi.NewSecretReference(secretID, "access_key_id")
+	secretKeyRef := *openapi.NewSecretReference(secretID, "secret_access_key")
+
+	s3Creds := openapi.NewS3Credentials(accessKeyRef, secretKeyRef, "us-west-2")
+
+	config := openapi.NewObjectStoreConfiguration()
+	config.SetS3Credentials(*s3Creds)
+
+	spec := openapi.NewObjectStoreSpec(*config, "s3://my-bucket/backups")
+
+	return openapi.NewObjectStore(name, *spec)
+}
+
+// CreateObjectStoreWithS3Endpoint creates an ObjectStore with S3-compatible endpoint
+func CreateObjectStoreWithS3Endpoint(name string, secretID string, endpoint string) *openapi.ObjectStore {
+	store := CreateObjectStoreWithS3(name, secretID)
+	s3Creds := store.Spec.Configuration.GetS3Credentials()
+	s3Creds.SetEndpointUrl(endpoint)
+	store.Spec.Configuration.SetS3Credentials(s3Creds)
+	return store
+}
+
+// CreateObjectStoreWithAzure creates an ObjectStore with Azure credentials
+func CreateObjectStoreWithAzure(name string, secretID string) *openapi.ObjectStore {
+	connStringRef := *openapi.NewSecretReference(secretID, "connection_string")
+
+	azureCreds := openapi.NewAzureCredentials(connStringRef)
+	azureCreds.SetStorageAccountName("teststorageaccount")
+
+	config := openapi.NewObjectStoreConfiguration()
+	config.SetAzureCredentials(*azureCreds)
+
+	spec := openapi.NewObjectStoreSpec(*config, "https://teststorageaccount.blob.core.windows.net/backups")
+
+	return openapi.NewObjectStore(name, *spec)
+}
+
+// CreateObjectStoreWithGCS creates an ObjectStore with GCS credentials
+func CreateObjectStoreWithGCS(name string, secretID string) *openapi.ObjectStore {
+	saCredsRef := *openapi.NewSecretReference(secretID, "service_account_credentials")
+
+	gcsCreds := openapi.NewGCSCredentials(saCredsRef)
+
+	config := openapi.NewObjectStoreConfiguration()
+	config.SetGcsCredentials(*gcsCreds)
+
+	spec := openapi.NewObjectStoreSpec(*config, "gs://my-bucket/backups")
+
+	return openapi.NewObjectStore(name, *spec)
+}
+
+// CreateObjectStoreWithRetention creates an ObjectStore with custom retention policy
+func CreateObjectStoreWithRetention(name string, secretID string, retention string) *openapi.ObjectStore {
+	store := CreateObjectStoreWithS3(name, secretID)
+	store.Spec.SetRetentionPolicy(retention)
+	return store
+}
