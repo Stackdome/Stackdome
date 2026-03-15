@@ -64,9 +64,10 @@ type Secret struct {
 	Data map[string]string `gorm:"-" json:"data,omitempty"`
 }
 
-// SecretReference points to a secret
+// SecretReference points to a secret and an optional key within that secret.
 type SecretReference struct {
 	SecretID string `json:"secret_id"` // UUID of the secret
+	Key      string `json:"key"`       // Key within the secret
 }
 
 func (s *Secret) ClusterSecretName() string {
