@@ -5,6 +5,22 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
+// convertSecretReference converts API SecretReference to domain model
+func convertSecretReference(in openapi.SecretReference) models.SecretReference {
+	return models.SecretReference{
+		SecretID: in.GetSecretId(),
+		Key:      in.GetKey(),
+	}
+}
+
+// presentSecretReference converts domain model to API SecretReference
+func presentSecretReference(in models.SecretReference) openapi.SecretReference {
+	ref := openapi.SecretReference{}
+	ref.SetSecretId(in.SecretID)
+	ref.SetKey(in.Key)
+	return ref
+}
+
 // ConvertObjectStore converts API ObjectStore to domain model
 func ConvertObjectStore(in *openapi.ObjectStore) *models.ObjectStore {
 	if in == nil {
@@ -66,8 +82,8 @@ func convertObjectStoreConfiguration(in openapi.ObjectStoreConfiguration) models
 
 	if in.S3Credentials != nil {
 		res.S3Credentials = &models.S3Credentials{
-			AccessKeyID:     in.S3Credentials.GetAccessKeyId(),
-			SecretAccessKey: in.S3Credentials.GetSecretAccessKey(),
+			AccessKeyID:     convertSecretReference(in.S3Credentials.GetAccessKeyId()),
+			SecretAccessKey: convertSecretReference(in.S3Credentials.GetSecretAccessKey()),
 			Region:          in.S3Credentials.GetRegion(),
 			Endpoint:        in.S3Credentials.GetEndpointUrl(),
 		}
@@ -75,13 +91,14 @@ func convertObjectStoreConfiguration(in openapi.ObjectStoreConfiguration) models
 
 	if in.AzureCredentials != nil {
 		res.AzureCredentials = &models.AzureCredentials{
-			ConnectionString: in.AzureCredentials.GetConnectionString(),
+			ConnectionString:   convertSecretReference(in.AzureCredentials.GetConnectionString()),
+			StorageAccountName: in.AzureCredentials.GetStorageAccountName(),
 		}
 	}
 
 	if in.GcsCredentials != nil {
 		res.GCSCredentials = &models.GCSCredentials{
-			ServiceAccountKey: in.GcsCredentials.GetServiceAccountKey(),
+			ServiceAccountCredentials: convertSecretReference(in.GcsCredentials.GetServiceAccountCredentials()),
 		}
 	}
 
@@ -93,8 +110,8 @@ func presentObjectStoreConfiguration(in models.ObjectStoreConfiguration) openapi
 
 	if in.S3Credentials != nil {
 		s3 := openapi.S3Credentials{}
-		s3.SetAccessKeyId(in.S3Credentials.AccessKeyID)
-		s3.SetSecretAccessKey(in.S3Credentials.SecretAccessKey)
+		s3.SetAccessKeyId(presentSecretReference(in.S3Credentials.AccessKeyID))
+		s3.SetSecretAccessKey(presentSecretReference(in.S3Credentials.SecretAccessKey))
 		s3.SetRegion(in.S3Credentials.Region)
 		if in.S3Credentials.Endpoint != "" {
 			s3.SetEndpointUrl(in.S3Credentials.Endpoint)
@@ -104,13 +121,16 @@ func presentObjectStoreConfiguration(in models.ObjectStoreConfiguration) openapi
 
 	if in.AzureCredentials != nil {
 		azure := openapi.AzureCredentials{}
-		azure.SetConnectionString(in.AzureCredentials.ConnectionString)
+		azure.SetConnectionString(presentSecretReference(in.AzureCredentials.ConnectionString))
+		if in.AzureCredentials.StorageAccountName != "" {
+			azure.SetStorageAccountName(in.AzureCredentials.StorageAccountName)
+		}
 		res.SetAzureCredentials(azure)
 	}
 
 	if in.GCSCredentials != nil {
 		gcs := openapi.GCSCredentials{}
-		gcs.SetServiceAccountKey(in.GCSCredentials.ServiceAccountKey)
+		gcs.SetServiceAccountCredentials(presentSecretReference(in.GCSCredentials.ServiceAccountCredentials))
 		res.SetGcsCredentials(gcs)
 	}
 
