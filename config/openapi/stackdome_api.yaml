@@ -3414,11 +3414,9 @@ components:
         - region
       properties:
         access_key_id:
-          type: string
-          description: Reference to secret containing AWS access key ID
+          $ref: '#/components/schemas/SecretReference'
         secret_access_key:
-          type: string
-          description: Reference to secret containing AWS secret access key
+          $ref: '#/components/schemas/SecretReference'
         region:
           type: string
           description: AWS region
@@ -3432,17 +3430,33 @@ components:
         - connection_string
       properties:
         connection_string:
+          $ref: '#/components/schemas/SecretReference'
+        storage_account_name:
           type: string
-          description: Reference to secret containing Azure Blob Storage connection string
+          description: Azure storage account name
 
     GCSCredentials:
       type: object
       required:
-        - service_account_key
+        - service_account_credentials
       properties:
-        service_account_key:
+        service_account_credentials:
+          $ref: '#/components/schemas/SecretReference'
+
+    SecretReference:
+      type: object
+      required:
+        - secret_id
+        - key
+      properties:
+        secret_id:
           type: string
-          description: Reference to secret containing GCS service account key JSON
+          format: uuid
+          description: UUID of the Stackdome secret
+        key:
+          type: string
+          description: Key within the secret containing the value
+
     WALConfiguration:
       type: object
       properties:
