@@ -62,7 +62,7 @@ func WrapErrAsServiceError(err error) *errors.ServiceError {
 	if err == nil {
 		return nil
 	}
-	return errors.GeneralError(err.Error())
+	return errors.GeneralError("%s", err.Error())
 }
 
 type DBClusterService interface {

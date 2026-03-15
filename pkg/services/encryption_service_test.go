@@ -19,7 +19,7 @@ var _ = Describe("AESEncryptionService", func() {
 		err     error
 	)
 
-	const masterKey = "this-is-a-very-secure-master-key-32chars!"
+	const masterKey = "this-is-a-very-secure-master-key-that-is-at-least-64-characters-long-for-security-validation"
 
 	BeforeEach(func() {
 		service, err = NewAESEncryptionService(EncryptionServiceSpec{Masterkey: masterKey})
