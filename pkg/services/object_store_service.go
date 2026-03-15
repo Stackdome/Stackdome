@@ -26,11 +26,13 @@ type ObjectStoreService interface {
 
 type ObjectStoreServiceSpec struct {
 	SessionFactory db.SessionFactory
+	SecretService  SecretService
 	Logger         logger.Logger
 }
 
 type objectStoreService struct {
 	objectStoreStore stores.ObjectStoreStore
+	secretService    SecretService
 	validator        validator.ObjectStoreValidator
 	logger           logger.Logger
 }
@@ -40,14 +42,65 @@ func NewObjectStoreService(spec ObjectStoreServiceSpec) ObjectStoreService {
 		objectStoreStore: pgstore.NewObjectStoreStore(pgstore.ObjectStoreStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		validator: objectstore.NewObjectStoreValidator(),
-		logger:    spec.Logger,
+		secretService: spec.SecretService,
+		validator:     objectstore.NewObjectStoreValidator(),
+		logger:        spec.Logger,
 	}
+}
+
+func (s *objectStoreService) validateSecretReference(ctx context.Context, ref models.SecretReference, fieldName string) *errors.ServiceError {
+	secret, err := s.secretService.GetByID(ctx, ref.SecretID)
+	if err != nil {
+		if err.Is404() {
+			return errors.BadRequest("%s: secret with ID '%s' does not exist", fieldName, ref.SecretID)
+		}
+		return err
+	}
+
+	keyFound := false
+	for _, k := range secret.Keys {
+		if k == ref.Key {
+			keyFound = true
+			break
+		}
+	}
+	if !keyFound {
+		return errors.BadRequest("%s: key '%s' does not exist in secret '%s'", fieldName, ref.Key, secret.Name)
+	}
+
+	return nil
+}
+
+func (s *objectStoreService) validateSecretReferences(ctx context.Context, config models.ObjectStoreConfiguration) *errors.ServiceError {
+	if config.S3Credentials != nil {
+		if err := s.validateSecretReference(ctx, config.S3Credentials.AccessKeyID, "S3 access key ID"); err != nil {
+			return err
+		}
+		if err := s.validateSecretReference(ctx, config.S3Credentials.SecretAccessKey, "S3 secret access key"); err != nil {
+			return err
+		}
+	}
+	if config.AzureCredentials != nil {
+		if err := s.validateSecretReference(ctx, config.AzureCredentials.ConnectionString, "Azure connection string"); err != nil {
+			return err
+		}
+	}
+	if config.GCSCredentials != nil {
+		if err := s.validateSecretReference(ctx, config.GCSCredentials.ServiceAccountCredentials, "GCS service account credentials"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *objectStoreService) Create(ctx context.Context, objectStore *models.ObjectStore) (*models.ObjectStore, *errors.ServiceError) {
 	// Validate input
 	if err := s.validator.ValidateForCreate(ctx, objectStore); err != nil {
+		return nil, err
+	}
+
+	// Validate secret references exist
+	if err := s.validateSecretReferences(ctx, objectStore.Configuration); err != nil {
 		return nil, err
 	}
 
@@ -93,6 +146,11 @@ func (s *objectStoreService) Update(ctx context.Context, id string, objectStore 
 
 	// Validate update
 	if err := s.validator.ValidateForUpdate(ctx, existingObjectStore, objectStore); err != nil {
+		return nil, err
+	}
+
+	// Validate secret references exist
+	if err := s.validateSecretReferences(ctx, objectStore.Configuration); err != nil {
 		return nil, err
 	}
 
