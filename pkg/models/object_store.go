@@ -46,9 +46,15 @@ type GCSCredentials struct {
 }
 
 type ObjectStoreStatus struct {
-	State      string      `json:"state,omitempty"`
-	Message    string      `json:"message,omitempty"`
-	Conditions []Condition `json:"conditions,omitempty"`
+	State            string                `json:"state,omitempty"`
+	Message          string                `json:"message,omitempty"`
+	Conditions       []Condition           `json:"conditions,omitempty"`
+	DeployedClusters []DeployedClusterInfo `json:"deployedClusters,omitempty"`
+}
+
+type DeployedClusterInfo struct {
+	ClusterID string `json:"clusterId"`
+	Namespace string `json:"namespace"`
 }
 
 // Implement driver.Valuer and sql.Scanner for custom types
