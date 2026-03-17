@@ -60,6 +60,15 @@ func (p PostgresAddon) AddonName() string {
 	return p.Name
 }
 
+func (p *PostgresAddon) HasDatabase(name string) bool {
+	for _, db := range p.Databases {
+		if db.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 type PostgresAddonDatabase struct {
 	ID              string             `gorm:"primary_key;default:gen_random_uuid()"`
 	PostgresAddonID string             `gorm:"not null;index"`
@@ -176,34 +185,44 @@ type PostgresLifecycleConfig struct {
 }
 
 type PostgresAddonStatus struct {
-	State          string                  `json:"state,omitempty"`
-	Message        string                  `json:"message,omitempty"`
-	Conditions     []Condition             `json:"conditions,omitempty"`
-	ClusterInfo    *PostgresClusterInfo    `json:"clusterInfo,omitempty"`
-	ConnectionInfo *PostgresConnectionInfo `json:"connectionInfo,omitempty"`
+	State                  string                       `json:"state,omitempty"`
+	Message                string                       `json:"message,omitempty"`
+	Conditions             []Condition                  `json:"conditions,omitempty"`
+	ConnectionInfo         *PostgresAddonConnectionInfo `json:"connectionInfo,omitempty"`
+	Databases              []PostgresDatabaseInfo       `json:"databases,omitempty"`
+	LastObservedStatusHash string                       `json:"lastObservedStatusHash,omitempty"`
 }
 
-type PostgresClusterInfo struct {
-	PrimaryInstance string `json:"primaryInstance,omitempty"`
-	ReadyInstances  int    `json:"readyInstances,omitempty"`
-	TotalInstances  int    `json:"totalInstances,omitempty"`
+type PostgresAddonConnectionInfo struct {
+	Host           string                       `json:"host,omitempty"`
+	Port           int32                        `json:"port,omitempty"`
+	SSLMode        string                       `json:"sslMode,omitempty"`
+	WriteService   string                       `json:"writeService,omitempty"`
+	ReadService    string                       `json:"readService,omitempty"`
+	ClusterSecrets *PostgresAddonClusterSecrets `json:"clusterSecrets,omitempty"`
 }
 
-type PostgresConnectionInfo struct {
-	Host        string                 `json:"host,omitempty"`
-	Port        int                    `json:"port,omitempty"`
-	Credentials PostgresCredentials    `json:"credentials,omitempty"`
-	Databases   []PostgresDatabaseInfo `json:"databases,omitempty"`
-}
-
-type PostgresCredentials struct {
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
+type PostgresAddonClusterSecrets struct {
+	SuperuserSecret     *string           `json:"superuserSecret,omitempty"`
+	UserSecrets         map[string]string `json:"userSecrets,omitempty"`
+	CACertificateSecret string            `json:"caCertificateSecret,omitempty"`
 }
 
 type PostgresDatabaseInfo struct {
-	Name string `json:"name"`
-	Size string `json:"size,omitempty"`
+	Name  string `json:"name"`
+	Owner string `json:"owner,omitempty"`
+}
+
+// PostgresCredentials is the JIT-fetched credential response (not stored in DB)
+type PostgresCredentials struct {
+	Database         string `json:"database"`
+	Host             string `json:"host"`
+	Port             int32  `json:"port"`
+	Username         string `json:"username"`
+	Password         string `json:"password"`
+	SSLMode          string `json:"sslMode"`
+	ConnectionString string `json:"connectionString"`
+	CACertificate    string `json:"caCertificate,omitempty"`
 }
 
 // Implement driver.Valuer and sql.Scanner for custom types

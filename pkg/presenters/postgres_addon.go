@@ -394,31 +394,31 @@ func presentPostgresAddonStatus(in models.PostgresAddonStatus) openapi.PostgresA
 		res.SetConditions(presentConditions(in.Conditions))
 	}
 
-	if in.ClusterInfo != nil {
-		clusterInfo := openapi.PostgresClusterInfo{}
-		// Note: API only has Version field, domain model has different fields
-		// This might need to be updated when API spec is aligned
-		res.SetClusterInfo(clusterInfo)
-	}
-
 	if in.ConnectionInfo != nil {
 		connectionInfo := openapi.PostgresConnectionInfo{}
 		connectionInfo.SetHost(in.ConnectionInfo.Host)
-		connectionInfo.SetPort(int32(in.ConnectionInfo.Port))
+		connectionInfo.SetPort(in.ConnectionInfo.Port)
 
-		if in.ConnectionInfo.Credentials != (models.PostgresCredentials{}) {
+		if in.ConnectionInfo.ClusterSecrets != nil {
 			credentials := openapi.PostgresConnectionInfoCredentials{}
-			// Note: API credentials structure is different from domain model
-			// Domain has username/password, API has secret IDs
+			if in.ConnectionInfo.ClusterSecrets.SuperuserSecret != nil {
+				credentials.SetSuperuserSecretId(*in.ConnectionInfo.ClusterSecrets.SuperuserSecret)
+			}
+			if len(in.ConnectionInfo.ClusterSecrets.UserSecrets) > 0 {
+				credentials.SetAppUserSecrets(in.ConnectionInfo.ClusterSecrets.UserSecrets)
+			}
+			if in.ConnectionInfo.ClusterSecrets.CACertificateSecret != "" {
+				credentials.SetCaCertificateSecretId(in.ConnectionInfo.ClusterSecrets.CACertificateSecret)
+			}
 			connectionInfo.SetCredentials(credentials)
 		}
 
-		if len(in.ConnectionInfo.Databases) > 0 {
-			databases := make([]openapi.PostgresConnectionInfoDatabasesInner, len(in.ConnectionInfo.Databases))
-			for i, db := range in.ConnectionInfo.Databases {
+		if len(in.Databases) > 0 {
+			databases := make([]openapi.PostgresConnectionInfoDatabasesInner, len(in.Databases))
+			for i, db := range in.Databases {
 				databases[i] = openapi.PostgresConnectionInfoDatabasesInner{
 					Name:  &db.Name,
-					Owner: nil, // Not available in domain model
+					Owner: &db.Owner,
 				}
 			}
 			connectionInfo.SetDatabases(databases)
