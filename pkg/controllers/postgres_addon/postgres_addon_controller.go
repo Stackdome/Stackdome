@@ -91,26 +91,51 @@ func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to get postgres addon from db: %v", serr)
 	}
 
-	// Update status from cluster
-	newStatus := mapToPostgresAddonStatus(clusterInstance.Status)
-	serr = r.PostgresAddonService.UpdatePostgresAddonStatus(ctx, dbInstance.ID, newStatus)
-	if serr != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to update postgres addon status in db: %v", serr)
+	// Only update if status hash changed
+	if clusterInstance.Status.StatusHash != dbInstance.Status.LastObservedStatusHash {
+		newStatus := mapToPostgresAddonStatus(clusterInstance.Status)
+		serr = r.PostgresAddonService.UpdatePostgresAddonStatus(ctx, dbInstance.ID, newStatus)
+		if serr != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update postgres addon status in db: %v", serr)
+		}
+		r.Log.Infof("updated postgres addon %s status: phase=%s", postgresAddonID, newStatus.State)
 	}
-	r.Log.Infof("updated postgres addon %s status: phase=%s", postgresAddonID, newStatus.State)
 
 	return ctrl.Result{}, nil
 }
 
 func mapToPostgresAddonStatus(clusterStatus addonsv1alpha1.PostgresClusterStatus) *models.PostgresAddonStatus {
 	status := &models.PostgresAddonStatus{
-		State:      string(clusterStatus.Phase),
-		Conditions: models.ConvertConditions(clusterStatus.Conditions),
+		State:                  string(clusterStatus.Phase),
+		Conditions:             models.ConvertConditions(clusterStatus.Conditions),
+		LastObservedStatusHash: clusterStatus.StatusHash,
 	}
 
-	// Only map basic status information that exists in the CRD
-	// Additional fields like cluster info and connection info would need
-	// to be populated from actual CRD status fields when they exist
+	if clusterStatus.Outputs != nil {
+		status.ConnectionInfo = &models.PostgresAddonConnectionInfo{
+			WriteService: clusterStatus.Outputs.WriteService,
+			ReadService:  clusterStatus.Outputs.ReadService,
+			ClusterSecrets: &models.PostgresAddonClusterSecrets{
+				SuperuserSecret:     clusterStatus.Outputs.SuperUserCredentialSecret,
+				UserSecrets:         clusterStatus.Outputs.UserCredentialSecrets,
+				CACertificateSecret: clusterStatus.Outputs.ClientCASecret,
+			},
+		}
+
+		if clusterStatus.Outputs.ClusterConnection != nil {
+			status.ConnectionInfo.Host = clusterStatus.Outputs.ClusterConnection.Host
+			status.ConnectionInfo.Port = clusterStatus.Outputs.ClusterConnection.Port
+			status.ConnectionInfo.SSLMode = clusterStatus.Outputs.ClusterConnection.SSLMode
+		}
+
+		status.Databases = make([]models.PostgresDatabaseInfo, len(clusterStatus.Outputs.Databases))
+		for i, db := range clusterStatus.Outputs.Databases {
+			status.Databases[i] = models.PostgresDatabaseInfo{
+				Name:  db.Name,
+				Owner: db.Owner,
+			}
+		}
+	}
 
 	return status
 }
