@@ -1,0 +1,74 @@
+package postgresaddon
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
+	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	addonsv1alpha1 "stackdome.io/cluster-agent/api/addons/v1alpha1"
+)
+
+type deprovisionReconciler struct {
+	postgresAddonService postgresAddonService
+	addonUsageStore      addonUsageStore
+	clusterManager       clustermanager.ClusterManager
+	logger               logger.Logger
+}
+
+func newDeprovisionReconciler(spec PostgresAddonWorkerSpec) *deprovisionReconciler {
+	return &deprovisionReconciler{
+		postgresAddonService: spec.PostgresAddonService,
+		addonUsageStore:      spec.AddonUsageStore,
+		clusterManager:       spec.ClusterManager,
+		logger:               logger.NewLoggerWithPrefix(context.Background(), "postgres-addon-deprovision"),
+	}
+}
+
+func (r *deprovisionReconciler) Name() string { return "deprovision" }
+
+func (r *deprovisionReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon) (subReconcilerResult, error) {
+	if addon.Status.State != "Deleting" {
+		return resultNil, nil
+	}
+
+	inUse, err := r.addonUsageStore.IsAddonInUse(ctx, models.AddonTypePostgres, addon.ID)
+	if err != nil {
+		return resultNil, fmt.Errorf("failed to check addon usage: %w", err)
+	}
+	if inUse {
+		r.logger.Infof("Postgres addon '%s' is still in use by stacks, requeueing", addon.Name)
+		return resultRequeueAfter(30 * time.Second), nil
+	}
+
+	r.logger.Infof("Deprovisioning postgres addon '%s' in namespace '%s'", addon.Name, addon.Namespace)
+
+	clusterClient, cerr := r.clusterManager.GetClient(addon.ClusterID)
+	if cerr != nil {
+		return resultNil, fmt.Errorf("failed to get cluster client: %w", cerr)
+	}
+
+	pgClusterCR := &addonsv1alpha1.PostgresCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      addon.Name,
+			Namespace: addon.Namespace,
+		},
+	}
+	if err := clusterClient.Delete(ctx, pgClusterCR, &client.DeleteOptions{
+		PropagationPolicy: ptr.To(metav1.DeletePropagationForeground),
+	}); client.IgnoreNotFound(err) != nil {
+		return resultNil, fmt.Errorf("failed to delete PostgresCluster CR '%s': %w", addon.Name, err)
+	}
+
+	if serr := r.postgresAddonService.InternalDeleteFromDB(ctx, addon.ID); serr != nil {
+		return resultNil, fmt.Errorf("failed to delete postgres addon from DB: %w", serr)
+	}
+
+	r.logger.Infof("Successfully deprovisioned postgres addon '%s'", addon.Name)
+	return resultStop, nil
+}
