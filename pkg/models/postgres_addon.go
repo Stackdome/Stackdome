@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -58,6 +59,18 @@ func (p PostgresAddon) Type() string {
 
 func (p PostgresAddon) AddonName() string {
 	return p.Name
+}
+
+// ImportPasswordSecretName returns the predictable K8s Secret name used to
+// store the password for importing from an external database.
+func (p *PostgresAddon) ImportPasswordSecretName() string {
+	return fmt.Sprintf("%s-import-password", p.Name)
+}
+
+// ImportSourceClusterName returns the predictable external cluster reference
+// name used in the PostgresCluster CR bootstrap spec for imports.
+func (p *PostgresAddon) ImportSourceClusterName() string {
+	return fmt.Sprintf("%s-import-source", p.Name)
 }
 
 func (p *PostgresAddon) HasDatabase(name string) bool {
