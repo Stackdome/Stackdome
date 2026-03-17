@@ -27,6 +27,12 @@ This document specifies the implementation of PostgresAddon cluster integration,
 
 **PostgresAddonStatus restructure:** The existing `PostgresConnectionInfo` struct (containing `Credentials` with `Username`/`Password` fields) will be replaced with `PostgresAddonConnectionInfo` that stores K8s secret *names* instead of actual credentials. This is a deliberate security improvement - credentials are fetched JIT from the cluster instead of being stored in the API server database.
 
+**Migration Strategy:** Since the status field is JSONB and re-populated from the cluster on every reconciliation, this is a safe breaking change:
+1. Update the model structs in code
+2. Deploy the new code - existing status data becomes partially unparseable
+3. PostgresAddonController will overwrite status with new structure on next reconciliation
+4. No data migration needed - cluster is the source of truth for status
+
 ---
 
 ## Architecture
@@ -195,7 +201,14 @@ type PostgresClusterBuilder interface {
 
 **Location:** `pkg/builders/objectstore_builder.go`
 
-**Note:** The ObjectStore CR is from the barman-cloud project (`github.com/cloudnative-pg/barman-cloud/api/v1`), not a stackdome CRD. This is a third-party CRD that CNPG uses for backup storage configuration.
+**Note:** The ObjectStore CR is from the barman-cloud project, not a stackdome CRD. This is a third-party CRD that CNPG uses for backup storage configuration.
+
+**Import Path:** `github.com/cloudnative-pg/barman-cloud/api/v1`
+
+This requires adding barman-cloud to go.mod:
+```
+go get github.com/cloudnative-pg/barman-cloud@v0.3.0
+```
 
 **Interface:**
 
@@ -306,7 +319,7 @@ func (r *postgresAddonReconciler) mapToPostgresAddonStatus(cr *addonsv1alpha1.Po
             ReadService:  cr.Status.Outputs.ReadService,
             ClusterSecrets: &models.PostgresAddonClusterSecrets{
                 SuperuserSecret:     cr.Status.Outputs.SuperUserCredentialSecret,  // *string in CRD
-                UserSecrets:         cr.Status.Outputs.UserCredentialSecretNames,  // map[string]string in CRD
+                UserSecrets:         cr.Status.Outputs.UserCredentialSecrets,      // map[string]string (json: userCredentialSecretNames)
                 CACertificateSecret: cr.Status.Outputs.ClientCASecret,
             },
         }
@@ -366,7 +379,11 @@ func (r *postgresBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
     backup := &cnpgv1.Backup{}
     r.Client.Get(ctx, req.NamespacedName, backup)
 
-    addonID := r.findAddonIDFromBackup(backup)
+    addonID := r.findAddonIDFromBackup(ctx, backup)
+    if addonID == "" {
+        r.Log.Infof("backup %s not associated with any PostgresAddon, skipping", backup.Name)
+        return ctrl.Result{}, nil
+    }
 
     existing, err := r.PostgresBackupService.GetByName(ctx, addonID, backup.Name)
 
@@ -383,6 +400,27 @@ func (r *postgresBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
     } else {
         r.PostgresBackupService.UpdateStatus(ctx, existing.ID, ...)
     }
+}
+
+// findAddonIDFromBackup resolves the PostgresAddon ID from a CNPG Backup.
+// It looks up the owning CNPG Cluster, then finds the PostgresCluster CR that created it,
+// and extracts the addon ID from its labels.
+func (r *postgresBackupReconciler) findAddonIDFromBackup(ctx context.Context, backup *cnpgv1.Backup) string {
+    // CNPG Backup references the cluster name in spec.cluster.name
+    clusterName := backup.Spec.Cluster.Name
+
+    // Find the PostgresCluster CR that owns this CNPG Cluster
+    // The CNPG Cluster is named: <postgres-cluster-cr-name>-<major-version>
+    // We need to find PostgresCluster CRs in this namespace and match
+    pgClusterList := &addonsv1alpha1.PostgresClusterList{}
+    r.Client.List(ctx, pgClusterList, client.InNamespace(backup.Namespace))
+
+    for _, pgCluster := range pgClusterList.Items {
+        if pgCluster.CnpgClusterName() == clusterName {
+            return pgCluster.Labels[models.PostgresAddonIDLabel]
+        }
+    }
+    return ""
 }
 ```
 
@@ -411,6 +449,16 @@ GET /api/v1/organizations/{org_id}/addons/postgres/{id}/credentials?superuser=tr
   "sslMode": "verify-full",
   "connectionString": "postgresql://myapp_owner:xxx@host:5432/myapp?sslmode=verify-full",
   "caCertificate": "-----BEGIN CERTIFICATE-----\n..."
+}
+```
+
+**Service Interface Addition:**
+
+```go
+// pkg/services/postgres_addon_service.go
+type PostgresAddonService interface {
+    // ... existing methods ...
+    GetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, error)
 }
 ```
 
@@ -455,6 +503,18 @@ func (s *postgresAddonService) GetCredentials(
     }, nil
 }
 ```
+
+**Error Handling:**
+
+| Scenario | HTTP Status | Error Message |
+|----------|-------------|---------------|
+| Addon not found | 404 | "PostgresAddon not found" |
+| Database not in addon | 404 | "Database 'X' not found in addon" |
+| Addon not ready | 503 | "Addon not ready, status: X" |
+| Cluster unreachable | 503 | "Unable to connect to cluster" |
+| Secret not found in cluster | 500 | "Credential secret not found in cluster" |
+| Superuser access disabled | 403 | "Superuser access not enabled for this addon" |
+| Permission denied | 403 | "Permission denied" |
 
 **Authorization:**
 
@@ -512,6 +572,11 @@ type PostgresAddonEnvSource struct {
     AddonID    string            `json:"addon_id"`
     Database   string            `json:"database"`
     EnvMapping map[string]string `json:"env_mapping"`
+}
+
+// HasEnvFromAddons returns true if any addon env sources are configured
+func (s *StackResource) HasEnvFromAddons() bool {
+    return s.ExecutionConfig != nil && len(s.ExecutionConfig.EnvFromAddons) > 0
 }
 ```
 
@@ -591,8 +656,32 @@ The Stack worker resolves addon references at **Stack reconciliation time** (not
 
 1. **Addon validation** - Stack creation/update validates addon exists and is in same organization
 2. **Addon readiness check** - Stack worker waits for addon to reach `Ready` state before proceeding
-3. **Secret mounting** - Worker configures StackResource CR to mount the K8s secret created by CNPG
-4. **Credential resolution** - Actual credential values are resolved by the cluster-agent at pod creation time
+3. **Secret mounting** - Worker configures StackResource CR with addon secret references
+4. **Credential resolution** - Cluster-agent resolves credentials at pod creation time
+
+**StackResource CR Secret Mounting:**
+
+The Stack worker adds addon credential information to the StackResource CR spec. The cluster-agent then:
+1. Reads the user credential secret name from PostgresCluster CR status
+2. Mounts that secret into the pod using `envFrom` or individual `env` entries
+3. Maps addon fields to env vars based on the `EnvMapping` configuration
+
+```go
+// Stack worker adds this to StackResource CR spec
+type AddonSecretReference struct {
+    AddonType      string            `json:"addonType"`
+    SecretName     string            `json:"secretName"`     // K8s secret name in same namespace
+    EnvMapping     map[string]string `json:"envMapping"`     // field -> env var name
+}
+
+// StackResource CR spec (in cluster-agent)
+type StackResourceSpec struct {
+    // ... existing fields ...
+    AddonSecrets []AddonSecretReference `json:"addonSecrets,omitempty"`
+}
+```
+
+The cluster-agent's StackResource controller reads `addonSecrets` and configures the pod spec with appropriate `env` entries that reference the K8s secrets created by CNPG.
 
 **Error scenarios:**
 
@@ -661,9 +750,10 @@ Track which addons are used by which stacks for deletion protection.
 ```go
 // pkg/models/addon_usage.go
 type AddonUsage struct {
-    AddonType       AddonType `gorm:"not null"`
-    AddonID         string    `gorm:"not null"`
-    StackID         string    `gorm:"not null"`
+    ID              string    `gorm:"primary_key;default:gen_random_uuid()"`
+    AddonType       AddonType `gorm:"not null;index:idx_addon_usages_addon"`
+    AddonID         string    `gorm:"not null;index:idx_addon_usages_addon"`
+    StackID         string    `gorm:"not null;index:idx_addon_usages_stack"`
     StackResourceID string    `gorm:"not null"`
 }
 ```
@@ -721,11 +811,12 @@ func (r *addonEnvReconciler) reconcileAddonUsage(ctx context.Context, stack *mod
 
 ```sql
 CREATE TABLE addon_usages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     addon_type VARCHAR(50) NOT NULL,
     addon_id UUID NOT NULL,
     stack_id UUID NOT NULL,
     stack_resource_id UUID NOT NULL,
-    PRIMARY KEY (addon_type, addon_id, stack_id, stack_resource_id)
+    UNIQUE (addon_type, addon_id, stack_id, stack_resource_id)
 );
 
 CREATE INDEX idx_addon_usages_addon ON addon_usages(addon_type, addon_id);
@@ -778,43 +869,73 @@ CREATE INDEX idx_addon_usages_stack ON addon_usages(stack_id);
 
 ## Migrations
 
-### Migration 1: ObjectStore Status
+### Migration 1: Add DeployedClusters to ObjectStore Status
+
+**File:** `pkg/db/migrations/202603161000_add_deployed_clusters_to_object_store_status.go`
+
+The ObjectStore table already has a `status` JSONB column. No schema change needed - the `DeployedClusters` field will be stored within the existing JSONB when the model is updated. This is a code-only change.
+
+### Migration 2: Create Addon Usages Table
+
+**File:** `pkg/db/migrations/202603161001_create_addon_usages_table.go`
 
 ```go
-func addObjectStoreStatus() *gormigrate.Migration {
+package migrations
+
+import (
+    "fmt"
+
+    "github.com/go-gormigrate/gormigrate/v2"
+    "gorm.io/gorm"
+)
+
+func createAddonUsagesTable() *gormigrate.Migration {
+    type AddonUsage struct {
+        ID              string `gorm:"primary_key;default:gen_random_uuid()"`
+        AddonType       string `gorm:"not null"`
+        AddonID         string `gorm:"not null"`
+        StackID         string `gorm:"not null"`
+        StackResourceID string `gorm:"not null"`
+    }
     return &gormigrate.Migration{
-        ID: "202603161000",
-        Migrate: func(db *gorm.DB) error {
-            return db.Exec(`
-                ALTER TABLE object_stores
-                ADD COLUMN IF NOT EXISTS status JSONB DEFAULT '{}'
-            `).Error
+        ID: "202603161001_create_addon_usages_table",
+        Migrate: func(tx *gorm.DB) error {
+            if err := tx.Migrator().AutoMigrate(&AddonUsage{}); err != nil {
+                return fmt.Errorf("error running addon usages migration: %w", err)
+            }
+            // Add unique constraint
+            if err := tx.Exec(
+                "ALTER TABLE addon_usages ADD CONSTRAINT uq_addon_usages UNIQUE (addon_type, addon_id, stack_id, stack_resource_id)").Error; err != nil {
+                return fmt.Errorf("error adding unique constraint on addon_usages: %w", err)
+            }
+            // Add indexes
+            if err := tx.Exec(
+                "CREATE INDEX IF NOT EXISTS idx_addon_usages_addon ON addon_usages(addon_type, addon_id)").Error; err != nil {
+                return fmt.Errorf("error creating addon_usages addon index: %w", err)
+            }
+            if err := tx.Exec(
+                "CREATE INDEX IF NOT EXISTS idx_addon_usages_stack ON addon_usages(stack_id)").Error; err != nil {
+                return fmt.Errorf("error creating addon_usages stack index: %w", err)
+            }
+            return nil
         },
     }
 }
 ```
 
-### Migration 2: Addon Usages Table
+### Migration 3: Add EnvFromAddons to Stack Resources
+
+**File:** `pkg/db/migrations/202603161002_add_env_from_addons_to_stack_resources.go`
+
+The `execution_config` column is already JSONB. Adding the `env_from_addons` field to `ExecutionConfig` struct is a code-only change - no schema migration needed.
+
+### Registration
+
+Add migrations to `pkg/db/migrations/migrations.go`:
 
 ```go
-func createAddonUsagesTable() *gormigrate.Migration {
-    return &gormigrate.Migration{
-        ID: "202603161001",
-        Migrate: func(db *gorm.DB) error {
-            return db.Exec(`
-                CREATE TABLE addon_usages (
-                    addon_type VARCHAR(50) NOT NULL,
-                    addon_id UUID NOT NULL,
-                    stack_id UUID NOT NULL,
-                    stack_resource_id UUID NOT NULL,
-                    PRIMARY KEY (addon_type, addon_id, stack_id, stack_resource_id)
-                );
-                CREATE INDEX idx_addon_usages_addon ON addon_usages(addon_type, addon_id);
-                CREATE INDEX idx_addon_usages_stack ON addon_usages(stack_id);
-            `).Error
-        },
-    }
-}
+// In GetMigrations() function
+createAddonUsagesTable(),
 ```
 
 ---
