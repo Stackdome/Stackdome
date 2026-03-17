@@ -40,4 +40,5 @@ var MigrationList = []*gormigrate.Migration{
 	createPostgresBackupsTable(),
 	createPostgresAddonDatabasesTable(),
 	addNamespaceIdToPostgresAddons(),
+	createAddonUsagesTable(),
 }
