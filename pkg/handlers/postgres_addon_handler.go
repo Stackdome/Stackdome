@@ -443,3 +443,46 @@ func (h *postgresAddonHandler) ListBackups(w http.ResponseWriter, r *http.Reques
 	}
 	handle(w, r, cfg, http.StatusOK)
 }
+
+func (h *postgresAddonHandler) GetCredentials(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			ctx := r.Context()
+			id := mux.Vars(r)["id"]
+			database := mux.Vars(r)["database"]
+			superuser := r.URL.Query().Get("superuser") == "true"
+
+			currentUser, uerr := auth.GetCurrentUserFromCtx(ctx)
+			if uerr != nil {
+				return nil, errors.Unauthorized("failed to fetch current user")
+			}
+
+			postgresAddon, err := h.postgresAddonService.GetPostgresAddon(ctx, id)
+			if err != nil {
+				return nil, err
+			}
+
+			allowed, accessErr := h.authzClient.AuthorizeResourceAccessRequest(auth.AuthorizationRequest{
+				User:            currentUser,
+				ResourceType:    auth.PostgresAddon,
+				ResourceID:      id,
+				ResourceOwnerID: postgresAddon.UserID,
+				Action:          models.ResourceAccessModeExecute,
+			})
+			if accessErr != nil {
+				return nil, errors.Unauthorized("failed to check authorization: %s", accessErr.Error())
+			}
+			if !allowed {
+				return nil, errors.Forbidden("insufficient permissions to access postgres addon credentials")
+			}
+
+			creds, err := h.postgresAddonService.GetCredentials(ctx, id, database, superuser)
+			if err != nil {
+				return nil, err
+			}
+
+			return creds, nil
+		},
+	}
+	handle(w, r, cfg, http.StatusOK)
+}

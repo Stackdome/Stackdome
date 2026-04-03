@@ -199,6 +199,9 @@ func (s apiServer) routes() *mux.Router {
 	// PostgreSQL addon backups
 	postgresAddonRouter.HandleFunc("/{id}/backups", postgresAddonHandler.ListBackups).Methods(http.MethodGet)
 
+	// PostgreSQL addon credentials (JIT)
+	postgresAddonRouter.HandleFunc("/{id}/credentials/{database}", postgresAddonHandler.GetCredentials).Methods(http.MethodGet)
+
 	// Object store routes
 	objectStoreRouter := organizationsRouter.PathPrefix("/{org_id}/object-stores").Subrouter()
 	objectStoreRouter.Use(authenticationMiddleware.AuthenticateUser)

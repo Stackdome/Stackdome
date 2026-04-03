@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -12,6 +14,8 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator/postgresaddon"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type PostgresAddonService interface {
@@ -31,6 +35,9 @@ type PostgresAddonService interface {
 	// Backup operations
 	ListBackups(ctx context.Context, postgresAddonID string) ([]*models.PostgresBackup, *errors.ServiceError)
 
+	// Credentials
+	GetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError)
+
 	// Internal operations
 	InternalDeleteFromDB(ctx context.Context, id string) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError)
@@ -45,6 +52,7 @@ type PostgresAddonServiceSpec struct {
 	ClusterService        ClusterService
 	NamespaceService      NamespaceService
 	PostgresBackupService PostgresBackupService
+	ClusterManager        clustermanager.ClusterManager
 	Logger                logger.Logger
 }
 
@@ -55,6 +63,7 @@ type postgresAddonService struct {
 	namespaceService   NamespaceService
 	clusterService     ClusterService
 	objectStoreService ObjectStoreService
+	clusterManager     clustermanager.ClusterManager
 	validator          validator.PostgresAddonValidator
 	logger             logger.Logger
 	sessionFactory     db.SessionFactory
@@ -80,6 +89,7 @@ func NewPostgresAddonService(spec PostgresAddonServiceSpec) PostgresAddonService
 		clusterService:     spec.ClusterService,
 		namespaceService:   spec.NamespaceService,
 		objectStoreService: spec.ObjectStoreService,
+		clusterManager:     spec.ClusterManager,
 		validator:          postgresaddon.NewPostgresAddonValidator(),
 		logger:             spec.Logger,
 		sessionFactory:     spec.SessionFactory,
@@ -525,4 +535,94 @@ func (s *postgresAddonService) ListBackups(ctx context.Context, postgresAddonID 
 	// TODO: Implement when PostgresAddonBackupService is available
 	// For now, return empty list
 	return []*models.PostgresBackup{}, nil
+}
+
+func (s *postgresAddonService) GetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError) {
+	addon, err := s.postgresAddonStore.GetByID(ctx, addonID)
+	if err != nil {
+		return nil, err
+	}
+
+	if addon.Status.State != "Ready" {
+		return nil, errors.BadRequest("addon not ready, current state: %s", addon.Status.State)
+	}
+
+	if addon.Status.ConnectionInfo == nil || addon.Status.ConnectionInfo.ClusterSecrets == nil {
+		return nil, errors.BadRequest("addon connection info not available yet")
+	}
+
+	if superuser {
+		if !addon.Configuration.EnableSuperuserAccess {
+			return nil, errors.Forbidden("superuser access not enabled for this addon")
+		}
+		if addon.Status.ConnectionInfo.ClusterSecrets.SuperuserSecret == nil {
+			return nil, errors.BadRequest("superuser secret not available yet")
+		}
+	} else {
+		if !addon.HasDatabase(database) {
+			return nil, errors.NotFound("database '%s' not found in addon", database)
+		}
+	}
+
+	clusterClient, cerr := s.clusterManager.GetClient(addon.ClusterID)
+	if cerr != nil {
+		return nil, errors.GeneralError("unable to connect to cluster: %v", cerr)
+	}
+
+	var secretName string
+	if superuser {
+		secretName = *addon.Status.ConnectionInfo.ClusterSecrets.SuperuserSecret
+	} else {
+		var ok bool
+		secretName, ok = addon.Status.ConnectionInfo.ClusterSecrets.UserSecrets[database]
+		if !ok {
+			return nil, errors.NotFound("credential secret for database '%s' not found", database)
+		}
+	}
+
+	// Fetch secret from cluster (JIT - never stored in API server DB)
+	secret := &corev1.Secret{}
+	if cerr := clusterClient.Get(ctx, client.ObjectKey{
+		Name:      secretName,
+		Namespace: addon.Namespace,
+	}, secret); cerr != nil {
+		return nil, errors.GeneralError("credential secret not found in cluster: %v", cerr)
+	}
+
+	username := string(secret.Data["username"])
+	password := string(secret.Data["password"])
+
+	dbName := database
+	if superuser {
+		dbName = "postgres"
+	}
+
+	creds := &models.PostgresCredentials{
+		Database: dbName,
+		Host:     addon.Status.ConnectionInfo.Host,
+		Port:     addon.Status.ConnectionInfo.Port,
+		Username: username,
+		Password: password,
+		SSLMode:  addon.Status.ConnectionInfo.SSLMode,
+		ConnectionString: fmt.Sprintf(
+			"postgresql://%s:%s@%s:%d/%s?sslmode=%s",
+			username, password,
+			addon.Status.ConnectionInfo.Host, addon.Status.ConnectionInfo.Port,
+			dbName, addon.Status.ConnectionInfo.SSLMode,
+		),
+	}
+
+	// Fetch CA certificate if available
+	caSecretName := addon.Status.ConnectionInfo.ClusterSecrets.CACertificateSecret
+	if caSecretName != "" {
+		caSecret := &corev1.Secret{}
+		if cerr := clusterClient.Get(ctx, client.ObjectKey{
+			Name:      caSecretName,
+			Namespace: addon.Namespace,
+		}, caSecret); cerr == nil {
+			creds.CACertificate = string(caSecret.Data["ca.crt"])
+		}
+	}
+
+	return creds, nil
 }
