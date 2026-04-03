@@ -58,6 +58,7 @@ type PostgresAddonServiceSpec struct {
 
 type postgresAddonService struct {
 	postgresAddonStore stores.PostgresAddonStore
+	addonUsageStore    stores.AddonUsageStore
 	databaseService    PostgresAddonDatabaseService
 	backupService      PostgresBackupService
 	namespaceService   NamespaceService
@@ -82,8 +83,13 @@ func NewPostgresAddonService(spec PostgresAddonServiceSpec) PostgresAddonService
 		Logger:         spec.Logger,
 	})
 
+	addonUsageStore := pgstore.NewAddonUsageStore(pgstore.AddonUsageStoreSpec{
+		SessionFactory: spec.SessionFactory,
+	})
+
 	return &postgresAddonService{
 		postgresAddonStore: postgresAddonStore,
+		addonUsageStore:    addonUsageStore,
 		databaseService:    databaseService,
 		backupService:      spec.PostgresBackupService,
 		clusterService:     spec.ClusterService,
@@ -333,6 +339,15 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 	postgresAddon, err := s.GetPostgresAddon(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check addon usage before deletion
+	inUse, usageErr := s.addonUsageStore.IsAddonInUse(ctx, models.AddonTypePostgres, id)
+	if usageErr != nil {
+		return nil, errors.GeneralError("failed to check addon usage: %v", usageErr)
+	}
+	if inUse {
+		return nil, errors.BadRequest("addon is in use by one or more stacks and cannot be deleted")
 	}
 
 	// Mark for deletion
