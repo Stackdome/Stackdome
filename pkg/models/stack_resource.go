@@ -127,6 +127,22 @@ type ExecutionConfig struct {
 	Args               []string             `json:"args,omitempty"`
 	Env                []EnvVar             `json:"env,omitempty"`
 	EnvVarsFromSecrets []EnvSecretReference `json:"env_vars_from_secrets,omitempty"`
+	EnvFromAddons      []AddonEnvSource     `json:"env_from_addons,omitempty"`
+}
+
+type AddonEnvSource struct {
+	Postgres *PostgresAddonEnvSource `json:"postgres,omitempty"`
+}
+
+type PostgresAddonEnvSource struct {
+	AddonID    string            `json:"addon_id"`
+	Database   string            `json:"database"`
+	EnvMapping map[string]string `json:"env_mapping"`
+}
+
+var PostgresAddonEnvFields = []string{
+	"host", "port", "username", "password",
+	"database", "sslmode", "connectionString", "caCertificate",
 }
 
 type EnvVar struct {
