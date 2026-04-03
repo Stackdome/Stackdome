@@ -26,6 +26,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services/clusterresource"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	postgresaddonworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/postgresaddon"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/stack"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
 	"github.com/google/uuid"
@@ -341,6 +342,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		ClusterService:        clusterService,
 		PostgresBackupService: postgresBackupService,
 		ObjectStoreService:    objectStoreService,
+		ClusterManager:        te.ClusterManager,
 		Logger:                te.Logger,
 	})
 
@@ -450,6 +452,18 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 	})
 
 	te.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
+
+	pgAddonWorker := postgresaddonworker.NewPostgresAddonWorker(postgresaddonworker.PostgresAddonWorkerSpec{
+		PostgresAddonService: te.Services.PostgresAddonService,
+		ObjectStoreService:   te.Services.ObjectStoreService,
+		NamespaceService:     te.Services.NamespaceService,
+		SecretService:        te.Services.SecretService,
+		ClusterManager:       te.ClusterManager,
+		CRBuilder:            builders.NewPostgresClusterBuilder(),
+		Env:                  te.Env.Name,
+	})
+	te.WorkerManager.RegisterWorker(pgAddonWorker, &models.PostgresAddon{})
+
 	return nil
 }
 
