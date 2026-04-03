@@ -15,6 +15,8 @@ type ObjectStoreStore interface {
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	ListByOrganisation(ctx context.Context, organisationID string) ([]*models.ObjectStore, *errors.ServiceError)
 
+	UpdateStatus(ctx context.Context, id string, status models.ObjectStoreStatus) *errors.ServiceError
+
 	// Validation
 	ValidateObjectStoreExists(ctx context.Context, objectStoreID string) (bool, *errors.ServiceError)
 	ValidateObjectStoreNameUnique(ctx context.Context, organisationID, name, excludeID string) (bool, *errors.ServiceError)

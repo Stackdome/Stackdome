@@ -115,6 +115,19 @@ func (s *objectStoreStore) Update(ctx context.Context, objectStore *models.Objec
 	return s.GetByID(ctx, objectStore.ID)
 }
 
+func (s *objectStoreStore) UpdateStatus(ctx context.Context, id string, status models.ObjectStoreStatus) *errors.ServiceError {
+	result := s.sessionFactory.New(ctx).Model(&models.ObjectStore{}).
+		Where("id = ?", id).
+		Update("status", status)
+	if result.Error != nil {
+		return errors.GeneralError("failed to update object store status: %s", result.Error.Error())
+	}
+	if result.RowsAffected == 0 {
+		return errors.NotFound("object store with id '%s' not found", id)
+	}
+	return nil
+}
+
 func (s *objectStoreStore) Delete(ctx context.Context, ID string) *errors.ServiceError {
 	result := s.sessionFactory.New(ctx).Delete(&models.ObjectStore{}, "id = ?", ID)
 	if result.Error != nil {

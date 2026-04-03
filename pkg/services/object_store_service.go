@@ -22,6 +22,7 @@ type ObjectStoreService interface {
 	ListByOrganisation(ctx context.Context, organisationID string) ([]*models.ObjectStore, *errors.ServiceError)
 	ValidateObjectStoreExists(ctx context.Context, objectStoreID string) (bool, *errors.ServiceError)
 	TestConnection(ctx context.Context, objectStoreID string) *errors.ServiceError
+	UpdateStatus(ctx context.Context, id string, status models.ObjectStoreStatus) *errors.ServiceError
 }
 
 type ObjectStoreServiceSpec struct {
@@ -203,4 +204,8 @@ func (s *objectStoreService) TestConnection(ctx context.Context, objectStoreID s
 
 	s.logger.Info(ctx, "Object store connection test not yet implemented", "objectStoreId", objectStore.ID)
 	return nil
+}
+
+func (s *objectStoreService) UpdateStatus(ctx context.Context, id string, status models.ObjectStoreStatus) *errors.ServiceError {
+	return s.objectStoreStore.UpdateStatus(ctx, id, status)
 }
