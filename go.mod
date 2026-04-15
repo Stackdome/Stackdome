@@ -5,6 +5,10 @@ go 1.25.0
 require (
 	github.com/casbin/casbin/v2 v2.103.0
 	github.com/casbin/gorm-adapter/v3 v3.32.0
+	github.com/cloudnative-pg/barman-cloud v0.4.1-0.20260108104508-ced266c145f5
+	github.com/cloudnative-pg/cloudnative-pg v1.28.0
+	github.com/cloudnative-pg/machinery v0.3.3
+	github.com/cloudnative-pg/plugin-barman-cloud v0.11.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/getkin/kin-openapi v0.126.0
 	github.com/go-git/go-git/v5 v5.16.0
@@ -64,10 +68,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
-	github.com/cloudnative-pg/barman-cloud v0.4.1-0.20260108104508-ced266c145f5 // indirect
-	github.com/cloudnative-pg/cloudnative-pg v1.28.0 // indirect
 	github.com/cloudnative-pg/cnpg-i v0.3.1 // indirect
-	github.com/cloudnative-pg/machinery v0.3.3 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/docker/cli v28.1.1+incompatible // indirect

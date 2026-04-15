@@ -60,6 +60,17 @@ func (s *addonUsageStore) GetByStackID(ctx context.Context, stackID string) ([]*
 	return usages, nil
 }
 
+func (s *addonUsageStore) ExistsByStackResourceAndAddon(ctx context.Context, stackID, resourceID, addonID string) (bool, error) {
+	conn := s.sessionFactory.New(ctx)
+	var count int64
+	if err := conn.Model(&models.AddonUsage{}).Where(
+		"stack_id = ? AND stack_resource_id = ? AND addon_id = ?", stackID, resourceID, addonID,
+	).Count(&count).Error; err != nil {
+		return false, fmt.Errorf("failed to check addon usage existence: %w", err)
+	}
+	return count > 0, nil
+}
+
 func (s *addonUsageStore) IsAddonInUse(ctx context.Context, addonType models.AddonType, addonID string) (bool, error) {
 	conn := s.sessionFactory.New(ctx)
 	var count int64

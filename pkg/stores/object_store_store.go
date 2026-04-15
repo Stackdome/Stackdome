@@ -20,4 +20,6 @@ type ObjectStoreStore interface {
 	// Validation
 	ValidateObjectStoreExists(ctx context.Context, objectStoreID string) (bool, *errors.ServiceError)
 	ValidateObjectStoreNameUnique(ctx context.Context, organisationID, name, excludeID string) (bool, *errors.ServiceError)
+
+	IsReferencedByAddon(ctx context.Context, objectStoreID string) (bool, *errors.ServiceError)
 }

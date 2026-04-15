@@ -6,6 +6,7 @@ api/openapi.yaml
 api_default.go
 client.go
 configuration.go
+docs/AddonEnvSource.md
 docs/Annotation.md
 docs/ApiV1OrganizationsIdRemoteSyncServersGet200Response.md
 docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response.md
@@ -64,6 +65,7 @@ docs/ObjectStoreStatus.md
 docs/Organisation.md
 docs/Port.md
 docs/PostgresAddon.md
+docs/PostgresAddonEnvSource.md
 docs/PostgresAddonList.md
 docs/PostgresAddonSpec.md
 docs/PostgresAddonStatus.md
@@ -75,6 +77,7 @@ docs/PostgresConfiguration.md
 docs/PostgresConnectionInfo.md
 docs/PostgresConnectionInfoCredentials.md
 docs/PostgresConnectionInfoDatabasesInner.md
+docs/PostgresCredentials.md
 docs/PostgresDatabase.md
 docs/PostgresInitialization.md
 docs/PostgresInitializationImportFromExternal.md
@@ -141,6 +144,7 @@ model__api_v1_organizations__org_id__addons_postgres__id__actions_fence_post_req
 model__api_v1_organizations__org_id__addons_postgres__id__actions_hibernate_post_200_response.go
 model__api_v1_organizations__org_id__addons_postgres__id__actions_hibernate_post_request.go
 model__api_v1_organizations__org_id__clusters__cluster_id__image_registries_get_200_response.go
+model_addon_env_source.go
 model_annotation.go
 model_azure_credentials.go
 model_build_artifact.go
@@ -190,6 +194,7 @@ model_object_store_status.go
 model_organisation.go
 model_port.go
 model_postgres_addon.go
+model_postgres_addon_env_source.go
 model_postgres_addon_list.go
 model_postgres_addon_spec.go
 model_postgres_addon_status.go
@@ -201,6 +206,7 @@ model_postgres_configuration.go
 model_postgres_connection_info.go
 model_postgres_connection_info_credentials.go
 model_postgres_connection_info_databases_inner.go
+model_postgres_credentials.go
 model_postgres_database.go
 model_postgres_initialization.go
 model_postgres_initialization_import_from_external.go

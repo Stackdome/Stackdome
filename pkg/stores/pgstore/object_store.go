@@ -178,3 +178,14 @@ func (s *objectStoreStore) ValidateObjectStoreNameUnique(ctx context.Context, or
 	}
 	return count == 0, nil
 }
+
+func (s *objectStoreStore) IsReferencedByAddon(ctx context.Context, objectStoreID string) (bool, *errors.ServiceError) {
+	var count int64
+	if err := s.sessionFactory.New(ctx).Model(&models.PostgresAddon{}).
+		Where("backup_config->>'objectStoreId' = ? OR initialization->'restoreFromObjectStore'->>'objectStoreId' = ?",
+			objectStoreID, objectStoreID).
+		Count(&count).Error; err != nil {
+		return false, errors.GeneralError("failed to check object store references: %s", err.Error())
+	}
+	return count > 0, nil
+}

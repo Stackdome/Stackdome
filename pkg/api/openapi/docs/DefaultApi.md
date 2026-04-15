@@ -17,6 +17,7 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/fence | Fence or unfence the PostgreSQL cluster
 [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/hibernate | Hibernate or wake the PostgreSQL cluster
 [**ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id}/backups | List backups for a PostgresAddon
+[**ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id}/credentials/{database} | Get JIT credentials for a PostgresAddon database
 [**ApiV1OrganizationsOrgIdAddonsPostgresIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdDelete) | **Delete** /api/v1/organizations/{org_id}/addons/postgres/{id} | Delete a PostgresAddon
 [**ApiV1OrganizationsOrgIdAddonsPostgresIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdGet) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id} | Get a specific PostgresAddon
 [**ApiV1OrganizationsOrgIdAddonsPostgresIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdPut) | **Put** /api/v1/organizations/{org_id}/addons/postgres/{id} | Update a PostgresAddon
@@ -968,6 +969,82 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**PostgresBackupList**](PostgresBackupList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet
+
+> PostgresCredentials ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet(ctx, orgId, id, database).Superuser(superuser).Execute()
+
+Get JIT credentials for a PostgresAddon database
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+    database := "database_example" // string | The name of the database
+    superuser := true // bool | Whether to return superuser credentials (optional) (default to false)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet(context.Background(), orgId, id, database).Superuser(superuser).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet`: PostgresCredentials
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+**database** | **string** | The name of the database | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **superuser** | **bool** | Whether to return superuser credentials | [default to false]
+
+### Return type
+
+[**PostgresCredentials**](PostgresCredentials.md)
 
 ### Authorization
 

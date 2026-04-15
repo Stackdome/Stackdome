@@ -2657,6 +2657,76 @@ paths:
       security:
       - Bearer: []
       summary: List backups for a PostgresAddon
+  /api/v1/organizations/{org_id}/addons/postgres/{id}/credentials/{database}:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the database
+        explode: false
+        in: path
+        name: database
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Whether to return superuser credentials
+        explode: true
+        in: query
+        name: superuser
+        required: false
+        schema:
+          default: false
+          type: boolean
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostgresCredentials'
+          description: Credentials retrieved successfully
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Forbidden
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Addon or database not found
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Addon not ready or cluster unreachable
+      security:
+      - Bearer: []
+      summary: Get JIT credentials for a PostgresAddon database
 components:
   parameters:
     id:
@@ -2691,6 +2761,15 @@ components:
       explode: false
       in: path
       name: stack_id
+      required: true
+      schema:
+        type: string
+      style: simple
+    database:
+      description: The name of the database
+      explode: false
+      in: path
+      name: database
       required: true
       schema:
         type: string
@@ -3758,6 +3837,17 @@ components:
                 value: value
               - name: name
                 value: value
+              env_from_addons:
+              - postgres:
+                  database: database
+                  env_mapping:
+                    key: env_mapping
+                  addon_id: addon_id
+              - postgres:
+                  database: database
+                  env_mapping:
+                    key: env_mapping
+                  addon_id: addon_id
               command:
               - command
               - command
@@ -3882,6 +3972,17 @@ components:
                 value: value
               - name: name
                 value: value
+              env_from_addons:
+              - postgres:
+                  database: database
+                  env_mapping:
+                    key: env_mapping
+                  addon_id: addon_id
+              - postgres:
+                  database: database
+                  env_mapping:
+                    key: env_mapping
+                  addon_id: addon_id
               command:
               - command
               - command
@@ -4212,6 +4313,17 @@ components:
                   value: value
                 - name: name
                   value: value
+                env_from_addons:
+                - postgres:
+                    database: database
+                    env_mapping:
+                      key: env_mapping
+                    addon_id: addon_id
+                - postgres:
+                    database: database
+                    env_mapping:
+                      key: env_mapping
+                    addon_id: addon_id
                 command:
                 - command
                 - command
@@ -4336,6 +4448,17 @@ components:
                   value: value
                 - name: name
                   value: value
+                env_from_addons:
+                - postgres:
+                    database: database
+                    env_mapping:
+                      key: env_mapping
+                    addon_id: addon_id
+                - postgres:
+                    database: database
+                    env_mapping:
+                      key: env_mapping
+                    addon_id: addon_id
                 command:
                 - command
                 - command
@@ -4620,6 +4743,17 @@ components:
                   value: value
                 - name: name
                   value: value
+                env_from_addons:
+                - postgres:
+                    database: database
+                    env_mapping:
+                      key: env_mapping
+                    addon_id: addon_id
+                - postgres:
+                    database: database
+                    env_mapping:
+                      key: env_mapping
+                    addon_id: addon_id
                 command:
                 - command
                 - command
@@ -4744,6 +4878,17 @@ components:
                   value: value
                 - name: name
                   value: value
+                env_from_addons:
+                - postgres:
+                    database: database
+                    env_mapping:
+                      key: env_mapping
+                    addon_id: addon_id
+                - postgres:
+                    database: database
+                    env_mapping:
+                      key: env_mapping
+                    addon_id: addon_id
                 command:
                 - command
                 - command
@@ -5025,6 +5170,17 @@ components:
               value: value
             - name: name
               value: value
+            env_from_addons:
+            - postgres:
+                database: database
+                env_mapping:
+                  key: env_mapping
+                addon_id: addon_id
+            - postgres:
+                database: database
+                env_mapping:
+                  key: env_mapping
+                addon_id: addon_id
             command:
             - command
             - command
@@ -5149,6 +5305,17 @@ components:
               value: value
             - name: name
               value: value
+            env_from_addons:
+            - postgres:
+                database: database
+                env_mapping:
+                  key: env_mapping
+                addon_id: addon_id
+            - postgres:
+                database: database
+                env_mapping:
+                  key: env_mapping
+                addon_id: addon_id
             command:
             - command
             - command
@@ -5440,6 +5607,17 @@ components:
             value: value
           - name: name
             value: value
+          env_from_addons:
+          - postgres:
+              database: database
+              env_mapping:
+                key: env_mapping
+              addon_id: addon_id
+          - postgres:
+              database: database
+              env_mapping:
+                key: env_mapping
+              addon_id: addon_id
           command:
           - command
           - command
@@ -5617,6 +5795,17 @@ components:
               value: value
             - name: name
               value: value
+            env_from_addons:
+            - postgres:
+                database: database
+                env_mapping:
+                  key: env_mapping
+                addon_id: addon_id
+            - postgres:
+                database: database
+                env_mapping:
+                  key: env_mapping
+                addon_id: addon_id
             command:
             - command
             - command
@@ -5741,6 +5930,17 @@ components:
               value: value
             - name: name
               value: value
+            env_from_addons:
+            - postgres:
+                database: database
+                env_mapping:
+                  key: env_mapping
+                addon_id: addon_id
+            - postgres:
+                database: database
+                env_mapping:
+                  key: env_mapping
+                addon_id: addon_id
             command:
             - command
             - command
@@ -6558,6 +6758,17 @@ components:
           value: value
         - name: name
           value: value
+        env_from_addons:
+        - postgres:
+            database: database
+            env_mapping:
+              key: env_mapping
+            addon_id: addon_id
+        - postgres:
+            database: database
+            env_mapping:
+              key: env_mapping
+            addon_id: addon_id
         command:
         - command
         - command
@@ -6586,6 +6797,10 @@ components:
         environment_variables_from_secret:
           items:
             $ref: '#/components/schemas/EnvVarFromSecret'
+          type: array
+        env_from_addons:
+          items:
+            $ref: '#/components/schemas/AddonEnvSource'
           type: array
       type: object
     EnvVarFromSecret:
@@ -7905,6 +8120,69 @@ components:
           type: array
         total:
           type: integer
+      type: object
+    PostgresCredentials:
+      example:
+        connectionString: connectionString
+        database: database
+        password: password
+        port: 0
+        host: host
+        caCertificate: caCertificate
+        username: username
+        sslMode: sslMode
+      properties:
+        database:
+          type: string
+        host:
+          type: string
+        port:
+          format: int32
+          type: integer
+        username:
+          type: string
+        password:
+          type: string
+        sslMode:
+          type: string
+        connectionString:
+          type: string
+        caCertificate:
+          type: string
+      type: object
+    AddonEnvSource:
+      example:
+        postgres:
+          database: database
+          env_mapping:
+            key: env_mapping
+          addon_id: addon_id
+      properties:
+        postgres:
+          $ref: '#/components/schemas/PostgresAddonEnvSource'
+      type: object
+    PostgresAddonEnvSource:
+      example:
+        database: database
+        env_mapping:
+          key: env_mapping
+        addon_id: addon_id
+      properties:
+        addon_id:
+          type: string
+        database:
+          type: string
+        env_mapping:
+          additionalProperties:
+            type: string
+          description: "Maps addon credential fields to environment variable names.\
+            \ Valid fields are host, port, username, password, database, sslmode,\
+            \ connectionString, caCertificate."
+          type: object
+      required:
+      - addon_id
+      - database
+      - env_mapping
       type: object
     _api_v1_organizations__org_id__clusters__cluster_id__image_registries_get_200_response:
       example:

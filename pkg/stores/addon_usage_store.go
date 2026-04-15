@@ -12,5 +12,6 @@ type AddonUsageStore interface {
 	GetByAddonID(ctx context.Context, addonType models.AddonType, addonID string) ([]*models.AddonUsage, error)
 	GetByStackID(ctx context.Context, stackID string) ([]*models.AddonUsage, error)
 	IsAddonInUse(ctx context.Context, addonType models.AddonType, addonID string) (bool, error)
+	ExistsByStackResourceAndAddon(ctx context.Context, stackID, resourceID, addonID string) (bool, error)
 	DeleteByStackID(ctx context.Context, stackID string) error
 }

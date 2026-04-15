@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -11,6 +13,10 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator/objectstore"
+	barmancloudv1 "github.com/cloudnative-pg/plugin-barman-cloud/api/v1"
+	corev1 "k8s.io/api/core/v1"
+	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type ObjectStoreService interface {
@@ -28,12 +34,14 @@ type ObjectStoreService interface {
 type ObjectStoreServiceSpec struct {
 	SessionFactory db.SessionFactory
 	SecretService  SecretService
+	ClusterManager clustermanager.ClusterManager
 	Logger         logger.Logger
 }
 
 type objectStoreService struct {
 	objectStoreStore stores.ObjectStoreStore
 	secretService    SecretService
+	clusterManager   clustermanager.ClusterManager
 	validator        validator.ObjectStoreValidator
 	logger           logger.Logger
 }
@@ -43,9 +51,10 @@ func NewObjectStoreService(spec ObjectStoreServiceSpec) ObjectStoreService {
 		objectStoreStore: pgstore.NewObjectStoreStore(pgstore.ObjectStoreStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		secretService: spec.SecretService,
-		validator:     objectstore.NewObjectStoreValidator(),
-		logger:        spec.Logger,
+		secretService:  spec.SecretService,
+		clusterManager: spec.ClusterManager,
+		validator:      objectstore.NewObjectStoreValidator(),
+		logger:         spec.Logger,
 	}
 }
 
@@ -169,13 +178,52 @@ func (s *objectStoreService) Update(ctx context.Context, id string, objectStore 
 }
 
 func (s *objectStoreService) Delete(ctx context.Context, ID string) *errors.ServiceError {
-	// TODO: Check if object store is in use by any PostgreSQL addons
-	// This would require querying PostgreSQL addons that reference this object store
-
-	if err := s.objectStoreStore.Delete(ctx, ID); err != nil {
+	objectStore, err := s.objectStoreStore.GetByID(ctx, ID)
+	if err != nil {
 		return err
 	}
-	return nil
+
+	inUse, err := s.objectStoreStore.IsReferencedByAddon(ctx, ID)
+	if err != nil {
+		return err
+	}
+	if inUse {
+		return errors.BadRequest("object store is in use by one or more PostgreSQL addons")
+	}
+
+	for _, deployed := range objectStore.Status.DeployedClusters {
+		s.cleanupFromCluster(ctx, objectStore, deployed)
+	}
+
+	return s.objectStoreStore.Delete(ctx, ID)
+}
+
+func (s *objectStoreService) cleanupFromCluster(ctx context.Context, objectStore *models.ObjectStore, deployed models.DeployedClusterInfo) {
+	clusterClient, clientErr := s.clusterManager.GetClient(deployed.ClusterID)
+	if clientErr != nil {
+		s.logger.Errorf("failed to get client for cluster %s during ObjectStore cleanup: %v", deployed.ClusterID, clientErr)
+		return
+	}
+
+	osCR := &barmancloudv1.ObjectStore{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      objectStore.Name,
+			Namespace: deployed.Namespace,
+		},
+	}
+	if deleteErr := clusterClient.Delete(ctx, osCR); deleteErr != nil && !k8sapierrors.IsNotFound(deleteErr) {
+		s.logger.Errorf("failed to delete ObjectStore CR %s from cluster %s: %v", objectStore.Name, deployed.ClusterID, deleteErr)
+	}
+
+	credSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("objectstore-%s-credentials", objectStore.Name),
+			Namespace: deployed.Namespace,
+		},
+	}
+	if deleteErr := clusterClient.Delete(ctx, credSecret); deleteErr != nil && !k8sapierrors.IsNotFound(deleteErr) {
+		s.logger.Errorf("failed to delete credential secret for ObjectStore %s from cluster %s: %v", objectStore.Name, deployed.ClusterID, deleteErr)
+	}
 }
 
 func (s *objectStoreService) ListByOrganisation(ctx context.Context, organisationID string) ([]*models.ObjectStore, *errors.ServiceError) {

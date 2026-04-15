@@ -51,6 +51,11 @@ func (r *secretReconciler) Reconcile(ctx context.Context, addon *models.Postgres
 	}
 
 	secretName := addon.ImportPasswordSecretName()
+	password, ok := secret.Data[models.PasswordSecretKey]
+	if !ok || password == "" {
+		return resultNil, fmt.Errorf("secret '%s' missing required '%s' key", imp.PasswordSecretID, models.PasswordSecretKey)
+	}
+
 	k8sSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
@@ -61,7 +66,7 @@ func (r *secretReconciler) Reconcile(ctx context.Context, addon *models.Postgres
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			"password": []byte(secret.Data["password"]),
+			"password": []byte(password),
 		},
 	}
 

@@ -58,6 +58,19 @@ func (s *postgresBackupStore) GetByID(ctx context.Context, ID string) (*models.P
 	return &backup, nil
 }
 
+func (s *postgresBackupStore) GetByName(ctx context.Context, postgresAddonID string, name string) (*models.PostgresBackup, *errors.ServiceError) {
+	var backup models.PostgresBackup
+	if err := s.sessionFactory.New(ctx).
+		Where("postgres_addon_id = ? AND name = ?", postgresAddonID, name).
+		First(&backup).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.NotFound("postgres backup '%s' not found for addon '%s'", name, postgresAddonID)
+		}
+		return nil, errors.GeneralError("failed to get postgres backup by name: %s", err.Error())
+	}
+	return &backup, nil
+}
+
 func (s *postgresBackupStore) Update(ctx context.Context, backup *models.PostgresBackup) (*models.PostgresBackup, *errors.ServiceError) {
 	tx := s.sessionFactory.New(ctx).Begin()
 	defer func() {

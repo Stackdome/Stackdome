@@ -13,6 +13,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/clusterimageregistry"
 	imagebuildcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/imagebuild"
 	postgresaddoncontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/postgres_addon"
+	postgresbackupcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/postgres_backup"
 	stackcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stack"
 	stackresourcecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stackresource"
 	postgresaddonworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/postgresaddon"
@@ -92,12 +93,14 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 	})
 
 	stackWorker := stack.NewStackWorker(stack.StackWorkerSpec{
-		StackService:     d.Services.StackService,
-		SecretService:    d.Services.SecretService,
-		ClusterManager:   d.ClusterManager,
-		VolumeService:    d.Services.VolumeService,
-		NamespaceService: d.Services.NamespaceService,
-		Env:              d.Env.Name,
+		StackService:         d.Services.StackService,
+		SecretService:        d.Services.SecretService,
+		ClusterManager:       d.ClusterManager,
+		VolumeService:        d.Services.VolumeService,
+		NamespaceService:     d.Services.NamespaceService,
+		PostgresAddonService: d.Services.PostgresAddonService,
+		AddonUsageService:    d.Services.AddonUsageService,
+		Env:                  d.Env.Name,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			SecretService: d.Services.SecretService,
 		}),
@@ -214,6 +217,10 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 				Log:                  applogger.NewLoggerWithPrefix(ctx, "postgres-addon-controller").SetLevel(d.Logger.GetLevel()),
 				PostgresAddonService: d.Services.PostgresAddonService,
 				Env:                  d.Env.Name,
+			}),
+			postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
+				Log:                   applogger.NewLoggerWithPrefix(ctx, "postgres-backup-controller").SetLevel(d.Logger.GetLevel()),
+				PostgresBackupService: d.Services.PostgresBackupService,
 			}),
 		},
 	})
@@ -353,6 +360,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	objectStoreService := services.NewObjectStoreService(services.ObjectStoreServiceSpec{
 		SessionFactory: d.DBSession,
 		SecretService:  secretService,
+		ClusterManager: d.ClusterManager,
 		Logger:         d.Logger,
 	})
 
@@ -361,10 +369,15 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:         d.Logger,
 	})
 
+	addonUsageService := services.NewAddonUsageService(services.AddonUsageServiceSpec{
+		SessionFactory: d.DBSession,
+	})
+
 	postgresAddonService := services.NewPostgresAddonService(services.PostgresAddonServiceSpec{
 		SessionFactory:        d.DBSession,
 		NamespaceService:      namespaceService,
 		ClusterService:        clusterService,
+		SecretService:         secretService,
 		PostgresBackupService: postgresBackupService,
 		ObjectStoreService:    objectStoreService,
 		ClusterManager:        d.ClusterManager,
@@ -391,6 +404,8 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SecretService:               secretService,
 		ObjectStoreService:          objectStoreService,
 		PostgresAddonService:        postgresAddonService,
+		PostgresBackupService:       postgresBackupService,
+		AddonUsageService:           addonUsageService,
 	}
 
 	return nil

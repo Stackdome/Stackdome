@@ -14,6 +14,8 @@ type PostgresBackupStore interface {
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	ListByPostgresAddon(ctx context.Context, postgresAddonID string) ([]*models.PostgresBackup, *errors.ServiceError)
 
+	GetByName(ctx context.Context, postgresAddonID string, name string) (*models.PostgresBackup, *errors.ServiceError)
+
 	// Validation
 	ValidateBackupExists(ctx context.Context, backupID string) (bool, *errors.ServiceError)
 }

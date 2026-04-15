@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -67,10 +68,10 @@ func (p *PostgresAddon) ImportPasswordSecretName() string {
 	return fmt.Sprintf("%s-import-password", p.Name)
 }
 
-// ImportSourceClusterName returns the predictable external cluster reference
-// name used in the PostgresCluster CR bootstrap spec for imports.
-func (p *PostgresAddon) ImportSourceClusterName() string {
-	return fmt.Sprintf("%s-import-source", p.Name)
+// ExternalClusterRefName returns the identifier used in the PostgresCluster CR
+// bootstrap import spec to reference the external database connection definition.
+func (p *PostgresAddon) ExternalClusterRefName() string {
+	return fmt.Sprintf("%s-external-ref", p.Name)
 }
 
 func (p *PostgresAddon) HasDatabase(name string) bool {
@@ -91,12 +92,19 @@ type PostgresAddonDatabase struct {
 	UpdatedAt       time.Time
 }
 
+type PostgresBackupType string
+
+const (
+	PostgresBackupTypeManual    PostgresBackupType = "Manual"
+	PostgresBackupTypeScheduled PostgresBackupType = "Scheduled"
+)
+
 type PostgresBackup struct {
 	ID              string `gorm:"primary_key;default:gen_random_uuid()"`
 	PostgresAddonID string `gorm:"not null;index"`
 	Name            string
 	Description     string
-	Type            string
+	Type            PostgresBackupType
 	Phase           string
 	StartedAt       *time.Time
 	CompletedAt     *time.Time
@@ -236,6 +244,32 @@ type PostgresCredentials struct {
 	SSLMode          string `json:"sslMode"`
 	ConnectionString string `json:"connectionString"`
 	CACertificate    string `json:"caCertificate,omitempty"`
+}
+
+// ToFieldMap returns credential values keyed by PostgresAddonEnvFields names.
+func (c *PostgresCredentials) ToFieldMap() map[string]string {
+	m := make(map[string]string, len(PostgresAddonEnvFields))
+	for _, field := range PostgresAddonEnvFields {
+		switch field {
+		case "host":
+			m[field] = c.Host
+		case "port":
+			m[field] = strconv.Itoa(int(c.Port))
+		case "username":
+			m[field] = c.Username
+		case "password":
+			m[field] = c.Password
+		case "database":
+			m[field] = c.Database
+		case "sslmode":
+			m[field] = c.SSLMode
+		case "connectionString":
+			m[field] = c.ConnectionString
+		case "caCertificate":
+			m[field] = c.CACertificate
+		}
+	}
+	return m
 }
 
 // Implement driver.Valuer and sql.Scanner for custom types

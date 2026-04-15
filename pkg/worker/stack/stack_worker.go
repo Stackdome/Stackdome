@@ -25,14 +25,16 @@ type stackWorker struct {
 }
 
 type StackWorkerSpec struct {
-	StackService     stackService
-	SecretService    secretService
-	VolumeService    volumeService
-	CRBuilder        builders.ClusterResourceBuilder
-	SecretBuilder    builders.SecretBuilder
-	NamespaceService namespaceService
-	Env              string
-	ClusterManager   clustermanager.ClusterManager
+	StackService         stackService
+	SecretService        secretService
+	VolumeService        volumeService
+	CRBuilder            builders.ClusterResourceBuilder
+	SecretBuilder        builders.SecretBuilder
+	NamespaceService     namespaceService
+	PostgresAddonService postgresAddonService
+	AddonUsageService    addonUsageService
+	Env                  string
+	ClusterManager       clustermanager.ClusterManager
 }
 
 func NewStackWorker(spec StackWorkerSpec) worker.Worker {
@@ -43,12 +45,13 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 		BaseWorker:     worker.NewBaseWorker(StackWorkerName, spec.Env),
 		subReconcilers: []subReconciler{
 			NewDeprovisionReconciler(DeprovisionReconcilerSpec{
-				StackService:     spec.StackService,
-				SecretService:    spec.SecretService,
-				NamespaceService: spec.NamespaceService,
-				Logger:           logger.NewLoggerWithPrefix(context.Background(), "stack-deprovision-reconciler"),
-				VolumeService:    spec.VolumeService,
-				ClusterManager:   spec.ClusterManager,
+				StackService:      spec.StackService,
+				SecretService:     spec.SecretService,
+				NamespaceService:  spec.NamespaceService,
+				Logger:            logger.NewLoggerWithPrefix(context.Background(), "stack-deprovision-reconciler"),
+				VolumeService:     spec.VolumeService,
+				ClusterManager:    spec.ClusterManager,
+				AddonUsageService: spec.AddonUsageService,
 			}),
 			NewValidationReconciler(ValidationReconcilerSpec{
 				Logger:         logger.NewLoggerWithPrefix(context.Background(), "stack-validation-reconciler"),
@@ -69,6 +72,10 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 				ClusterManager:  spec.ClusterManager,
 				VolumeService:   spec.VolumeService,
 				VolumeCrBuilder: spec.CRBuilder,
+			}),
+			NewAddonEnvReconciler(AddonEnvReconcilerSpec{
+				PostgresAddonService: spec.PostgresAddonService,
+				AddonUsageService:    spec.AddonUsageService,
 			}),
 			NewStackReconciler(StackReconcilerSpec{
 				ClusterManager: spec.ClusterManager,

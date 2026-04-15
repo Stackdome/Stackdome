@@ -87,7 +87,15 @@ func (r *postgresClusterReconciler) buildContext(ctx context.Context, addon *mod
 			}
 			buildCtx.RestoreObjectStoreName = restoreObjectStore.Name
 		}
-		buildCtx.SourcePostgresClusterName = addon.ImportSourceClusterName()
+
+		// SourceClusterName is the name of the PostgresCluster CR that originally
+		// archived backups to the object store. Since CR names match addon names,
+		// we resolve this by looking up the source addon.
+		sourceAddon, serr := r.postgresAddonService.GetPostgresAddon(ctx, addon.Initialization.RestoreFromObjectStore.SourcePostgresAddonID)
+		if serr != nil {
+			return buildCtx, fmt.Errorf("failed to get source postgres addon '%s': %w", addon.Initialization.RestoreFromObjectStore.SourcePostgresAddonID, serr)
+		}
+		buildCtx.RecoverySourceClusterName = sourceAddon.Name
 	}
 
 	return buildCtx, nil

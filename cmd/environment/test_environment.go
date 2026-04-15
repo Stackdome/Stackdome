@@ -14,6 +14,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/clusterimageregistry"
 	imagebuildcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/imagebuild"
 	postgresaddoncontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/postgres_addon"
+	postgresbackupcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/postgres_backup"
 	stackcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stack"
 	stackresourcecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stackresource"
 	volumecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/volume"
@@ -328,6 +329,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	objectStoreService := services.NewObjectStoreService(services.ObjectStoreServiceSpec{
 		SessionFactory: te.DBSession,
 		SecretService:  secretService,
+		ClusterManager: te.ClusterManager,
 		Logger:         te.Logger,
 	})
 
@@ -336,10 +338,15 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:         te.Logger,
 	})
 
+	addonUsageService := services.NewAddonUsageService(services.AddonUsageServiceSpec{
+		SessionFactory: te.DBSession,
+	})
+
 	postgresAddonService := services.NewPostgresAddonService(services.PostgresAddonServiceSpec{
 		SessionFactory:        te.DBSession,
 		NamespaceService:      namespaceService,
 		ClusterService:        clusterService,
+		SecretService:         secretService,
 		PostgresBackupService: postgresBackupService,
 		ObjectStoreService:    objectStoreService,
 		ClusterManager:        te.ClusterManager,
@@ -366,6 +373,8 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SecretService:               secretService,
 		ObjectStoreService:          objectStoreService,
 		PostgresAddonService:        postgresAddonService,
+		PostgresBackupService:       postgresBackupService,
+		AddonUsageService:           addonUsageService,
 	}
 
 	return nil
@@ -424,6 +433,10 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 				PostgresAddonService: te.Services.PostgresAddonService,
 				Env:                  te.Env.Name,
 			}),
+			postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
+				Log:                   applogger.NewLoggerWithPrefix(ctx, "test-postgres-backup-controller").SetLevel(te.Logger.GetLevel()),
+				PostgresBackupService: te.Services.PostgresBackupService,
+			}),
 		},
 	})
 	te.Services.ClusterService.InjectClusterManager(te.ClusterManager)
@@ -437,12 +450,14 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 	})
 
 	stackWorker := stack.NewStackWorker(stack.StackWorkerSpec{
-		StackService:     te.Services.StackService,
-		SecretService:    te.Services.SecretService,
-		ClusterManager:   te.ClusterManager,
-		VolumeService:    te.Services.VolumeService,
-		NamespaceService: te.Services.NamespaceService,
-		Env:              te.Env.Name,
+		StackService:         te.Services.StackService,
+		SecretService:        te.Services.SecretService,
+		ClusterManager:       te.ClusterManager,
+		VolumeService:        te.Services.VolumeService,
+		NamespaceService:     te.Services.NamespaceService,
+		PostgresAddonService: te.Services.PostgresAddonService,
+		AddonUsageService:    te.Services.AddonUsageService,
+		Env:                  te.Env.Name,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			SecretService: te.Services.SecretService,
 		}),

@@ -61,4 +61,6 @@ type Services struct {
 	EncryptionService           services.EncryptionService
 	ObjectStoreService          services.ObjectStoreService
 	PostgresAddonService        services.PostgresAddonService
+	PostgresBackupService       services.PostgresBackupService
+	AddonUsageService           services.AddonUsageService
 }

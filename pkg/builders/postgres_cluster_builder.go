@@ -23,9 +23,10 @@ type PostgresClusterBuildContext struct {
 	// K8s resource used for restore. Required when restoring from object store.
 	RestoreObjectStoreName string
 
-	// SourcePostgresClusterName is the resolved name of the source PostgresCluster
-	// CR to restore from. Required when restoring from object store.
-	SourcePostgresClusterName string
+	// RecoverySourceClusterName is the name of the PostgresCluster CR that
+	// originally archived backups to the object store. Used as the barman-cloud
+	// serverName when restoring from object store.
+	RecoverySourceClusterName string
 
 	// RestoreBackupName is the resolved CNPG Backup CR name to restore from.
 	// Required when restoring from a specific backup.
@@ -239,7 +240,7 @@ func buildImportBootstrapSpec(addon *models.PostgresAddon, ext *models.PostgresI
 			Import: &addonsv1alpha1.ImportSpec{
 				Databases: ext.DatabasesToImport,
 				SourceClusterSpec: &addonsv1alpha1.ExternalClusterSpec{
-					Name:    addon.ImportSourceClusterName(),
+					Name:    addon.ExternalClusterRefName(),
 					Host:    ext.Host,
 					User:    ext.Username,
 					Port:    ext.Port,
@@ -249,7 +250,7 @@ func buildImportBootstrapSpec(addon *models.PostgresAddon, ext *models.PostgresI
 						SecretRef: corev1.SecretReference{
 							Name: addon.ImportPasswordSecretName(),
 						},
-						Key: "password",
+						Key: models.PasswordSecretKey,
 					},
 				},
 			},
@@ -260,7 +261,7 @@ func buildImportBootstrapSpec(addon *models.PostgresAddon, ext *models.PostgresI
 func buildObjectStoreRecoverySpec(restore *models.PostgresRestoreFromObjectStore, buildCtx PostgresClusterBuildContext) *addonsv1alpha1.BootstrapSpec {
 	recoverySpec := &addonsv1alpha1.RecoveryFromObjectStoreSpec{
 		ObjectStoreName:   buildCtx.RestoreObjectStoreName,
-		SourceClusterName: buildCtx.SourcePostgresClusterName,
+		SourceClusterName: buildCtx.RecoverySourceClusterName,
 	}
 
 	if restore.RecoveryTargetTime != nil {

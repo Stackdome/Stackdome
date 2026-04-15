@@ -14,7 +14,7 @@ func PresentPostgresAddonBackup(in *models.PostgresBackup) openapi.PostgresBacku
 	res.SetPostgresAddonId(in.PostgresAddonID)
 	res.SetName(in.Name)
 	res.SetDescription(in.Description)
-	res.SetType(in.Type)
+	res.SetType(string(in.Type))
 	res.SetPhase(in.Phase)
 	res.SetError(in.Error)
 	res.SetCreatedAt(in.CreatedAt)

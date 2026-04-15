@@ -42,7 +42,6 @@ func NewPostgresAddonWorker(spec PostgresAddonWorkerSpec) worker.Worker {
 			newObjectStoreDependencyReconciler(spec),
 			newSecretReconciler(spec),
 			newPostgresClusterReconciler(spec),
-			newLifecycleReconciler(spec),
 		},
 	}
 }

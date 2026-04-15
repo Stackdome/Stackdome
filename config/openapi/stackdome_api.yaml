@@ -2162,6 +2162,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/addons/postgres/{id}/credentials/{database}:
+    get:
+      summary: Get JIT credentials for a PostgresAddon database
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/database'
+        - in: query
+          name: superuser
+          schema:
+            type: boolean
+            default: false
+          description: Whether to return superuser credentials
+      responses:
+        '200':
+          description: Credentials retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostgresCredentials'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Addon or database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Addon not ready or cluster unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     Bearer:
@@ -2197,6 +2243,13 @@ components:
       schema:
         type: string
       description: The ID of the stack
+    database:
+      name: database
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The name of the database
   schemas:
     Organisation:
       type: object
@@ -3227,6 +3280,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EnvVarFromSecret'
+        env_from_addons:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddonEnvSource'
     EnvVarFromSecret:
       type: object
       additionalProperties: false
@@ -3915,3 +3972,44 @@ components:
             $ref: '#/components/schemas/PostgresBackup'
         total:
           type: integer
+    PostgresCredentials:
+      type: object
+      properties:
+        database:
+          type: string
+        host:
+          type: string
+        port:
+          type: integer
+          format: int32
+        username:
+          type: string
+        password:
+          type: string
+        sslMode:
+          type: string
+        connectionString:
+          type: string
+        caCertificate:
+          type: string
+    AddonEnvSource:
+      type: object
+      properties:
+        postgres:
+          $ref: '#/components/schemas/PostgresAddonEnvSource'
+    PostgresAddonEnvSource:
+      type: object
+      required:
+        - addon_id
+        - database
+        - env_mapping
+      properties:
+        addon_id:
+          type: string
+        database:
+          type: string
+        env_mapping:
+          type: object
+          additionalProperties:
+            type: string
+          description: Maps addon credential fields to environment variable names. Valid fields are host, port, username, password, database, sslmode, connectionString, caCertificate.

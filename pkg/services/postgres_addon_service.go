@@ -51,6 +51,7 @@ type PostgresAddonServiceSpec struct {
 	ObjectStoreService    ObjectStoreService
 	ClusterService        ClusterService
 	NamespaceService      NamespaceService
+	SecretService         SecretService
 	PostgresBackupService PostgresBackupService
 	ClusterManager        clustermanager.ClusterManager
 	Logger                logger.Logger
@@ -64,6 +65,7 @@ type postgresAddonService struct {
 	namespaceService   NamespaceService
 	clusterService     ClusterService
 	objectStoreService ObjectStoreService
+	secretService      SecretService
 	clusterManager     clustermanager.ClusterManager
 	validator          validator.PostgresAddonValidator
 	logger             logger.Logger
@@ -95,6 +97,7 @@ func NewPostgresAddonService(spec PostgresAddonServiceSpec) PostgresAddonService
 		clusterService:     spec.ClusterService,
 		namespaceService:   spec.NamespaceService,
 		objectStoreService: spec.ObjectStoreService,
+		secretService:      spec.SecretService,
 		clusterManager:     spec.ClusterManager,
 		validator:          postgresaddon.NewPostgresAddonValidator(),
 		logger:             spec.Logger,
@@ -146,6 +149,16 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 			}
 			if !exists {
 				return nil, errors.BadRequest("initialization backup with ID '%s' does not exist", postgresAddon.Initialization.RestoreFromBackup.BackupID)
+			}
+		}
+
+		if postgresAddon.Initialization.ImportFromExternal != nil && postgresAddon.Initialization.ImportFromExternal.PasswordSecretID != "" {
+			valid, missingKeys, err := s.secretService.ValidateSecretHasKeys(ctx, postgresAddon.Initialization.ImportFromExternal.PasswordSecretID, []string{models.PasswordSecretKey})
+			if err != nil {
+				return nil, errors.GeneralError("failed to validate import password secret: %s", err.Error())
+			}
+			if !valid {
+				return nil, errors.BadRequest("import password secret must contain key(s): %v", missingKeys)
 			}
 		}
 

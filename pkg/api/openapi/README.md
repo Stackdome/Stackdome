@@ -91,6 +91,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidactionsfencepost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/fence | Fence or unfence the PostgreSQL cluster
 *DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidactionshibernatepost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/hibernate | Hibernate or wake the PostgreSQL cluster
 *DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidbackupsget) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id}/backups | List backups for a PostgresAddon
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidcredentialsdatabaseget) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id}/credentials/{database} | Get JIT credentials for a PostgresAddon database
 *DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresiddelete) | **Delete** /api/v1/organizations/{org_id}/addons/postgres/{id} | Delete a PostgresAddon
 *DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdGet**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidget) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id} | Get a specific PostgresAddon
 *DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdPut**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidput) | **Put** /api/v1/organizations/{org_id}/addons/postgres/{id} | Update a PostgresAddon
@@ -151,6 +152,7 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [AddonEnvSource](docs/AddonEnvSource.md)
  - [Annotation](docs/Annotation.md)
  - [ApiV1OrganizationsIdRemoteSyncServersGet200Response](docs/ApiV1OrganizationsIdRemoteSyncServersGet200Response.md)
  - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response.md)
@@ -208,6 +210,7 @@ Class | Method | HTTP request | Description
  - [Organisation](docs/Organisation.md)
  - [Port](docs/Port.md)
  - [PostgresAddon](docs/PostgresAddon.md)
+ - [PostgresAddonEnvSource](docs/PostgresAddonEnvSource.md)
  - [PostgresAddonList](docs/PostgresAddonList.md)
  - [PostgresAddonSpec](docs/PostgresAddonSpec.md)
  - [PostgresAddonStatus](docs/PostgresAddonStatus.md)
@@ -219,6 +222,7 @@ Class | Method | HTTP request | Description
  - [PostgresConnectionInfo](docs/PostgresConnectionInfo.md)
  - [PostgresConnectionInfoCredentials](docs/PostgresConnectionInfoCredentials.md)
  - [PostgresConnectionInfoDatabasesInner](docs/PostgresConnectionInfoDatabasesInner.md)
+ - [PostgresCredentials](docs/PostgresCredentials.md)
  - [PostgresDatabase](docs/PostgresDatabase.md)
  - [PostgresInitialization](docs/PostgresInitialization.md)
  - [PostgresInitializationImportFromExternal](docs/PostgresInitializationImportFromExternal.md)

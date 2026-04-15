@@ -15,6 +15,7 @@ import (
 type PostgresBackupService interface {
 	Create(ctx context.Context, backup *models.PostgresBackup) (*models.PostgresBackup, *errors.ServiceError)
 	GetByID(ctx context.Context, ID string) (*models.PostgresBackup, *errors.ServiceError)
+	GetByName(ctx context.Context, postgresAddonID string, name string) (*models.PostgresBackup, *errors.ServiceError)
 	Update(ctx context.Context, id string, backup *models.PostgresBackup) (*models.PostgresBackup, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	ListByPostgresAddon(ctx context.Context, postgresAddonID string) ([]*models.PostgresBackup, *errors.ServiceError)
@@ -51,7 +52,7 @@ func (s *postgresBackupService) Create(ctx context.Context, backup *models.Postg
 		backup.Phase = "Pending"
 	}
 	if backup.Type == "" {
-		backup.Type = "Manual"
+		backup.Type = models.PostgresBackupTypeManual
 	}
 
 	// Set start time
@@ -72,6 +73,10 @@ func (s *postgresBackupService) GetByID(ctx context.Context, ID string) (*models
 		return nil, err
 	}
 	return backup, nil
+}
+
+func (s *postgresBackupService) GetByName(ctx context.Context, postgresAddonID string, name string) (*models.PostgresBackup, *errors.ServiceError) {
+	return s.backupStore.GetByName(ctx, postgresAddonID, name)
 }
 
 func (s *postgresBackupService) Update(ctx context.Context, id string, backup *models.PostgresBackup) (*models.PostgresBackup, *errors.ServiceError) {
