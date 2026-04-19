@@ -42,6 +42,8 @@ type PostgresAddonService interface {
 	InternalDeleteFromDB(ctx context.Context, id string) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError)
 
+	InjectClusterManager(clusterManager clustermanager.ClusterManager)
+
 	BackgroundJobEnqueuerInjectable
 	ClusterResourceServiceInjectable
 }
@@ -103,6 +105,10 @@ func NewPostgresAddonService(spec PostgresAddonServiceSpec) PostgresAddonService
 		logger:             spec.Logger,
 		sessionFactory:     spec.SessionFactory,
 	}
+}
+
+func (s *postgresAddonService) InjectClusterManager(clusterManager clustermanager.ClusterManager) {
+	s.clusterManager = clusterManager
 }
 
 func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgresAddon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
@@ -221,6 +227,12 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 		return nil, err
 	}
 
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
+		ID: createdPostgresAddon.ID,
+	}); err != nil {
+		return nil, errors.GeneralError("failed to enqueue background job for postgres addon '%s': %s", createdPostgresAddon.Name, err.Error())
+	}
+
 	return createdPostgresAddon, nil
 }
 
@@ -277,6 +289,12 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
+		ID: updatedPostgresAddon.ID,
+	}); err != nil {
+		return nil, errors.GeneralError("failed to enqueue background job for postgres addon '%s': %s", updatedPostgresAddon.Name, err.Error())
 	}
 
 	return updatedPostgresAddon, nil
@@ -370,6 +388,12 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 	err = s.postgresAddonStore.UpdateStatus(ctx, id, &postgresAddon.Status)
 	if err != nil {
 		return nil, errors.GeneralError("failed to update PostgreSQL addon status for deletion: %s", err.Error())
+	}
+
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
+		ID: id,
+	}); err != nil {
+		return nil, errors.GeneralError("failed to enqueue background job for postgres addon '%s': %s", postgresAddon.Name, err.Error())
 	}
 
 	return postgresAddon, nil
@@ -523,7 +547,16 @@ func (s *postgresAddonService) DatabaseService() PostgresAddonDatabaseService {
 func (s *postgresAddonService) TriggerBackup(ctx context.Context, id string) *errors.ServiceError {
 	// Update the backup requested timestamp
 	now := time.Now()
-	return s.postgresAddonStore.UpdateBackupRequestedAt(ctx, id, &now)
+	if err := s.postgresAddonStore.UpdateBackupRequestedAt(ctx, id, &now); err != nil {
+		return err
+	}
+
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
+		ID: id,
+	}); err != nil {
+		return errors.GeneralError("failed to enqueue backup job for postgres addon '%s': %s", id, err.Error())
+	}
+	return nil
 }
 
 // TriggerHibernate triggers hibernation for the postgres addon
@@ -560,9 +593,7 @@ func (s *postgresAddonService) TriggerFence(ctx context.Context, id string, enab
 
 // ListBackups lists all backups for a postgres addon
 func (s *postgresAddonService) ListBackups(ctx context.Context, postgresAddonID string) ([]*models.PostgresBackup, *errors.ServiceError) {
-	// TODO: Implement when PostgresAddonBackupService is available
-	// For now, return empty list
-	return []*models.PostgresBackup{}, nil
+	return s.backupService.ListByPostgresAddon(ctx, postgresAddonID)
 }
 
 func (s *postgresAddonService) GetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError) {
@@ -601,8 +632,20 @@ func (s *postgresAddonService) GetCredentials(ctx context.Context, addonID strin
 	if superuser {
 		secretName = *addon.Status.ConnectionInfo.ClusterSecrets.SuperuserSecret
 	} else {
+		// Find the database owner from status, then look up the owner's secret.
+		// CNPG creates credential secrets per database owner, not per database name.
+		owner := ""
+		for _, dbInfo := range addon.Status.Databases {
+			if dbInfo.Name == database {
+				owner = dbInfo.Owner
+				break
+			}
+		}
+		if owner == "" {
+			return nil, errors.NotFound("credential secret for database '%s' not found", database)
+		}
 		var ok bool
-		secretName, ok = addon.Status.ConnectionInfo.ClusterSecrets.UserSecrets[database]
+		secretName, ok = addon.Status.ConnectionInfo.ClusterSecrets.UserSecrets[owner]
 		if !ok {
 			return nil, errors.NotFound("credential secret for database '%s' not found", database)
 		}

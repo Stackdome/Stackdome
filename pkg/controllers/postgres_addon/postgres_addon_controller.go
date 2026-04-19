@@ -91,8 +91,8 @@ func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to get postgres addon from db: %v", serr)
 	}
 
-	// Only update if status hash changed
-	if clusterInstance.Status.StatusHash != dbInstance.Status.LastObservedStatusHash {
+	// Update if status hash changed, or if hash is empty (cluster-agent doesn't compute it yet)
+	if clusterInstance.Status.StatusHash == "" || clusterInstance.Status.StatusHash != dbInstance.Status.LastObservedStatusHash {
 		newStatus := mapToPostgresAddonStatus(clusterInstance.Status)
 		serr = r.PostgresAddonService.UpdatePostgresAddonStatus(ctx, dbInstance.ID, newStatus)
 		if serr != nil {
@@ -104,9 +104,23 @@ func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return ctrl.Result{}, nil
 }
 
+func mapPhaseToState(phase string) string {
+	switch phase {
+	case "Cluster in healthy state":
+		return "Ready"
+	case addonsv1alpha1.PendingPhase, addonsv1alpha1.ErrorPhase,
+		addonsv1alpha1.DeletingPhase, addonsv1alpha1.HibernatedPhase,
+		addonsv1alpha1.ReadyPhase:
+		return phase
+	default:
+		// Pass through any other CNPG phase strings as-is
+		return phase
+	}
+}
+
 func mapToPostgresAddonStatus(clusterStatus addonsv1alpha1.PostgresClusterStatus) *models.PostgresAddonStatus {
 	status := &models.PostgresAddonStatus{
-		State:                  string(clusterStatus.Phase),
+		State:                  mapPhaseToState(string(clusterStatus.Phase)),
 		Conditions:             models.ConvertConditions(clusterStatus.Conditions),
 		LastObservedStatusHash: clusterStatus.StatusHash,
 	}
@@ -126,6 +140,11 @@ func mapToPostgresAddonStatus(clusterStatus addonsv1alpha1.PostgresClusterStatus
 			status.ConnectionInfo.Host = clusterStatus.Outputs.ClusterConnection.Host
 			status.ConnectionInfo.Port = clusterStatus.Outputs.ClusterConnection.Port
 			status.ConnectionInfo.SSLMode = clusterStatus.Outputs.ClusterConnection.SSLMode
+		} else if clusterStatus.Outputs.WriteService != "" {
+			// Derive connection info from write service when ClusterConnection is not populated
+			status.ConnectionInfo.Host = clusterStatus.Outputs.WriteService
+			status.ConnectionInfo.Port = 5432
+			status.ConnectionInfo.SSLMode = "verify-full"
 		}
 
 		status.Databases = make([]models.PostgresDatabaseInfo, len(clusterStatus.Outputs.Databases))
