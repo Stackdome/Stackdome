@@ -2,6 +2,7 @@ package workspaceresource
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers"
 	apperrors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -98,12 +99,15 @@ func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			w.logger.Infof("StackResource %s not found in DB", stackResourceCr.Name)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, serr
+		return ctrl.Result{}, fmt.Errorf("failed to get stack resource from db: %v", serr)
 	}
 
 	if dbStackResource.Status == nil || dbStackResource.Status.LastObservedStatusHash != stackResourceCr.Status.StatusHash {
 		dbStackResource.Status = mapClusterStatusToServerStatus(stackResourceCr)
-		return ctrl.Result{}, w.stackResourceService.UpdateStatus(ctx, dbStackResource.ID, dbStackResource.Status)
+		if serr := w.stackResourceService.UpdateStatus(ctx, dbStackResource.ID, dbStackResource.Status); serr != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update stack resource status: %v", serr)
+		}
+		return ctrl.Result{}, nil
 	}
 	return ctrl.Result{}, nil
 }

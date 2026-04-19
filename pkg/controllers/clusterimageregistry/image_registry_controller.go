@@ -2,6 +2,7 @@ package clusterimageregistry
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -81,17 +82,20 @@ func (r *clusterImageRegistryReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, nil
 	}
 
-	dbImageRegistry, err := r.DBImageRegistryService.Get(ctx, registryID)
-	if err != nil {
-		r.Logger.Error(ctx, "failed to get cluster image registry from DB: %v", err)
-		return ctrl.Result{}, err
+	dbImageRegistry, serr := r.DBImageRegistryService.Get(ctx, registryID)
+	if serr != nil {
+		r.Logger.Error(ctx, "failed to get cluster image registry from DB: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to get cluster image registry from DB: %v", serr)
 	}
 
 	if dbImageRegistry.Status == nil ||
 		string(dbImageRegistry.Status.State) != string(registryCr.Status.Phase) ||
 		len(dbImageRegistry.Status.Conditions) != len(registryCr.Status.Conditions) || dbImageRegistry.Status.RegistryUrl == "" {
 		dbImageRegistry.Status = mapClusterStatusToServerStatus(registryCr.Status)
-		return ctrl.Result{}, r.DBImageRegistryService.UpdateStatus(ctx, dbImageRegistry.ID, dbImageRegistry.Status)
+		if serr := r.DBImageRegistryService.UpdateStatus(ctx, dbImageRegistry.ID, dbImageRegistry.Status); serr != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update cluster image registry status: %v", serr)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	return ctrl.Result{}, nil
