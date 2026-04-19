@@ -84,7 +84,7 @@ func (dm *DatabaseManager) Bootstrap(ctx context.Context) error {
 	testDBConfig := &config.DatabaseConfig{
 		Dialect:            "postgres",
 		SSLMode:            "disable",
-		Debug:              true,
+		Debug:              false,
 		MaxOpenConnections: 50,
 		DBConnectionConfig: config.DBConnectionConfig{
 			Host:     dm.config.Host,
@@ -121,7 +121,7 @@ func (dm *DatabaseManager) GetConfig() *config.DatabaseConfig {
 	return &config.DatabaseConfig{
 		Dialect:            "postgres",
 		SSLMode:            "disable",
-		Debug:              true,
+		Debug:              false,
 		MaxOpenConnections: 50,
 		DBConnectionConfig: config.DBConnectionConfig{
 			Host:     dm.config.Host,

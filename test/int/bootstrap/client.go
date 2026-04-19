@@ -17,7 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
 )
 
 type ClientManager struct {
@@ -174,18 +174,13 @@ func (cm *ClientManager) deployServiceAccount(ctx context.Context) error {
 		return fmt.Errorf("failed to get kube client: %w", err)
 	}
 
-	clientset, ok := kubeClient.(kubernetes.Interface)
-	if !ok {
-		return fmt.Errorf("invalid kube client type")
-	}
-
 	// Create namespace
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "stackdome-control-plane",
 		},
 	}
-	_, err = clientset.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
+	_, err = kubeClient.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
 	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to create namespace: %w", err)
 	}
@@ -197,7 +192,7 @@ func (cm *ClientManager) deployServiceAccount(ctx context.Context) error {
 			Namespace: "stackdome-control-plane",
 		},
 	}
-	_, err = clientset.CoreV1().ServiceAccounts("stackdome-control-plane").Create(ctx, sa, metav1.CreateOptions{})
+	_, err = kubeClient.CoreV1().ServiceAccounts("stackdome-control-plane").Create(ctx, sa, metav1.CreateOptions{})
 	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to create service account: %w", err)
 	}
@@ -215,7 +210,7 @@ func (cm *ClientManager) deployServiceAccount(ctx context.Context) error {
 			},
 		},
 	}
-	_, err = clientset.RbacV1().ClusterRoles().Create(ctx, clusterRole, metav1.CreateOptions{})
+	_, err = kubeClient.RbacV1().ClusterRoles().Create(ctx, clusterRole, metav1.CreateOptions{})
 	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to create cluster role: %w", err)
 	}
@@ -238,7 +233,7 @@ func (cm *ClientManager) deployServiceAccount(ctx context.Context) error {
 			},
 		},
 	}
-	_, err = clientset.RbacV1().ClusterRoleBindings().Create(ctx, clusterRoleBinding, metav1.CreateOptions{})
+	_, err = kubeClient.RbacV1().ClusterRoleBindings().Create(ctx, clusterRoleBinding, metav1.CreateOptions{})
 	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to create cluster role binding: %w", err)
 	}
@@ -254,14 +249,14 @@ func (cm *ClientManager) deployServiceAccount(ctx context.Context) error {
 		},
 		Type: corev1.SecretTypeServiceAccountToken,
 	}
-	_, err = clientset.CoreV1().Secrets("stackdome-control-plane").Create(ctx, secret, metav1.CreateOptions{})
+	_, err = kubeClient.CoreV1().Secrets("stackdome-control-plane").Create(ctx, secret, metav1.CreateOptions{})
 	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to create secret: %w", err)
 	}
 
 	// Wait for secret to be populated
 	for i := 0; i < 30; i++ {
-		s, err := clientset.CoreV1().Secrets("stackdome-control-plane").Get(ctx, "stackdome-api-server-account-secret", metav1.GetOptions{})
+		s, err := kubeClient.CoreV1().Secrets("stackdome-control-plane").Get(ctx, "stackdome-api-server-account-secret", metav1.GetOptions{})
 		if err == nil && len(s.Data["token"]) > 0 && len(s.Data["ca.crt"]) > 0 {
 			return nil
 		}
@@ -272,14 +267,9 @@ func (cm *ClientManager) deployServiceAccount(ctx context.Context) error {
 }
 
 func (cm *ClientManager) extractClusterCredentials(ctx context.Context) (string, string, string, error) {
-	kubeClient, err := cm.cluster.GetKubeClient()
+	clientset, err := cm.cluster.GetKubeClient()
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to get kube client: %w", err)
-	}
-
-	clientset, ok := kubeClient.(kubernetes.Interface)
-	if !ok {
-		return "", "", "", fmt.Errorf("invalid kube client type")
 	}
 
 	// Get cluster URL from rest config
@@ -313,11 +303,11 @@ func (cm *ClientManager) registerClusterViaAPI(ctx context.Context, clusterURL, 
 		ClusterImageRegistry: &openapi.ClusterImageRegistry{
 			Name: "test-registry",
 			Spec: &openapi.ClusterImageRegistrySpec{
-				BackendStorageSize:  stringPtr("10Gi"),
-				BackendStorageClass: stringPtr("standard"),
-				MaxRepositories:     int32Ptr(100),
-				TagsPerRepository:   int32Ptr(50),
-				DeleteUntagged:      boolPtr(true),
+				BackendStorageSize:  ptr.To("10Gi"),
+				BackendStorageClass: ptr.To("standard"),
+				MaxRepositories:     ptr.To(int32(100)),
+				TagsPerRepository:   ptr.To(int32(50)),
+				DeleteUntagged:      ptr.To(bool(true)),
 			},
 		},
 	}
@@ -360,17 +350,4 @@ func (cm *ClientManager) registerClusterViaAPI(ctx context.Context, clusterURL, 
 	}
 
 	return *responseCluster.Id, nil
-}
-
-// Helper functions for pointer creation
-func stringPtr(s string) *string {
-	return &s
-}
-
-func int32Ptr(i int32) *int32 {
-	return &i
-}
-
-func boolPtr(b bool) *bool {
-	return &b
 }

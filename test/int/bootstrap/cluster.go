@@ -14,10 +14,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	kindcluster "sigs.k8s.io/kind/pkg/cluster"
 )
 
 const (
-	testClusterName = "stackdome-int-test"
+	testClusterName = "stackdome-api-server-test"
 )
 
 type ClusterManager struct {
@@ -142,6 +143,12 @@ func (cm *ClusterManager) createNewCluster(ctx context.Context) error {
 	bootstrapCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
+	// Clear the cache directory
+	if err := os.RemoveAll(config.CacheDir); err != nil {
+		cm.logger.Info("Warning: failed to clear cache directory", "path", config.CacheDir, "error", err.Error())
+	}
+	cm.logger.Info("Cache directory cleared", "path", config.CacheDir)
+
 	// Create cluster and deploy all dependencies (operators + CRDs)
 	cm.logger.Info("Setting up test cluster (this may take 5-10 minutes)")
 	if err := cm.cluster.Setup(bootstrapCtx); err != nil {
@@ -155,12 +162,6 @@ func (cm *ClusterManager) createNewCluster(ctx context.Context) error {
 	imageTag := getClusterAgentImageTag()
 	if err := cm.cluster.DeployClusterAgent(bootstrapCtx, imageTag); err != nil {
 		return fmt.Errorf("failed to deploy cluster agent: %w", err)
-	}
-
-	// Wait for cluster agent to be ready
-	cm.logger.Info("Waiting for cluster agent to be ready")
-	if err := cm.waitForClusterAgentReady(bootstrapCtx); err != nil {
-		return fmt.Errorf("cluster agent not ready: %w", err)
 	}
 
 	cm.logger.Info("Cluster bootstrap completed successfully")
@@ -196,35 +197,24 @@ func (cm *ClusterManager) Cleanup(ctx context.Context) error {
 }
 
 func (cm *ClusterManager) deleteClusterIfExists(ctx context.Context) error {
-	// Use testutil directly to check and delete cluster
-	// This handles orphaned clusters better than trying to get a kube client
-	config := testutil.DefaultClusterConfig(testClusterName, cm.logger)
-	tempCluster := testutil.NewTestCluster(config)
-
-	// Attempt to delete - Teardown is idempotent and handles non-existent clusters gracefully
-	cm.logger.Info("Attempting to delete any existing cluster", "name", testClusterName)
-	if err := tempCluster.Teardown(ctx); err != nil {
-		// Log but don't fail - cluster might not exist
-		cm.logger.Info("Cluster deletion completed with note", "note", err.Error())
-	} else {
-		cm.logger.Info("Cluster deleted successfully (if it existed)")
-	}
-
-	return nil
-}
-
-func (cm *ClusterManager) waitForClusterAgentReady(ctx context.Context) error {
-	// Get kubernetes client
-	kubeClient, err := cm.cluster.GetKubeClient()
+	provider := kindcluster.NewProvider()
+	clusters, err := provider.List()
 	if err != nil {
-		return fmt.Errorf("failed to get kube client: %w", err)
+		return fmt.Errorf("listing kind clusters: %w", err)
 	}
 
-	// TODO: Add proper readiness check for cluster agent deployment
-	// For now, just wait a bit to ensure the deployment is ready
-	time.Sleep(30 * time.Second)
+	for _, name := range clusters {
+		if name == testClusterName {
+			cm.logger.Info("Deleting existing Kind cluster", "name", testClusterName)
+			if err := provider.Delete(testClusterName, ""); err != nil {
+				return fmt.Errorf("deleting kind cluster: %w", err)
+			}
+			cm.logger.Info("Existing cluster deleted")
+			return nil
+		}
+	}
 
-	cm.logger.Info("Cluster agent is ready", "client", kubeClient != nil)
+	cm.logger.Info("No existing cluster found", "name", testClusterName)
 	return nil
 }
 

@@ -46,15 +46,14 @@ func NewServerManager(sessionFactory db.SessionFactory, dbConfig *config.Databas
 func (sm *ServerManager) Bootstrap(ctx context.Context, dbConfig *config.DatabaseConfig) error {
 	sm.logger.Info("Starting server bootstrap")
 
-	// Create context with 5-minute timeout for server bootstrap
-	bootstrapCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
 	// Create test environment
 	env := environment.NewTestEnvironment(sm.sessionFactory, dbConfig, environment.WithApplicationConfig(sm.config))
 
-	// Initialize environment
-	if err := env.Init(bootstrapCtx); err != nil {
+	// Use a background context for environment init. The environment starts
+	// long-lived goroutines (worker manager, cluster manager) that must outlive
+	// the bootstrap phase. Using a timeout context here would cancel those
+	// goroutines when bootstrap returns.
+	if err := env.Init(context.Background()); err != nil {
 		return fmt.Errorf("failed to initialize environment: %w", err)
 	}
 
@@ -76,7 +75,7 @@ func (sm *ServerManager) Bootstrap(ctx context.Context, dbConfig *config.Databas
 	sm.logger.Info("API server started", "address", sm.config.Server.BindAddress)
 	// Wait for server to be ready
 
-	ctxWithTimeout, cancel := context.WithTimeout(bootstrapCtx, 20*time.Second)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	if err := sm.waitForReady(ctxWithTimeout); err != nil {
 		return fmt.Errorf("server failed to start: %w", err)
