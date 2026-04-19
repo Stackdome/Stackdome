@@ -1,7 +1,7 @@
 # PostgresAddon Implementation Design
 
 **Date:** 2026-03-16
-**Status:** Draft
+**Status:** Implemented (2026-04-12)
 **Author:** Claude
 
 ## Overview
@@ -49,12 +49,10 @@ This document specifies the implementation of PostgresAddon cluster integration,
 │  ┌────────▼────────────────────────────────────┐          │             │
 │  │ PostgresAddonWorker                         │          │             │
 │  │  - DeprovisionReconciler                    │          │             │
-│  │  - ValidationReconciler                     │          │             │
 │  │  - NamespaceReconciler                      │          │             │
 │  │  - ObjectStoreDependencyReconciler          │          │             │
 │  │  - SecretReconciler                         │          │             │
 │  │  - PostgresClusterReconciler                │          │             │
-│  │  - LifecycleReconciler                      │          │             │
 │  └────────┬────────────────────────────────────┘          │             │
 │           │                                               │             │
 │  ┌────────▼───────────────────────────────────────────────▼──────────┐  │
@@ -119,13 +117,13 @@ type postgresAddonWorker struct {
 
 | Order | Reconciler | Responsibility |
 |-------|------------|----------------|
-| 1 | DeprovisionReconciler | Handle deletion - delete CR, clean up |
-| 2 | ValidationReconciler | Validate spec before cluster operations |
-| 3 | NamespaceReconciler | Ensure namespace exists in cluster |
-| 4 | ObjectStoreDependencyReconciler | Create ObjectStore CR if backup config references one |
-| 5 | SecretReconciler | Create secrets for external DB import credentials |
-| 6 | PostgresClusterReconciler | Create/update PostgresCluster CR |
-| 7 | LifecycleReconciler | Handle backup/hibernate/fence triggers |
+| 1 | DeprovisionReconciler | Handle deletion — check addon usage, delete CR, delete from DB |
+| 2 | NamespaceReconciler | Ensure namespace exists in cluster |
+| 3 | ObjectStoreDependencyReconciler | Deploy barman-cloud ObjectStore CR and credential K8s Secret |
+| 4 | SecretReconciler | Create K8s Secret for external DB import passwords |
+| 5 | PostgresClusterReconciler | Build context, create/update PostgresCluster CR |
+
+**Note:** ValidationReconciler and LifecycleReconciler were removed. Lifecycle operations (hibernation, fencing, backup triggers) are handled via CR spec fields set by the PostgresClusterReconciler's builder. The cluster-agent operator handles the actual transitions.
 
 #### GetInput Query
 
@@ -152,12 +150,10 @@ Each sub-reconciler can return:
 | Sub-reconciler | On Error | Notes |
 |----------------|----------|-------|
 | DeprovisionReconciler | Requeue with backoff | Retries deletion until success |
-| ValidationReconciler | Stop, set Error state | No retry - user must fix spec |
 | NamespaceReconciler | Requeue with backoff | Transient cluster errors |
 | ObjectStoreDependencyReconciler | Requeue with backoff | ObjectStore CR creation may fail transiently |
 | SecretReconciler | Requeue with backoff | Transient cluster errors |
 | PostgresClusterReconciler | Requeue with backoff | CR creation/update may fail transiently |
-| LifecycleReconciler | Requeue with backoff | Lifecycle operations may fail transiently |
 
 ---
 
@@ -168,10 +164,22 @@ Each sub-reconciler can return:
 **Interface:**
 
 ```go
+type PostgresClusterBuildContext struct {
+    BackupObjectStoreName     string // Resolved barman ObjectStore name for backups
+    RestoreObjectStoreName    string // Resolved barman ObjectStore name for restore
+    RecoverySourceClusterName string // PostgresCluster CR name that archived backups (barman-cloud serverName)
+    RestoreBackupName         string // CNPG Backup CR name to restore from
+}
+
 type PostgresClusterBuilder interface {
-    BuildPostgresClusterCR(addon *models.PostgresAddon) (*addonsv1alpha1.PostgresCluster, error)
+    BuildPostgresClusterCR(addon *models.PostgresAddon, buildCtx PostgresClusterBuildContext) (*addonsv1alpha1.PostgresCluster, error)
+    BuildImportPasswordSecret(addon *models.PostgresAddon, password string) *corev1.Secret
 }
 ```
+
+The `PostgresClusterReconciler` resolves DB IDs to cluster resource names in a `buildContext()` method, then passes the pre-resolved context to the pure builder function. Key resolution:
+- `BackupObjectStoreName`: Looked up via `objectStoreService.GetByID(addon.BackupConfig.ObjectStoreID)`
+- `RecoverySourceClusterName`: Looked up via `postgresAddonService.GetPostgresAddon(addon.Initialization.RestoreFromObjectStore.SourcePostgresAddonID)` — uses `sourceAddon.Name` (which equals the CR name)
 
 **Field Mapping:**
 
@@ -199,27 +207,22 @@ type PostgresClusterBuilder interface {
 
 ### 3. ObjectStore CR Builder
 
-**Location:** `pkg/builders/objectstore_builder.go`
+**Location:** Inline in `pkg/worker/postgresaddon/objectstore_dependency_reconciler.go`
 
-**Note:** The ObjectStore CR is from the barman-cloud project, not a stackdome CRD. This is a third-party CRD that CNPG uses for backup storage configuration.
+**Note:** The ObjectStore CR is from the barman-cloud plugin project (`github.com/cloudnative-pg/plugin-barman-cloud/api/v1`), not a stackdome CRD. The `barmancloudv1` scheme is registered in `pkg/clustermanager/manager.go` so the cluster client can operate on ObjectStore CRs.
 
-**Import Path:** `github.com/cloudnative-pg/barman-cloud/api/v1`
+**Credential Resolution Chain:**
+1. App-level encrypted secrets (SecretReference with SecretID + Key) are decrypted via `InternalGetByID`
+2. Raw credential values are created as a K8s Secret (`objectstore-<name>-credentials`) in the target namespace
+3. The ObjectStore CR references the K8s Secret via `SecretKeySelector`
 
-This requires adding barman-cloud to go.mod:
-```
-go get github.com/cloudnative-pg/barman-cloud@v0.3.0
-```
+**Provider Support:**
 
-**Interface:**
-
-```go
-import barmancloudv1 "github.com/cloudnative-pg/barman-cloud/api/v1"
-
-type ObjectStoreBuilder interface {
-    BuildObjectStoreCR(ctx context.Context, objectStore *models.ObjectStore, namespace string) (*barmancloudv1.ObjectStore, error)
-    BuildCredentialSecret(ctx context.Context, objectStore *models.ObjectStore, namespace string) (*corev1.Secret, error)
-}
-```
+| Provider | Secret Keys | CR Fields |
+|----------|-------------|-----------|
+| S3 | `ACCESS_KEY_ID`, `ACCESS_SECRET_KEY`, optional `REGION` | `spec.configuration.s3`, custom `endpointURL` for S3-compatible stores |
+| Azure | `AZURE_CONNECTION_STRING`, `AZURE_STORAGE_ACCOUNT` | `spec.configuration.azureCredentials` |
+| GCS | `GOOGLE_APPLICATION_CREDENTIALS` (service account JSON key) | `spec.configuration.googleCredentials` |
 
 **Field Mapping:**
 
@@ -827,43 +830,49 @@ CREATE INDEX idx_addon_usages_stack ON addon_usages(stack_id);
 
 ## Files to Create/Modify
 
-### New Files
+### New Files (Implemented)
 
 | File | Purpose |
 |------|---------|
-| `pkg/worker/postgresaddon/postgres_addon_worker.go` | Main worker |
-| `pkg/worker/postgresaddon/deprovision_reconciler.go` | Deletion handling |
-| `pkg/worker/postgresaddon/validation_reconciler.go` | Spec validation |
-| `pkg/worker/postgresaddon/namespace_reconciler.go` | Namespace creation |
-| `pkg/worker/postgresaddon/objectstore_dependency_reconciler.go` | ObjectStore CR creation |
-| `pkg/worker/postgresaddon/secret_reconciler.go` | External DB secrets |
-| `pkg/worker/postgresaddon/postgres_cluster_reconciler.go` | PostgresCluster CR |
-| `pkg/worker/postgresaddon/lifecycle_reconciler.go` | Backup/hibernate/fence |
-| `pkg/worker/postgresaddon/interfaces.go` | Service interfaces |
-| `pkg/models/addon_type.go` | AddonType enum definition |
-| `pkg/builders/postgres_cluster_builder.go` | CR builder |
-| `pkg/builders/objectstore_builder.go` | ObjectStore CR builder |
-| `pkg/controllers/postgres_backup/postgres_backup_controller.go` | Backup sync |
-| `pkg/worker/stack/addon_env_reconciler.go` | Stack addon env resolution |
-| `pkg/models/addon_usage.go` | Addon usage model |
-| `pkg/stores/addon_usage_store.go` | Addon usage store interface |
-| `pkg/stores/pgstore/addon_usage.go` | Addon usage store implementation |
+| `pkg/worker/postgresaddon/postgres_addon_worker.go` | Main worker with reconciler chain |
+| `pkg/worker/postgresaddon/deprovision_reconciler.go` | Deletion: usage check, CR delete, DB delete |
+| `pkg/worker/postgresaddon/namespace_reconciler.go` | Ensures namespace exists in cluster |
+| `pkg/worker/postgresaddon/objectstore_dependency_reconciler.go` | Deploys barman-cloud ObjectStore CR + credential Secret |
+| `pkg/worker/postgresaddon/secret_reconciler.go` | Creates K8s Secret for external DB import passwords |
+| `pkg/worker/postgresaddon/postgres_cluster_reconciler.go` | Builds context, creates/updates PostgresCluster CR |
+| `pkg/worker/postgresaddon/types.go` | Sub-reconciler result types and flow control |
+| `pkg/worker/postgresaddon/interfaces.go` | Narrow service interfaces for dependency injection |
+| `pkg/models/addon_usage.go` | AddonUsage model and AddonType enum |
+| `pkg/builders/postgres_cluster_builder.go` | PostgresCluster CR builder (pure function, no I/O) |
+| `pkg/stores/addon_usage_store.go` | AddonUsage store interface |
+| `pkg/stores/pgstore/addon_usage.go` | AddonUsage pgstore implementation |
+| `pkg/db/migrations/202603161001_create_addon_usages_table.go` | Migration for addon_usages table |
 
-### Modified Files
+### Removed Files
+
+| File | Reason |
+|------|--------|
+| `pkg/worker/postgresaddon/validation_reconciler.go` | Never created — validation handled at API layer |
+| `pkg/worker/postgresaddon/lifecycle_reconciler.go` | Removed — lifecycle ops handled via CR spec fields in builder |
+| `pkg/builders/objectstore_builder.go` | Never created — ObjectStore CR building is inline in the reconciler |
+
+### Modified Files (Implemented)
 
 | File | Changes |
 |------|---------|
-| `pkg/models/postgres_addon.go` | Add ConnectionInfo, ClusterSecrets structs |
-| `pkg/models/object_store.go` | Add DeployedClusters to status |
-| `pkg/models/stack_resource.go` | Add EnvFromAddons, AddonEnvSource structs |
-| `pkg/services/postgres_addon_service.go` | Add GetCredentials method |
-| `pkg/services/object_store_service.go` | Add deployment tracking, deletion cleanup |
-| `pkg/handlers/postgres_addon_handler.go` | Add GetCredentials handler |
-| `pkg/controllers/postgres_addon/postgres_addon_controller.go` | Enhanced status mapping |
-| `pkg/validator/stack/stack_validator.go` | Add addon env validation |
-| `pkg/worker/stack/stack_worker.go` | Add AddonEnvReconciler |
-| `cmd/server/routes.go` | Add credentials endpoint |
-| `config/openapi/stackdome_api.yaml` | Add credentials endpoint, EnvFromAddons schema |
+| `pkg/models/postgres_addon.go` | Restructured status for JIT credentials, added `ExternalClusterRefName()`, `ImportPasswordSecretName()`, `HasDatabase()` |
+| `pkg/models/object_store.go` | Added `DeployedClusters` to status |
+| `pkg/models/stack_resource.go` | Added `EnvFromAddons`, `AddonEnvSource`, `PostgresAddonEnvSource` types |
+| `pkg/services/postgres_addon_service.go` | Added `GetCredentials`, `SecretService` dependency, import password validation, deletion protection |
+| `pkg/services/object_store_service.go` | Added `UpdateStatus` method |
+| `pkg/stores/object_store_store.go` | Added `UpdateStatus` to interface |
+| `pkg/stores/pgstore/object_store.go` | Added `UpdateStatus` implementation |
+| `pkg/handlers/postgres_addon_handler.go` | Added `GetCredentials` handler |
+| `pkg/controllers/postgres_addon/postgres_addon_controller.go` | Full status mapping with hash comparison |
+| `pkg/clustermanager/manager.go` | Registered `addonsv1alpha1` and `barmancloudv1` schemes |
+| `cmd/server/routes.go` | Added `GET /{id}/credentials/{database}` route |
+| `cmd/environment/development_environment.go` | Wired worker, `ClusterManager` + `SecretService` injection |
+| `cmd/environment/test_environment.go` | Same wiring as development |
 
 ---
 
@@ -973,6 +982,10 @@ createAddonUsagesTable(),
 5. **Addon usage tracking** - Prevents accidental deletion of in-use addons
 
 ---
+
+## Deferred Items
+
+See `docs/plans/postgres-addon-deferred-items.md` for the executable plan.
 
 ## Open Questions
 

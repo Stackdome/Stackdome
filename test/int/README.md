@@ -13,23 +13,27 @@ The integration tests follow a **shared infrastructure** pattern where:
 
 ## Running Tests
 
-### Standard Integration Tests
+### Using Make (Recommended)
 ```bash
 # Run all integration tests
-go test ./test/int/... -v
+make test-integration
 
-# Run with debug logging
-TEST_LOG_LEVEL=debug go test ./test/int/... -v
+# Keep cluster for debugging
+KEEP_CLUSTER=true make test-integration
 
-# Run specific test suite
-go test ./test/int/... -v -run="PostgresAddon"
+# With debug logging
+TEST_LOG_LEVEL=debug make test-integration
 ```
 
-### Development Mode (Keep Infrastructure)
+Output is logged to `test/int/last-run.log`.
+
+### Using go test directly
 ```bash
-# Keep cluster and database for debugging
-export KEEP_CLUSTER=true
-go test ./test/int/... -v
+# Run all integration tests
+go test ./test/int/... -v -ginkgo.v -timeout 30m -count=1
+
+# Run specific test suite
+go test ./test/int/... -v -ginkgo.v -timeout 30m -count=1 -ginkgo.focus="PostgresAddon"
 ```
 
 ## Environment Variables
@@ -197,14 +201,10 @@ After bootstrap, all test specs share:
 For detailed troubleshooting:
 ```bash
 # Maximum debug output
-TEST_LOG_LEVEL=debug KEEP_CLUSTER=true go test ./test/int/... -v -count=1
-
-# Check bootstrap phases individually
-TEST_LOG_LEVEL=debug go test ./test/int/bootstrap/... -v
+TEST_LOG_LEVEL=debug KEEP_CLUSTER=true make test-integration
 
 # Keep infrastructure for manual inspection
-export KEEP_CLUSTER=true
-go test ./test/int/... -v
+KEEP_CLUSTER=true make test-integration
 # Infrastructure remains running after tests for kubectl debugging
 ```
 

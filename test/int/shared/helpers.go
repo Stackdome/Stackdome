@@ -54,7 +54,7 @@ func DeletePostgresAddon(client *openapi.APIClient, orgID, addonID string) {
 	ctx := context.Background()
 	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdDelete(ctx, orgID, addonID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to delete postgres addon")
-	Expect(httpResp.StatusCode).To(Equal(http.StatusNoContent), "unexpected status code")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 }
 
 // Error testing helpers for Ginkgo

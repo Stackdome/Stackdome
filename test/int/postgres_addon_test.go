@@ -2,6 +2,7 @@ package int
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,7 +33,7 @@ var _ = Describe("PostgreSQL Addon", func() {
 			Expect(createdAddon.GetId()).NotTo(BeEmpty())
 			Expect(createdAddon.GetName()).To(Equal("test-minimal"))
 			Expect(createdAddon.Spec.Version.GetMajor()).To(Equal(int32(16)))
-			Expect(createdAddon.Spec.Instances.GetCount()).To(Equal(int32(1)))
+			Expect(createdAddon.Spec.Instances.GetCount()).To(Equal(int32(2)))
 			Expect(createdAddon.Spec.Storage.GetSize()).To(Equal("5Gi"))
 			Expect(createdAddon.Spec.Storage.GetStorageClass()).To(Equal("standard"))
 		})
@@ -117,7 +118,7 @@ var _ = Describe("PostgreSQL Addon", func() {
 			Expect(dbNames).To(ContainElement("analytics"))
 		})
 
-		XIt("should delete a postgres addon", func() {
+		It("should delete a postgres addon", func() {
 			By("Creating a postgres addon first")
 			addon := shared.CreateMinimalPostgresAddon("test-delete")
 			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
@@ -125,8 +126,8 @@ var _ = Describe("PostgreSQL Addon", func() {
 			By("Deleting the addon")
 			shared.DeletePostgresAddon(client, orgID, createdAddon.GetId())
 
-			By("Verifying the addon is deleted")
-			shared.GetPostgresAddonExpectError(client, orgID, createdAddon.GetId(), 404)
+			By("Waiting for the addon to be fully deleted")
+			shared.WaitForAddonDeleted(client, orgID, createdAddon.GetId(), 30*time.Second)
 		})
 	})
 
