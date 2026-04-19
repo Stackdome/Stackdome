@@ -11,6 +11,12 @@ import (
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
 
+const (
+	// DefaultImageCatalogName is the name of the CNPG ImageCatalog resource
+	// that must exist in the target namespace before a PostgresCluster can be created.
+	DefaultImageCatalogName = "postgres-catalog"
+)
+
 // PostgresClusterBuildContext provides pre-resolved references needed
 // to build a PostgresCluster CR. The caller is responsible for resolving
 // database IDs to cluster resource names before invoking the builder.
@@ -69,6 +75,11 @@ func (b *postgresClusterBuilder) BuildPostgresClusterCR(addon *models.PostgresAd
 		return nil, fmt.Errorf("failed to build resource requirements: %w", err)
 	}
 
+	minorVersion := addon.PostgresVersion.Minor
+	if minorVersion == 0 {
+		minorVersion = 1
+	}
+
 	cr := &addonsv1alpha1.PostgresCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      addon.Name,
@@ -79,9 +90,16 @@ func (b *postgresClusterBuilder) BuildPostgresClusterCR(addon *models.PostgresAd
 		},
 		Spec: addonsv1alpha1.PostgresClusterSpec{
 			Instances: addon.Instances.Count,
+			ReplicasSpec: addonsv1alpha1.ReplicasSpec{
+				NumSynchronousReplicas:           1,
+				SynchronousReplicaDataDurability: "preferred",
+			},
 			PostgreSQLSpec: &addonsv1alpha1.PostgreSQLSpec{
+				ImageCatalogRef: &addonsv1alpha1.ImageCatalogRef{
+					Name: DefaultImageCatalogName,
+				},
 				PostgreSQLMajorVersion:     addon.PostgresVersion.Major,
-				PostgreSQLMinorVersion:     addon.PostgresVersion.Minor,
+				PostgreSQLMinorVersion:     minorVersion,
 				EnableMajorVersionUpgrades: addon.PostgresVersion.EnableMajorVersionUpgrade,
 				EnableMinorVersionUpgrades: addon.PostgresVersion.EnableMinorVersionUpgrade,
 				PostgresConf:               addon.Configuration.Parameters,
