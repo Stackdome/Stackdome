@@ -3,28 +3,18 @@ package testutil
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/google/go-github/v50/github"
 	"github.com/mt-sre/devkube/dev"
 	"golang.org/x/oauth2"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
-	// Default version should match the version in go.mod
-	defaultClusterAgentVersion = "v0.4.7-alpha"
-	defaultRepoOwner           = "ashishmax31"
-	defaultRepoName            = "cluster-agent"
+	defaultRepoOwner = "ashishmax31"
+	defaultRepoName  = "cluster-agent"
 
 	// GitHub raw content URL pattern
 	githubRawURLPattern = "https://raw.githubusercontent.com/%s/%s/%s/%s"
@@ -54,14 +44,14 @@ func createGitHubClient(ctx context.Context) *github.Client {
 }
 
 // checkTagExists verifies if a tag exists in the repository
-func checkTagExists(ctx context.Context, client *github.Client, tag string) (bool, error) {
+func (g *githubLoader) checkTagExists(ctx context.Context) (bool, error) {
 	// List tags
-	tags, _, err := client.Repositories.ListTags(ctx, defaultRepoOwner, defaultRepoName, &github.ListOptions{
+	tags, _, err := g.client.Repositories.ListTags(ctx, g.owner, g.repo, &github.ListOptions{
 		PerPage: 100,
 	})
 	if err != nil {
 		// Try to list releases as an alternative
-		releases, _, releaseErr := client.Repositories.ListReleases(ctx, defaultRepoOwner, defaultRepoName, &github.ListOptions{
+		releases, _, releaseErr := g.client.Repositories.ListReleases(ctx, g.owner, g.repo, &github.ListOptions{
 			PerPage: 100,
 		})
 		if releaseErr != nil {
@@ -70,7 +60,7 @@ func checkTagExists(ctx context.Context, client *github.Client, tag string) (boo
 
 		// Check releases
 		for _, release := range releases {
-			if release.TagName != nil && *release.TagName == tag {
+			if release.TagName != nil && *release.TagName == g.tag {
 				return true, nil
 			}
 		}
@@ -79,13 +69,13 @@ func checkTagExists(ctx context.Context, client *github.Client, tag string) (boo
 
 	// Check tags
 	for _, t := range tags {
-		if t.Name != nil && *t.Name == tag {
+		if t.Name != nil && *t.Name == g.tag {
 			return true, nil
 		}
 	}
 
 	// If tag not found, also check if it exists as a branch
-	_, _, err = client.Repositories.GetBranch(ctx, defaultRepoOwner, defaultRepoName, strings.TrimPrefix(tag, "v"), true)
+	_, _, err = g.client.Repositories.GetBranch(ctx, g.owner, g.repo, strings.TrimPrefix(g.tag, "v"), true)
 	if err == nil {
 		return true, nil
 	}
@@ -94,15 +84,15 @@ func checkTagExists(ctx context.Context, client *github.Client, tag string) (boo
 }
 
 // findLatestTag finds the latest available tag in the repository
-func findLatestTag(ctx context.Context, client *github.Client) (string, error) {
+func (g *githubLoader) findLatestTag(ctx context.Context) (string, error) {
 	// Try to get the latest release first
-	release, _, err := client.Repositories.GetLatestRelease(ctx, defaultRepoOwner, defaultRepoName)
+	release, _, err := g.client.Repositories.GetLatestRelease(ctx, g.owner, g.repo)
 	if err == nil && release.TagName != nil {
 		return *release.TagName, nil
 	}
 
 	// If no releases, list tags
-	tags, _, err := client.Repositories.ListTags(ctx, defaultRepoOwner, defaultRepoName, &github.ListOptions{
+	tags, _, err := g.client.Repositories.ListTags(ctx, g.owner, g.repo, &github.ListOptions{
 		PerPage: 10, // Get only recent tags
 	})
 	if err != nil {
@@ -116,78 +106,173 @@ func findLatestTag(ctx context.Context, client *github.Client) (string, error) {
 	return "", fmt.Errorf("no tags found in repository")
 }
 
-// githubCRDLoader implements dev.ClusterInitializer to load CRDs from GitHub
-type githubCRDLoader struct {
-	version  string
-	cacheDir string
-	client   *github.Client
+// githubLoader implements dev.ClusterInitializer to load manifests from GitHub
+type githubLoader struct {
+	repo        string
+	owner       string
+	tag         string
+	cacheDir    string
+	client      *github.Client
+	pathsToLoad []string
 }
 
-func (g *githubCRDLoader) Init(ctx context.Context, cluster *dev.Cluster) error {
+func WithRepoOwner(owner string) func(*githubLoader) {
+	return func(g *githubLoader) {
+		g.owner = owner
+	}
+}
+
+func WithRepoName(repo string) func(*githubLoader) {
+	return func(g *githubLoader) {
+		g.repo = repo
+	}
+}
+
+func WithRepoTag(tag string) func(*githubLoader) {
+	return func(g *githubLoader) {
+		g.tag = tag
+	}
+}
+
+func WithPathsToLoad(paths []string) func(*githubLoader) {
+	return func(g *githubLoader) {
+		g.pathsToLoad = paths
+	}
+}
+
+func WithCacheDir(cacheDir string) func(*githubLoader) {
+	return func(g *githubLoader) {
+		g.cacheDir = cacheDir
+	}
+}
+
+func NewGitHubLoader(ctx context.Context, options ...func(*githubLoader)) *githubLoader {
+	loader := &githubLoader{
+		client: createGitHubClient(ctx),
+	}
+
+	for _, option := range options {
+		option(loader)
+	}
+
+	return loader
+}
+
+func (g *githubLoader) Init(ctx context.Context, cluster *dev.Cluster) error {
 	// Create GitHub client if not already created
 	if g.client == nil {
-		g.client = createGitHubClient(ctx)
+		return fmt.Errorf("GitHub client not initialized")
+	}
+
+	// Validate required fields
+	if g.owner == "" {
+		return fmt.Errorf("repository owner not specified")
+	}
+	if g.repo == "" {
+		return fmt.Errorf("repository name not specified")
+	}
+	if g.tag == "" {
+		return fmt.Errorf("repository tag not specified")
+	}
+
+	if len(g.pathsToLoad) == 0 {
+		return fmt.Errorf("no paths specified to load from GitHub")
 	}
 
 	// Verify tag exists
-	exists, err := checkTagExists(ctx, g.client, g.version)
+	exists, err := g.checkTagExists(ctx)
 	if err != nil {
-		return fmt.Errorf("checking if tag %s exists: %w", g.version, err)
+		return fmt.Errorf("checking if tag %s exists: %w", g.tag, err)
 	}
 	if !exists {
 		// Try to find the latest available tag
-		latestTag, err := findLatestTag(ctx, g.client)
+		latestTag, err := g.findLatestTag(ctx)
 		if err != nil {
-			return fmt.Errorf("tag %s not found and unable to find latest tag: %w", g.version, err)
+			return fmt.Errorf("tag %s not found and unable to find latest tag: %w", g.tag, err)
 		}
-		return fmt.Errorf("tag %s not found in repository, latest available tag is %s", g.version, latestTag)
+		return fmt.Errorf("tag %s not found in repository, latest available tag is %s", g.tag, latestTag)
 	}
 
 	// Prepare temporary directory for CRD files
-	tempDir := filepath.Join(g.cacheDir, "temp-crds", g.version)
+	tempDir := filepath.Join(g.cacheDir, "temp-files", g.tag)
 	if err := os.MkdirAll(tempDir, 0755); err != nil {
 		return fmt.Errorf("creating temp directory: %w", err)
 	}
 
-	// Get CRD file names
-	crdFiles := []string{
-		"addons.stackdome.io_postgresclusters.yaml",
-		"builds.stackdome.io_imagebuilds.yaml",
-		"core.stackdome.io_stackresources.yaml",
-		"core.stackdome.io_stacks.yaml",
-		"registry.stackdome.io_clusterregistries.yaml",
-		"storage.stackdome.io_nfsservers.yaml",
-		"storage.stackdome.io_storages.yaml",
-		"storage.stackdome.io_volumes.yaml",
-		"users.stackdome.io_users.yaml",
+	directoriesToLoad := []string{}
+	filesToLoad := []string{}
+
+	// If the path ends with a slash, treat it as a directory, otherwise as a file
+	for _, path := range g.pathsToLoad {
+		if strings.HasSuffix(path, "/") {
+			directoriesToLoad = append(directoriesToLoad, path)
+		} else {
+			filesToLoad = append(filesToLoad, path)
+		}
 	}
+
+	directoryContentsToFetch, err := g.fetchDirectoryContents(ctx, directoriesToLoad)
+	if err != nil {
+		return fmt.Errorf("fetching directory contents: %w", err)
+	}
+
+	fileContentsToFetch := append(filesToLoad, directoryContentsToFetch...)
 
 	// Download and write CRD files to temporary directory
 	var filePaths []string
-	for _, filename := range crdFiles {
-		content, err := g.fetchManifest(ctx, "config/deploy/crds/"+filename)
+	for _, path := range fileContentsToFetch {
+		manifest, err := g.fetchManifest(ctx, path)
 		if err != nil {
-			return fmt.Errorf("fetching CRD %s: %w", filename, err)
+			return fmt.Errorf("fetching manifest %s: %w", path, err)
 		}
-
-		filePath := filepath.Join(tempDir, filename)
-		if err := os.WriteFile(filePath, content, 0644); err != nil {
-			return fmt.Errorf("writing CRD file %s: %w", filename, err)
+		manifestFilepath := filepath.Join(tempDir, filepath.Base(path))
+		if err := os.WriteFile(manifestFilepath, manifest, 0644); err != nil {
+			return fmt.Errorf("writing manifest file %s: %w", filepath.Base(path), err)
 		}
-		filePaths = append(filePaths, filePath)
+		filePaths = append(filePaths, manifestFilepath)
 	}
 
 	// Use cluster's CreateAndWaitFromFiles method
 	if err := cluster.CreateAndWaitFromFiles(ctx, filePaths); err != nil {
-		return fmt.Errorf("creating CRDs from files: %w", err)
+		return fmt.Errorf("creating CRDs from github: %w", err)
 	}
 
 	return nil
 }
 
-func (g *githubCRDLoader) fetchManifest(ctx context.Context, path string) ([]byte, error) {
+func (g *githubLoader) fetchDirectoryContents(ctx context.Context, directories []string) ([]string, error) {
+	var allFilePaths []string
+	for _, dir := range directories {
+		_, contents, _, err := g.client.Repositories.GetContents(
+			ctx,
+			g.owner,
+			g.repo,
+			dir,
+			&github.RepositoryContentGetOptions{
+				Ref: g.tag,
+			})
+		if err != nil {
+			return nil, fmt.Errorf("listing directory contents for %s: %w", dir, err)
+		}
+
+		for _, content := range contents {
+			fileName := content.GetName()
+			if strings.HasSuffix(fileName, ".yaml") || strings.HasSuffix(fileName, ".yml") {
+				allFilePaths = append(allFilePaths, dir+fileName)
+			}
+		}
+	}
+	return allFilePaths, nil
+}
+
+// FetchManifest fetches a single file from the configured GitHub repository.
+func (g *githubLoader) FetchManifest(ctx context.Context, path string) ([]byte, error) {
+	return g.fetchManifest(ctx, path)
+}
+
+func (g *githubLoader) fetchManifest(ctx context.Context, path string) ([]byte, error) {
 	// Check cache first
-	cacheKey := fmt.Sprintf("%s/%s", g.version, path)
+	cacheKey := fmt.Sprintf("%s/%s", g.tag, path)
 	if cached, ok := manifestCache[cacheKey]; ok {
 		return cached, nil
 	}
@@ -198,8 +283,8 @@ func (g *githubCRDLoader) fetchManifest(ctx context.Context, path string) ([]byt
 	}
 
 	// Try GitHub API first
-	fileContent, _, resp, err := g.client.Repositories.GetContents(ctx, defaultRepoOwner, defaultRepoName, path, &github.RepositoryContentGetOptions{
-		Ref: g.version,
+	fileContent, _, resp, err := g.client.Repositories.GetContents(ctx, g.owner, g.repo, path, &github.RepositoryContentGetOptions{
+		Ref: g.tag,
 	})
 
 	// If successful and it's a file
@@ -216,7 +301,7 @@ func (g *githubCRDLoader) fetchManifest(ctx context.Context, path string) ([]byt
 
 		// Also save to disk cache if cache directory is provided
 		if g.cacheDir != "" {
-			cacheFile := filepath.Join(g.cacheDir, "manifests", g.version, path)
+			cacheFile := filepath.Join(g.cacheDir, "manifests", g.tag, path)
 			if err := os.MkdirAll(filepath.Dir(cacheFile), 0755); err == nil {
 				os.WriteFile(cacheFile, contentBytes, 0644)
 			}
@@ -225,70 +310,14 @@ func (g *githubCRDLoader) fetchManifest(ctx context.Context, path string) ([]byt
 		return contentBytes, nil
 	}
 
-	// If API failed with 404 or other error, try raw URL as fallback
-	if resp != nil && (resp.StatusCode == 404 || resp.StatusCode == 403) {
-		// Build GitHub raw URL
-		url := fmt.Sprintf(githubRawURLPattern, defaultRepoOwner, defaultRepoName, g.version, path)
-
-		// Create HTTP client with timeout
-		client := &http.Client{
-			Timeout: 30 * time.Second,
-		}
-
-		// Create request
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		if err != nil {
-			return nil, fmt.Errorf("creating request: %w", err)
-		}
-
-		// Add GitHub token if available for private repos
-		token := os.Getenv("GHACCESS_TOKEN")
-		if token == "" {
-			token = os.Getenv("GITHUB_TOKEN")
-		}
-		if token != "" {
-			req.Header.Set("Authorization", "token "+token)
-		}
-
-		// Make request
-		httpResp, err := client.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("fetching %s: %w", url, err)
-		}
-		defer httpResp.Body.Close()
-
-		if httpResp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("HTTP %d fetching %s", httpResp.StatusCode, url)
-		}
-
-		// Read content
-		content, err := io.ReadAll(httpResp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("reading response: %w", err)
-		}
-
-		// Cache content
-		manifestCache[cacheKey] = content
-
-		// Also save to disk cache if cache directory is provided
-		if g.cacheDir != "" {
-			cacheFile := filepath.Join(g.cacheDir, "manifests", g.version, path)
-			if err := os.MkdirAll(filepath.Dir(cacheFile), 0755); err == nil {
-				os.WriteFile(cacheFile, content, 0644)
-			}
-		}
-
-		return content, nil
-	}
-
 	// Return original error
-	return nil, fmt.Errorf("fetching file from GitHub: %w", err)
+	return nil, fmt.Errorf("fetching file from GitHub: %w: resp error code: %d", err, resp.StatusCode)
 }
 
 // deployManifestsFromGitHub deploys manifests fetched from GitHub
 func deployManifestsFromGitHub(ctx context.Context, cluster *dev.Cluster, files []string, version, cacheDir string) error {
-	loader := &githubCRDLoader{
-		version:  version,
+	loader := &githubLoader{
+		tag:      version,
 		cacheDir: cacheDir,
 		client:   createGitHubClient(ctx),
 	}
@@ -320,142 +349,4 @@ func deployManifestsFromGitHub(ctx context.Context, cluster *dev.Cluster, files 
 	}
 
 	return nil
-}
-
-// getClusterAgentDeployment creates a deployment for the cluster agent manager
-func getClusterAgentDeployment(imageTag string) (*appsv1.Deployment, error) {
-	var image string
-	if imageTag == "" {
-		image = "quay.io/stackdome/cluster-agent/cluster-agent-manager:latest"
-	} else {
-		image = "quay.io/stackdome/cluster-agent/cluster-agent-manager:" + imageTag
-	}
-
-	replicas := int32(1)
-	runAsNonRoot := true
-	allowPrivilegeEscalation := false
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "stackdome-operator-manager",
-			Namespace: "stackdome-control-plane",
-			Labels: map[string]string{
-				"app.kubernetes.io/name": "stackdome-operator",
-			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app.kubernetes.io/name": "stackdome-operator",
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app.kubernetes.io/name": "stackdome-operator",
-					},
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: "stackdome-operator",
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: &runAsNonRoot,
-						SeccompProfile: &corev1.SeccompProfile{
-							Type: corev1.SeccompProfileTypeRuntimeDefault,
-						},
-					},
-					Containers: []corev1.Container{
-						{
-							Name:  "manager",
-							Image: image,
-							Args: []string{
-								"--leader-elect",
-							},
-							LivenessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/healthz",
-										Port: intstr.FromInt(8081),
-									},
-								},
-								InitialDelaySeconds: 15,
-								PeriodSeconds:       20,
-							},
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/readyz",
-										Port: intstr.FromInt(8081),
-									},
-								},
-								InitialDelaySeconds: 5,
-								PeriodSeconds:       10,
-							},
-							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("500m"),
-									corev1.ResourceMemory: resource.MustParse("128Mi"),
-								},
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("10m"),
-									corev1.ResourceMemory: resource.MustParse("64Mi"),
-								},
-							},
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: &allowPrivilegeEscalation,
-								Capabilities: &corev1.Capabilities{
-									Drop: []corev1.Capability{"ALL"},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	return deployment, nil
-}
-
-// GetCRDsFromGitHub returns all CRD YAML content as a map fetched from GitHub
-func GetCRDsFromGitHub(ctx context.Context, version, cacheDir string) (map[string][]byte, error) {
-	if version == "" {
-		version = GetClusterAgentVersion()
-	}
-
-	loader := &githubCRDLoader{
-		version:  version,
-		cacheDir: cacheDir,
-		client:   createGitHubClient(ctx),
-	}
-
-	crds := make(map[string][]byte)
-	crdFiles := []string{
-		"addons.stackdome.io_postgresclusters.yaml",
-		"builds.stackdome.io_imagebuilds.yaml",
-		"core.stackdome.io_stackresources.yaml",
-		"core.stackdome.io_stacks.yaml",
-		"registry.stackdome.io_clusterregistries.yaml",
-		"storage.stackdome.io_nfsservers.yaml",
-		"storage.stackdome.io_storages.yaml",
-		"storage.stackdome.io_volumes.yaml",
-		"users.stackdome.io_users.yaml",
-	}
-
-	for _, filename := range crdFiles {
-		content, err := loader.fetchManifest(ctx, "config/deploy/crds/"+filename)
-		if err != nil {
-			return nil, fmt.Errorf("fetching CRD %s: %w", filename, err)
-		}
-		crds[filename] = content
-	}
-
-	return crds, nil
-}
-
-// getClusterAgentVersion returns the version to use, checking environment variables
-func GetClusterAgentVersion() string {
-	if version := os.Getenv("CLUSTER_AGENT_VERSION"); version != "" {
-		return version
-	}
-	return defaultClusterAgentVersion
 }

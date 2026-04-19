@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 	"github.com/mt-sre/devkube/dev"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -18,6 +19,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	kindv1alpha4 "sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
+	"sigs.k8s.io/yaml"
 
 	// Import all CRD schemes from cluster-agent dependency
 	addonsv1alpha1 "stackdome.io/cluster-agent/api/addons/v1alpha1"
@@ -78,20 +80,38 @@ func (tc *TestCluster) Setup(ctx context.Context) error {
 	// Prepare cluster initializers
 	var clusterInitializers []dev.ClusterInitializer
 
-	// Always load CRDs from GitHub
-	clusterInitializers = append(clusterInitializers, &githubCRDLoader{
-		version:  GetClusterAgentVersion(),
-		cacheDir: tc.config.CacheDir,
-		client:   createGitHubClient(ctx),
-	})
-
-	// Optionally install operators
+	// We use GitHubLoader and httpObjectApplier since github loader uses
+	// a client which can use gh personal access token for authentication and thus can handle private repositories,
+	// while httpObjectApplier is a simple initializer that applies manifests from given URLs and does not require authentication.
+	// We use GitHubLoader for the cluster agent since it is a private repository, and httpObjectApplier for the Barman Cloud plugin since it is public.
+	// Load cluster agent manifests from GitHub
+	clusterAgentInitializer := NewGitHubLoader(
+		ctx,
+		WithCacheDir(tc.config.CacheDir),
+		WithRepoOwner(clusterAgentOwner),
+		WithRepoName(clusterAgentRepo),
+		WithRepoTag(GetClusterAgentVersion()),
+		WithPathsToLoad([]string{
+			"config/deploy/00-namespace.yaml",
+			"config/deploy/01-rbac.yaml",
+			// Trailing slash is important as it tells the loader to load all manifests in the folder.
+			"config/deploy/crds/",
+		}),
+	)
+	clusterInitializers = append(clusterInitializers, clusterAgentInitializer)
+	// install dependent operators, like cnpg, traefik, cert-manager
 	if tc.config.InstallOperators {
 		clusterInitializers = append(clusterInitializers, tc.getClusterDependencies()...)
 	}
 
+	// Load Barman Cloud plugin from GitHub
 	clusterInitializers = append(clusterInitializers,
-		HTTPObjectApplier("https://github.com/cloudnative-pg/plugin-barman-cloud/releases/download/v0.5.0/manifest.yaml"),
+		httpObjectApplier(
+			fmt.Sprintf(
+				"https://github.com/cloudnative-pg/plugin-barman-cloud/releases/download/%s/manifest.yaml",
+				GetBarmanCloudVersion(),
+			),
+		),
 	)
 
 	// Configure Kind cluster
@@ -169,7 +189,7 @@ func (tc *TestCluster) GetRESTConfig() *rest.Config {
 }
 
 // GetKubeClient returns a kubernetes.Interface client for the test cluster
-func (tc *TestCluster) GetKubeClient() (interface{}, error) {
+func (tc *TestCluster) GetKubeClient() (*kubernetes.Clientset, error) {
 	if tc.environment == nil || tc.environment.Cluster == nil {
 		return nil, fmt.Errorf("cluster not initialized")
 	}
@@ -203,55 +223,48 @@ func (tc *TestCluster) LoadImage(imagePath string) error {
 	return tc.environment.LoadImageFromTar(imagePath)
 }
 
-// DeployClusterAgent deploys the cluster agent to the test cluster
+// DeployClusterAgent fetches the deployment manifest from the cluster-agent
+// GitHub repository, patches the container image, and deploys it.
 func (tc *TestCluster) DeployClusterAgent(ctx context.Context, imageTag string) error {
 	if tc.environment == nil || tc.environment.Cluster == nil {
 		return fmt.Errorf("cluster not initialized")
 	}
 
-	cluster := tc.environment.Cluster
+	loader := NewGitHubLoader(
+		ctx,
+		WithCacheDir(tc.config.CacheDir),
+		WithRepoOwner(clusterAgentOwner),
+		WithRepoName(clusterAgentRepo),
+		WithRepoTag(GetClusterAgentVersion()),
+	)
 
-	// Deploy namespace and RBAC from GitHub
-	version := GetClusterAgentVersion()
-
-	// Create GitHub client to verify tag exists
-	githubClient := createGitHubClient(ctx)
-	exists, err := checkTagExists(ctx, githubClient, version)
+	manifestBytes, err := loader.FetchManifest(ctx, clusterAgentDeploymentManifestPath)
 	if err != nil {
-		return fmt.Errorf("checking if tag %s exists: %w", version, err)
+		return fmt.Errorf("fetching deployment manifest: %w", err)
 	}
-	if !exists {
-		// Try to find the latest available tag
-		latestTag, err := findLatestTag(ctx, githubClient)
-		if err != nil {
-			return fmt.Errorf("tag %s not found and unable to find latest tag: %w", version, err)
+
+	deployment := &appsv1.Deployment{}
+	if err := yaml.Unmarshal(manifestBytes, deployment); err != nil {
+		return fmt.Errorf("parsing deployment manifest: %w", err)
+	}
+
+	tag := imageTag
+	if tag == "" {
+		tag = GetClusterAgentVersion()
+	}
+	image := fmt.Sprintf("%s:%s", clusterAgentImage, tag)
+	for i := range deployment.Spec.Template.Spec.Containers {
+		if deployment.Spec.Template.Spec.Containers[i].Name == "manager" {
+			deployment.Spec.Template.Spec.Containers[i].Image = image
+			break
 		}
-		return fmt.Errorf("tag %s not found in repository, latest available tag is %s. Please update the version in go.mod or set CLUSTER_AGENT_VERSION environment variable", version, latestTag)
 	}
 
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	if err := deployManifestsFromGitHub(ctxWithTimeout, cluster, []string{
-		"00-namespace.yaml",
-		"01-rbac.yaml",
-	}, version, tc.config.CacheDir); err != nil {
-		return fmt.Errorf("deploying cluster agent dependencies: %w", err)
-	}
-
-	// Wait a moment for namespace to be ready
-	time.Sleep(5 * time.Second)
-
-	// Deploy the cluster agent manager
-	deployment, err := getClusterAgentDeployment(imageTag)
-	if err != nil {
-		return fmt.Errorf("creating deployment: %w", err)
-	}
-
-	if err := cluster.CreateAndWaitForReadiness(ctx, deployment); err != nil {
+	if err := tc.environment.Cluster.CreateAndWaitForReadiness(ctx, deployment); err != nil {
 		return fmt.Errorf("deploying cluster agent manager: %w", err)
 	}
 
-	tc.logger.Info("Cluster agent deployed", "image", imageTag)
+	tc.logger.Info("Cluster agent deployed", "image", image)
 	return nil
 }
 
@@ -297,21 +310,21 @@ func (tc *TestCluster) getClusterDependencies() []dev.ClusterInitializer {
 	return []dev.ClusterInitializer{
 		dev.ClusterHelmInstall{
 			RepoName:    "traefik",
-			RepoURL:     "https://traefik.github.io/charts",
+			RepoURL:     TraefikChartRepo,
 			PackageName: "traefik",
 			Namespace:   "traefik-v2",
 			ReleaseName: "traefik",
 		},
 		dev.ClusterHelmInstall{
 			RepoName:    "cnpg",
-			RepoURL:     "https://cloudnative-pg.github.io/charts",
+			RepoURL:     CNPGChartRepo,
 			PackageName: "cloudnative-pg",
 			Namespace:   "cnpg-system",
 			ReleaseName: "cnpg",
 		},
 		dev.ClusterHelmInstall{
 			RepoName:    "jetstack",
-			RepoURL:     "https://charts.jetstack.io",
+			RepoURL:     CertManagerChartRepo,
 			PackageName: "cert-manager",
 			Namespace:   "cert-manager",
 			ReleaseName: "cert-manager",

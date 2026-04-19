@@ -13,15 +13,15 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type httpObjectApplier struct {
+type httpObjectApplierImpl struct {
 	URLs []string
 }
 
-func HTTPObjectApplier(urls ...string) *httpObjectApplier {
-	return &httpObjectApplier{URLs: urls}
+func httpObjectApplier(urls ...string) *httpObjectApplierImpl {
+	return &httpObjectApplierImpl{URLs: urls}
 }
 
-func (a httpObjectApplier) Init(ctx context.Context, cluster *dev.Cluster) error {
+func (a *httpObjectApplierImpl) Init(ctx context.Context, cluster *dev.Cluster) error {
 	if len(a.URLs) == 0 {
 		return nil
 	}
