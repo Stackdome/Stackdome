@@ -116,6 +116,7 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		ObjectStoreService:   d.Services.ObjectStoreService,
 		NamespaceService:     d.Services.NamespaceService,
 		SecretService:        d.Services.SecretService,
+		AddonUsageStore:      d.Services.AddonUsageService,
 		ClusterManager:       d.ClusterManager,
 		CRBuilder:            builders.NewPostgresClusterBuilder(),
 		Env:                  d.Env.Name,
@@ -225,6 +226,7 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 		},
 	})
 	d.Services.ClusterService.InjectClusterManager(d.ClusterManager)
+	d.Services.PostgresAddonService.InjectClusterManager(d.ClusterManager)
 	return nil
 }
 
@@ -477,6 +479,7 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 	d.Services.MetricsService.InjectClusterResourceServiceDeps(deps)
 	d.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	d.Services.StackService.InjectBackgroundJobEnqueuer(dep)
+	d.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
 	return nil
 }
 

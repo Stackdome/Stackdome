@@ -39,6 +39,7 @@ func NewPostgresAddonWorker(spec PostgresAddonWorkerSpec) worker.Worker {
 		subReconcilers: []subReconciler{
 			newDeprovisionReconciler(spec),
 			newNamespaceReconciler(spec),
+			newImageCatalogReconciler(spec),
 			newObjectStoreDependencyReconciler(spec),
 			newSecretReconciler(spec),
 			newPostgresClusterReconciler(spec),
