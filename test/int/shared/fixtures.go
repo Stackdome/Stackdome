@@ -7,8 +7,9 @@ import (
 // PostgreSQL addon factory functions using OpenAPI models
 func CreateMinimalPostgresAddon(name string) *openapi.PostgresAddon {
 	version := openapi.NewPostgresVersion(16)
+	version.SetMinor(6)
 
-	instances := openapi.NewPostgresInstances(1)
+	instances := openapi.NewPostgresInstances(2)
 
 	storage := openapi.NewPostgresStorage("5Gi", "standard")
 
@@ -132,11 +133,11 @@ func CreateGenericSecret(name string, data map[string]string) *openapi.Secret {
 	return openapi.NewSecret(name, openapi.GENERIC, secretData)
 }
 
-// CreateS3CredentialsSecret creates a secret with S3 access credentials
+// CreateS3CredentialsSecret creates a secret with MinIO S3 access credentials
 func CreateS3CredentialsSecret(name string) *openapi.Secret {
 	data := []openapi.SecretData{
-		*openapi.NewSecretData("access_key_id", "AKIAIOSFODNN7EXAMPLE"),
-		*openapi.NewSecretData("secret_access_key", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"),
+		*openapi.NewSecretData("access_key_id", MinIOAccessKey),
+		*openapi.NewSecretData("secret_access_key", MinIOSecretKey),
 	}
 	return openapi.NewSecret(name, openapi.GENERIC, data)
 }
@@ -180,6 +181,7 @@ func CreateObjectStoreWithS3Endpoint(name string, secretID string, endpoint stri
 	s3Creds := store.Spec.Configuration.GetS3Credentials()
 	s3Creds.SetEndpointUrl(endpoint)
 	store.Spec.Configuration.SetS3Credentials(s3Creds)
+	store.Spec.SetDestinationPath("s3://backups/")
 	return store
 }
 
@@ -193,7 +195,7 @@ func CreateObjectStoreWithAzure(name string, secretID string) *openapi.ObjectSto
 	config := openapi.NewObjectStoreConfiguration()
 	config.SetAzureCredentials(*azureCreds)
 
-	spec := openapi.NewObjectStoreSpec(*config, "https://teststorageaccount.blob.core.windows.net/backups")
+	spec := openapi.NewObjectStoreSpec(*config, "https://teststorageaccount.blob.core.windows.net/backups/data")
 
 	return openapi.NewObjectStore(name, *spec)
 }

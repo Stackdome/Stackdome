@@ -106,6 +106,10 @@ func (v *objectStoreValidator) validateConfiguration(spec *models.ObjectStore) *
 		return errors.BadRequest("Only one credential configuration (S3, Azure, or GCS) can be specified")
 	}
 
+	if err := v.validateDestinationPath(spec); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -149,6 +153,45 @@ func (v *objectStoreValidator) validateAzureConfiguration(azure *models.AzureCre
 func (v *objectStoreValidator) validateGCSConfiguration(gcs *models.GCSCredentials) *errors.ServiceError {
 	if err := v.validateSecretReference(gcs.ServiceAccountCredentials, "GCS service account credentials"); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (v *objectStoreValidator) validateDestinationPath(spec *models.ObjectStore) *errors.ServiceError {
+	path := spec.DestinationPath
+	if path == "" {
+		return errors.BadRequest("Destination path cannot be empty")
+	}
+
+	switch {
+	case spec.Configuration.S3Credentials != nil:
+		if !strings.HasPrefix(path, "s3://") {
+			return errors.BadRequest("S3 destination path must start with 's3://' (e.g., s3://bucket-name/path)")
+		}
+		bucket := strings.TrimPrefix(path, "s3://")
+		bucket = strings.TrimSuffix(bucket, "/")
+		bucket = strings.SplitN(bucket, "/", 2)[0]
+		if bucket == "" {
+			return errors.BadRequest("S3 destination path must include a bucket name (e.g., s3://bucket-name/)")
+		}
+
+	case spec.Configuration.AzureCredentials != nil:
+		azurePattern := regexp.MustCompile(`^https?://[a-z0-9]+\.[a-z]+\.core\.windows\.net/[^/]+/.+`)
+		if !azurePattern.MatchString(path) {
+			return errors.BadRequest("Azure destination path must match format: http(s)://<account>.<service>.core.windows.net/<container>/<blob>")
+		}
+
+	case spec.Configuration.GCSCredentials != nil:
+		if !strings.HasPrefix(path, "gs://") {
+			return errors.BadRequest("GCS destination path must start with 'gs://' (e.g., gs://bucket-name/path)")
+		}
+		bucket := strings.TrimPrefix(path, "gs://")
+		bucket = strings.TrimSuffix(bucket, "/")
+		bucket = strings.SplitN(bucket, "/", 2)[0]
+		if bucket == "" {
+			return errors.BadRequest("GCS destination path must include a bucket name (e.g., gs://bucket-name/)")
+		}
 	}
 
 	return nil

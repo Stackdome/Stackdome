@@ -247,5 +247,84 @@ var _ = Describe("ObjectStore", func() {
 
 			shared.UpdateObjectStoreExpectError(client, orgID, createdStore.GetId(), updateStore, 400)
 		})
+
+		It("should reject S3 object store with invalid destination path prefix", func() {
+			By("Creating S3 object store with non-s3:// prefix")
+			store := shared.CreateObjectStoreWithS3("test-s3-bad-prefix", s3Secret.GetId())
+			store.Spec.SetDestinationPath("http://my-bucket/backups")
+
+			shared.CreateObjectStoreExpectError(client, orgID, store, 400)
+		})
+
+		It("should reject S3 object store with missing bucket name", func() {
+			By("Creating S3 object store with empty bucket")
+			store := shared.CreateObjectStoreWithS3("test-s3-no-bucket", s3Secret.GetId())
+			store.Spec.SetDestinationPath("s3://")
+
+			shared.CreateObjectStoreExpectError(client, orgID, store, 400)
+		})
+
+		It("should reject object store with empty destination path", func() {
+			By("Creating S3 object store with empty destination path")
+			store := shared.CreateObjectStoreWithS3("test-empty-path", s3Secret.GetId())
+			store.Spec.SetDestinationPath("")
+
+			shared.CreateObjectStoreExpectError(client, orgID, store, 400)
+		})
+
+		It("should reject Azure object store with invalid destination path", func() {
+			By("Creating Azure credentials secret")
+			azureSecretData := shared.CreateAzureCredentialsSecret("test-azure-validation-creds")
+			azureSecret := shared.CreateSecret(client, orgID, azureSecretData)
+
+			By("Creating Azure object store with invalid destination path")
+			connStringRef := *openapi.NewSecretReference(azureSecret.GetId(), "connection_string")
+			azureCreds := openapi.NewAzureCredentials(connStringRef)
+			azureCreds.SetStorageAccountName("teststorageaccount")
+
+			config := openapi.NewObjectStoreConfiguration()
+			config.SetAzureCredentials(*azureCreds)
+
+			spec := openapi.NewObjectStoreSpec(*config, "https://invalid-path/container")
+			store := openapi.NewObjectStore("test-azure-bad-path", *spec)
+
+			shared.CreateObjectStoreExpectError(client, orgID, store, 400)
+		})
+
+		It("should reject GCS object store with invalid destination path prefix", func() {
+			By("Creating GCS credentials secret")
+			gcsSecretData := shared.CreateGCSCredentialsSecret("test-gcs-validation-creds")
+			gcsSecret := shared.CreateSecret(client, orgID, gcsSecretData)
+
+			By("Creating GCS object store with non-gs:// prefix")
+			saCredsRef := *openapi.NewSecretReference(gcsSecret.GetId(), "service_account_credentials")
+			gcsCreds := openapi.NewGCSCredentials(saCredsRef)
+
+			config := openapi.NewObjectStoreConfiguration()
+			config.SetGcsCredentials(*gcsCreds)
+
+			spec := openapi.NewObjectStoreSpec(*config, "s3://wrong-prefix/backups")
+			store := openapi.NewObjectStore("test-gcs-bad-prefix", *spec)
+
+			shared.CreateObjectStoreExpectError(client, orgID, store, 400)
+		})
+
+		It("should reject GCS object store with missing bucket name", func() {
+			By("Creating GCS credentials secret")
+			gcsSecretData := shared.CreateGCSCredentialsSecret("test-gcs-no-bucket-creds")
+			gcsSecret := shared.CreateSecret(client, orgID, gcsSecretData)
+
+			By("Creating GCS object store with empty bucket")
+			saCredsRef := *openapi.NewSecretReference(gcsSecret.GetId(), "service_account_credentials")
+			gcsCreds := openapi.NewGCSCredentials(saCredsRef)
+
+			config := openapi.NewObjectStoreConfiguration()
+			config.SetGcsCredentials(*gcsCreds)
+
+			spec := openapi.NewObjectStoreSpec(*config, "gs://")
+			store := openapi.NewObjectStore("test-gcs-no-bucket", *spec)
+
+			shared.CreateObjectStoreExpectError(client, orgID, store, 400)
+		})
 	})
 })
