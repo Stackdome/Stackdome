@@ -95,6 +95,8 @@ func (r *addonEnvReconciler) resolveAddonEnvVars(ctx context.Context, stackID st
 			return nil, &result, nil
 		}
 
+		// TODO: Pass K8s secret references to the cluster-agent instead of resolving
+		// credentials as plain env var values (see docs/plans/postgres-addon-improvements.md #8).
 		fieldMap := creds.ToFieldMap()
 		for credField, envName := range pg.EnvMapping {
 			value, ok := fieldMap[credField]

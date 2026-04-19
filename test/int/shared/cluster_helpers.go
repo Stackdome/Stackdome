@@ -145,6 +145,7 @@ func GetCredentials(apiClient *openapi.APIClient, orgID, addonID, database strin
 }
 
 // ConnectToPostgres opens a real PostgreSQL connection and runs SELECT 1 to verify connectivity.
+// TODO: Exercise this in an e2e test (see docs/plans/postgres-addon-e2e-tests-enhancement.md #4).
 func ConnectToPostgres(host string, port int32, username, password, dbName, sslMode string) *sql.DB {
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		host, port, username, password, dbName, sslMode)

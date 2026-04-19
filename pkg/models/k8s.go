@@ -9,6 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// TODO: Add condition helper methods (FindCondition, IsConditionTrue, SetCondition)
+// and typed condition constants (see docs/plans/status-conditions-enhancement.md).
 type Condition struct {
 	Type               string    `json:"type"`
 	Status             string    `json:"status"`

@@ -179,6 +179,8 @@ func (s *objectStoreStore) ValidateObjectStoreNameUnique(ctx context.Context, or
 	return count == 0, nil
 }
 
+// TODO: Replace JSONB cross-table query with a dedicated object_store_references table
+// (see docs/plans/postgres-addon-improvements.md #7).
 func (s *objectStoreStore) IsReferencedByAddon(ctx context.Context, objectStoreID string) (bool, *errors.ServiceError) {
 	var count int64
 	if err := s.sessionFactory.New(ctx).Model(&models.PostgresAddon{}).

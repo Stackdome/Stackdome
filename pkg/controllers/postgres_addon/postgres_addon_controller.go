@@ -91,7 +91,8 @@ func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to get postgres addon from db: %v", serr)
 	}
 
-	// Update if status hash changed, or if hash is empty (cluster-agent doesn't compute it yet)
+	// TODO(cluster-agent): Remove StatusHash=="" fallback once cluster-agent computes
+	// StatusHash on PostgresCluster CRs (see docs/plans/cluster-agent-fixes.md #2).
 	if clusterInstance.Status.StatusHash == "" || clusterInstance.Status.StatusHash != dbInstance.Status.LastObservedStatusHash {
 		newStatus := mapToPostgresAddonStatus(clusterInstance.Status)
 		serr = r.PostgresAddonService.UpdatePostgresAddonStatus(ctx, dbInstance.ID, newStatus)
@@ -104,6 +105,8 @@ func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return ctrl.Result{}, nil
 }
 
+// TODO(cluster-agent): Remove this mapping once cluster-agent uses defined phase
+// constants instead of passing through raw CNPG strings (see docs/plans/cluster-agent-fixes.md #3).
 func mapPhaseToState(phase string) string {
 	switch phase {
 	case "Cluster in healthy state":
@@ -141,7 +144,8 @@ func mapToPostgresAddonStatus(clusterStatus addonsv1alpha1.PostgresClusterStatus
 			status.ConnectionInfo.Port = clusterStatus.Outputs.ClusterConnection.Port
 			status.ConnectionInfo.SSLMode = clusterStatus.Outputs.ClusterConnection.SSLMode
 		} else if clusterStatus.Outputs.WriteService != "" {
-			// Derive connection info from write service when ClusterConnection is not populated
+			// TODO(cluster-agent): Remove this fallback once cluster-agent populates
+			// ClusterConnection in PostgresCluster outputs (see docs/plans/cluster-agent-fixes.md #4).
 			status.ConnectionInfo.Host = clusterStatus.Outputs.WriteService
 			status.ConnectionInfo.Port = 5432
 			status.ConnectionInfo.SSLMode = "verify-full"
