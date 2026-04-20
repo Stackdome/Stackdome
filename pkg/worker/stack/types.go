@@ -54,3 +54,14 @@ type volumeService interface {
 	ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError)
 	InternalDeleteVolumesUsedByStackFromDB(ctx context.Context, stackID string) *errors.ServiceError
 }
+
+type postgresAddonService interface {
+	GetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
+	GetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError)
+}
+
+type addonUsageService interface {
+	Create(ctx context.Context, usage *models.AddonUsage) error
+	ExistsByStackResourceAndAddon(ctx context.Context, stackID, resourceID, addonID string) (bool, error)
+	DeleteByStackID(ctx context.Context, stackID string) error
+}

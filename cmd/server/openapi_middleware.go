@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -70,7 +69,7 @@ func (m *OpenAPIMiddleware) Middleware(next http.Handler) http.Handler {
 		}
 		err := openapi3filter.ValidateRequest(context.TODO(), requestValidationInput)
 		if err != nil {
-			serviceErr := errors.Validation(fmt.Sprintf("Failing openapi validation: %s", err))
+			serviceErr := errors.Validation("Failing openapi validation: %s", err)
 			handleError(context.TODO(), w, serviceErr.Code, serviceErr.Reason)
 			return
 		}
@@ -80,7 +79,7 @@ func (m *OpenAPIMiddleware) Middleware(next http.Handler) http.Handler {
 
 func handleError(ctx context.Context, w http.ResponseWriter, code errors.ServiceErrorCode, reason string) {
 	log := logger.NewLogger()
-	err := errors.New(code, reason)
+	err := errors.New(code, "%s", reason)
 	if err.HttpCode >= 400 && err.HttpCode <= 499 {
 		log.Infof(err.Error())
 	} else {

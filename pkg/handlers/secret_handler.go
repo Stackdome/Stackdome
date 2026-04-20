@@ -85,7 +85,7 @@ func (h *secretHandler) ListByOrganisationID(w http.ResponseWriter, r *http.Requ
 				return nil, errors.Unauthorized("failed to authorize access: %s", accessErr.Error())
 			}
 			if !allowed {
-				return nil, errors.Unauthorized("user '%s' is not allowed to list secrets '%s' under organisation %s", currentUser.ID, orgID)
+				return nil, errors.Unauthorized("user '%s' is not allowed to list secrets under organisation '%s'", currentUser.ID, orgID)
 			}
 			objs, serr := h.secretService.ListByOrganisation(ctx, orgID)
 			if serr != nil {

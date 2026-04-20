@@ -35,4 +35,10 @@ var MigrationList = []*gormigrate.Migration{
 	addClusterIdToStackTable(),
 	addDeletionTimestampToStackTable(),
 	addStackCRHashToStackTable(),
+	createObjectStoresTable(),
+	createPostgresAddonsTable(),
+	createPostgresBackupsTable(),
+	createPostgresAddonDatabasesTable(),
+	addNamespaceIdToPostgresAddons(),
+	createAddonUsagesTable(),
 }

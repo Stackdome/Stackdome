@@ -13,6 +13,12 @@ func (s apiServer) routes() *mux.Router {
 	mainRouter := mux.NewRouter()
 
 	mainRouter.NotFoundHandler = http.HandlerFunc(api.SendNotFound)
+
+	// Health check endpoint
+	mainRouter.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	}).Methods(http.MethodGet)
 	services := s.environment.Environment().Services
 	logger := s.environment.Environment().Logger
 
@@ -79,6 +85,17 @@ func (s apiServer) routes() *mux.Router {
 		SecretService: services.SecretService,
 		AuthzClient:   authzClient,
 		Logger:        logger,
+	})
+
+	postgresAddonHandler := handlers.NewPostgresAddonHandler(handlers.PostgresAddonHandlerSpec{
+		PostgresAddonService: services.PostgresAddonService,
+		AuthzClient:          authzClient,
+		Logger:               logger,
+	})
+
+	objectStoreHandler := handlers.NewObjectStoreHandler(handlers.ObjectStoreHandlerSpec{
+		ObjectStoreService: services.ObjectStoreService,
+		AuthzClient:        authzClient,
 	})
 
 	authenticationMiddleware := auth.NewAuthMiddleware(services.UserService)
@@ -164,6 +181,35 @@ func (s apiServer) routes() *mux.Router {
 	stackRouter.HandleFunc("/{id}/resources/{resource_name}/builds", imageBuildHandler.ListByResourceName).Methods(http.MethodGet)
 	stackRouter.HandleFunc("/{id}/builds", imageBuildHandler.ListByStackID).Methods(http.MethodGet)
 	stackRouter.HandleFunc("/{id}/builds/{build_id}", imageBuildHandler.GetByID).Methods(http.MethodGet)
+
+	// PostgreSQL addon routes
+	postgresAddonRouter := organizationsRouter.PathPrefix("/{org_id}/addons/postgres").Subrouter()
+	postgresAddonRouter.Use(authenticationMiddleware.AuthenticateUser)
+	postgresAddonRouter.HandleFunc("", postgresAddonHandler.Create).Methods(http.MethodPost)
+	postgresAddonRouter.HandleFunc("", postgresAddonHandler.List).Methods(http.MethodGet)
+	postgresAddonRouter.HandleFunc("/{id}", postgresAddonHandler.GetByID).Methods(http.MethodGet)
+	postgresAddonRouter.HandleFunc("/{id}", postgresAddonHandler.Update).Methods(http.MethodPut)
+	postgresAddonRouter.HandleFunc("/{id}", postgresAddonHandler.Delete).Methods(http.MethodDelete)
+
+	// PostgreSQL addon actions
+	postgresAddonRouter.HandleFunc("/{id}/actions/backup", postgresAddonHandler.Backup).Methods(http.MethodPost)
+	postgresAddonRouter.HandleFunc("/{id}/actions/fence", postgresAddonHandler.Fence).Methods(http.MethodPost)
+	postgresAddonRouter.HandleFunc("/{id}/actions/hibernate", postgresAddonHandler.Hibernate).Methods(http.MethodPost)
+
+	// PostgreSQL addon backups
+	postgresAddonRouter.HandleFunc("/{id}/backups", postgresAddonHandler.ListBackups).Methods(http.MethodGet)
+
+	// PostgreSQL addon credentials (JIT)
+	postgresAddonRouter.HandleFunc("/{id}/credentials/{database}", postgresAddonHandler.GetCredentials).Methods(http.MethodGet)
+
+	// Object store routes
+	objectStoreRouter := organizationsRouter.PathPrefix("/{org_id}/object-stores").Subrouter()
+	objectStoreRouter.Use(authenticationMiddleware.AuthenticateUser)
+	objectStoreRouter.HandleFunc("", objectStoreHandler.Create).Methods(http.MethodPost)
+	objectStoreRouter.HandleFunc("", objectStoreHandler.List).Methods(http.MethodGet)
+	objectStoreRouter.HandleFunc("/{id}", objectStoreHandler.GetByID).Methods(http.MethodGet)
+	objectStoreRouter.HandleFunc("/{id}", objectStoreHandler.Update).Methods(http.MethodPut)
+	objectStoreRouter.HandleFunc("/{id}", objectStoreHandler.Delete).Methods(http.MethodDelete)
 
 	return mainRouter
 }

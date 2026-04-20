@@ -46,7 +46,7 @@ func SendUnauthorized(w http.ResponseWriter, r *http.Request, message string) {
 	w.Header().Set("Content-Type", "application/json")
 
 	// Prepare the body:
-	apiError := errors.Unauthorized(message)
+	apiError := errors.Unauthorized("%s", message)
 	data, err := json.Marshal(apiError)
 	if err != nil {
 		SendPanic(w, r)

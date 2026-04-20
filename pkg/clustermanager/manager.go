@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	cnpgv1 "github.com/cloudnative-pg/cloudnative-pg/api/v1"
+	barmancloudv1 "github.com/cloudnative-pg/plugin-barman-cloud/api/v1"
 	"github.com/openshift-online/ocm-sdk-go/leadership"
 	suture "github.com/thejerf/suture/v4"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	addonsv1alpha1 "stackdome.io/cluster-agent/api/addons/v1alpha1"
 	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 	registryv1alpha1 "stackdome.io/cluster-agent/api/registry/v1alpha1"
@@ -311,6 +314,18 @@ func createScheme() (*runtime.Scheme, error) {
 
 	if err := registryv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("failed to add registryv1alpha1 scheme: %w", err)
+	}
+
+	if err := addonsv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add addonsv1alpha1 scheme: %w", err)
+	}
+
+	if err := cnpgv1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add cnpgv1 scheme: %w", err)
+	}
+
+	if err := barmancloudv1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add barmancloudv1 scheme: %w", err)
 	}
 
 	return scheme, nil

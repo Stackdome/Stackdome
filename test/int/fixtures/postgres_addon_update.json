@@ -1,0 +1,42 @@
+{
+  "name": "test-postgres-minimal",
+  "spec": {
+    "version": {
+      "major": 16
+    },
+    "instances": {
+      "count": 3
+    },
+    "storage": {
+      "size": "5Gi",
+      "storage_class": "standard"
+    },
+    "resources": {
+      "cpu": {
+        "request": "500m",
+        "limit": "2"
+      },
+      "memory": {
+        "request": "1Gi",
+        "limit": "4Gi"
+      }
+    },
+    "databases": [
+      {
+        "name": "app",
+        "extensions": []
+      },
+      {
+        "name": "analytics",
+        "extensions": ["vector"]
+      }
+    ],
+    "configuration": {
+      "enable_superuser_access": true,
+      "parameters": {
+        "max_connections": "200",
+        "shared_buffers": "256MB"
+      }
+    }
+  }
+}

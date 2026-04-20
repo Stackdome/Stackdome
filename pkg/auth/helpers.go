@@ -8,7 +8,7 @@ import (
 )
 
 func handleError(w http.ResponseWriter, code errors.ServiceErrorCode, reason string) {
-	err := errors.New(code, reason)
+	err := errors.New(code, "%s", reason)
 
 	writeJSONResponse(w, err.HttpCode, err.AsOpenapiError())
 }

@@ -2,6 +2,7 @@ package imagebuild
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers"
 	apperrors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -94,18 +95,21 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	dbResourceBuild, err := r.DBImageBuildService.GetByID(ctx, imageBuild.Name)
-	if err != nil {
-		if err.Code == apperrors.ErrorNotFound {
+	dbResourceBuild, serr := r.DBImageBuildService.GetByID(ctx, imageBuild.Name)
+	if serr != nil {
+		if serr.Code == apperrors.ErrorNotFound {
 			r.Logger.Infof("imageBuild %s not found in DB, creating a new build", imageBuild.Name)
 			return ctrl.Result{Requeue: true}, r.createImageBuildInDB(ctx, imageBuild, dbStackResouce)
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed to get image build from db: %v", serr)
 	}
 
 	if dbResourceBuild.Status == nil || dbResourceBuild.Status.LastObservedStatusHash != imageBuild.Status.StatusHash {
 		dbResourceBuild.Status = mapClusterStatusToServerStatus(imageBuild.Status)
-		return ctrl.Result{}, r.DBImageBuildService.UpdateStatus(ctx, dbResourceBuild.ID, dbResourceBuild.Status)
+		if serr := r.DBImageBuildService.UpdateStatus(ctx, dbResourceBuild.ID, dbResourceBuild.Status); serr != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update image build status: %v", serr)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	return ctrl.Result{}, nil

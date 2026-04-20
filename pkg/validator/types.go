@@ -19,3 +19,13 @@ type StackValidator interface {
 	ValidateForCreate(ctx context.Context, spec *models.Stack) *errors.ServiceError
 	ValidateForUpdate(ctx context.Context, existing *models.Stack, spec *models.Stack) *errors.ServiceError
 }
+
+type PostgresAddonValidator interface {
+	ValidateForCreate(ctx context.Context, spec *models.PostgresAddon) *errors.ServiceError
+	ValidateForUpdate(ctx context.Context, existing *models.PostgresAddon, spec *models.PostgresAddon) *errors.ServiceError
+}
+
+type ObjectStoreValidator interface {
+	ValidateForCreate(ctx context.Context, spec *models.ObjectStore) *errors.ServiceError
+	ValidateForUpdate(ctx context.Context, existing *models.ObjectStore, spec *models.ObjectStore) *errors.ServiceError
+}

@@ -2,8 +2,8 @@ package environment
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/config"
@@ -12,8 +12,11 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers/clusterimageregistry"
 	imagebuildcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/imagebuild"
+	postgresaddoncontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/postgres_addon"
+	postgresbackupcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/postgres_backup"
 	stackcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stack"
 	stackresourcecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stackresource"
+	postgresaddonworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/postgresaddon"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/stack"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
 
@@ -32,14 +35,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/openshift-online/ocm-sdk-go/leadership"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-	certutil "k8s.io/client-go/util/cert"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
-	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
-	usersv1alpha1 "stackdome.io/cluster-agent/api/users/v1alpha1"
 )
 
 type developmentEnvironment struct {
@@ -98,12 +93,14 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 	})
 
 	stackWorker := stack.NewStackWorker(stack.StackWorkerSpec{
-		StackService:     d.Services.StackService,
-		SecretService:    d.Services.SecretService,
-		ClusterManager:   d.ClusterManager,
-		VolumeService:    d.Services.VolumeService,
-		NamespaceService: d.Services.NamespaceService,
-		Env:              d.Env.Name,
+		StackService:         d.Services.StackService,
+		SecretService:        d.Services.SecretService,
+		ClusterManager:       d.ClusterManager,
+		VolumeService:        d.Services.VolumeService,
+		NamespaceService:     d.Services.NamespaceService,
+		PostgresAddonService: d.Services.PostgresAddonService,
+		AddonUsageService:    d.Services.AddonUsageService,
+		Env:                  d.Env.Name,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			SecretService: d.Services.SecretService,
 		}),
@@ -113,6 +110,19 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 	})
 
 	d.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
+
+	pgAddonWorker := postgresaddonworker.NewPostgresAddonWorker(postgresaddonworker.PostgresAddonWorkerSpec{
+		PostgresAddonService: d.Services.PostgresAddonService,
+		ObjectStoreService:   d.Services.ObjectStoreService,
+		NamespaceService:     d.Services.NamespaceService,
+		SecretService:        d.Services.SecretService,
+		AddonUsageStore:      d.Services.AddonUsageService,
+		ClusterManager:       d.ClusterManager,
+		CRBuilder:            builders.NewPostgresClusterBuilder(),
+		Env:                  d.Env.Name,
+	})
+	d.WorkerManager.RegisterWorker(pgAddonWorker, &models.PostgresAddon{})
+
 	return nil
 }
 
@@ -204,20 +214,36 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 				Logger:                 applogger.NewLoggerWithPrefix(ctx, "cluster-image-registry-controller").SetLevel(d.Logger.GetLevel()),
 				DBImageRegistryService: d.Services.ClusterImageRegistryService,
 			}),
+			postgresaddoncontroller.NewPostgresAddonReconciler(postgresaddoncontroller.PostgresAddonReconcilerSpec{
+				Log:                  applogger.NewLoggerWithPrefix(ctx, "postgres-addon-controller").SetLevel(d.Logger.GetLevel()),
+				PostgresAddonService: d.Services.PostgresAddonService,
+				Env:                  d.Env.Name,
+			}),
+			postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
+				Log:                   applogger.NewLoggerWithPrefix(ctx, "postgres-backup-controller").SetLevel(d.Logger.GetLevel()),
+				PostgresBackupService: d.Services.PostgresBackupService,
+			}),
 		},
 	})
 	d.Services.ClusterService.InjectClusterManager(d.ClusterManager)
+	d.Services.PostgresAddonService.InjectClusterManager(d.ClusterManager)
 	return nil
 }
 
 func (d *developmentEnvironment) initializeResourceAccessPolicyManager(ctx context.Context) error {
 	d.Logger.Debugf("Initializing resource access policy manager")
 	debugModeEnabled := d.Logger.GetLevel() == logrus.DebugLevel
+	rootdir, err := findGoModDir()
+	if err != nil {
+		return fmt.Errorf("failed to find root directory for policy file: %w", err)
+	}
+	policyFilePath := filepath.Join(rootdir, "pkg/resourceaccess/casbin_model.conf")
 	resourceAccessPolicyMgr, err := resourceaccess.NewResourceAccessPolicyManager(
 		resourceaccess.CasbinResourceAccessPolicyManagerConfig{
 			DBConnectionString:     d.Config.Database.ConnectionString(),
 			EnableDebugLog:         debugModeEnabled,
 			PolicyAutoLoadInterval: time.Minute,
+			PolicyFilePath:         policyFilePath,
 		},
 	)
 	if err != nil {
@@ -333,11 +359,39 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:               d.Logger,
 	})
 
+	objectStoreService := services.NewObjectStoreService(services.ObjectStoreServiceSpec{
+		SessionFactory: d.DBSession,
+		SecretService:  secretService,
+		ClusterManager: d.ClusterManager,
+		Logger:         d.Logger,
+	})
+
+	postgresBackupService := services.NewPostgresBackupService(services.PostgresBackupServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         d.Logger,
+	})
+
+	addonUsageService := services.NewAddonUsageService(services.AddonUsageServiceSpec{
+		SessionFactory: d.DBSession,
+	})
+
+	postgresAddonService := services.NewPostgresAddonService(services.PostgresAddonServiceSpec{
+		SessionFactory:        d.DBSession,
+		NamespaceService:      namespaceService,
+		ClusterService:        clusterService,
+		SecretService:         secretService,
+		PostgresBackupService: postgresBackupService,
+		ObjectStoreService:    objectStoreService,
+		ClusterManager:        d.ClusterManager,
+		Logger:                d.Logger,
+	})
+
 	d.Services = Services{
 		UserService:                 userService,
 		WorkspaceUserService:        workspaceUserService,
 		OrganisationService:         organisationService,
 		ClusterService:              clusterService,
+		StackStorageService:         nil, // Not implemented yet
 		VolumeService:               volumeService,
 		StackService:                stackService,
 		StackResourceService:        stackResourceService,
@@ -350,6 +404,10 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		MetricsService:              metricsService,
 		EncryptionService:           encryptionService,
 		SecretService:               secretService,
+		ObjectStoreService:          objectStoreService,
+		PostgresAddonService:        postgresAddonService,
+		PostgresBackupService:       postgresBackupService,
+		AddonUsageService:           addonUsageService,
 	}
 
 	return nil
@@ -421,6 +479,7 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 	d.Services.MetricsService.InjectClusterResourceServiceDeps(deps)
 	d.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	d.Services.StackService.InjectBackgroundJobEnqueuer(dep)
+	d.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
 	return nil
 }
 
@@ -512,49 +571,32 @@ func (d *developmentEnvironment) startManagers(ctx context.Context) error {
 	return d.WorkerManager.Start(ctx)
 }
 
-func initializeClusterClient(cfg *config.ClusterConfig) (client.Client, error) {
-	cadata, err := base64.StdEncoding.DecodeString(cfg.ClusterCAData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode cluster CA data: %w", err)
-	}
-	token, err := base64.StdEncoding.DecodeString(cfg.Token)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode cluster token: %w", err)
+func (d *developmentEnvironment) Shutdown(ctx context.Context) error {
+	d.Logger.Infof("Shutting down development environment")
+
+	// Stop worker manager first
+	if d.WorkerManager != nil {
+		d.Logger.Debugf("Stopping worker manager")
+		d.WorkerManager.Stop(false) // Don't drain the queue
 	}
 
-	_, err = certutil.NewPoolFromBytes(cadata)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cert pool: %w", err)
+	// Stop cluster manager
+	if d.ClusterManager != nil {
+		d.Logger.Debugf("Stopping cluster manager")
+		if err := d.ClusterManager.Stop(ctx); err != nil {
+			d.Logger.Errorf("Failed to stop cluster manager: %v", err)
+		}
 	}
 
-	restConfig := &rest.Config{
-		Host:        cfg.ClusterURL,
-		BearerToken: string(token),
-		TLSClientConfig: rest.TLSClientConfig{
-			CAData: cadata,
-		},
-	}
-	scheme := runtime.NewScheme()
-	if err := clientgoscheme.AddToScheme(scheme); err != nil {
-		return nil, err
+	// Close database connections
+	if d.DBSession != nil {
+		d.Logger.Debugf("Closing database connections")
+		if err := d.DBSession.Close(); err != nil {
+			d.Logger.Errorf("Failed to close database connections: %v", err)
+			return err
+		}
 	}
 
-	if err := corev1alpha1.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-
-	if err := buildsv1alpha1.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-
-	if err := usersv1alpha1.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	clientset, err := client.New(restConfig, client.Options{
-		Scheme: scheme,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return clientset, nil
+	d.Logger.Infof("Development environment shutdown completed")
+	return nil
 }

@@ -35,6 +35,12 @@ const (
 
 	// Secret
 	Secret AuthorizableResource = "Secret"
+
+	// PostgresAddon
+	PostgresAddon AuthorizableResource = "PostgresAddon"
+
+	// ObjectStore
+	ObjectStore AuthorizableResource = "ObjectStore"
 )
 
 type AuthorizationRequest struct {

@@ -86,6 +86,16 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsIdPut**](docs/DefaultApi.md#apiv1organizationsidput) | **Put** /api/v1/organizations/{id} | Update an organization
 *DefaultApi* | [**ApiV1OrganizationsIdRemoteSyncServersGet**](docs/DefaultApi.md#apiv1organizationsidremotesyncserversget) | **Get** /api/v1/organizations/{id}/remote-sync-servers | List all RemoteSyncServer objects for an organization
 *DefaultApi* | [**ApiV1OrganizationsIdRemoteSyncServersPost**](docs/DefaultApi.md#apiv1organizationsidremotesyncserverspost) | **Post** /api/v1/organizations/{id}/remote-sync-servers | Create a new remote sync server
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresGet**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresget) | **Get** /api/v1/organizations/{org_id}/addons/postgres | List all PostgresAddons for under an organization
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidactionsbackuppost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/backup | Trigger an immediate backup
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidactionsfencepost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/fence | Fence or unfence the PostgreSQL cluster
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidactionshibernatepost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/hibernate | Hibernate or wake the PostgreSQL cluster
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidbackupsget) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id}/backups | List backups for a PostgresAddon
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidcredentialsdatabaseget) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id}/credentials/{database} | Get JIT credentials for a PostgresAddon database
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresiddelete) | **Delete** /api/v1/organizations/{org_id}/addons/postgres/{id} | Delete a PostgresAddon
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdGet**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidget) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id} | Get a specific PostgresAddon
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdPut**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidput) | **Put** /api/v1/organizations/{org_id}/addons/postgres/{id} | Update a PostgresAddon
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresPost**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgrespost) | **Post** /api/v1/organizations/{org_id}/addons/postgres | Create a new PostgresAddon
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesget) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries | List all image registries for a cluster
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesiddelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Delete an image registry object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesidget) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Get a specific image registry object
@@ -93,6 +103,11 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidclustersiddelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{id} | Delete a cluster object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersidget) | **Get** /api/v1/organizations/{org_id}/clusters/{id} | Get a specific cluster object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdPut**](docs/DefaultApi.md#apiv1organizationsorgidclustersidput) | **Put** /api/v1/organizations/{org_id}/clusters/{id} | Update a cluster object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresGet**](docs/DefaultApi.md#apiv1organizationsorgidobjectstoresget) | **Get** /api/v1/organizations/{org_id}/object-stores | List all ObjectStores for an organization
+*DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidobjectstoresiddelete) | **Delete** /api/v1/organizations/{org_id}/object-stores/{id} | Delete an ObjectStore
+*DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresIdGet**](docs/DefaultApi.md#apiv1organizationsorgidobjectstoresidget) | **Get** /api/v1/organizations/{org_id}/object-stores/{id} | Get a specific ObjectStore
+*DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresIdPut**](docs/DefaultApi.md#apiv1organizationsorgidobjectstoresidput) | **Put** /api/v1/organizations/{org_id}/object-stores/{id} | Update an ObjectStore
+*DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresPost**](docs/DefaultApi.md#apiv1organizationsorgidobjectstorespost) | **Post** /api/v1/organizations/{org_id}/object-stores | Add a new ObjectStore for backup storage
 *DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserverscurrentget) | **Get** /api/v1/organizations/{org_id}/remote-sync-servers/current | Get RemoteSyncServer for the current user
 *DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversiddelete) | **Delete** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Delete a RemoteSyncServer object
 *DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversidget) | **Get** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Get a specific RemoteSyncServer object
@@ -137,9 +152,17 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [AddonEnvSource](docs/AddonEnvSource.md)
  - [Annotation](docs/Annotation.md)
  - [ApiV1OrganizationsIdRemoteSyncServersGet200Response](docs/ApiV1OrganizationsIdRemoteSyncServersGet200Response.md)
+ - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response.md)
+ - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest.md)
+ - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost200Response](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost200Response.md)
+ - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest.md)
+ - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost200Response](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost200Response.md)
+ - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest.md)
  - [ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response](docs/ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response.md)
+ - [AzureCredentials](docs/AzureCredentials.md)
  - [BuildArtifact](docs/BuildArtifact.md)
  - [BuildArtifactSyncInfo](docs/BuildArtifactSyncInfo.md)
  - [BuildSourceContext](docs/BuildSourceContext.md)
@@ -162,6 +185,7 @@ Class | Method | HTTP request | Description
  - [ErrorAllOf](docs/ErrorAllOf.md)
  - [ErrorList](docs/ErrorList.md)
  - [ExecutionConfig](docs/ExecutionConfig.md)
+ - [GCSCredentials](docs/GCSCredentials.md)
  - [GitRepoRevision](docs/GitRepoRevision.md)
  - [GitRepoRevisionBranch](docs/GitRepoRevisionBranch.md)
  - [GitRepoSource](docs/GitRepoSource.md)
@@ -178,8 +202,40 @@ Class | Method | HTTP request | Description
  - [LoginRequest](docs/LoginRequest.md)
  - [LoginResponse](docs/LoginResponse.md)
  - [ObjectReference](docs/ObjectReference.md)
+ - [ObjectStore](docs/ObjectStore.md)
+ - [ObjectStoreConfiguration](docs/ObjectStoreConfiguration.md)
+ - [ObjectStoreList](docs/ObjectStoreList.md)
+ - [ObjectStoreSpec](docs/ObjectStoreSpec.md)
+ - [ObjectStoreStatus](docs/ObjectStoreStatus.md)
  - [Organisation](docs/Organisation.md)
  - [Port](docs/Port.md)
+ - [PostgresAddon](docs/PostgresAddon.md)
+ - [PostgresAddonEnvSource](docs/PostgresAddonEnvSource.md)
+ - [PostgresAddonList](docs/PostgresAddonList.md)
+ - [PostgresAddonSpec](docs/PostgresAddonSpec.md)
+ - [PostgresAddonStatus](docs/PostgresAddonStatus.md)
+ - [PostgresBackup](docs/PostgresBackup.md)
+ - [PostgresBackupConfig](docs/PostgresBackupConfig.md)
+ - [PostgresBackupList](docs/PostgresBackupList.md)
+ - [PostgresClusterInfo](docs/PostgresClusterInfo.md)
+ - [PostgresConfiguration](docs/PostgresConfiguration.md)
+ - [PostgresConnectionInfo](docs/PostgresConnectionInfo.md)
+ - [PostgresConnectionInfoCredentials](docs/PostgresConnectionInfoCredentials.md)
+ - [PostgresConnectionInfoDatabasesInner](docs/PostgresConnectionInfoDatabasesInner.md)
+ - [PostgresCredentials](docs/PostgresCredentials.md)
+ - [PostgresDatabase](docs/PostgresDatabase.md)
+ - [PostgresInitialization](docs/PostgresInitialization.md)
+ - [PostgresInitializationImportFromExternal](docs/PostgresInitializationImportFromExternal.md)
+ - [PostgresInitializationRestoreFromBackup](docs/PostgresInitializationRestoreFromBackup.md)
+ - [PostgresInitializationRestoreFromObjectStore](docs/PostgresInitializationRestoreFromObjectStore.md)
+ - [PostgresInstances](docs/PostgresInstances.md)
+ - [PostgresInstancesPlacement](docs/PostgresInstancesPlacement.md)
+ - [PostgresInstancesPlacementTolerationsInner](docs/PostgresInstancesPlacementTolerationsInner.md)
+ - [PostgresResources](docs/PostgresResources.md)
+ - [PostgresResourcesCpu](docs/PostgresResourcesCpu.md)
+ - [PostgresResourcesMemory](docs/PostgresResourcesMemory.md)
+ - [PostgresStorage](docs/PostgresStorage.md)
+ - [PostgresVersion](docs/PostgresVersion.md)
  - [RemoteSource](docs/RemoteSource.md)
  - [RemoteSyncServer](docs/RemoteSyncServer.md)
  - [RemoteSyncServerList](docs/RemoteSyncServerList.md)
@@ -188,11 +244,13 @@ Class | Method | HTTP request | Description
  - [RemoteSyncServerStatus](docs/RemoteSyncServerStatus.md)
  - [ResourceMetrics](docs/ResourceMetrics.md)
  - [ResourceMetricsNodeCapacitiesInner](docs/ResourceMetricsNodeCapacitiesInner.md)
+ - [S3Credentials](docs/S3Credentials.md)
  - [SSHConfig](docs/SSHConfig.md)
  - [Secret](docs/Secret.md)
  - [SecretData](docs/SecretData.md)
  - [SecretList](docs/SecretList.md)
  - [SecretRef](docs/SecretRef.md)
+ - [SecretReference](docs/SecretReference.md)
  - [SecretType](docs/SecretType.md)
  - [Stack](docs/Stack.md)
  - [StackList](docs/StackList.md)
@@ -215,6 +273,7 @@ Class | Method | HTTP request | Description
  - [VolumeSourceTypes](docs/VolumeSourceTypes.md)
  - [VolumeSpec](docs/VolumeSpec.md)
  - [VolumeStatus](docs/VolumeStatus.md)
+ - [WALConfiguration](docs/WALConfiguration.md)
  - [WorkspaceUser](docs/WorkspaceUser.md)
  - [WorkspaceUserState](docs/WorkspaceUserState.md)
  - [WorkspaceUserStatus](docs/WorkspaceUserStatus.md)

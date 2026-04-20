@@ -45,6 +45,7 @@ func NewWorkerManager(spec WorkerManagerSpec) *serviceWorkerManager {
 	workerMgr := &serviceWorkerManager{
 		environment:       spec.Environment,
 		registeredWorkers: make(map[reflect.Type]workerlib.Worker),
+		stopChan:          make(chan struct{}),
 	}
 	return workerMgr
 }
@@ -72,7 +73,7 @@ func (s *serviceWorkerManager) Start(ctx context.Context) error {
 
 func (s *serviceWorkerManager) Stop(drain bool) {
 	close(s.stopChan)
-	var wg *sync.WaitGroup
+	var wg sync.WaitGroup
 	wg.Add(len(s.registeredWorkers))
 
 	// When the workqueue is shutdown, the workers exit their

@@ -125,7 +125,7 @@ func (e *ServiceError) AsError() error {
 	if e == nil {
 		return nil
 	}
-	return fmt.Errorf(e.Error())
+	return fmt.Errorf("%s", e.Error())
 }
 
 func (e *ServiceError) WithPrefix(format string, a ...interface{}) *ServiceError {
