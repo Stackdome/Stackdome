@@ -112,6 +112,10 @@ func (s *stackDomainService) DomainToUseForStack(ctx context.Context, stack *mod
 }
 
 func (s *stackDomainService) PopulateAndSaveExposedPortDomainsForStackWithTx(ctx context.Context, stack *models.Stack) *errors.ServiceError {
+	if !stack.HasExposedPorts() {
+		return nil
+	}
+
 	// Get the domain to use for the stack
 	domainToUse, err := s.DomainToUseForStack(ctx, stack)
 	if err != nil {
