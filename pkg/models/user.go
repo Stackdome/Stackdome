@@ -55,6 +55,24 @@ func (u *User) ClusterAccessRules() []rbacv1.PolicyRule {
 				Verbs:     []string{"get"},
 			},
 		}
+	case OrganisationAdminRole:
+		return []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods", "pods/log"},
+				Verbs:     []string{"get", "list"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods/exec", "pods/portforward"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"services"},
+				Verbs:     []string{"get"},
+			},
+		}
 	case PlatformAdminRole:
 		return []rbacv1.PolicyRule{
 			{
@@ -74,6 +92,6 @@ func (u *User) ClusterAccessRules() []rbacv1.PolicyRule {
 			},
 		}
 	default:
-		panic("not implemented")
+		return []rbacv1.PolicyRule{}
 	}
 }
