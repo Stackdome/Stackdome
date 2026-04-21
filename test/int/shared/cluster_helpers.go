@@ -7,11 +7,14 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	addonsv1alpha1 "stackdome.io/cluster-agent/api/addons/v1alpha1"
+	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 
 	// postgres driver for connectivity check
 	_ "github.com/lib/pq"
@@ -201,4 +204,109 @@ func WaitForBackupPhase(apiClient *openapi.APIClient, orgID, addonID, expectedPh
 		}
 		g.Expect(found).To(BeTrue(), "no backup in phase %s", expectedPhase)
 	}, timeout, 10*time.Second).Should(Succeed())
+}
+
+// Stack cluster helpers
+
+func WaitForStackCRExists(ctx context.Context, clusterClient client.Client, name, namespace string, timeout time.Duration) *corev1alpha1.Stack {
+	var cr corev1alpha1.Stack
+	Eventually(func(g Gomega) {
+		err := clusterClient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &cr)
+		g.Expect(err).NotTo(HaveOccurred(), "Stack CR should exist")
+	}, timeout, 2*time.Second).Should(Succeed())
+	return &cr
+}
+
+func WaitForStackReady(apiClient *openapi.APIClient, orgID, stackID string, timeout time.Duration) *openapi.Stack {
+	var stack *openapi.Stack
+	Eventually(func(g Gomega) {
+		ctx := context.Background()
+		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdGet(ctx, orgID, stackID).Execute()
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(httpResp.StatusCode).To(Equal(200))
+
+		status, ok := resp.GetStatusOk()
+		g.Expect(ok).To(BeTrue(), "stack should have status")
+
+		state, stateOk := status.GetStateOk()
+		g.Expect(stateOk).To(BeTrue(), "status should have state")
+		g.Expect(*state).To(Equal("Ready"), "stack should be Ready, got: %s", *state)
+		stack = resp
+	}, timeout, 5*time.Second).Should(Succeed())
+	return stack
+}
+
+func WaitForStackDeleted(apiClient *openapi.APIClient, orgID, stackID string, timeout time.Duration) {
+	Eventually(func(g Gomega) {
+		ctx := context.Background()
+		_, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdGet(ctx, orgID, stackID).Execute()
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(httpResp.StatusCode).To(Equal(404))
+	}, timeout, 2*time.Second).Should(Succeed())
+}
+
+func GetStackCR(ctx context.Context, clusterClient client.Client, name, namespace string) (*corev1alpha1.Stack, error) {
+	var cr corev1alpha1.Stack
+	if err := clusterClient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &cr); err != nil {
+		return nil, err
+	}
+	return &cr, nil
+}
+
+func VerifyStackCRLabel(cr *corev1alpha1.Stack, stackID string) {
+	labels := cr.GetLabels()
+	Expect(labels).To(HaveKeyWithValue(models.StackIDLabel, stackID), "Stack CR should have stack ID label")
+}
+
+func WaitForStackResourceCRAvailable(ctx context.Context, clusterClient client.Client, name, namespace string, timeout time.Duration) *corev1alpha1.StackResource {
+	var cr corev1alpha1.StackResource
+	Eventually(func(g Gomega) {
+		err := clusterClient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &cr)
+		g.Expect(err).NotTo(HaveOccurred(), "StackResource CR should exist")
+
+		available := false
+		for _, c := range cr.Status.Conditions {
+			if c.Type == string(corev1alpha1.StackResourceStatusAvailable) && c.Status == "True" {
+				available = true
+				break
+			}
+		}
+		g.Expect(available).To(BeTrue(), "StackResource should be Available")
+	}, timeout, 5*time.Second).Should(Succeed())
+	return &cr
+}
+
+func WaitForStackCRDeleted(ctx context.Context, clusterClient client.Client, name, namespace string, timeout time.Duration) {
+	Eventually(func(g Gomega) {
+		var cr corev1alpha1.Stack
+		err := clusterClient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &cr)
+		g.Expect(err).To(HaveOccurred(), "Stack CR should be deleted")
+	}, timeout, 2*time.Second).Should(Succeed())
+}
+
+func GetDeploymentForStackResource(ctx context.Context, clusterClient client.Client, namespace, name string) (*appsv1.Deployment, error) {
+	var deploy appsv1.Deployment
+	if err := clusterClient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &deploy); err != nil {
+		return nil, err
+	}
+	return &deploy, nil
+}
+
+func GetServiceForStackResource(ctx context.Context, clusterClient client.Client, namespace, name string) (*corev1.Service, error) {
+	var svc corev1.Service
+	if err := clusterClient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &svc); err != nil {
+		return nil, err
+	}
+	return &svc, nil
+}
+
+func GetContainerEnvVar(deploy *appsv1.Deployment, envName string) (string, bool) {
+	for _, container := range deploy.Spec.Template.Spec.Containers {
+		for _, env := range container.Env {
+			if env.Name == envName {
+				return env.Value, true
+			}
+		}
+	}
+	return "", false
 }

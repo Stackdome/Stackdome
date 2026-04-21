@@ -4,6 +4,46 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 )
 
+// Shared test image used across all stack fixtures
+const TestImage = "nginx:1.25-alpine"
+
+// InitContainer fixture values
+const (
+	InitImage   = "busybox:1.36"
+	InitCommand = "echo init-done"
+)
+
+// Multi-resource stack fixture values
+const (
+	MultiResourceBackendName  = "backend"
+	MultiResourceFrontendName = "frontend"
+	MultiResourceBackendPort  = 8080
+	MultiResourceFrontendPort = 80
+)
+
+// Env and ports stack fixture values
+const (
+	EnvPortsResourceName = "app"
+	EnvPortsAppEnvKey    = "APP_ENV"
+	EnvPortsAppEnvVal    = "test"
+	EnvPortsAppPortKey   = "APP_PORT"
+	EnvPortsAppPortVal   = "8080"
+	EnvPortsLogLevelKey  = "LOG_LEVEL"
+	EnvPortsLogLevelVal  = "debug"
+	EnvPortsPort1        = 8080
+	EnvPortsPort2        = 9090
+)
+
+// Postgres addon env mapping keys used in CreateStackWithPostgresAddon
+var PostgresEnvMapping = map[string]string{
+	"host":             "PG_HOST",
+	"port":             "PG_PORT",
+	"username":         "PG_USER",
+	"password":         "PG_PASSWORD",
+	"database":         "PG_DATABASE",
+	"connectionString": "DATABASE_URL",
+}
+
 // PostgreSQL addon factory functions using OpenAPI models
 func CreateMinimalPostgresAddon(name string) *openapi.PostgresAddon {
 	version := openapi.NewPostgresVersion(16)
@@ -219,4 +259,125 @@ func CreateObjectStoreWithRetention(name string, secretID string, retention stri
 	store := CreateObjectStoreWithS3(name, secretID)
 	store.Spec.SetRetentionPolicy(retention)
 	return store
+}
+
+// Stack factory functions using OpenAPI models
+
+func CreateSimpleStack(name string) *openapi.Stack {
+	resource := openapi.NewStackResource("web")
+	imageSpec := openapi.NewImageSpec("nginx:1.25-alpine")
+	resource.SetImageSpec(*imageSpec)
+	resource.SetPorts([]openapi.Port{
+		*openapi.NewPort(80, false),
+	})
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	return openapi.NewStack(name, *spec)
+}
+
+func CreateMultiResourceStack(name string) *openapi.Stack {
+	backend := openapi.NewStackResource(MultiResourceBackendName)
+	backendImage := openapi.NewImageSpec(TestImage)
+	backend.SetImageSpec(*backendImage)
+	backend.SetPorts([]openapi.Port{
+		*openapi.NewPort(MultiResourceBackendPort, false),
+	})
+	backendExec := openapi.NewExecutionConfig()
+	backendExec.SetEnvironmentVariables([]openapi.EnvVar{
+		*openapi.NewEnvVar("APP_ROLE", MultiResourceBackendName),
+	})
+	backend.SetExecutionConfig(*backendExec)
+
+	frontend := openapi.NewStackResource(MultiResourceFrontendName)
+	frontendImage := openapi.NewImageSpec(TestImage)
+	frontend.SetImageSpec(*frontendImage)
+	frontend.SetPorts([]openapi.Port{
+		*openapi.NewPort(MultiResourceFrontendPort, false),
+	})
+	frontendExec := openapi.NewExecutionConfig()
+	frontendExec.SetEnvironmentVariables([]openapi.EnvVar{
+		*openapi.NewEnvVar("BACKEND_URL", "{{ STACKDOME_BACKEND_INTERNAL }}"),
+	})
+	frontend.SetExecutionConfig(*frontendExec)
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{*backend, *frontend})
+	return openapi.NewStack(name, *spec)
+}
+
+func CreateStackWithDependencies(name string) *openapi.Stack {
+	resourceA := openapi.NewStackResource("database")
+	imageA := openapi.NewImageSpec("nginx:1.25-alpine")
+	resourceA.SetImageSpec(*imageA)
+	resourceA.SetPorts([]openapi.Port{
+		*openapi.NewPort(5432, false),
+	})
+
+	resourceB := openapi.NewStackResource("app")
+	imageB := openapi.NewImageSpec("nginx:1.25-alpine")
+	resourceB.SetImageSpec(*imageB)
+	resourceB.SetPorts([]openapi.Port{
+		*openapi.NewPort(8080, false),
+	})
+	resourceB.SetDependsOn([]string{"database"})
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{*resourceA, *resourceB})
+	return openapi.NewStack(name, *spec)
+}
+
+func CreateStackWithEnvAndPorts(name string) *openapi.Stack {
+	resource := openapi.NewStackResource(EnvPortsResourceName)
+	image := openapi.NewImageSpec(TestImage)
+	resource.SetImageSpec(*image)
+	resource.SetPorts([]openapi.Port{
+		*openapi.NewPort(EnvPortsPort1, false),
+		*openapi.NewPort(EnvPortsPort2, false),
+	})
+	exec := openapi.NewExecutionConfig()
+	exec.SetEnvironmentVariables([]openapi.EnvVar{
+		*openapi.NewEnvVar(EnvPortsAppEnvKey, EnvPortsAppEnvVal),
+		*openapi.NewEnvVar(EnvPortsAppPortKey, EnvPortsAppPortVal),
+		*openapi.NewEnvVar(EnvPortsLogLevelKey, EnvPortsLogLevelVal),
+	})
+	resource.SetExecutionConfig(*exec)
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	return openapi.NewStack(name, *spec)
+}
+
+func CreateStackWithInitContainer(name string) *openapi.Stack {
+	resource := openapi.NewStackResource("app")
+	image := openapi.NewImageSpec(TestImage)
+	resource.SetImageSpec(*image)
+	resource.SetPorts([]openapi.Port{
+		*openapi.NewPort(80, false),
+	})
+
+	initSpec := openapi.NewInitSpec()
+	initImage := openapi.NewImageSpec(InitImage)
+	initSpec.SetImageSpec(*initImage)
+	initSpec.Command = []string{"sh", "-c", InitCommand}
+	resource.SetInitSpec(*initSpec)
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	return openapi.NewStack(name, *spec)
+}
+
+func CreateStackWithPostgresAddon(name string, addonID string, database string) *openapi.Stack {
+	resource := openapi.NewStackResource("app")
+	image := openapi.NewImageSpec("nginx:1.25-alpine")
+	resource.SetImageSpec(*image)
+	resource.SetPorts([]openapi.Port{
+		*openapi.NewPort(8080, false),
+	})
+
+	pgEnvSource := openapi.NewPostgresAddonEnvSource(addonID, database, PostgresEnvMapping)
+	addonEnvSource := openapi.NewAddonEnvSource()
+	addonEnvSource.SetPostgres(*pgEnvSource)
+
+	exec := openapi.NewExecutionConfig()
+	exec.SetEnvFromAddons([]openapi.AddonEnvSource{*addonEnvSource})
+	resource.SetExecutionConfig(*exec)
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	return openapi.NewStack(name, *spec)
 }

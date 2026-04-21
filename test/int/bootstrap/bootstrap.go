@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/testutil"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
@@ -93,6 +94,12 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 		return fmt.Errorf("client bootstrap failed: %v", err)
 	}
 
+	// Create organisation domain for stack tests
+	logger.Info("Creating organisation domain for stack tests")
+	if err := createOrganisationDomain(ctx, dbManager, clientManager.GetOrgID()); err != nil {
+		return fmt.Errorf("failed to create organisation domain: %v", err)
+	}
+
 	// Set final client details
 	env.Client = clientManager.GetClient()
 	env.ClusterID = clientManager.GetClusterID()
@@ -171,6 +178,18 @@ func (env *Environment) Cleanup() {
 	}
 
 	env.logger.Info("Integration test cleanup completed")
+}
+
+func createOrganisationDomain(ctx context.Context, dbManager *DatabaseManager, orgID string) error {
+	session := dbManager.GetSessionFactory().New(ctx)
+	domain := &models.OrganisationDomain{
+		OrganisationID: orgID,
+		Domain:         "test.example.com",
+	}
+	if err := session.Create(domain).Error; err != nil {
+		return fmt.Errorf("failed to insert organisation domain: %w", err)
+	}
+	return nil
 }
 
 func deployMinIO(ctx context.Context, k8sClient client.Client) error {
