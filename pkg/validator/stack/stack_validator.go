@@ -46,6 +46,9 @@ func NewStackValidator(
 }
 
 func (v *stackValidator) ValidateForCreate(ctx context.Context, spec *models.Stack) *errors.ServiceError {
+	if err := v.validateUniqueResourceNames(spec); err != nil {
+		return err
+	}
 	if err := v.validateImageSource(spec); err != nil {
 		return err
 	}
@@ -80,6 +83,9 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 		return errors.BadRequest("stack organisation cannot be updated")
 	}
 
+	if err := v.validateUniqueResourceNames(spec); err != nil {
+		return err
+	}
 	if err := v.validateImageSource(spec); err != nil {
 		return err
 	}
@@ -97,6 +103,17 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 	}
 	if err := v.validateBuildSourceVolumes(spec); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (v *stackValidator) validateUniqueResourceNames(spec *models.Stack) *errors.ServiceError {
+	seen := make(map[string]struct{}, len(spec.StackResources))
+	for _, r := range spec.StackResources {
+		if _, exists := seen[r.Name]; exists {
+			return errors.BadRequest("duplicate stack resource name '%s'", r.Name)
+		}
+		seen[r.Name] = struct{}{}
 	}
 	return nil
 }

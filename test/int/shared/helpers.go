@@ -266,3 +266,89 @@ func ExpectPostgresAddonEqual(expected, actual *openapi.PostgresAddon) {
 		}
 	}
 }
+
+// Stack CRUD operations for Ginkgo tests
+
+func CreateStack(client *openapi.APIClient, orgID string, stack *openapi.Stack) *openapi.Stack {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksPost(ctx, orgID).Stack(*stack).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to create stack")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack response")
+
+	return resp
+}
+
+func GetStack(client *openapi.APIClient, orgID, stackID string) *openapi.Stack {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksIdGet(ctx, orgID, stackID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to get stack")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack response")
+
+	return resp
+}
+
+func ListStacks(client *openapi.APIClient, orgID string) *openapi.StackList {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksGet(ctx, orgID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to list stacks")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack list response")
+
+	return resp
+}
+
+func ListStacksByCurrentUser(client *openapi.APIClient, orgID string) *openapi.StackList {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksCurrentGet(ctx, orgID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to list stacks for current user")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack list response")
+
+	return resp
+}
+
+func UpdateStack(client *openapi.APIClient, orgID, stackID string, stack *openapi.Stack) *openapi.Stack {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksIdPut(ctx, orgID, stackID).Stack(*stack).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to update stack")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack response")
+
+	return resp
+}
+
+func DeleteStack(client *openapi.APIClient, orgID, stackID string) *openapi.Stack {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksIdDelete(ctx, orgID, stackID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to delete stack")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusAccepted), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack response")
+
+	return resp
+}
+
+func CreateStackExpectError(client *openapi.APIClient, orgID string, stack *openapi.Stack, expectedStatus int) *openapi.GenericOpenAPIError {
+	ctx := context.Background()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksPost(ctx, orgID).Stack(*stack).Execute()
+	Expect(err).To(HaveOccurred(), "expected error")
+	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+
+	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
+
+	return apiErr
+}
+
+func UpdateStackExpectError(client *openapi.APIClient, orgID, stackID string, stack *openapi.Stack, expectedStatus int) *openapi.GenericOpenAPIError {
+	ctx := context.Background()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksIdPut(ctx, orgID, stackID).Stack(*stack).Execute()
+	Expect(err).To(HaveOccurred(), "expected error")
+	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+
+	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
+
+	return apiErr
+}
