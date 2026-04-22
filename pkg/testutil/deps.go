@@ -7,7 +7,7 @@ import (
 
 const (
 	// Cluster agent
-	clusterAgentVersion                = "v0.4.7-alpha"
+	clusterAgentVersion                = "v0.4.8-alpha"
 	clusterAgentRepo                   = "cluster-agent"
 	clusterAgentOwner                  = "ashishmax31"
 	clusterAgentImage                  = "quay.io/stackdome/cluster-agent/cluster-agent-manager"
