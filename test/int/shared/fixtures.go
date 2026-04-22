@@ -7,6 +7,9 @@ import (
 // Shared test image used across all stack fixtures
 const TestImage = "nginx:1.25-alpine"
 
+// Cluster registration fixture values
+const TestRegistryName = "test-registry"
+
 // InitContainer fixture values
 const (
 	InitImage   = "busybox:1.36"
@@ -43,6 +46,17 @@ var PostgresEnvMapping = map[string]string{
 	"database":         "PG_DATABASE",
 	"connectionString": "DATABASE_URL",
 }
+
+// Build from source fixture values
+const (
+	BuildSourceRepoURL      = "https://github.com/ashishmax31/test-private-repo.git"
+	BuildSourceBranch       = "main"
+	BuildSourceDockerfile   = "Dockerfile"
+	BuildSourceContextPath  = "."
+	BuildSourcePort         = 3000
+	BuildSourceResourceName = "todo-app"
+	BuildSourceSecretName   = "test-git-creds"
+)
 
 // PostgreSQL addon factory functions using OpenAPI models
 func CreateMinimalPostgresAddon(name string) *openapi.PostgresAddon {
@@ -196,6 +210,14 @@ func CreateGCSCredentialsSecret(name string) *openapi.Secret {
 		*openapi.NewSecretData("service_account_credentials", `{"type":"service_account","project_id":"test-project"}`),
 	}
 	return openapi.NewSecret(name, openapi.GENERIC, data)
+}
+
+// CreateGitCredentialsSecret creates a GitCredentials secret with a GitHub PAT token
+func CreateGitCredentialsSecret(name string, token string) *openapi.Secret {
+	data := []openapi.SecretData{
+		*openapi.NewSecretData("token", token),
+	}
+	return openapi.NewSecret(name, openapi.GIT_CREDENTIALS, data)
 }
 
 // ObjectStore factory functions
@@ -377,6 +399,50 @@ func CreateStackWithPostgresAddon(name string, addonID string, database string) 
 	exec := openapi.NewExecutionConfig()
 	exec.SetEnvFromAddons([]openapi.AddonEnvSource{*addonEnvSource})
 	resource.SetExecutionConfig(*exec)
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	return openapi.NewStack(name, *spec)
+}
+
+func CreateStackWithBuildSource(name string, repoURL string, secretID string) *openapi.Stack {
+	resource := openapi.NewStackResource(BuildSourceResourceName)
+
+	// Build source context — git repo with secret for private access
+	gitRepo := openapi.NewBuildSourceContextGitRepo(repoURL)
+	gitSecret := openapi.NewSecretRef(secretID)
+	gitRepo.SetGitSecret(*gitSecret)
+
+	sourceContext := openapi.NewBuildSourceContext()
+	sourceContext.SetGitRepo(*gitRepo)
+
+	// Source revision — branch
+	branchRevision := openapi.GitRepoRevisionBranch{
+		Name: openapi.PtrString(BuildSourceBranch),
+	}
+	gitRepoRevision := openapi.NewGitRepoRevision()
+	gitRepoRevision.SetBranch(branchRevision)
+
+	sourceRevision := openapi.NewBuildSourceRevision()
+	sourceRevision.SetGitRepoRevision(*gitRepoRevision)
+
+	// Image repository — use internal (in-cluster Zot) registry
+	imageRepo := openapi.NewImageRepository()
+	imageRepo.SetUseInternalRegistry(true)
+
+	// Assemble build spec
+	buildSpec := openapi.NewStackResourceBuildSpec(
+		*sourceContext,
+		BuildSourceContextPath,
+		BuildSourceDockerfile,
+		*sourceRevision,
+		*imageRepo,
+	)
+	resource.SetBuildSpec(*buildSpec)
+
+	// Port 3000 exposed to public
+	resource.SetPorts([]openapi.Port{
+		*openapi.NewPort(int32(BuildSourcePort), true),
+	})
 
 	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
 	return openapi.NewStack(name, *spec)
