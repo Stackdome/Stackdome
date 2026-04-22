@@ -103,6 +103,23 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			Expect(creds.GetPort()).To(BeNumerically(">", 0))
 			Expect(creds.GetUsername()).NotTo(BeEmpty())
 			Expect(creds.GetPassword()).NotTo(BeEmpty())
+
+			By("Port-forwarding to the primary postgres pod")
+			clientset, err := testEnv.Cluster.GetKubeClient()
+			Expect(err).NotTo(HaveOccurred())
+
+			cnpgName := shared.CnpgClusterName(addonName, int(addon.Spec.Version.Major))
+			localPort, stopChan := shared.PortForwardPostgres(ctx, testEnv.Cluster.GetRESTConfig(), clientset, namespace, cnpgName)
+			defer close(stopChan)
+
+			By("Connecting to postgres and running a query")
+			db := shared.ConnectToPostgres("127.0.0.1", localPort, creds.GetUsername(), creds.GetPassword(), "testdb", "disable")
+			defer db.Close()
+
+			var result int
+			err = db.QueryRowContext(ctx, "SELECT 1").Scan(&result)
+			Expect(err).NotTo(HaveOccurred(), "SELECT 1 query should succeed")
+			Expect(result).To(Equal(1))
 		})
 	})
 

@@ -1,0 +1,72 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: e2e-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Configure private module access
+        run: git config --global url."https://${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Download dependencies
+        run: go mod download
+        env:
+          GOPRIVATE: github.com/ashishmax31/*,stackdome.io/*
+
+      - name: Create .env for tests
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+        run: |
+          printf '%s\n' \
+            'LOG_LEVEL=info' \
+            'DB_HOST=localhost' \
+            'DB_PORT=5432' \
+            'DB_NAME=stackdome' \
+            'DB_USERNAME=postgres' \
+            'DB_PASSWORD=testpassword' \
+            "JWT_SECRET=${JWT_SECRET}" \
+            "ENCRYPTION_KEY=${ENCRYPTION_KEY}" \
+            > .env
+
+      - name: Run e2e tests
+        run: make test-integration
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-log
+          path: test/int/last-run.log
+          retention-days: 2

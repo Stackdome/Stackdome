@@ -2,6 +2,7 @@ package int
 
 import (
 	"context"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -359,6 +360,95 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["connectionString"])
 			Expect(dbURL).To(HavePrefix("postgresql://"), "DATABASE_URL should be a postgresql:// connection string")
 			Expect(dbURL).To(ContainSubstring("testdb"), "DATABASE_URL should reference the requested database")
+		})
+	})
+
+	Context("Build from Source with Private Repo", func() {
+		var githubToken string
+
+		BeforeAll(func() {
+			githubToken = os.Getenv("GITHUB_TOKEN")
+			if githubToken == "" {
+				Skip("GITHUB_TOKEN not set — skipping build-from-source tests")
+			}
+		})
+
+		It("should build from a private git repo and expose to public", func() {
+			testEnv := GetEnvironment()
+			clusterClient := testEnv.Cluster.GetClient()
+			ctx := context.Background()
+
+			By("Creating a GitCredentials secret with the GitHub token")
+			gitSecret := shared.CreateGitCredentialsSecret(shared.BuildSourceSecretName, githubToken)
+			createdSecret := shared.CreateSecret(client, orgID, gitSecret)
+			secretID := createdSecret.GetId()
+
+			DeferCleanup(func() {
+				shared.DeleteSecret(client, orgID, secretID)
+			})
+
+			By("Creating a stack with build source and exposed port")
+			stack := shared.CreateStackWithBuildSource("test-build-source", shared.BuildSourceRepoURL, secretID)
+			created := shared.CreateStack(client, orgID, stack)
+			stackID := created.GetId()
+			stackName := created.GetName()
+			namespace := created.GetNamespace()
+
+			Expect(stackID).NotTo(BeEmpty())
+			Expect(namespace).NotTo(BeEmpty())
+
+			DeferCleanup(func() {
+				shared.DeleteStack(client, orgID, stackID)
+				shared.WaitForStackDeleted(client, orgID, stackID, 2*time.Minute)
+			})
+
+			By("Waiting for the Stack CR to appear in the cluster")
+			cr := shared.WaitForStackCRExists(ctx, clusterClient, stackName, namespace, 2*time.Minute)
+
+			By("Verifying Stack CR has build spec with git repo URL")
+			Expect(cr.Spec.StackResources).To(HaveLen(1))
+			buildSpec := cr.Spec.StackResources[0].Spec.BuildSpec
+			Expect(buildSpec).NotTo(BeNil(), "Stack CR resource should have a BuildSpec")
+			Expect(buildSpec.SourceContext.Git).NotTo(BeNil(), "BuildSpec should have a Git source context")
+			Expect(buildSpec.SourceContext.Git.RepoUrl).To(Equal(shared.BuildSourceRepoURL))
+
+			By("Verifying git credentials secret exists in the cluster")
+			shared.VerifyGitCredentialsSecretExists(ctx, clusterClient, namespace, stackID)
+
+			By("Waiting for stack to become Ready")
+			shared.WaitForStackReady(client, orgID, stackID, 10*time.Minute)
+
+			By("Verifying StackResource CR is Available")
+			shared.WaitForStackResourceCRAvailable(ctx, clusterClient, shared.BuildSourceResourceName, namespace, 5*time.Minute)
+
+			By("Verifying Deployment uses a built image from in-cluster registry")
+			deploy, err := shared.GetDeploymentForStackResource(ctx, clusterClient, namespace, shared.BuildSourceResourceName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deploy.Spec.Template.Spec.Containers).To(HaveLen(1))
+			containerImage := deploy.Spec.Template.Spec.Containers[0].Image
+			Expect(containerImage).NotTo(BeEmpty(), "container image should be set")
+			Expect(containerImage).To(ContainSubstring(shared.TestRegistryName), "image should be from the in-cluster registry")
+
+			By("Verifying Service has port 3000")
+			svc, err := shared.GetServiceForStackResource(ctx, clusterClient, namespace, shared.BuildSourceResourceName)
+			Expect(err).NotTo(HaveOccurred())
+			portFound := false
+			for _, p := range svc.Spec.Ports {
+				if p.Port == int32(shared.BuildSourcePort) {
+					portFound = true
+					break
+				}
+			}
+			Expect(portFound).To(BeTrue(), "Service should have port %d", shared.BuildSourcePort)
+
+			By("Verifying Ingress was created for exposed port")
+			ingress, err := shared.GetIngressForStackResource(ctx, clusterClient, namespace, shared.BuildSourceResourceName)
+			Expect(err).NotTo(HaveOccurred(), "Ingress should exist for exposed port")
+			Expect(ingress.Spec.Rules).NotTo(BeEmpty(), "Ingress should have at least one rule")
+
+			By("Verifying image build record via API")
+			builds := shared.ListStackBuilds(client, orgID, stackID)
+			Expect(builds).NotTo(BeEmpty(), "should have at least one image build record")
 		})
 	})
 })

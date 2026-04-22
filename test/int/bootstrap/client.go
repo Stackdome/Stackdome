@@ -13,6 +13,7 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/testutil"
+	"github.com/ashishmax31/stackdome-api-server/test/int/shared"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -165,6 +166,12 @@ func (cm *ClientManager) registerCluster(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to register cluster via API: %w", err)
 	}
 
+	// Wait for the cluster image registry to reach Running state
+	cm.logger.Info("Waiting for cluster image registry to become Running")
+	if err := cm.waitForRegistryRunning(ctx, clusterID); err != nil {
+		return "", fmt.Errorf("failed waiting for registry: %w", err)
+	}
+
 	return clusterID, nil
 }
 
@@ -301,7 +308,7 @@ func (cm *ClientManager) registerClusterViaAPI(ctx context.Context, clusterURL, 
 		ClusterCaData:  caData,
 		ClusterSaToken: saToken,
 		ClusterImageRegistry: &openapi.ClusterImageRegistry{
-			Name: "test-registry",
+			Name: shared.TestRegistryName,
 			Spec: &openapi.ClusterImageRegistrySpec{
 				BackendStorageSize:  ptr.To("10Gi"),
 				BackendStorageClass: ptr.To("standard"),
@@ -350,4 +357,36 @@ func (cm *ClientManager) registerClusterViaAPI(ctx context.Context, clusterURL, 
 	}
 
 	return *responseCluster.Id, nil
+}
+
+func (cm *ClientManager) waitForRegistryRunning(ctx context.Context, clusterID string) error {
+	timeout := 5 * time.Minute
+	deadline := time.Now().Add(timeout)
+
+	for time.Now().Before(deadline) {
+		resp, httpResp, err := cm.client.DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet(ctx, cm.orgID, clusterID).Execute()
+		if err != nil {
+			cm.logger.Info("Registry list request failed, retrying", "error", err.Error())
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		if httpResp.StatusCode != http.StatusOK {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		for _, reg := range resp.GetItems() {
+			if reg.Status != nil && reg.Status.State != nil && *reg.Status.State == openapi.IMAGE_REGISTRY_RUNNING {
+				cm.logger.Info("Cluster image registry is Running", "name", reg.Name)
+				return nil
+			}
+			if reg.Status != nil {
+				cm.logger.Info("Registry not yet Running", "name", reg.Name, "state", string(reg.Status.GetState()))
+			}
+		}
+
+		time.Sleep(5 * time.Second)
+	}
+
+	return fmt.Errorf("timed out after %v waiting for cluster image registry to become Running", timeout)
 }

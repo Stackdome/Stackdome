@@ -91,6 +91,16 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	dbStackResouce, err := r.DBResourceService.GetByStackIDAndResourceName(ctx, stackID, imageBuild.Spec.ResourceName)
 	if err != nil {
+		if err.Code == apperrors.ErrorNotFound {
+			// stack might have gotten deleted. We log and ignore this event.
+			r.Logger.Infof(
+				"stack resource with name '%s' for stack '%s' not found, it might have been deleted. Ignoring image build '%s'",
+				imageBuild.Spec.ResourceName,
+				stackID,
+				client.ObjectKeyFromObject(imageBuild).String(),
+			)
+			return ctrl.Result{}, nil
+		}
 		r.Logger.Errorf("failed to get stack resource %s for build '%s'", imageBuild.Spec.ResourceName, client.ObjectKeyFromObject(imageBuild).String())
 		return ctrl.Result{}, err
 	}

@@ -4,11 +4,19 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/portforward"
+	"k8s.io/client-go/transport/spdy"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
@@ -148,7 +156,6 @@ func GetCredentials(apiClient *openapi.APIClient, orgID, addonID, database strin
 }
 
 // ConnectToPostgres opens a real PostgreSQL connection and runs SELECT 1 to verify connectivity.
-// TODO: Exercise this in an e2e test (see docs/plans/postgres-addon-e2e-tests-enhancement.md #4).
 func ConnectToPostgres(host string, port int32, username, password, dbName, sslMode string) *sql.DB {
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		host, port, username, password, dbName, sslMode)
@@ -160,6 +167,72 @@ func ConnectToPostgres(host string, port int32, username, password, dbName, sslM
 	Expect(err).NotTo(HaveOccurred(), "failed to ping postgres")
 
 	return db
+}
+
+// CnpgClusterName returns the CNPG Cluster CR name derived from addon name and PG major version.
+func CnpgClusterName(addonName string, majorVersion int) string {
+	return fmt.Sprintf("%s-%d", addonName, majorVersion)
+}
+
+// PortForwardPostgres sets up port-forwarding to the CNPG primary pod for a given addon.
+// cnpgClusterName should be built via CnpgClusterName(addonName, majorVersion).
+// Returns the local port and a stop channel. Close stopChan to tear down the forward.
+func PortForwardPostgres(ctx context.Context, restConfig *rest.Config, clientset *kubernetes.Clientset, namespace, cnpgClusterName string) (int32, chan struct{}) {
+	podName := findCNPGPrimaryPod(ctx, clientset, namespace, cnpgClusterName)
+
+	reqURL := clientset.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Namespace(namespace).
+		Name(podName).
+		SubResource("portforward").
+		URL()
+
+	transport, upgrader, err := spdy.RoundTripperFor(restConfig)
+	Expect(err).NotTo(HaveOccurred(), "failed to create SPDY round tripper")
+
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, reqURL)
+
+	stopChan := make(chan struct{})
+	readyChan := make(chan struct{})
+
+	// Port 0 lets the OS pick a free local port
+	fw, err := portforward.New(dialer, []string{"0:5432"}, stopChan, readyChan, nil, nil)
+	Expect(err).NotTo(HaveOccurred(), "failed to create port forwarder")
+
+	go func() {
+		if err := fw.ForwardPorts(); err != nil {
+			// Only log if we didn't stop intentionally
+			select {
+			case <-stopChan:
+			default:
+				fmt.Printf("port-forward error: %v\n", err)
+			}
+		}
+	}()
+
+	select {
+	case <-readyChan:
+	case <-time.After(30 * time.Second):
+		close(stopChan)
+		Expect(fmt.Errorf("port-forward ready timeout")).NotTo(HaveOccurred())
+	}
+
+	ports, err := fw.GetPorts()
+	Expect(err).NotTo(HaveOccurred(), "failed to get forwarded ports")
+	Expect(ports).NotTo(BeEmpty())
+
+	return int32(ports[0].Local), stopChan
+}
+
+func findCNPGPrimaryPod(ctx context.Context, clientset *kubernetes.Clientset, namespace, clusterName string) string {
+	// CNPG labels the primary pod with cnpg.io/cluster=<name> and role=primary
+	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("cnpg.io/cluster=%s,role=primary", clusterName),
+	})
+	Expect(err).NotTo(HaveOccurred(), "failed to list CNPG pods")
+	Expect(pods.Items).NotTo(BeEmpty(), "no primary pod found for cluster %s", clusterName)
+
+	return pods.Items[0].Name
 }
 
 // CRNameForAddon returns the expected PostgresCluster CR name for a given addon.
@@ -309,4 +382,40 @@ func GetContainerEnvVar(deploy *appsv1.Deployment, envName string) (string, bool
 		}
 	}
 	return "", false
+}
+
+func VerifyGitCredentialsSecretExists(ctx context.Context, clusterClient client.Client, namespace, stackID string) {
+	secretList := &corev1.SecretList{}
+	err := clusterClient.List(ctx, secretList,
+		client.InNamespace(namespace),
+		client.MatchingLabels{models.StackIDLabel: stackID},
+	)
+	Expect(err).NotTo(HaveOccurred(), "failed to list secrets in namespace")
+
+	found := false
+	for _, secret := range secretList.Items {
+		if strings.HasPrefix(secret.Name, "git-credentials-") {
+			found = true
+			break
+		}
+	}
+	Expect(found).To(BeTrue(), "expected a git-credentials secret with stack ID label in namespace %s", namespace)
+}
+
+func GetIngressForStackResource(ctx context.Context, clusterClient client.Client, namespace, resourceName string) (*networkingv1.Ingress, error) {
+	ingressName := fmt.Sprintf("%s-http-proxy", resourceName)
+	var ingress networkingv1.Ingress
+	if err := clusterClient.Get(ctx, client.ObjectKey{Name: ingressName, Namespace: namespace}, &ingress); err != nil {
+		return nil, err
+	}
+	return &ingress, nil
+}
+
+func ListStackBuilds(apiClient *openapi.APIClient, orgID, stackID string) []openapi.ImageBuild {
+	ctx := context.Background()
+	resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdBuildsGet(ctx, orgID, stackID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to list stack builds")
+	Expect(httpResp.StatusCode).To(Equal(200))
+	Expect(resp).NotTo(BeNil())
+	return resp.GetItems()
 }

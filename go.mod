@@ -204,4 +204,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2-0.20260122202528-d9cc6641c482 // indirect
 )
 
-replace stackdome.io/cluster-agent => github.com/ashishmax31/cluster-agent v0.4.7-alpha
+replace stackdome.io/cluster-agent => github.com/ashishmax31/cluster-agent v0.4.9-alpha
