@@ -2,6 +2,9 @@ package int
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"time"
 
@@ -445,6 +448,22 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			ingress, err := shared.GetIngressForStackResource(ctx, clusterClient, namespace, shared.BuildSourceResourceName)
 			Expect(err).NotTo(HaveOccurred(), "Ingress should exist for exposed port")
 			Expect(ingress.Spec.Rules).NotTo(BeEmpty(), "Ingress should have at least one rule")
+
+			By("Port-forwarding to the app and verifying HTTP response")
+			clientset, err := testEnv.Cluster.GetKubeClient()
+			Expect(err).NotTo(HaveOccurred())
+
+			localPort, stopChan := shared.PortForwardStackResource(ctx, testEnv.Cluster.GetRESTConfig(), clientset, namespace, shared.BuildSourceResourceName, shared.BuildSourcePort)
+			defer close(stopChan)
+
+			httpClient := &http.Client{Timeout: 10 * time.Second}
+			resp, err := httpClient.Get(fmt.Sprintf("http://127.0.0.1:%d/", localPort))
+			Expect(err).NotTo(HaveOccurred(), "HTTP GET to app should succeed")
+			defer resp.Body.Close()
+
+			body, err := io.ReadAll(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusOK), "expected 200, got %d; body: %s", resp.StatusCode, string(body))
 
 			By("Verifying image build record via API")
 			builds := shared.ListStackBuilds(client, orgID, stackID)

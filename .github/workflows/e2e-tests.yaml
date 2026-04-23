@@ -51,7 +51,6 @@ jobs:
             'LOG_LEVEL=info' \
             'DB_HOST=localhost' \
             'DB_PORT=5432' \
-            'DB_NAME=stackdome' \
             'DB_USERNAME=postgres' \
             'DB_PASSWORD=testpassword' \
             "JWT_SECRET=${JWT_SECRET}" \
