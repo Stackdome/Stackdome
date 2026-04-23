@@ -174,12 +174,9 @@ func CnpgClusterName(addonName string, majorVersion int) string {
 	return fmt.Sprintf("%s-%d", addonName, majorVersion)
 }
 
-// PortForwardPostgres sets up port-forwarding to the CNPG primary pod for a given addon.
-// cnpgClusterName should be built via CnpgClusterName(addonName, majorVersion).
+// PortForwardPod sets up port-forwarding to a pod.
 // Returns the local port and a stop channel. Close stopChan to tear down the forward.
-func PortForwardPostgres(ctx context.Context, restConfig *rest.Config, clientset *kubernetes.Clientset, namespace, cnpgClusterName string) (int32, chan struct{}) {
-	podName := findCNPGPrimaryPod(ctx, clientset, namespace, cnpgClusterName)
-
+func PortForwardPod(restConfig *rest.Config, clientset *kubernetes.Clientset, namespace, podName string, remotePort int) (int32, chan struct{}) {
 	reqURL := clientset.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Namespace(namespace).
@@ -195,13 +192,12 @@ func PortForwardPostgres(ctx context.Context, restConfig *rest.Config, clientset
 	stopChan := make(chan struct{})
 	readyChan := make(chan struct{})
 
-	// Port 0 lets the OS pick a free local port
-	fw, err := portforward.New(dialer, []string{"0:5432"}, stopChan, readyChan, nil, nil)
+	portMapping := fmt.Sprintf("0:%d", remotePort)
+	fw, err := portforward.New(dialer, []string{portMapping}, stopChan, readyChan, nil, nil)
 	Expect(err).NotTo(HaveOccurred(), "failed to create port forwarder")
 
 	go func() {
 		if err := fw.ForwardPorts(); err != nil {
-			// Only log if we didn't stop intentionally
 			select {
 			case <-stopChan:
 			default:
@@ -222,6 +218,23 @@ func PortForwardPostgres(ctx context.Context, restConfig *rest.Config, clientset
 	Expect(ports).NotTo(BeEmpty())
 
 	return int32(ports[0].Local), stopChan
+}
+
+// PortForwardPostgres sets up port-forwarding to the CNPG primary pod for a given addon.
+func PortForwardPostgres(ctx context.Context, restConfig *rest.Config, clientset *kubernetes.Clientset, namespace, cnpgClusterName string) (int32, chan struct{}) {
+	podName := findCNPGPrimaryPod(ctx, clientset, namespace, cnpgClusterName)
+	return PortForwardPod(restConfig, clientset, namespace, podName, 5432)
+}
+
+// PortForwardStackResource sets up port-forwarding to a pod backing a StackResource Deployment.
+func PortForwardStackResource(ctx context.Context, restConfig *rest.Config, clientset *kubernetes.Clientset, namespace, resourceName string, remotePort int) (int32, chan struct{}) {
+	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("resource=%s", resourceName),
+	})
+	Expect(err).NotTo(HaveOccurred(), "failed to list pods for stack resource %s", resourceName)
+	Expect(pods.Items).NotTo(BeEmpty(), "no running pod found for stack resource %s", resourceName)
+
+	return PortForwardPod(restConfig, clientset, namespace, pods.Items[0].Name, remotePort)
 }
 
 func findCNPGPrimaryPod(ctx context.Context, clientset *kubernetes.Clientset, namespace, clusterName string) string {
