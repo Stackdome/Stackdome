@@ -379,6 +379,8 @@ var _ = Describe("Stack E2E", Ordered, func() {
 		It("should build from a private git repo and expose to public", func() {
 			testEnv := GetEnvironment()
 			clusterClient := testEnv.Cluster.GetClient()
+			clientset, err := testEnv.Cluster.GetKubeClient()
+			Expect(err).NotTo(HaveOccurred())
 			ctx := context.Background()
 
 			By("Creating a GitCredentials secret with the GitHub token")
@@ -401,6 +403,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(namespace).NotTo(BeEmpty())
 
 			DeferCleanup(func() {
+				if CurrentSpecReport().Failed() {
+					shared.DumpBuildSourceDebugInfo(ctx, client, clusterClient, clientset, orgID, stackID, namespace)
+				}
 				shared.DeleteStack(client, orgID, stackID)
 				shared.WaitForStackDeleted(client, orgID, stackID, 2*time.Minute)
 			})
@@ -450,9 +455,6 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(ingress.Spec.Rules).NotTo(BeEmpty(), "Ingress should have at least one rule")
 
 			By("Port-forwarding to the app and verifying HTTP response")
-			clientset, err := testEnv.Cluster.GetKubeClient()
-			Expect(err).NotTo(HaveOccurred())
-
 			localPort, stopChan := shared.PortForwardStackResource(ctx, testEnv.Cluster.GetRESTConfig(), clientset, namespace, shared.BuildSourceResourceName, shared.BuildSourcePort)
 			defer close(stopChan)
 

@@ -22,6 +22,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	addonsv1alpha1 "stackdome.io/cluster-agent/api/addons/v1alpha1"
+	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 
 	// postgres driver for connectivity check
@@ -431,4 +432,127 @@ func ListStackBuilds(apiClient *openapi.APIClient, orgID, stackID string) []open
 	Expect(httpResp.StatusCode).To(Equal(200))
 	Expect(resp).NotTo(BeNil())
 	return resp.GetItems()
+}
+
+// DumpBuildSourceDebugInfo prints cluster and API state to help diagnose stuck builds.
+func DumpBuildSourceDebugInfo(ctx context.Context, apiClient *openapi.APIClient, clusterClient client.Client, clientset *kubernetes.Clientset, orgID, stackID, namespace string) {
+	fmt.Println("\n========== BUILD SOURCE DEBUG INFO ==========")
+
+	// Stack status via API
+	resp, _, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdGet(ctx, orgID, stackID).Execute()
+	if err != nil {
+		fmt.Printf("[Stack API] error fetching stack: %v\n", err)
+	} else if status, ok := resp.GetStatusOk(); ok {
+		fmt.Printf("[Stack API] state=%s message=%q\n", status.GetState(), status.GetMessage())
+		for _, c := range status.GetConditions() {
+			fmt.Printf("[Stack API]   condition: type=%s status=%s reason=%s\n", c.GetType(), c.GetStatus(), c.GetReason())
+		}
+	}
+
+	// Image builds via API
+	buildsResp, _, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdBuildsGet(ctx, orgID, stackID).Execute()
+	if err != nil {
+		fmt.Printf("[Builds API] error: %v\n", err)
+	} else {
+		builds := buildsResp.GetItems()
+		fmt.Printf("[Builds API] count=%d\n", len(builds))
+		for i, b := range builds {
+			st := b.GetStatus()
+			fmt.Printf("[Builds API]   [%d] resource=%s state=%s image=%s\n", i, b.GetStackResourceName(), st.GetState(), st.GetImageUrl())
+			for _, c := range st.GetConditions() {
+				fmt.Printf("[Builds API]     condition: type=%s status=%s reason=%s\n", c.GetType(), c.GetStatus(), c.GetReason())
+			}
+		}
+	}
+
+	// Stack CR from cluster
+	var stackList corev1alpha1.StackList
+	if err := clusterClient.List(ctx, &stackList, client.InNamespace(namespace)); err != nil {
+		fmt.Printf("[Cluster] error listing Stack CRs: %v\n", err)
+	} else {
+		for _, s := range stackList.Items {
+			fmt.Printf("[Cluster] Stack CR name=%s phase=%s\n", s.Name, s.Status.Phase)
+			for _, c := range s.Status.Conditions {
+				fmt.Printf("[Cluster]   condition: type=%s status=%s reason=%s msg=%q\n", c.Type, c.Status, c.Reason, c.Message)
+			}
+		}
+	}
+
+	// StackResource CRs
+	var srList corev1alpha1.StackResourceList
+	if err := clusterClient.List(ctx, &srList, client.InNamespace(namespace)); err != nil {
+		fmt.Printf("[Cluster] error listing StackResource CRs: %v\n", err)
+	} else {
+		for _, sr := range srList.Items {
+			fmt.Printf("[Cluster] StackResource CR name=%s\n", sr.Name)
+			for _, c := range sr.Status.Conditions {
+				fmt.Printf("[Cluster]   condition: type=%s status=%s reason=%s msg=%q\n", c.Type, c.Status, c.Reason, c.Message)
+			}
+		}
+	}
+
+	// ImageBuild CRs from cluster
+	var ibList buildsv1alpha1.ImageBuildList
+	if err := clusterClient.List(ctx, &ibList, client.InNamespace(namespace)); err != nil {
+		fmt.Printf("[Cluster] error listing ImageBuild CRs: %v\n", err)
+	} else {
+		fmt.Printf("[Cluster] ImageBuild CRs: %d\n", len(ibList.Items))
+		for _, ib := range ibList.Items {
+			fmt.Printf("[Cluster]   name=%s phase=%s image=%s\n", ib.Name, ib.Status.Phase, ib.Status.ImageUrl)
+			for _, c := range ib.Status.Conditions {
+				fmt.Printf("[Cluster]     condition: type=%s status=%s reason=%s msg=%q\n", c.Type, c.Status, c.Reason, c.Message)
+			}
+		}
+	}
+
+	// Pods in namespace
+	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		fmt.Printf("[Cluster] error listing pods: %v\n", err)
+	} else {
+		fmt.Printf("[Cluster] pods in namespace %s: %d\n", namespace, len(pods.Items))
+		for _, p := range pods.Items {
+			fmt.Printf("[Cluster]   pod=%s phase=%s", p.Name, p.Status.Phase)
+			for _, cs := range p.Status.ContainerStatuses {
+				if cs.State.Waiting != nil {
+					fmt.Printf(" container=%s waiting=%s msg=%q", cs.Name, cs.State.Waiting.Reason, cs.State.Waiting.Message)
+				}
+				if cs.State.Terminated != nil {
+					fmt.Printf(" container=%s terminated=%s exit=%d msg=%q", cs.Name, cs.State.Terminated.Reason, cs.State.Terminated.ExitCode, cs.State.Terminated.Message)
+				}
+			}
+			fmt.Println()
+		}
+	}
+
+	// Jobs in namespace (Kaniko build jobs)
+	jobs, err := clientset.BatchV1().Jobs(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		fmt.Printf("[Cluster] error listing jobs: %v\n", err)
+	} else {
+		fmt.Printf("[Cluster] jobs in namespace %s: %d\n", namespace, len(jobs.Items))
+		for _, j := range jobs.Items {
+			fmt.Printf("[Cluster]   job=%s active=%d succeeded=%d failed=%d\n", j.Name, j.Status.Active, j.Status.Succeeded, j.Status.Failed)
+			for _, c := range j.Status.Conditions {
+				fmt.Printf("[Cluster]     condition: type=%s status=%s reason=%s msg=%q\n", c.Type, c.Status, c.Reason, c.Message)
+			}
+		}
+	}
+
+	// Recent events in namespace
+	events, err := clientset.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		fmt.Printf("[Cluster] error listing events: %v\n", err)
+	} else {
+		fmt.Printf("[Cluster] events in namespace %s (last 20):\n", namespace)
+		start := 0
+		if len(events.Items) > 20 {
+			start = len(events.Items) - 20
+		}
+		for _, e := range events.Items[start:] {
+			fmt.Printf("[Cluster]   %s %s/%s: %s - %s\n", e.LastTimestamp.Format(time.RFC3339), e.InvolvedObject.Kind, e.InvolvedObject.Name, e.Reason, e.Message)
+		}
+	}
+
+	fmt.Println("========== END DEBUG INFO ==========")
 }
