@@ -32,6 +32,7 @@ image: binary
 .PHONY: image
 
 .PHONY: test-integration
+test-integration: SHELL := /usr/bin/env bash
 test-integration: ## Run integration tests (requires Docker for Kind cluster)
 	@go test -c -o test/int/integration.test ./test/int
 	@cd test/int && set -o pipefail && ./integration.test -test.v -ginkgo.v -test.timeout 30m -test.count 1 2>&1 | tee last-run.log; \
