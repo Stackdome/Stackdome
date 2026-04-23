@@ -34,5 +34,5 @@ image: binary
 .PHONY: test-integration
 test-integration: ## Run integration tests (requires Docker for Kind cluster)
 	@go test -c -o test/int/integration.test ./test/int
-	@cd test/int && ./integration.test -test.v -ginkgo.v -test.timeout 30m -test.count 1 2>&1 | tee last-run.log; \
+	@cd test/int && set -o pipefail && ./integration.test -test.v -ginkgo.v -test.timeout 30m -test.count 1 2>&1 | tee last-run.log; \
 		EXIT_CODE=$$?; rm -f integration.test; exit $$EXIT_CODE
