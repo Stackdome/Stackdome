@@ -101,6 +101,16 @@ func CreatePostgresAddonWithResources(name string) *openapi.PostgresAddon {
 	return addon
 }
 
+func CreatePostgresAddonWithSuperuser(name string) *openapi.PostgresAddon {
+	addon := CreatePostgresAddonWithResources(name)
+
+	config := openapi.NewPostgresConfiguration()
+	config.SetEnableSuperuserAccess(true)
+	addon.Spec.SetConfiguration(*config)
+
+	return addon
+}
+
 func CreatePostgresAddonForUpdate(name string) *openapi.PostgresAddon {
 	addon := CreateMinimalPostgresAddon(name)
 
@@ -392,7 +402,29 @@ func CreateStackWithPostgresAddon(name string, addonID string, database string) 
 		*openapi.NewPort(8080, false),
 	})
 
-	pgEnvSource := openapi.NewPostgresAddonEnvSource(addonID, database, PostgresEnvMapping)
+	pgEnvSource := openapi.NewPostgresAddonEnvSource(addonID, PostgresEnvMapping)
+	pgEnvSource.SetDatabase(database)
+	addonEnvSource := openapi.NewAddonEnvSource()
+	addonEnvSource.SetPostgres(*pgEnvSource)
+
+	exec := openapi.NewExecutionConfig()
+	exec.SetEnvFromAddons([]openapi.AddonEnvSource{*addonEnvSource})
+	resource.SetExecutionConfig(*exec)
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	return openapi.NewStack(name, *spec)
+}
+
+func CreateStackWithPostgresAddonSuperuser(name string, addonID string) *openapi.Stack {
+	resource := openapi.NewStackResource("app")
+	image := openapi.NewImageSpec("nginx:1.25-alpine")
+	resource.SetImageSpec(*image)
+	resource.SetPorts([]openapi.Port{
+		*openapi.NewPort(8080, false),
+	})
+
+	pgEnvSource := openapi.NewPostgresAddonEnvSource(addonID, PostgresEnvMapping)
+	pgEnvSource.SetSuperuser(true)
 	addonEnvSource := openapi.NewAddonEnvSource()
 	addonEnvSource.SetPostgres(*pgEnvSource)
 

@@ -62,6 +62,8 @@ type postgresAddonService interface {
 
 type addonUsageService interface {
 	Create(ctx context.Context, usage *models.AddonUsage) error
+	Delete(ctx context.Context, addonType models.AddonType, addonID, stackID, resourceID string) error
+	GetByStackID(ctx context.Context, stackID string) ([]*models.AddonUsage, error)
 	ExistsByStackResourceAndAddon(ctx context.Context, stackID, resourceID, addonID string) (bool, error)
 	DeleteByStackID(ctx context.Context, stackID string) error
 }

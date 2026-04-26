@@ -21,6 +21,10 @@ type secretService interface {
 	InternalGetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError)
 }
 
+type postgresAddonService interface {
+	GetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
+}
+
 // Add only validations that take reasonable time to complete.
 // Avoid validations that require network calls or long-running operations.
 // Long running validations should be handled in the stack worker.
@@ -28,11 +32,13 @@ type stackValidator struct {
 	interpolationValidator validator.InterpolationValidation
 	domainService          organisationDomainService
 	secretService          secretService
+	postgresAddonService   postgresAddonService
 }
 
 type StackValidatorSpec struct {
-	DomainService organisationDomainService
-	SecretService secretService
+	DomainService        organisationDomainService
+	SecretService        secretService
+	PostgresAddonService postgresAddonService
 }
 
 func NewStackValidator(
@@ -42,6 +48,7 @@ func NewStackValidator(
 		interpolationValidator: NewInterpolationValidation(),
 		domainService:          spec.DomainService,
 		secretService:          spec.SecretService,
+		postgresAddonService:   spec.PostgresAddonService,
 	}
 }
 
@@ -65,6 +72,9 @@ func (v *stackValidator) ValidateForCreate(ctx context.Context, spec *models.Sta
 		return err
 	}
 	if err := v.validateBuildSourceVolumes(spec); err != nil {
+		return err
+	}
+	if err := v.validateEnvFromAddons(ctx, spec); err != nil {
 		return err
 	}
 
@@ -102,6 +112,9 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 		return err
 	}
 	if err := v.validateBuildSourceVolumes(spec); err != nil {
+		return err
+	}
+	if err := v.validateEnvFromAddons(ctx, spec); err != nil {
 		return err
 	}
 	return nil
@@ -324,6 +337,61 @@ func (v *stackValidator) validateStackEnvVars(spec *models.Stack) *errors.Servic
 		return errors.BadRequest("stack resource '%s' has invalid interpolation: %s", spec.Name, err.Error())
 	}
 
+	return nil
+}
+
+func (v *stackValidator) validateEnvFromAddons(ctx context.Context, spec *models.Stack) *errors.ServiceError {
+	validFields := make(map[string]struct{}, len(models.PostgresAddonEnvFields))
+	for _, f := range models.PostgresAddonEnvFields {
+		validFields[f] = struct{}{}
+	}
+
+	for i := range spec.StackResources {
+		resource := spec.StackResources[i]
+		if resource.ExecutionConfig == nil || len(resource.ExecutionConfig.EnvFromAddons) == 0 {
+			continue
+		}
+		for _, addonEnv := range resource.ExecutionConfig.EnvFromAddons {
+			if addonEnv.Postgres == nil {
+				continue
+			}
+			pgSource := addonEnv.Postgres
+
+			if pgSource.AddonID == "" {
+				return errors.BadRequest("stack resource '%s' has empty postgres addon ID in env_from_addons", resource.Name)
+			}
+			if !pgSource.Superuser && pgSource.Database == "" {
+				return errors.BadRequest("stack resource '%s' has empty database name in env_from_addons for addon '%s'", resource.Name, pgSource.AddonID)
+			}
+			if len(pgSource.EnvMapping) == 0 {
+				return errors.BadRequest("stack resource '%s' has empty env_mapping in env_from_addons for addon '%s'", resource.Name, pgSource.AddonID)
+			}
+
+			for field, envName := range pgSource.EnvMapping {
+				if _, ok := validFields[field]; !ok {
+					return errors.BadRequest("stack resource '%s' has invalid field '%s' in env_mapping for addon '%s'", resource.Name, field, pgSource.AddonID)
+				}
+				if envName == "" {
+					return errors.BadRequest("stack resource '%s' has empty env var name for field '%s' in env_mapping for addon '%s'", resource.Name, field, pgSource.AddonID)
+				}
+			}
+
+			addon, err := v.postgresAddonService.GetPostgresAddon(ctx, pgSource.AddonID)
+			if err != nil {
+				return errors.BadRequest("stack resource '%s' references non-existent postgres addon '%s'", resource.Name, pgSource.AddonID)
+			}
+
+			if pgSource.Superuser {
+				if !addon.Configuration.EnableSuperuserAccess {
+					return errors.BadRequest("stack resource '%s' requests superuser access but addon '%s' does not have superuser access enabled", resource.Name, pgSource.AddonID)
+				}
+			} else {
+				if !addon.HasDatabase(pgSource.Database) {
+					return errors.BadRequest("stack resource '%s' references non-existent database '%s' in postgres addon '%s'", resource.Name, pgSource.Database, pgSource.AddonID)
+				}
+			}
+		}
+	}
 	return nil
 }
 

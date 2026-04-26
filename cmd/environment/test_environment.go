@@ -301,28 +301,9 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:         te.Logger,
 	})
 
-	stackService := services.NewStackService(services.StackServiceSpec{
-		SessionFactory:         te.DBSession,
-		Logger:                 te.Logger,
-		VolumeService:          volumeService,
-		OrganisationService:    organisationService,
-		StackResourceService:   stackResourceService,
-		ClusterService:         clusterService,
-		ClusterRegistryService: imageRegistryService,
-		NamespaceService:       namespaceService,
-		SecretService:          secretService,
-	})
-
 	loggingService := services.NewLoggingService(services.LoggingServiceSpec{
 		ClusterService:       clusterService,
 		StackResourceService: stackResourceService,
-		Logger:               te.Logger,
-	})
-
-	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
-		ClusterService:       clusterService,
-		StackResourceService: stackResourceService,
-		StackService:         stackService,
 		Logger:               te.Logger,
 	})
 
@@ -351,6 +332,26 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		ObjectStoreService:    objectStoreService,
 		ClusterManager:        te.ClusterManager,
 		Logger:                te.Logger,
+	})
+
+	stackService := services.NewStackService(services.StackServiceSpec{
+		SessionFactory:         te.DBSession,
+		Logger:                 te.Logger,
+		VolumeService:          volumeService,
+		OrganisationService:    organisationService,
+		StackResourceService:   stackResourceService,
+		ClusterService:         clusterService,
+		ClusterRegistryService: imageRegistryService,
+		NamespaceService:       namespaceService,
+		SecretService:          secretService,
+		PostgresAddonService:   postgresAddonService,
+	})
+
+	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
+		ClusterService:       clusterService,
+		StackResourceService: stackResourceService,
+		StackService:         stackService,
+		Logger:               te.Logger,
 	})
 
 	te.Services = Services{

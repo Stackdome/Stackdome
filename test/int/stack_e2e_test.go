@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/test/int/shared"
 )
 
@@ -363,6 +364,119 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["connectionString"])
 			Expect(dbURL).To(HavePrefix("postgresql://"), "DATABASE_URL should be a postgresql:// connection string")
 			Expect(dbURL).To(ContainSubstring("testdb"), "DATABASE_URL should reference the requested database")
+		})
+	})
+
+	Context("Stack with PostgresAddon Superuser", func() {
+		It("should inject superuser credentials and allow privileged database operations", func() {
+			testEnv := GetEnvironment()
+			clusterClient := testEnv.Cluster.GetClient()
+			ctx := context.Background()
+
+			By("Creating a postgres addon with superuser access enabled")
+			addon := shared.CreatePostgresAddonWithSuperuser("test-stack-pg-su")
+			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			addonID := createdAddon.GetId()
+			addonName := createdAddon.GetName()
+			addonNamespace := createdAddon.GetNamespace()
+
+			DeferCleanup(func() {
+				shared.DeletePostgresAddon(client, orgID, addonID)
+			})
+
+			By("Waiting for the postgres addon to become Ready")
+			shared.WaitForAddonReady(client, orgID, addonID, 10*time.Minute)
+
+			By("Waiting for databases to be applied")
+			shared.WaitForConditionTrue(client, orgID, addonID, string(models.PostgresAddonConditionDatabasesApplied), 2*time.Minute)
+
+			By("Creating a stack that references the addon with superuser mode")
+			stack := shared.CreateStackWithPostgresAddonSuperuser("test-su-stack", addonID)
+			created := shared.CreateStack(client, orgID, stack)
+			stackID := created.GetId()
+			namespace := created.GetNamespace()
+
+			DeferCleanup(func() {
+				shared.DeleteStack(client, orgID, stackID)
+				shared.WaitForStackDeleted(client, orgID, stackID, 1*time.Minute)
+			})
+
+			By("Waiting for stack to become Ready")
+			shared.WaitForStackReady(client, orgID, stackID, 5*time.Minute)
+
+			By("Verifying Deployment has all postgres env vars from the mapping")
+			deploy, err := shared.GetDeploymentForStackResource(ctx, clusterClient, namespace, "app")
+			Expect(err).NotTo(HaveOccurred())
+
+			for credField, envName := range shared.PostgresEnvMapping {
+				val, found := shared.GetContainerEnvVar(deploy, envName)
+				Expect(found).To(BeTrue(), "env var %s (mapped from %s) should be injected", envName, credField)
+				Expect(val).NotTo(BeEmpty(), "env var %s should have a non-empty value", envName)
+			}
+
+			By("Verifying superuser credential values on deployment")
+			pgUser, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["username"])
+			Expect(pgUser).To(Equal("postgres"), "superuser username should be 'postgres'")
+
+			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["connectionString"])
+			Expect(dbURL).To(HavePrefix("postgresql://"), "DATABASE_URL should be a postgresql:// connection string")
+
+			By("Fetching superuser credentials via API")
+			creds := shared.GetSuperuserCredentials(client, orgID, addonID)
+			Expect(creds.GetUsername()).To(Equal("postgres"), "superuser username should be 'postgres'")
+			Expect(creds.GetPassword()).NotTo(BeEmpty())
+
+			By("Port-forwarding to the primary postgres pod")
+			clientset, err := testEnv.Cluster.GetKubeClient()
+			Expect(err).NotTo(HaveOccurred())
+
+			cnpgName := shared.CnpgClusterName(addonName, int(addon.Spec.Version.Major))
+			localPort, stopChan := shared.PortForwardPostgres(ctx, testEnv.Cluster.GetRESTConfig(), clientset, addonNamespace, cnpgName)
+			defer close(stopChan)
+
+			By("Verifying superuser can read and write to testdb")
+			testDB := shared.ConnectToPostgres("127.0.0.1", localPort, creds.GetUsername(), creds.GetPassword(), "testdb", "disable")
+			defer testDB.Close()
+
+			_, err = testDB.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS e2e_su_test (id serial PRIMARY KEY, val text)")
+			Expect(err).NotTo(HaveOccurred(), "superuser should be able to create tables in testdb")
+
+			_, err = testDB.ExecContext(ctx, "INSERT INTO e2e_su_test (val) VALUES ('superuser_write')")
+			Expect(err).NotTo(HaveOccurred(), "superuser should be able to insert into testdb")
+
+			var val string
+			err = testDB.QueryRowContext(ctx, "SELECT val FROM e2e_su_test WHERE val = 'superuser_write'").Scan(&val)
+			Expect(err).NotTo(HaveOccurred(), "superuser should be able to read from testdb")
+			Expect(val).To(Equal("superuser_write"))
+
+			By("Verifying superuser can read and write to the default app database")
+			appDB := shared.ConnectToPostgres("127.0.0.1", localPort, creds.GetUsername(), creds.GetPassword(), "app", "disable")
+			defer appDB.Close()
+
+			_, err = appDB.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS e2e_su_test (id serial PRIMARY KEY, val text)")
+			Expect(err).NotTo(HaveOccurred(), "superuser should be able to create tables in app database")
+
+			_, err = appDB.ExecContext(ctx, "INSERT INTO e2e_su_test (val) VALUES ('superuser_write')")
+			Expect(err).NotTo(HaveOccurred(), "superuser should be able to insert into app database")
+
+			err = appDB.QueryRowContext(ctx, "SELECT val FROM e2e_su_test WHERE val = 'superuser_write'").Scan(&val)
+			Expect(err).NotTo(HaveOccurred(), "superuser should be able to read from app database")
+			Expect(val).To(Equal("superuser_write"))
+
+			By("Verifying superuser can create a new database")
+			postgresDB := shared.ConnectToPostgres("127.0.0.1", localPort, creds.GetUsername(), creds.GetPassword(), "postgres", "disable")
+			defer postgresDB.Close()
+
+			_, err = postgresDB.ExecContext(ctx, "CREATE DATABASE e2e_superuser_created")
+			Expect(err).NotTo(HaveOccurred(), "superuser should be able to create new databases")
+
+			newDB := shared.ConnectToPostgres("127.0.0.1", localPort, creds.GetUsername(), creds.GetPassword(), "e2e_superuser_created", "disable")
+			defer newDB.Close()
+
+			var result int
+			err = newDB.QueryRowContext(ctx, "SELECT 1").Scan(&result)
+			Expect(err).NotTo(HaveOccurred(), "superuser should be able to connect to the newly created database")
+			Expect(result).To(Equal(1))
 		})
 	})
 
