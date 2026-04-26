@@ -1,0 +1,98 @@
+{
+  "name": "postgres-ha-placement",
+  "labels": [
+    {
+      "key": "tier",
+      "value": "critical"
+    },
+    {
+      "key": "ha",
+      "value": "true"
+    }
+  ],
+  "annotations": [
+    {
+      "key": "description",
+      "value": "High availability PostgreSQL with specific node placement"
+    }
+  ],
+  "spec": {
+    "version": {
+      "major": 17,
+      "enable_auto_minor_upgrade": true,
+      "enable_auto_major_upgrade": false
+    },
+    "instances": {
+      "count": 3,
+      "placement": {
+        "topology_key": "topology.kubernetes.io/zone",
+        "policy": "required",
+        "node_selector": {
+          "node-type": "database",
+          "instance-type": "r5.4xlarge",
+          "availability-zone": "us-west-2a"
+        },
+        "tolerations": [
+          {
+            "key": "database-only",
+            "operator": "Equal",
+            "value": "true",
+            "effect": "NoSchedule"
+          },
+          {
+            "key": "high-memory",
+            "operator": "Equal",
+            "value": "true",
+            "effect": "PreferNoSchedule"
+          }
+        ]
+      }
+    },
+    "storage": {
+      "size": "1Ti",
+      "storage_class": "io2-csi"
+    },
+    "resources": {
+      "cpu": {
+        "request": "8",
+        "limit": "16"
+      },
+      "memory": {
+        "request": "32Gi",
+        "limit": "64Gi"
+      }
+    },
+    "backup": {
+      "enabled": true,
+      "object_store_id": "critical-backups-s3",
+      "schedule": "0 */6 * * *",
+      "wal_archiving": true
+    },
+    "databases": [
+      {
+        "name": "critical_app",
+        "extensions": ["vector"]
+      },
+      {
+        "name": "session_store",
+        "extensions": []
+      }
+    ],
+    "configuration": {
+      "enable_superuser_access": true,
+      "parameters": {
+        "max_connections": "2000",
+        "shared_buffers": "16GB",
+        "work_mem": "128MB",
+        "maintenance_work_mem": "4GB",
+        "effective_cache_size": "48GB",
+        "wal_level": "replica",
+        "max_wal_senders": "10",
+        "max_replication_slots": "10",
+        "hot_standby": "on",
+        "synchronous_commit": "on",
+        "wal_keep_segments": "64"
+      }
+    }
+  }
+}

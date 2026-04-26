@@ -1,0 +1,75 @@
+{
+  "name": "postgres-with-backups",
+  "labels": [
+    {
+      "key": "environment",
+      "value": "production"
+    },
+    {
+      "key": "team",
+      "value": "backend"
+    }
+  ],
+  "annotations": [
+    {
+      "key": "description",
+      "value": "Production PostgreSQL database with automated backups"
+    }
+  ],
+  "spec": {
+    "version": {
+      "major": 16,
+      "minor": 3,
+      "enable_auto_minor_upgrade": true,
+      "enable_auto_major_upgrade": false
+    },
+    "instances": {
+      "count": 3
+    },
+    "storage": {
+      "size": "100Gi",
+      "storage_class": "ssd-fast"
+    },
+    "resources": {
+      "cpu": {
+        "request": "1",
+        "limit": "4"
+      },
+      "memory": {
+        "request": "4Gi",
+        "limit": "16Gi"
+      }
+    },
+    "backup": {
+      "enabled": true,
+      "object_store_id": "prod-s3-backup-store",
+      "schedule": "0 0 2 * * *",
+      "wal_archiving": true
+    },
+    "databases": [
+      {
+        "name": "app_production",
+        "extensions": ["vector"]
+      },
+      {
+        "name": "analytics",
+        "extensions": []
+      }
+    ],
+    "configuration": {
+      "enable_superuser_access": true,
+      "parameters": {
+        "max_connections": "500",
+        "shared_buffers": "4GB",
+        "work_mem": "16MB",
+        "effective_cache_size": "12GB",
+        "maintenance_work_mem": "512MB",
+        "checkpoint_completion_target": "0.9",
+        "wal_buffers": "16MB",
+        "default_statistics_target": "100",
+        "random_page_cost": "1.1",
+        "effective_io_concurrency": "200"
+      }
+    }
+  }
+}

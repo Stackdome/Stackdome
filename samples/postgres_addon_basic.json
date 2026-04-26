@@ -1,0 +1,40 @@
+{
+  "name": "my-postgres-db",
+  "spec": {
+    "version": {
+      "major": 16,
+      "enable_auto_minor_upgrade": true,
+      "enable_auto_major_upgrade": false
+    },
+    "instances": {
+      "count": 1
+    },
+    "storage": {
+      "size": "10Gi",
+      "storage_class": "standard"
+    },
+    "resources": {
+      "cpu": {
+        "request": "250m",
+        "limit": "1"
+      },
+      "memory": {
+        "request": "512Mi",
+        "limit": "2Gi"
+      }
+    },
+    "databases": [
+      {
+        "name": "myapp",
+        "extensions": []
+      }
+    ],
+    "configuration": {
+      "enable_superuser_access": false,
+      "parameters": {
+        "max_connections": "100",
+        "shared_buffers": "128MB"
+      }
+    }
+  }
+}
