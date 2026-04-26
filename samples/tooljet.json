@@ -1,0 +1,207 @@
+{
+    "name": "tooljet",
+    "labels": [
+        {
+            "key": "app",
+            "value": "tooljet"
+        }
+    ],
+    "spec": {
+        "stack_resources": [
+            {
+                "name": "tooljet",
+                "image_spec": {
+                    "image": "tooljet/tooljet-ce:latest"
+                },
+                "ports": [
+                    {
+                        "number": 80,
+                        "exposed_to_public": true,
+                        "subdomain_prefix": "tooljet",
+                        "protocol": "HTTP"
+                    }
+                ],
+                "execution_config": {
+                    "args": ["npm", "run", "start:prod"],
+                    "environment_variables": [
+                        {
+                            "name": "NODE_ENV",
+                            "value": "production"
+                        },
+                        {
+                            "name": "PORT",
+                            "value": "80"
+                        },
+                        {
+                            "name": "TOOLJET_HOST",
+                            "value": "https://{{STACKDOME_TOOLJET_PUBLIC}}"
+                        },
+                        {
+                            "name": "LOCKBOX_MASTER_KEY",
+                            "value": "db78c1536f072aa1607a89f3d29541134d132467f31579a51143f56b4ac84214"
+                        },
+                        {
+                            "name": "SECRET_KEY_BASE",
+                            "value": "0622a64434a91c4fefbd9658ff2212a43da7819ab153cc6b469de1275baba71a"
+                        },
+                        {
+                            "name": "PG_HOST",
+                            "value": "postgres"
+                        },
+                        {
+                            "name": "PG_PORT",
+                            "value": "5432"
+                        },
+                        {
+                            "name": "PG_USER",
+                            "value": "tooljet"
+                        },
+                        {
+                            "name": "PG_PASS",
+                            "value": "tooljet_password"
+                        },
+                        {
+                            "name": "PG_DB",
+                            "value": "tooljet"
+                        },
+                        {
+                            "name": "ENABLE_TOOLJET_DB",
+                            "value": "true"
+                        },
+                        {
+                            "name": "TOOLJET_DB",
+                            "value": "tooljet_db"
+                        },
+                        {
+                            "name": "TOOLJET_DB_USER",
+                            "value": "tooljet"
+                        },
+                        {
+                            "name": "TOOLJET_DB_HOST",
+                            "value": "postgres"
+                        },
+                        {
+                            "name": "TOOLJET_DB_PASS",
+                            "value": "tooljet_password"
+                        },
+                        {
+                            "name": "PGRST_HOST",
+                            "value": "localhost:3001"
+                        },
+                        {
+                            "name": "PGRST_SERVER_PORT",
+                            "value": "3001"
+                        },
+                        {
+                            "name": "PGRST_DB_URI",
+                            "value": "postgres://tooljet:tooljet_password@postgres:5432/tooljet_db"
+                        },
+                        {
+                            "name": "PGRST_JWT_SECRET",
+                            "value": "0622a64434a91c4fefbd9658ff2212a43da7819ab153cc6b469de1275baba71a"
+                        },
+                        {
+                            "name": "SMTP_DOMAIN",
+                            "value": "{{STACKDOME_MAILHOG_INTERNAL}}"
+                        },
+                        {
+                            "name": "SMTP_PORT",
+                            "value": "1025"
+                        },
+                        {
+                            "name": "SMTP_USERNAME",
+                            "value": "ashish"
+                        },
+                        {
+                            "name": "SMTP_PASSWORD",
+                            "value": "test"
+                        },
+                        {
+                            "name": "DEFAULT_FROM_EMAIL",
+                            "value": "tooljet@local.stackdome.io"
+                        }
+                    ]
+                },
+                "depends_on": ["postgres", "redis"]
+            },
+            {
+                "name": "postgres",
+                "image_spec": {
+                    "image": "postgres:13"
+                },
+                "stateful": true,
+                "ports": [
+                    {
+                        "number": 5432,
+                        "exposed_to_public": false,
+                        "protocol": "TCP"
+                    }
+                ],
+                "execution_config": {
+                    "environment_variables": [
+                        {
+                            "name": "POSTGRES_USER",
+                            "value": "tooljet"
+                        },
+                        {
+                            "name": "POSTGRES_PASSWORD",
+                            "value": "tooljet_password"
+                        },
+                        {
+                            "name": "POSTGRES_DB",
+                            "value": "tooljet"
+                        }
+                    ]
+                },
+                "volume_mounts": [
+                    {
+                        "source_volume_name": "pg-data",
+                        "target_path": "/var/lib/postgresql/data"
+                    }
+                ]
+            },
+            {
+                "name": "redis",
+                "image_spec": {
+                    "image": "redis:6.2"
+                },
+                "ports": [
+                    {
+                        "number": 6379,
+                        "exposed_to_public": false,
+                        "protocol": "TCP"
+                    }
+                ]
+            },
+            {
+                "name": "mailhog",
+                "image_spec": {
+                    "image": "mailhog/mailhog"
+                },
+                "ports": [
+                    {
+                        "number": 1025,
+                        "exposed_to_public": false,
+                        "protocol": "TCP"
+                    },
+                    {
+                        "number": 8025,
+                        "exposed_to_public": true,
+                        "subdomain_prefix": "mail",
+                        "protocol": "HTTP"
+                    }
+                ]
+            }
+        ],
+        "volumes": [
+            {
+                "name": "pg-data",
+                "spec": {
+                    "size": "5Gi",
+                    "access_mode": "ReadWriteOnce",
+                    "needs_sync_before_use": false
+                }
+            }
+        ]
+    }
+}

@@ -1,0 +1,44 @@
+{
+    "name": "tooljet-db",
+    "spec": {
+        "version": {
+            "major": 13,
+            "enable_auto_minor_upgrade": true,
+            "enable_auto_major_upgrade": false
+        },
+        "instances": {
+            "count": 2
+        },
+        "storage": {
+            "size": "5Gi",
+            "storage_class": "standard"
+        },
+        "resources": {
+            "cpu": {
+                "request": "250m",
+                "limit": "1"
+            },
+            "memory": {
+                "request": "512Mi",
+                "limit": "1Gi"
+            }
+        },
+        "databases": [
+            {
+                "name": "tooljet",
+                "extensions": []
+            },
+            {
+                "name": "tooljet-db",
+                "extensions": []
+            }
+        ],
+        "configuration": {
+            "enable_superuser_access": false,
+            "parameters": {
+                "max_connections": "100",
+                "shared_buffers": "128MB"
+            }
+        }
+    }
+}

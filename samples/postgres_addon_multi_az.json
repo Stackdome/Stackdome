@@ -1,0 +1,103 @@
+{
+  "name": "postgres-multi-az",
+  "labels": [
+    {
+      "key": "deployment",
+      "value": "multi-az"
+    },
+    {
+      "key": "tier",
+      "value": "production"
+    }
+  ],
+  "annotations": [
+    {
+      "key": "description",
+      "value": "Multi-AZ PostgreSQL deployment for high availability"
+    }
+  ],
+  "spec": {
+    "version": {
+      "major": 16,
+      "minor": 2,
+      "enable_auto_minor_upgrade": true,
+      "enable_auto_major_upgrade": false
+    },
+    "instances": {
+      "count": 5,
+      "placement": {
+        "topology_key": "failure-domain.beta.kubernetes.io/zone",
+        "policy": "required",
+        "node_selector": {
+          "database-tier": "premium"
+        },
+        "tolerations": [
+          {
+            "key": "database-workload",
+            "operator": "Exists",
+            "effect": "NoSchedule"
+          }
+        ]
+      }
+    },
+    "storage": {
+      "size": "2Ti",
+      "storage_class": "gp3-csi"
+    },
+    "resources": {
+      "cpu": {
+        "request": "16",
+        "limit": "32"
+      },
+      "memory": {
+        "request": "64Gi",
+        "limit": "128Gi"
+      }
+    },
+    "backup": {
+      "enabled": true,
+      "object_store_id": "multi-region-backup-store",
+      "schedule": "0 */4 * * *",
+      "wal_archiving": true
+    },
+    "databases": [
+      {
+        "name": "primary_app",
+        "extensions": ["vector"]
+      },
+      {
+        "name": "secondary_app",
+        "extensions": []
+      },
+      {
+        "name": "metrics",
+        "extensions": []
+      }
+    ],
+    "configuration": {
+      "enable_superuser_access": false,
+      "parameters": {
+        "max_connections": "5000",
+        "shared_buffers": "32GB",
+        "work_mem": "256MB",
+        "maintenance_work_mem": "8GB",
+        "effective_cache_size": "96GB",
+        "checkpoint_segments": "64",
+        "checkpoint_completion_target": "0.95",
+        "wal_buffers": "64MB",
+        "wal_level": "replica",
+        "archive_mode": "on",
+        "archive_command": "pgbackrest --stanza=main archive-push %p",
+        "max_wal_senders": "20",
+        "max_replication_slots": "20",
+        "hot_standby": "on",
+        "hot_standby_feedback": "on",
+        "wal_receiver_status_interval": "10s",
+        "max_standby_streaming_delay": "30s",
+        "max_standby_archive_delay": "30s",
+        "synchronous_commit": "remote_write",
+        "synchronous_standby_names": "FIRST 2 (standby1, standby2, standby3, standby4)"
+      }
+    }
+  }
+}

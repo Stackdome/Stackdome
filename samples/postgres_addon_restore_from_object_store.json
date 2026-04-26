@@ -1,0 +1,65 @@
+{
+  "name": "postgres-pitr-restore",
+  "labels": [
+    {
+      "key": "restore-type",
+      "value": "point-in-time"
+    }
+  ],
+  "annotations": [
+    {
+      "key": "description",
+      "value": "Point-in-time recovery from object store backup"
+    }
+  ],
+  "spec": {
+    "version": {
+      "major": 16,
+      "enable_auto_minor_upgrade": true,
+      "enable_auto_major_upgrade": false
+    },
+    "instances": {
+      "count": 1
+    },
+    "storage": {
+      "size": "200Gi",
+      "storage_class": "ssd-standard"
+    },
+    "resources": {
+      "cpu": {
+        "request": "2",
+        "limit": "4"
+      },
+      "memory": {
+        "request": "8Gi",
+        "limit": "16Gi"
+      }
+    },
+    "initialization": {
+      "type": "restore_from_object_store",
+      "restore_from_object_store": {
+        "object_store_id": "production-s3-backups",
+        "source_postgres_addon_id": "prod-postgres-cluster-001",
+        "recovery_target_time": "2024-01-15T14:30:00Z"
+      }
+    },
+    "backup": {
+      "enabled": false
+    },
+    "databases": [
+      {
+        "name": "recovered_production",
+        "extensions": ["vector"]
+      }
+    ],
+    "configuration": {
+      "enable_superuser_access": true,
+      "parameters": {
+        "max_connections": "300",
+        "shared_buffers": "4GB",
+        "work_mem": "32MB",
+        "effective_cache_size": "12GB"
+      }
+    }
+  }
+}

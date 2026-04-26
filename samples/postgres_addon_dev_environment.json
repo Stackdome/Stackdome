@@ -1,0 +1,71 @@
+{
+  "name": "postgres-dev",
+  "labels": [
+    {
+      "key": "environment",
+      "value": "development"
+    },
+    {
+      "key": "cost-center",
+      "value": "engineering"
+    }
+  ],
+  "annotations": [
+    {
+      "key": "description",
+      "value": "Development PostgreSQL instance with vector extension"
+    },
+    {
+      "key": "owner",
+      "value": "dev-team@company.com"
+    }
+  ],
+  "spec": {
+    "version": {
+      "major": 16,
+      "enable_auto_minor_upgrade": true,
+      "enable_auto_major_upgrade": false
+    },
+    "instances": {
+      "count": 1
+    },
+    "storage": {
+      "size": "20Gi",
+      "storage_class": "standard"
+    },
+    "resources": {
+      "cpu": {
+        "request": "100m",
+        "limit": "500m"
+      },
+      "memory": {
+        "request": "256Mi",
+        "limit": "1Gi"
+      }
+    },
+    "backup": {
+      "enabled": false
+    },
+    "databases": [
+      {
+        "name": "development",
+        "extensions": ["vector"]
+      },
+      {
+        "name": "test",
+        "extensions": []
+      }
+    ],
+    "configuration": {
+      "enable_superuser_access": true,
+      "parameters": {
+        "max_connections": "50",
+        "shared_buffers": "64MB",
+        "work_mem": "4MB",
+        "log_statement": "all",
+        "log_duration": "on",
+        "log_min_duration_statement": "100"
+      }
+    }
+  }
+}

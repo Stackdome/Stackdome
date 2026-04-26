@@ -1,0 +1,59 @@
+{
+  "name": "postgres-restored",
+  "annotations": [
+    {
+      "key": "purpose",
+      "value": "Restored database from backup for testing"
+    }
+  ],
+  "spec": {
+    "version": {
+      "major": 16,
+      "enable_auto_minor_upgrade": true,
+      "enable_auto_major_upgrade": false
+    },
+    "instances": {
+      "count": 2
+    },
+    "storage": {
+      "size": "50Gi",
+      "storage_class": "standard"
+    },
+    "resources": {
+      "cpu": {
+        "request": "500m",
+        "limit": "2"
+      },
+      "memory": {
+        "request": "2Gi",
+        "limit": "8Gi"
+      }
+    },
+    "initialization": {
+      "type": "restore_from_backup",
+      "restore_from_backup": {
+        "backup_id": "backup-20240115-prod-db-001"
+      }
+    },
+    "backup": {
+      "enabled": true,
+      "object_store_id": "staging-backup-store",
+      "schedule": "0 0 3 * * *",
+      "wal_archiving": true
+    },
+    "databases": [
+      {
+        "name": "restored_app",
+        "extensions": []
+      }
+    ],
+    "configuration": {
+      "enable_superuser_access": false,
+      "parameters": {
+        "max_connections": "200",
+        "shared_buffers": "1GB",
+        "work_mem": "8MB"
+      }
+    }
+  }
+}

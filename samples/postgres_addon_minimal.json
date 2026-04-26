@@ -1,0 +1,15 @@
+{
+  "name": "postgres-minimal",
+  "spec": {
+    "version": {
+      "major": 16
+    },
+    "instances": {
+      "count": 1
+    },
+    "storage": {
+      "size": "5Gi",
+      "storage_class": "standard"
+    }
+  }
+}
