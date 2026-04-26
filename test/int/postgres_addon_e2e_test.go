@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/test/int/shared"
 )
 
@@ -89,7 +90,10 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			Expect(connInfo.GetPort()).To(BeNumerically(">", 0), "Port should be positive")
 
 			By("Verifying conditions include ClusterReady")
-			shared.WaitForConditionTrue(client, orgID, addonID, "ClusterReady", 30*time.Second)
+			shared.WaitForConditionTrue(client, orgID, addonID, string(models.PostgresAddonConditionClusterReady), 30*time.Second)
+
+			By("Waiting for databases to be applied")
+			shared.WaitForConditionTrue(client, orgID, addonID, string(models.PostgresAddonConditionDatabasesApplied), 2*time.Minute)
 
 			By("Verifying CR exists with correct spec in the cluster")
 			cr, err := shared.GetPostgresClusterCR(ctx, clusterClient, shared.CRNameForAddon(addonName), namespace)
@@ -216,7 +220,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 
 				state, stateOk := status.GetStateOk()
 				g.Expect(stateOk).To(BeTrue())
-				g.Expect(*state).NotTo(Equal("Ready"), "addon should not be Ready with invalid storage class")
+				g.Expect(*state).NotTo(Equal(string(models.PostgresAddonStateReady)), "addon should not be Ready with invalid storage class")
 			}, 3*time.Minute, 10*time.Second).Should(Succeed())
 		})
 	})
@@ -259,7 +263,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			shared.WaitForAddonReady(client, orgID, addonID, 10*time.Minute)
 
 			By("Verifying ContinuousWalArchivingSuccess condition becomes True")
-			shared.WaitForConditionTrue(client, orgID, addonID, "ContinuousWalArchivingSuccess", 5*time.Minute)
+			shared.WaitForConditionTrue(client, orgID, addonID, string(models.PostgresAddonConditionWalArchivingSuccess), 5*time.Minute)
 
 			By("Triggering an immediate backup")
 			shared.TriggerBackup(client, orgID, addonID)

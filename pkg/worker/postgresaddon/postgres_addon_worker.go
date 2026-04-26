@@ -97,7 +97,11 @@ func (w *postgresAddonWorker) reconcile(ctx context.Context, addon *models.Postg
 func (w *postgresAddonWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
 	addons, err := w.postgresAddonService.InternalList(ctx,
 		"status->>'state' IN ?",
-		[]string{"Pending", "Error", "Deleting"},
+		[]string{
+			string(models.PostgresAddonStatePending),
+			string(models.PostgresAddonStateError),
+			string(models.PostgresAddonStateDeleting),
+		},
 	)
 	if err != nil {
 		return nil, w.WorkerError.NewError("failed to list pending postgres addons: %v", err)

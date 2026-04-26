@@ -35,7 +35,7 @@ func (r *deprovisionReconciler) Name() string { return "deprovision" }
 func (r *deprovisionReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon) (subReconcilerResult, error) {
 	// TODO: Use addon.DeletionTimestamp != nil instead of state string check
 	// (see docs/plans/postgres-addon-improvements.md #1).
-	if addon.Status.State != "Deleting" {
+	if addon.Status.State != models.PostgresAddonStateDeleting {
 		return resultNil, nil
 	}
 

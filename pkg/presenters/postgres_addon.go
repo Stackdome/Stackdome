@@ -387,7 +387,7 @@ func presentPostgresDatabases(in []models.PostgresAddonDatabase) []openapi.Postg
 
 func presentPostgresAddonStatus(in models.PostgresAddonStatus) openapi.PostgresAddonStatus {
 	res := openapi.PostgresAddonStatus{}
-	res.SetState(in.State)
+	res.SetState(string(in.State))
 	res.SetMessage(in.Message)
 
 	if len(in.Conditions) > 0 {

@@ -5,12 +5,15 @@ package postgres_addon
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers"
 	apperrors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
+	"k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -95,6 +98,29 @@ func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// StatusHash on PostgresCluster CRs (see docs/plans/cluster-agent-fixes.md #2).
 	if clusterInstance.Status.StatusHash == "" || clusterInstance.Status.StatusHash != dbInstance.Status.LastObservedStatusHash {
 		newStatus := mapToPostgresAddonStatus(clusterInstance.Status)
+		// Check if current status has ReadyOnce condition = true. If yes then that is always added.
+		if models.IsConditionTrue(dbInstance.Status.Conditions, string(models.PostgresAddonConditionReadyOnce)) {
+			readyOnceCond := models.FindCondition(dbInstance.Status.Conditions, string(models.PostgresAddonConditionReadyOnce))
+			newStatus.Conditions = append(newStatus.Conditions, *readyOnceCond)
+		}
+
+		// If the new status is Ready and the old status doesn't have ReadyOnce=true, set ReadyOnce=true with current timestamp.
+		// This ensures that ReadyOnce condition is set when addon reaches Ready state for the first time.
+		if newStatus.State == models.PostgresAddonStateReady && !models.IsConditionTrue(dbInstance.Status.Conditions, string(models.PostgresAddonConditionReadyOnce)) {
+			models.SetCondition(&newStatus.Conditions, models.Condition{
+				Type:               string(models.PostgresAddonConditionReadyOnce),
+				Status:             string(metav1.ConditionTrue),
+				LastTransitionTime: time.Now().UTC(),
+				Reason:             "PostgresReadyOnce",
+				Message:            "Postgres reached Ready state at least once",
+			})
+		}
+
+		if equality.Semantic.DeepEqual(dbInstance.Status, &newStatus) {
+			r.Log.Infof("postgres addon %s status is up to date, skipping DB update", postgresAddonID)
+			return ctrl.Result{}, nil
+		}
+
 		serr = r.PostgresAddonService.UpdatePostgresAddonStatus(ctx, dbInstance.ID, newStatus)
 		if serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update postgres addon status in db: %v", serr)
@@ -107,17 +133,20 @@ func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 // TODO(cluster-agent): Remove this mapping once cluster-agent uses defined phase
 // constants instead of passing through raw CNPG strings (see docs/plans/cluster-agent-fixes.md #3).
-func mapPhaseToState(phase string) string {
+func mapPhaseToState(phase string) models.PostgresAddonState {
 	switch phase {
-	case "Cluster in healthy state":
-		return "Ready"
-	case addonsv1alpha1.PendingPhase, addonsv1alpha1.ErrorPhase,
-		addonsv1alpha1.DeletingPhase, addonsv1alpha1.HibernatedPhase,
-		addonsv1alpha1.ReadyPhase:
-		return phase
+	case "Cluster in healthy state", addonsv1alpha1.ReadyPhase:
+		return models.PostgresAddonStateReady
+	case addonsv1alpha1.PendingPhase:
+		return models.PostgresAddonStatePending
+	case addonsv1alpha1.ErrorPhase:
+		return models.PostgresAddonStateError
+	case addonsv1alpha1.DeletingPhase:
+		return models.PostgresAddonStateDeleting
+	case addonsv1alpha1.HibernatedPhase:
+		return models.PostgresAddonStateHibernated
 	default:
-		// Pass through any other CNPG phase strings as-is
-		return phase
+		return models.PostgresAddonState(phase)
 	}
 }
 
@@ -148,7 +177,7 @@ func mapToPostgresAddonStatus(clusterStatus addonsv1alpha1.PostgresClusterStatus
 			// ClusterConnection in PostgresCluster outputs (see docs/plans/cluster-agent-fixes.md #4).
 			status.ConnectionInfo.Host = clusterStatus.Outputs.WriteService
 			status.ConnectionInfo.Port = 5432
-			status.ConnectionInfo.SSLMode = "verify-full"
+			status.ConnectionInfo.SSLMode = "require"
 		}
 
 		status.Databases = make([]models.PostgresDatabaseInfo, len(clusterStatus.Outputs.Databases))

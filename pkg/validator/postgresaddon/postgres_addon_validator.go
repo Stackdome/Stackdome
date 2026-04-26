@@ -10,6 +10,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
 	gocron "github.com/robfig/cron/v3"
 	"github.com/samber/lo"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 type postgresAddonValidator struct{}
@@ -346,14 +347,8 @@ func (v *postgresAddonValidator) validateDatabases(spec *models.PostgresAddon) *
 		}
 		databaseNames[db.Name] = true
 
-		// Validate database name format (PostgreSQL identifier rules)
-		dbNameRegex := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-		if !dbNameRegex.MatchString(db.Name) {
-			return errors.BadRequest("Database name '%s' must be a valid PostgreSQL identifier", db.Name)
-		}
-
-		if len(db.Name) > 63 {
-			return errors.BadRequest("Database name '%s' cannot be longer than 63 characters", db.Name)
+		if errs := validation.IsDNS1123Subdomain(db.Name); len(errs) > 0 {
+			return errors.BadRequest("Database name '%s' is not a valid DNS subdomain: %s", db.Name, strings.Join(errs, "; "))
 		}
 		for _, ext := range db.Extensions {
 			if !lo.Contains(models.SupportedPostgresExtensions, ext) {
