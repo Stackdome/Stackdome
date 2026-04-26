@@ -11,6 +11,41 @@ import (
 
 const (
 	PostgresAddonIDLabel = "postgres-addon.stackdome.io/id"
+	DefaultDatabaseName  = "app"
+)
+
+// PostgresAddonState represents the state of a PostgresAddon.
+type PostgresAddonState string
+
+const (
+	PostgresAddonStatePending      PostgresAddonState = "Pending"
+	PostgresAddonStateCreating     PostgresAddonState = "Creating"
+	PostgresAddonStateInitializing PostgresAddonState = "Initializing"
+	PostgresAddonStateReady        PostgresAddonState = "Ready"
+	PostgresAddonStateUpdating     PostgresAddonState = "Updating"
+	PostgresAddonStateBackingUp    PostgresAddonState = "Backing Up"
+	PostgresAddonStateRestoring    PostgresAddonState = "Restoring"
+	PostgresAddonStateError        PostgresAddonState = "Error"
+	PostgresAddonStateDeleting     PostgresAddonState = "Deleting"
+	PostgresAddonStateHibernated   PostgresAddonState = "Hibernated"
+	PostgresAddonStateFenced       PostgresAddonState = "Fenced"
+)
+
+// PostgresAddonConditionType represents condition types for a PostgresAddon.
+type PostgresAddonConditionType string
+
+const (
+	PostgresAddonConditionClusterConfigValid      PostgresAddonConditionType = "ClusterConfigurationValid"
+	PostgresAddonConditionClusterReady            PostgresAddonConditionType = "ClusterReady"
+	PostgresAddonConditionClusterHibernated       PostgresAddonConditionType = "ClusterHibernated"
+	PostgresAddonConditionClusterFenced           PostgresAddonConditionType = "ClusterFenced"
+	PostgresAddonConditionDatabasesApplied        PostgresAddonConditionType = "DatabasesApplied"
+	PostgresAddonConditionWalArchivingSuccess     PostgresAddonConditionType = "ContinuousWalArchivingSuccess"
+	PostgresAddonConditionLastBaseBackupSucceeded PostgresAddonConditionType = "LastBaseBackupSucceeded"
+
+	// PostgresAddonConditionReadyOnce is set by the API server (not the cluster-agent)
+	// when the addon first reaches Ready state. Once set, it is never cleared.
+	PostgresAddonConditionReadyOnce PostgresAddonConditionType = "ReadyOnce"
 )
 
 var SupportedPostgresExtensions = []string{
@@ -52,6 +87,15 @@ type PostgresAddon struct {
 	// Relationships
 	Databases []PostgresAddonDatabase `gorm:"foreignKey:PostgresAddonID"`
 	Backups   []PostgresBackup        `gorm:"foreignKey:PostgresAddonID"`
+}
+
+func (p PostgresAddon) DefaultDatabaseSpecified() bool {
+	for _, db := range p.Databases {
+		if db.Name == DefaultDatabaseName {
+			return true
+		}
+	}
+	return false
 }
 
 func (p PostgresAddon) Type() string {
@@ -206,7 +250,7 @@ type PostgresLifecycleConfig struct {
 }
 
 type PostgresAddonStatus struct {
-	State                  string                       `json:"state,omitempty"`
+	State                  PostgresAddonState           `json:"state,omitempty"`
 	Message                string                       `json:"message,omitempty"`
 	Conditions             []Condition                  `json:"conditions,omitempty"`
 	ConnectionInfo         *PostgresAddonConnectionInfo `json:"connectionInfo,omitempty"`

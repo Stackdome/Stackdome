@@ -74,6 +74,30 @@ func (a Annotations) ToMap() map[string]string {
 	return m
 }
 
+func FindCondition(conditions []Condition, condType string) *Condition {
+	for i := range conditions {
+		if conditions[i].Type == condType {
+			return &conditions[i]
+		}
+	}
+	return nil
+}
+
+func IsConditionTrue(conditions []Condition, condType string) bool {
+	c := FindCondition(conditions, condType)
+	return c != nil && c.Status == string(metav1.ConditionTrue)
+}
+
+func SetCondition(conditions *[]Condition, cond Condition) {
+	for i := range *conditions {
+		if (*conditions)[i].Type == cond.Type {
+			(*conditions)[i] = cond
+			return
+		}
+	}
+	*conditions = append(*conditions, cond)
+}
+
 func ConvertConditions(k8sconditions []metav1.Condition) []Condition {
 	conditions := make([]Condition, len(k8sconditions))
 	for i := range conditions {

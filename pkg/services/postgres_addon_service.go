@@ -14,6 +14,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator/postgresaddon"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -187,9 +188,16 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 		}
 	}
 
+	// Set default database as 'app' if no databases specified or default database not specified.
+	if len(postgresAddon.Databases) == 0 || !postgresAddon.DefaultDatabaseSpecified() {
+		postgresAddon.Databases = append(postgresAddon.Databases, models.PostgresAddonDatabase{
+			Name: models.DefaultDatabaseName,
+		})
+	}
+
 	// Set initial status
 	postgresAddon.Status = models.PostgresAddonStatus{
-		State:   "Pending",
+		State:   models.PostgresAddonStatePending,
 		Message: "PostgreSQL addon is being created",
 	}
 
@@ -382,7 +390,7 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 	}
 
 	// Mark for deletion
-	postgresAddon.Status.State = "Deleting"
+	postgresAddon.Status.State = models.PostgresAddonStateDeleting
 	postgresAddon.Status.Message = "PostgreSQL addon is being deleted"
 
 	err = s.postgresAddonStore.UpdateStatus(ctx, id, &postgresAddon.Status)
@@ -602,8 +610,9 @@ func (s *postgresAddonService) GetCredentials(ctx context.Context, addonID strin
 		return nil, err
 	}
 
-	if addon.Status.State != "Ready" {
-		return nil, errors.BadRequest("addon not ready, current state: %s", addon.Status.State)
+	ok := models.IsConditionTrue(addon.Status.Conditions, string(models.PostgresAddonConditionReadyOnce))
+	if !ok {
+		return nil, errors.BadRequest("credentials not available until addon has been ready at least once")
 	}
 
 	if addon.Status.ConnectionInfo == nil || addon.Status.ConnectionInfo.ClusterSecrets == nil {
@@ -620,6 +629,13 @@ func (s *postgresAddonService) GetCredentials(ctx context.Context, addonID strin
 	} else {
 		if !addon.HasDatabase(database) {
 			return nil, errors.NotFound("database '%s' not found in addon", database)
+		}
+
+		_, found := lo.Find(addon.Status.Databases, func(d models.PostgresDatabaseInfo) bool {
+			return d.Name == database
+		})
+		if !found {
+			return nil, errors.NotFound("database '%s' not applied", database)
 		}
 	}
 
@@ -664,7 +680,7 @@ func (s *postgresAddonService) GetCredentials(ctx context.Context, addonID strin
 	password := string(secret.Data["password"])
 
 	dbName := database
-	if superuser {
+	if superuser && database == "" {
 		dbName = "postgres"
 	}
 

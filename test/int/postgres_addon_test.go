@@ -58,8 +58,9 @@ var _ = Describe("PostgreSQL Addon", func() {
 
 			Expect(createdAddon.Spec.HasDatabases()).To(BeTrue())
 			databases := createdAddon.Spec.GetDatabases()
-			Expect(len(databases)).To(Equal(1))
-			Expect(databases[0].GetName()).To(Equal("testdb"))
+			Expect(len(databases)).To(Equal(2))
+			dbNames := []string{databases[0].GetName(), databases[1].GetName()}
+			Expect(dbNames).To(ContainElements("testdb", "app"))
 		})
 
 		It("should retrieve a postgres addon by ID", func() {
