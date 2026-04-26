@@ -4001,13 +4001,17 @@ components:
       type: object
       required:
         - addon_id
-        - database
         - env_mapping
       properties:
         addon_id:
           type: string
         database:
           type: string
+          description: Target database name. Required when superuser is false. Defaults to 'postgres' when superuser is true and omitted.
+        superuser:
+          type: boolean
+          default: false
+          description: When true, use superuser credentials. The addon must have enableSuperuserAccess enabled.
         env_mapping:
           type: object
           additionalProperties:

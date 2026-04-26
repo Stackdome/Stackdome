@@ -215,12 +215,18 @@ func presentEnvFromAddons(sources []models.AddonEnvSource) []openapi.AddonEnvSou
 	result := make([]openapi.AddonEnvSource, len(sources))
 	for i, s := range sources {
 		if s.Postgres != nil {
+			pgSource := &openapi.PostgresAddonEnvSource{
+				AddonId:    s.Postgres.AddonID,
+				EnvMapping: s.Postgres.EnvMapping,
+			}
+			if s.Postgres.Database != "" {
+				pgSource.SetDatabase(s.Postgres.Database)
+			}
+			if s.Postgres.Superuser {
+				pgSource.SetSuperuser(true)
+			}
 			result[i] = openapi.AddonEnvSource{
-				Postgres: &openapi.PostgresAddonEnvSource{
-					AddonId:    s.Postgres.AddonID,
-					Database:   s.Postgres.Database,
-					EnvMapping: s.Postgres.EnvMapping,
-				},
+				Postgres: pgSource,
 			}
 		}
 	}
@@ -475,7 +481,8 @@ func convertEnvFromAddons(sources []openapi.AddonEnvSource) []models.AddonEnvSou
 			result[i] = models.AddonEnvSource{
 				Postgres: &models.PostgresAddonEnvSource{
 					AddonID:    s.Postgres.AddonId,
-					Database:   s.Postgres.Database,
+					Database:   s.Postgres.GetDatabase(),
+					Superuser:  s.Postgres.GetSuperuser(),
 					EnvMapping: s.Postgres.EnvMapping,
 				},
 			}

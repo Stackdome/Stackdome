@@ -45,6 +45,7 @@ type StackServiceSpec struct {
 	ClusterRegistryService ImageRegistryService
 	NamespaceService       NamespaceService
 	SecretService          SecretService
+	PostgresAddonService   PostgresAddonService
 	Logger                 logger.Logger
 }
 
@@ -87,8 +88,9 @@ func NewStackService(spec StackServiceSpec) StackService {
 		logger:              spec.Logger,
 		sessionFactory:      spec.SessionFactory,
 		stackValidator: stackvalidator.NewStackValidator(stackvalidator.StackValidatorSpec{
-			DomainService: organisationDomainService,
-			SecretService: spec.SecretService,
+			DomainService:        organisationDomainService,
+			SecretService:        spec.SecretService,
+			PostgresAddonService: spec.PostgresAddonService,
 		}),
 		stackResourceService:   spec.StackResourceService,
 		clusterRegistryService: spec.ClusterRegistryService,

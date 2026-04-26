@@ -16,8 +16,11 @@ import (
 
 // PostgresAddonEnvSource struct for PostgresAddonEnvSource
 type PostgresAddonEnvSource struct {
-	AddonId  string `json:"addon_id"`
-	Database string `json:"database"`
+	AddonId string `json:"addon_id"`
+	// Target database name. Required when superuser is false. Defaults to 'postgres' when superuser is true and omitted.
+	Database *string `json:"database,omitempty"`
+	// When true, use superuser credentials. The addon must have enableSuperuserAccess enabled.
+	Superuser *bool `json:"superuser,omitempty"`
 	// Maps addon credential fields to environment variable names. Valid fields are host, port, username, password, database, sslmode, connectionString, caCertificate.
 	EnvMapping map[string]string `json:"env_mapping"`
 }
@@ -26,10 +29,11 @@ type PostgresAddonEnvSource struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPostgresAddonEnvSource(addonId string, database string, envMapping map[string]string) *PostgresAddonEnvSource {
+func NewPostgresAddonEnvSource(addonId string, envMapping map[string]string) *PostgresAddonEnvSource {
 	this := PostgresAddonEnvSource{}
 	this.AddonId = addonId
-	this.Database = database
+	var superuser bool = false
+	this.Superuser = &superuser
 	this.EnvMapping = envMapping
 	return &this
 }
@@ -39,6 +43,8 @@ func NewPostgresAddonEnvSource(addonId string, database string, envMapping map[s
 // but it doesn't guarantee that properties required by API are set
 func NewPostgresAddonEnvSourceWithDefaults() *PostgresAddonEnvSource {
 	this := PostgresAddonEnvSource{}
+	var superuser bool = false
+	this.Superuser = &superuser
 	return &this
 }
 
@@ -66,28 +72,68 @@ func (o *PostgresAddonEnvSource) SetAddonId(v string) {
 	o.AddonId = v
 }
 
-// GetDatabase returns the Database field value
+// GetDatabase returns the Database field value if set, zero value otherwise.
 func (o *PostgresAddonEnvSource) GetDatabase() string {
-	if o == nil {
+	if o == nil || o.Database == nil {
 		var ret string
 		return ret
 	}
-
-	return o.Database
+	return *o.Database
 }
 
-// GetDatabaseOk returns a tuple with the Database field value
+// GetDatabaseOk returns a tuple with the Database field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *PostgresAddonEnvSource) GetDatabaseOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.Database == nil {
 		return nil, false
 	}
-	return &o.Database, true
+	return o.Database, true
 }
 
-// SetDatabase sets field value
+// HasDatabase returns a boolean if a field has been set.
+func (o *PostgresAddonEnvSource) HasDatabase() bool {
+	if o != nil && o.Database != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetDatabase gets a reference to the given string and assigns it to the Database field.
 func (o *PostgresAddonEnvSource) SetDatabase(v string) {
-	o.Database = v
+	o.Database = &v
+}
+
+// GetSuperuser returns the Superuser field value if set, zero value otherwise.
+func (o *PostgresAddonEnvSource) GetSuperuser() bool {
+	if o == nil || o.Superuser == nil {
+		var ret bool
+		return ret
+	}
+	return *o.Superuser
+}
+
+// GetSuperuserOk returns a tuple with the Superuser field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PostgresAddonEnvSource) GetSuperuserOk() (*bool, bool) {
+	if o == nil || o.Superuser == nil {
+		return nil, false
+	}
+	return o.Superuser, true
+}
+
+// HasSuperuser returns a boolean if a field has been set.
+func (o *PostgresAddonEnvSource) HasSuperuser() bool {
+	if o != nil && o.Superuser != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetSuperuser gets a reference to the given bool and assigns it to the Superuser field.
+func (o *PostgresAddonEnvSource) SetSuperuser(v bool) {
+	o.Superuser = &v
 }
 
 // GetEnvMapping returns the EnvMapping field value
@@ -119,8 +165,11 @@ func (o PostgresAddonEnvSource) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["addon_id"] = o.AddonId
 	}
-	if true {
+	if o.Database != nil {
 		toSerialize["database"] = o.Database
+	}
+	if o.Superuser != nil {
+		toSerialize["superuser"] = o.Superuser
 	}
 	if true {
 		toSerialize["env_mapping"] = o.EnvMapping

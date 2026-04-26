@@ -5,14 +5,15 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **AddonId** | **string** |  | 
-**Database** | **string** |  | 
+**Database** | Pointer to **string** | Target database name. Required when superuser is false. Defaults to &#39;postgres&#39; when superuser is true and omitted. | [optional] 
+**Superuser** | Pointer to **bool** | When true, use superuser credentials. The addon must have enableSuperuserAccess enabled. | [optional] [default to false]
 **EnvMapping** | **map[string]string** | Maps addon credential fields to environment variable names. Valid fields are host, port, username, password, database, sslmode, connectionString, caCertificate. | 
 
 ## Methods
 
 ### NewPostgresAddonEnvSource
 
-`func NewPostgresAddonEnvSource(addonId string, database string, envMapping map[string]string, ) *PostgresAddonEnvSource`
+`func NewPostgresAddonEnvSource(addonId string, envMapping map[string]string, ) *PostgresAddonEnvSource`
 
 NewPostgresAddonEnvSource instantiates a new PostgresAddonEnvSource object
 This constructor will assign default values to properties that have it defined,
@@ -66,6 +67,36 @@ and a boolean to check if the value has been set.
 
 SetDatabase sets Database field to given value.
 
+### HasDatabase
+
+`func (o *PostgresAddonEnvSource) HasDatabase() bool`
+
+HasDatabase returns a boolean if a field has been set.
+
+### GetSuperuser
+
+`func (o *PostgresAddonEnvSource) GetSuperuser() bool`
+
+GetSuperuser returns the Superuser field if non-nil, zero value otherwise.
+
+### GetSuperuserOk
+
+`func (o *PostgresAddonEnvSource) GetSuperuserOk() (*bool, bool)`
+
+GetSuperuserOk returns a tuple with the Superuser field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetSuperuser
+
+`func (o *PostgresAddonEnvSource) SetSuperuser(v bool)`
+
+SetSuperuser sets Superuser field to given value.
+
+### HasSuperuser
+
+`func (o *PostgresAddonEnvSource) HasSuperuser() bool`
+
+HasSuperuser returns a boolean if a field has been set.
 
 ### GetEnvMapping
 

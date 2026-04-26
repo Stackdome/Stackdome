@@ -334,28 +334,9 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SessionFactory: d.DBSession,
 		Logger:         d.Logger,
 	})
-	stackService := services.NewStackService(services.StackServiceSpec{
-		SessionFactory:         d.DBSession,
-		Logger:                 d.Logger,
-		VolumeService:          volumeService,
-		OrganisationService:    organisationService,
-		StackResourceService:   stackResourceService,
-		ClusterService:         clusterService,
-		ClusterRegistryService: imageRegistryService,
-		NamespaceService:       namespaceService,
-		SecretService:          secretService,
-	})
-
 	loggingService := services.NewLoggingService(services.LoggingServiceSpec{
 		ClusterService:       clusterService,
 		StackResourceService: stackResourceService,
-		Logger:               d.Logger,
-	})
-
-	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
-		ClusterService:       clusterService,
-		StackResourceService: stackResourceService,
-		StackService:         stackService,
 		Logger:               d.Logger,
 	})
 
@@ -384,6 +365,26 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		ObjectStoreService:    objectStoreService,
 		ClusterManager:        d.ClusterManager,
 		Logger:                d.Logger,
+	})
+
+	stackService := services.NewStackService(services.StackServiceSpec{
+		SessionFactory:         d.DBSession,
+		Logger:                 d.Logger,
+		VolumeService:          volumeService,
+		OrganisationService:    organisationService,
+		StackResourceService:   stackResourceService,
+		ClusterService:         clusterService,
+		ClusterRegistryService: imageRegistryService,
+		NamespaceService:       namespaceService,
+		SecretService:          secretService,
+		PostgresAddonService:   postgresAddonService,
+	})
+
+	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
+		ClusterService:       clusterService,
+		StackResourceService: stackResourceService,
+		StackService:         stackService,
+		Logger:               d.Logger,
 	})
 
 	d.Services = Services{

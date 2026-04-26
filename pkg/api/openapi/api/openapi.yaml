@@ -3842,11 +3842,13 @@ components:
                   database: database
                   env_mapping:
                     key: env_mapping
+                  superuser: false
                   addon_id: addon_id
               - postgres:
                   database: database
                   env_mapping:
                     key: env_mapping
+                  superuser: false
                   addon_id: addon_id
               command:
               - command
@@ -3977,11 +3979,13 @@ components:
                   database: database
                   env_mapping:
                     key: env_mapping
+                  superuser: false
                   addon_id: addon_id
               - postgres:
                   database: database
                   env_mapping:
                     key: env_mapping
+                  superuser: false
                   addon_id: addon_id
               command:
               - command
@@ -4318,11 +4322,13 @@ components:
                     database: database
                     env_mapping:
                       key: env_mapping
+                    superuser: false
                     addon_id: addon_id
                 - postgres:
                     database: database
                     env_mapping:
                       key: env_mapping
+                    superuser: false
                     addon_id: addon_id
                 command:
                 - command
@@ -4453,11 +4459,13 @@ components:
                     database: database
                     env_mapping:
                       key: env_mapping
+                    superuser: false
                     addon_id: addon_id
                 - postgres:
                     database: database
                     env_mapping:
                       key: env_mapping
+                    superuser: false
                     addon_id: addon_id
                 command:
                 - command
@@ -4748,11 +4756,13 @@ components:
                     database: database
                     env_mapping:
                       key: env_mapping
+                    superuser: false
                     addon_id: addon_id
                 - postgres:
                     database: database
                     env_mapping:
                       key: env_mapping
+                    superuser: false
                     addon_id: addon_id
                 command:
                 - command
@@ -4883,11 +4893,13 @@ components:
                     database: database
                     env_mapping:
                       key: env_mapping
+                    superuser: false
                     addon_id: addon_id
                 - postgres:
                     database: database
                     env_mapping:
                       key: env_mapping
+                    superuser: false
                     addon_id: addon_id
                 command:
                 - command
@@ -5175,11 +5187,13 @@ components:
                 database: database
                 env_mapping:
                   key: env_mapping
+                superuser: false
                 addon_id: addon_id
             - postgres:
                 database: database
                 env_mapping:
                   key: env_mapping
+                superuser: false
                 addon_id: addon_id
             command:
             - command
@@ -5310,11 +5324,13 @@ components:
                 database: database
                 env_mapping:
                   key: env_mapping
+                superuser: false
                 addon_id: addon_id
             - postgres:
                 database: database
                 env_mapping:
                   key: env_mapping
+                superuser: false
                 addon_id: addon_id
             command:
             - command
@@ -5612,11 +5628,13 @@ components:
               database: database
               env_mapping:
                 key: env_mapping
+              superuser: false
               addon_id: addon_id
           - postgres:
               database: database
               env_mapping:
                 key: env_mapping
+              superuser: false
               addon_id: addon_id
           command:
           - command
@@ -5800,11 +5818,13 @@ components:
                 database: database
                 env_mapping:
                   key: env_mapping
+                superuser: false
                 addon_id: addon_id
             - postgres:
                 database: database
                 env_mapping:
                   key: env_mapping
+                superuser: false
                 addon_id: addon_id
             command:
             - command
@@ -5935,11 +5955,13 @@ components:
                 database: database
                 env_mapping:
                   key: env_mapping
+                superuser: false
                 addon_id: addon_id
             - postgres:
                 database: database
                 env_mapping:
                   key: env_mapping
+                superuser: false
                 addon_id: addon_id
             command:
             - command
@@ -6763,11 +6785,13 @@ components:
             database: database
             env_mapping:
               key: env_mapping
+            superuser: false
             addon_id: addon_id
         - postgres:
             database: database
             env_mapping:
               key: env_mapping
+            superuser: false
             addon_id: addon_id
         command:
         - command
@@ -8156,6 +8180,7 @@ components:
           database: database
           env_mapping:
             key: env_mapping
+          superuser: false
           addon_id: addon_id
       properties:
         postgres:
@@ -8166,12 +8191,20 @@ components:
         database: database
         env_mapping:
           key: env_mapping
+        superuser: false
         addon_id: addon_id
       properties:
         addon_id:
           type: string
         database:
+          description: Target database name. Required when superuser is false. Defaults
+            to 'postgres' when superuser is true and omitted.
           type: string
+        superuser:
+          default: false
+          description: "When true, use superuser credentials. The addon must have\
+            \ enableSuperuserAccess enabled."
+          type: boolean
         env_mapping:
           additionalProperties:
             type: string
@@ -8181,7 +8214,6 @@ components:
           type: object
       required:
       - addon_id
-      - database
       - env_mapping
       type: object
     _api_v1_organizations__org_id__clusters__cluster_id__image_registries_get_200_response:

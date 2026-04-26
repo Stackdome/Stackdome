@@ -39,6 +39,7 @@ func (r *addonEnvReconciler) Reconcile(ctx context.Context, stack *models.Stack)
 		return resultNil, nil
 	}
 
+	var desiredAddonUsages []*models.AddonUsage
 	for _, resource := range stack.StackResources {
 		if resource.ExecutionConfig == nil || len(resource.ExecutionConfig.EnvFromAddons) == 0 {
 			continue
@@ -52,15 +53,24 @@ func (r *addonEnvReconciler) Reconcile(ctx context.Context, stack *models.Stack)
 			return *requeueResult, nil
 		}
 
-		if len(resolvedEnvVars) == 0 {
-			continue
+		for _, addonSource := range resource.ExecutionConfig.EnvFromAddons {
+			if addonSource.Postgres != nil {
+				desiredAddonUsages = append(desiredAddonUsages, &models.AddonUsage{
+					AddonType:       models.AddonTypePostgres,
+					AddonID:         addonSource.Postgres.AddonID,
+					StackID:         stack.ID,
+					StackResourceID: resource.ID,
+				})
+			}
 		}
 
-		resource.ExecutionConfig.Env = appendWithoutDuplicates(resource.ExecutionConfig.Env, resolvedEnvVars)
-
-		if err := r.syncAddonUsages(ctx, stack.ID, resource); err != nil {
-			return resultNil, fmt.Errorf("failed to sync addon usages for resource '%s': %w", resource.Name, err)
+		if len(resolvedEnvVars) > 0 {
+			resource.ExecutionConfig.Env = appendWithoutDuplicates(resource.ExecutionConfig.Env, resolvedEnvVars)
 		}
+	}
+
+	if err := r.syncAddonUsages(ctx, stack.ID, desiredAddonUsages); err != nil {
+		return resultNil, fmt.Errorf("failed to sync addon usages: %w", err)
 	}
 
 	return resultNil, nil
@@ -75,8 +85,9 @@ func (r *addonEnvReconciler) resolveAddonEnvVars(ctx context.Context, stackID st
 		}
 		pg := addonSource.Postgres
 
-		creds, credErr := r.postgresAddonService.GetCredentials(ctx, pg.AddonID, pg.Database, false)
+		creds, credErr := r.postgresAddonService.GetCredentials(ctx, pg.AddonID, pg.Database, pg.Superuser)
 		if credErr != nil {
+			r.logger.Errorf("failed to fetch db: '%s' credentials, got err: %s", pg.Database, credErr.Error())
 			// Check if credentials were resolved in a prior reconciliation.
 			// If yes, the CR already has valid env vars — proceed without blocking.
 			previouslyResolved, lookupErr := r.addonUsageService.ExistsByStackResourceAndAddon(ctx, stackID, resource.ID, pg.AddonID)
@@ -113,20 +124,40 @@ func (r *addonEnvReconciler) resolveAddonEnvVars(ctx context.Context, stackID st
 	return envVars, nil, nil
 }
 
-func (r *addonEnvReconciler) syncAddonUsages(ctx context.Context, stackID string, resource *models.StackResource) error {
-	for _, addonSource := range resource.ExecutionConfig.EnvFromAddons {
-		if addonSource.Postgres == nil {
-			continue
-		}
-		if err := r.addonUsageService.Create(ctx, &models.AddonUsage{
-			AddonType:       models.AddonTypePostgres,
-			AddonID:         addonSource.Postgres.AddonID,
-			StackID:         stackID,
-			StackResourceID: resource.ID,
-		}); err != nil {
-			return fmt.Errorf("failed to create addon usage for addon '%s': %w", addonSource.Postgres.AddonID, err)
+func addonUsageKey(resourceID, addonID string, addonType models.AddonType) string {
+	return resourceID + ":" + addonID + ":" + string(addonType)
+}
+
+func (r *addonEnvReconciler) syncAddonUsages(ctx context.Context, stackID string, desiredAddonUsages []*models.AddonUsage) error {
+	existing, err := r.addonUsageService.GetByStackID(ctx, stackID)
+	if err != nil {
+		return fmt.Errorf("failed to list addon usages for stack '%s': %w", stackID, err)
+	}
+
+	existingKeys := make(map[string]struct{}, len(existing))
+	for _, u := range existing {
+		existingKeys[addonUsageKey(u.StackResourceID, u.AddonID, u.AddonType)] = struct{}{}
+	}
+
+	desiredKeys := make(map[string]struct{}, len(desiredAddonUsages))
+	for _, u := range desiredAddonUsages {
+		key := addonUsageKey(u.StackResourceID, u.AddonID, u.AddonType)
+		desiredKeys[key] = struct{}{}
+		if _, ok := existingKeys[key]; !ok {
+			if err := r.addonUsageService.Create(ctx, u); err != nil {
+				return fmt.Errorf("failed to create addon usage for addon '%s': %w", u.AddonID, err)
+			}
 		}
 	}
+
+	for _, u := range existing {
+		if _, ok := desiredKeys[addonUsageKey(u.StackResourceID, u.AddonID, u.AddonType)]; !ok {
+			if err := r.addonUsageService.Delete(ctx, u.AddonType, u.AddonID, stackID, u.StackResourceID); err != nil {
+				return fmt.Errorf("failed to delete stale addon usage for addon '%s': %w", u.AddonID, err)
+			}
+		}
+	}
+
 	return nil
 }
 

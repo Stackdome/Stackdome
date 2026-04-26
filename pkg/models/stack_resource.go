@@ -136,7 +136,8 @@ type AddonEnvSource struct {
 
 type PostgresAddonEnvSource struct {
 	AddonID    string            `json:"addon_id"`
-	Database   string            `json:"database"`
+	Database   string            `json:"database,omitempty"`
+	Superuser  bool              `json:"superuser,omitempty"`
 	EnvMapping map[string]string `json:"env_mapping"`
 }
 

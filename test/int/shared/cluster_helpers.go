@@ -170,6 +170,19 @@ func ConnectToPostgres(host string, port int32, username, password, dbName, sslM
 	return db
 }
 
+// GetSuperuserCredentials fetches JIT superuser credentials for an addon via the API.
+// The database path param is required by the route but ignored by the service in superuser mode.
+func GetSuperuserCredentials(apiClient *openapi.APIClient, orgID, addonID string) *openapi.PostgresCredentials {
+	ctx := context.Background()
+	resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet(ctx, orgID, addonID, "postgres").
+		Superuser(true).
+		Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to get superuser credentials")
+	Expect(httpResp.StatusCode).To(Equal(200))
+	Expect(resp).NotTo(BeNil())
+	return resp
+}
+
 // CnpgClusterName returns the CNPG Cluster CR name derived from addon name and PG major version.
 func CnpgClusterName(addonName string, majorVersion int) string {
 	return fmt.Sprintf("%s-%d", addonName, majorVersion)
