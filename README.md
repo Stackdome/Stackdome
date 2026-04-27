@@ -11,16 +11,16 @@ Stackdome is a self-hosted PaaS (Platform-as-a-Service) that deploys and manages
                     └──────┬───────┘
                            │
                     ┌──────▼───────┐         ┌──────────────┐
-                    │  API Server  │────────►│  PostgreSQL   │
-                    │    (Hub)     │         │   Database    │
+                    │  API Server  │────────►│  PostgreSQL  │
+                    │    (Hub)     │         │   Database   │
                     └──────┬───────┘         └──────────────┘
                            │
               ┌────────────┼────────────┐
               │            │            │
        ┌──────▼──┐  ┌──────▼──┐  ┌──────▼──┐
-       │ Cluster  │  │ Cluster  │  │ Cluster  │
-       │ Agent 1  │  │ Agent 2  │  │ Agent N  │
-       │ (Spoke)  │  │ (Spoke)  │  │ (Spoke)  │
+       │ Cluster │  │ Cluster │  │ Cluster │
+       │ Agent 1 │  │ Agent 2 │  │ Agent N │
+       │ (Spoke) │  │ (Spoke) │  │ (Spoke) │
        └─────────┘  └─────────┘  └─────────┘
 ```
 
