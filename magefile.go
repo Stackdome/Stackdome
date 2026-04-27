@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -12,11 +13,13 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
+	"github.com/joho/godotenv"
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/mt-sre/devkube/dev"
@@ -102,6 +105,16 @@ const (
 	StackdomeChartRepo           = "oci://quay.io/stackdome/charts/stackdome-agent"
 	StackdomeChartReleaseName    = "stackdome-agent"
 	StackdomeChartNamespace      = "stackdome-control-plane"
+
+	// Dev environment
+	PGContainerName = "psql-stackdome-dev"
+	DevConfigFile   = "dev_env.yaml"
+
+	// RBAC resource names
+	DevSAName      = "stackdome-api-server-account"
+	DevSANamespace = "stackdome-control-plane"
+	DevRoleName    = "stackdome-api-server-role"
+	DevSecretName  = "stackdome-api-server-account-secret"
 )
 
 // GetClusterName returns the cluster name from KIND_CLUSTER_NAME env var or the default.
@@ -811,5 +824,514 @@ func runIntegrationTests(ctx context.Context, focus string, verbose bool) error 
 		}
 	}
 
+	return nil
+}
+
+// =============================================================================
+// Dev Namespace
+// =============================================================================
+
+// Dev namespace for local development environment management
+type Dev mg.Namespace
+
+// DevDBConfig holds PostgreSQL connection configuration for the dev environment.
+type DevDBConfig struct {
+	Host     string
+	Port     int
+	Name     string
+	Username string
+	Password string
+}
+
+// DevCredentials holds the extracted cluster credentials.
+type DevCredentials struct {
+	ClusterURL string
+	CAData     string
+	SAToken    string
+}
+
+// Setup bootstraps a complete local development environment:
+// Kind cluster with stackdome-agent, RBAC for cluster registration,
+// and a PostgreSQL container. Safe to run multiple times.
+func (Dev) Setup(ctx context.Context) error {
+	fmt.Println("========================================")
+	fmt.Println(" Setting up Stackdome dev environment")
+	fmt.Println("========================================")
+	fmt.Println()
+
+	// Step 1: Load .env and get DB config
+	dbConfig := loadDevDBConfig()
+
+	// Step 2: Start PostgreSQL container
+	fmt.Println("[1/4] Starting PostgreSQL...")
+	if err := startPostgresContainer(ctx, dbConfig); err != nil {
+		return fmt.Errorf("failed to start PostgreSQL: %w", err)
+	}
+
+	// Step 3: Create Kind cluster + install stackdome-agent
+	fmt.Println()
+	fmt.Println("[2/4] Setting up Kind cluster with stackdome-agent...")
+
+	mg.Deps(mg.F(Deps.Install))
+	if err := initDevEnvironment(); err != nil {
+		return fmt.Errorf("failed to init dev environment config: %w", err)
+	}
+
+	clusterName := GetClusterName()
+	kubeconfig := filepath.Join(devEnvironment.WorkDir, "kubeconfig.yaml")
+
+	if kindClusterExists(ctx, clusterName) {
+		fmt.Printf("Kind cluster '%s' already exists. Reusing.\n", clusterName)
+		if err := ensureStackdomeAgent(ctx, kubeconfig); err != nil {
+			return fmt.Errorf("failed to ensure stackdome-agent: %w", err)
+		}
+	} else {
+		if err := devEnvironment.Init(ctx); err != nil {
+			return fmt.Errorf("failed to create cluster: %w", err)
+		}
+		fmt.Println("✅ Cluster created.")
+	}
+
+	// Step 4: Deploy RBAC resources
+	fmt.Println()
+	fmt.Println("[3/4] Deploying RBAC resources...")
+	if err := deployDevRBAC(ctx, kubeconfig); err != nil {
+		return fmt.Errorf("failed to deploy RBAC: %w", err)
+	}
+
+	// Step 5: Extract credentials
+	fmt.Println()
+	fmt.Println("[4/4] Extracting cluster credentials...")
+	creds, err := extractDevCredentials(ctx, kubeconfig)
+	if err != nil {
+		return fmt.Errorf("failed to extract credentials: %w", err)
+	}
+
+	// Step 6: Write config file and print summary
+	configPath := filepath.Join(projectRoot, DevConfigFile)
+	if err := writeDevConfig(configPath, clusterName, kubeconfig, creds, dbConfig); err != nil {
+		return fmt.Errorf("failed to write dev config: %w", err)
+	}
+
+	printDevSummary(clusterName, kubeconfig, creds, dbConfig, configPath)
+	return nil
+}
+
+// kindClusterExists checks whether a Kind cluster with the given name exists.
+func kindClusterExists(ctx context.Context, name string) bool {
+	cmd := exec.CommandContext(ctx, "kind", "get", "clusters")
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		if line == name {
+			return true
+		}
+	}
+	return false
+}
+
+// ensureStackdomeAgent runs helm upgrade --install so the chart is
+// present even when the cluster was already running.
+func ensureStackdomeAgent(ctx context.Context, kubeconfig string) error {
+	chartVersion := GetStackdomeChartVersion()
+	args := []string{
+		"upgrade", "--install", StackdomeChartReleaseName, StackdomeChartRepo,
+		"--version", chartVersion,
+		"--namespace", StackdomeChartNamespace,
+		"--create-namespace",
+	}
+	logger.Info("Ensuring stackdome-agent chart", "version", chartVersion)
+	cmd := exec.CommandContext(ctx, "helm", args...)
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+kubeconfig)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("helm upgrade --install failed: %w", err)
+	}
+	return nil
+}
+
+// Teardown removes the local development environment. Safe to run
+// even if some components were already removed.
+func (Dev) Teardown(ctx context.Context) error {
+	fmt.Println("Tearing down Stackdome dev environment...")
+
+	// Remove postgres container
+	if containerRuntime == "" {
+		containerRuntime, _ = detectContainerRuntime()
+	}
+	if containerRuntime != "" {
+		fmt.Println("Stopping PostgreSQL container...")
+		cmd := exec.CommandContext(ctx, containerRuntime, "rm", "-f", PGContainerName)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		_ = cmd.Run()
+	} else {
+		fmt.Println("Warning: no container runtime found, skipping postgres cleanup")
+	}
+
+	// Delete Kind cluster (handles missing cluster gracefully)
+	fmt.Println("Deleting Kind cluster...")
+	if err := (Cluster{}).Delete(ctx); err != nil {
+		fmt.Printf("Warning: failed to delete cluster: %v\n", err)
+	}
+
+	// Remove config file
+	configPath := filepath.Join(projectRoot, DevConfigFile)
+	if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
+		fmt.Printf("Warning: failed to remove %s: %v\n", DevConfigFile, err)
+	}
+
+	fmt.Println("✅ Dev environment torn down")
+	return nil
+}
+
+// loadDevDBConfig loads PostgreSQL config from .env file and environment,
+// then writes any missing values back to .env so that subsequent commands
+// (mage migrate, mage run) work without manual configuration.
+func loadDevDBConfig() *DevDBConfig {
+	envFile := filepath.Join(projectRoot, ".env")
+	_ = godotenv.Load(envFile)
+
+	defaults := map[string]string{
+		"DB_HOST":     "localhost",
+		"DB_PORT":     "5432",
+		"DB_NAME":     "stackdome_dev",
+		"DB_USERNAME": "postgres",
+		"DB_PASSWORD": "foobar-bizz-buzz",
+	}
+
+	port := 5432
+	if v := os.Getenv("DB_PORT"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil {
+			port = p
+		}
+	}
+
+	config := &DevDBConfig{
+		Host:     getEnv("DB_HOST", defaults["DB_HOST"]),
+		Port:     port,
+		Name:     getEnv("DB_NAME", defaults["DB_NAME"]),
+		Username: getEnv("DB_USERNAME", defaults["DB_USERNAME"]),
+		Password: getEnv("DB_PASSWORD", defaults["DB_PASSWORD"]),
+	}
+
+	ensureDotEnvDefaults(envFile, defaults)
+	return config
+}
+
+// ensureDotEnvDefaults reads the .env file and appends any missing keys
+// with their default values. Creates the file from .env_template if it
+// doesn't exist.
+func ensureDotEnvDefaults(envFile string, defaults map[string]string) {
+	// If .env doesn't exist, seed it from .env_template
+	if _, err := os.Stat(envFile); os.IsNotExist(err) {
+		templateFile := filepath.Join(projectRoot, ".env_template")
+		if tmpl, err := os.ReadFile(templateFile); err == nil {
+			_ = os.WriteFile(envFile, tmpl, 0600)
+			fmt.Println("Created .env from .env_template")
+		} else {
+			_ = os.WriteFile(envFile, []byte(""), 0600)
+			fmt.Println("Created empty .env")
+		}
+	}
+
+	existing, err := godotenv.Read(envFile)
+	if err != nil {
+		existing = map[string]string{}
+	}
+
+	// Append only missing keys to preserve file ordering and comments
+	var lines []string
+	for key, defaultVal := range defaults {
+		if _, exists := existing[key]; !exists {
+			lines = append(lines, fmt.Sprintf("%s=%q", key, defaultVal))
+		}
+	}
+
+	if len(lines) > 0 {
+		f, err := os.OpenFile(envFile, os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			fmt.Printf("Warning: failed to update .env: %v\n", err)
+			return
+		}
+		defer f.Close()
+
+		content := "\n" + strings.Join(lines, "\n") + "\n"
+		if _, err := f.WriteString(content); err != nil {
+			fmt.Printf("Warning: failed to write to .env: %v\n", err)
+			return
+		}
+
+		var keys []string
+		for _, line := range lines {
+			keys = append(keys, strings.SplitN(line, "=", 2)[0])
+		}
+		fmt.Printf("Added missing defaults to .env: %s\n", strings.Join(keys, ", "))
+	}
+}
+
+// startPostgresContainer starts a PostgreSQL Docker container for the dev environment.
+func startPostgresContainer(ctx context.Context, config *DevDBConfig) error {
+	if containerRuntime == "" {
+		var err error
+		containerRuntime, err = detectContainerRuntime()
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check if container is already running
+	cmd := exec.CommandContext(ctx, containerRuntime, "ps", "--format", "{{.Names}}")
+	output, err := cmd.Output()
+	if err == nil && strings.Contains(string(output), PGContainerName) {
+		fmt.Printf("PostgreSQL container '%s' already running.\n", PGContainerName)
+		return nil
+	}
+
+	// Check if container exists but is stopped
+	cmd = exec.CommandContext(ctx, containerRuntime, "ps", "-a", "--format", "{{.Names}}")
+	output, err = cmd.Output()
+	if err == nil && strings.Contains(string(output), PGContainerName) {
+		fmt.Printf("Starting existing PostgreSQL container '%s'...\n", PGContainerName)
+		cmd = exec.CommandContext(ctx, containerRuntime, "start", PGContainerName)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to start existing container: %w", err)
+		}
+	} else {
+		// Create new container
+		fmt.Printf("Creating PostgreSQL container '%s'...\n", PGContainerName)
+		cmd = exec.CommandContext(ctx, containerRuntime, "run",
+			"--name", PGContainerName,
+			"-e", fmt.Sprintf("POSTGRES_USER=%s", config.Username),
+			"-e", fmt.Sprintf("POSTGRES_PASSWORD=%s", config.Password),
+			"-e", fmt.Sprintf("POSTGRES_DB=%s", config.Name),
+			"-p", fmt.Sprintf("%d:5432", config.Port),
+			"-d", "postgres",
+		)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to create postgres container: %w", err)
+		}
+	}
+
+	// Wait for PostgreSQL to be ready
+	fmt.Println("Waiting for PostgreSQL to be ready...")
+	for i := 0; i < 30; i++ {
+		cmd = exec.CommandContext(ctx, containerRuntime, "exec", PGContainerName,
+			"pg_isready", "-U", config.Username)
+		if err := cmd.Run(); err == nil {
+			fmt.Printf("PostgreSQL ready (database: %s, port: %d)\n", config.Name, config.Port)
+			return nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	return fmt.Errorf("PostgreSQL failed to start within 30 seconds")
+}
+
+// deployDevRBAC creates the service account, roles, and bindings needed
+// for the API server to manage the cluster.
+func deployDevRBAC(ctx context.Context, kubeconfig string) error {
+	// Ensure namespace exists (may already exist from Helm chart)
+	if err := runKubectlApply(ctx, kubeconfig, fmt.Sprintf(`
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: %s`, DevSANamespace)); err != nil {
+		return fmt.Errorf("failed to ensure namespace: %w", err)
+	}
+
+	// Create ServiceAccount
+	if err := runKubectlApply(ctx, kubeconfig, fmt.Sprintf(`
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: %s
+  namespace: %s`, DevSAName, DevSANamespace)); err != nil {
+		return fmt.Errorf("failed to create service account: %w", err)
+	}
+
+	// Create ClusterRole with full permissions for API server
+	if err := runKubectlApply(ctx, kubeconfig, fmt.Sprintf(`
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: %s
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]`, DevRoleName)); err != nil {
+		return fmt.Errorf("failed to create cluster role: %w", err)
+	}
+
+	// Create ClusterRoleBinding
+	if err := runKubectlApply(ctx, kubeconfig, fmt.Sprintf(`
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: %s-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: %s
+subjects:
+  - kind: ServiceAccount
+    name: %s
+    namespace: %s`, DevRoleName, DevRoleName, DevSAName, DevSANamespace)); err != nil {
+		return fmt.Errorf("failed to create cluster role binding: %w", err)
+	}
+
+	// Create Secret for ServiceAccount token
+	if err := runKubectlApply(ctx, kubeconfig, fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+  annotations:
+    kubernetes.io/service-account.name: %s
+type: kubernetes.io/service-account-token`, DevSecretName, DevSANamespace, DevSAName)); err != nil {
+		return fmt.Errorf("failed to create secret: %w", err)
+	}
+
+	// Wait for token to be populated
+	fmt.Println("Waiting for service account token...")
+	for i := 0; i < 30; i++ {
+		cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig,
+			"get", "secret", DevSecretName,
+			"-n", DevSANamespace,
+			"-o", "jsonpath={.data.token}")
+		output, err := cmd.Output()
+		if err == nil && len(output) > 0 {
+			fmt.Println("Service account token ready.")
+			return nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	return fmt.Errorf("timeout waiting for service account token (30s)")
+}
+
+// extractDevCredentials retrieves the cluster URL, CA data, and SA token.
+func extractDevCredentials(ctx context.Context, kubeconfig string) (*DevCredentials, error) {
+	// Get cluster API URL
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig,
+		"config", "view", "--raw", "--minify", "--flatten",
+		"-o", "jsonpath={.clusters[0].cluster.server}")
+	urlOutput, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cluster URL: %w", err)
+	}
+
+	// Get CA data (already base64 encoded in the secret)
+	cmd = exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig,
+		"get", "secret", DevSecretName,
+		"-n", DevSANamespace,
+		"-o", "jsonpath={.data.ca\\.crt}")
+	caOutput, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get CA data: %w", err)
+	}
+
+	// Get SA token (base64 encoded in the secret, needs decoding)
+	cmd = exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig,
+		"get", "secret", DevSecretName,
+		"-n", DevSANamespace,
+		"-o", "jsonpath={.data.token}")
+	tokenB64, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get SA token: %w", err)
+	}
+
+	token, err := base64.StdEncoding.DecodeString(string(tokenB64))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode SA token: %w", err)
+	}
+
+	return &DevCredentials{
+		ClusterURL: string(urlOutput),
+		CAData:     string(caOutput),
+		SAToken:    string(token),
+	}, nil
+}
+
+// writeDevConfig writes the dev environment configuration to a YAML file.
+func writeDevConfig(path, clusterName, kubeconfig string, creds *DevCredentials, db *DevDBConfig) error {
+	content := fmt.Sprintf(`kubeconfig: %s
+cluster_name: %s
+cluster_url: %s
+cluster_ca_data: %s
+cluster_sa_token: %s
+kubectl_context: kind-%s
+db_host: %s
+db_port: %d
+db_name: %s
+db_username: %s
+db_password: %s
+`, kubeconfig, clusterName, creds.ClusterURL, creds.CAData, creds.SAToken,
+		clusterName, db.Host, db.Port, db.Name, db.Username, db.Password)
+
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
+}
+
+// printDevSummary prints the dev environment details and next steps.
+func printDevSummary(clusterName, kubeconfig string, creds *DevCredentials, db *DevDBConfig, configPath string) {
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println(" Stackdome dev environment is ready!")
+	fmt.Println("========================================")
+	fmt.Println()
+	fmt.Println("Cluster:")
+	fmt.Printf("  Name:        %s\n", clusterName)
+	fmt.Printf("  API URL:     %s\n", creds.ClusterURL)
+	fmt.Printf("  Kubeconfig:  %s\n", kubeconfig)
+	fmt.Printf("  Context:     kind-%s\n", clusterName)
+	fmt.Println()
+	fmt.Println("Service Account:")
+	fmt.Printf("  Token:       %s...%s\n", creds.SAToken[:10], creds.SAToken[len(creds.SAToken)-10:])
+	fmt.Printf("  CA Data:     %s...\n", creds.CAData[:40])
+	fmt.Println()
+	fmt.Println("PostgreSQL:")
+	fmt.Printf("  Host:        %s\n", db.Host)
+	fmt.Printf("  Port:        %d\n", db.Port)
+	fmt.Printf("  Database:    %s\n", db.Name)
+	fmt.Printf("  Username:    %s\n", db.Username)
+	fmt.Println()
+	fmt.Printf("Config written to: %s\n", configPath)
+	fmt.Println()
+	fmt.Println("Next steps:")
+	fmt.Println()
+	fmt.Println("  # Run database migrations")
+	fmt.Println("  mage migrate")
+	fmt.Println()
+	fmt.Println("  # Start the API server")
+	fmt.Println("  mage run")
+	fmt.Println()
+	fmt.Println("  # Watch cluster pods")
+	fmt.Printf("  kubectl --context kind-%s get pods -A -w\n", clusterName)
+	fmt.Println()
+	fmt.Println("  # Tear down the environment")
+	fmt.Println("  mage dev:teardown")
+	fmt.Println()
+}
+
+// runKubectlApply applies a YAML manifest via kubectl apply.
+func runKubectlApply(ctx context.Context, kubeconfig, manifest string) error {
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "apply", "-f", "-")
+	cmd.Stdin = strings.NewReader(manifest)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("kubectl apply failed: %w\nOutput: %s", err, output)
+	}
 	return nil
 }
