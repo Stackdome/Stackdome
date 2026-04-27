@@ -14,6 +14,7 @@ go install github.com/magefile/mage@latest
 The `magefile.go` is organized into logical namespaces:
 
 - **Global Namespace**: Core build commands (build, run, generate, fmt, lint, clean, migrate)
+- **Dev**: Local development environment lifecycle (setup, teardown)
 - **Deps**: Dependency management (install/clean build tools like kind, helm, kubectl)
 - **Cluster**: Test cluster lifecycle (create, delete, status, kubeconfig)
 - **Test**: Test execution (unit, integration, coverage, clean)
@@ -27,6 +28,27 @@ The `magefile.go` is organized into logical namespaces:
 - `mage clean` - Remove build artifacts
 - `mage fmt` - Format the code
 - `mage generate` - Regenerate OpenAPI client code
+
+### Dev Environment
+
+- `mage dev:setup` - Bootstrap a complete local dev environment (PostgreSQL + Kind cluster + RBAC)
+- `mage dev:teardown` - Tear down the dev environment (removes postgres container, Kind cluster, and config file)
+
+Both commands are idempotent — `dev:setup` reuses an existing PostgreSQL container and Kind cluster, and `dev:teardown` handles already-removed components gracefully.
+
+`dev:setup` reads database configuration from `.env` if present, otherwise uses defaults (`localhost:5432`, user `postgres`, database `stackdome_dev`). Any missing DB variables are automatically appended to `.env` (created from `.env_template` if absent) so that `mage migrate` and `mage run` work immediately. Cluster credentials and DB config are written to `dev_env.yaml`.
+
+```bash
+# One-command setup
+mage dev:setup
+
+# Then run the API server
+mage migrate
+mage run
+
+# Clean up when done
+mage dev:teardown
+```
 
 ### Test Commands
 

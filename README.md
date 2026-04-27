@@ -57,9 +57,48 @@ The system follows a **hub-and-spoke model**:
 
 ## Quick Start
 
-### Automated Setup
+### One-Command Setup (Recommended)
 
-The `hack/run_local.sh` script bootstraps a complete local environment (PostgreSQL, Kind cluster, API server, cluster registration):
+`mage dev:setup` bootstraps everything you need to develop locally — a PostgreSQL container, a Kind cluster with the stackdome-agent operator, and RBAC credentials for cluster registration:
+
+```bash
+mage dev:setup
+```
+
+This will:
+1. Start a PostgreSQL container (reads config from `.env` if present, otherwise uses defaults)
+2. Create a Kind cluster and install the stackdome-agent Helm chart
+3. Deploy RBAC resources (ServiceAccount, ClusterRole, ClusterRoleBinding) for API server access
+4. Extract cluster credentials (API URL, CA data, SA token) and write them to `dev_env.yaml`
+
+Then run the API server:
+
+```bash
+mage migrate    # Run database migrations
+mage run        # Build and start the API server
+```
+
+To tear everything down:
+
+```bash
+mage dev:teardown
+```
+
+The command is fully idempotent — safe to run multiple times. It will reuse an existing PostgreSQL container and Kind cluster instead of recreating them.
+
+**Database configuration:** `mage dev:setup` loads the `.env` file if present, then falls back to these defaults. Any missing DB variables are automatically appended to `.env` so that `mage migrate` and `mage run` work without manual editing. If `.env` doesn't exist at all, it is created from `.env_template`.
+
+| Variable | Default |
+|----------|---------|
+| `DB_HOST` | `localhost` |
+| `DB_PORT` | `5432` |
+| `DB_NAME` | `stackdome_dev` |
+| `DB_USERNAME` | `postgres` |
+| `DB_PASSWORD` | `foobar-bizz-buzz` |
+
+### Alternative: Full Automated Setup
+
+The `hack/run_local.sh` script bootstraps a complete local environment including the API server and cluster registration (useful for end-to-end demos):
 
 ```bash
 # Start environment only
@@ -167,6 +206,10 @@ mage run                     # Build and run
 mage fmt                     # Format code
 mage lint                    # Run linter
 mage migrate                 # Run database migrations
+
+# Dev environment (recommended for onboarding)
+mage dev:setup               # Bootstrap full dev environment (postgres + cluster + RBAC)
+mage dev:teardown            # Tear down dev environment
 
 # Cluster management
 mage cluster:setup           # Create Kind cluster with stackdome-agent chart
