@@ -142,6 +142,9 @@ func (r *addonEnvReconciler) syncAddonUsages(ctx context.Context, stackID string
 	desiredKeys := make(map[string]struct{}, len(desiredAddonUsages))
 	for _, u := range desiredAddonUsages {
 		key := addonUsageKey(u.StackResourceID, u.AddonID, u.AddonType)
+		if _, ok := desiredKeys[key]; ok {
+			continue
+		}
 		desiredKeys[key] = struct{}{}
 		if _, ok := existingKeys[key]; !ok {
 			if err := r.addonUsageService.Create(ctx, u); err != nil {
