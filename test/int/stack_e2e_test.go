@@ -488,6 +488,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			if githubToken == "" {
 				Skip("GITHUB_TOKEN not set — skipping build-from-source tests")
 			}
+			// For now print first 20 characters to verify it's being picked up without exposing the full token in logs
+			testenv := GetEnvironment()
+			testenv.Logger().Info("GITHUB_TOKEN set", "token", githubToken[:20]+"...")
 		})
 
 		It("should build from a private git repo and expose to public", func() {
