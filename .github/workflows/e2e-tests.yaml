@@ -40,27 +40,17 @@ jobs:
       - name: Download dependencies
         run: go mod download
         env:
-          GOPRIVATE: github.com/ashishmax31/*,stackdome.io/*
-
-      - name: Create .env for tests
-        env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
-        run: |
-          printf '%s\n' \
-            'LOG_LEVEL=info' \
-            'DB_HOST=localhost' \
-            'DB_PORT=5432' \
-            'DB_USERNAME=postgres' \
-            'DB_PASSWORD=testpassword' \
-            "JWT_SECRET=${JWT_SECRET}" \
-            "ENCRYPTION_KEY=${ENCRYPTION_KEY}" \
-            > .env
+          GOPRIVATE: github.com/ashishmax31/*,stackdome.io/*,github.com/Stackdome/*
 
       - name: Run e2e tests
         run: make test-integration
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GOPRIVATE: github.com/ashishmax31/*,stackdome.io/*,github.com/Stackdome/*
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USERNAME: postgres
+          DB_PASSWORD: testpassword
 
       - name: Upload test log
         if: always()

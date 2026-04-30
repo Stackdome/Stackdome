@@ -43,11 +43,11 @@ func NewServerManager(sessionFactory db.SessionFactory, dbConfig *config.Databas
 	}
 }
 
-func (sm *ServerManager) Bootstrap(ctx context.Context, dbConfig *config.DatabaseConfig) error {
+func (sm *ServerManager) Bootstrap(ctx context.Context) error {
 	sm.logger.Info("Starting server bootstrap")
 
 	// Create test environment
-	env := environment.NewTestEnvironment(sm.sessionFactory, dbConfig, environment.WithApplicationConfig(sm.config))
+	env := environment.NewTestEnvironment(sm.sessionFactory, sm.config.Database, environment.WithApplicationConfig(sm.config))
 
 	// Use a background context for environment init. The environment starts
 	// long-lived goroutines (worker manager, cluster manager) that must outlive

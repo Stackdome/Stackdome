@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/joho/godotenv"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -25,8 +24,6 @@ var _ = BeforeEach(func() {
 })
 
 var _ = BeforeSuite(func() {
-	err := godotenv.Load("../../.env")
-	Expect(err).NotTo(HaveOccurred(), "Failed to load .env file for integration tests")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*15)
 	bootstrapErr := bootstrap.Setup(env, ctx)
 	if bootstrapErr != nil {

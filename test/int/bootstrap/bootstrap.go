@@ -36,6 +36,11 @@ type Environment struct {
 	logger         logr.Logger
 }
 
+// logger
+func (env *Environment) Logger() logr.Logger {
+	return env.logger
+}
+
 func Setup(env *Environment, ctx context.Context) (retErr error) {
 	// Configure logger to output to stdout for visibility during test execution
 	logger := stdr.New(log.New(os.Stderr, "", log.LstdFlags))
@@ -82,7 +87,7 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 	logger.Info("Bootstrapping server")
 	serverManager := NewServerManager(dbManager.GetSessionFactory(), dbManager.GetConfig(), logger)
 	env.serverManager = serverManager
-	if err := serverManager.Bootstrap(ctx, dbManager.GetConfig()); err != nil {
+	if err := serverManager.Bootstrap(ctx); err != nil {
 		return fmt.Errorf("server bootstrap failed: %v", err)
 	}
 

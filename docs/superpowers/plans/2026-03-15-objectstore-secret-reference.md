@@ -1,6 +1,6 @@
 # ObjectStore SecretReference Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status:** Implemented. Multiple commits through 2026-04-28 (latest: `47e044c`).
 
 **Goal:** Fix ObjectStore to use SecretReference for credentials instead of raw strings.
 
