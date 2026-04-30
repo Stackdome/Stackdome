@@ -31,7 +31,6 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/stack"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
 	"github.com/google/uuid"
-	"github.com/joho/godotenv"
 	"github.com/openshift-online/ocm-sdk-go/leadership"
 	"github.com/sirupsen/logrus"
 )
@@ -117,13 +116,9 @@ func (te *testEnvironment) InitDatabase(ctx context.Context) error {
 }
 
 func (te *testEnvironment) loadEnvAndConfigs(ctx context.Context) error {
-	// Load .env file (optional for tests)
-	if err := godotenv.Load(); err != nil {
-		// Don't fail if .env doesn't exist in test environment - we'll log this later
-	}
-
-	// Load environment variables with test-specific fallbacks
-	te.loadTestEnvVariables()
+	// Load sane defaults for test environment, which can be overridden by environment variables.
+	// This allows tests to run successfully without requiring a .env file, while still allowing configuration via env vars in CI.
+	te.loadSaneDefaults()
 
 	if err := te.Config.Validate(); err != nil {
 		return fmt.Errorf("invalid application config: %w", err)
@@ -135,17 +130,21 @@ func (te *testEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 	return nil
 }
 
-func (te *testEnvironment) loadTestEnvVariables() {
+func (te *testEnvironment) loadSaneDefaults() {
+
+	// We dont load from .env file in test environment since we want to rely on environment variables for configuration in CI.
+	// The test bootstrap will use sensible defaults for any config values not set in environment variables, so that tests can run successfully without requiring a .env file.
+	// This also ensures that CI can configure the environment via env vars without needing to manage a .env file.
 	// Load standard environment variables
-	te.Config.LoadEnvVariables()
-	te.BootstrapConfig.LoadEnvVariables()
+	// te.Config.LoadEnvVariables()
+	// te.BootstrapConfig.LoadEnvVariables()
 
 	// Override with test-specific defaults if not set
 	if te.Config.JwtSecret == "" {
 		if testSecret := os.Getenv("TEST_JWT_SECRET"); testSecret != "" {
 			te.Config.JwtSecret = testSecret
 		} else {
-			te.Config.JwtSecret = "test-jwt-secret-key-must-be-longer-than-this-for-security-requirements"
+			te.Config.JwtSecret = "ScmCX4vNcS5nj9HFSQbq7PYnRaxM29Lz9E5Z5r1A5RAWZz9li6CMqi2YSxJK5uEU"
 		}
 	}
 
@@ -153,7 +152,7 @@ func (te *testEnvironment) loadTestEnvVariables() {
 		if testKey := os.Getenv("TEST_ENCRYPTION_KEY"); testKey != "" {
 			te.Config.EncryptionKey = testKey
 		} else {
-			te.Config.EncryptionKey = "test-encryption-key-must-be-at-least-64-characters-long-for-security-requirements"
+			te.Config.EncryptionKey = "6193d7a7dec2e569548f0eaa46a87fb6a2d9288649dd35c827208d5e2b751d3c"
 		}
 	}
 

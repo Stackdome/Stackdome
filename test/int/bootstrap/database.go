@@ -10,7 +10,6 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/config"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -29,9 +28,6 @@ type DatabaseConfig struct {
 }
 
 func NewDatabaseManager() *DatabaseManager {
-	// Load .env file (optional for tests)
-	_ = godotenv.Load()
-
 	// Load database configuration from environment with fallback defaults
 	config := &DatabaseConfig{
 		Host:     getEnvString("DB_HOST", "localhost"),
