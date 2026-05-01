@@ -27,6 +27,7 @@ import type { z } from "zod";
 
 import type { FormStackResourceData, FormEnvVarData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { UseSecretsReturn } from "../../hooks/use-secrets";
+import { EnvRow, type EnvFrom } from "./env-row";
 
 interface StackResourceItemProps {
   resource: Partial<FormStackResourceData>;
@@ -143,6 +144,19 @@ export default function StackResourceItem({
         environment_variables: (resource.execution_config?.environment_variables || []).filter((_, i) => i !== envIdx),
       },
     });
+  };
+
+  // Helper for switching a row's `from` discriminator. Addon rows can only be
+  // added via the addon dialog, so switching INTO addon from here is a no-op.
+  const switchRowFrom = (envIdx: number, from: EnvFrom) => {
+    const current = resource.execution_config?.environment_variables?.[envIdx];
+    if (!current) return;
+    if (current.from === "addon") return;
+    if (from === "stack") {
+      replaceEnvVar(envIdx, { from: "stack", name: current.name, value: "" });
+    } else if (from === "secret") {
+      replaceEnvVar(envIdx, { from: "secret", name: current.name, secretId: "", secretKey: "" });
+    }
   };
 
   const addVolumeMount = () => {
@@ -1183,134 +1197,30 @@ export default function StackResourceItem({
                   {/* Environment Variables Rows */}
                   {(resource.execution_config?.environment_variables || []).length ? (
                     (resource.execution_config?.environment_variables || []).map((env, envIdx) => (
-                      <div key={envIdx} className="grid grid-cols-12 gap-2 p-3 border-b last:border-b-0 items-start">
-                        {/* Key Input - Fixed width */}
-                        <div className="col-span-3">
-                          <Input
-                            value={env.name || ""}
-                            onChange={(e) => {
-                              if (env.from === "stack") {
-                                replaceEnvVar(envIdx, { ...env, name: e.target.value });
-                              } else if (env.from === "secret") {
-                                replaceEnvVar(envIdx, { ...env, name: e.target.value });
-                              } else {
-                                replaceEnvVar(envIdx, { ...env, name: e.target.value });
-                              }
-                            }}
-                            className="w-full text-sm font-mono"
-                            placeholder="KEY"
-                            disabled={env.from === "addon"}
-                          />
-                        </div>
-
-                        {/* Value Input/Secret Selection / Addon placeholder - Fixed width */}
-                        <div className="col-span-6">
-                          {env.from === "secret" ? (
-                            <div className="space-y-2">
-                              <Select
-                                value={env.secretId || ""}
-                                onValueChange={(value) => replaceEnvVar(envIdx, { ...env, secretId: value, secretKey: "" })}
-                                disabled={secrets.isLoading || secrets.secrets.filter(s => s.type === 'Generic').length === 0}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder={
-                                    secrets.secrets.filter(s => s.type === 'Generic').length === 0
-                                      ? "No generic secrets available"
-                                      : "select secret..."
-                                  } />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {secrets.secrets.filter(s => s.type === 'Generic').map((secret) => (
-                                    <SelectItem key={secret.id} value={secret.id!}>
-                                      {secret.name}
-                                      {secret.description && (
-                                        <span className="text-muted-foreground ml-2">
-                                          - {secret.description}
-                                        </span>
-                                      )}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              {env.secretId && (() => {
-                                const selectedSecret = secrets.secrets.find(s => s.id === env.secretId);
-                                const availableKeys = selectedSecret?.data?.map(d => d.key) || [];
-
-                                return (
-                                  <Select
-                                    value={env.secretKey || ""}
-                                    onValueChange={(value) => replaceEnvVar(envIdx, { ...env, secretKey: value })}
-                                    disabled={availableKeys.length === 0}
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder={
-                                        availableKeys.length === 0
-                                          ? "No keys available in secret"
-                                          : "select key..."
-                                      } />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {availableKeys.map((key) => (
-                                        <SelectItem key={key} value={key}>
-                                          {key}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                );
-                              })()}
-                            </div>
-                          ) : env.from === "addon" ? (
-                            <div className="text-xs text-muted-foreground italic px-3 py-2">
-                              {env.addonId.slice(0, 8)}… · {env.database ?? "(superuser)"} · {env.credField}
-                            </div>
-                          ) : (
-                            <Input
-                              value={env.value || ""}
-                              onChange={(e) => replaceEnvVar(envIdx, { ...env, value: e.target.value })}
-                              className="w-full text-sm font-mono"
-                              placeholder="VALUE"
-                            />
-                          )}
-                        </div>
-
-                        {/* Use Secret Toggle - Fixed width. Disabled for addon rows. */}
-                        <div className="col-span-2 flex justify-center items-start pt-2">
-                          <Switch
-                            checked={env.from === "secret"}
-                            onCheckedChange={(checked) => {
-                              if (env.from === "addon") return;
-                              if (checked) {
-                                replaceEnvVar(envIdx, {
-                                  from: "secret",
-                                  name: env.name,
-                                  secretId: "",
-                                  secretKey: "",
-                                });
-                              } else {
-                                replaceEnvVar(envIdx, {
-                                  from: "stack",
-                                  name: env.name,
-                                  value: "",
-                                });
-                              }
-                            }}
-                            disabled={secrets.isLoading || env.from === "addon"}
-                          />
-                        </div>
-
-                        {/* Remove Button - Fixed width */}
-                        <div className="col-span-1 flex justify-center items-start pt-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => removeEnvVar(envIdx)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+                      <EnvRow
+                        key={envIdx}
+                        row={env as FormEnvVarData}
+                        index={envIdx}
+                        resourceIndex={index}
+                        secrets={secrets.secrets}
+                        secretsLoading={secrets.isLoading}
+                        onChangeName={(name) => replaceEnvVar(envIdx, { ...(env as FormEnvVarData), name })}
+                        onChangeValue={(value) => {
+                          if (env.from === "stack") {
+                            replaceEnvVar(envIdx, { ...env, value });
+                          }
+                        }}
+                        onChangeFrom={(from) => switchRowFrom(envIdx, from)}
+                        onChangeSecret={(secretId, secretKey) =>
+                          replaceEnvVar(envIdx, {
+                            from: "secret",
+                            name: env.name,
+                            secretId,
+                            secretKey,
+                          })
+                        }
+                        onRemove={() => removeEnvVar(envIdx)}
+                      />
                     ))
                   ) : (
                     <div className="p-8 text-center text-muted-foreground">
