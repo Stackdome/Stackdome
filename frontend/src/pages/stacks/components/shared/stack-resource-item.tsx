@@ -25,7 +25,7 @@ import { MultiSelect } from "@/components/multi-select";
 import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
 import type { z } from "zod";
 
-import type { FormStackResourceData  , FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData, FormEnvVarData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { UseSecretsReturn } from "../../hooks/use-secrets";
 
 interface StackResourceItemProps {
@@ -110,26 +110,28 @@ export default function StackResourceItem({
     });
   };
 
-  // Helper for adding an environment variable
+  // Helper for adding an environment variable (defaults to a stack-literal row)
   const addEnvVar = () => {
     update({
       execution_config: {
         ...resource.execution_config,
         environment_variables: [
           ...(resource.execution_config?.environment_variables || []),
-          { name: "", value: "", useSecret: false, selectedSecretId: undefined, selectedSecretKey: undefined },
+          { from: "stack", name: "", value: "" },
         ],
       },
     });
   };
 
-  // Helper for updating an environment variable
-  const updateEnvVar = (envIdx: number, updates: Partial<{ name: string; value: string; useSecret: boolean; selectedSecretId: string; selectedSecretKey: string }>) => {
+  // Helper for replacing an environment variable row entirely. Because rows
+  // are a discriminated union, partial-merge is unsafe across `from` flips,
+  // so callers pass in the full next row.
+  const replaceEnvVar = (envIdx: number, next: FormEnvVarData) => {
     update({
       execution_config: {
         ...resource.execution_config,
         environment_variables: (resource.execution_config?.environment_variables || []).map((env, i) =>
-          i === envIdx ? { ...env, ...updates } : env
+          i === envIdx ? next : env
         ),
       },
     });
@@ -163,14 +165,13 @@ export default function StackResourceItem({
     // Create a map of existing var names for quick lookup
     const existingVarNames = new Set(currentVars.map(env => env.name));
 
-    // Filter out duplicates and add new vars with default secret fields
-    const newVars = filteredVars
+    // Filter out duplicates and add new vars as stack-literal rows
+    const newVars: FormEnvVarData[] = filteredVars
       .filter(env => !existingVarNames.has(env.name))
       .map(env => ({
-        ...env,
-        useSecret: false,
-        selectedSecretId: undefined,
-        selectedSecretKey: undefined,
+        from: "stack" as const,
+        name: env.name,
+        value: env.value,
       }));
 
     if (newVars.length === 0) {
@@ -1187,19 +1188,28 @@ export default function StackResourceItem({
                         <div className="col-span-3">
                           <Input
                             value={env.name || ""}
-                            onChange={(e) => updateEnvVar(envIdx, { name: e.target.value })}
+                            onChange={(e) => {
+                              if (env.from === "stack") {
+                                replaceEnvVar(envIdx, { ...env, name: e.target.value });
+                              } else if (env.from === "secret") {
+                                replaceEnvVar(envIdx, { ...env, name: e.target.value });
+                              } else {
+                                replaceEnvVar(envIdx, { ...env, name: e.target.value });
+                              }
+                            }}
                             className="w-full text-sm font-mono"
                             placeholder="KEY"
+                            disabled={env.from === "addon"}
                           />
                         </div>
 
-                        {/* Value Input/Secret Selection - Fixed width */}
+                        {/* Value Input/Secret Selection / Addon placeholder - Fixed width */}
                         <div className="col-span-6">
-                          {env.useSecret ? (
+                          {env.from === "secret" ? (
                             <div className="space-y-2">
                               <Select
-                                value={env.selectedSecretId || ""}
-                                onValueChange={(value) => updateEnvVar(envIdx, { selectedSecretId: value, selectedSecretKey: undefined })}
+                                value={env.secretId || ""}
+                                onValueChange={(value) => replaceEnvVar(envIdx, { ...env, secretId: value, secretKey: "" })}
                                 disabled={secrets.isLoading || secrets.secrets.filter(s => s.type === 'Generic').length === 0}
                               >
                                 <SelectTrigger className="w-full">
@@ -1222,14 +1232,14 @@ export default function StackResourceItem({
                                   ))}
                                 </SelectContent>
                               </Select>
-                              {env.selectedSecretId && (() => {
-                                const selectedSecret = secrets.secrets.find(s => s.id === env.selectedSecretId);
+                              {env.secretId && (() => {
+                                const selectedSecret = secrets.secrets.find(s => s.id === env.secretId);
                                 const availableKeys = selectedSecret?.data?.map(d => d.key) || [];
 
                                 return (
                                   <Select
-                                    value={env.selectedSecretKey || ""}
-                                    onValueChange={(value) => updateEnvVar(envIdx, { selectedSecretKey: value })}
+                                    value={env.secretKey || ""}
+                                    onValueChange={(value) => replaceEnvVar(envIdx, { ...env, secretKey: value })}
                                     disabled={availableKeys.length === 0}
                                   >
                                     <SelectTrigger className="w-full">
@@ -1250,32 +1260,42 @@ export default function StackResourceItem({
                                 );
                               })()}
                             </div>
+                          ) : env.from === "addon" ? (
+                            <div className="text-xs text-muted-foreground italic px-3 py-2">
+                              {env.addonId.slice(0, 8)}… · {env.database ?? "(superuser)"} · {env.credField}
+                            </div>
                           ) : (
                             <Input
                               value={env.value || ""}
-                              onChange={(e) => updateEnvVar(envIdx, { value: e.target.value })}
+                              onChange={(e) => replaceEnvVar(envIdx, { ...env, value: e.target.value })}
                               className="w-full text-sm font-mono"
                               placeholder="VALUE"
                             />
                           )}
                         </div>
 
-                        {/* Use Secret Toggle - Fixed width */}
+                        {/* Use Secret Toggle - Fixed width. Disabled for addon rows. */}
                         <div className="col-span-2 flex justify-center items-start pt-2">
                           <Switch
-                            checked={env.useSecret || false}
+                            checked={env.from === "secret"}
                             onCheckedChange={(checked) => {
+                              if (env.from === "addon") return;
                               if (checked) {
-                                updateEnvVar(envIdx, { useSecret: true, value: '' });
+                                replaceEnvVar(envIdx, {
+                                  from: "secret",
+                                  name: env.name,
+                                  secretId: "",
+                                  secretKey: "",
+                                });
                               } else {
-                                updateEnvVar(envIdx, {
-                                  useSecret: false,
-                                  selectedSecretId: undefined,
-                                  selectedSecretKey: undefined
+                                replaceEnvVar(envIdx, {
+                                  from: "stack",
+                                  name: env.name,
+                                  value: "",
                                 });
                               }
                             }}
-                            disabled={secrets.isLoading}
+                            disabled={secrets.isLoading || env.from === "addon"}
                           />
                         </div>
 

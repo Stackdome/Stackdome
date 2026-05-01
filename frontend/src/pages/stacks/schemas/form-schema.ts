@@ -11,20 +11,37 @@ import {
   ApiStackSchema,
 } from "./api-schema";
 import type { StackUpdateRequest, StackResourceUpdateRequest, VolumeUpdateRequest } from "@/api/stacks";
+import { CRED_FIELDS } from "@/pages/stacks/lib/addon-presets";
 
 /**
  * Form-specific UI schema additions
  */
 const FormGitRevisionTypeSchema = z.enum(["commit", "branch", "tag"]);
 
-const FormEnvVarSchema = z.object({
-  name: z.string().min(1, "Environment variable name is required"),
-  value: z.string(),
-  // UI-only fields for secret functionality
-  useSecret: z.boolean().optional().default(false),
-  selectedSecretId: z.string().optional(),
-  selectedSecretKey: z.string().optional(),
-});
+const FormEnvVarSchema = z.discriminatedUnion("from", [
+  z.object({
+    from: z.literal("stack"),
+    name: z.string().min(1, "Environment variable name is required"),
+    value: z.string(),
+  }),
+  z.object({
+    from: z.literal("secret"),
+    name: z.string().min(1, "Environment variable name is required"),
+    secretId: z.string().min(1),
+    secretKey: z.string().min(1),
+  }),
+  z.object({
+    from: z.literal("addon"),
+    name: z.string().min(1, "Environment variable name is required"),
+    addonType: z.literal("postgres"),
+    addonId: z.string().min(1),
+    database: z.string().optional(),
+    superuser: z.boolean().default(false),
+    credField: z.enum(CRED_FIELDS),
+  }),
+]);
+
+type FormEnvVarData = z.infer<typeof FormEnvVarSchema>;
 
 const FormStackResourceSchema = ApiStackResourceSchema.extend({
   // UI helper, not part of API spec for StackResource
@@ -37,7 +54,10 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
   selectedImageSecretId: z.string().optional(),
   useGitSecret: z.boolean().optional().default(false),
   selectedGitSecretId: z.string().optional(),
-  // Override execution_config to use our form env var schema
+  // Override execution_config to use our form env var schema. The
+  // environment_variables list holds form rows discriminated by `from`;
+  // the API arrays (literal/secret/addon) are reconstructed in the
+  // converter on save, so they aren't part of this form-side shape.
   execution_config: z.object({
     command: z.array(z.string()).optional(),
     args: z.array(z.string()).optional(),
@@ -193,21 +213,70 @@ function convertFormResourceToApiResource(
     return cleanVolumeMount;
   });
 
-  // Process environment variables to separate regular and secret-based ones
-  const processedExecutionConfig = rest.execution_config ? {
-    ...rest.execution_config,
-    environment_variables: rest.execution_config.environment_variables?.filter(envVar => !envVar.useSecret).map(envVar => ({
-      name: envVar.name,
-      value: envVar.value,
-    })),
-    environment_variables_from_secret: rest.execution_config.environment_variables?.filter(envVar => envVar.useSecret && envVar.selectedSecretId && envVar.selectedSecretKey).map(envVar => ({
-      name: envVar.name,
-      secret_ref: {
-        secret_id: envVar.selectedSecretId!
+  // Process environment variables: split form rows by `from` discriminator
+  // back into the three API arrays (literals, secret-backed, addon-backed).
+  const envVars = (rest.execution_config?.environment_variables ?? []) as FormEnvVarData[];
+
+  const literalEnvs = envVars
+    .filter((r): r is Extract<FormEnvVarData, { from: "stack" }> => r.from === "stack")
+    .map((r) => ({ name: r.name, value: r.value }));
+
+  const secretEnvs = envVars
+    .filter((r): r is Extract<FormEnvVarData, { from: "secret" }> => r.from === "secret")
+    .map((r) => ({
+      name: r.name,
+      secret_ref: { secret_id: r.secretId },
+      key: r.secretKey,
+    }));
+
+  const groups = new Map<
+    string,
+    {
+      addonId: string;
+      database?: string;
+      superuser: boolean;
+      mapping: Record<string, string>;
+    }
+  >();
+  for (const r of envVars) {
+    if (r.from !== "addon") continue;
+    const key = `${r.addonId}::${r.database ?? ""}::${r.superuser}`;
+    let g = groups.get(key);
+    if (!g) {
+      g = {
+        addonId: r.addonId,
+        database: r.database,
+        superuser: r.superuser,
+        mapping: {},
+      };
+      groups.set(key, g);
+    }
+    g.mapping[r.credField] = r.name;
+  }
+
+  const env_from_addons = [...groups.values()]
+    .filter((g) => Object.keys(g.mapping).length > 0)
+    .sort((a, b) => {
+      if (a.addonId !== b.addonId) return a.addonId.localeCompare(b.addonId);
+      return (a.database ?? "").localeCompare(b.database ?? "");
+    })
+    .map((g) => ({
+      postgres: {
+        addon_id: g.addonId,
+        ...(g.superuser ? {} : { database: g.database }),
+        superuser: g.superuser,
+        env_mapping: g.mapping,
       },
-      key: envVar.selectedSecretKey!,
-    })),
-  } : undefined;
+    }));
+
+  const processedExecutionConfig = rest.execution_config
+    ? {
+      ...rest.execution_config,
+      environment_variables: literalEnvs,
+      environment_variables_from_secret: secretEnvs,
+      env_from_addons,
+    }
+    : undefined;
 
   return {
     ...rest,
@@ -273,25 +342,49 @@ function convertApiResourceToFormResource(
     }
   }
 
-  // Process environment variables to combine regular and secret-based ones
-  const processedEnvVars = [
-    // Regular environment variables
-    ...(resource.execution_config?.environment_variables || []).map(envVar => ({
-      name: envVar.name,
-      value: envVar.value,
-      useSecret: false,
-      selectedSecretId: undefined,
-      selectedSecretKey: undefined,
-    })),
-    // Environment variables from secrets
-    ...(resource.execution_config?.environment_variables_from_secret || []).map(envVar => ({
-      name: envVar.name,
-      value: '', // Empty value when using secret
-      useSecret: true,
-      selectedSecretId: envVar.secret_ref.secret_id,
-      selectedSecretKey: envVar.key,
-    })),
-  ];
+  // Process environment variables: fan out the three API arrays
+  // (literals, secret-backed, addon-backed) into a single list of form
+  // rows discriminated by `from`. Addon entries become one row per
+  // credField in their env_mapping.
+  const literalRows: FormEnvVarData[] = (
+    resource.execution_config?.environment_variables ?? []
+  ).map((v) => ({
+    from: "stack" as const,
+    name: v.name,
+    value: v.value,
+  }));
+
+  const secretRows: FormEnvVarData[] = (
+    resource.execution_config?.environment_variables_from_secret ?? []
+  ).map((v) => ({
+    from: "secret" as const,
+    name: v.name,
+    secretId: v.secret_ref.secret_id,
+    secretKey: v.key,
+  }));
+
+  const credOrderIndex = (f: string) =>
+    CRED_FIELDS.indexOf(f as (typeof CRED_FIELDS)[number]);
+
+  const addonRows: FormEnvVarData[] = (
+    resource.execution_config?.env_from_addons ?? []
+  ).flatMap((entry) => {
+    const pg = entry.postgres;
+    if (!pg) return [];
+    return Object.entries(pg.env_mapping ?? {})
+      .sort(([a], [b]) => credOrderIndex(a) - credOrderIndex(b))
+      .map(([credField, envName]) => ({
+        from: "addon" as const,
+        name: envName,
+        addonType: "postgres" as const,
+        addonId: pg.addon_id,
+        database: pg.database,
+        superuser: pg.superuser ?? false,
+        credField: credField as (typeof CRED_FIELDS)[number],
+      }));
+  });
+
+  const processedEnvVars = [...literalRows, ...secretRows, ...addonRows];
 
   // Detect if secrets are being used
   const useImageSecret = Boolean(resource.image_spec?.pull_secret?.secret_id);
@@ -418,6 +511,7 @@ export type {
   FormStackResourceData,
   FormVolumeData,
   FormVolumeExtendedData,
+  FormEnvVarData,
 };
 
 export {
