@@ -153,8 +153,12 @@ export function AddFromAddonDialog({
       superuser,
       credField,
     }));
-    onAdd(rows);
-    onOpenChange(false);
+    try {
+      onAdd(rows);
+      onOpenChange(false);
+    } catch {
+      // onAdd failed — keep dialog open so user can review
+    }
   };
 
   return (
@@ -208,7 +212,7 @@ export function AddFromAddonDialog({
                   <SelectValue placeholder="Select a database" />
                 </SelectTrigger>
                 <SelectContent>
-                  {databases.map((d) => (
+                  {databases.filter((d) => d.name).map((d) => (
                     <SelectItem key={d.name} value={d.name!}>
                       {d.name}
                     </SelectItem>
