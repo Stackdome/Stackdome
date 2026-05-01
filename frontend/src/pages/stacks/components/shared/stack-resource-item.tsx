@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import {
   AccordionItem,
   AccordionTrigger,
@@ -19,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PlusCircle, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy, Info } from "lucide-react";
+import { PlusCircle, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy, Info, Cog } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
@@ -28,6 +29,8 @@ import type { z } from "zod";
 import type { FormStackResourceData, FormEnvVarData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { UseSecretsReturn } from "../../hooks/use-secrets";
 import { EnvRow, type EnvFrom } from "./env-row";
+import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import { AddFromAddonDialog } from "./add-from-addon-dialog";
 
 interface StackResourceItemProps {
   resource: Partial<FormStackResourceData>;
@@ -77,6 +80,13 @@ export default function StackResourceItem({
   const update = (patch: Partial<FormStackResourceData>) => {
     onChange(index, { ...resource, ...patch });
   };
+
+  const { addons } = usePostgresAddons();
+  const addonNameById = useMemo(
+    () => new Map(addons.filter((a) => a.id).map((a) => [a.id!, a.name])),
+    [addons],
+  );
+  const [addonDialogOpen, setAddonDialogOpen] = useState(false);
 
   // Helper for updating nested build_spec
   const updateBuildSpec = (patch: Partial<NonNullable<FormStackResourceData["build_spec"]>>) => {
@@ -1147,6 +1157,16 @@ export default function StackResourceItem({
                         </div>
                       </DialogContent>
                     </Dialog>
+                    {/* Add from addon button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setAddonDialogOpen(true)}
+                    >
+                      <Cog className="h-4 w-4" />
+                      <span>Add from addon</span>
+                    </Button>
                     {/* Import from file button */}
                     <Dialog>
                       <DialogTrigger asChild>
@@ -1190,7 +1210,7 @@ export default function StackResourceItem({
                   <div className="grid grid-cols-12 gap-2 p-3 border-b bg-muted/30 text-sm font-medium">
                     <div className="col-span-3">Key</div>
                     <div className="col-span-6">Value</div>
-                    <div className="col-span-2 text-center">Use Secret</div>
+                    <div className="col-span-2 text-center">From</div>
                     <div className="col-span-1"></div>
                   </div>
 
@@ -1204,6 +1224,7 @@ export default function StackResourceItem({
                         resourceIndex={index}
                         secrets={secrets.secrets}
                         secretsLoading={secrets.isLoading}
+                        addonNameById={addonNameById}
                         onChangeName={(name) => replaceEnvVar(envIdx, { ...(env as FormEnvVarData), name })}
                         onChangeValue={(value) => {
                           if (env.from === "stack") {
@@ -1234,6 +1255,25 @@ export default function StackResourceItem({
                     <PlusCircle className="h-4 w-4 mr-2" /> Add Variable
                   </Button>
                 </div>
+                <AddFromAddonDialog
+                  open={addonDialogOpen}
+                  onOpenChange={setAddonDialogOpen}
+                  addons={addons}
+                  existingEnvNames={new Set(
+                    (resource.execution_config?.environment_variables || []).map((r) => r.name),
+                  )}
+                  onAdd={(rows) => {
+                    update({
+                      execution_config: {
+                        ...resource.execution_config,
+                        environment_variables: [
+                          ...(resource.execution_config?.environment_variables || []),
+                          ...rows,
+                        ],
+                      },
+                    });
+                  }}
+                />
               </TabsContent>
             </Tabs>
 

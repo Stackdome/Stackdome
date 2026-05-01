@@ -1,7 +1,6 @@
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -20,6 +19,7 @@ interface EnvRowProps {
   resourceIndex: number;
   secrets: Secret[];
   secretsLoading: boolean;
+  addonNameById?: Map<string, string>;
   onChangeName: (name: string) => void;
   onChangeValue: (value: string) => void;
   onChangeFrom: (from: EnvFrom) => void;
@@ -33,6 +33,7 @@ export function EnvRow({
   resourceIndex,
   secrets,
   secretsLoading,
+  addonNameById,
   onChangeName,
   onChangeValue,
   onChangeFrom,
@@ -81,21 +82,30 @@ export function EnvRow({
             database={row.database}
             credField={row.credField}
             superuser={row.superuser}
+            addonName={addonNameById?.get(row.addonId)}
+            isOrphan={addonNameById !== undefined && !addonNameById.has(row.addonId)}
           />
         )}
       </div>
 
-      {/* Use Secret toggle (disabled for addon rows) */}
-      <div className="col-span-2 flex justify-center items-start pt-2">
-        <Switch
-          checked={row.from === "secret"}
-          onCheckedChange={(checked) => {
-            if (row.from === "addon") return;
-            onChangeFrom(checked ? "secret" : "stack");
-          }}
-          disabled={secretsLoading || row.from === "addon"}
-          aria-label="Use secret"
-        />
+      {/* From select (Stack | Secret | Addon) */}
+      <div className="col-span-2 flex justify-center items-start pt-1">
+        <Select
+          value={row.from}
+          onValueChange={(v) => onChangeFrom(v as EnvFrom)}
+          disabled={row.from === "addon"}
+        >
+          <SelectTrigger className="w-[110px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="stack">Stack</SelectItem>
+            <SelectItem value="secret">Secret</SelectItem>
+            <SelectItem value="addon" disabled>
+              Addon
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Remove */}
@@ -193,17 +203,27 @@ function AddonValueCell({
   database,
   credField,
   superuser,
+  addonName,
+  isOrphan,
 }: {
   addonId: string;
   database?: string;
   credField: string;
   superuser: boolean;
+  addonName?: string;
+  isOrphan?: boolean;
 }) {
   const dbLabel = superuser ? "(superuser)" : database ?? "—";
-  const shortId = addonId.slice(0, 8);
+  const label = isOrphan
+    ? "<missing addon>"
+    : addonName ?? `${addonId.slice(0, 8)}…`;
   return (
-    <div className="text-xs text-muted-foreground italic px-3 py-2">
-      {shortId}… · {dbLabel} · {credField}
+    <div
+      className={`text-xs italic px-3 py-2 ${
+        isOrphan ? "text-yellow-600" : "text-muted-foreground"
+      }`}
+    >
+      ⚙ {label} · {dbLabel} · {credField}
     </div>
   );
 }
