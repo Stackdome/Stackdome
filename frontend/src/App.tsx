@@ -8,6 +8,8 @@ import ClustersPage from "@/pages/clusters"
 import ClusterDetailPage from "@/pages/clusters/components/detail"
 import SecretsPage from "@/pages/secrets"
 import DomainsPage from "@/pages/domains"
+import AddonsPage from "@/pages/addons"
+import PostgresFormPage from "@/pages/addons/components/postgres-create-page"
 import { StackProvider } from "@/pages/stacks/contexts/stack-context"
 import { logoutAndRedirect } from "@/helpers/common"
 import { AppLayout } from "@/components/app-layout"
@@ -31,6 +33,9 @@ const router = createBrowserRouter(
         <Route path="/clusters" element={<ClustersPage />} />
         <Route path="/clusters/:id" element={<ClusterDetailPage />} />
         <Route path="/secrets" element={<SecretsPage />} />
+        <Route path="/addons" element={<AddonsPage />} />
+        <Route path="/addons/create/postgres" element={<PostgresFormPage />} />
+        <Route path="/addons/postgres/:id/edit" element={<PostgresFormPage />} />
         <Route path="/domains" element={<DomainsPage />} />
       </Route>
       <Route path="/login" element={<Login />} />

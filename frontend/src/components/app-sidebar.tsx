@@ -6,6 +6,7 @@ import { NavStacks } from "@/components/nav-stacks"
 import { NavClusters } from "@/components/nav-clusters"
 import { NavSecrets } from "@/components/nav-secrets"
 import { NavDomains } from "@/components/nav-domains"
+import { NavAddons } from "@/components/nav-addons"
 import { NavUser } from "@/components/nav-user"
 import { getCurrentUser } from "@/helpers/common"
 import {
@@ -58,6 +59,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupContent>
             <NavStacks />
             <NavSecrets />
+            <NavAddons />
             <NavClusters />
             <NavDomains />
           </SidebarGroupContent>
