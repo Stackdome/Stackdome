@@ -131,40 +131,30 @@ func (te *testEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 }
 
 func (te *testEnvironment) loadSaneDefaults() {
-
-	// We dont load from .env file in test environment since we want to rely on environment variables for configuration in CI.
-	// The test bootstrap will use sensible defaults for any config values not set in environment variables, so that tests can run successfully without requiring a .env file.
-	// This also ensures that CI can configure the environment via env vars without needing to manage a .env file.
-	// Load standard environment variables
-	// te.Config.LoadEnvVariables()
-	// te.BootstrapConfig.LoadEnvVariables()
-
-	// Override with test-specific defaults if not set
 	if te.Config.JwtSecret == "" {
-		if testSecret := os.Getenv("TEST_JWT_SECRET"); testSecret != "" {
-			te.Config.JwtSecret = testSecret
+		if val, ok := config.EnvTestJWTSecret.Lookup(); ok {
+			te.Config.JwtSecret = val
 		} else {
 			te.Config.JwtSecret = "ScmCX4vNcS5nj9HFSQbq7PYnRaxM29Lz9E5Z5r1A5RAWZz9li6CMqi2YSxJK5uEU"
 		}
 	}
 
 	if te.Config.EncryptionKey == "" {
-		if testKey := os.Getenv("TEST_ENCRYPTION_KEY"); testKey != "" {
-			te.Config.EncryptionKey = testKey
+		if val, ok := config.EnvTestEncryptionKey.Lookup(); ok {
+			te.Config.EncryptionKey = val
 		} else {
 			te.Config.EncryptionKey = "6193d7a7dec2e569548f0eaa46a87fb6a2d9288649dd35c827208d5e2b751d3c"
 		}
 	}
 
 	if te.Config.LogLevel == "" {
-		if testLevel := os.Getenv("TEST_LOG_LEVEL"); testLevel != "" {
-			te.Config.LogLevel = testLevel
+		if val, ok := config.EnvTestLogLevel.Lookup(); ok {
+			te.Config.LogLevel = val
 		} else {
 			te.Config.LogLevel = "info"
 		}
 	}
 
-	// Set test default user if not configured
 	if te.BootstrapConfig.DefaultUser.Email == "" {
 		te.BootstrapConfig.DefaultUser.Email = "test-admin@stackdome.io"
 	}

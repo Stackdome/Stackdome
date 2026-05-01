@@ -1,9 +1,5 @@
 package config
 
-import (
-	"os"
-)
-
 var (
 	ErrEmptyEmail    = &ConfigError{"empty email"}
 	ErrEmptyName     = &ConfigError{"empty name"}
@@ -47,26 +43,20 @@ func (d *DefaultPlatformAdminConfig) Validate() error {
 
 func NewBootstrapConfig() *BootstrapConfig {
 	return &BootstrapConfig{
-		DefaultUser: &DefaultPlatformAdminConfig{
-			Name:     "Platform Admin",
-			Password: "welcome@123",
-		},
+		DefaultUser: &DefaultPlatformAdminConfig{},
 	}
 }
 
 func (b *BootstrapConfig) LoadEnvVariables() {
-	defaultUserEmail, found := os.LookupEnv(DEFAULT_USER_EMAIL)
-	if found {
-		b.DefaultUser.Email = defaultUserEmail
+	if val, ok := EnvDefaultUserEmail.Lookup(); ok {
+		b.DefaultUser.Email = val
 	}
 
-	defaultUserName, found := os.LookupEnv(DEFAULT_USER_NAME)
-	if found {
-		b.DefaultUser.Name = defaultUserName
+	if val, ok := EnvDefaultUserName.Lookup(); ok {
+		b.DefaultUser.Name = val
 	}
 
-	defaultUserPassword, found := os.LookupEnv(DEFAULT_USER_PASS)
-	if found {
-		b.DefaultUser.Password = defaultUserPassword
+	if val, ok := EnvDefaultUserPassword.Lookup(); ok {
+		b.DefaultUser.Password = val
 	}
 }

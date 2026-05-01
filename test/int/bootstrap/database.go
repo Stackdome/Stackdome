@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/config"
@@ -28,35 +27,37 @@ type DatabaseConfig struct {
 }
 
 func NewDatabaseManager() *DatabaseManager {
-	// Load database configuration from environment with fallback defaults
-	config := &DatabaseConfig{
-		Host:     getEnvString("DB_HOST", "localhost"),
-		Port:     getEnvInt("DB_PORT", 5432),
+	host := "localhost"
+	if val, ok := config.EnvDBHost.Lookup(); ok {
+		host = val
+	}
+
+	port := 5432
+	if val, ok := config.EnvDBPort.Lookup(); ok {
+		port = val
+	}
+
+	user := "postgres"
+	if val, ok := config.EnvDBUsername.Lookup(); ok {
+		user = val
+	}
+
+	password := "foobar-bizz-buzz"
+	if val, ok := config.EnvDBPassword.Lookup(); ok {
+		password = val
+	}
+
+	dbConfig := &DatabaseConfig{
+		Host:     host,
+		Port:     port,
 		Name:     fmt.Sprintf("stackdome_test_%d", os.Getpid()),
-		User:     getEnvString("DB_USERNAME", "postgres"),
-		Password: getEnvString("DB_PASSWORD", "foobar-bizz-buzz"),
+		User:     user,
+		Password: password,
 	}
 
 	return &DatabaseManager{
-		config: config,
+		config: dbConfig,
 	}
-}
-
-// Helper functions to read environment variables with fallbacks
-func getEnvString(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
-}
-
-func getEnvInt(key string, fallback int) int {
-	if value := os.Getenv(key); value != "" {
-		if intValue, err := strconv.Atoi(value); err == nil {
-			return intValue
-		}
-	}
-	return fallback
 }
 
 func (dm *DatabaseManager) Bootstrap(ctx context.Context) error {
