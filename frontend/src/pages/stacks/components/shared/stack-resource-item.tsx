@@ -89,6 +89,15 @@ export default function StackResourceItem({
     () => new Set((resource.execution_config?.environment_variables || []).map((r) => r.name)),
     [resource.execution_config?.environment_variables],
   );
+
+  const addonCount = useMemo(() => {
+    const ids = new Set<string>();
+    (resource.execution_config?.environment_variables || []).forEach((r) => {
+      if (r.from === "addon") ids.add((r as any).addonId);
+    });
+    return ids.size;
+  }, [resource.execution_config?.environment_variables]);
+
   const [addonDialogOpen, setAddonDialogOpen] = useState(false);
 
   // Helper for updating nested build_spec
@@ -379,6 +388,12 @@ export default function StackResourceItem({
                 <span className="text-xs text-destructive mt-0.5 pl-6">{errors._form}</span>
               )}
             </div>
+            {addonCount > 0 && (
+              <span className="ml-auto mr-2 inline-flex items-center gap-1 rounded-full border bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
+                <Cog className="h-3 w-3" />
+                {addonCount} {addonCount === 1 ? "addon" : "addons"}
+              </span>
+            )}
           </div>
         </AccordionTrigger>
         <AccordionContent className="pb-4 pt-2">
