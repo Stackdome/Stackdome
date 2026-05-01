@@ -92,8 +92,8 @@ export default function StackResourceItem({
 
   const addonCount = useMemo(() => {
     const ids = new Set<string>();
-    (resource.execution_config?.environment_variables || []).forEach((r) => {
-      if (r.from === "addon") ids.add((r as any).addonId);
+    ((resource.execution_config?.environment_variables || []) as FormEnvVarData[]).forEach((r) => {
+      if (r.from === "addon") ids.add(r.addonId);
     });
     return ids.size;
   }, [resource.execution_config?.environment_variables]);
