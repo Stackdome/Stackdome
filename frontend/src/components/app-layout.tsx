@@ -1,7 +1,7 @@
 import * as React from "react";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 interface BreadcrumbItemType {
   name: string;
   path: string;
+  clickable: boolean;
 }
 
 function AppLayoutContent({
@@ -27,27 +28,28 @@ function AppLayoutContent({
   children?: React.ReactNode;
 }) {
   const location = useLocation();
-  const { customLabels, loadingLabels } = useBreadcrumb();
+  const { customLabels, loadingLabels, nonClickablePaths } = useBreadcrumb();
 
   // Parse the current path for breadcrumbs
   const pathSegments = location.pathname.split('/').filter(Boolean);
 
   // Create breadcrumb items based on the current path
   const breadcrumbItems: BreadcrumbItemType[] = [
-    { name: 'Home', path: '/' },
+    { name: 'Home', path: '/', clickable: true },
     ...pathSegments.map((segment, index): BreadcrumbItemType => {
       const path = '/' + pathSegments.slice(0, index + 1).join('/');
+      const clickable = !nonClickablePaths[path];
       // If it's the last segment and loading, show "..."
       if (index === pathSegments.length - 1 && loadingLabels && loadingLabels[path]) {
-        return { name: "...", path };
+        return { name: "...", path, clickable };
       }
-      // If there's a custom label for the last segment, use it
-      if (index === pathSegments.length - 1 && customLabels[path]) {
-        return { name: customLabels[path], path };
+      // Custom label takes precedence for any segment that registers one
+      if (customLabels[path]) {
+        return { name: customLabels[path], path, clickable };
       }
       // Otherwise, capitalize the segment
       const name = segment.charAt(0).toUpperCase() + segment.slice(1);
-      return { name, path };
+      return { name, path, clickable };
     }),
   ];
 
@@ -70,9 +72,15 @@ function AppLayoutContent({
                           <BreadcrumbItem>
                             <BreadcrumbPage>{item.name}</BreadcrumbPage>
                           </BreadcrumbItem>
+                        ) : !item.clickable ? (
+                          <BreadcrumbItem>
+                            <span className="text-muted-foreground">{item.name}</span>
+                          </BreadcrumbItem>
                         ) : (
                           <BreadcrumbItem>
-                            <BreadcrumbLink href={item.path}>{item.name}</BreadcrumbLink>
+                            <BreadcrumbLink asChild>
+                              <Link to={item.path}>{item.name}</Link>
+                            </BreadcrumbLink>
                           </BreadcrumbItem>
                         )}
                       </React.Fragment>
