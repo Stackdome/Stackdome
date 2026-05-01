@@ -184,6 +184,43 @@ describe("env round-trip", () => {
     expect(rows.map((r) => r.from).sort()).toEqual(["addon", "secret", "stack"]);
   });
 
+  it("preserves an orphaned addon row through save", () => {
+    const formStack = {
+      name: "s",
+      labels: [],
+      annotations: [],
+      spec: {
+        stack_resources: [
+          {
+            id: "r-1",
+            stack_id: "s-1",
+            name: "tooljet",
+            image_spec: { image: "tooljet/tooljet-ce:latest" },
+            execution_config: {
+              environment_variables: [
+                {
+                  from: "addon",
+                  name: "PG_HOST",
+                  addonType: "postgres",
+                  addonId: "deleted-addon-id",
+                  database: "tooljet",
+                  superuser: false,
+                  credField: "host",
+                },
+              ],
+            },
+          },
+        ],
+        volumes: [],
+      },
+    };
+    const api = convertFormStackToApiStack(formStack as any);
+    const entries = api.spec.stack_resources[0].execution_config!.env_from_addons!;
+    expect(entries).toHaveLength(1);
+    expect(entries[0].postgres!.addon_id).toBe("deleted-addon-id");
+    expect(entries[0].postgres!.env_mapping).toEqual({ host: "PG_HOST" });
+  });
+
   it("drops addon groups whose mapping is empty on save", () => {
     const formStack = {
       name: "s",

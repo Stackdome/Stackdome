@@ -40,20 +40,29 @@ export function EnvRow({
   onChangeSecret,
   onRemove,
 }: EnvRowProps) {
+  const isOrphanAddon =
+    row.from === "addon" &&
+    addonNameById !== undefined &&
+    !addonNameById.has((row as any).addonId);
+
   return (
     <div
-      className="grid grid-cols-12 gap-2 p-3 border-b last:border-b-0 items-start"
+      className={`border-b last:border-b-0 ${
+        isOrphanAddon ? "border-l-4 border-l-yellow-500/60 pl-2 bg-yellow-500/5" : ""
+      }`}
       data-testid={`env-row-${resourceIndex}-${index}`}
     >
+      <div className="grid grid-cols-12 gap-2 p-3 items-start">
       {/* Key */}
       <div className="col-span-3">
         <Input
           id={`env-name-${resourceIndex}-${index}`}
           value={row.name || ""}
           onChange={(e) => onChangeName(e.target.value)}
-          className="w-full text-sm font-mono"
+          className={`w-full text-sm font-mono ${isOrphanAddon ? "opacity-60" : ""}`}
           placeholder="KEY"
           disabled={row.from === "addon"}
+          readOnly={isOrphanAddon}
         />
       </div>
 
@@ -120,6 +129,12 @@ export function EnvRow({
           <X className="h-4 w-4" />
         </Button>
       </div>
+      </div>
+      {isOrphanAddon && (
+        <p className="col-span-full text-xs text-yellow-700 dark:text-yellow-400 mt-0.5 mb-1 px-3">
+          Addon was deleted. This variable won't resolve. Remove to clean up.
+        </p>
+      )}
     </div>
   );
 }
