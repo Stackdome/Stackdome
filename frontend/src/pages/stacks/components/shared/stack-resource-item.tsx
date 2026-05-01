@@ -29,7 +29,7 @@ import type { z } from "zod";
 import type { FormStackResourceData, FormEnvVarData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { UseSecretsReturn } from "../../hooks/use-secrets";
 import { EnvRow, type EnvFrom } from "./env-row";
-import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import type { PostgresAddon } from "@/api/addons";
 import { AddFromAddonDialog } from "./add-from-addon-dialog";
 
 interface StackResourceItemProps {
@@ -42,6 +42,8 @@ interface StackResourceItemProps {
   volumes?: Partial<VolumeFormData>[];
   allResources?: { name: string; index: number }[];
   secrets: UseSecretsReturn;
+  addons: PostgresAddon[];
+  addonNameById: Map<string, string>;
 }
 
 const getError = (errors: { [field: string]: string | undefined }, path: string) => {
@@ -75,16 +77,17 @@ export default function StackResourceItem({
   volumes = [],
   allResources: _allResources,
   secrets,
+  addons,
+  addonNameById,
 }: StackResourceItemProps) {
   // Helper for updating resource fields
   const update = (patch: Partial<FormStackResourceData>) => {
     onChange(index, { ...resource, ...patch });
   };
 
-  const { addons } = usePostgresAddons();
-  const addonNameById = useMemo(
-    () => new Map(addons.filter((a) => a.id).map((a) => [a.id!, a.name])),
-    [addons],
+  const existingEnvNames = useMemo(
+    () => new Set((resource.execution_config?.environment_variables || []).map((r) => r.name)),
+    [resource.execution_config?.environment_variables],
   );
   const [addonDialogOpen, setAddonDialogOpen] = useState(false);
 
@@ -1259,9 +1262,7 @@ export default function StackResourceItem({
                   open={addonDialogOpen}
                   onOpenChange={setAddonDialogOpen}
                   addons={addons}
-                  existingEnvNames={new Set(
-                    (resource.execution_config?.environment_variables || []).map((r) => r.name),
-                  )}
+                  existingEnvNames={existingEnvNames}
                   onAdd={(rows) => {
                     update({
                       execution_config: {

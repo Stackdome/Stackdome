@@ -3,9 +3,11 @@ import ResourceFormList from "@/pages/stacks/components/shared/resource-form-lis
 import StackResourceItem from "@/pages/stacks/components/shared/stack-resource-item";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PlusCircle } from "lucide-react";
 import { useSecrets } from "../../hooks/use-secrets";
+import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import type { PostgresAddon } from "@/api/addons";
 
 interface StackResourcesFormProps {
   resources: Partial<FormStackResourceData>[];
@@ -38,6 +40,11 @@ export default function StackResourcesForm({
 }: StackResourcesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
   const secrets = useSecrets();
+  const { addons } = usePostgresAddons();
+  const addonNameById = useMemo(
+    () => new Map(addons.filter((a: PostgresAddon) => a.id).map((a: PostgresAddon) => [a.id!, a.name])),
+    [addons],
+  );
 
   const isResourceFilled = (res: Partial<FormStackResourceData>) => {
     return !!(res.name || res.ports?.length || res.volume_mounts?.length || res.labels?.length || res.depends_on?.length || res.execution_config?.environment_variables?.length || res.build_spec || (res.image_spec && res.image_spec.image));
@@ -77,6 +84,8 @@ export default function StackResourcesForm({
             allResources={resources.map((r, i) => ({ name: r.name || `Resource ${i + 1}`, index: i }))}
             onRemove={handleRemove}
             secrets={secrets}
+            addons={addons}
+            addonNameById={addonNameById}
           />
         )}
         defaultAllCollapsed={!accordionDefaultOpen}
