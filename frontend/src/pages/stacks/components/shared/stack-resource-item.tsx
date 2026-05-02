@@ -1242,7 +1242,9 @@ export default function StackResourceItem({
                         resourceIndex={index}
                         secrets={secrets.secrets}
                         secretsLoading={secrets.isLoading}
+                        addons={addons}
                         addonNameById={addonNameById}
+                        onChangeAddon={() => {}}
                         onChangeName={(name) => replaceEnvVar(envIdx, { ...(env as FormEnvVarData), name })}
                         onChangeValue={(value) => {
                           if (env.from === "stack") {

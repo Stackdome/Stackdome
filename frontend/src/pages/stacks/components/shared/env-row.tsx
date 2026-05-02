@@ -10,8 +10,29 @@ import {
 } from "@/components/ui/select";
 import type { FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { Secret } from "@/api/secrets";
+import type { PostgresAddon } from "@/api/addons";
+import {
+  CRED_FIELDS,
+  CLUSTER_WIDE_FIELDS,
+  type CredField,
+} from "@/pages/stacks/lib/addon-presets";
 
 export type EnvFrom = FormEnvVarData["from"];
+
+export type AddonBindingPatch = {
+  addonId?: string;
+  database?: string | null; // null = explicitly cleared (All databases)
+  superuser?: boolean;
+  credField?: CredField;
+};
+
+export type EnvRowErrors = {
+  name?: string;
+  addonId?: string;
+  database?: string;
+  credField?: string;
+  duplicate?: string;
+};
 
 interface EnvRowProps {
   row: FormEnvVarData;
@@ -19,11 +40,15 @@ interface EnvRowProps {
   resourceIndex: number;
   secrets: Secret[];
   secretsLoading: boolean;
+  addons: PostgresAddon[];
   addonNameById?: Map<string, string>;
+  rowErrors?: EnvRowErrors;
   onChangeName: (name: string) => void;
   onChangeValue: (value: string) => void;
   onChangeFrom: (from: EnvFrom) => void;
   onChangeSecret: (secretId: string, secretKey: string) => void;
+  onChangeAddon: (patch: AddonBindingPatch) => void;
+  onBlur?: () => void;
   onRemove: () => void;
 }
 
@@ -33,11 +58,15 @@ export function EnvRow({
   resourceIndex,
   secrets,
   secretsLoading,
+  addons,
   addonNameById,
+  rowErrors,
   onChangeName,
   onChangeValue,
   onChangeFrom,
   onChangeSecret,
+  onChangeAddon,
+  onBlur,
   onRemove,
 }: EnvRowProps) {
   const isOrphanAddon =
@@ -51,6 +80,7 @@ export function EnvRow({
         isOrphanAddon ? "border-l-4 border-l-yellow-500/60 pl-2 bg-yellow-500/5" : ""
       }`}
       data-testid={`env-row-${resourceIndex}-${index}`}
+      onBlur={onBlur}
     >
       <div className="grid grid-cols-12 gap-2 p-3 items-start">
       {/* Key */}
@@ -61,7 +91,6 @@ export function EnvRow({
           onChange={(e) => onChangeName(e.target.value)}
           className={`w-full text-sm font-mono ${isOrphanAddon ? "opacity-60" : ""}`}
           placeholder="KEY"
-          disabled={row.from === "addon"}
           readOnly={isOrphanAddon}
         />
       </div>
@@ -86,13 +115,11 @@ export function EnvRow({
           />
         )}
         {row.from === "addon" && (
-          <AddonValueCell
-            addonId={row.addonId}
-            database={row.database}
-            credField={row.credField}
-            superuser={row.superuser}
-            addonName={addonNameById?.get(row.addonId)}
-            isOrphan={addonNameById !== undefined && !addonNameById.has(row.addonId)}
+          <AddonInlinePickers
+            row={row}
+            addons={addons}
+            onChangeAddon={onChangeAddon}
+            rowErrors={rowErrors}
           />
         )}
       </div>
@@ -102,7 +129,6 @@ export function EnvRow({
         <Select
           value={row.from}
           onValueChange={(v) => onChangeFrom(v as EnvFrom)}
-          disabled={row.from === "addon"}
         >
           <SelectTrigger className="w-[110px]">
             <SelectValue />
@@ -110,9 +136,7 @@ export function EnvRow({
           <SelectContent>
             <SelectItem value="stack">Stack</SelectItem>
             <SelectItem value="secret">Secret</SelectItem>
-            <SelectItem value="addon" disabled>
-              Addon
-            </SelectItem>
+            <SelectItem value="addon">Addon</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -213,32 +237,43 @@ function SecretValueCell({
   );
 }
 
-function AddonValueCell({
-  addonId,
-  database,
-  credField,
-  superuser,
-  addonName,
-  isOrphan,
+function AddonInlinePickers({
+  row,
+  addons: _addons,
+  onChangeAddon: _onChangeAddon,
+  rowErrors: _rowErrors,
 }: {
-  addonId: string;
-  database?: string;
-  credField: string;
-  superuser: boolean;
-  addonName?: string;
-  isOrphan?: boolean;
+  row: Extract<FormEnvVarData, { from: "addon" }>;
+  addons: PostgresAddon[];
+  onChangeAddon: (patch: AddonBindingPatch) => void;
+  rowErrors?: EnvRowErrors;
 }) {
-  const dbLabel = superuser ? "(superuser)" : database ?? "—";
-  const label = isOrphan
-    ? "<missing addon>"
-    : addonName ?? `${addonId.slice(0, 8)}…`;
+  // Suppress unused-var warnings for stubs that get wired in later tasks.
+  void _addons;
+  void _onChangeAddon;
+  void _rowErrors;
+  void CRED_FIELDS;
+  void CLUSTER_WIDE_FIELDS;
   return (
-    <div
-      className={`text-xs italic px-3 py-2 ${
-        isOrphan ? "text-yellow-600" : "text-muted-foreground"
-      }`}
-    >
-      ⚙ {label} · {dbLabel} · {credField}
+    <div className="flex gap-2">
+      <Select value={row.addonId || undefined}>
+        <SelectTrigger className="w-[160px]" data-testid="addon-picker-trigger">
+          <SelectValue placeholder="Addon" />
+        </SelectTrigger>
+        <SelectContent></SelectContent>
+      </Select>
+      <Select value={row.database || undefined}>
+        <SelectTrigger className="w-[140px]" data-testid="database-picker-trigger">
+          <SelectValue placeholder="Database" />
+        </SelectTrigger>
+        <SelectContent></SelectContent>
+      </Select>
+      <Select value={row.credField || undefined}>
+        <SelectTrigger className="w-[140px]" data-testid="field-picker-trigger">
+          <SelectValue placeholder="Field" />
+        </SelectTrigger>
+        <SelectContent></SelectContent>
+      </Select>
     </div>
   );
 }
