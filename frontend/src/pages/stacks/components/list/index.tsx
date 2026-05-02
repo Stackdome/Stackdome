@@ -14,8 +14,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { PageHeader, EmptyState, StatusPill, variantFromState, type StatusVariant } from "@/components/branded";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { PageHeader, EmptyState, variantFromState, type StatusVariant } from "@/components/branded";
 import { formatDistanceToNow } from "date-fns";
 import { DockerComposeImportDropdown } from "@/pages/stacks/components/shared/import-dropdown";
 import DockerComposeImportDialog from "@/pages/stacks/components/shared/docker-compose-import-dialog";
@@ -297,9 +297,26 @@ export default function StacksPage() {
                               {stack.name}
                             </span>
                             {stack.status?.state && (
-                              <StatusPill variant={variant} className="shrink-0">
-                                {stack.status.state}
-                              </StatusPill>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span
+                                    className={cn(
+                                      "mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full",
+                                      variant === "ready" && "bg-[#22c55e]",
+                                      variant === "pending" && "bg-[#eab308]",
+                                      variant === "error" && "bg-[#dc2626]",
+                                      variant === "info" && "bg-[#f97316]",
+                                      variant === "neutral" && "bg-[#94a3b8]",
+                                    )}
+                                    aria-label={stack.status.state}
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <span className="font-mono text-[11px] uppercase tracking-[1.2px]">
+                                    {stack.status.state}
+                                  </span>
+                                </TooltipContent>
+                              </Tooltip>
                             )}
                           </div>
                         </div>
