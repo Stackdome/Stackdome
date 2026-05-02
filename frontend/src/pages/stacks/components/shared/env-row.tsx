@@ -84,40 +84,40 @@ export function EnvRow({
       onBlur={onBlur}
     >
       <div className="grid grid-cols-12 gap-2 p-3 items-start">
-      {/* Key */}
-      <div className="col-span-3">
-        <Input
-          id={`env-name-${resourceIndex}-${index}`}
-          value={row.name || ""}
-          onChange={(e) => onChangeName(e.target.value)}
-          className={`w-full text-sm font-mono ${isOrphanAddon ? "opacity-60" : ""} ${
-            rowErrors?.duplicate || rowErrors?.name ? "border-destructive" : ""
-          }`}
-          placeholder="KEY"
-          readOnly={isOrphanAddon}
-        />
-      </div>
-
-      {/* Value */}
-      <div className="col-span-6">
-        {row.from === "stack" && (
+        {/* Key */}
+        <div className="col-span-3">
           <Input
-            value={row.value || ""}
-            onChange={(e) => onChangeValue(e.target.value)}
-            className="w-full text-sm font-mono"
-            placeholder="VALUE"
+            id={`env-name-${resourceIndex}-${index}`}
+            value={row.name || ""}
+            onChange={(e) => onChangeName(e.target.value)}
+            className={`w-full text-sm font-mono ${isOrphanAddon ? "opacity-60" : ""} ${
+              rowErrors?.duplicate || rowErrors?.name ? "border-destructive" : ""
+            }`}
+            placeholder="KEY"
+            readOnly={isOrphanAddon}
           />
-        )}
-        {row.from === "secret" && (
-          <SecretValueCell
-            secrets={secrets}
-            loading={secretsLoading}
-            secretId={row.secretId}
-            secretKey={row.secretKey}
-            onChange={onChangeSecret}
-          />
-        )}
-        {row.from === "addon" &&
+        </div>
+
+        {/* Value */}
+        <div className="col-span-6">
+          {row.from === "stack" && (
+            <Input
+              value={row.value || ""}
+              onChange={(e) => onChangeValue(e.target.value)}
+              className="w-full text-sm font-mono"
+              placeholder="VALUE"
+            />
+          )}
+          {row.from === "secret" && (
+            <SecretValueCell
+              secrets={secrets}
+              loading={secretsLoading}
+              secretId={row.secretId}
+              secretKey={row.secretKey}
+              onChange={onChangeSecret}
+            />
+          )}
+          {row.from === "addon" &&
           (isOrphanAddon ? (
             <AddonOrphanReadOnly
               database={row.database}
@@ -132,37 +132,37 @@ export function EnvRow({
               rowErrors={rowErrors}
             />
           ))}
-      </div>
+        </div>
 
-      {/* From select (Stack | Secret | Addon) */}
-      <div className="col-span-2 flex justify-center items-start pt-1">
-        <Select
-          value={row.from}
-          onValueChange={(v) => onChangeFrom(v as EnvFrom)}
-        >
-          <SelectTrigger className="w-[110px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="stack">Stack</SelectItem>
-            <SelectItem value="secret">Secret</SelectItem>
-            <SelectItem value="addon">Addon</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        {/* From select (Stack | Secret | Addon) */}
+        <div className="col-span-2 flex justify-center items-start pt-1">
+          <Select
+            value={row.from}
+            onValueChange={(v) => onChangeFrom(v as EnvFrom)}
+          >
+            <SelectTrigger className="w-[110px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="stack">Stack</SelectItem>
+              <SelectItem value="secret">Secret</SelectItem>
+              <SelectItem value="addon">Addon</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-      {/* Remove */}
-      <div className="col-span-1 flex justify-center items-start pt-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
-          onClick={onRemove}
-          aria-label="Remove env var"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+        {/* Remove */}
+        <div className="col-span-1 flex justify-center items-start pt-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
+            onClick={onRemove}
+            aria-label="Remove env var"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       {rowErrors?.duplicate && (
         <p className="col-span-full text-xs text-destructive mt-0.5 mb-1 px-3">
@@ -321,97 +321,97 @@ function AddonInlinePickers({
 
   return (
     <div>
-    <div className="flex gap-2">
-      <Select
-        value={row.addonId || undefined}
-        onValueChange={handleAddonChange}
-      >
-        <SelectTrigger
-          className={`w-[160px] ${rowErrors?.addonId ? "border-destructive" : ""}`}
-          data-testid="addon-picker-trigger"
+      <div className="flex gap-2">
+        <Select
+          value={row.addonId || undefined}
+          onValueChange={handleAddonChange}
         >
-          <SelectValue placeholder="Addon" />
-        </SelectTrigger>
-        <SelectContent>
-          {addons.length === 0 ? (
-            <div className="px-3 py-3 text-sm">
-              <p className="text-muted-foreground mb-2">No Postgres addons yet.</p>
-              <a
-                href="/addons/create/postgres"
-                target="_blank"
-                rel="noreferrer"
-                className="text-primary underline"
-              >
+          <SelectTrigger
+            className={`w-[160px] ${rowErrors?.addonId ? "border-destructive" : ""}`}
+            data-testid="addon-picker-trigger"
+          >
+            <SelectValue placeholder="Addon" />
+          </SelectTrigger>
+          <SelectContent>
+            {addons.length === 0 ? (
+              <div className="px-3 py-3 text-sm">
+                <p className="text-muted-foreground mb-2">No Postgres addons yet.</p>
+                <a
+                  href="/addons/create/postgres"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline"
+                >
                 + Create Postgres addon
-              </a>
-            </div>
-          ) : (
-            addons.map((a) => (
-              <SelectItem key={a.id} value={a.id!}>
-                {a.name} (Postgres · {a.status?.state ?? "Unknown"})
-              </SelectItem>
-            ))
-          )}
-        </SelectContent>
-      </Select>
-      <Select
-        value={row.superuser ? ALL_DATABASES_VALUE : row.database || undefined}
-        onValueChange={handleDatabaseChange}
-        disabled={!row.addonId}
-      >
-        <SelectTrigger
-          className={`w-[140px] ${rowErrors?.database ? "border-destructive" : ""}`}
-          data-testid="database-picker-trigger"
+                </a>
+              </div>
+            ) : (
+              addons.map((a) => (
+                <SelectItem key={a.id} value={a.id!}>
+                  {a.name} (Postgres · {a.status?.state ?? "Unknown"})
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+        <Select
+          value={row.superuser ? ALL_DATABASES_VALUE : row.database || undefined}
+          onValueChange={handleDatabaseChange}
+          disabled={!row.addonId}
         >
-          <SelectValue placeholder={row.addonId ? "Database" : "Pick an addon first"} />
-        </SelectTrigger>
-        <SelectContent>
-          {supportsSuperuser && (
-            <SelectItem value={ALL_DATABASES_VALUE}>─ All databases ─</SelectItem>
-          )}
-          {databases.map((d) =>
-            d.name ? (
-              <SelectItem key={d.name} value={d.name}>
-                {d.name}
-              </SelectItem>
-            ) : null,
-          )}
-        </SelectContent>
-      </Select>
-      <Select
-        value={row.credField || undefined}
-        onValueChange={(v) => onChangeAddon({ credField: v as CredField })}
-        disabled={!row.addonId}
-      >
-        <SelectTrigger
-          className={`w-[140px] ${rowErrors?.credField ? "border-destructive" : ""}`}
-          data-testid="field-picker-trigger"
+          <SelectTrigger
+            className={`w-[140px] ${rowErrors?.database ? "border-destructive" : ""}`}
+            data-testid="database-picker-trigger"
+          >
+            <SelectValue placeholder={row.addonId ? "Database" : "Pick an addon first"} />
+          </SelectTrigger>
+          <SelectContent>
+            {supportsSuperuser && (
+              <SelectItem value={ALL_DATABASES_VALUE}>─ All databases ─</SelectItem>
+            )}
+            {databases.map((d) =>
+              d.name ? (
+                <SelectItem key={d.name} value={d.name}>
+                  {d.name}
+                </SelectItem>
+              ) : null,
+            )}
+          </SelectContent>
+        </Select>
+        <Select
+          value={row.credField || undefined}
+          onValueChange={(v) => onChangeAddon({ credField: v as CredField })}
+          disabled={!row.addonId}
         >
-          <SelectValue placeholder={row.addonId ? "Field" : "Pick an addon first"} />
-        </SelectTrigger>
-        <SelectContent>
-          {CRED_FIELDS.map((f) => (
-            <SelectItem key={f} value={f}>
-              <span className="flex items-center gap-2">
-                <span>{f}</span>
-                {CLUSTER_WIDE_FIELDS.has(f) && (
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <SelectTrigger
+            className={`w-[140px] ${rowErrors?.credField ? "border-destructive" : ""}`}
+            data-testid="field-picker-trigger"
+          >
+            <SelectValue placeholder={row.addonId ? "Field" : "Pick an addon first"} />
+          </SelectTrigger>
+          <SelectContent>
+            {CRED_FIELDS.map((f) => (
+              <SelectItem key={f} value={f}>
+                <span className="flex items-center gap-2">
+                  <span>{f}</span>
+                  {CLUSTER_WIDE_FIELDS.has(f) && (
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                     cluster
-                  </span>
-                )}
-              </span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-    {(rowErrors?.addonId || rowErrors?.database || rowErrors?.credField) && (
-      <div className="mt-1 space-y-0.5">
-        {rowErrors?.addonId && <p className="text-xs text-destructive">{rowErrors.addonId}</p>}
-        {rowErrors?.database && <p className="text-xs text-destructive">{rowErrors.database}</p>}
-        {rowErrors?.credField && <p className="text-xs text-destructive">{rowErrors.credField}</p>}
+                    </span>
+                  )}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-    )}
+      {(rowErrors?.addonId || rowErrors?.database || rowErrors?.credField) && (
+        <div className="mt-1 space-y-0.5">
+          {rowErrors?.addonId && <p className="text-xs text-destructive">{rowErrors.addonId}</p>}
+          {rowErrors?.database && <p className="text-xs text-destructive">{rowErrors.database}</p>}
+          {rowErrors?.credField && <p className="text-xs text-destructive">{rowErrors.credField}</p>}
+        </div>
+      )}
     </div>
   );
 }
