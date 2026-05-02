@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/breadcrumb";
 import { BreadcrumbProvider } from "@/contexts/breadcrumb-context";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
-import { ThemeProvider } from "@/contexts/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 
@@ -115,10 +114,8 @@ export function AppLayout({
   children?: React.ReactNode;
 }) {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="stackdome-ui-theme">
-      <BreadcrumbProvider>
-        <AppLayoutContent children={children} />
-      </BreadcrumbProvider>
-    </ThemeProvider>
+    <BreadcrumbProvider>
+      <AppLayoutContent children={children} />
+    </BreadcrumbProvider>
   );
 }

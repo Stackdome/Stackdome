@@ -14,6 +14,7 @@ import { StackProvider } from "@/pages/stacks/contexts/stack-context"
 import { logoutAndRedirect } from "@/helpers/common"
 import { AppLayout } from "@/components/app-layout"
 import { Toaster } from "@/components/ui/toaster"
+import { ThemeProvider } from "@/contexts/theme-provider"
 
 const Logout = () => {
   logoutAndRedirect("/login");
@@ -47,10 +48,12 @@ const router = createBrowserRouter(
 
 function App() {
   return (
-    <StackProvider>
-      <RouterProvider router={router} />
-      <Toaster />
-    </StackProvider>
+    <ThemeProvider defaultTheme="system" storageKey="stackdome-ui-theme">
+      <StackProvider>
+        <RouterProvider router={router} />
+        <Toaster />
+      </StackProvider>
+    </ThemeProvider>
   )
 }
 
