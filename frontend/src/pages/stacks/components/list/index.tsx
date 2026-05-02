@@ -286,24 +286,17 @@ export default function StacksPage() {
                           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-brand-border bg-brand-bg text-brand">
                             <Icon className="h-4 w-4" />
                           </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <span
-                                className="truncate font-medium text-base group-hover:text-brand transition-colors"
-                                title={stack.name}
-                              >
-                                {stack.name}
-                              </span>
-                              {stack.status?.state && (
-                                <StatusPill variant={variant} className="shrink-0">
-                                  {stack.status.state}
-                                </StatusPill>
-                              )}
-                            </div>
-                            {stack.namespace && (
-                              <p className="font-mono text-[11px] text-muted-foreground truncate mt-0.5 tracking-[0.3px]">
-                                {stack.namespace}
-                              </p>
+                          <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
+                            <span
+                              className="truncate font-medium text-base group-hover:text-brand transition-colors"
+                              title={stack.name}
+                            >
+                              {stack.name}
+                            </span>
+                            {stack.status?.state && (
+                              <StatusPill variant={variant} className="shrink-0">
+                                {stack.status.state}
+                              </StatusPill>
                             )}
                           </div>
                         </div>
