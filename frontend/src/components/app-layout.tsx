@@ -64,13 +64,17 @@ function AppLayoutContent({
                 <SidebarTrigger />
                 <div className="border-l-2 h-4 w-0 mx-2" />
                 <Breadcrumb>
-                  <BreadcrumbList>
+                  <BreadcrumbList className="font-mono text-[11px] uppercase tracking-[1.5px] gap-2 sm:gap-2">
                     {breadcrumbItems.map((item, index) => (
                       <React.Fragment key={index}>
-                        {index > 0 && <BreadcrumbSeparator />}
+                        {index > 0 && (
+                          <BreadcrumbSeparator className="text-muted-foreground/50 [&>svg]:hidden">
+                            <span>/</span>
+                          </BreadcrumbSeparator>
+                        )}
                         {index === breadcrumbItems.length - 1 ? (
                           <BreadcrumbItem>
-                            <BreadcrumbPage>{item.name}</BreadcrumbPage>
+                            <BreadcrumbPage className="text-foreground">{item.name}</BreadcrumbPage>
                           </BreadcrumbItem>
                         ) : !item.clickable ? (
                           <BreadcrumbItem>
@@ -78,7 +82,7 @@ function AppLayoutContent({
                           </BreadcrumbItem>
                         ) : (
                           <BreadcrumbItem>
-                            <BreadcrumbLink asChild>
+                            <BreadcrumbLink asChild className="text-muted-foreground hover:text-brand transition-colors">
                               <Link to={item.path}>{item.name}</Link>
                             </BreadcrumbLink>
                           </BreadcrumbItem>
