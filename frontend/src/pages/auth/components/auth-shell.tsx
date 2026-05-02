@@ -1,6 +1,7 @@
 import * as React from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { EyebrowLabel, StackdomeMark } from "@/components/branded";
+import { EyebrowLabel } from "@/components/branded/eyebrow-label";
+import { StackdomeMark } from "@/components/branded/stackdome-mark";
 import { cn } from "@/lib/utils";
 
 interface MetaCell {
@@ -36,7 +37,7 @@ export function AuthShell({
         <ThemeToggle />
       </div>
 
-      <div className="grid min-h-svh lg:grid-cols-2">
+      <div className="grid min-h-svh lg:grid-cols-[1fr_460px]">
         {/* Brand panel */}
         <aside className="relative hidden flex-col justify-between border-r border-border bg-card p-10 lg:flex xl:p-14">
           <div className="absolute inset-0 pointer-events-none opacity-[0.06] [background-image:linear-gradient(to_right,currentColor_1px,transparent_1px),linear-gradient(to_bottom,currentColor_1px,transparent_1px)] [background-size:32px_32px] text-foreground" />
@@ -49,13 +50,10 @@ export function AuthShell({
           </div>
 
           <div className="relative z-10 flex flex-col gap-8">
-            <div className="flex items-center gap-3">
-              <EyebrowLabel className="rounded-sm border border-brand-border bg-brand-bg px-2 py-1 text-brand">
-                {marker.code}
-              </EyebrowLabel>
-              <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
-                {marker.expr}
-              </span>
+            <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[1.5px]">
+              <span className="text-brand">{marker.code}</span>
+              <span className="text-muted-foreground/60">·</span>
+              <span className="text-muted-foreground">{marker.expr}</span>
             </div>
 
             <h1 className="font-semibold text-5xl leading-[0.95] tracking-tight xl:text-6xl">
@@ -129,8 +127,8 @@ export function AuthShell({
         </aside>
 
         {/* Form panel */}
-        <main className="flex items-center justify-center p-6 sm:p-10">
-          <div className="w-full max-w-[400px]">
+        <main className="flex items-center justify-center px-6 py-10 sm:px-10">
+          <div className="w-full max-w-[360px]">
             {/* Mobile-only brand mark */}
             <div className="mb-8 flex items-center gap-2 lg:hidden">
               <span className="flex h-7 w-7 items-center justify-center rounded-sm bg-brand-bg border border-brand-border">
@@ -156,9 +154,9 @@ export function FormHead({
   trailing?: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 space-y-2">
+    <div className="mb-6 space-y-1.5">
       <EyebrowLabel tone="muted">{step}</EyebrowLabel>
-      <h2 className="text-3xl font-semibold tracking-tight">{title}</h2>
+      <h2 className="text-[28px] font-semibold leading-tight tracking-tight">{title}</h2>
       {trailing && <p className="text-sm text-muted-foreground">{trailing}</p>}
     </div>
   );
@@ -166,12 +164,10 @@ export function FormHead({
 
 export function FieldLabel({
   htmlFor,
-  number,
   children,
   hint,
 }: {
   htmlFor: string;
-  number: string;
   children: React.ReactNode;
   hint?: React.ReactNode;
 }) {
@@ -181,7 +177,7 @@ export function FieldLabel({
       className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground"
     >
       <span className="flex items-center gap-1.5">
-        <span className="text-brand">{number}</span>
+        <span className="text-brand">→</span>
         {children}
       </span>
       {hint && <span className="text-muted-foreground/70 normal-case tracking-normal">{hint}</span>}

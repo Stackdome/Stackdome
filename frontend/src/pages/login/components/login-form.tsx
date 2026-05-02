@@ -83,7 +83,7 @@ export function LoginForm() {
         )}
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="email" number="→">email</FieldLabel>
+          <FieldLabel htmlFor="email">email</FieldLabel>
           <Input
             id="email"
             name="email"
@@ -101,7 +101,7 @@ export function LoginForm() {
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="password" number="→">password</FieldLabel>
+          <FieldLabel htmlFor="password">password</FieldLabel>
           <Input
             id="password"
             name="password"

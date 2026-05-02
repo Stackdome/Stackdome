@@ -89,7 +89,7 @@ export function SignupForm() {
         }
       />
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {serverError && (
           <div className="rounded-sm border border-[rgb(220_38_38_/_0.55)] bg-[rgb(220_38_38_/_0.12)] px-3 py-2 text-sm text-[#b91c1c] dark:text-[#fca5a5]">
             {serverError}
@@ -97,7 +97,7 @@ export function SignupForm() {
         )}
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="name" number="01 /">full name</FieldLabel>
+          <FieldLabel htmlFor="name">full name</FieldLabel>
           <Input
             id="name"
             name="name"
@@ -111,7 +111,7 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="organisationName" number="02 /">organization</FieldLabel>
+          <FieldLabel htmlFor="organisationName">organization</FieldLabel>
           <Input
             id="organisationName"
             name="organisationName"
@@ -127,7 +127,7 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="email" number="03 /">work email</FieldLabel>
+          <FieldLabel htmlFor="email">work email</FieldLabel>
           <Input
             id="email"
             name="email"
@@ -144,7 +144,7 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="password" number="04 /" hint="min. 8 characters">
+          <FieldLabel htmlFor="password" hint="min. 8 characters">
             password
           </FieldLabel>
           <Input
@@ -163,7 +163,7 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="confirmPassword" number="05 /">confirm</FieldLabel>
+          <FieldLabel htmlFor="confirmPassword">confirm</FieldLabel>
           <Input
             id="confirmPassword"
             name="confirmPassword"
