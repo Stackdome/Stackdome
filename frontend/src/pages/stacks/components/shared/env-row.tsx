@@ -239,8 +239,8 @@ function SecretValueCell({
 
 function AddonInlinePickers({
   row,
-  addons: _addons,
-  onChangeAddon: _onChangeAddon,
+  addons,
+  onChangeAddon,
   rowErrors: _rowErrors,
 }: {
   row: Extract<FormEnvVarData, { from: "addon" }>;
@@ -248,19 +248,25 @@ function AddonInlinePickers({
   onChangeAddon: (patch: AddonBindingPatch) => void;
   rowErrors?: EnvRowErrors;
 }) {
-  // Suppress unused-var warnings for stubs that get wired in later tasks.
-  void _addons;
-  void _onChangeAddon;
   void _rowErrors;
   void CRED_FIELDS;
   void CLUSTER_WIDE_FIELDS;
   return (
     <div className="flex gap-2">
-      <Select value={row.addonId || undefined}>
+      <Select
+        value={row.addonId || undefined}
+        onValueChange={(v) => onChangeAddon({ addonId: v })}
+      >
         <SelectTrigger className="w-[160px]" data-testid="addon-picker-trigger">
           <SelectValue placeholder="Addon" />
         </SelectTrigger>
-        <SelectContent></SelectContent>
+        <SelectContent>
+          {addons.map((a) => (
+            <SelectItem key={a.id} value={a.id!}>
+              {a.name} (Postgres · {a.status?.state ?? "Unknown"})
+            </SelectItem>
+          ))}
+        </SelectContent>
       </Select>
       <Select value={row.database || undefined}>
         <SelectTrigger className="w-[140px]" data-testid="database-picker-trigger">
