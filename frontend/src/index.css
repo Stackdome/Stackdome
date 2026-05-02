@@ -26,23 +26,32 @@
   --input: oklch(1 0 0);
   --ring: oklch(0.72 0.20 40);
 
-  /* ── Brand tokens (light) ── */
+  /* ── Brand tokens (light) — design system: amber #f97316, hover #ea6a0e, press #c25809 ── */
   --brand: oklch(0.72 0.20 40);
-  --brand-darker: oklch(0.65 0.22 35);
+  --brand-hover: oklch(0.67 0.20 40);
+  --brand-press: oklch(0.55 0.16 40);
+  --brand-darker: var(--brand-hover); /* legacy alias */
   --brand-bg: oklch(0.72 0.20 40 / 0.10);
   --brand-bg-hover: oklch(0.72 0.20 40 / 0.16);
   --brand-border: oklch(0.72 0.20 40 / 0.30);
 
-  /* ── Status semantic tokens (light) ── */
-  --success: oklch(0.65 0.18 145);
-  --success-bg: oklch(0.65 0.18 145 / 0.12);
-  --success-border: oklch(0.65 0.18 145 / 0.45);
-  --warn: oklch(0.74 0.16 85);
-  --warn-bg: oklch(0.74 0.16 85 / 0.14);
-  --warn-border: oklch(0.74 0.16 85 / 0.50);
-  --danger: oklch(0.55 0.20 25);
-  --danger-bg: oklch(0.55 0.20 25 / 0.10);
-  --danger-border: oklch(0.55 0.20 25 / 0.55);
+  /* ── Foreground hierarchy (light) — design system: fg-1 #1a1a1a, fg-2 #4b5563, fg-3 #6b7280, fg-muted #94a3b8 ── */
+  --fg-2: oklch(0.41 0.013 264);
+  --fg-muted: oklch(0.66 0.018 250);
+
+  /* ── Status semantic tokens (light) — design system: ok #15803d, warn #a16207, err #b91c1c, info #1d4ed8 ── */
+  --success: oklch(0.51 0.16 145);
+  --success-bg: oklch(0.51 0.16 145 / 0.10);
+  --success-border: oklch(0.51 0.16 145 / 0.40);
+  --warn: oklch(0.50 0.13 75);
+  --warn-bg: oklch(0.50 0.13 75 / 0.12);
+  --warn-border: oklch(0.50 0.13 75 / 0.45);
+  --danger: oklch(0.51 0.20 27);
+  --danger-bg: oklch(0.51 0.20 27 / 0.10);
+  --danger-border: oklch(0.51 0.20 27 / 0.50);
+  --info: oklch(0.48 0.20 264);
+  --info-bg: oklch(0.48 0.20 264 / 0.10);
+  --info-border: oklch(0.48 0.20 264 / 0.45);
 
   --chart-1: oklch(0.72 0.20 40);
   --chart-2: oklch(0.55 0.22 264);
@@ -98,20 +107,29 @@
   --ring: oklch(0.72 0.20 40);
 
   --brand: oklch(0.72 0.20 40);
-  --brand-darker: oklch(0.65 0.22 35);
+  --brand-hover: oklch(0.67 0.20 40);
+  --brand-press: oklch(0.55 0.16 40);
+  --brand-darker: var(--brand-hover);
   --brand-bg: oklch(0.72 0.20 40 / 0.10);
   --brand-bg-hover: oklch(0.72 0.20 40 / 0.18);
   --brand-border: oklch(0.72 0.20 40 / 0.30);
 
-  --success: oklch(0.72 0.18 145);
-  --success-bg: oklch(0.72 0.18 145 / 0.10);
-  --success-border: oklch(0.72 0.18 145 / 0.35);
-  --warn: oklch(0.78 0.16 85);
-  --warn-bg: oklch(0.78 0.16 85 / 0.10);
-  --warn-border: oklch(0.78 0.16 85 / 0.35);
-  --danger: oklch(0.62 0.22 25);
-  --danger-bg: oklch(0.62 0.22 25 / 0.15);
-  --danger-border: oklch(0.62 0.22 25 / 0.50);
+  --fg-2: oklch(0.86 0.020 250);
+  --fg-muted: oklch(0.50 0.020 250);
+
+  /* ── Status (dark) — design system: ok #22c55e, warn #eab308, err #dc2626, info #3b82f6 ── */
+  --success: oklch(0.71 0.20 145);
+  --success-bg: oklch(0.71 0.20 145 / 0.12);
+  --success-border: oklch(0.71 0.20 145 / 0.40);
+  --warn: oklch(0.79 0.16 85);
+  --warn-bg: oklch(0.79 0.16 85 / 0.12);
+  --warn-border: oklch(0.79 0.16 85 / 0.40);
+  --danger: oklch(0.59 0.22 27);
+  --danger-bg: oklch(0.59 0.22 27 / 0.15);
+  --danger-border: oklch(0.59 0.22 27 / 0.50);
+  --info: oklch(0.62 0.20 252);
+  --info-bg: oklch(0.62 0.20 252 / 0.12);
+  --info-border: oklch(0.62 0.20 252 / 0.40);
 
   --chart-1: oklch(0.72 0.20 40);
   --chart-2: oklch(0.58 0.21 260);
@@ -161,10 +179,15 @@
   --color-ring: var(--ring);
 
   --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-press: var(--brand-press);
   --color-brand-darker: var(--brand-darker);
   --color-brand-bg: var(--brand-bg);
   --color-brand-bg-hover: var(--brand-bg-hover);
   --color-brand-border: var(--brand-border);
+
+  --color-fg-2: var(--fg-2);
+  --color-fg-muted: var(--fg-muted);
 
   --color-success: var(--success);
   --color-success-bg: var(--success-bg);
@@ -175,6 +198,9 @@
   --color-danger: var(--danger);
   --color-danger-bg: var(--danger-bg);
   --color-danger-border: var(--danger-border);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-info-border: var(--info-border);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);

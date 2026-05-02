@@ -81,7 +81,7 @@ export function LoginForm() {
 
       <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
         {serverError && (
-          <div className="rounded-sm border border-[rgb(220_38_38_/_0.55)] bg-[rgb(220_38_38_/_0.12)] px-3 py-2 text-sm text-[#b91c1c] dark:text-[#fca5a5]">
+          <div className="rounded-sm border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}
           </div>
         )}
@@ -100,7 +100,7 @@ export function LoginForm() {
             aria-invalid={!!errors.email}
           />
           {errors.email && (
-            <p className="text-xs text-[#b91c1c] dark:text-[#fca5a5]">{errors.email}</p>
+            <p className="text-xs text-danger">{errors.email}</p>
           )}
         </div>
 
@@ -117,15 +117,11 @@ export function LoginForm() {
             aria-invalid={!!errors.password}
           />
           {errors.password && (
-            <p className="text-xs text-[#b91c1c] dark:text-[#fca5a5]">{errors.password}</p>
+            <p className="text-xs text-danger">{errors.password}</p>
           )}
         </div>
 
-        <Button
-          type="submit"
-          className="w-full bg-foreground text-background hover:bg-foreground/90"
-          disabled={isLoading}
-        >
+        <Button type="submit" variant="inverse" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="animate-spin h-4 w-4" />

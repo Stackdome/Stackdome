@@ -223,7 +223,7 @@ export default function StacksPage() {
                       type="button"
                       onClick={() => setStatusFilter(f.key)}
                       className={cn(
-                        "inline-flex items-center gap-1.5 rounded-md border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.2px] transition-colors",
+                        "inline-flex items-center gap-1.5 rounded-md border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors",
                         active
                           ? "border-brand-border bg-brand-bg text-brand"
                           : "border-border text-muted-foreground hover:bg-muted/50"
@@ -239,7 +239,7 @@ export default function StacksPage() {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.2px] text-muted-foreground hover:bg-muted/50"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
                   >
                     Sort: <span className="text-foreground">{sortLabel}</span>
                     <ChevronDown className="h-3 w-3" />
@@ -255,7 +255,7 @@ export default function StacksPage() {
                       key={o.key}
                       onClick={() => setSortKey(o.key)}
                       className={cn(
-                        "font-mono text-[11px] uppercase tracking-[1.2px]",
+                        "font-mono text-[11px] uppercase tracking-[1.5px]",
                         sortKey === o.key && "text-brand"
                       )}
                     >
@@ -306,17 +306,17 @@ export default function StacksPage() {
                                   <span
                                     className={cn(
                                       "mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full",
-                                      variant === "ready" && "bg-[#22c55e]",
-                                      variant === "pending" && "bg-[#eab308]",
-                                      variant === "error" && "bg-[#dc2626]",
-                                      variant === "info" && "bg-[#f97316]",
-                                      variant === "neutral" && "bg-[#94a3b8]",
+                                      variant === "ready" && "bg-success",
+                                      variant === "pending" && "bg-warn",
+                                      variant === "error" && "bg-danger",
+                                      variant === "info" && "bg-info",
+                                      variant === "neutral" && "bg-fg-muted",
                                     )}
                                     aria-label={stack.status.state}
                                   />
                                 </TooltipTrigger>
                                 <TooltipContent side="top">
-                                  <span className="font-mono text-[11px] uppercase tracking-[1.2px]">
+                                  <span className="font-mono text-[11px] uppercase tracking-[1.5px]">
                                     {stack.status.state}
                                   </span>
                                 </TooltipContent>

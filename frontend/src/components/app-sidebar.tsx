@@ -45,7 +45,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold lowercase" style={{ letterSpacing: "0.04em" }}>stackdome</span>
-                  <span className="truncate text-[11px] font-mono uppercase tracking-[1.2px] text-muted-foreground">{user?.organisation}</span>
+                  <span className="truncate text-[11px] font-mono uppercase tracking-[1.5px] text-muted-foreground">{user?.organisation}</span>
                 </div>
               </Link>
             </SidebarMenuButton>

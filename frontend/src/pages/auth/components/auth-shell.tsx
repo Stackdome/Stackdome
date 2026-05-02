@@ -19,7 +19,6 @@ interface AuthShellProps {
   meta?: MetaCell[];
   checklist?: { icon: React.ReactNode; text: React.ReactNode }[];
   hideTopBrand?: boolean;
-  brandCaption?: boolean;
   children: React.ReactNode;
 }
 
@@ -32,7 +31,6 @@ export function AuthShell({
   meta,
   checklist,
   hideTopBrand = false,
-  brandCaption = false,
   children,
 }: AuthShellProps) {
   return (
@@ -121,7 +119,7 @@ export function AuthShell({
                       className={cn(
                         "mt-1 font-mono text-[13px]",
                         m.tone === "brand" && "text-brand",
-                        m.tone === "success" && "text-[#22c55e]",
+                        m.tone === "success" && "text-success",
                       )}
                     >
                       {m.value}

@@ -7,28 +7,27 @@ interface StatusPillProps extends React.HTMLAttributes<HTMLSpanElement> {
   withDot?: boolean;
 }
 
-// Design-system status palette: tinted bg + saturated border + bright readable text.
-// Hex values map to colors_and_type.css and preview/components-badges.html.
+// Token-driven palette: each variant maps to design-system semantic tokens.
 const styles: Record<StatusVariant, { wrap: string; dot: string }> = {
   ready: {
-    wrap: "bg-[rgb(34_197_94_/_0.16)] border-[rgb(34_197_94_/_0.50)] text-[#22c55e] dark:text-[#86efac]",
-    dot: "bg-[#22c55e]",
+    wrap: "bg-success-bg border-success-border text-success",
+    dot: "bg-success",
   },
   pending: {
-    wrap: "bg-[rgb(234_179_8_/_0.16)] border-[rgb(234_179_8_/_0.55)] text-[#a16207] dark:text-[#fde047]",
-    dot: "bg-[#eab308]",
+    wrap: "bg-warn-bg border-warn-border text-warn",
+    dot: "bg-warn",
   },
   error: {
-    wrap: "bg-[rgb(220_38_38_/_0.18)] border-[rgb(220_38_38_/_0.65)] text-[#b91c1c] dark:text-[#fca5a5]",
-    dot: "bg-[#dc2626]",
+    wrap: "bg-danger-bg border-danger-border text-danger",
+    dot: "bg-danger",
   },
   info: {
-    wrap: "bg-[rgb(249_115_22_/_0.14)] border-[rgb(249_115_22_/_0.55)] text-[#c2410c] dark:text-[#fdba74]",
-    dot: "bg-[#f97316]",
+    wrap: "bg-info-bg border-info-border text-info",
+    dot: "bg-info",
   },
   neutral: {
-    wrap: "bg-[rgb(148_163_184_/_0.12)] border-[rgb(148_163_184_/_0.35)] text-[#475569] dark:text-[#cbd5e1]",
-    dot: "bg-[#94a3b8]",
+    wrap: "bg-fg-muted/15 border-fg-muted/35 text-fg-muted",
+    dot: "bg-fg-muted",
   },
 };
 

@@ -95,7 +95,7 @@ export function SignupForm() {
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {serverError && (
-          <div className="rounded-sm border border-[rgb(220_38_38_/_0.55)] bg-[rgb(220_38_38_/_0.12)] px-3 py-2 text-sm text-[#b91c1c] dark:text-[#fca5a5]">
+          <div className="rounded-sm border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}
           </div>
         )}
@@ -111,7 +111,7 @@ export function SignupForm() {
             onChange={handleChange}
             aria-invalid={!!errors.name}
           />
-          {errors.name && <p className="text-xs text-[#b91c1c] dark:text-[#fca5a5]">{errors.name}</p>}
+          {errors.name && <p className="text-xs text-danger">{errors.name}</p>}
         </div>
 
         <div className="space-y-2">
@@ -126,7 +126,7 @@ export function SignupForm() {
             aria-invalid={!!errors.organisationName}
           />
           {errors.organisationName && (
-            <p className="text-xs text-[#b91c1c] dark:text-[#fca5a5]">{errors.organisationName}</p>
+            <p className="text-xs text-danger">{errors.organisationName}</p>
           )}
         </div>
 
@@ -144,7 +144,7 @@ export function SignupForm() {
             onChange={handleChange}
             aria-invalid={!!errors.email}
           />
-          {errors.email && <p className="text-xs text-[#b91c1c] dark:text-[#fca5a5]">{errors.email}</p>}
+          {errors.email && <p className="text-xs text-danger">{errors.email}</p>}
         </div>
 
         <div className="space-y-2">
@@ -161,7 +161,7 @@ export function SignupForm() {
             aria-invalid={!!errors.password}
           />
           {errors.password && (
-            <p className="text-xs text-[#b91c1c] dark:text-[#fca5a5]">{errors.password}</p>
+            <p className="text-xs text-danger">{errors.password}</p>
           )}
         </div>
 
@@ -177,15 +177,11 @@ export function SignupForm() {
             aria-invalid={!!errors.confirmPassword}
           />
           {errors.confirmPassword && (
-            <p className="text-xs text-[#b91c1c] dark:text-[#fca5a5]">{errors.confirmPassword}</p>
+            <p className="text-xs text-danger">{errors.confirmPassword}</p>
           )}
         </div>
 
-        <Button
-          type="submit"
-          className="w-full bg-foreground text-background hover:bg-foreground/90"
-          disabled={isLoading}
-        >
+        <Button type="submit" variant="inverse" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="animate-spin h-4 w-4" />
