@@ -9,7 +9,7 @@ import type { SignupFormData } from "../types";
 import { signupSchema } from "../types";
 import { setAuthSession } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
-import { FormHead, FieldLabel, FootRow } from "@/pages/auth/components/auth-shell";
+import { FormHead, FieldLabel } from "@/pages/auth/components/auth-shell";
 
 export function SignupForm() {
   const [formData, setFormData] = useState<SignupFormData>({
@@ -199,14 +199,6 @@ export function SignupForm() {
           )}
         </Button>
       </form>
-
-      <p className="mt-4 text-xs text-muted-foreground">
-        By creating an account you agree to the{" "}
-        <a href="#" className="text-brand hover:underline underline-offset-4">Terms</a> and{" "}
-        <a href="#" className="text-brand hover:underline underline-offset-4">Privacy Policy</a>.
-      </p>
-
-      <FootRow left="open source · apache 2.0" />
     </div>
   );
 }
