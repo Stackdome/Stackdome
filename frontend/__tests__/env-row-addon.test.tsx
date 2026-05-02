@@ -141,4 +141,85 @@ describe("EnvRow (addon variant)", () => {
       expect.objectContaining({ addonId: "addon-x" }),
     );
   });
+
+  it("database picker is disabled when no addon is picked", () => {
+    render(
+      <EnvRow
+        row={baseAddonRow({ addonId: "", database: undefined }) as any}
+        {...noopProps}
+        addons={[mkAddon()]}
+      />,
+    );
+    expect(screen.getByTestId("database-picker-trigger")).toBeDisabled();
+  });
+
+  it("database picker lists addon's databases when an addon is picked", async () => {
+    const user = userEvent.setup();
+    render(<EnvRow row={baseAddonRow({ database: undefined }) as any} {...noopProps} />);
+    await user.click(screen.getByTestId("database-picker-trigger"));
+    expect(await screen.findByRole("option", { name: /tooljet/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /analytics/i })).toBeInTheDocument();
+  });
+
+  it("does NOT show 'All databases' when addon does not enable superuser", async () => {
+    const user = userEvent.setup();
+    render(<EnvRow row={baseAddonRow({ database: undefined }) as any} {...noopProps} />);
+    await user.click(screen.getByTestId("database-picker-trigger"));
+    expect(screen.queryByRole("option", { name: /all databases/i })).not.toBeInTheDocument();
+  });
+
+  it("shows 'All databases' when addon enables superuser", async () => {
+    const user = userEvent.setup();
+    const su = mkAddon({
+      spec: { ...mkAddon().spec, configuration: { enable_superuser_access: true } } as any,
+    });
+    render(
+      <EnvRow row={baseAddonRow({ database: undefined }) as any} {...noopProps} addons={[su]} />,
+    );
+    await user.click(screen.getByTestId("database-picker-trigger"));
+    expect(await screen.findByRole("option", { name: /all databases/i })).toBeInTheDocument();
+  });
+
+  it("calls onChangeAddon with superuser=true and database=null when 'All databases' is picked", async () => {
+    const user = userEvent.setup();
+    const onChangeAddon = vi.fn();
+    const su = mkAddon({
+      spec: { ...mkAddon().spec, configuration: { enable_superuser_access: true } } as any,
+    });
+    render(
+      <EnvRow
+        row={baseAddonRow({ database: undefined }) as any}
+        {...noopProps}
+        addons={[su]}
+        onChangeAddon={onChangeAddon}
+      />,
+    );
+    await user.click(screen.getByTestId("database-picker-trigger"));
+    await user.click(await screen.findByRole("option", { name: /all databases/i }));
+    expect(onChangeAddon).toHaveBeenCalledWith({ database: null, superuser: true });
+  });
+
+  it("auto-selects the only database when picking an addon with one db and no superuser", async () => {
+    const user = userEvent.setup();
+    const onChangeAddon = vi.fn();
+    const single = mkAddon({
+      id: "addon-single",
+      spec: { ...mkAddon().spec, databases: [{ name: "only-one" }] } as any,
+    });
+    render(
+      <EnvRow
+        row={baseAddonRow({ addonId: "", database: undefined }) as any}
+        {...noopProps}
+        addons={[single]}
+        onChangeAddon={onChangeAddon}
+      />,
+    );
+    await user.click(screen.getByTestId("addon-picker-trigger"));
+    await user.click(await screen.findByRole("option", { name: /tooljet-db/i }));
+    expect(onChangeAddon).toHaveBeenCalledWith({
+      addonId: "addon-single",
+      database: "only-one",
+      superuser: false,
+    });
+  });
 });

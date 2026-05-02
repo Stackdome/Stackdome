@@ -237,6 +237,8 @@ function SecretValueCell({
   );
 }
 
+const ALL_DATABASES_VALUE = "__ALL_DATABASES__";
+
 function AddonInlinePickers({
   row,
   addons,
@@ -251,11 +253,44 @@ function AddonInlinePickers({
   void _rowErrors;
   void CRED_FIELDS;
   void CLUSTER_WIDE_FIELDS;
+
+  const selectedAddon = addons.find((a) => a.id === row.addonId);
+  const databases = ((selectedAddon?.spec as unknown as { databases?: { name?: string }[] })
+    ?.databases ?? []) as { name?: string }[];
+  const supportsSuperuser =
+    (selectedAddon?.spec as unknown as {
+      configuration?: { enable_superuser_access?: boolean };
+    })?.configuration?.enable_superuser_access === true;
+
+  const handleAddonChange = (addonId: string) => {
+    const a = addons.find((x) => x.id === addonId);
+    const dbs = ((a?.spec as unknown as { databases?: { name?: string }[] })?.databases ?? []) as {
+      name?: string;
+    }[];
+    const aSupportsSU =
+      (a?.spec as unknown as {
+        configuration?: { enable_superuser_access?: boolean };
+      })?.configuration?.enable_superuser_access === true;
+    if (dbs.length === 1 && !aSupportsSU && dbs[0]?.name) {
+      onChangeAddon({ addonId, database: dbs[0].name, superuser: false });
+    } else {
+      onChangeAddon({ addonId, database: null, superuser: false });
+    }
+  };
+
+  const handleDatabaseChange = (value: string) => {
+    if (value === ALL_DATABASES_VALUE) {
+      onChangeAddon({ database: null, superuser: true });
+    } else {
+      onChangeAddon({ database: value, superuser: false });
+    }
+  };
+
   return (
     <div className="flex gap-2">
       <Select
         value={row.addonId || undefined}
-        onValueChange={(v) => onChangeAddon({ addonId: v })}
+        onValueChange={handleAddonChange}
       >
         <SelectTrigger className="w-[160px]" data-testid="addon-picker-trigger">
           <SelectValue placeholder="Addon" />
@@ -282,11 +317,26 @@ function AddonInlinePickers({
           )}
         </SelectContent>
       </Select>
-      <Select value={row.database || undefined}>
+      <Select
+        value={row.superuser ? ALL_DATABASES_VALUE : row.database || undefined}
+        onValueChange={handleDatabaseChange}
+        disabled={!row.addonId}
+      >
         <SelectTrigger className="w-[140px]" data-testid="database-picker-trigger">
-          <SelectValue placeholder="Database" />
+          <SelectValue placeholder={row.addonId ? "Database" : "Pick an addon first"} />
         </SelectTrigger>
-        <SelectContent></SelectContent>
+        <SelectContent>
+          {supportsSuperuser && (
+            <SelectItem value={ALL_DATABASES_VALUE}>─ All databases ─</SelectItem>
+          )}
+          {databases.map((d) =>
+            d.name ? (
+              <SelectItem key={d.name} value={d.name}>
+                {d.name}
+              </SelectItem>
+            ) : null,
+          )}
+        </SelectContent>
       </Select>
       <Select value={row.credField || undefined}>
         <SelectTrigger className="w-[140px]" data-testid="field-picker-trigger">
