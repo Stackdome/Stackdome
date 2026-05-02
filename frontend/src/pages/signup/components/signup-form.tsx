@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Loader2 } from "lucide-react";
 import { useSignup } from "../hooks/use-signup";
 import type { UserSignupRequest, UserSignupResponse } from "@/api/users";
@@ -150,10 +151,9 @@ export function SignupForm() {
           <FieldLabel htmlFor="password" hint="min. 8 characters">
             password
           </FieldLabel>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             autoComplete="new-password"
             placeholder="••••••••••••"
             value={formData.password}
@@ -167,10 +167,9 @@ export function SignupForm() {
 
         <div className="space-y-2">
           <FieldLabel htmlFor="confirmPassword">confirm</FieldLabel>
-          <Input
+          <PasswordInput
             id="confirmPassword"
             name="confirmPassword"
-            type="password"
             autoComplete="new-password"
             placeholder="••••••••••••"
             value={formData.confirmPassword}

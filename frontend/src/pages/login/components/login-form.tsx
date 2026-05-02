@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Loader2 } from "lucide-react";
 import { useLogin } from "../hooks/use-login";
 import type { LoginFormData } from "../types";
@@ -105,10 +106,9 @@ export function LoginForm() {
 
         <div className="space-y-2">
           <FieldLabel htmlFor="password">password</FieldLabel>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             autoComplete="current-password"
             placeholder="••••••••••••"
             value={formData.password}
