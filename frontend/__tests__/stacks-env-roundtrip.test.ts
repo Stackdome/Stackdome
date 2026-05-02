@@ -245,3 +245,72 @@ describe("env round-trip", () => {
     expect(ec.env_from_addons ?? []).toHaveLength(0);
   });
 });
+
+describe("FormEnvVarSchema (addon variant) — refines", () => {
+  it("requires database when superuser is false", async () => {
+    const { FormEnvVarSchema } = await import("../src/pages/stacks/schemas/form-schema");
+    const result = FormEnvVarSchema.safeParse({
+      from: "addon",
+      name: "PG_HOST",
+      addonType: "postgres",
+      addonId: "addon-1",
+      database: undefined,
+      superuser: false,
+      credField: "host",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes("database"))).toBe(true);
+    }
+  });
+
+  it("allows missing database when superuser is true", async () => {
+    const { FormEnvVarSchema } = await import("../src/pages/stacks/schemas/form-schema");
+    const result = FormEnvVarSchema.safeParse({
+      from: "addon",
+      name: "PG_HOST",
+      addonType: "postgres",
+      addonId: "addon-1",
+      database: undefined,
+      superuser: true,
+      credField: "host",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("requires credField on addon rows", async () => {
+    const { FormEnvVarSchema } = await import("../src/pages/stacks/schemas/form-schema");
+    const result = FormEnvVarSchema.safeParse({
+      from: "addon",
+      name: "PG_HOST",
+      addonType: "postgres",
+      addonId: "addon-1",
+      database: "tooljet",
+      superuser: false,
+      credField: undefined,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes("credField"))).toBe(true);
+    }
+  });
+
+  it("uses 'Pick an addon' message on empty addonId", async () => {
+    const { FormEnvVarSchema } = await import("../src/pages/stacks/schemas/form-schema");
+    const result = FormEnvVarSchema.safeParse({
+      from: "addon",
+      name: "PG_HOST",
+      addonType: "postgres",
+      addonId: "",
+      database: "tooljet",
+      superuser: false,
+      credField: "host",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.find((i) => i.path.includes("addonId"))?.message,
+      ).toMatch(/pick an addon/i);
+    }
+  });
+});

@@ -18,7 +18,7 @@ import { CRED_FIELDS } from "@/pages/stacks/lib/addon-presets";
  */
 const FormGitRevisionTypeSchema = z.enum(["commit", "branch", "tag"]);
 
-const FormEnvVarSchema = z.discriminatedUnion("from", [
+const FormEnvVarSchema = z.union([
   z.object({
     from: z.literal("stack"),
     name: z.string().min(1, "Environment variable name is required"),
@@ -34,11 +34,19 @@ const FormEnvVarSchema = z.discriminatedUnion("from", [
     from: z.literal("addon"),
     name: z.string().min(1, "Environment variable name is required"),
     addonType: z.literal("postgres"),
-    addonId: z.string().min(1),
+    addonId: z.string().min(1, "Pick an addon"),
     database: z.string().optional(),
     superuser: z.boolean().default(false),
-    credField: z.enum(CRED_FIELDS),
-  }),
+    credField: z.enum(CRED_FIELDS).optional(),
+  })
+    .refine(
+      (d) => d.superuser || (typeof d.database === "string" && d.database.length > 0),
+      { message: "Pick a database", path: ["database"] },
+    )
+    .refine(
+      (d) => typeof d.credField === "string" && d.credField.length > 0,
+      { message: "Pick a field", path: ["credField"] },
+    ),
 ]);
 
 type FormEnvVarData = z.infer<typeof FormEnvVarSchema>;
@@ -240,6 +248,7 @@ function convertFormResourceToApiResource(
   >();
   for (const r of envVars) {
     if (r.from !== "addon") continue;
+    if (!r.credField) continue; // schema enforces this on save; guard for in-progress rows
     const key = `${r.addonId}::${r.database ?? ""}::${r.superuser}`;
     let g = groups.get(key);
     if (!g) {
@@ -515,6 +524,7 @@ export type {
 };
 
 export {
+  FormEnvVarSchema,
   FormVolumeExtendedSchema,
   FormStackSchema,
   convertApiResourceToFormResource,
