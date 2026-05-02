@@ -78,7 +78,7 @@ export function SignupForm() {
     <div>
       <FormHead
         step="create account"
-        title="Own your runtime."
+        title="Own your stack."
         trailing={
           <>
             Already have one?{" "}
