@@ -17,7 +17,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/contexts/theme-provider"
 
 const Logout = () => {
-  logoutAndRedirect("/login");
+  logoutAndRedirect("/signin");
   return null;
 }
 
@@ -39,7 +39,7 @@ const router = createBrowserRouter(
         <Route path="/addons/postgres/:id/edit" element={<PostgresFormPage />} />
         <Route path="/domains" element={<DomainsPage />} />
       </Route>
-      <Route path="/login" element={<Login />} />
+      <Route path="/signin" element={<Login />} />
       <Route path="/sign-up" element={<Signup />} />
       <Route path="/logout" element={<Logout />} />
     </>
