@@ -47,8 +47,8 @@ export function AuthShell({
         <ThemeToggle />
       </div>
 
-      {/* Centered wrap — empty bg shows on either side past 1240px */}
-      <div className="relative z-10 mx-auto grid min-h-svh max-w-[1240px] lg:grid-cols-[1fr_440px]">
+      {/* Wrap fills the viewport so wider monitors aren't bracketed by empty strips */}
+      <div className="relative z-10 grid min-h-svh lg:grid-cols-[1fr_440px]">
         {/* Brand panel — transparent so the grid shows through */}
         <aside className="relative hidden flex-col p-10 lg:flex xl:p-14">
           {!hideTopBrand && (
