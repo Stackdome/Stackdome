@@ -199,6 +199,54 @@ describe("EnvRow (addon variant)", () => {
     expect(onChangeAddon).toHaveBeenCalledWith({ database: null, superuser: true });
   });
 
+  it("field picker is disabled when no addon is picked", () => {
+    render(
+      <EnvRow
+        row={baseAddonRow({ addonId: "", database: undefined, credField: undefined as any }) as any}
+        {...noopProps}
+        addons={[mkAddon()]}
+      />,
+    );
+    expect(screen.getByTestId("field-picker-trigger")).toBeDisabled();
+  });
+
+  it("field picker lists all 8 CRED_FIELDS", async () => {
+    const user = userEvent.setup();
+    render(<EnvRow row={baseAddonRow() as any} {...noopProps} />);
+    await user.click(screen.getByTestId("field-picker-trigger"));
+    for (const f of [
+      "host",
+      "port",
+      "username",
+      "password",
+      "database",
+      "sslmode",
+      "connectionString",
+      "caCertificate",
+    ]) {
+      expect(await screen.findByRole("option", { name: new RegExp(f, "i") })).toBeInTheDocument();
+    }
+  });
+
+  it("cluster-wide fields show 'cluster' badge in dropdown items", async () => {
+    const user = userEvent.setup();
+    render(<EnvRow row={baseAddonRow() as any} {...noopProps} />);
+    await user.click(screen.getByTestId("field-picker-trigger"));
+    const hostOption = await screen.findByRole("option", { name: /host/i });
+    expect(hostOption).toHaveTextContent(/cluster/i);
+    const userOption = screen.getByRole("option", { name: /^username/i });
+    expect(userOption).not.toHaveTextContent(/cluster/i);
+  });
+
+  it("calls onChangeAddon with credField when a field is picked", async () => {
+    const user = userEvent.setup();
+    const onChangeAddon = vi.fn();
+    render(<EnvRow row={baseAddonRow() as any} {...noopProps} onChangeAddon={onChangeAddon} />);
+    await user.click(screen.getByTestId("field-picker-trigger"));
+    await user.click(await screen.findByRole("option", { name: /port/i }));
+    expect(onChangeAddon).toHaveBeenCalledWith({ credField: "port" });
+  });
+
   it("auto-selects the only database when picking an addon with one db and no superuser", async () => {
     const user = userEvent.setup();
     const onChangeAddon = vi.fn();

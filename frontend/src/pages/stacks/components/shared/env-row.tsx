@@ -251,8 +251,6 @@ function AddonInlinePickers({
   rowErrors?: EnvRowErrors;
 }) {
   void _rowErrors;
-  void CRED_FIELDS;
-  void CLUSTER_WIDE_FIELDS;
 
   const selectedAddon = addons.find((a) => a.id === row.addonId);
   const databases = ((selectedAddon?.spec as unknown as { databases?: { name?: string }[] })
@@ -338,11 +336,28 @@ function AddonInlinePickers({
           )}
         </SelectContent>
       </Select>
-      <Select value={row.credField || undefined}>
+      <Select
+        value={row.credField || undefined}
+        onValueChange={(v) => onChangeAddon({ credField: v as CredField })}
+        disabled={!row.addonId}
+      >
         <SelectTrigger className="w-[140px]" data-testid="field-picker-trigger">
-          <SelectValue placeholder="Field" />
+          <SelectValue placeholder={row.addonId ? "Field" : "Pick an addon first"} />
         </SelectTrigger>
-        <SelectContent></SelectContent>
+        <SelectContent>
+          {CRED_FIELDS.map((f) => (
+            <SelectItem key={f} value={f}>
+              <span className="flex items-center gap-2">
+                <span>{f}</span>
+                {CLUSTER_WIDE_FIELDS.has(f) && (
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    cluster
+                  </span>
+                )}
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
       </Select>
     </div>
   );
