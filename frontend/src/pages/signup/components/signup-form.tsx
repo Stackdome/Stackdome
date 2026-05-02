@@ -84,7 +84,7 @@ export function SignupForm() {
             Already have one?{" "}
             <Link
               to="/login"
-              className="text-foreground underline underline-offset-4 decoration-brand/70 hover:decoration-brand"
+              className="text-foreground underline underline-offset-4 decoration-[1.5px] decoration-brand/80 hover:decoration-brand"
             >
               Sign in<span className="text-brand">.</span>
             </Link>

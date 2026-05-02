@@ -70,7 +70,7 @@ export function LoginForm() {
             No account yet?{" "}
             <Link
               to="/sign-up"
-              className="text-foreground underline underline-offset-4 decoration-brand/70 hover:decoration-brand"
+              className="text-foreground underline underline-offset-4 decoration-[1.5px] decoration-brand/80 hover:decoration-brand"
             >
               Start here<span className="text-brand">.</span>
             </Link>
