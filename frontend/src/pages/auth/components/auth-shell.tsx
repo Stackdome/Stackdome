@@ -47,10 +47,10 @@ export function AuthShell({
         <ThemeToggle />
       </div>
 
-      {/* Three-column grid: brand fills, form band 440px, right strip scales with viewport */}
-      <div className="relative z-10 grid min-h-svh lg:grid-cols-[1fr_440px_clamp(48px,8vw,220px)]">
-        {/* Brand panel — transparent so the grid shows through */}
-        <aside className="relative hidden flex-col p-10 lg:flex lg:items-end xl:p-14 [&>*]:w-full [&>*]:max-w-[640px]">
+      {/* Centered wrap — equal negative space on left + right past the cap */}
+      <div className="relative z-10 mx-auto grid min-h-svh max-w-[1600px] lg:grid-cols-[1fr_440px]">
+        {/* Brand panel — content left-aligned with comfy padding */}
+        <aside className="relative hidden flex-col p-10 lg:flex xl:p-14">
           {!hideTopBrand && (
             <div className="relative z-10">
               <StackdomeWordmark size={20} />
@@ -158,9 +158,6 @@ export function AuthShell({
             {children}
           </div>
         </main>
-
-        {/* Right negative-space strip — only renders on lg+, plain bg, no grid behind it */}
-        <div className="hidden lg:block" aria-hidden="true" />
       </div>
     </div>
   );
