@@ -89,7 +89,9 @@ export function EnvRow({
           id={`env-name-${resourceIndex}-${index}`}
           value={row.name || ""}
           onChange={(e) => onChangeName(e.target.value)}
-          className={`w-full text-sm font-mono ${isOrphanAddon ? "opacity-60" : ""}`}
+          className={`w-full text-sm font-mono ${isOrphanAddon ? "opacity-60" : ""} ${
+            rowErrors?.duplicate || rowErrors?.name ? "border-destructive" : ""
+          }`}
           placeholder="KEY"
           readOnly={isOrphanAddon}
         />
@@ -154,6 +156,16 @@ export function EnvRow({
         </Button>
       </div>
       </div>
+      {rowErrors?.duplicate && (
+        <p className="col-span-full text-xs text-destructive mt-0.5 mb-1 px-3">
+          {rowErrors.duplicate}
+        </p>
+      )}
+      {rowErrors?.name && (
+        <p className="col-span-full text-xs text-destructive mt-0.5 mb-1 px-3">
+          {rowErrors.name}
+        </p>
+      )}
       {isOrphanAddon && (
         <p className="col-span-full text-xs text-yellow-700 dark:text-yellow-400 mt-0.5 mb-1 px-3">
           Addon was deleted. This variable won't resolve. Remove to clean up.
@@ -243,15 +255,13 @@ function AddonInlinePickers({
   row,
   addons,
   onChangeAddon,
-  rowErrors: _rowErrors,
+  rowErrors,
 }: {
   row: Extract<FormEnvVarData, { from: "addon" }>;
   addons: PostgresAddon[];
   onChangeAddon: (patch: AddonBindingPatch) => void;
   rowErrors?: EnvRowErrors;
 }) {
-  void _rowErrors;
-
   const selectedAddon = addons.find((a) => a.id === row.addonId);
   const databases = ((selectedAddon?.spec as unknown as { databases?: { name?: string }[] })
     ?.databases ?? []) as { name?: string }[];
@@ -285,12 +295,16 @@ function AddonInlinePickers({
   };
 
   return (
+    <div>
     <div className="flex gap-2">
       <Select
         value={row.addonId || undefined}
         onValueChange={handleAddonChange}
       >
-        <SelectTrigger className="w-[160px]" data-testid="addon-picker-trigger">
+        <SelectTrigger
+          className={`w-[160px] ${rowErrors?.addonId ? "border-destructive" : ""}`}
+          data-testid="addon-picker-trigger"
+        >
           <SelectValue placeholder="Addon" />
         </SelectTrigger>
         <SelectContent>
@@ -320,7 +334,10 @@ function AddonInlinePickers({
         onValueChange={handleDatabaseChange}
         disabled={!row.addonId}
       >
-        <SelectTrigger className="w-[140px]" data-testid="database-picker-trigger">
+        <SelectTrigger
+          className={`w-[140px] ${rowErrors?.database ? "border-destructive" : ""}`}
+          data-testid="database-picker-trigger"
+        >
           <SelectValue placeholder={row.addonId ? "Database" : "Pick an addon first"} />
         </SelectTrigger>
         <SelectContent>
@@ -341,7 +358,10 @@ function AddonInlinePickers({
         onValueChange={(v) => onChangeAddon({ credField: v as CredField })}
         disabled={!row.addonId}
       >
-        <SelectTrigger className="w-[140px]" data-testid="field-picker-trigger">
+        <SelectTrigger
+          className={`w-[140px] ${rowErrors?.credField ? "border-destructive" : ""}`}
+          data-testid="field-picker-trigger"
+        >
           <SelectValue placeholder={row.addonId ? "Field" : "Pick an addon first"} />
         </SelectTrigger>
         <SelectContent>
@@ -359,6 +379,14 @@ function AddonInlinePickers({
           ))}
         </SelectContent>
       </Select>
+    </div>
+    {(rowErrors?.addonId || rowErrors?.database || rowErrors?.credField) && (
+      <div className="mt-1 space-y-0.5">
+        {rowErrors?.addonId && <p className="text-xs text-destructive">{rowErrors.addonId}</p>}
+        {rowErrors?.database && <p className="text-xs text-destructive">{rowErrors.database}</p>}
+        {rowErrors?.credField && <p className="text-xs text-destructive">{rowErrors.credField}</p>}
+      </div>
+    )}
     </div>
   );
 }

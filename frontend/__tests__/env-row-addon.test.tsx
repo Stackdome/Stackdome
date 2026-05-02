@@ -247,6 +247,59 @@ describe("EnvRow (addon variant)", () => {
     expect(onChangeAddon).toHaveBeenCalledWith({ credField: "port" });
   });
 
+  it("renders no error styling without rowErrors", () => {
+    render(<EnvRow row={baseAddonRow() as any} {...noopProps} />);
+    expect(screen.getByTestId("addon-picker-trigger")).not.toHaveClass("border-destructive");
+  });
+
+  it("renders red border + message on addon picker when rowErrors.addonId set", () => {
+    render(
+      <EnvRow
+        row={baseAddonRow({ addonId: "" }) as any}
+        {...noopProps}
+        rowErrors={{ addonId: "Pick an addon" }}
+      />,
+    );
+    expect(screen.getByTestId("addon-picker-trigger")).toHaveClass("border-destructive");
+    expect(screen.getByText("Pick an addon")).toBeInTheDocument();
+  });
+
+  it("renders red border + message on database picker when rowErrors.database set", () => {
+    render(
+      <EnvRow
+        row={baseAddonRow({ database: undefined }) as any}
+        {...noopProps}
+        rowErrors={{ database: "Pick a database" }}
+      />,
+    );
+    expect(screen.getByTestId("database-picker-trigger")).toHaveClass("border-destructive");
+    expect(screen.getByText("Pick a database")).toBeInTheDocument();
+  });
+
+  it("renders red border + message on field picker when rowErrors.credField set", () => {
+    render(
+      <EnvRow
+        row={baseAddonRow({ credField: undefined as any }) as any}
+        {...noopProps}
+        rowErrors={{ credField: "Pick a field" }}
+      />,
+    );
+    expect(screen.getByTestId("field-picker-trigger")).toHaveClass("border-destructive");
+    expect(screen.getByText("Pick a field")).toBeInTheDocument();
+  });
+
+  it("renders duplicate name error on the name input", () => {
+    render(
+      <EnvRow
+        row={baseAddonRow() as any}
+        {...noopProps}
+        rowErrors={{ duplicate: 'Duplicate name "PG_HOST"' }}
+      />,
+    );
+    expect(screen.getByPlaceholderText("KEY")).toHaveClass("border-destructive");
+    expect(screen.getByText('Duplicate name "PG_HOST"')).toBeInTheDocument();
+  });
+
   it("auto-selects the only database when picking an addon with one db and no superuser", async () => {
     const user = userEvent.setup();
     const onChangeAddon = vi.fn();
