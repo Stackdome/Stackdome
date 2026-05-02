@@ -86,7 +86,7 @@ export function SignupForm() {
               to="/sign-in"
               className="text-foreground underline underline-offset-4 decoration-[1.5px] decoration-brand/80 hover:decoration-brand"
             >
-              Sign in<span className="text-brand">.</span>
+              Sign in<span className="font-bold text-brand">.</span>
             </Link>
           </>
         }

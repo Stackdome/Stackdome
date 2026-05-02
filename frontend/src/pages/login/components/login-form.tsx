@@ -8,7 +8,7 @@ import type { LoginFormData } from "../types";
 import { loginSchema } from "../types";
 import { setAuthSession } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
-import { FormHead, FieldLabel, FootRow } from "@/pages/auth/components/auth-shell";
+import { FormHead, FieldLabel } from "@/pages/auth/components/auth-shell";
 
 export function LoginForm() {
   const [formData, setFormData] = useState<LoginFormData>({ email: "", password: "" });
@@ -72,7 +72,7 @@ export function LoginForm() {
               to="/sign-up"
               className="text-foreground underline underline-offset-4 decoration-[1.5px] decoration-brand/80 hover:decoration-brand"
             >
-              Start here<span className="text-brand">.</span>
+              Start here<span className="font-bold text-brand">.</span>
             </Link>
           </>
         }
@@ -138,8 +138,6 @@ export function LoginForm() {
           )}
         </Button>
       </form>
-
-      <FootRow left="secure / tls 1.3" right="encrypted at rest" />
     </div>
   );
 }
