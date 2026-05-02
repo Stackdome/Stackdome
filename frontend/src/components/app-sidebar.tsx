@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Link } from "react-router-dom"
-import { Command } from "lucide-react"
+import { StackdomeMark } from "@/components/branded"
 
 import { NavStacks } from "@/components/nav-stacks"
 import { NavClusters } from "@/components/nav-clusters"
@@ -40,12 +40,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip="Stackdome">
               <Link to="/">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <Command className="size-4" />
+                <div className="bg-brand-bg border border-brand-border flex aspect-square size-8 items-center justify-center rounded-md">
+                  <StackdomeMark size={18} variant="tinted" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">Stackdome</span>
-                  <span className="truncate text-xs text-muted-foreground">{user?.organisation}</span>
+                  <span className="truncate text-[11px] font-mono uppercase tracking-[1.2px] text-muted-foreground">{user?.organisation}</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -55,7 +55,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Platform</SidebarGroupLabel>
+          <SidebarGroupLabel className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground/70">Platform</SidebarGroupLabel>
           <SidebarGroupContent>
             <NavStacks />
             <NavSecrets />

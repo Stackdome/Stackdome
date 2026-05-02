@@ -13,11 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Tooltip,
-  TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { PageHeader, EmptyState, StatusPill, variantFromState } from "@/components/branded";
 import { formatDistanceToNow } from 'date-fns';
 import { DockerComposeImportDropdown } from "@/pages/stacks/components/shared/import-dropdown";
 import DockerComposeImportDialog from "@/pages/stacks/components/shared/docker-compose-import-dialog";
@@ -90,92 +88,78 @@ export default function StacksPage() {
 
   return (
     <TooltipProvider>
-      <div className="flex flex-1 flex-col p-4 pt-0 h-full">
-        {stacks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[80vh] text-center">
-            <div className="flex flex-col items-center max-w-md">
-              <div className="rounded-full bg-primary/10 p-4 mb-4">
-                <Layers className="h-10 w-10 text-primary" />
-              </div>
-              <h2 className="text-2xl font-bold mb-2">No stacks deployed yet</h2>
-              <p className="text-muted-foreground mb-6">
-                Deploy your first stack to get started.
-              </p>
-              <div className="flex gap-3">
-                <Button onClick={handleCreateNewStack}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Create New Stack
-                </Button>
-                <DockerComposeImportDropdown
-                  onDockerComposeImport={openImportDialog}
-                  variant="outline"
-                />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex justify-between items-center py-4">
-              <h1 className="text-2xl font-semibold">Stacks</h1>
-              <div className="flex gap-2">
-                <DockerComposeImportDropdown
-                  onDockerComposeImport={openImportDialog}
-                  variant="outline"
-                  size="lg"
-                />
-                <Button onClick={handleCreateNewStack} size="lg">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add New Stack
-                </Button>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4 mt-0">
-              {stacks.map((stack) => {
-                const status = stack.status?.state?.toLowerCase() || 'unknown';
-                let circleColor = 'bg-gray-500'; // Default for unknown
-                if (status === 'ready') {
-                  circleColor = 'bg-green-500';
-                } else if (status === 'pending') {
-                  circleColor = 'bg-yellow-500';
-                } else if (status === 'failed') {
-                  circleColor = 'bg-red-500';
-                }
+      <div className="flex flex-1 flex-col p-8 space-y-8 h-full">
+        <PageHeader
+          eyebrow="Platform"
+          title="Stacks"
+          subtitle={`${stacks.length} ${stacks.length === 1 ? "stack" : "stacks"} deployed`}
+          actions={
+            <>
+              <DockerComposeImportDropdown
+                onDockerComposeImport={openImportDialog}
+                variant="outline"
+              />
+              <Button onClick={handleCreateNewStack} className="bg-brand text-white hover:bg-brand-darker">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                New Stack
+              </Button>
+            </>
+          }
+        />
 
-                return (
-                  <Card key={stack.id || stack.name} className="flex flex-col w-full min-h-[130px] hover:shadow-lg dark:hover:shadow-[0_10px_15px_-3px_rgba(200,200,200,0.15),0_4px_6px_-4px_rgba(200,200,200,0.12)] transition-shadow duration-200">
+        {stacks.length === 0 ? (
+          <EmptyState
+            icon={<Layers className="h-8 w-8" />}
+            title="No stacks deployed yet"
+            description="Deploy your first stack to get started."
+            action={
+              <Button onClick={handleCreateNewStack} variant="outline">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create New Stack
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
+            {stacks.map((stack) => {
+              const variant = variantFromState(stack.status?.state);
+              return (
+                <Link
+                  key={stack.id || stack.name}
+                  to={`/stacks/${stack.id}`}
+                  className="block group"
+                >
+                  <Card className="flex flex-col w-full min-h-[130px] hover:border-brand-border hover:bg-muted/30 transition-colors duration-150">
                     <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center justify-between">
-                        <Link to={`/stacks/${stack.id}`} className="hover:underline truncate pr-2" title={stack.name}>
+                      <CardTitle className="flex items-start justify-between gap-2 text-base font-medium">
+                        <span className="truncate pr-2 group-hover:text-brand transition-colors" title={stack.name}>
                           {stack.name}
-                        </Link>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className={`h-3 w-3 rounded-full ${circleColor}`} />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="capitalize">{status}</p>
-                          </TooltipContent>
-                        </Tooltip>
+                        </span>
+                        {stack.status?.state && (
+                          <StatusPill variant={variant} className="shrink-0">
+                            {stack.status.state}
+                          </StatusPill>
+                        )}
                       </CardTitle>
                     </CardHeader>
-                    <CardFooter className="flex justify-between items-baseline text-xs text-muted-foreground mt-auto pt-2 pb-3">
-                      <div className="flex flex-col">
-                        <span>
-                          Resources: {stack.spec.stack_resources?.length || 0}
+                    <CardFooter className="flex justify-between items-baseline mt-auto pt-2 pb-3 font-mono text-[11px] text-muted-foreground">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="tabular-nums">
+                          {stack.spec.stack_resources?.length || 0} resources
                         </span>
-                        <span>
-                          Volumes: {stack.spec.volumes?.length || 0}
+                        <span className="tabular-nums">
+                          {stack.spec.volumes?.length || 0} volumes
                         </span>
                       </div>
-                      <span className="text-right">
+                      <span className="text-right uppercase tracking-[0.5px]">
                         {stack.created_at ? formatDistanceToNow(new Date(stack.created_at), { addSuffix: true }).replace(/^about\s/, '') : 'N/A'}
                       </span>
                     </CardFooter>
                   </Card>
-                );
-              })}
-            </div>
-          </>
+                </Link>
+              );
+            })}
+          </div>
         )}
 
         {/* Docker Compose Import Dialog */}

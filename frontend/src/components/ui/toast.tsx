@@ -23,14 +23,14 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  // Minimal, neutral styling for simple toasts
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-2 rounded-md border bg-background p-3 text-sm shadow-md transition-all data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full",
+  // Brand toast: card surface, semantic left-edge accent, mono meta inside
+  "group pointer-events-auto relative flex w-full items-start gap-3 rounded-md border bg-card p-4 text-sm shadow-md transition-all data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full",
   {
     variants: {
       variant: {
-        default: "border bg-background text-foreground",
-        destructive: "border-destructive bg-destructive text-destructive-foreground",
-        success: "border-green-500 bg-green-50 text-green-900",
+        default: "border-border",
+        destructive: "border-danger-border bg-danger-bg/50 text-foreground",
+        success: "border-success-border bg-success-bg/50 text-foreground",
       },
     },
     defaultVariants: {
@@ -105,7 +105,7 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("text-sm opacity-90", className)}
+    className={cn("font-mono text-[11px] uppercase tracking-[1px] text-muted-foreground", className)}
     {...props}
   />
 ))

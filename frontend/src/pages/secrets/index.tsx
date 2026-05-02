@@ -6,14 +6,8 @@ import { SecretDeleteDialog } from "./components/secret-delete-dialog";
 import { SecretFormDialog } from "./components/secret-form-dialog";
 import type { Secret } from "./types";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { PageHeader, Panel, EmptyState } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
 import { deleteSecret, createSecret, updateSecret } from "@/api/secrets";
 import { getCurrentOrganizationId } from "@/helpers/common";
@@ -143,52 +137,40 @@ export default function SecretsPage() {
 
   return (
     <TooltipProvider>
-      <div className="p-6">
-        <header className="mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-2xl font-bold">Secrets management</h1>
-              </div>
-              <p className="text-muted-foreground">
-                Manage sensitive data like API keys, passwords, and certificates securely.
-              </p>
-            </div>
-            <Button onClick={() => setShowAddDialog(true)}>
+      <div className="p-8 space-y-8">
+        <PageHeader
+          eyebrow="Platform"
+          title="Secrets"
+          subtitle="Manage sensitive data like API keys, passwords, and certificates"
+          actions={
+            <Button onClick={() => setShowAddDialog(true)} className="bg-brand text-white hover:bg-brand-darker">
               <PlusCircle className="mr-2 h-4 w-4" />
               Create Secret
             </Button>
-          </div>
-          <Separator className="mt-4" />
-        </header>
+          }
+        />
 
-        <Card className="rounded-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl flex items-center gap-2">
-              <KeyRound className="h-5 w-5" />
-              Organization Secrets
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {secrets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <KeyRound className="h-12 w-12 mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-medium mb-2">No secrets found</h3>
-                <p className="text-muted-foreground mb-6">Create your first secret to securely store sensitive data.</p>
-                <Button onClick={() => setShowAddDialog(true)}>
+        <Panel
+          title="Organization Secrets"
+          count={secrets.length}
+          bodyClassName={secrets.length === 0 ? "p-5" : "p-0"}
+        >
+          {secrets.length === 0 ? (
+            <EmptyState
+              icon={<KeyRound className="h-8 w-8" />}
+              title="No secrets yet"
+              description="Create your first secret to securely store sensitive data."
+              action={
+                <Button onClick={() => setShowAddDialog(true)} variant="outline">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Create Secret
                 </Button>
-              </div>
-            ) : (
-              <div className="space-y-0">
-                <div className="border rounded-lg">
-                  <SecretList secrets={secrets} onEdit={handleEdit} onDelete={handleDelete} />
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              }
+            />
+          ) : (
+            <SecretList secrets={secrets} onEdit={handleEdit} onDelete={handleDelete} />
+          )}
+        </Panel>
 
         <SecretFormDialog
           open={showAddDialog}

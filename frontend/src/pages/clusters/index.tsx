@@ -8,14 +8,8 @@ import AddClusterDialog from "./components/add-cluster-dialog";
 import type { Cluster } from "./types";
 import type { ClusterData } from "./hooks/use-clusters";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { PageHeader, Panel, EmptyState } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
 import { deleteCluster, createCluster } from "@/api/clusters";
 import { getCurrentOrganizationId } from "@/helpers/common";
@@ -134,44 +128,40 @@ export default function ClustersPage() {
 
   return (
     <TooltipProvider>
-      <div className="p-6">
-        <header className="mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-2xl font-bold">Cluster management</h1>
-              </div>
-            </div>
-          </div>
-          <Separator className="mt-4" />
-        </header>
+      <div className="p-8 space-y-8">
+        <PageHeader
+          eyebrow="Platform"
+          title="Clusters"
+          subtitle="Compute targets for your stacks"
+          actions={
+            <Button onClick={() => setShowAddDialog(true)} className="bg-brand text-white hover:bg-brand-darker">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Cluster
+            </Button>
+          }
+        />
 
-        <Card className="rounded-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl flex items-center gap-2">
-              Clusters
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {clusters.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <Boxes className="h-12 w-12 mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-medium mb-2">No clusters configured</h3>
-                <p className="text-muted-foreground mb-6">Link to your cluster to get started.</p>
-                <Button onClick={() => setShowAddDialog(true)}>
+        <Panel
+          title="All Clusters"
+          count={clusters.length}
+          bodyClassName={clusters.length === 0 ? "p-5" : "p-0"}
+        >
+          {clusters.length === 0 ? (
+            <EmptyState
+              icon={<Boxes className="h-8 w-8" />}
+              title="No clusters configured"
+              description="Link to your cluster to get started."
+              action={
+                <Button onClick={() => setShowAddDialog(true)} variant="outline">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Cluster
                 </Button>
-              </div>
-            ) : (
-              <div className="space-y-0">
-                <div className="border rounded-lg">
-                  <ClusterList clusters={clusters} onEdit={handleEdit} onDelete={handleDelete} />
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              }
+            />
+          ) : (
+            <ClusterList clusters={clusters} onEdit={handleEdit} onDelete={handleDelete} />
+          )}
+        </Panel>
 
         <AddClusterDialog
           open={showAddDialog}

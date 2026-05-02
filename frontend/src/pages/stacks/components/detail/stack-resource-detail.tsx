@@ -12,6 +12,7 @@ import { Box, GitBranch, ExternalLink, Copy } from "lucide-react";
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 import type { z } from "zod";
 import type { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
+import { StatusPill, variantFromState } from "@/components/branded";
 
 interface StackResourceDetailProps {
   resource: Partial<FormStackResourceData>;
@@ -25,13 +26,13 @@ export default function StackResourceDetail({
   const { toast } = useToast();
   const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
   const status = statusObj.state?.toLowerCase() || 'pending';
-  let statusColor = 'bg-yellow-500';
-
-  if (status === 'ready' || status === 'running') {
-    statusColor = 'bg-green-500';
-  } else if (status === 'failed') {
-    statusColor = 'bg-red-500';
-  }
+  const statusVariant = variantFromState(statusObj.state);
+  const statusDotColor =
+    statusVariant === "ready" ? "bg-success"
+    : statusVariant === "error" ? "bg-danger"
+    : statusVariant === "pending" ? "bg-warn"
+    : "bg-muted-foreground";
+  const sourceLabel = resource.sourceType === "image" ? "Container Image" : "Git Repository";
 
   const ensureAbsoluteUrl = (url: string): string => {
     if (!url) return url;
@@ -82,19 +83,19 @@ export default function StackResourceDetail({
   return (
     <AccordionItem value={String(index)} className="border-0">
       <AccordionTrigger
-        className="px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
+        className="px-4 py-3 hover:bg-muted/40 data-[state=open]:bg-muted/30 rounded-t-md [&[data-state=open]]:rounded-b-none"
       >
-        <div className="flex items-center gap-2 text-left flex-grow">
+        <div className="flex items-center gap-3 text-left flex-grow">
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <span className={`h-2 w-2 rounded-full shrink-0 ${statusDotColor}`}></span>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p className="capitalize">{status}</p>
+            </TooltipContent>
+          </Tooltip>
           <div className="flex flex-col flex-grow min-w-0">
             <span className="font-medium flex items-center gap-2">
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <span className={`h-2 w-2 rounded-full ${statusColor}`}></span>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p className="capitalize">{status}</p>
-                </TooltipContent>
-              </Tooltip>
               {resource.name || `Resource ${index + 1}`}
               {firstPublicUrl && (
                 <Tooltip delayDuration={300}>
@@ -139,15 +140,23 @@ export default function StackResourceDetail({
               )}
             </span>
           </div>
+          <div className="flex items-center gap-3 shrink-0 mr-2">
+            <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground hidden sm:inline">
+              {sourceLabel}
+            </span>
+            {statusObj.state && (
+              <StatusPill variant={statusVariant}>{statusObj.state}</StatusPill>
+            )}
+          </div>
         </div>
       </AccordionTrigger>
       <AccordionContent className="pb-4 pt-2">
         <div className="px-4 space-y-4">
           <Tabs defaultValue="configuration" className="w-full">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="configuration" className="flex-1">Configuration</TabsTrigger>
-              <TabsTrigger value="deployment" className="flex-1">Deployment</TabsTrigger>
-              <TabsTrigger value="environment" className="flex-1">Environment</TabsTrigger>
+            <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-6">
+              <TabsTrigger value="configuration" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 -mb-px">Configuration</TabsTrigger>
+              <TabsTrigger value="deployment" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 -mb-px">Deployment</TabsTrigger>
+              <TabsTrigger value="environment" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 -mb-px">Environment</TabsTrigger>
             </TabsList>
             <TabsContent value="configuration" className="pt-4 space-y-6">
               <div>

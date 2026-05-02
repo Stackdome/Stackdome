@@ -2,16 +2,10 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Globe, PlusCircle, Loader2 } from "lucide-react";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useToast } from "@/components/ui/use-toast";
-import { Separator } from "@/components/ui/separator";
+import { PageHeader, Panel, EmptyState } from "@/components/branded";
 import * as organizationApi from "@/api/organizations";
 import type { Organization } from "@/api/organizations";
 import { getErrorMessage } from "@/api/client";
@@ -144,51 +138,47 @@ export default function DomainsPage() {
 
   return (
     <TooltipProvider>
-      <div className="p-6">
-        <header className="mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-2xl font-bold">Domain management</h1>
-              </div>
-            </div>
-          </div>
-          <Separator className="mt-4" />
-        </header>
+      <div className="p-8 space-y-8">
+        <PageHeader
+          eyebrow="Platform"
+          title="Domains"
+          subtitle="Configure custom domains for your organization"
+          actions={
+            <Button onClick={() => setShowAddDialog(true)} className="bg-brand text-white hover:bg-brand-darker">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Domain
+            </Button>
+          }
+        />
 
-        <Card className="rounded-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl flex items-center gap-2">
-              Domains
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {domains.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <Globe className="h-12 w-12 mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-medium mb-2">No domain configured</h3>
-                <p className="text-muted-foreground mb-6">Configure a domain for your organization.</p>
-                <Button onClick={() => setShowAddDialog(true)}>
+        <Panel
+          title="All Domains"
+          count={domains.length}
+          bodyClassName={domains.length === 0 ? "p-5" : "p-0"}
+        >
+          {domains.length === 0 ? (
+            <EmptyState
+              icon={<Globe className="h-8 w-8" />}
+              title="No domain configured"
+              description="Configure a domain for your organization."
+              action={
+                <Button onClick={() => setShowAddDialog(true)} variant="outline">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Domain
                 </Button>
-              </div>
-            ) : (
-              <div className="space-y-0">
-                <div className="border rounded-lg">
-                  {domains.map((domain, index) => (
-                    <DomainListItem
-                      key={index}
-                      domain={domain}
-                      index={index}
-                      onRemove={handleRemoveDomain}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              }
+            />
+          ) : (
+            domains.map((domain, index) => (
+              <DomainListItem
+                key={index}
+                domain={domain}
+                index={index}
+                onRemove={handleRemoveDomain}
+              />
+            ))
+          )}
+        </Panel>
 
         <AddDomainDialog
           open={showAddDialog}

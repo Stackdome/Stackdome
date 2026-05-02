@@ -25,6 +25,7 @@ import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
 import type { z } from "zod";
+import { StatusPill, variantFromState } from "@/components/branded";
 
 import type { FormStackResourceData, FormEnvVarData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { UseSecretsReturn } from "../../hooks/use-secrets";
@@ -364,34 +365,34 @@ export default function StackResourceItem({
     });
   };
 
-  // Status color logic
+  // Status semantics
   const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
-  const status = statusObj.state?.toLowerCase() || 'pending';
-  let statusColor = 'bg-yellow-500';
-  if (status === 'ready' || status === 'running') {
-    statusColor = 'bg-green-500';
-  } else if (status === 'failed') {
-    statusColor = 'bg-red-500';
-  }
+  const statusVariant = variantFromState(statusObj.state);
+  const statusDotColor =
+    statusVariant === "ready" ? "bg-success"
+    : statusVariant === "error" ? "bg-danger"
+    : statusVariant === "pending" ? "bg-warn"
+    : "bg-muted-foreground";
+  const sourceLabel = resource.sourceType === "image" ? "Container Image" : "Git Repository";
 
   return (
     <TooltipProvider>
       <AccordionItem value={String(index)} className="border-0">
         <AccordionTrigger
           ref={itemRef}
-          className="px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
+          className="px-4 py-3 hover:bg-muted/40 data-[state=open]:bg-muted/30 rounded-t-md [&[data-state=open]]:rounded-b-none"
         >
-          <div className="flex items-center gap-2 text-left flex-grow">
+          <div className="flex items-center gap-3 text-left flex-grow">
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <span className={`h-2 w-2 rounded-full shrink-0 ${statusDotColor}`}></span>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="capitalize">{statusObj.state || 'Pending'}</p>
+              </TooltipContent>
+            </Tooltip>
             <div className="flex flex-col flex-grow min-w-0">
               <span className="font-medium flex items-center gap-2">
-                <Tooltip delayDuration={300}>
-                  <TooltipTrigger asChild>
-                    <span className={`h-2 w-2 rounded-full ${statusColor}`}></span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p className="capitalize">{statusObj.state || 'Pending'}</p>
-                  </TooltipContent>
-                </Tooltip>
                 {resource.name || `Resource ${index + 1}`}
               </span>
               <span className="text-sm text-muted-foreground truncate">
@@ -421,22 +422,30 @@ export default function StackResourceItem({
                 <span className="text-xs text-destructive mt-0.5 pl-6">{errors._form}</span>
               )}
             </div>
-            {addonCount > 0 && (
-              <span className="ml-auto mr-2 inline-flex items-center gap-1 rounded-full border bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
-                <Cog className="h-3 w-3" />
-                {addonCount} {addonCount === 1 ? "addon" : "addons"}
+            <div className="ml-auto flex items-center gap-3 shrink-0 mr-2">
+              {addonCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-md border bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
+                  <Cog className="h-3 w-3" />
+                  {addonCount} {addonCount === 1 ? "addon" : "addons"}
+                </span>
+              )}
+              <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground hidden sm:inline">
+                {sourceLabel}
               </span>
-            )}
+              {statusObj.state && (
+                <StatusPill variant={statusVariant}>{statusObj.state}</StatusPill>
+              )}
+            </div>
           </div>
         </AccordionTrigger>
         <AccordionContent className="pb-4 pt-2">
           <div className="px-4 space-y-4">
             <Tabs defaultValue="general" className="w-full">
               <div className="mt-1 mb-3">
-                <TabsList className="grid grid-cols-3 w-full">
-                  <TabsTrigger value="general">General</TabsTrigger>
-                  <TabsTrigger value="deployment">Deployment</TabsTrigger>
-                  <TabsTrigger value="environment">Environment Variables</TabsTrigger>
+                <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-6">
+                  <TabsTrigger value="general" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 -mb-px">General</TabsTrigger>
+                  <TabsTrigger value="deployment" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 -mb-px">Deployment</TabsTrigger>
+                  <TabsTrigger value="environment" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 -mb-px">Environment Variables</TabsTrigger>
                 </TabsList>
               </div>
 

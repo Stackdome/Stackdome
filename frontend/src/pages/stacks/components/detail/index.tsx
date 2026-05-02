@@ -1,10 +1,9 @@
 import { useParams, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Rocket, Pencil, Loader2, X } from "lucide-react";
+import { PageHeader, Panel, StatusPill, variantFromState } from "@/components/branded";
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StackResourcesForm from "@/pages/stacks/components/shared/stack-resources-form";
 import StackVolumesForm from "@/pages/stacks/components/shared/stack-volumes-form";
@@ -233,139 +232,127 @@ export default function StackDetailPage() {
   const resourcesForForm: FormStackResourceData[] = (stackToShow?.spec.stack_resources || []).map(mapStackResourceToFormData);
   const volumesForForm = (stackToShow.spec?.volumes || []).map(mapVolumeToFormData);
 
-  return (
-    <div className="p-6">
-      <header className="mb-6">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-2xl font-bold">{stackToShow.name}</h1>
-                {/* Status label */}
-                {stackToShow.status?.state && (
-                  <span>
-                    {stackToShow.status.state.toLowerCase() === 'ready' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-300">Ready</span>
-                    )}
-                    {stackToShow.status.state.toLowerCase() === 'pending' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">Pending</span>
-                    )}
-                    {stackToShow.status.state.toLowerCase() === 'failed' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-300">Failed</span>
-                    )}
-                    {!['ready','pending','failed'].includes(stackToShow.status.state.toLowerCase()) && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300">{stackToShow.status.state}</span>
-                    )}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-4 text-muted-foreground text-sm mb-1">
-                <span>Services: {stackToShow.spec?.stack_resources?.length || 0}</span>
-                <span>Volumes: {stackToShow.spec?.volumes?.length || 0}</span>
-              </div>
-            </div>
-          </div>
+  const resourceCount = stackToShow.spec?.stack_resources?.length || 0;
+  const volumeCount = stackToShow.spec?.volumes?.length || 0;
+  const subtitleParts: React.ReactNode[] = [
+    `${resourceCount} ${resourceCount === 1 ? "service" : "services"}`,
+    `${volumeCount} ${volumeCount === 1 ? "volume" : "volumes"}`,
+  ];
+  // cluster name is not on the Stack type; omit for now
 
-          <div className="flex gap-3">
-            {/* Edit Mode Toggle */}
-            {isEditing ? (
-              <>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleEditToggle}
-                  disabled={isSaving}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button
-                  variant="default"
-                  size="lg"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Deploying...
-                    </>
-                  ) : (
-                    <>
-                      <Rocket className="mr-2 h-4 w-4" />
-                      Deploy
-                    </>
-                  )}
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={handleEditToggle}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
+  return (
+    <div className="p-8 space-y-8">
+      <PageHeader
+        title={stackToShow.name}
+        status={
+          stackToShow.status?.state ? (
+            <StatusPill variant={variantFromState(stackToShow.status.state)}>
+              {stackToShow.status.state}
+            </StatusPill>
+          ) : null
+        }
+        subtitle={subtitleParts.map((p, i) => (
+          <span key={i}>
+            {i > 0 && <span className="mx-2 text-muted-foreground/50">·</span>}
+            {p}
+          </span>
+        ))}
+        actions={
+          isEditing ? (
+            <>
+              <Button variant="outline" onClick={handleEditToggle} disabled={isSaving}>
+                <X className="mr-2 h-4 w-4" />
+                Cancel
               </Button>
-            )}
-          </div>
-        </div>
-        <Separator className="mt-4" />
-      </header>
+              <Button onClick={handleSave} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deploying...
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="mr-2 h-4 w-4" />
+                    Deploy
+                  </>
+                )}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={handleEditToggle} className="bg-brand text-white hover:bg-brand-darker">
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          )
+        }
+      />
 
       <Tabs defaultValue="configuration" className="w-full">
-        <TabsList className="mb-6 w-full justify-start">
-          <TabsTrigger value="configuration" className="flex-1">Configuration</TabsTrigger>
-          <TabsTrigger value="logs" className="flex-1">Logs</TabsTrigger>
-          <TabsTrigger value="metrics" className="flex-1">Metrics</TabsTrigger>
+        <TabsList className="mb-6 w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-6">
+          <TabsTrigger
+            value="configuration"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
+          >
+            Configuration
+          </TabsTrigger>
+          <TabsTrigger
+            value="logs"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
+          >
+            Logs
+          </TabsTrigger>
+          <TabsTrigger
+            value="metrics"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
+          >
+            Metrics
+          </TabsTrigger>
         </TabsList>
 
         {/* Configuration Tab: Stack Resources and Volumes */}
         <TabsContent value="configuration" className="space-y-8">
-          <Card className="mb-6 rounded-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl">Stack Resources</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {isEditing ? (
-                <StackResourcesForm
-                  resources={editFormData?.resources || []}
-                  onResourcesChange={handleResourcesChange}
-                  errors={validationErrors.resources}
-                  volumes={editFormData?.volumes || []}
-                  accordionDefaultOpen={false}
-                />
-              ) : (
-                <StackResourcesDetail
-                  resources={resourcesForForm}
-                  accordionDefaultOpen={false}
-                />
-              )}
-            </CardContent>
-          </Card>
+          <Panel
+            title="Stack Resources"
+            count={resourcesForForm.length}
+            bodyClassName="p-0"
+          >
+            {isEditing ? (
+              <StackResourcesForm
+                resources={editFormData?.resources || []}
+                onResourcesChange={handleResourcesChange}
+                errors={validationErrors.resources}
+                volumes={editFormData?.volumes || []}
+                accordionDefaultOpen={false}
+              />
+            ) : (
+              <StackResourcesDetail
+                resources={resourcesForForm}
+                accordionDefaultOpen={false}
+              />
+            )}
+          </Panel>
 
-          <Card className="mb-6 rounded-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl">Stack Volumes</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {isEditing ? (
-                <StackVolumesForm
-                  volumes={editFormData?.volumes || []}
-                  onVolumesChange={handleVolumesChange}
-                  errors={validationErrors.volumes}
-                  stackResources={editFormData?.resources || []}
-                  accordionDefaultOpen={false}
-                />
-              ) : (
-                <StackVolumesDetail
-                  volumes={volumesForForm}
-                  stackResources={resourcesForForm}
-                  accordionDefaultOpen={false}
-                />
-              )}
-            </CardContent>
-          </Card>
+          <Panel
+            title="Stack Volumes"
+            count={volumesForForm.length}
+            bodyClassName="p-0"
+          >
+            {isEditing ? (
+              <StackVolumesForm
+                volumes={editFormData?.volumes || []}
+                onVolumesChange={handleVolumesChange}
+                errors={validationErrors.volumes}
+                stackResources={editFormData?.resources || []}
+                accordionDefaultOpen={false}
+              />
+            ) : (
+              <StackVolumesDetail
+                volumes={volumesForForm}
+                stackResources={resourcesForForm}
+                accordionDefaultOpen={false}
+              />
+            )}
+          </Panel>
         </TabsContent>
 
         {/* Logs Tab */}
