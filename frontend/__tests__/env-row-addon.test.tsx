@@ -113,6 +113,17 @@ describe("EnvRow (addon variant)", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows '+ Create Postgres addon' link when addons list is empty", async () => {
+    const user = userEvent.setup();
+    render(
+      <EnvRow row={baseAddonRow({ addonId: "" }) as any} {...noopProps} addons={[]} />,
+    );
+    await user.click(screen.getByTestId("addon-picker-trigger"));
+    const link = await screen.findByRole("link", { name: /create postgres addon/i });
+    expect(link).toHaveAttribute("href", "/addons/create/postgres");
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+
   it("calls onChangeAddon when an addon is picked", async () => {
     const user = userEvent.setup();
     const onChangeAddon = vi.fn();

@@ -261,11 +261,25 @@ function AddonInlinePickers({
           <SelectValue placeholder="Addon" />
         </SelectTrigger>
         <SelectContent>
-          {addons.map((a) => (
-            <SelectItem key={a.id} value={a.id!}>
-              {a.name} (Postgres · {a.status?.state ?? "Unknown"})
-            </SelectItem>
-          ))}
+          {addons.length === 0 ? (
+            <div className="px-3 py-3 text-sm">
+              <p className="text-muted-foreground mb-2">No Postgres addons yet.</p>
+              <a
+                href="/addons/create/postgres"
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline"
+              >
+                + Create Postgres addon
+              </a>
+            </div>
+          ) : (
+            addons.map((a) => (
+              <SelectItem key={a.id} value={a.id!}>
+                {a.name} (Postgres · {a.status?.state ?? "Unknown"})
+              </SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
       <Select value={row.database || undefined}>
