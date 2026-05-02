@@ -1,4 +1,4 @@
-import { Layers, PlusCircle, Loader2, AlertTriangle, Search, Box, GitBranch, Database, ChevronDown } from "lucide-react";
+import { Layers, PlusCircle, Loader2, AlertTriangle, Search, Box, GitBranch, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageHeader, EmptyState, StatusPill, variantFromState, type StatusVariant } from "@/components/branded";
 import { formatDistanceToNow } from "date-fns";
 import { DockerComposeImportDropdown } from "@/pages/stacks/components/shared/import-dropdown";
@@ -46,13 +46,6 @@ function inferStackIcon(stack: Stack) {
   if (first.build_spec) return GitBranch;
   if (first.image_spec) return Box;
   return Layers;
-}
-
-function shortRevision(rev?: string | null) {
-  if (!rev) return null;
-  // Show first 7 chars (commit-style) or up to 8 if numeric
-  const trimmed = rev.replace(/^v/, "");
-  return trimmed.length > 8 ? trimmed.slice(0, 8) : trimmed;
 }
 
 function bucketStatus(state?: string | null): StatusFilter {
@@ -279,11 +272,7 @@ export default function StacksPage() {
                   const variant = variantFromState(stack.status?.state);
                   const resourceCount = stack.spec?.stack_resources?.length || 0;
                   const volumeCount = stack.spec?.volumes?.length || 0;
-                  const rev = shortRevision(stack.revision);
-                  const observed = shortRevision(stack.status?.observed_revision);
-                  const driftedRevision = rev && observed && rev !== observed;
                   const updatedAt = stack.updated_at || stack.created_at;
-                  const message = stack.status?.message;
 
                   return (
                     <Link
@@ -319,71 +308,13 @@ export default function StacksPage() {
                           </div>
                         </div>
 
-                        {/* Metric row: resources / volumes / revision */}
-                        <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border/60">
-                          <div className="flex flex-col gap-0.5 pt-2">
-                            <span className="font-mono tabular-nums text-base font-medium leading-none">
-                              {resourceCount}
-                            </span>
-                            <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
-                              Resources
-                            </span>
+                        {/* Footer: counts on left, relative time on right */}
+                        <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-border/60 font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                          <div className="flex flex-col gap-0.5 tabular-nums">
+                            <span>{resourceCount} {resourceCount === 1 ? "resource" : "resources"}</span>
+                            <span>{volumeCount} {volumeCount === 1 ? "volume" : "volumes"}</span>
                           </div>
-                          <div className="flex flex-col gap-0.5 pt-2">
-                            <span className="font-mono tabular-nums text-base font-medium leading-none">
-                              {volumeCount}
-                            </span>
-                            <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
-                              Volumes
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-0.5 pt-2 min-w-0">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="font-mono tabular-nums text-base font-medium leading-none truncate">
-                                  {rev ? `#${rev}` : "—"}
-                                </span>
-                              </TooltipTrigger>
-                              {(rev || observed) && (
-                                <TooltipContent>
-                                  <div className="font-mono text-xs space-y-1">
-                                    {rev && <div>Spec: {rev}</div>}
-                                    {observed && <div>Observed: {observed}</div>}
-                                  </div>
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
-                            <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
-                              Revision
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Footer: optional drift hint + relative time */}
-                        <div className="flex items-center justify-between gap-2 mt-auto font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
-                          {driftedRevision ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="inline-flex items-center gap-1 text-warn">
-                                  <Database className="h-3 w-3" />
-                                  Rolling out
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="text-xs max-w-xs">
-                                  Spec revision <span className="font-mono">{rev}</span> hasn't been observed yet
-                                  {message ? <>: {message}</> : "."}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : message ? (
-                            <span className="truncate normal-case tracking-normal text-muted-foreground/80">
-                              {message}
-                            </span>
-                          ) : (
-                            <span />
-                          )}
-                          <span className="shrink-0 text-right">
+                          <span className="uppercase tracking-[0.5px] text-right">
                             {updatedAt
                               ? formatDistanceToNow(new Date(updatedAt), { addSuffix: true }).replace(/^about\s/, "")
                               : "—"}
