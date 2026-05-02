@@ -1,7 +1,7 @@
 import * as React from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { EyebrowLabel } from "@/components/branded/eyebrow-label";
-import { StackdomeMark } from "@/components/branded/stackdome-mark";
+import { StackdomeMark, StackdomeWordmark } from "@/components/branded/stackdome-mark";
 import { cn } from "@/lib/utils";
 
 interface MetaCell {
@@ -47,11 +47,8 @@ export function AuthShell({
       <div className="relative z-10 mx-auto grid min-h-svh max-w-[1240px] lg:grid-cols-[1fr_440px]">
         {/* Brand panel — transparent so the grid shows through */}
         <aside className="relative hidden flex-col justify-between p-10 lg:flex xl:p-14">
-          <div className="relative z-10 flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-sm bg-brand-bg border border-brand-border">
-              <StackdomeMark size={18} variant="tinted" />
-            </span>
-            <span className="font-mono text-[12px] uppercase tracking-[1.5px] text-foreground">stackdome</span>
+          <div className="relative z-10">
+            <StackdomeWordmark size={20} />
           </div>
 
           <div className="relative z-10 flex flex-col gap-8">
@@ -87,7 +84,7 @@ export function AuthShell({
                 {stageStatus}
               </div>
               <div className="flex items-center justify-center py-6">
-                <StackdomeMark size={88} variant="tinted" />
+                <StackdomeMark size={96} />
               </div>
             </div>
           </div>
@@ -135,11 +132,8 @@ export function AuthShell({
         <main className="relative flex items-center justify-center bg-secondary px-6 py-10 sm:px-10 lg:border-x lg:border-border">
           <div className="w-full max-w-[360px]">
             {/* Mobile-only brand mark */}
-            <div className="mb-8 flex items-center gap-2 lg:hidden">
-              <span className="flex h-7 w-7 items-center justify-center rounded-sm bg-brand-bg border border-brand-border">
-                <StackdomeMark size={18} variant="tinted" />
-              </span>
-              <span className="font-mono text-[12px] uppercase tracking-[1.5px]">stackdome</span>
+            <div className="mb-8 lg:hidden">
+              <StackdomeWordmark size={20} />
             </div>
             {children}
           </div>
