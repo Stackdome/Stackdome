@@ -68,7 +68,10 @@ export function LoginForm() {
         trailing={
           <>
             No account yet?{" "}
-            <Link to="/sign-up" className="text-brand hover:underline underline-offset-4">
+            <Link
+              to="/sign-up"
+              className="text-brand underline underline-offset-4 decoration-brand/70 hover:decoration-brand"
+            >
               Start here →
             </Link>
           </>

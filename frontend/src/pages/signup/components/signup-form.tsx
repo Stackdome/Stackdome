@@ -82,7 +82,10 @@ export function SignupForm() {
         trailing={
           <>
             Already have one?{" "}
-            <Link to="/login" className="text-brand hover:underline underline-offset-4">
+            <Link
+              to="/login"
+              className="text-brand underline underline-offset-4 decoration-brand/70 hover:decoration-brand"
+            >
               Sign in →
             </Link>
           </>
