@@ -154,7 +154,7 @@ export function FormHead({
 }) {
   return (
     <div className="mb-6 space-y-1.5">
-      <EyebrowLabel tone="muted">{step}</EyebrowLabel>
+      <EyebrowLabel tone="brand">{step}</EyebrowLabel>
       <h2 className="text-[28px] font-semibold leading-tight tracking-tight">{title}</h2>
       {trailing && <p className="text-sm text-muted-foreground">{trailing}</p>}
     </div>

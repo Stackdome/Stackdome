@@ -63,7 +63,7 @@ export function LoginForm() {
   return (
     <div>
       <FormHead
-        step="step 01 / sign in"
+        step="sign in"
         title="Welcome back."
         trailing={
           <>

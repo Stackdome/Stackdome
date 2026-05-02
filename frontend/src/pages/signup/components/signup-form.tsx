@@ -77,7 +77,7 @@ export function SignupForm() {
   return (
     <div>
       <FormHead
-        step="step 01 of 03 / create account"
+        step="create account"
         title="Own your runtime."
         trailing={
           <>
