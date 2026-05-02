@@ -17,7 +17,9 @@ interface AuthShellProps {
   sub?: string;
   stageStatus?: string;
   meta?: MetaCell[];
-  checklist?: React.ReactNode[];
+  checklist?: { icon: React.ReactNode; text: React.ReactNode }[];
+  hideTopBrand?: boolean;
+  brandCaption?: boolean;
   children: React.ReactNode;
 }
 
@@ -29,6 +31,8 @@ export function AuthShell({
   stageStatus,
   meta,
   checklist,
+  hideTopBrand = false,
+  brandCaption = false,
   children,
 }: AuthShellProps) {
   return (
@@ -46,12 +50,17 @@ export function AuthShell({
       {/* Centered wrap — empty bg shows on either side past 1240px */}
       <div className="relative z-10 mx-auto grid min-h-svh max-w-[1240px] lg:grid-cols-[1fr_440px]">
         {/* Brand panel — transparent so the grid shows through */}
-        <aside className="relative hidden flex-col justify-between p-10 lg:flex xl:p-14">
-          <div className="relative z-10">
-            <StackdomeWordmark size={20} />
-          </div>
+        <aside className="relative hidden flex-col p-10 lg:flex xl:p-14">
+          {!hideTopBrand && (
+            <div className="relative z-10">
+              <StackdomeWordmark size={20} />
+            </div>
+          )}
 
-          <div className="relative z-10 flex flex-col gap-8">
+          {/* Top spacer — pushes headline below visual center */}
+          <div className="grow-[1.6]" aria-hidden="true" />
+
+          <div className={cn("relative z-10 flex flex-col gap-6", hideTopBrand ? "mt-32 xl:mt-40" : "")}>
             <h1 className="max-w-xl font-semibold text-4xl leading-[1.05] tracking-tight xl:text-5xl">
               {headlineSolid}
               {headlineStroke && (
@@ -69,6 +78,7 @@ export function AuthShell({
                 </>
               )}
             </h1>
+
 
             {tagline && (
               <p className="max-w-md text-lg font-medium leading-snug tracking-tight text-muted-foreground xl:text-xl">
@@ -96,7 +106,10 @@ export function AuthShell({
             )}
           </div>
 
-          <div className="relative z-10">
+          {/* Bottom spacer */}
+          <div className="grow" aria-hidden="true" />
+
+          <div className="relative z-10 pt-16">
             {meta && (
               <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border border-border bg-border">
                 {meta.map((m) => (
@@ -119,15 +132,15 @@ export function AuthShell({
             )}
             {checklist && (
               <ul className="space-y-2">
-                {checklist.map((item) => (
+                {checklist.map((item, idx) => (
                   <li
-                    key={item}
+                    key={idx}
                     className="flex items-center gap-2 font-mono text-[12px] text-muted-foreground"
                   >
-                    <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-brand-bg text-brand">
-                      ✓
+                    <span className="flex h-5 w-5 items-center justify-center rounded-sm bg-brand-bg text-brand [&>svg]:h-3.5 [&>svg]:w-3.5">
+                      {item.icon}
                     </span>
-                    {item}
+                    {item.text}
                   </li>
                 ))}
               </ul>

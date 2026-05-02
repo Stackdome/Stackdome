@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Heart, Unlock, Zap } from "lucide-react";
 import { isUserLoggedIn } from "@/helpers/common";
 
 import { LoginForm } from "@/pages/login/components/login-form";
@@ -17,12 +18,19 @@ export default function Login() {
     <AuthShell
       headlineSolid="Deploy. Own."
       headlineStroke="Scale."
-      sub="The runtime you depend on should be a runtime you own. Sign in to your control plane."
-      stageStatus="live"
-      meta={[
-        { label: "Region", value: "us-east-1" },
-        { label: "Version", value: "v0.1.4" },
-        { label: "Status", value: "● operational", tone: "brand" },
+      checklist={[
+        {
+          icon: <Heart fill="currentColor" />,
+          text: <>Built with <span className="text-foreground">open source</span></>,
+        },
+        {
+          icon: <Zap fill="currentColor" />,
+          text: <>Powered by <span className="text-foreground">Kubernetes</span></>,
+        },
+        {
+          icon: <Unlock />,
+          text: <>No vendor <span className="text-foreground">lock-in</span></>,
+        },
       ]}
     >
       <LoginForm />

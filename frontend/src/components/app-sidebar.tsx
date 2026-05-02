@@ -40,7 +40,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip="Stackdome">
               <Link to="/">
-                <StackdomeMark size={28} />
+                <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-md border border-brand-border bg-brand-bg">
+                  <StackdomeMark size={18} />
+                </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold lowercase" style={{ letterSpacing: "0.04em" }}>stackdome</span>
                   <span className="truncate text-[11px] font-mono uppercase tracking-[1.2px] text-muted-foreground">{user?.organisation}</span>
