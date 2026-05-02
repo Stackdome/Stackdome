@@ -12,17 +12,19 @@ interface MetaCell {
 
 interface AuthShellProps {
   headlineSolid: string;
-  headlineStroke: string;
-  sub: string;
-  stageStatus: string;
+  headlineStroke?: string;
+  tagline?: React.ReactNode;
+  sub?: string;
+  stageStatus?: string;
   meta?: MetaCell[];
-  checklist?: string[];
+  checklist?: React.ReactNode[];
   children: React.ReactNode;
 }
 
 export function AuthShell({
   headlineSolid,
   headlineStroke,
+  tagline,
   sub,
   stageStatus,
   meta,
@@ -52,33 +54,46 @@ export function AuthShell({
           <div className="relative z-10 flex flex-col gap-8">
             <h1 className="font-semibold text-5xl leading-[0.95] tracking-tight xl:text-6xl">
               {headlineSolid}
-              <br />
-              <span
-                className="text-brand"
-                style={{
-                  WebkitTextStroke: "1.5px currentColor",
-                  WebkitTextFillColor: "transparent",
-                }}
-              >
-                {headlineStroke}
-              </span>
+              {headlineStroke && (
+                <>
+                  <br />
+                  <span
+                    className="text-brand"
+                    style={{
+                      WebkitTextStroke: "1.5px currentColor",
+                      WebkitTextFillColor: "transparent",
+                    }}
+                  >
+                    {headlineStroke}
+                  </span>
+                </>
+              )}
             </h1>
 
-            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">{sub}</p>
+            {tagline && (
+              <p className="max-w-md text-2xl font-medium leading-snug tracking-tight text-foreground/90 xl:text-3xl">
+                {tagline}
+              </p>
+            )}
 
-            {/* Stage card */}
-            <div className="relative max-w-md rounded-md border border-border bg-background/50 p-6">
-              <div className="absolute left-4 top-3 font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground">
-                stack.render()
+            {sub && (
+              <p className="max-w-md text-sm leading-relaxed text-muted-foreground">{sub}</p>
+            )}
+
+            {stageStatus && (
+              <div className="relative max-w-md rounded-md border border-border bg-background/50 p-6">
+                <div className="absolute left-4 top-3 font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground">
+                  stack.render()
+                </div>
+                <div className="absolute right-4 top-3 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1.5px] text-brand">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
+                  {stageStatus}
+                </div>
+                <div className="flex items-center justify-center py-6">
+                  <StackdomeMark size={96} />
+                </div>
               </div>
-              <div className="absolute right-4 top-3 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1.5px] text-brand">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
-                {stageStatus}
-              </div>
-              <div className="flex items-center justify-center py-6">
-                <StackdomeMark size={96} />
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="relative z-10">

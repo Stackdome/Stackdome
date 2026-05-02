@@ -4,14 +4,16 @@ import { AuthShell } from "@/pages/auth/components/auth-shell";
 export default function Signup() {
   return (
     <AuthShell
-      headlineSolid="Three layers."
-      headlineStroke="One runtime."
-      sub="Spin up your first cluster in under a minute. No credit card. Open source under Apache 2.0."
-      stageStatus="building"
+      headlineSolid="Kickstart your delightful deployment journey."
+      tagline={
+        <>
+          Be the captain. Just ship it<span className="text-brand">.</span>
+        </>
+      }
       checklist={[
-        "Free during preview · no credit card",
-        "Open source · self-host or managed",
-        "14 regions worldwide · low-latency edge",
+        <>Powered by <span className="text-foreground">open source</span></>,
+        <>Built on top of <span className="text-foreground">Kubernetes</span></>,
+        <>No vendor lock-in. <span className="text-foreground">Ever.</span></>,
       ]}
     >
       <SignupForm />
