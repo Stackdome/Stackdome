@@ -245,12 +245,15 @@ export default function StacksPage() {
                     <ChevronDown className="h-3 w-3" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="min-w-[200px]">
                   {SORT_OPTIONS.map((o) => (
                     <DropdownMenuItem
                       key={o.key}
                       onClick={() => setSortKey(o.key)}
-                      className={cn(sortKey === o.key && "text-brand")}
+                      className={cn(
+                        "font-mono text-[11px] uppercase tracking-[1.2px]",
+                        sortKey === o.key && "text-brand"
+                      )}
                     >
                       {o.label}
                     </DropdownMenuItem>
