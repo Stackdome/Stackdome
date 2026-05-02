@@ -291,7 +291,7 @@ export default function StacksPage() {
                           </span>
                           <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
                             <span
-                              className="truncate font-medium text-base group-hover:text-brand transition-colors"
+                              className="font-medium text-base leading-tight group-hover:text-brand transition-colors break-words line-clamp-2 [overflow-wrap:anywhere]"
                               title={stack.name}
                             >
                               {stack.name}
