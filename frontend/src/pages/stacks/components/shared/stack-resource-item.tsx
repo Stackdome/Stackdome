@@ -188,7 +188,7 @@ export default function StackResourceItem({
         database: undefined,
         superuser: false,
         // credField is optional in the form schema; left undefined until the user picks one.
-        credField: undefined as any,
+        credField: undefined,
       });
     }
   };
@@ -209,7 +209,7 @@ export default function StackResourceItem({
       addonId: patch.addonId ?? current.addonId,
       database: nextDatabase,
       superuser: patch.superuser ?? current.superuser,
-      credField: (patch.credField ?? current.credField) as any,
+      credField: patch.credField ?? current.credField,
     });
     markEnvRowDirty(envIdx);
   };

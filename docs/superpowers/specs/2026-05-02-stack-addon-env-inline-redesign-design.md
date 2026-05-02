@@ -1,6 +1,6 @@
 # Stack ↔ Addon Env Linkage — Inline Redesign
 
-**Status:** Design
+**Status:** Implemented
 **Date:** 2026-05-02
 **Supersedes (UI portion only):** `docs/superpowers/specs/2026-05-01-stack-addon-env-linkage-design.md`
 
