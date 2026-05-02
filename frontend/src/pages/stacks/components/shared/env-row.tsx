@@ -72,6 +72,7 @@ export function EnvRow({
   const isOrphanAddon =
     row.from === "addon" &&
     addonNameById !== undefined &&
+    !!(row as any).addonId &&
     !addonNameById.has((row as any).addonId);
 
   return (
@@ -116,14 +117,21 @@ export function EnvRow({
             onChange={onChangeSecret}
           />
         )}
-        {row.from === "addon" && (
-          <AddonInlinePickers
-            row={row}
-            addons={addons}
-            onChangeAddon={onChangeAddon}
-            rowErrors={rowErrors}
-          />
-        )}
+        {row.from === "addon" &&
+          (isOrphanAddon ? (
+            <AddonOrphanReadOnly
+              database={row.database}
+              credField={row.credField}
+              superuser={row.superuser}
+            />
+          ) : (
+            <AddonInlinePickers
+              row={row}
+              addons={addons}
+              onChangeAddon={onChangeAddon}
+              rowErrors={rowErrors}
+            />
+          ))}
       </div>
 
       {/* From select (Stack | Secret | Addon) */}
@@ -250,6 +258,23 @@ function SecretValueCell({
 }
 
 const ALL_DATABASES_VALUE = "__ALL_DATABASES__";
+
+function AddonOrphanReadOnly({
+  database,
+  credField,
+  superuser,
+}: {
+  database?: string;
+  credField?: string;
+  superuser: boolean;
+}) {
+  const dbLabel = superuser ? "(superuser)" : database ?? "—";
+  return (
+    <div className="text-xs italic px-3 py-2 text-yellow-600">
+      ⚙ &lt;missing addon&gt; · {dbLabel} · {credField ?? "—"}
+    </div>
+  );
+}
 
 function AddonInlinePickers({
   row,

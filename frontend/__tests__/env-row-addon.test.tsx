@@ -300,6 +300,28 @@ describe("EnvRow (addon variant)", () => {
     expect(screen.getByText('Duplicate name "PG_HOST"')).toBeInTheDocument();
   });
 
+  it("orphan addon row renders read-only second line with warning, but From dropdown still works", () => {
+    render(
+      <EnvRow
+        row={baseAddonRow({ addonId: "missing-addon", database: "tooljet", credField: "host" }) as any}
+        {...noopProps}
+        addonNameById={new Map([["addon-1", "tooljet-db"]])}
+        addons={[mkAddon()]}
+      />,
+    );
+    expect(screen.getByText(/<missing addon>/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Addon was deleted\. This variable won't resolve\. Remove to clean up\./i),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("addon-picker-trigger")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("database-picker-trigger")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("field-picker-trigger")).not.toBeInTheDocument();
+    const fromTrigger = screen
+      .getAllByRole("combobox")
+      .find((el) => el.textContent?.match(/Addon/));
+    expect(fromTrigger).not.toBeDisabled();
+  });
+
   it("auto-selects the only database when picking an addon with one db and no superuser", async () => {
     const user = userEvent.setup();
     const onChangeAddon = vi.fn();
