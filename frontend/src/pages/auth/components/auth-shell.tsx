@@ -11,7 +11,6 @@ interface MetaCell {
 }
 
 interface AuthShellProps {
-  marker: { code: string; expr: string };
   headlineSolid: string;
   headlineStroke: string;
   sub: string;
@@ -22,7 +21,6 @@ interface AuthShellProps {
 }
 
 export function AuthShell({
-  marker,
   headlineSolid,
   headlineStroke,
   sub,
@@ -52,12 +50,6 @@ export function AuthShell({
           </div>
 
           <div className="relative z-10 flex flex-col gap-8">
-            <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[1.5px]">
-              <span className="text-brand">{marker.code}</span>
-              <span className="text-muted-foreground/60">·</span>
-              <span className="text-muted-foreground">{marker.expr}</span>
-            </div>
-
             <h1 className="font-semibold text-5xl leading-[0.95] tracking-tight xl:text-6xl">
               {headlineSolid}
               <br />

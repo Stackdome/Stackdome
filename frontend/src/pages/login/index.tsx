@@ -15,7 +15,6 @@ export default function Login() {
 
   return (
     <AuthShell
-      marker={{ code: "01 / AUTH", expr: "session.init()" }}
       headlineSolid="Deploy. Own."
       headlineStroke="Scale."
       sub="The runtime you depend on should be a runtime you own. Sign in to your control plane."
