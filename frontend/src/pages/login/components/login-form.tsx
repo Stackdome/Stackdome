@@ -68,11 +68,11 @@ export function LoginForm() {
         trailing={
           <>
             No account yet?{" "}
-            <Link
-              to="/sign-up"
-              className="text-foreground underline underline-offset-4 decoration-[1.5px] decoration-brand/80 hover:decoration-brand"
-            >
-              Start here<span className="font-bold text-brand">.</span>
+            <Link to="/sign-up" className="text-foreground">
+              <span className="underline underline-offset-4 decoration-[1.5px] decoration-brand/80 hover:decoration-brand">
+                Start here
+              </span>
+              <span className="text-brand">.</span>
             </Link>
           </>
         }
