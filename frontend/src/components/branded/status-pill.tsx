@@ -7,26 +7,28 @@ interface StatusPillProps extends React.HTMLAttributes<HTMLSpanElement> {
   withDot?: boolean;
 }
 
+// Design-system status palette: tinted bg + saturated border + bright readable text.
+// Hex values map to colors_and_type.css and preview/components-badges.html.
 const styles: Record<StatusVariant, { wrap: string; dot: string }> = {
   ready: {
-    wrap: "bg-success-bg border-success-border text-success",
-    dot: "bg-success",
+    wrap: "bg-[rgb(34_197_94_/_0.16)] border-[rgb(34_197_94_/_0.50)] text-[#22c55e] dark:text-[#86efac]",
+    dot: "bg-[#22c55e]",
   },
   pending: {
-    wrap: "bg-warn-bg border-warn-border text-warn",
-    dot: "bg-warn",
+    wrap: "bg-[rgb(234_179_8_/_0.16)] border-[rgb(234_179_8_/_0.55)] text-[#a16207] dark:text-[#fde047]",
+    dot: "bg-[#eab308]",
   },
   error: {
-    wrap: "bg-danger-bg border-danger-border text-danger",
-    dot: "bg-danger",
+    wrap: "bg-[rgb(220_38_38_/_0.18)] border-[rgb(220_38_38_/_0.65)] text-[#b91c1c] dark:text-[#fca5a5]",
+    dot: "bg-[#dc2626]",
   },
   info: {
-    wrap: "bg-brand-bg border-brand-border text-brand",
-    dot: "bg-brand",
+    wrap: "bg-[rgb(249_115_22_/_0.14)] border-[rgb(249_115_22_/_0.55)] text-[#c2410c] dark:text-[#fdba74]",
+    dot: "bg-[#f97316]",
   },
   neutral: {
-    wrap: "bg-muted border-border text-muted-foreground",
-    dot: "bg-muted-foreground",
+    wrap: "bg-[rgb(148_163_184_/_0.12)] border-[rgb(148_163_184_/_0.35)] text-[#475569] dark:text-[#cbd5e1]",
+    dot: "bg-[#94a3b8]",
   },
 };
 
@@ -50,14 +52,15 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5",
-        "font-mono text-[10px] font-medium uppercase tracking-[1px]",
+        // Pill: full-rounded, 1px border, mono uppercase bold per design system
+        "inline-flex items-center gap-[7px] rounded-full border px-2.5 py-1 leading-none",
+        "font-mono text-[11px] font-bold uppercase tracking-[0.08em]",
         s.wrap,
         className,
       )}
       {...props}
     >
-      {withDot && <span className={cn("inline-block h-1.5 w-1.5 rounded-full", s.dot)} />}
+      {withDot && <span className={cn("inline-block h-[7px] w-[7px] rounded-full", s.dot)} />}
       {children}
     </span>
   );
