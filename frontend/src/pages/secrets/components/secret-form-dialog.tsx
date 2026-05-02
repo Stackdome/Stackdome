@@ -563,7 +563,7 @@ export function SecretFormDialog({
                 size="sm"
                 onClick={addGenericDataPair}
               >
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="h-4 w-4" />
                 Add Key-Value Pair
               </Button>
             </div>
@@ -699,7 +699,7 @@ export function SecretFormDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
             {isEditing ? "Update Secret" : "Create Secret"}
           </Button>
         </DialogFooter>

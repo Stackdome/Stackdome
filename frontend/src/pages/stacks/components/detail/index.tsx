@@ -261,18 +261,18 @@ export default function StackDetailPage() {
           isEditing ? (
             <>
               <Button variant="outline" onClick={handleEditToggle} disabled={isSaving}>
-                <X className="mr-2 h-4 w-4" />
+                <X className="h-4 w-4" />
                 Cancel
               </Button>
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Deploying...
                   </>
                 ) : (
                   <>
-                    <Rocket className="mr-2 h-4 w-4" />
+                    <Rocket className="h-4 w-4" />
                     Deploy
                   </>
                 )}
@@ -280,7 +280,7 @@ export default function StackDetailPage() {
             </>
           ) : (
             <Button onClick={handleEditToggle} className="bg-brand text-white hover:bg-brand-darker">
-              <Pencil className="mr-2 h-4 w-4" />
+              <Pencil className="h-4 w-4" />
               Edit
             </Button>
           )

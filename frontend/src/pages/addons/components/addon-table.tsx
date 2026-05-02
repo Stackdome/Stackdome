@@ -98,14 +98,14 @@ export function AddonTable({ addons, onDelete }: AddonTableProps) {
                       }
                       disabled={!addon.id}
                     >
-                      <Pencil className="mr-2 h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive"
                       onClick={() => onDelete(addon)}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>

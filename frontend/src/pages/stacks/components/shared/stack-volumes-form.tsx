@@ -89,7 +89,7 @@ export default function StackVolumesForm({
           variant="ghost"
           onClick={() => onVolumesChange([...volumes, getDefaultVolume()])}
         >
-          <PlusCircle className="mr-2 h-4 w-4" />
+          <PlusCircle className="h-4 w-4" />
           Add Volume
         </Button>
       </div>

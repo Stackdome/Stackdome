@@ -140,7 +140,7 @@ export function LogViewer({ stackId, organizationId, resources = [], className =
             <Popover open={sourceSelectOpen} onOpenChange={setSourceSelectOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 w-48 justify-start">
-                  <Layers className="mr-2 h-4 w-4" />
+                  <Layers className="h-4 w-4" />
                   Resources
                   <ChevronDown className="ml-auto h-4 w-4" />
                   {filters.sources.length > 0 && (
@@ -177,7 +177,7 @@ export function LogViewer({ stackId, organizationId, resources = [], className =
           {/* Time Range Selector */}
           <Select value={filters.timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-48 h-8">
-              <Clock className="mr-2 h-4 w-4" />
+              <Clock className="h-4 w-4" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

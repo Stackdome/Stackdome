@@ -100,7 +100,7 @@ export default function StacksPage() {
                 variant="outline"
               />
               <Button onClick={handleCreateNewStack} className="bg-brand text-white hover:bg-brand-darker">
-                <PlusCircle className="mr-2 h-4 w-4" />
+                <PlusCircle className="h-4 w-4" />
                 New Stack
               </Button>
             </>
@@ -114,7 +114,7 @@ export default function StacksPage() {
             description="Deploy your first stack to get started."
             action={
               <Button onClick={handleCreateNewStack} variant="outline">
-                <PlusCircle className="mr-2 h-4 w-4" />
+                <PlusCircle className="h-4 w-4" />
                 Create New Stack
               </Button>
             }
@@ -129,10 +129,10 @@ export default function StacksPage() {
                   to={`/stacks/${stack.id}`}
                   className="block group"
                 >
-                  <Card className="flex flex-col w-full min-h-[130px] hover:border-brand-border hover:bg-muted/30 transition-colors duration-150">
-                    <CardHeader className="pb-2">
+                  <Card className="flex flex-col w-full hover:border-brand-border hover:bg-muted/30 transition-colors duration-150 py-4 gap-3">
+                    <CardHeader className="px-4 pb-0">
                       <CardTitle className="flex items-start justify-between gap-2 text-base font-medium">
-                        <span className="truncate pr-2 group-hover:text-brand transition-colors" title={stack.name}>
+                        <span className="truncate group-hover:text-brand transition-colors" title={stack.name}>
                           {stack.name}
                         </span>
                         {stack.status?.state && (
@@ -142,16 +142,12 @@ export default function StacksPage() {
                         )}
                       </CardTitle>
                     </CardHeader>
-                    <CardFooter className="flex justify-between items-baseline mt-auto pt-2 pb-3 font-mono text-[11px] text-muted-foreground">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="tabular-nums">
-                          {stack.spec.stack_resources?.length || 0} resources
-                        </span>
-                        <span className="tabular-nums">
-                          {stack.spec.volumes?.length || 0} volumes
-                        </span>
+                    <CardFooter className="px-4 pb-0 flex justify-between items-end gap-2 font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                      <div className="flex flex-col gap-0.5 tabular-nums">
+                        <span>{stack.spec.stack_resources?.length || 0} resources</span>
+                        <span>{stack.spec.volumes?.length || 0} volumes</span>
                       </div>
-                      <span className="text-right uppercase tracking-[0.5px]">
+                      <span className="uppercase tracking-[0.5px] text-right">
                         {stack.created_at ? formatDistanceToNow(new Date(stack.created_at), { addSuffix: true }).replace(/^about\s/, '') : 'N/A'}
                       </span>
                     </CardFooter>

@@ -95,7 +95,7 @@ export default function AddonsPage() {
           subtitle="Manage hosted addon services for your stacks"
           actions={
             <Button onClick={() => setPickerOpen(true)} className="bg-brand text-white hover:bg-brand-darker">
-              <PlusCircle className="mr-2 h-4 w-4" />
+              <PlusCircle className="h-4 w-4" />
               Add Addon
             </Button>
           }
@@ -113,7 +113,7 @@ export default function AddonsPage() {
               description="Add an addon to provision a managed Postgres for your stacks."
               action={
                 <Button onClick={() => setPickerOpen(true)} variant="outline">
-                  <PlusCircle className="mr-2 h-4 w-4" />
+                  <PlusCircle className="h-4 w-4" />
                   Add Addon
                 </Button>
               }

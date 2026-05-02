@@ -46,7 +46,7 @@ export default function ImportDropdown({
         >
           {children || (
             <>
-              <Upload className="mr-2 h-4 w-4" />
+              <Upload className="h-4 w-4" />
               Import
               <ChevronDown className="ml-2 h-4 w-4" />
             </>

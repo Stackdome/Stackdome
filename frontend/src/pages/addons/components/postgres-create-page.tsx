@@ -297,14 +297,14 @@ export default function PostgresFormPage() {
           </div>
           <div className="flex gap-3">
             <Button variant="outline" size="lg" onClick={handleCancel} disabled={submitting}>
-              <X className="mr-2 h-4 w-4" />
+              <X className="h-4 w-4" />
               Cancel
             </Button>
             <Button size="lg" onClick={handleSubmit} disabled={submitting}>
               {submitting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Rocket className="mr-2 h-4 w-4" />
+                <Rocket className="h-4 w-4" />
               )}
               <span className="font-semibold">{submitLabel}</span>
             </Button>
@@ -613,7 +613,7 @@ export default function PostgresFormPage() {
               Cancel
             </Button>
             <Button onClick={() => void persist()} disabled={submitting}>
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Save changes
             </Button>
           </DialogFooter>

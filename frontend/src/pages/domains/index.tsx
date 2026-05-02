@@ -145,7 +145,7 @@ export default function DomainsPage() {
           subtitle="Configure custom domains for your organization"
           actions={
             <Button onClick={() => setShowAddDialog(true)} className="bg-brand text-white hover:bg-brand-darker">
-              <PlusCircle className="mr-2 h-4 w-4" />
+              <PlusCircle className="h-4 w-4" />
               Add Domain
             </Button>
           }
@@ -163,7 +163,7 @@ export default function DomainsPage() {
               description="Configure a domain for your organization."
               action={
                 <Button onClick={() => setShowAddDialog(true)} variant="outline">
-                  <PlusCircle className="mr-2 h-4 w-4" />
+                  <PlusCircle className="h-4 w-4" />
                   Add Domain
                 </Button>
               }

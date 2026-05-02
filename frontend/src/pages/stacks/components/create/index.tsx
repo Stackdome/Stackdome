@@ -444,11 +444,11 @@ export default function StackCreatePage() {
                 navigate("/stacks", { replace: true });
               }
             }}>
-              <X className="mr-2 h-4 w-4" />
+              <X className="h-4 w-4" />
               Cancel
             </Button>
             <Button variant="default" size="lg" onClick={handleSubmit} disabled={isLoading}>
-              <Rocket className="mr-2 h-4 w-4" />
+              <Rocket className="h-4 w-4" />
               <span className="font-semibold">{isLoading ? "Deploying..." : "Deploy"}</span>
             </Button>
           </div>

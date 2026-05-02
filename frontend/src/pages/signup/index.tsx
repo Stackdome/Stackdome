@@ -14,7 +14,7 @@ export default function Signup() {
       
       <div className="relative hidden h-full flex-col bg-zinc-900 p-10 text-white dark:border-r lg:flex">
         <div className="relative z-20 flex items-center text-lg font-medium">
-          <GalleryVerticalEnd className="mr-2 h-6 w-6" />
+          <GalleryVerticalEnd className="h-6 w-6" />
           Stackdome
         </div>
         <div className="relative z-20 mt-auto">

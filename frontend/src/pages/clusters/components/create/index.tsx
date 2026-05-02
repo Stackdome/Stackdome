@@ -93,7 +93,7 @@ export default function ClusterCreatePage() {
           </div>
           <div className="flex gap-3">
             <Button variant="outline" size="lg" onClick={handleCancel}>
-              <X className="mr-2 h-4 w-4" />
+              <X className="h-4 w-4" />
               Cancel
             </Button>
           </div>
