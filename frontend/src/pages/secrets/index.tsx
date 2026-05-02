@@ -143,7 +143,7 @@ export default function SecretsPage() {
           title="Secrets"
           subtitle="Manage sensitive data like API keys, passwords, and certificates"
           actions={
-            <Button onClick={() => setShowAddDialog(true)} className="bg-brand text-white hover:bg-brand-darker">
+            <Button onClick={() => setShowAddDialog(true)}>
               <PlusCircle className="h-4 w-4" />
               Create Secret
             </Button>

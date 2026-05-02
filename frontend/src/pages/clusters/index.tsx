@@ -134,7 +134,7 @@ export default function ClustersPage() {
           title="Clusters"
           subtitle="Compute targets for your stacks"
           actions={
-            <Button onClick={() => setShowAddDialog(true)} className="bg-brand text-white hover:bg-brand-darker">
+            <Button onClick={() => setShowAddDialog(true)}>
               <PlusCircle className="h-4 w-4" />
               Add Cluster
             </Button>

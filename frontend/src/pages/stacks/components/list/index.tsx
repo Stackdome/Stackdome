@@ -180,7 +180,7 @@ export default function StacksPage() {
                 onDockerComposeImport={openImportDialog}
                 variant="outline"
               />
-              <Button onClick={handleCreateNewStack} className="bg-brand text-white hover:bg-brand-darker">
+              <Button onClick={handleCreateNewStack}>
                 <PlusCircle className="h-4 w-4" />
                 New Stack
               </Button>

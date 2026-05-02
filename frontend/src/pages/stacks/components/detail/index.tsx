@@ -279,7 +279,7 @@ export default function StackDetailPage() {
               </Button>
             </>
           ) : (
-            <Button onClick={handleEditToggle} className="bg-brand text-white hover:bg-brand-darker">
+            <Button onClick={handleEditToggle}>
               <Pencil className="h-4 w-4" />
               Edit
             </Button>

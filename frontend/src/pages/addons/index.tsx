@@ -94,7 +94,7 @@ export default function AddonsPage() {
           title="Addons"
           subtitle="Manage hosted addon services for your stacks"
           actions={
-            <Button onClick={() => setPickerOpen(true)} className="bg-brand text-white hover:bg-brand-darker">
+            <Button onClick={() => setPickerOpen(true)}>
               <PlusCircle className="h-4 w-4" />
               Add Addon
             </Button>
