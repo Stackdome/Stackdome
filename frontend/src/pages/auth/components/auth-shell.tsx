@@ -32,16 +32,21 @@ export function AuthShell({
   children,
 }: AuthShellProps) {
   return (
-    <div className="relative min-h-svh bg-background text-foreground">
-      <div className="absolute right-4 top-4 z-20 md:right-6 md:top-6">
+    <div className="relative min-h-svh bg-background text-foreground overflow-hidden">
+      {/* Page-wide grid backdrop, masked to fade at edges (matches reference .grid-bg) */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.10] text-foreground [background-image:linear-gradient(to_right,currentColor_1px,transparent_1px),linear-gradient(to_bottom,currentColor_1px,transparent_1px)] [background-size:64px_64px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)] [-webkit-mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)]"
+      />
+
+      <div className="absolute right-4 top-4 z-30 md:right-6 md:top-6">
         <ThemeToggle />
       </div>
 
-      <div className="grid min-h-svh lg:grid-cols-[1fr_460px]">
-        {/* Brand panel */}
-        <aside className="relative hidden flex-col justify-between border-r border-border bg-card p-10 lg:flex xl:p-14">
-          <div className="absolute inset-0 pointer-events-none opacity-[0.06] [background-image:linear-gradient(to_right,currentColor_1px,transparent_1px),linear-gradient(to_bottom,currentColor_1px,transparent_1px)] [background-size:32px_32px] text-foreground" />
-
+      {/* Centered wrap — empty bg shows on either side past 1240px */}
+      <div className="relative z-10 mx-auto grid min-h-svh max-w-[1240px] lg:grid-cols-[1fr_440px]">
+        {/* Brand panel — transparent so the grid shows through */}
+        <aside className="relative hidden flex-col justify-between p-10 lg:flex xl:p-14">
           <div className="relative z-10 flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-sm bg-brand-bg border border-brand-border">
               <StackdomeMark size={18} variant="tinted" />
@@ -126,8 +131,8 @@ export function AuthShell({
           </div>
         </aside>
 
-        {/* Form panel */}
-        <main className="flex items-center justify-center px-6 py-10 sm:px-10">
+        {/* Form band — solid darker bg covers the grid behind it */}
+        <main className="relative flex items-center justify-center bg-secondary px-6 py-10 sm:px-10 lg:border-x lg:border-border">
           <div className="w-full max-w-[360px]">
             {/* Mobile-only brand mark */}
             <div className="mb-8 flex items-center gap-2 lg:hidden">
