@@ -283,11 +283,11 @@ export default function StacksPage() {
                       to={`/stacks/${stack.id}`}
                       className="block group"
                     >
-                      <Card className="flex flex-col w-full h-full hover:border-brand-border hover:bg-muted/20 transition-colors duration-150 p-4 gap-3">
+                      <Card className="flex flex-col w-full h-full min-h-[180px] hover:border-brand-border hover:bg-muted/20 transition-colors duration-150 p-5 gap-5">
                         {/* Header: icon + name + namespace + status pill */}
                         <div className="flex items-start gap-3">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-brand-border bg-brand-bg text-brand">
-                            <Icon className="h-4 w-4" />
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-brand-border bg-brand-bg text-brand">
+                            <Icon className="h-[18px] w-[18px]" />
                           </span>
                           <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
                             <span
@@ -305,8 +305,8 @@ export default function StacksPage() {
                         </div>
 
                         {/* Footer: counts on left, relative time on right */}
-                        <div className="flex items-end justify-between gap-2 mt-auto pt-2 border-t border-border/60 font-mono text-[11px] text-muted-foreground whitespace-nowrap">
-                          <div className="flex flex-col gap-0.5 tabular-nums">
+                        <div className="flex items-end justify-between gap-2 mt-auto pt-4 border-t border-border/60 font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                          <div className="flex flex-col gap-1 tabular-nums">
                             <span>{resourceCount} {resourceCount === 1 ? "resource" : "resources"}</span>
                             <span>{volumeCount} {volumeCount === 1 ? "volume" : "volumes"}</span>
                           </div>
