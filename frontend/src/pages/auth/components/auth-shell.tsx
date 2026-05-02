@@ -52,7 +52,7 @@ export function AuthShell({
           </div>
 
           <div className="relative z-10 flex flex-col gap-8">
-            <h1 className="font-semibold text-5xl leading-[0.95] tracking-tight xl:text-6xl">
+            <h1 className="max-w-xl font-semibold text-4xl leading-[1.05] tracking-tight xl:text-5xl">
               {headlineSolid}
               {headlineStroke && (
                 <>
@@ -71,7 +71,7 @@ export function AuthShell({
             </h1>
 
             {tagline && (
-              <p className="max-w-md text-2xl font-medium leading-snug tracking-tight text-foreground/90 xl:text-3xl">
+              <p className="max-w-md text-lg font-medium leading-snug tracking-tight text-muted-foreground xl:text-xl">
                 {tagline}
               </p>
             )}
