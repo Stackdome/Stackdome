@@ -3,55 +3,55 @@ import { describe, it, expect, vi, afterEach, beforeAll } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { EnvRow } from "../src/pages/stacks/components/shared/env-row";
+import type { FormEnvVarData } from "../src/pages/stacks/schemas/form-schema";
+import type { PostgresAddon, PostgresAddonSpec } from "../src/api/addons";
 
 afterEach(cleanup);
 
 // Radix Select uses pointer-capture APIs that jsdom doesn't implement.
 // Stub them so userEvent.click on a SelectTrigger opens the popover.
 beforeAll(() => {
-  if (!(Element.prototype as any).hasPointerCapture) {
-    (Element.prototype as any).hasPointerCapture = vi.fn(() => false);
-  }
-  if (!(Element.prototype as any).releasePointerCapture) {
-    (Element.prototype as any).releasePointerCapture = vi.fn();
-  }
-  if (!(Element.prototype as any).setPointerCapture) {
-    (Element.prototype as any).setPointerCapture = vi.fn();
-  }
-  if (!(Element.prototype as any).scrollIntoView) {
-    (Element.prototype as any).scrollIntoView = vi.fn();
+  const stubs: Record<string, () => unknown> = {
+    hasPointerCapture: () => false,
+    releasePointerCapture: () => undefined,
+    setPointerCapture: () => undefined,
+    scrollIntoView: () => undefined,
+  };
+  for (const [name, impl] of Object.entries(stubs)) {
+    const proto = Element.prototype as unknown as Record<string, unknown>;
+    if (!proto[name]) proto[name] = vi.fn(impl);
   }
 });
-import { EnvRow } from "../src/pages/stacks/components/shared/env-row";
-import type { FormEnvVarData } from "../src/pages/stacks/schemas/form-schema";
-import type { PostgresAddon } from "../src/api/addons";
 
-const mkAddon = (over: Partial<PostgresAddon> = {}): PostgresAddon => ({
-  id: "addon-1",
-  name: "tooljet-db",
-  status: { state: "Ready" },
-  spec: {
+type AddonRow = Extract<FormEnvVarData, { from: "addon" }>;
+
+const mkAddon = (over: Partial<PostgresAddon> = {}): PostgresAddon => {
+  const baseSpec: PostgresAddonSpec = {
     version: { major: 17 },
     storage: { size: "5Gi" },
     databases: [{ name: "tooljet" }, { name: "analytics" }],
     configuration: { enable_superuser_access: false },
-  } as any,
-  ...(over as any),
-});
-
-const baseAddonRow = (
-  over: Partial<Extract<FormEnvVarData, { from: "addon" }>> = {},
-): FormEnvVarData =>
-  ({
-    from: "addon",
-    name: "PG_HOST",
-    addonType: "postgres",
-    addonId: "addon-1",
-    database: "tooljet",
-    superuser: false,
-    credField: "host",
+  } as PostgresAddonSpec;
+  return {
+    id: "addon-1",
+    name: "tooljet-db",
+    status: { state: "Ready" },
+    spec: baseSpec,
     ...over,
-  }) as FormEnvVarData;
+  } as PostgresAddon;
+};
+
+const baseAddonRow = (over: Partial<AddonRow> = {}): AddonRow => ({
+  from: "addon",
+  name: "PG_HOST",
+  addonType: "postgres",
+  addonId: "addon-1",
+  database: "tooljet",
+  superuser: false,
+  credField: "host",
+  ...over,
+});
 
 const noopProps = {
   index: 0,
@@ -96,11 +96,11 @@ describe("EnvRow (addon variant)", () => {
     const user = userEvent.setup();
     render(
       <EnvRow
-        row={baseAddonRow({ addonId: "" }) as any}
+        row={baseAddonRow({ addonId: "" })}
         {...noopProps}
         addons={[
-          mkAddon({ id: "a", name: "primary", status: { state: "Ready" } } as any),
-          mkAddon({ id: "b", name: "secondary", status: { state: "Pending" } } as any),
+          mkAddon({ id: "a", name: "primary", status: { state: "Ready" } }),
+          mkAddon({ id: "b", name: "secondary", status: { state: "Pending" } }),
         ]}
       />,
     );
@@ -116,7 +116,7 @@ describe("EnvRow (addon variant)", () => {
   it("shows '+ Create Postgres addon' link when addons list is empty", async () => {
     const user = userEvent.setup();
     render(
-      <EnvRow row={baseAddonRow({ addonId: "" }) as any} {...noopProps} addons={[]} />,
+      <EnvRow row={baseAddonRow({ addonId: "" })} {...noopProps} addons={[]} />,
     );
     await user.click(screen.getByTestId("addon-picker-trigger"));
     const link = await screen.findByRole("link", { name: /create postgres addon/i });
@@ -129,10 +129,10 @@ describe("EnvRow (addon variant)", () => {
     const onChangeAddon = vi.fn();
     render(
       <EnvRow
-        row={baseAddonRow({ addonId: "" }) as any}
+        row={baseAddonRow({ addonId: "" })}
         {...noopProps}
         onChangeAddon={onChangeAddon}
-        addons={[mkAddon({ id: "addon-x" } as any)]}
+        addons={[mkAddon({ id: "addon-x" })]}
       />,
     );
     await user.click(screen.getByTestId("addon-picker-trigger"));
@@ -145,7 +145,7 @@ describe("EnvRow (addon variant)", () => {
   it("database picker is disabled when no addon is picked", () => {
     render(
       <EnvRow
-        row={baseAddonRow({ addonId: "", database: undefined }) as any}
+        row={baseAddonRow({ addonId: "", database: undefined })}
         {...noopProps}
         addons={[mkAddon()]}
       />,
@@ -155,7 +155,7 @@ describe("EnvRow (addon variant)", () => {
 
   it("database picker lists addon's databases when an addon is picked", async () => {
     const user = userEvent.setup();
-    render(<EnvRow row={baseAddonRow({ database: undefined }) as any} {...noopProps} />);
+    render(<EnvRow row={baseAddonRow({ database: undefined })} {...noopProps} />);
     await user.click(screen.getByTestId("database-picker-trigger"));
     expect(await screen.findByRole("option", { name: /tooljet/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /analytics/i })).toBeInTheDocument();
@@ -163,7 +163,7 @@ describe("EnvRow (addon variant)", () => {
 
   it("does NOT show 'All databases' when addon does not enable superuser", async () => {
     const user = userEvent.setup();
-    render(<EnvRow row={baseAddonRow({ database: undefined }) as any} {...noopProps} />);
+    render(<EnvRow row={baseAddonRow({ database: undefined })} {...noopProps} />);
     await user.click(screen.getByTestId("database-picker-trigger"));
     expect(screen.queryByRole("option", { name: /all databases/i })).not.toBeInTheDocument();
   });
@@ -171,10 +171,13 @@ describe("EnvRow (addon variant)", () => {
   it("shows 'All databases' when addon enables superuser", async () => {
     const user = userEvent.setup();
     const su = mkAddon({
-      spec: { ...mkAddon().spec, configuration: { enable_superuser_access: true } } as any,
+      spec: {
+        ...mkAddon().spec,
+        configuration: { enable_superuser_access: true },
+      } as PostgresAddonSpec,
     });
     render(
-      <EnvRow row={baseAddonRow({ database: undefined }) as any} {...noopProps} addons={[su]} />,
+      <EnvRow row={baseAddonRow({ database: undefined })} {...noopProps} addons={[su]} />,
     );
     await user.click(screen.getByTestId("database-picker-trigger"));
     expect(await screen.findByRole("option", { name: /all databases/i })).toBeInTheDocument();
@@ -184,11 +187,14 @@ describe("EnvRow (addon variant)", () => {
     const user = userEvent.setup();
     const onChangeAddon = vi.fn();
     const su = mkAddon({
-      spec: { ...mkAddon().spec, configuration: { enable_superuser_access: true } } as any,
+      spec: {
+        ...mkAddon().spec,
+        configuration: { enable_superuser_access: true },
+      } as PostgresAddonSpec,
     });
     render(
       <EnvRow
-        row={baseAddonRow({ database: undefined }) as any}
+        row={baseAddonRow({ database: undefined })}
         {...noopProps}
         addons={[su]}
         onChangeAddon={onChangeAddon}
@@ -202,7 +208,7 @@ describe("EnvRow (addon variant)", () => {
   it("field picker is disabled when no addon is picked", () => {
     render(
       <EnvRow
-        row={baseAddonRow({ addonId: "", database: undefined, credField: undefined as any }) as any}
+        row={baseAddonRow({ addonId: "", database: undefined, credField: undefined })}
         {...noopProps}
         addons={[mkAddon()]}
       />,
@@ -212,7 +218,7 @@ describe("EnvRow (addon variant)", () => {
 
   it("field picker lists all 8 CRED_FIELDS", async () => {
     const user = userEvent.setup();
-    render(<EnvRow row={baseAddonRow() as any} {...noopProps} />);
+    render(<EnvRow row={baseAddonRow()} {...noopProps} />);
     await user.click(screen.getByTestId("field-picker-trigger"));
     for (const f of [
       "host",
@@ -230,7 +236,7 @@ describe("EnvRow (addon variant)", () => {
 
   it("cluster-wide fields show 'cluster' badge in dropdown items", async () => {
     const user = userEvent.setup();
-    render(<EnvRow row={baseAddonRow() as any} {...noopProps} />);
+    render(<EnvRow row={baseAddonRow()} {...noopProps} />);
     await user.click(screen.getByTestId("field-picker-trigger"));
     const hostOption = await screen.findByRole("option", { name: /host/i });
     expect(hostOption).toHaveTextContent(/cluster/i);
@@ -241,21 +247,21 @@ describe("EnvRow (addon variant)", () => {
   it("calls onChangeAddon with credField when a field is picked", async () => {
     const user = userEvent.setup();
     const onChangeAddon = vi.fn();
-    render(<EnvRow row={baseAddonRow() as any} {...noopProps} onChangeAddon={onChangeAddon} />);
+    render(<EnvRow row={baseAddonRow()} {...noopProps} onChangeAddon={onChangeAddon} />);
     await user.click(screen.getByTestId("field-picker-trigger"));
     await user.click(await screen.findByRole("option", { name: /port/i }));
     expect(onChangeAddon).toHaveBeenCalledWith({ credField: "port" });
   });
 
   it("renders no error styling without rowErrors", () => {
-    render(<EnvRow row={baseAddonRow() as any} {...noopProps} />);
+    render(<EnvRow row={baseAddonRow()} {...noopProps} />);
     expect(screen.getByTestId("addon-picker-trigger")).not.toHaveClass("border-destructive");
   });
 
   it("renders red border + message on addon picker when rowErrors.addonId set", () => {
     render(
       <EnvRow
-        row={baseAddonRow({ addonId: "" }) as any}
+        row={baseAddonRow({ addonId: "" })}
         {...noopProps}
         rowErrors={{ addonId: "Pick an addon" }}
       />,
@@ -267,7 +273,7 @@ describe("EnvRow (addon variant)", () => {
   it("renders red border + message on database picker when rowErrors.database set", () => {
     render(
       <EnvRow
-        row={baseAddonRow({ database: undefined }) as any}
+        row={baseAddonRow({ database: undefined })}
         {...noopProps}
         rowErrors={{ database: "Pick a database" }}
       />,
@@ -279,7 +285,7 @@ describe("EnvRow (addon variant)", () => {
   it("renders red border + message on field picker when rowErrors.credField set", () => {
     render(
       <EnvRow
-        row={baseAddonRow({ credField: undefined as any }) as any}
+        row={baseAddonRow({ credField: undefined })}
         {...noopProps}
         rowErrors={{ credField: "Pick a field" }}
       />,
@@ -291,7 +297,7 @@ describe("EnvRow (addon variant)", () => {
   it("renders duplicate name error on the name input", () => {
     render(
       <EnvRow
-        row={baseAddonRow() as any}
+        row={baseAddonRow()}
         {...noopProps}
         rowErrors={{ duplicate: 'Duplicate name "PG_HOST"' }}
       />,
@@ -303,7 +309,7 @@ describe("EnvRow (addon variant)", () => {
   it("orphan addon row renders read-only second line with warning, but From dropdown still works", () => {
     render(
       <EnvRow
-        row={baseAddonRow({ addonId: "missing-addon", database: "tooljet", credField: "host" }) as any}
+        row={baseAddonRow({ addonId: "missing-addon", database: "tooljet", credField: "host" })}
         {...noopProps}
         addonNameById={new Map([["addon-1", "tooljet-db"]])}
         addons={[mkAddon()]}
@@ -327,11 +333,14 @@ describe("EnvRow (addon variant)", () => {
     const onChangeAddon = vi.fn();
     const single = mkAddon({
       id: "addon-single",
-      spec: { ...mkAddon().spec, databases: [{ name: "only-one" }] } as any,
+      spec: {
+        ...mkAddon().spec,
+        databases: [{ name: "only-one" }],
+      } as PostgresAddonSpec,
     });
     render(
       <EnvRow
-        row={baseAddonRow({ addonId: "", database: undefined }) as any}
+        row={baseAddonRow({ addonId: "", database: undefined })}
         {...noopProps}
         addons={[single]}
         onChangeAddon={onChangeAddon}

@@ -72,8 +72,8 @@ export function EnvRow({
   const isOrphanAddon =
     row.from === "addon" &&
     addonNameById !== undefined &&
-    !!(row as any).addonId &&
-    !addonNameById.has((row as any).addonId);
+    !!row.addonId &&
+    !addonNameById.has(row.addonId);
 
   return (
     <div
