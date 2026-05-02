@@ -28,9 +28,8 @@ import type { z } from "zod";
 
 import type { FormStackResourceData, FormEnvVarData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { UseSecretsReturn } from "../../hooks/use-secrets";
-import { EnvRow, type EnvFrom } from "./env-row";
+import { EnvRow, type EnvFrom, type EnvRowErrors, type AddonBindingPatch } from "./env-row";
 import type { PostgresAddon } from "@/api/addons";
-import { AddFromAddonDialog } from "./add-from-addon-dialog";
 
 interface StackResourceItemProps {
   resource: Partial<FormStackResourceData>;
@@ -85,11 +84,6 @@ export default function StackResourceItem({
     onChange(index, { ...resource, ...patch });
   };
 
-  const existingEnvNames = useMemo(
-    () => new Set((resource.execution_config?.environment_variables || []).map((r) => r.name)),
-    [resource.execution_config?.environment_variables],
-  );
-
   const addonCount = useMemo(() => {
     const ids = new Set<string>();
     ((resource.execution_config?.environment_variables || []) as FormEnvVarData[]).forEach((r) => {
@@ -98,7 +92,15 @@ export default function StackResourceItem({
     return ids.size;
   }, [resource.execution_config?.environment_variables]);
 
-  const [addonDialogOpen, setAddonDialogOpen] = useState(false);
+  const [dirtyEnvRows, setDirtyEnvRows] = useState<Set<number>>(new Set());
+  const markEnvRowDirty = (envIdx: number) => {
+    setDirtyEnvRows((prev) => {
+      if (prev.has(envIdx)) return prev;
+      const next = new Set(prev);
+      next.add(envIdx);
+      return next;
+    });
+  };
 
   // Helper for updating nested build_spec
   const updateBuildSpec = (patch: Partial<NonNullable<FormStackResourceData["build_spec"]>>) => {
@@ -168,17 +170,48 @@ export default function StackResourceItem({
     });
   };
 
-  // Helper for switching a row's `from` discriminator. Addon rows can only be
-  // added via the addon dialog, so switching INTO addon from here is a no-op.
+  // Helper for switching a row's `from` discriminator. Each branch swaps in
+  // an empty variant; the user fills in the bindings via the inline pickers.
   const switchRowFrom = (envIdx: number, from: EnvFrom) => {
     const current = resource.execution_config?.environment_variables?.[envIdx];
     if (!current) return;
-    if (current.from === "addon") return;
     if (from === "stack") {
       replaceEnvVar(envIdx, { from: "stack", name: current.name, value: "" });
     } else if (from === "secret") {
       replaceEnvVar(envIdx, { from: "secret", name: current.name, secretId: "", secretKey: "" });
+    } else if (from === "addon") {
+      replaceEnvVar(envIdx, {
+        from: "addon",
+        name: current.name,
+        addonType: "postgres",
+        addonId: "",
+        database: undefined,
+        superuser: false,
+        // credField is optional in the form schema; left undefined until the user picks one.
+        credField: undefined as any,
+      });
     }
+  };
+
+  // Apply a patch from the inline addon pickers. `database: null` means
+  // "explicitly clear" (used by All databases), undefined means unchanged.
+  const onChangeAddonForRow = (envIdx: number, patch: AddonBindingPatch) => {
+    const current = resource.execution_config?.environment_variables?.[envIdx];
+    if (!current || current.from !== "addon") return;
+    const nextDatabase =
+      patch.database === null
+        ? undefined
+        : patch.database === undefined
+          ? current.database
+          : patch.database;
+    replaceEnvVar(envIdx, {
+      ...current,
+      addonId: patch.addonId ?? current.addonId,
+      database: nextDatabase,
+      superuser: patch.superuser ?? current.superuser,
+      credField: (patch.credField ?? current.credField) as any,
+    });
+    markEnvRowDirty(envIdx);
   };
 
   const addVolumeMount = () => {
@@ -1175,16 +1208,6 @@ export default function StackResourceItem({
                         </div>
                       </DialogContent>
                     </Dialog>
-                    {/* Add from addon button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => setAddonDialogOpen(true)}
-                    >
-                      <Cog className="h-4 w-4" />
-                      <span>Add from addon</span>
-                    </Button>
                     {/* Import from file button */}
                     <Dialog>
                       <DialogTrigger asChild>
@@ -1233,8 +1256,42 @@ export default function StackResourceItem({
                   </div>
 
                   {/* Environment Variables Rows */}
-                  {(resource.execution_config?.environment_variables || []).length ? (
-                    (resource.execution_config?.environment_variables || []).map((env, envIdx) => (
+                  {(() => {
+                    const envVars = (resource.execution_config?.environment_variables || []) as FormEnvVarData[];
+                    // Live duplicate detection (always on, regardless of dirty state)
+                    const nameCounts = new Map<string, number>();
+                    envVars.forEach((r) => {
+                      const k = r.name?.trim();
+                      if (!k) return;
+                      nameCounts.set(k, (nameCounts.get(k) ?? 0) + 1);
+                    });
+                    const rowErrorsForIndex = (envIdx: number): EnvRowErrors | undefined => {
+                      const r = envVars[envIdx];
+                      if (!r) return undefined;
+                      const out: EnvRowErrors = {};
+                      if (r.name && (nameCounts.get(r.name.trim()) ?? 0) > 1) {
+                        out.duplicate = `Duplicate name "${r.name}"`;
+                      }
+                      const dirty = dirtyEnvRows.has(envIdx);
+                      const errPath = (field: string) =>
+                        errors[`execution_config.environment_variables.${envIdx}.${field}`];
+                      if (r.from === "addon") {
+                        if ((dirty || errPath("addonId")) && !r.addonId) out.addonId = "Pick an addon";
+                        if ((dirty || errPath("database")) && !r.superuser && !r.database) out.database = "Pick a database";
+                        if ((dirty || errPath("credField")) && !r.credField) out.credField = "Pick a field";
+                      }
+                      if ((dirty || errPath("name")) && !r.name) out.name = "Environment variable name is required";
+                      return Object.keys(out).length === 0 ? undefined : out;
+                    };
+
+                    if (envVars.length === 0) {
+                      return (
+                        <div className="p-8 text-center text-muted-foreground">
+                          No environment variables defined
+                        </div>
+                      );
+                    }
+                    return envVars.map((env, envIdx) => (
                       <EnvRow
                         key={envIdx}
                         row={env as FormEnvVarData}
@@ -1244,14 +1301,20 @@ export default function StackResourceItem({
                         secretsLoading={secrets.isLoading}
                         addons={addons}
                         addonNameById={addonNameById}
-                        onChangeAddon={() => {}}
-                        onChangeName={(name) => replaceEnvVar(envIdx, { ...(env as FormEnvVarData), name })}
+                        rowErrors={rowErrorsForIndex(envIdx)}
+                        onChangeAddon={(patch) => onChangeAddonForRow(envIdx, patch)}
+                        onChangeName={(name) => {
+                          replaceEnvVar(envIdx, { ...(env as FormEnvVarData), name });
+                        }}
                         onChangeValue={(value) => {
                           if (env.from === "stack") {
                             replaceEnvVar(envIdx, { ...env, value });
                           }
                         }}
-                        onChangeFrom={(from) => switchRowFrom(envIdx, from)}
+                        onChangeFrom={(from) => {
+                          switchRowFrom(envIdx, from);
+                          markEnvRowDirty(envIdx);
+                        }}
                         onChangeSecret={(secretId, secretKey) =>
                           replaceEnvVar(envIdx, {
                             from: "secret",
@@ -1260,14 +1323,11 @@ export default function StackResourceItem({
                             secretKey,
                           })
                         }
+                        onBlur={() => markEnvRowDirty(envIdx)}
                         onRemove={() => removeEnvVar(envIdx)}
                       />
-                    ))
-                  ) : (
-                    <div className="p-8 text-center text-muted-foreground">
-                      No environment variables defined
-                    </div>
-                  )}
+                    ));
+                  })()}
                 </div>
                 {/* Add Variable button */}
                 <div className="flex justify-end mt-2">
@@ -1275,23 +1335,6 @@ export default function StackResourceItem({
                     <PlusCircle className="h-4 w-4 mr-2" /> Add Variable
                   </Button>
                 </div>
-                <AddFromAddonDialog
-                  open={addonDialogOpen}
-                  onOpenChange={setAddonDialogOpen}
-                  addons={addons}
-                  existingEnvNames={existingEnvNames}
-                  onAdd={(rows) => {
-                    update({
-                      execution_config: {
-                        ...resource.execution_config,
-                        environment_variables: [
-                          ...(resource.execution_config?.environment_variables || []),
-                          ...rows,
-                        ],
-                      },
-                    });
-                  }}
-                />
               </TabsContent>
             </Tabs>
 
