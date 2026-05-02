@@ -53,7 +53,11 @@ export default function ImportDropdown({
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent
+        align="end"
+        className="w-56"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
         {importOptions.map((option) => (
           <DropdownMenuItem
             key={option.id}

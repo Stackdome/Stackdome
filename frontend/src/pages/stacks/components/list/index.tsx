@@ -245,7 +245,11 @@ export default function StacksPage() {
                     <ChevronDown className="h-3 w-3" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[200px]">
+                <DropdownMenuContent
+                  align="end"
+                  className="min-w-[200px]"
+                  onCloseAutoFocus={(e) => e.preventDefault()}
+                >
                   {SORT_OPTIONS.map((o) => (
                     <DropdownMenuItem
                       key={o.key}
