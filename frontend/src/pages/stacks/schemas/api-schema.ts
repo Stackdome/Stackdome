@@ -43,11 +43,23 @@ const ApiEnvVarFromSecretSchema = z.object({
   key: z.string().min(1, "Secret key is required"),
 });
 
+const ApiPostgresAddonEnvSourceSchema = z.object({
+  addon_id: z.string().min(1, "Addon ID is required"),
+  database: z.string().optional(),
+  superuser: z.boolean(),
+  env_mapping: z.record(z.string(), z.string()),
+});
+
+const ApiAddonEnvSourceSchema = z.object({
+  postgres: ApiPostgresAddonEnvSourceSchema.optional(),
+});
+
 const ApiExecutionConfigSchema = z.object({
   command: z.array(z.string()).optional(),
   args: z.array(z.string()).optional(),
   environment_variables: z.array(ApiEnvVarSchema).optional(),
   environment_variables_from_secret: z.array(ApiEnvVarFromSecretSchema).optional(),
+  env_from_addons: z.array(ApiAddonEnvSourceSchema).optional(),
 });
 
 const ApiInitSpecSchema = z.object({

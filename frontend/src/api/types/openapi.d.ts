@@ -3252,6 +3252,1042 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{org_id}/object-stores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all ObjectStores for an organization */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ObjectStoreList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Add a new ObjectStore for backup storage
+         * @description Add a new ObjectStore configuration for storing PostgreSQL backups and WAL files
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ObjectStore"];
+                };
+            };
+            responses: {
+                /** @description ObjectStore created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ObjectStore"];
+                    };
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ObjectStore already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/object-stores/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a specific ObjectStore */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ObjectStore"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ObjectStore not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update an ObjectStore */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ObjectStore"];
+                };
+            };
+            responses: {
+                /** @description ObjectStore updated successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ObjectStore"];
+                    };
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ObjectStore not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete an ObjectStore */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description ObjectStore deleted successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ObjectStore not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ObjectStore is in use by PostgresAddons */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/addons/postgres": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all PostgresAddons for under an organization */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PostgresAddonList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create a new PostgresAddon
+         * @description Create a new PostgreSQL database cluster addon
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PostgresAddon"];
+                };
+            };
+            responses: {
+                /** @description PostgresAddon created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PostgresAddon"];
+                    };
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description PostgresAddon already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/addons/postgres/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a specific PostgresAddon */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PostgresAddon"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description PostgresAddon not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update a PostgresAddon */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PostgresAddon"];
+                };
+            };
+            responses: {
+                /** @description PostgresAddon updated successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PostgresAddon"];
+                    };
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description PostgresAddon not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete a PostgresAddon */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description PostgresAddon deletion initiated successfully */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PostgresAddon"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description PostgresAddon not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/addons/postgres/{id}/actions/backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger an immediate backup */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description Optional description for this backup */
+                        description?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Backup request accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            message?: string;
+                            backup_id?: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description PostgresAddon not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Backup already in progress */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/addons/postgres/{id}/actions/fence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fence or unfence the PostgreSQL cluster */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @description true to fence the cluster, false to unfence */
+                        fence: boolean;
+                        /** @description Reason for fencing/unfencing */
+                        reason?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Fencing operation successful */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            message?: string;
+                            fenced?: boolean;
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description PostgresAddon not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/addons/postgres/{id}/actions/hibernate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hibernate or wake the PostgreSQL cluster */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @description true to hibernate, false to wake */
+                        hibernate: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Hibernation operation successful */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            message?: string;
+                            hibernated?: boolean;
+                        };
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description PostgresAddon not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/addons/postgres/{id}/backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List backups for a PostgresAddon */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PostgresBackupList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description PostgresAddon not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/addons/postgres/{id}/credentials/{database}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get JIT credentials for a PostgresAddon database */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Whether to return superuser credentials */
+                    superuser?: boolean;
+                };
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    /** @description The name of the database */
+                    database: components["parameters"]["database"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Credentials retrieved successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PostgresCredentials"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Addon or database not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Addon not ready or cluster unreachable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3695,6 +4731,7 @@ export interface components {
             args?: string[];
             environment_variables?: components["schemas"]["EnvVar"][];
             environment_variables_from_secret?: components["schemas"]["EnvVarFromSecret"][];
+            env_from_addons?: components["schemas"]["AddonEnvSource"][];
         };
         EnvVarFromSecret: {
             name: string;
@@ -3742,6 +4779,357 @@ export interface components {
             kind?: string;
             href?: string;
         };
+        ObjectStore: {
+            readonly id?: string;
+            readonly organisation_id?: string;
+            /** @description Unique name for this object store configuration */
+            name: string;
+            spec: components["schemas"]["ObjectStoreSpec"];
+            readonly status?: components["schemas"]["ObjectStoreStatus"];
+            /** Format: date-time */
+            readonly created_at?: string;
+            /** Format: date-time */
+            readonly updated_at?: string;
+        };
+        ObjectStoreList: {
+            items?: components["schemas"]["ObjectStore"][];
+            total?: number;
+        };
+        ObjectStoreSpec: {
+            configuration: components["schemas"]["ObjectStoreConfiguration"];
+            /** @description Storage destination URL (e.g., s3://bucket/path, https://account.blob.core.windows.net/container/path) */
+            destination_path: string;
+            /**
+             * @description Retention policy (e.g., '1d', '7d', '30d')
+             * @default 7d
+             */
+            retention_policy: string;
+        };
+        ObjectStoreConfiguration: {
+            s3_credentials?: components["schemas"]["S3Credentials"];
+            azure_credentials?: components["schemas"]["AzureCredentials"];
+            gcs_credentials?: components["schemas"]["GCSCredentials"];
+        };
+        S3Credentials: {
+            access_key_id: components["schemas"]["SecretReference"];
+            secret_access_key: components["schemas"]["SecretReference"];
+            /** @description AWS region */
+            region: string;
+            /** @description Custom S3 endpoint URL for S3-compatible storage */
+            endpoint_url?: string;
+        };
+        AzureCredentials: {
+            connection_string: components["schemas"]["SecretReference"];
+            /** @description Azure storage account name */
+            storage_account_name?: string;
+        };
+        GCSCredentials: {
+            service_account_credentials: components["schemas"]["SecretReference"];
+        };
+        SecretReference: {
+            /**
+             * Format: uuid
+             * @description UUID of the Stackdome secret
+             */
+            secret_id: string;
+            /** @description Key within the secret containing the value */
+            key: string;
+        };
+        WALConfiguration: {
+            /**
+             * @description Compression type for WAL files
+             * @default gzip
+             * @enum {string}
+             */
+            compression: "gzip" | "lz4" | "zstd";
+        };
+        ObjectStoreStatus: {
+            /** @enum {string} */
+            state?: "Pending" | "Ready" | "Error";
+            message?: string;
+        };
+        PostgresAddon: {
+            readonly id?: string;
+            readonly organisation_id?: string;
+            readonly user_id?: string;
+            readonly cluster_id?: string;
+            /** @description Unique name for this PostgreSQL cluster */
+            name: string;
+            readonly namespace?: string;
+            labels?: components["schemas"]["Label"][];
+            annotations?: components["schemas"]["Annotation"][];
+            readonly revision?: string;
+            spec: components["schemas"]["PostgresAddonSpec"];
+            readonly status?: components["schemas"]["PostgresAddonStatus"];
+            /** Format: date-time */
+            readonly created_at?: string;
+            /** Format: date-time */
+            readonly updated_at?: string;
+        };
+        PostgresAddonList: {
+            items?: components["schemas"]["PostgresAddon"][];
+            total?: number;
+        };
+        PostgresAddonSpec: {
+            version: components["schemas"]["PostgresVersion"];
+            instances: components["schemas"]["PostgresInstances"];
+            storage: components["schemas"]["PostgresStorage"];
+            resources?: components["schemas"]["PostgresResources"];
+            backup?: components["schemas"]["PostgresBackupConfig"];
+            initialization?: components["schemas"]["PostgresInitialization"];
+            databases?: components["schemas"]["PostgresDatabase"][];
+            configuration?: components["schemas"]["PostgresConfiguration"];
+        };
+        PostgresVersion: {
+            /** @description PostgreSQL major version */
+            major: number;
+            /** @description PostgreSQL minor version */
+            minor?: number;
+            /**
+             * @description Enable automatic minor version upgrades
+             * @default true
+             */
+            enable_auto_minor_upgrade: boolean;
+            /**
+             * @description Enable automatic major version upgrades
+             * @default false
+             */
+            enable_auto_major_upgrade: boolean;
+        };
+        PostgresInstances: {
+            /** @description Number of PostgreSQL instances */
+            count: number;
+            placement?: {
+                /**
+                 * @description Topology key for instance spreading
+                 * @default kubernetes.io/hostname
+                 */
+                topology_key: string;
+                /**
+                 * @description Instance placement policy
+                 * @default preferred
+                 * @enum {string}
+                 */
+                policy: "preferred" | "required";
+                /** @description Node selector for instance placement */
+                node_selector?: {
+                    [key: string]: string;
+                };
+                tolerations?: {
+                    key?: string;
+                    operator?: string;
+                    value?: string;
+                    effect?: string;
+                }[];
+            };
+        };
+        PostgresStorage: {
+            /** @description Storage size (e.g., 10Gi, 100Gi) */
+            size: string;
+            /** @description Kubernetes storage class name */
+            storage_class: string;
+        };
+        PostgresResources: {
+            cpu?: {
+                /** @description CPU request (e.g., 100m, 1) */
+                request?: string;
+                /** @description CPU limit */
+                limit?: string;
+            };
+            memory?: {
+                /** @description Memory request (e.g., 256Mi, 1Gi) */
+                request?: string;
+                /** @description Memory limit */
+                limit?: string;
+            };
+        };
+        PostgresBackupConfig: {
+            /**
+             * @description Enable backup functionality
+             * @default false
+             */
+            enabled: boolean;
+            /** @description Reference to ObjectStore for backup storage */
+            object_store_id?: string;
+            /**
+             * @description Cron schedule for automated backups
+             * @default 0 0 0 * * 0
+             */
+            schedule: string;
+            /**
+             * @description Enable WAL archiving for point-in-time recovery
+             * @default false
+             */
+            wal_archiving: boolean;
+        };
+        PostgresInitialization: {
+            /**
+             * @default new
+             * @enum {string}
+             */
+            type: "new" | "restore_from_backup" | "restore_from_object_store" | "import_from_external";
+            restore_from_backup?: {
+                /** @description ID of backup to restore from */
+                backup_id?: string;
+            };
+            restore_from_object_store?: {
+                /** @description Object store containing the backup */
+                object_store_id?: string;
+                /** @description Source PostgresAddon that created the backup */
+                source_postgres_addon_id?: string;
+                /**
+                 * Format: date-time
+                 * @description Point-in-time recovery target
+                 */
+                recovery_target_time?: string;
+            };
+            import_from_external?: {
+                host: string;
+                /** @default 5432 */
+                port: number;
+                database: string;
+                username: string;
+                /** @description Secret containing the password */
+                password_secret_id: string;
+                /**
+                 * @default require
+                 * @enum {string}
+                 */
+                ssl_mode: "disable" | "require" | "verify-ca" | "verify-full";
+                /** @description Specific databases to import */
+                databases_to_import?: string[];
+            };
+        };
+        PostgresDatabase: {
+            /** @description Database name */
+            name: string;
+            /** @description PostgreSQL extensions to enable */
+            extensions?: "vector"[];
+        };
+        PostgresConfiguration: {
+            /**
+             * @description Enable superuser access to the database
+             * @default false
+             */
+            enable_superuser_access: boolean;
+            /**
+             * @description PostgreSQL configuration parameters
+             * @example {
+             *       "max_connections": "200",
+             *       "shared_buffers": "256MB",
+             *       "work_mem": "4MB"
+             *     }
+             */
+            parameters?: {
+                [key: string]: string;
+            };
+        };
+        PostgresAddonStatus: {
+            /** @enum {string} */
+            state?: "Pending" | "Creating" | "Initializing" | "Ready" | "Updating" | "Backing Up" | "Restoring" | "Error" | "Deleting" | "Hibernated" | "Fenced";
+            message?: string;
+            phase?: string;
+            conditions?: components["schemas"]["Condition"][];
+            observed_revision?: string;
+            observed_generation?: number;
+            cluster_info?: components["schemas"]["PostgresClusterInfo"];
+            connection_info?: components["schemas"]["PostgresConnectionInfo"];
+        };
+        PostgresClusterInfo: {
+            /** @description Current PostgreSQL version */
+            version?: string;
+        };
+        PostgresConnectionInfo: {
+            /** @description Primary host endpoint */
+            host?: string;
+            /** @default 5432 */
+            port: number;
+            databases?: {
+                name?: string;
+                owner?: string;
+            }[];
+            credentials?: {
+                /** @description Secret containing superuser credentials */
+                superuser_secret_id?: string;
+                /** @description Map of database to app user secret IDs */
+                app_user_secrets?: {
+                    [key: string]: string;
+                };
+                /** @description Secret containing CA certificate */
+                ca_certificate_secret_id?: string;
+            };
+        };
+        PostgresBackup: {
+            /** @description Unique backup identifier */
+            id?: string;
+            /** @description ID of the PostgreSQL addon this backup belongs to */
+            postgres_addon_id?: string;
+            /** @description Human-readable backup name */
+            name?: string;
+            /** @description Optional backup description */
+            description?: string;
+            /**
+             * @description How the backup was initiated
+             * @enum {string}
+             */
+            type?: "scheduled" | "manual" | "pre_upgrade";
+            /**
+             * @description Current backup status
+             * @enum {string}
+             */
+            phase?: "pending" | "running" | "completed" | "failed";
+            /**
+             * Format: date-time
+             * @description When the backup started
+             */
+            started_at?: string;
+            /**
+             * Format: date-time
+             * @description When the backup completed (if finished)
+             */
+            completed_at?: string;
+            /** @description Error message if backup failed */
+            error?: string;
+            /** @description Backup size in bytes (if available) */
+            size_bytes?: number;
+            /**
+             * Format: date-time
+             * @description When the backup record was created
+             */
+            created_at?: string;
+        };
+        PostgresBackupList: {
+            items?: components["schemas"]["PostgresBackup"][];
+            total?: number;
+        };
+        PostgresCredentials: {
+            database?: string;
+            host?: string;
+            /** Format: int32 */
+            port?: number;
+            username?: string;
+            password?: string;
+            sslMode?: string;
+            connectionString?: string;
+            caCertificate?: string;
+        };
+        AddonEnvSource: {
+            postgres?: components["schemas"]["PostgresAddonEnvSource"];
+        };
+        PostgresAddonEnvSource: {
+            addon_id: string;
+            /** @description Target database name. Required when superuser is false. Defaults to 'postgres' when superuser is true and omitted. */
+            database?: string;
+            /**
+             * @description When true, use superuser credentials. The addon must have enableSuperuserAccess enabled.
+             * @default false
+             */
+            superuser: boolean;
+            /** @description Maps addon credential fields to environment variable names. Valid fields are host, port, username, password, database, sslmode, connectionString, caCertificate. */
+            env_mapping: {
+                [key: string]: string;
+            };
+        };
     };
     responses: never;
     parameters: {
@@ -3753,6 +5141,8 @@ export interface components {
         cluster_id: string;
         /** @description The ID of the stack */
         stack_id: string;
+        /** @description The name of the database */
+        database: string;
     };
     requestBodies: never;
     headers: never;

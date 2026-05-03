@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import {
   AccordionItem,
   AccordionTrigger,
@@ -19,14 +20,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PlusCircle, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy, Info } from "lucide-react";
+import { PlusCircle, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy, Info, Cog } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
 import type { z } from "zod";
 
-import type { FormStackResourceData  , FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData, FormEnvVarData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { UseSecretsReturn } from "../../hooks/use-secrets";
+import { EnvRow, type EnvFrom, type EnvRowErrors, type AddonBindingPatch } from "./env-row";
+import type { PostgresAddon } from "@/api/addons";
 
 interface StackResourceItemProps {
   resource: Partial<FormStackResourceData>;
@@ -38,6 +41,8 @@ interface StackResourceItemProps {
   volumes?: Partial<VolumeFormData>[];
   allResources?: { name: string; index: number }[];
   secrets: UseSecretsReturn;
+  addons: PostgresAddon[];
+  addonNameById: Map<string, string>;
 }
 
 const getError = (errors: { [field: string]: string | undefined }, path: string) => {
@@ -71,10 +76,30 @@ export default function StackResourceItem({
   volumes = [],
   allResources: _allResources,
   secrets,
+  addons,
+  addonNameById,
 }: StackResourceItemProps) {
   // Helper for updating resource fields
   const update = (patch: Partial<FormStackResourceData>) => {
     onChange(index, { ...resource, ...patch });
+  };
+
+  const addonCount = useMemo(() => {
+    const ids = new Set<string>();
+    ((resource.execution_config?.environment_variables || []) as FormEnvVarData[]).forEach((r) => {
+      if (r.from === "addon") ids.add(r.addonId);
+    });
+    return ids.size;
+  }, [resource.execution_config?.environment_variables]);
+
+  const [dirtyEnvRows, setDirtyEnvRows] = useState<Set<number>>(new Set());
+  const markEnvRowDirty = (envIdx: number) => {
+    setDirtyEnvRows((prev) => {
+      if (prev.has(envIdx)) return prev;
+      const next = new Set(prev);
+      next.add(envIdx);
+      return next;
+    });
   };
 
   // Helper for updating nested build_spec
@@ -110,26 +135,28 @@ export default function StackResourceItem({
     });
   };
 
-  // Helper for adding an environment variable
+  // Helper for adding an environment variable (defaults to a stack-literal row)
   const addEnvVar = () => {
     update({
       execution_config: {
         ...resource.execution_config,
         environment_variables: [
           ...(resource.execution_config?.environment_variables || []),
-          { name: "", value: "", useSecret: false, selectedSecretId: undefined, selectedSecretKey: undefined },
+          { from: "stack", name: "", value: "" },
         ],
       },
     });
   };
 
-  // Helper for updating an environment variable
-  const updateEnvVar = (envIdx: number, updates: Partial<{ name: string; value: string; useSecret: boolean; selectedSecretId: string; selectedSecretKey: string }>) => {
+  // Helper for replacing an environment variable row entirely. Because rows
+  // are a discriminated union, partial-merge is unsafe across `from` flips,
+  // so callers pass in the full next row.
+  const replaceEnvVar = (envIdx: number, next: FormEnvVarData) => {
     update({
       execution_config: {
         ...resource.execution_config,
         environment_variables: (resource.execution_config?.environment_variables || []).map((env, i) =>
-          i === envIdx ? { ...env, ...updates } : env
+          i === envIdx ? next : env
         ),
       },
     });
@@ -141,6 +168,50 @@ export default function StackResourceItem({
         environment_variables: (resource.execution_config?.environment_variables || []).filter((_, i) => i !== envIdx),
       },
     });
+  };
+
+  // Helper for switching a row's `from` discriminator. Each branch swaps in
+  // an empty variant; the user fills in the bindings via the inline pickers.
+  const switchRowFrom = (envIdx: number, from: EnvFrom) => {
+    const current = resource.execution_config?.environment_variables?.[envIdx];
+    if (!current) return;
+    if (from === "stack") {
+      replaceEnvVar(envIdx, { from: "stack", name: current.name, value: "" });
+    } else if (from === "secret") {
+      replaceEnvVar(envIdx, { from: "secret", name: current.name, secretId: "", secretKey: "" });
+    } else if (from === "addon") {
+      replaceEnvVar(envIdx, {
+        from: "addon",
+        name: current.name,
+        addonType: "postgres",
+        addonId: "",
+        database: undefined,
+        superuser: false,
+        // credField is optional in the form schema; left undefined until the user picks one.
+        credField: undefined,
+      });
+    }
+  };
+
+  // Apply a patch from the inline addon pickers. `database: null` means
+  // "explicitly clear" (used by All databases), undefined means unchanged.
+  const onChangeAddonForRow = (envIdx: number, patch: AddonBindingPatch) => {
+    const current = resource.execution_config?.environment_variables?.[envIdx];
+    if (!current || current.from !== "addon") return;
+    const nextDatabase =
+      patch.database === null
+        ? undefined
+        : patch.database === undefined
+          ? current.database
+          : patch.database;
+    replaceEnvVar(envIdx, {
+      ...current,
+      addonId: patch.addonId ?? current.addonId,
+      database: nextDatabase,
+      superuser: patch.superuser ?? current.superuser,
+      credField: patch.credField ?? current.credField,
+    });
+    markEnvRowDirty(envIdx);
   };
 
   const addVolumeMount = () => {
@@ -163,14 +234,13 @@ export default function StackResourceItem({
     // Create a map of existing var names for quick lookup
     const existingVarNames = new Set(currentVars.map(env => env.name));
 
-    // Filter out duplicates and add new vars with default secret fields
-    const newVars = filteredVars
+    // Filter out duplicates and add new vars as stack-literal rows
+    const newVars: FormEnvVarData[] = filteredVars
       .filter(env => !existingVarNames.has(env.name))
       .map(env => ({
-        ...env,
-        useSecret: false,
-        selectedSecretId: undefined,
-        selectedSecretKey: undefined,
+        from: "stack" as const,
+        name: env.name,
+        value: env.value,
       }));
 
     if (newVars.length === 0) {
@@ -351,6 +421,12 @@ export default function StackResourceItem({
                 <span className="text-xs text-destructive mt-0.5 pl-6">{errors._form}</span>
               )}
             </div>
+            {addonCount > 0 && (
+              <span className="ml-auto mr-2 inline-flex items-center gap-1 rounded-full border bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
+                <Cog className="h-3 w-3" />
+                {addonCount} {addonCount === 1 ? "addon" : "addons"}
+              </span>
+            )}
           </div>
         </AccordionTrigger>
         <AccordionContent className="pb-4 pt-2">
@@ -1175,128 +1251,83 @@ export default function StackResourceItem({
                   <div className="grid grid-cols-12 gap-2 p-3 border-b bg-muted/30 text-sm font-medium">
                     <div className="col-span-3">Key</div>
                     <div className="col-span-6">Value</div>
-                    <div className="col-span-2 text-center">Use Secret</div>
+                    <div className="col-span-2 text-center">From</div>
                     <div className="col-span-1"></div>
                   </div>
 
                   {/* Environment Variables Rows */}
-                  {(resource.execution_config?.environment_variables || []).length ? (
-                    (resource.execution_config?.environment_variables || []).map((env, envIdx) => (
-                      <div key={envIdx} className="grid grid-cols-12 gap-2 p-3 border-b last:border-b-0 items-start">
-                        {/* Key Input - Fixed width */}
-                        <div className="col-span-3">
-                          <Input
-                            value={env.name || ""}
-                            onChange={(e) => updateEnvVar(envIdx, { name: e.target.value })}
-                            className="w-full text-sm font-mono"
-                            placeholder="KEY"
-                          />
-                        </div>
+                  {(() => {
+                    const envVars = (resource.execution_config?.environment_variables || []) as FormEnvVarData[];
+                    // Live duplicate detection (always on, regardless of dirty state)
+                    const nameCounts = new Map<string, number>();
+                    envVars.forEach((r) => {
+                      const k = r.name?.trim();
+                      if (!k) return;
+                      nameCounts.set(k, (nameCounts.get(k) ?? 0) + 1);
+                    });
+                    const rowErrorsForIndex = (envIdx: number): EnvRowErrors | undefined => {
+                      const r = envVars[envIdx];
+                      if (!r) return undefined;
+                      const out: EnvRowErrors = {};
+                      if (r.name && (nameCounts.get(r.name.trim()) ?? 0) > 1) {
+                        out.duplicate = `Duplicate name "${r.name}"`;
+                      }
+                      const dirty = dirtyEnvRows.has(envIdx);
+                      const errPath = (field: string) =>
+                        errors[`execution_config.environment_variables.${envIdx}.${field}`];
+                      if (r.from === "addon") {
+                        if ((dirty || errPath("addonId")) && !r.addonId) out.addonId = "Pick an addon";
+                        if ((dirty || errPath("database")) && !r.superuser && !r.database) out.database = "Pick a database";
+                        if ((dirty || errPath("credField")) && !r.credField) out.credField = "Pick a field";
+                      }
+                      if ((dirty || errPath("name")) && !r.name) out.name = "Environment variable name is required";
+                      return Object.keys(out).length === 0 ? undefined : out;
+                    };
 
-                        {/* Value Input/Secret Selection - Fixed width */}
-                        <div className="col-span-6">
-                          {env.useSecret ? (
-                            <div className="space-y-2">
-                              <Select
-                                value={env.selectedSecretId || ""}
-                                onValueChange={(value) => updateEnvVar(envIdx, { selectedSecretId: value, selectedSecretKey: undefined })}
-                                disabled={secrets.isLoading || secrets.secrets.filter(s => s.type === 'Generic').length === 0}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder={
-                                    secrets.secrets.filter(s => s.type === 'Generic').length === 0
-                                      ? "No generic secrets available"
-                                      : "select secret..."
-                                  } />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {secrets.secrets.filter(s => s.type === 'Generic').map((secret) => (
-                                    <SelectItem key={secret.id} value={secret.id!}>
-                                      {secret.name}
-                                      {secret.description && (
-                                        <span className="text-muted-foreground ml-2">
-                                          - {secret.description}
-                                        </span>
-                                      )}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              {env.selectedSecretId && (() => {
-                                const selectedSecret = secrets.secrets.find(s => s.id === env.selectedSecretId);
-                                const availableKeys = selectedSecret?.data?.map(d => d.key) || [];
-
-                                return (
-                                  <Select
-                                    value={env.selectedSecretKey || ""}
-                                    onValueChange={(value) => updateEnvVar(envIdx, { selectedSecretKey: value })}
-                                    disabled={availableKeys.length === 0}
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder={
-                                        availableKeys.length === 0
-                                          ? "No keys available in secret"
-                                          : "select key..."
-                                      } />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {availableKeys.map((key) => (
-                                        <SelectItem key={key} value={key}>
-                                          {key}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                );
-                              })()}
-                            </div>
-                          ) : (
-                            <Input
-                              value={env.value || ""}
-                              onChange={(e) => updateEnvVar(envIdx, { value: e.target.value })}
-                              className="w-full text-sm font-mono"
-                              placeholder="VALUE"
-                            />
-                          )}
+                    if (envVars.length === 0) {
+                      return (
+                        <div className="p-8 text-center text-muted-foreground">
+                          No environment variables defined
                         </div>
-
-                        {/* Use Secret Toggle - Fixed width */}
-                        <div className="col-span-2 flex justify-center items-start pt-2">
-                          <Switch
-                            checked={env.useSecret || false}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                updateEnvVar(envIdx, { useSecret: true, value: '' });
-                              } else {
-                                updateEnvVar(envIdx, {
-                                  useSecret: false,
-                                  selectedSecretId: undefined,
-                                  selectedSecretKey: undefined
-                                });
-                              }
-                            }}
-                            disabled={secrets.isLoading}
-                          />
-                        </div>
-
-                        {/* Remove Button - Fixed width */}
-                        <div className="col-span-1 flex justify-center items-start pt-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => removeEnvVar(envIdx)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-8 text-center text-muted-foreground">
-                      No environment variables defined
-                    </div>
-                  )}
+                      );
+                    }
+                    return envVars.map((env, envIdx) => (
+                      <EnvRow
+                        key={envIdx}
+                        row={env as FormEnvVarData}
+                        index={envIdx}
+                        resourceIndex={index}
+                        secrets={secrets.secrets}
+                        secretsLoading={secrets.isLoading}
+                        addons={addons}
+                        addonNameById={addonNameById}
+                        rowErrors={rowErrorsForIndex(envIdx)}
+                        onChangeAddon={(patch) => onChangeAddonForRow(envIdx, patch)}
+                        onChangeName={(name) => {
+                          replaceEnvVar(envIdx, { ...(env as FormEnvVarData), name });
+                        }}
+                        onChangeValue={(value) => {
+                          if (env.from === "stack") {
+                            replaceEnvVar(envIdx, { ...env, value });
+                          }
+                        }}
+                        onChangeFrom={(from) => {
+                          switchRowFrom(envIdx, from);
+                          markEnvRowDirty(envIdx);
+                        }}
+                        onChangeSecret={(secretId, secretKey) =>
+                          replaceEnvVar(envIdx, {
+                            from: "secret",
+                            name: env.name,
+                            secretId,
+                            secretKey,
+                          })
+                        }
+                        onBlur={() => markEnvRowDirty(envIdx)}
+                        onRemove={() => removeEnvVar(envIdx)}
+                      />
+                    ));
+                  })()}
                 </div>
                 {/* Add Variable button */}
                 <div className="flex justify-end mt-2">

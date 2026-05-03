@@ -8,13 +8,13 @@ import {
   extractNetworks,
   getDockerComposeSummary,
   createSampleDockerCompose,
-} from "../src/lib/docker-compose-parser";
+} from "./docker-compose-parser";
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-const simpleComposeYaml = readFileSync(join(__dirname, 'fixtures/simple-docker-compose.yml'), 'utf-8');
-const complexComposeYaml = readFileSync(join(__dirname, 'fixtures/complex-docker-compose.yml'), 'utf-8');
-const invalidComposeYaml = readFileSync(join(__dirname, 'fixtures/invalid-docker-compose.yml'), 'utf-8');
+const simpleComposeYaml = readFileSync(join(__dirname, '__fixtures__/simple-docker-compose.yml'), 'utf-8');
+const complexComposeYaml = readFileSync(join(__dirname, '__fixtures__/complex-docker-compose.yml'), 'utf-8');
+const invalidComposeYaml = readFileSync(join(__dirname, '__fixtures__/invalid-docker-compose.yml'), 'utf-8');
 
 describe("Docker Compose Parser", () => {
   describe("parseDockerCompose", () => {
