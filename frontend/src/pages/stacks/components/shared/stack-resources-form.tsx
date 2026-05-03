@@ -8,6 +8,7 @@ import { PlusCircle } from "lucide-react";
 import { useSecrets } from "../../hooks/use-secrets";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
+import type { AddonGroupStateMap } from "./stack-resource-item";
 
 interface StackResourcesFormProps {
   resources: Partial<FormStackResourceData>[];
@@ -15,6 +16,11 @@ interface StackResourcesFormProps {
   errors: { [index: number]: { [field: string]: string | undefined } };
   volumes?: Partial<VolumeFormData>[];
   accordionDefaultOpen?: boolean; // If false, all collapsed by default
+  defaultOpenResourceIdx?: number | null;
+  addonGroupState?: AddonGroupStateMap;
+  onEditAddonBinding?: (addonId: string) => void;
+  onDetachAddon?: (addonId: string) => void;
+  onCancelDetachAddon?: (addonId: string) => void;
 }
 
 function getDefaultResource(): Partial<FormStackResourceData> {
@@ -37,6 +43,11 @@ export default function StackResourcesForm({
   errors,
   volumes = [],
   accordionDefaultOpen = true,
+  defaultOpenResourceIdx = null,
+  addonGroupState,
+  onEditAddonBinding,
+  onDetachAddon,
+  onCancelDetachAddon,
 }: StackResourcesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
   const secrets = useSecrets();
@@ -86,9 +97,14 @@ export default function StackResourcesForm({
             secrets={secrets}
             addons={addons}
             addonNameById={addonNameById}
+            addonGroupState={addonGroupState}
+            onEditAddonBinding={onEditAddonBinding}
+            onDetachAddon={onDetachAddon}
+            onCancelDetachAddon={onCancelDetachAddon}
           />
         )}
         defaultAllCollapsed={!accordionDefaultOpen}
+        defaultOpenIndex={defaultOpenResourceIdx}
       />
       <div className="flex justify-center mt-4">
         <Button

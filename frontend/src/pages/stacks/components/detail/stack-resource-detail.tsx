@@ -8,20 +8,34 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import { Box, GitBranch, ExternalLink, Copy } from "lucide-react";
+import { Box, GitBranch, ExternalLink, Copy, Pencil } from "lucide-react";
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 import type { z } from "zod";
 import type { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
-import { StatusPill, variantFromState } from "@/components/branded";
+import { variantFromState } from "@/components/branded";
+import { SoftLabel } from "@/pages/stacks/components/shared/section-label";
 
 interface StackResourceDetailProps {
   resource: Partial<FormStackResourceData>;
   index: number;
+  isSessionActive?: boolean;
+  isDirty?: boolean;
+  dirtyCount?: number;
+  onEdit?: () => void;
+  onDiscard?: () => void;
+  /** Map of `${resourceIdx}::${envName}` → provenance for converted env rows. */
+  detachedProvenance?: Map<string, { addonName: string; credField?: string }>;
 }
 
 export default function StackResourceDetail({
   resource,
   index,
+  isSessionActive = false,
+  isDirty = false,
+  dirtyCount = 0,
+  onEdit,
+  onDiscard,
+  detachedProvenance,
 }: StackResourceDetailProps) {
   const { toast } = useToast();
   const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
@@ -32,7 +46,6 @@ export default function StackResourceDetail({
     : statusVariant === "error" ? "bg-danger"
     : statusVariant === "pending" ? "bg-warn"
     : "bg-muted-foreground";
-  const sourceLabel = resource.sourceType === "image" ? "Container Image" : "Git Repository";
 
   const ensureAbsoluteUrl = (url: string): string => {
     if (!url) return url;
@@ -81,9 +94,9 @@ export default function StackResourceDetail({
   };
 
   return (
-    <AccordionItem value={String(index)} className="border-0">
+    <AccordionItem value={String(index)} className="border-t border-border first:border-t-0">
       <AccordionTrigger
-        className="px-4 py-3 hover:bg-muted/40 data-[state=open]:bg-muted/30 rounded-t-md [&[data-state=open]]:rounded-b-none"
+        className="group/row px-4 py-3 hover:bg-muted/40 data-[state=open]:bg-muted/30 rounded-t-md [&[data-state=open]]:rounded-b-none"
       >
         <div className="flex items-center gap-3 text-left flex-grow">
           <Tooltip delayDuration={300}>
@@ -141,26 +154,54 @@ export default function StackResourceDetail({
             </span>
           </div>
           <div className="flex items-center gap-3 shrink-0 mr-2">
-            <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground hidden sm:inline">
-              {sourceLabel}
-            </span>
-            {statusObj.state && (
-              <StatusPill variant={statusVariant}>{statusObj.state}</StatusPill>
+            {!isSessionActive && onEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground border border-border opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+              >
+                <Pencil className="h-3 w-3" />
+                Edit
+              </Button>
+            )}
+            {isSessionActive && isDirty && (
+              <>
+                <span className="text-[11.5px] font-medium text-foreground bg-brand-bg px-2 py-0.5 rounded-sm">
+                  {dirtyCount} changed
+                </span>
+                {onDiscard && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs hover:bg-danger-bg hover:text-danger hover:border-danger border border-transparent"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDiscard();
+                    }}
+                  >
+                    Discard
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="pb-4 pt-2">
+      <AccordionContent className="bg-secondary border-t border-border pb-4 pt-4 px-1">
         <div className="px-4 space-y-4">
           <Tabs defaultValue="configuration" className="w-full">
-            <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-6">
-              <TabsTrigger value="configuration" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 -mb-px">Configuration</TabsTrigger>
-              <TabsTrigger value="deployment" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 -mb-px">Deployment</TabsTrigger>
-              <TabsTrigger value="environment" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 -mb-px">Environment</TabsTrigger>
+            <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-1 px-2">
+              <TabsTrigger value="configuration" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Configuration</TabsTrigger>
+              <TabsTrigger value="deployment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Deployment</TabsTrigger>
+              <TabsTrigger value="environment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Environment</TabsTrigger>
             </TabsList>
             <TabsContent value="configuration" className="pt-4 space-y-6">
               <div>
-                <h3 className="text-lg font-medium mb-3">General</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">General</h3>
                 <div className="grid gap-4 max-w-3xl">
                   <div>
                     <div className="mb-1 text-sm font-medium">Resource Name</div>
@@ -244,7 +285,7 @@ export default function StackResourceDetail({
 
               {/* Ingress Section */}
               <div>
-                <h3 className="text-lg font-medium mb-3">Ingress</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Ingress</h3>
                 {resource.ports && resource.ports.length > 0 ? (
                   <div className="grid gap-3 w-full">
                     {resource.ports.map((port, pidx) => {
@@ -307,7 +348,7 @@ export default function StackResourceDetail({
 
               {/* Volume Mounts Section */}
               <div>
-                <h3 className="text-lg font-medium mb-3">Volume Mounts</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Volume Mounts</h3>
                 {resource.volume_mounts && resource.volume_mounts.length > 0 ? (
                   <div className="grid gap-3 max-w-3xl">
                     {resource.volume_mounts.map((vm, vmIdx) => (
@@ -342,7 +383,7 @@ export default function StackResourceDetail({
             <TabsContent value="deployment" className="pt-4 space-y-6">
               {/* Pre-deploy Section (Init) */}
               <div>
-                <h3 className="text-lg font-medium mb-3">Pre-deployment step</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Pre-deployment step</h3>
                 <div className="grid gap-4 max-w-3xl">
                   {resource.init_spec ? (
                     <>
@@ -368,7 +409,7 @@ export default function StackResourceDetail({
 
               {/* Main Container (Execution) */}
               <div>
-                <h3 className="text-lg font-medium mb-3">Main container step</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Main container step</h3>
                 <div className="grid gap-4 max-w-3xl">
                   {resource.execution_config ? (
                     <>
@@ -394,24 +435,37 @@ export default function StackResourceDetail({
 
             <TabsContent value="environment" className="pt-4 space-y-6">
               <div>
-                <h3 className="text-lg font-medium mb-3">Environment Variables</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Environment variables</h3>
                 {resource.execution_config?.environment_variables &&
                 resource.execution_config.environment_variables.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="min-w-full border border-muted rounded-md">
                         <thead className="bg-muted/30">
                           <tr>
-                            <th className="text-left px-6 py-3 text-sm">Name</th>
-                            <th className="text-left px-6 py-3 text-sm">Value</th>
+                            <th className="text-left px-6 py-3"><SoftLabel>Name</SoftLabel></th>
+                            <th className="text-left px-6 py-3"><SoftLabel>Value</SoftLabel></th>
                           </tr>
                         </thead>
                         <tbody>
-                          {resource.execution_config.environment_variables.map((env, idx) => (
-                            <tr key={idx} className="border-t border-muted">
-                              <td className="px-6 py-2 text-sm">{env.name}</td>
-                              <td className="px-6 py-2 text-sm font-mono">{env.value}</td>
-                            </tr>
-                          ))}
+                          {resource.execution_config.environment_variables.map((env, idx) => {
+                            const prov = env.name
+                              ? detachedProvenance?.get(`${index}::${env.name}`)
+                              : undefined;
+                            return (
+                              <tr key={idx} className="border-t border-muted">
+                                <td className="px-6 py-2 text-sm align-top">{env.name}</td>
+                                <td className="px-6 py-2 text-sm font-mono align-top">
+                                  {(env as { value?: string }).value}
+                                  {prov && (
+                                    <div className="mt-1 text-[11px] font-sans text-muted-foreground not-italic">
+                                      ↶ was bound to {prov.addonName}
+                                      {prov.credField ? `.${prov.credField}` : ""}
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

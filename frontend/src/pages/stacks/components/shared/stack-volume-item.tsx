@@ -65,7 +65,7 @@ export default function StackVolumeItem({
     : [];
 
   return (
-    <AccordionItem value={String(index)} className="border-0">
+    <AccordionItem value={String(index)} className="border-t border-border first:border-t-0">
       <AccordionTrigger
         ref={itemRef}
         className="px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
@@ -95,7 +95,7 @@ export default function StackVolumeItem({
           </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="pb-4 pt-2">
+      <AccordionContent className="bg-secondary border-t border-border pb-4 pt-4 px-1">
         <div className="px-4 space-y-4">
           {/* Basic info section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

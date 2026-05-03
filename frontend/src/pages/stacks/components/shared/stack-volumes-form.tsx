@@ -12,6 +12,7 @@ interface StackVolumesFormProps {
   errors: { [index: number]: { [field: string]: string | undefined } };
   stackResources?: Partial<FormStackResourceData>[];
   accordionDefaultOpen?: boolean; // If false, all collapsed by default
+  defaultOpenVolumeIdx?: number | null;
 }
 
 function getDefaultVolume(): Partial<VolumeFormData> {
@@ -33,6 +34,7 @@ export default function StackVolumesForm({
   errors,
   stackResources = [],
   accordionDefaultOpen = true,
+  defaultOpenVolumeIdx = null,
 }: StackVolumesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
 
@@ -82,6 +84,7 @@ export default function StackVolumesForm({
         emptyText="No volumes added."
         emptyIcon={<Database className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />}
         defaultAllCollapsed={!accordionDefaultOpen}
+        defaultOpenIndex={defaultOpenVolumeIdx}
       />
       <div className="flex justify-center mt-4">
         <Button

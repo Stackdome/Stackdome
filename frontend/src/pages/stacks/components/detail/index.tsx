@@ -1,14 +1,36 @@
 import { useParams, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
-import { Rocket, Pencil, Loader2, X } from "lucide-react";
+import { Loader2, MoreHorizontal } from "lucide-react";
 import { PageHeader, Panel, StatusPill, variantFromState } from "@/components/branded";
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import StackResourcesForm from "@/pages/stacks/components/shared/stack-resources-form";
 import StackVolumesForm from "@/pages/stacks/components/shared/stack-volumes-form";
 import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resources-detail";
 import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
+import SessionEditBar from "@/pages/stacks/components/detail/session-edit-bar";
+import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
+import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
+import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import type { FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
+import type { AddonGroupStateMap } from "@/pages/stacks/components/shared/stack-resource-item";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
@@ -53,12 +75,22 @@ export default function StackDetailPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [isEditing, setIsEditing] = useState(false);
+  const session = useStackEditSession();
+  const { addons: postgresAddons } = usePostgresAddons();
+  const addonNameById = useMemo(
+    () => new Map(postgresAddons.filter((a) => a.id).map((a) => [a.id!, a.name])),
+    [postgresAddons],
+  );
   const [isSaving, setIsSaving] = useState(false);
-  const [editFormData, setEditFormData] = useState<{
-    resources: FormStackResourceData[];
-    volumes: VolumeFormData[];
-  } | null>(null);
+  const [editingBindingIds, setEditingBindingIds] = useState<Set<string>>(new Set());
+  // Per-addonId provenance for converted env rows after a successful detach
+  // save. Keyed by `${resourceIdx}::${envName}`. Page-state only — vanishes
+  // on reload by design (no API field for it).
+  const [detachedProvenance, setDetachedProvenance] = useState<Map<string, { addonName: string; credField?: string }>>(
+    new Map(),
+  );
+  const [detachConfirmOpen, setDetachConfirmOpen] = useState(false);
+  const [unboundConfirmOpen, setUnboundConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{
     resources: { [index: number]: { [field: string]: string | undefined } };
     volumes: { [index: number]: { [field: string]: string | undefined } };
@@ -108,59 +140,141 @@ export default function StackDetailPage() {
 
   const stackToShow = currentStack || fetchedStack;
 
-  const initializeEditForm = () => {
-    if (!stackToShow) return;
+  const baselineResources = useMemo<FormStackResourceData[]>(
+    () => (stackToShow?.spec.stack_resources || []).map(mapStackResourceToFormData),
+    [stackToShow],
+  );
+  const baselineVolumes = useMemo<VolumeFormData[]>(
+    () => (stackToShow?.spec?.volumes || []).map(mapVolumeToFormData),
+    [stackToShow],
+  );
 
-    const resourcesForForm: FormStackResourceData[] = (stackToShow.spec.stack_resources || []).map(mapStackResourceToFormData);
-    const volumesForForm = (stackToShow.spec?.volumes || []).map(mapVolumeToFormData);
+  const activateEdit = (opts?: { resourceIdx?: number; volumeIdx?: number; openTab?: EditSessionTab }) => {
+    session.start(
+      { resources: baselineResources, volumes: baselineVolumes },
+      {
+        openResourceIdx: opts?.resourceIdx ?? null,
+        openVolumeIdx: opts?.volumeIdx ?? null,
+        openTab: opts?.openTab ?? null,
+      },
+    );
+    setEditingBindingIds(new Set());
+  };
 
-    setEditFormData({
-      resources: resourcesForForm,
-      volumes: volumesForForm
+  // Page-derived per-addonId state map. Detaching wins over editing.
+  const addonGroupState = useMemo<AddonGroupStateMap>(() => {
+    const m = new Map<string, "idle" | "editing-binding" | "detaching">();
+    for (const id of editingBindingIds) m.set(id, "editing-binding");
+    for (const id of session.pendingDetach) m.set(id, "detaching");
+    return m;
+  }, [editingBindingIds, session.pendingDetach]);
+
+  const handleEditAddonBinding = (addonId: string) => {
+    setEditingBindingIds((prev) => {
+      const next = new Set(prev);
+      next.add(addonId);
+      return next;
     });
   };
 
-  const handleEditToggle = () => {
-    if (!isEditing) {
-      initializeEditForm();
-      setIsEditing(true);
-    } else {
-      // Cancel edit mode
-      setIsEditing(false);
-      setEditFormData(null);
-      setValidationErrors({ resources: {}, volumes: {} });
-    }
+  const handleDetachAddon = (addonId: string) => {
+    setEditingBindingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(addonId);
+      return next;
+    });
+    session.setPendingDetach((prev) => {
+      const next = new Set(prev);
+      next.add(addonId);
+      return next;
+    });
   };
 
-  const handleSave = async () => {
-    if (!stackToShow || !editFormData || !id) return;
+  const handleCancelDetachAddon = (addonId: string) => {
+    session.setPendingDetach((prev) => {
+      const next = new Set(prev);
+      next.delete(addonId);
+      return next;
+    });
+    setEditingBindingIds((prev) => {
+      const next = new Set(prev);
+      next.add(addonId);
+      return next;
+    });
+  };
 
+  // Compute "linked but unbound" — addons in linkedAddonIds with zero env
+  // bindings across the draft.
+  const computeUnboundLinked = (): string[] => {
+    const referenced = new Set<string>();
+    for (const r of session.draft.resources) {
+      const envs = (r?.execution_config?.environment_variables || []) as FormEnvVarData[];
+      for (const e of envs) {
+        if (e.from === "addon" && e.addonId) referenced.add(e.addonId);
+      }
+    }
+    return Array.from(session.linkedAddonIds).filter((id) => !referenced.has(id));
+  };
+
+  // Convert addon rows in pendingDetach to plain stack rows. Returns the new
+  // resources array and the provenance map of resourceIdx::envName entries.
+  const applyPendingDetach = (): {
+    resources: Partial<FormStackResourceData>[];
+    provenance: Map<string, { addonName: string; credField?: string }>;
+  } => {
+    const provenance = new Map<string, { addonName: string; credField?: string }>();
+    const resources = session.draft.resources.map((r, rIdx) => {
+      const envs = (r?.execution_config?.environment_variables || []) as FormEnvVarData[];
+      const newEnvs = envs.map((e) => {
+        if (e.from === "addon" && session.pendingDetach.has(e.addonId)) {
+          provenance.set(`${rIdx}::${e.name}`, {
+            addonName: addonNameById.get(e.addonId) ?? e.addonId,
+            credField: e.credField,
+          });
+          return { from: "stack" as const, name: e.name, value: "" };
+        }
+        return e;
+      });
+      return {
+        ...r,
+        execution_config: {
+          ...(r.execution_config || {}),
+          environment_variables: newEnvs,
+        },
+      };
+    });
+    return { resources, provenance };
+  };
+
+  const performSave = async () => {
+    if (!stackToShow || !session.isActive || !id) return;
     setIsSaving(true);
     setValidationErrors({ resources: {}, volumes: {} });
 
     try {
       const orgId = getCurrentOrganizationId();
-      if (!orgId) {
-        throw new Error("Organization ID not found");
-      }
+      if (!orgId) throw new Error("Organization ID not found");
 
-      // Convert form data to API format
+      const detachResult = session.pendingDetach.size > 0 ? applyPendingDetach() : null;
+      const resources = (detachResult?.resources ?? session.draft.resources) as FormStackResourceData[];
+
       const formStackData: FormStackData = {
         name: stackToShow.name || '',
         labels: stackToShow.labels || [],
         spec: {
-          stack_resources: editFormData.resources,
-          volumes: editFormData.volumes
+          stack_resources: resources,
+          volumes: session.draft.volumes as VolumeFormData[],
         }
       };
 
       const apiData = convertFormStackToApiStack(formStackData);
       const updatedStack = await updateStack(orgId, id, apiData);
 
-      // Update local state
       setFetchedStack(updatedStack);
-      setIsEditing(false);
-      setEditFormData(null);
+      if (detachResult) setDetachedProvenance(detachResult.provenance);
+      else setDetachedProvenance(new Map());
+      session.discard();
+      setEditingBindingIds(new Set());
 
       toast({
         title: "Stack updated successfully",
@@ -168,11 +282,11 @@ export default function StackDetailPage() {
         variant: "default"
       });
 
-    } catch (error) {
-      console.error('Failed to update stack:', error);
+    } catch (err) {
+      console.error('Failed to update stack:', err);
       toast({
         title: "Failed to update stack",
-        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
+        description: err instanceof Error ? err.message : "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -180,20 +294,26 @@ export default function StackDetailPage() {
     }
   };
 
+  const handleSave = () => {
+    if (!session.isActive) return;
+    if (session.pendingDetach.size > 0) {
+      setDetachConfirmOpen(true);
+      return;
+    }
+    const unbound = computeUnboundLinked();
+    if (unbound.length > 0) {
+      setUnboundConfirmOpen(true);
+      return;
+    }
+    void performSave();
+  };
+
   const handleResourcesChange = (updatedResources: Partial<FormStackResourceData>[]) => {
-    if (!editFormData) return;
-    setEditFormData({
-      ...editFormData,
-      resources: updatedResources as FormStackResourceData[]
-    });
+    session.updateResources(updatedResources as FormStackResourceData[]);
   };
 
   const handleVolumesChange = (updatedVolumes: Partial<VolumeFormData>[]) => {
-    if (!editFormData) return;
-    setEditFormData({
-      ...editFormData,
-      volumes: updatedVolumes as VolumeFormData[]
-    });
+    session.updateVolumes(updatedVolumes as VolumeFormData[]);
   };
 
   if (loading) {
@@ -229,27 +349,62 @@ export default function StackDetailPage() {
     );
   }
 
-  const resourcesForForm: FormStackResourceData[] = (stackToShow?.spec.stack_resources || []).map(mapStackResourceToFormData);
-  const volumesForForm = (stackToShow.spec?.volumes || []).map(mapVolumeToFormData);
-
   const resourceCount = stackToShow.spec?.stack_resources?.length || 0;
   const volumeCount = stackToShow.spec?.volumes?.length || 0;
   const subtitleParts: React.ReactNode[] = [
     `${resourceCount} ${resourceCount === 1 ? "service" : "services"}`,
     `${volumeCount} ${volumeCount === 1 ? "volume" : "volumes"}`,
   ];
-  // cluster name is not on the Stack type; omit for now
+
+  const overflowMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="More actions">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onClick={() =>
+            toast({
+              title: "Not implemented",
+              description: "Delete stack will land in a follow-up.",
+            })
+          }
+        >
+          Delete stack
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div className="p-8 space-y-8">
+      {session.isActive && (
+        <SessionEditBar
+          dirty={session.dirty}
+          onDiscardAll={() => session.discard()}
+          onDeploy={handleSave}
+          isDeploying={isSaving}
+        />
+      )}
+
       <PageHeader
         title={stackToShow.name}
         status={
-          stackToShow.status?.state ? (
-            <StatusPill variant={variantFromState(stackToShow.status.state)}>
-              {stackToShow.status.state}
-            </StatusPill>
-          ) : null
+          <span className="flex items-center gap-2">
+            {stackToShow.status?.state && (
+              <StatusPill variant={variantFromState(stackToShow.status.state)}>
+                {stackToShow.status.state}
+              </StatusPill>
+            )}
+            {session.isActive && (
+              <span className="inline-flex items-center gap-[7px] rounded-full border px-2.5 py-1 leading-none font-mono text-[11px] font-bold uppercase tracking-[0.08em] bg-brand-bg border-brand/40 text-brand">
+                <span className="inline-block h-[7px] w-[7px] rounded-full bg-brand animate-pulse" />
+                Editing
+              </span>
+            )}
+          </span>
         }
         subtitle={subtitleParts.map((p, i) => (
           <span key={i}>
@@ -257,34 +412,7 @@ export default function StackDetailPage() {
             {p}
           </span>
         ))}
-        actions={
-          isEditing ? (
-            <>
-              <Button variant="outline" onClick={handleEditToggle} disabled={isSaving}>
-                <X className="h-4 w-4" />
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Deploying...
-                  </>
-                ) : (
-                  <>
-                    <Rocket className="h-4 w-4" />
-                    Deploy
-                  </>
-                )}
-              </Button>
-            </>
-          ) : (
-            <Button onClick={handleEditToggle}>
-              <Pencil className="h-4 w-4" />
-              Edit
-            </Button>
-          )
-        }
+        actions={overflowMenu}
       />
 
       <Tabs defaultValue="configuration" className="w-full">
@@ -311,45 +439,83 @@ export default function StackDetailPage() {
 
         {/* Configuration Tab: Stack Resources and Volumes */}
         <TabsContent value="configuration" className="space-y-8">
+          {(() => {
+            const baseline = { resources: baselineResources, volumes: baselineVolumes };
+            const ensureActive = () => {
+              if (!session.isActive) session.start(baseline);
+            };
+            return (
+              <AddonsInStackPanel
+                resources={(session.isActive ? session.draft.resources : baselineResources) as Partial<FormStackResourceData>[]}
+                linkedAddonIds={session.linkedAddonIds}
+                onLinkAddon={(addonId) => {
+                  ensureActive();
+                  session.setLinkedAddonIds((prev) => {
+                    const next = new Set(prev);
+                    next.add(addonId);
+                    return next;
+                  });
+                }}
+                onRemoveLinkedAddon={(addonId) => {
+                  session.setLinkedAddonIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(addonId);
+                    return next;
+                  });
+                }}
+              />
+            );
+          })()}
           <Panel
             title="Stack Resources"
-            count={resourcesForForm.length}
+            count={baselineResources.length}
             bodyClassName="p-0"
           >
-            {isEditing ? (
+            {session.isActive ? (
               <StackResourcesForm
-                resources={editFormData?.resources || []}
+                resources={session.draft.resources}
                 onResourcesChange={handleResourcesChange}
                 errors={validationErrors.resources}
-                volumes={editFormData?.volumes || []}
+                volumes={session.draft.volumes}
                 accordionDefaultOpen={false}
+                defaultOpenResourceIdx={session.openResourceIdx}
+                addonGroupState={addonGroupState}
+                onEditAddonBinding={handleEditAddonBinding}
+                onDetachAddon={handleDetachAddon}
+                onCancelDetachAddon={handleCancelDetachAddon}
               />
             ) : (
               <StackResourcesDetail
-                resources={resourcesForForm}
+                resources={baselineResources}
                 accordionDefaultOpen={false}
+                onEditResource={(idx) =>
+                  activateEdit({ resourceIdx: idx, openTab: "environment" })
+                }
+                detachedProvenance={detachedProvenance}
               />
             )}
           </Panel>
 
           <Panel
             title="Stack Volumes"
-            count={volumesForForm.length}
+            count={baselineVolumes.length}
             bodyClassName="p-0"
           >
-            {isEditing ? (
+            {session.isActive ? (
               <StackVolumesForm
-                volumes={editFormData?.volumes || []}
+                volumes={session.draft.volumes}
                 onVolumesChange={handleVolumesChange}
                 errors={validationErrors.volumes}
-                stackResources={editFormData?.resources || []}
+                stackResources={session.draft.resources}
                 accordionDefaultOpen={false}
+                defaultOpenVolumeIdx={session.openVolumeIdx}
               />
             ) : (
               <StackVolumesDetail
-                volumes={volumesForForm}
-                stackResources={resourcesForForm}
+                volumes={baselineVolumes}
+                stackResources={baselineResources}
                 accordionDefaultOpen={false}
+                onEditVolume={(idx) => activateEdit({ volumeIdx: idx })}
               />
             )}
           </Panel>
@@ -381,6 +547,60 @@ export default function StackDetailPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={detachConfirmOpen} onOpenChange={setDetachConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Detach {session.pendingDetach.size} {session.pendingDetach.size === 1 ? "addon" : "addons"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Bound env keys will be converted to plain stack vars with their last-known values. Confirm to continue.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setDetachConfirmOpen(false);
+                const unbound = computeUnboundLinked();
+                if (unbound.length > 0) {
+                  setUnboundConfirmOpen(true);
+                } else {
+                  void performSave();
+                }
+              }}
+            >
+              Confirm and detach
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={unboundConfirmOpen} onOpenChange={setUnboundConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Some addons aren't linked to any stack resource.</AlertDialogTitle>
+            <AlertDialogDescription>
+              {computeUnboundLinked()
+                .map((aid) => addonNameById.get(aid) ?? aid)
+                .join(", ")}{" "}
+              will be removed on save.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setUnboundConfirmOpen(false);
+                void performSave();
+              }}
+            >
+              Confirm and deploy
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

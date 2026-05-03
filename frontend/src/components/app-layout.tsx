@@ -96,10 +96,17 @@ function AppLayoutContent({
             <Separator />
           </div>
 
-          {/* Scrollable content area with padding and max-width */}
-          <div className="flex-grow overflow-auto scrollbar-hide rounded-bl-lg rounded-br-lg flex justify-center items-start p-6">
-            <div className="w-full max-w-6xl">
-              {children ? children : <Outlet />}
+          {/* Scrollable content area with padding and max-width.
+              The page-sticky-bar slot lives at the top of the scroll container
+              so a sticky element inside it pins flush under the topnav and
+              spans the full width of the inset (no max-w cap). Pages portal
+              into it via #page-sticky-bar. */}
+          <div className="flex-grow overflow-auto scrollbar-hide rounded-bl-lg rounded-br-lg">
+            <div id="page-sticky-bar" className="sticky top-0 z-30" />
+            <div className="flex justify-center items-start p-6">
+              <div className="w-full max-w-6xl">
+                {children ? children : <Outlet />}
+              </div>
             </div>
           </div>
         </SidebarInset>

@@ -25,12 +25,15 @@ import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
 import type { z } from "zod";
-import { StatusPill, variantFromState } from "@/components/branded";
+import { variantFromState } from "@/components/branded";
 
 import type { FormStackResourceData, FormEnvVarData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { UseSecretsReturn } from "../../hooks/use-secrets";
 import { EnvRow, type EnvFrom, type EnvRowErrors, type AddonBindingPatch } from "./env-row";
+import EnvAddonGroup, { type EnvAddonBinding } from "./env-addon-group";
 import type { PostgresAddon } from "@/api/addons";
+
+export type AddonGroupStateMap = Map<string, "idle" | "editing-binding" | "detaching">;
 
 interface StackResourceItemProps {
   resource: Partial<FormStackResourceData>;
@@ -44,6 +47,10 @@ interface StackResourceItemProps {
   secrets: UseSecretsReturn;
   addons: PostgresAddon[];
   addonNameById: Map<string, string>;
+  addonGroupState?: AddonGroupStateMap;
+  onEditAddonBinding?: (addonId: string) => void;
+  onDetachAddon?: (addonId: string) => void;
+  onCancelDetachAddon?: (addonId: string) => void;
 }
 
 const getError = (errors: { [field: string]: string | undefined }, path: string) => {
@@ -79,6 +86,10 @@ export default function StackResourceItem({
   secrets,
   addons,
   addonNameById,
+  addonGroupState,
+  onEditAddonBinding,
+  onDetachAddon,
+  onCancelDetachAddon,
 }: StackResourceItemProps) {
   // Helper for updating resource fields
   const update = (patch: Partial<FormStackResourceData>) => {
@@ -373,11 +384,10 @@ export default function StackResourceItem({
     : statusVariant === "error" ? "bg-danger"
     : statusVariant === "pending" ? "bg-warn"
     : "bg-muted-foreground";
-  const sourceLabel = resource.sourceType === "image" ? "Container Image" : "Git Repository";
 
   return (
     <TooltipProvider>
-      <AccordionItem value={String(index)} className="border-0">
+      <AccordionItem value={String(index)} className="border-t border-border first:border-t-0">
         <AccordionTrigger
           ref={itemRef}
           className="px-4 py-3 hover:bg-muted/40 data-[state=open]:bg-muted/30 rounded-t-md [&[data-state=open]]:rounded-b-none"
@@ -429,30 +439,24 @@ export default function StackResourceItem({
                   {addonCount} {addonCount === 1 ? "addon" : "addons"}
                 </span>
               )}
-              <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground hidden sm:inline">
-                {sourceLabel}
-              </span>
-              {statusObj.state && (
-                <StatusPill variant={statusVariant}>{statusObj.state}</StatusPill>
-              )}
             </div>
           </div>
         </AccordionTrigger>
-        <AccordionContent className="pb-4 pt-2">
+        <AccordionContent className="bg-secondary border-t border-border pb-4 pt-4 px-1">
           <div className="px-4 space-y-4">
             <Tabs defaultValue="general" className="w-full">
               <div className="mt-1 mb-3">
-                <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-6">
-                  <TabsTrigger value="general" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 -mb-px">General</TabsTrigger>
-                  <TabsTrigger value="deployment" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 -mb-px">Deployment</TabsTrigger>
-                  <TabsTrigger value="environment" className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-2 -mb-px">Environment Variables</TabsTrigger>
+                <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-1 px-2">
+                  <TabsTrigger value="general" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Configuration</TabsTrigger>
+                  <TabsTrigger value="deployment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Deployment</TabsTrigger>
+                  <TabsTrigger value="environment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Environment</TabsTrigger>
                 </TabsList>
               </div>
 
               {/* General Section (always at top) */}
               <TabsContent value="general" className="pt-4 space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium mb-3">General</h3>
+                  <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">General</h3>
                   <div className="grid gap-4 max-w-3xl">
                     <div>
                       <div className="flex items-center gap-1 mb-2">
@@ -829,7 +833,7 @@ export default function StackResourceItem({
                 <Separator className="my-4" />
                 {/* Volume Mounts Section */}
                 <div>
-                  <h3 className="text-lg font-medium mb-3">Volume Mounts</h3>
+                  <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Volume Mounts</h3>
                   <div className="grid gap-6 max-w-3xl">
                     {(resource.volume_mounts || []).map((vm, vmIdx) => (
                       <div key={vmIdx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
@@ -948,7 +952,7 @@ export default function StackResourceItem({
                 <Separator className="my-4" />
                 {/* Ports Section */}
                 <div>
-                  <h3 className="text-lg font-medium mb-3">Ports</h3>
+                  <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Ports</h3>
                   <div className="grid gap-6 max-w-3xl">
                     {(resource.ports || []).map((port, pidx) => (
                       <div key={pidx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
@@ -1051,7 +1055,7 @@ export default function StackResourceItem({
               <TabsContent value="deployment" className="pt-4 space-y-6">
                 {/* Pre-Deploy Section (Init) */}
                 <div>
-                  <h3 className="text-lg font-medium mb-3">Pre-Deployment step</h3>
+                  <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Pre-Deployment step</h3>
                   <div className="grid gap-4 max-w-3xl">
                     <div>
                       <div className="flex items-center gap-1 mb-2">
@@ -1096,7 +1100,7 @@ export default function StackResourceItem({
                 <Separator className="my-4" />
                 {/* Post-Deploy Section (Execution) */}
                 <div>
-                  <h3 className="text-lg font-medium mb-3">Main container step</h3>
+                  <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Main container step</h3>
                   <div className="grid gap-4 max-w-3xl">
                     <div>
                       <div className="flex items-center gap-1 mb-2">
@@ -1300,7 +1304,10 @@ export default function StackResourceItem({
                         </div>
                       );
                     }
-                    return envVars.map((env, envIdx) => (
+                    const nonAddon = envVars
+                      .map((env, envIdx) => ({ env, envIdx }))
+                      .filter(({ env }) => env.from !== "addon");
+                    return nonAddon.map(({ env, envIdx }) => (
                       <EnvRow
                         key={envIdx}
                         row={env as FormEnvVarData}
@@ -1338,6 +1345,72 @@ export default function StackResourceItem({
                     ));
                   })()}
                 </div>
+                {/* Inline addon binding groups */}
+                {(() => {
+                  const envVars = (resource.execution_config?.environment_variables || []) as FormEnvVarData[];
+                  type GroupKey = string;
+                  const groups = new Map<GroupKey, {
+                    addonId: string;
+                    database?: string;
+                    superuser: boolean;
+                    bindings: EnvAddonBinding[];
+                    rowIndices: number[];
+                  }>();
+                  envVars.forEach((env, envIdx) => {
+                    if (env.from !== "addon" || !env.addonId) return;
+                    const key = `${env.addonId}|${env.database ?? ""}|${env.superuser ? "1" : "0"}`;
+                    if (!groups.has(key)) {
+                      groups.set(key, {
+                        addonId: env.addonId,
+                        database: env.database,
+                        superuser: !!env.superuser,
+                        bindings: [],
+                        rowIndices: [],
+                      });
+                    }
+                    const g = groups.get(key)!;
+                    g.bindings.push({ envName: env.name || "", credField: env.credField });
+                    g.rowIndices.push(envIdx);
+                  });
+                  if (groups.size === 0) return null;
+                  return (
+                    <div className="mt-3 space-y-3">
+                      {Array.from(groups.values()).map((g) => {
+                        const groupState = addonGroupState?.get(g.addonId) ?? "idle";
+                        return (
+                          <EnvAddonGroup
+                            key={`${g.addonId}-${g.database ?? ""}-${g.superuser ? "su" : ""}`}
+                            addonId={g.addonId}
+                            addonName={addonNameById?.get(g.addonId) ?? g.addonId}
+                            bindings={g.bindings}
+                            database={g.database}
+                            superuser={g.superuser}
+                            state={groupState}
+                            onEditBinding={onEditAddonBinding ? () => onEditAddonBinding(g.addonId) : undefined}
+                            onDetach={onDetachAddon ? () => onDetachAddon(g.addonId) : undefined}
+                            onCancelDetach={onCancelDetachAddon ? () => onCancelDetachAddon(g.addonId) : undefined}
+                            onChangeBinding={(oldCredField, newCredField) => {
+                              const idx = g.rowIndices.find((i) => {
+                                const v = envVars[i];
+                                return v?.from === "addon" && v.credField === oldCredField;
+                              });
+                              if (idx !== undefined) {
+                                const cur = envVars[idx];
+                                if (cur && cur.from === "addon") {
+                                  replaceEnvVar(idx, { ...cur, credField: newCredField });
+                                }
+                              }
+                            }}
+                            onRemoveBinding={(_credField, envName) => {
+                              const idx = g.rowIndices.find((i) => envVars[i]?.name === envName);
+                              if (idx !== undefined) removeEnvVar(idx);
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
                 {/* Add Variable button */}
                 <div className="flex justify-end mt-2">
                   <Button variant="ghost" size="sm" onClick={addEnvVar}>

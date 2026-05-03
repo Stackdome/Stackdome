@@ -146,7 +146,6 @@ export function EnvRow({
             <SelectContent>
               <SelectItem value="stack">Stack</SelectItem>
               <SelectItem value="secret">Secret</SelectItem>
-              <SelectItem value="addon">Addon</SelectItem>
             </SelectContent>
           </Select>
         </div>
