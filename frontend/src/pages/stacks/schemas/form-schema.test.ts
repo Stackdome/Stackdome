@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   convertApiResourceToFormResource,
   convertFormStackToApiStack,
-} from "../src/pages/stacks/schemas/form-schema";
+} from "./form-schema";
 import type { StackResource } from "@/api/stacks";
 
 const TOOLJET_ADDON_ID = "57fa98c8-27ca-47a8-9761-15504d60d349";
@@ -248,7 +248,7 @@ describe("env round-trip", () => {
 
 describe("FormEnvVarSchema (addon variant) — refines", () => {
   it("requires database when superuser is false", async () => {
-    const { FormEnvVarSchema } = await import("../src/pages/stacks/schemas/form-schema");
+    const { FormEnvVarSchema } = await import("./form-schema");
     const result = FormEnvVarSchema.safeParse({
       from: "addon",
       name: "PG_HOST",
@@ -265,7 +265,7 @@ describe("FormEnvVarSchema (addon variant) — refines", () => {
   });
 
   it("allows missing database when superuser is true", async () => {
-    const { FormEnvVarSchema } = await import("../src/pages/stacks/schemas/form-schema");
+    const { FormEnvVarSchema } = await import("./form-schema");
     const result = FormEnvVarSchema.safeParse({
       from: "addon",
       name: "PG_HOST",
@@ -279,7 +279,7 @@ describe("FormEnvVarSchema (addon variant) — refines", () => {
   });
 
   it("requires credField on addon rows", async () => {
-    const { FormEnvVarSchema } = await import("../src/pages/stacks/schemas/form-schema");
+    const { FormEnvVarSchema } = await import("./form-schema");
     const result = FormEnvVarSchema.safeParse({
       from: "addon",
       name: "PG_HOST",
@@ -296,7 +296,7 @@ describe("FormEnvVarSchema (addon variant) — refines", () => {
   });
 
   it("uses 'Pick an addon' message on empty addonId", async () => {
-    const { FormEnvVarSchema } = await import("../src/pages/stacks/schemas/form-schema");
+    const { FormEnvVarSchema } = await import("./form-schema");
     const result = FormEnvVarSchema.safeParse({
       from: "addon",
       name: "PG_HOST",

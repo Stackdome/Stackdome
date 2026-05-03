@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   CRED_FIELDS,
   CLUSTER_WIDE_FIELDS,
-} from "../src/pages/stacks/lib/addon-presets";
+} from "./addon-presets";
 
 describe("CRED_FIELDS", () => {
   it("lists all 8 fields the backend supports", () => {

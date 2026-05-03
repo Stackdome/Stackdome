@@ -11,15 +11,15 @@ import {
   convertVolumeToStackVolume,
   getConversionSummary,
   type ConversionResult,
-} from '../src/lib/docker-compose-converter';
-import { parseDockerCompose } from '../src/lib/docker-compose-parser';
-import type { DockerComposeFile, DockerComposeService } from '../src/types/docker-compose';
-import type { FormStackResourceData, FormVolumeExtendedData } from '../src/pages/stacks/schemas/form-schema';
+} from './docker-compose-converter';
+import { parseDockerCompose } from './docker-compose-parser';
+import type { DockerComposeFile, DockerComposeService } from '@/types/docker-compose';
+import type { FormStackResourceData, FormVolumeExtendedData } from '@/pages/stacks/schemas/form-schema';
 
 // Simple fixture loaders
-const simpleComposeYaml = readFileSync(join(__dirname, 'fixtures/simple-docker-compose.yml'), 'utf-8');
-const complexComposeYaml = readFileSync(join(__dirname, 'fixtures/complex-docker-compose.yml'), 'utf-8');
-const invalidComposeYaml = readFileSync(join(__dirname, 'fixtures/invalid-docker-compose.yml'), 'utf-8');
+const simpleComposeYaml = readFileSync(join(__dirname, '__fixtures__/simple-docker-compose.yml'), 'utf-8');
+const complexComposeYaml = readFileSync(join(__dirname, '__fixtures__/complex-docker-compose.yml'), 'utf-8');
+const invalidComposeYaml = readFileSync(join(__dirname, '__fixtures__/invalid-docker-compose.yml'), 'utf-8');
 
 // Test helper to create minimal stack resource that matches the actual form schema
 function createMockStackResource(name: string): FormStackResourceData {

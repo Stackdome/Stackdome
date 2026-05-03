@@ -3,9 +3,9 @@ import { describe, it, expect, vi, afterEach, beforeAll } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { EnvRow } from "../src/pages/stacks/components/shared/env-row";
-import type { FormEnvVarData } from "../src/pages/stacks/schemas/form-schema";
-import type { PostgresAddon, PostgresAddonSpec } from "../src/api/addons";
+import { EnvRow } from "./env-row";
+import type { FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
+import type { PostgresAddon, PostgresAddonSpec } from "@/api/addons";
 
 afterEach(cleanup);
 
