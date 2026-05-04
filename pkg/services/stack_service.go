@@ -34,6 +34,7 @@ type StackQueryService interface {
 	GetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError)
 	GetStacksByUserID(ctx context.Context, userID string) ([]*models.Stack, *errors.ServiceError)
+	GetStacksByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError)
 }
 
@@ -109,7 +110,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 }
 
 func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, spec.OrganisationID, auth.ResourceStacks, "", auth.ActionCreate); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, spec.TeamID, auth.ResourceStacks, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
 	existingStack, _ := s.GetStackByName(ctx, spec.Name, spec.UserID)
@@ -242,7 +243,7 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 	if err != nil {
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, existingStack.OrganisationID, auth.ResourceStacks, ID, auth.ActionWrite); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, existingStack.TeamID, auth.ResourceStacks, ID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 
@@ -350,7 +351,7 @@ func (s *stackService) GetStack(ctx context.Context, ID string) (*models.Stack, 
 	if err != nil {
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, stack.OrganisationID, auth.ResourceStacks, ID, auth.ActionRead); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, stack.TeamID, auth.ResourceStacks, ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return stack, nil
@@ -361,7 +362,7 @@ func (s *stackService) GetStackByName(ctx context.Context, name string, userID s
 	if err != nil {
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, stack.OrganisationID, auth.ResourceStacks, stack.ID, auth.ActionRead); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, stack.TeamID, auth.ResourceStacks, stack.ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return stack, nil
@@ -390,15 +391,22 @@ func (s *stackService) InternalList(ctx context.Context, query string, args ...a
 	return stacks, nil
 }
 
-func (s *stackService) GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError) {
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, organisationID, auth.ResourceStacks, "", auth.ActionList); permErr != nil {
+func (s *stackService) GetStacksByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, teamID, auth.ResourceStacks, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
-	stacks, err := s.stackStore.ListByOrganisationID(ctx, organisationID)
+	stacks, err := s.stackStore.ListByTeamID(ctx, teamID)
 	if err != nil {
 		return nil, err
 	}
 	return stacks, nil
+}
+
+func (s *stackService) GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, organisationID, auth.ResourceStacks, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
+	return s.stackStore.ListByOrganisationID(ctx, organisationID)
 }
 
 func (s *stackService) DeleteStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError) {
@@ -407,7 +415,7 @@ func (s *stackService) DeleteStack(ctx context.Context, ID string) (*models.Stac
 	if err != nil {
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, stack.OrganisationID, auth.ResourceStacks, ID, auth.ActionDelete); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, stack.TeamID, auth.ResourceStacks, ID, auth.ActionDelete); permErr != nil {
 		return nil, permErr
 	}
 	if stack.Status.State == models.StackDeleting {

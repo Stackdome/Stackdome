@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -32,6 +33,7 @@ type clusterService struct {
 	logger               logger.Logger
 	clusterManager       clustermanager.ClusterManager
 	imageRegistryService ImageRegistryService
+	permissions          auth.PermissionService
 }
 
 func NewClusterService(spec ClusterServiceSpec) ClusterService {
@@ -42,6 +44,7 @@ func NewClusterService(spec ClusterServiceSpec) ClusterService {
 		clusterManager:       spec.ClusterManager,
 		logger:               spec.Logger,
 		imageRegistryService: spec.ImageRegistryService,
+		permissions:          spec.Permissions,
 	}
 }
 
@@ -49,6 +52,7 @@ type ClusterServiceSpec struct {
 	SessionFactory       db.SessionFactory
 	ClusterManager       clustermanager.ClusterManager
 	ImageRegistryService ImageRegistryService
+	Permissions          auth.PermissionService
 	Logger               logger.Logger
 }
 
@@ -68,6 +72,13 @@ func (s *clusterService) InternalListAllClusters(ctx context.Context) ([]*models
 }
 
 func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, cluster.OrganisationID, auth.ResourceClusters, "", auth.ActionCreate); permErr != nil {
+		return nil, permErr
+	}
+	identity := auth.GetIdentityFromCtx(ctx)
+	if identity != nil && identity.OrgID != cluster.OrganisationID && !identity.IsOrgAdmin() {
+		return nil, errors.Forbidden("insufficient permissions")
+	}
 	// Check if the cluster already exists for the org
 	existingCluster, err := s.clusterStore.GetClusterForOrg(ctx, cluster.OrganisationID)
 	if err != nil && err.Code != errors.ErrorNotFound {
@@ -128,6 +139,13 @@ func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceE
 	if err != nil {
 		s.logger.Errorf("failed to get cluster: %v", err)
 		return err
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionDelete); permErr != nil {
+		return permErr
+	}
+	identity := auth.GetIdentityFromCtx(ctx)
+	if identity != nil && identity.OrgID != cluster.OrganisationID && !identity.IsOrgAdmin() {
+		return errors.Forbidden("insufficient permissions")
 	}
 	// // Unregister the cluster from the cluster manager
 	// cerr := s.clusterManager.UnregisterCluster(cluster.ID)
@@ -246,6 +264,9 @@ func (s *clusterService) PersistManagerState(ctx context.Context, clusterID stri
 }
 
 func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, orgID, auth.ResourceClusters, "", auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	cluster, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
 	if err != nil {
 		s.logger.Errorf("failed to get cluster for org: %v", err)
@@ -268,6 +289,9 @@ func (s *clusterService) Get(ctx context.Context, ID string) (*models.Cluster, *
 	if err != nil {
 		s.logger.Errorf("failed to get cluster: %v", err)
 		return nil, err
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
 	}
 	return cluster, nil
 }

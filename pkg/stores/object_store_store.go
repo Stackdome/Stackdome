@@ -14,6 +14,7 @@ type ObjectStoreStore interface {
 	Update(ctx context.Context, objectStore *models.ObjectStore) (*models.ObjectStore, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	ListByOrganisation(ctx context.Context, organisationID string) ([]*models.ObjectStore, *errors.ServiceError)
+	ListByTeamID(ctx context.Context, teamID string) ([]*models.ObjectStore, *errors.ServiceError)
 
 	UpdateStatus(ctx context.Context, id string, status models.ObjectStoreStatus) *errors.ServiceError
 

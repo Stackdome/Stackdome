@@ -154,6 +154,19 @@ func (s *objectStoreStore) ListByOrganisation(ctx context.Context, organisationI
 	return objectStores, nil
 }
 
+func (s *objectStoreStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.ObjectStore, *errors.ServiceError) {
+	var objectStores []*models.ObjectStore
+
+	if err := s.sessionFactory.New(ctx).
+		Where("team_id = ?", teamID).
+		Order("created_at DESC").
+		Find(&objectStores).Error; err != nil {
+		return nil, errors.GeneralError("failed to list object stores by team: %s", err.Error())
+	}
+
+	return objectStores, nil
+}
+
 func (s *objectStoreStore) ValidateObjectStoreExists(ctx context.Context, objectStoreID string) (bool, *errors.ServiceError) {
 	var count int64
 	if err := s.sessionFactory.New(ctx).Model(&models.ObjectStore{}).

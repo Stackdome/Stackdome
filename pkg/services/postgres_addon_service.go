@@ -27,6 +27,7 @@ type PostgresAddonService interface {
 	UpdatePostgresAddon(ctx context.Context, id string, postgresAddon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError)
 	DeletePostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
 	ListPostgresAddonsByOrganisation(ctx context.Context, organisationID string) ([]*models.PostgresAddon, *errors.ServiceError)
+	ListPostgresAddonsByTeamID(ctx context.Context, teamID string) ([]*models.PostgresAddon, *errors.ServiceError)
 	UpdatePostgresAddonStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError
 
 	// Lifecycle operations
@@ -117,7 +118,7 @@ func (s *postgresAddonService) InjectClusterManager(clusterManager clustermanage
 }
 
 func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgresAddon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, postgresAddon.OrganisationID, auth.ResourceAddonsPostgres, "", auth.ActionCreate); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, postgresAddon.TeamID, auth.ResourceAddonsPostgres, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
 
@@ -257,7 +258,7 @@ func (s *postgresAddonService) GetPostgresAddon(ctx context.Context, id string) 
 	if err != nil {
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, addon.OrganisationID, auth.ResourceAddonsPostgres, id, auth.ActionRead); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, addon.TeamID, auth.ResourceAddonsPostgres, id, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return addon, nil
@@ -272,7 +273,7 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 	if err != nil {
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, existingPostgresAddon.OrganisationID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, existingPostgresAddon.TeamID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 
@@ -397,7 +398,7 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 	if err != nil {
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, postgresAddon.OrganisationID, auth.ResourceAddonsPostgres, id, auth.ActionDelete); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, postgresAddon.TeamID, auth.ResourceAddonsPostgres, id, auth.ActionDelete); permErr != nil {
 		return nil, permErr
 	}
 
@@ -433,6 +434,13 @@ func (s *postgresAddonService) ListPostgresAddonsByOrganisation(ctx context.Cont
 		return nil, permErr
 	}
 	return s.postgresAddonStore.ListByOrganisation(ctx, organisationID)
+}
+
+func (s *postgresAddonService) ListPostgresAddonsByTeamID(ctx context.Context, teamID string) ([]*models.PostgresAddon, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, teamID, auth.ResourceAddonsPostgres, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
+	return s.postgresAddonStore.ListByTeamID(ctx, teamID)
 }
 
 func (s *postgresAddonService) UpdatePostgresAddonStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError {
@@ -581,7 +589,7 @@ func (s *postgresAddonService) TriggerBackup(ctx context.Context, id string) *er
 	if err != nil {
 		return err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, addon.OrganisationID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, addon.TeamID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
 		return permErr
 	}
 
@@ -606,7 +614,7 @@ func (s *postgresAddonService) TriggerHibernate(ctx context.Context, id string, 
 	if err != nil {
 		return err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, postgresAddon.OrganisationID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, postgresAddon.TeamID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
 		return permErr
 	}
 
@@ -631,7 +639,7 @@ func (s *postgresAddonService) TriggerFence(ctx context.Context, id string, enab
 	if err != nil {
 		return err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, postgresAddon.OrganisationID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, postgresAddon.TeamID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
 		return permErr
 	}
 
@@ -655,7 +663,7 @@ func (s *postgresAddonService) ListBackups(ctx context.Context, postgresAddonID 
 	if err != nil {
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, addon.OrganisationID, auth.ResourceAddonsPostgres, postgresAddonID, auth.ActionRead); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, addon.TeamID, auth.ResourceAddonsPostgres, postgresAddonID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return s.backupService.ListByPostgresAddon(ctx, postgresAddonID)
@@ -666,7 +674,7 @@ func (s *postgresAddonService) GetCredentials(ctx context.Context, addonID strin
 	if err != nil {
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, addon.OrganisationID, auth.ResourceAddonsPostgres, addonID, auth.ActionRead); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, addon.TeamID, auth.ResourceAddonsPostgres, addonID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 

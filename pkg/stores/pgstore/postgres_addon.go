@@ -207,6 +207,21 @@ func (s *postgresAddonStore) ListByOrganisation(ctx context.Context, organisatio
 	return addons, nil
 }
 
+func (s *postgresAddonStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.PostgresAddon, *errors.ServiceError) {
+	var addons []*models.PostgresAddon
+
+	if err := s.sessionFactory.New(ctx).
+		Preload("Databases").
+		Preload("Backups").
+		Where("team_id = ?", teamID).
+		Order("created_at DESC").
+		Find(&addons).Error; err != nil {
+		return nil, errors.GeneralError("failed to list postgres addons by team: %s", err.Error())
+	}
+
+	return addons, nil
+}
+
 func (s *postgresAddonStore) ListByCluster(ctx context.Context, clusterID string) ([]*models.PostgresAddon, *errors.ServiceError) {
 	var addons []*models.PostgresAddon
 

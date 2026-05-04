@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -23,6 +24,7 @@ type organisationService struct {
 	organisationStore         stores.OrganisationStore
 	organisationDomainService OrganisationDomainsService
 	stackQueryService         StackQueryService
+	permissions               auth.PermissionService
 	logger                    logger.Logger
 }
 
@@ -33,6 +35,7 @@ func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
 		}),
 		stackQueryService:         spec.StackQueryService,
 		organisationDomainService: spec.OrganisationDomainService,
+		permissions:               spec.Permissions,
 		logger:                    spec.Logger,
 	}
 }
@@ -41,6 +44,7 @@ type OrganisationServiceSpec struct {
 	SessionFactory            db.SessionFactory
 	OrganisationDomainService OrganisationDomainsService
 	StackQueryService         StackQueryService
+	Permissions               auth.PermissionService
 	Logger                    logger.Logger
 }
 
@@ -50,10 +54,16 @@ func (s *organisationService) GetDefaultOrg(ctx context.Context) (*models.Organi
 		s.logger.Errorf("failed to get default organisation: %v", err)
 		return nil, err
 	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, org.ID, auth.ResourceOrgs, org.ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	return org, nil
 }
 
 func (s *organisationService) Create(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, "", auth.ResourceOrgs, "", auth.ActionCreate); permErr != nil {
+		return nil, permErr
+	}
 	if len(spec.Name) == 0 {
 		return nil, errors.BadRequest("organisation name is required")
 	}
@@ -75,6 +85,9 @@ func (s *organisationService) Create(ctx context.Context, spec *models.Organisat
 }
 
 func (s *organisationService) Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, ID, auth.ResourceOrgs, ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	org, err := s.organisationStore.Get(ctx, ID)
 	if err != nil {
 		s.logger.Errorf("failed to get organisation: %v", err)
@@ -85,6 +98,9 @@ func (s *organisationService) Get(ctx context.Context, ID string) (*models.Organ
 
 // TODO: Org is the root of almost everything, so we need to be careful when deleting it.
 func (s *organisationService) Delete(ctx context.Context, ID string) *errors.ServiceError {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, ID, auth.ResourceOrgs, ID, auth.ActionDelete); permErr != nil {
+		return permErr
+	}
 	stacks, err := s.stackQueryService.GetStacksByOrganisationID(ctx, ID)
 	if err != nil {
 		return err
@@ -102,6 +118,19 @@ func (s *organisationService) Delete(ctx context.Context, ID string) *errors.Ser
 
 // Update updates an organisation
 func (s *organisationService) Update(ctx context.Context, ID string, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, ID, auth.ResourceOrgs, ID, auth.ActionWrite); permErr != nil {
+		return nil, permErr
+	}
+	identity := auth.GetIdentityFromCtx(ctx)
+	if identity != nil {
+		role := identity.Role
+		if role != string(models.OrgAdminRole) {
+			return nil, errors.Forbidden("insufficient permissions")
+		}
+		if identity.OrgID != ID {
+			return nil, errors.Forbidden("insufficient permissions")
+		}
+	}
 	existing, err := s.Get(ctx, ID)
 	if err != nil {
 		return nil, err

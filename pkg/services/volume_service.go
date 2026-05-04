@@ -77,7 +77,7 @@ func (s *volumeService) Get(ctx context.Context, ID string) (*models.Volume, *er
 		s.logger.Errorf("failed to get volume: %v", err)
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, volume.OrganisationID, auth.ResourceVolumes, ID, auth.ActionRead); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return volume, nil
@@ -227,7 +227,7 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 }
 
 func (s *volumeService) Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, spec.OrganisationID, auth.ResourceVolumes, "", auth.ActionCreate); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, spec.TeamID, auth.ResourceVolumes, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
 
@@ -315,7 +315,7 @@ func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 		return err
 	}
 
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, volume.OrganisationID, auth.ResourceVolumes, ID, auth.ActionDelete); permErr != nil {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
 
