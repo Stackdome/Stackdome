@@ -8,6 +8,7 @@ Name | Type | Description | Notes
 **Name** | **string** |  | 
 **Description** | Pointer to **string** |  | [optional] 
 **OrganisationId** | Pointer to **string** |  | [optional] [readonly] 
+**TeamId** | Pointer to **string** |  | [optional] [readonly] 
 **Type** | [**SecretType**](SecretType.md) |  | 
 **Data** | [**[]SecretData**](SecretData.md) |  | 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] [readonly] 
@@ -126,6 +127,31 @@ SetOrganisationId sets OrganisationId field to given value.
 `func (o *Secret) HasOrganisationId() bool`
 
 HasOrganisationId returns a boolean if a field has been set.
+
+### GetTeamId
+
+`func (o *Secret) GetTeamId() string`
+
+GetTeamId returns the TeamId field if non-nil, zero value otherwise.
+
+### GetTeamIdOk
+
+`func (o *Secret) GetTeamIdOk() (*string, bool)`
+
+GetTeamIdOk returns a tuple with the TeamId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTeamId
+
+`func (o *Secret) SetTeamId(v string)`
+
+SetTeamId sets TeamId field to given value.
+
+### HasTeamId
+
+`func (o *Secret) HasTeamId() bool`
+
+HasTeamId returns a boolean if a field has been set.
 
 ### GetType
 

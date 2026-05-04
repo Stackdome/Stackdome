@@ -313,6 +313,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		JWTClaimsBuilder:            auth.NewJWTClaimsBuilder(),
 		OrganisationService:         organisationService,
 		Permissions:                 d.PermissionService,
+		TeamService:                 teamService,
 	})
 
 	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{

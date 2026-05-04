@@ -20,16 +20,18 @@ type UserRole string
 
 // List of UserRole
 const (
-	ORGANISATION_ADMIN UserRole = "OrganisationAdmin"
-	PLATFORM_ADMIN     UserRole = "PlatformAdmin"
-	USER               UserRole = "User"
+	ORG_ADMIN  UserRole = "OrgAdmin"
+	DEVELOPER  UserRole = "Developer"
+	VIEWER     UserRole = "Viewer"
+	ORG_MEMBER UserRole = "OrgMember"
 )
 
 // All allowed values of UserRole enum
 var AllowedUserRoleEnumValues = []UserRole{
-	"OrganisationAdmin",
-	"PlatformAdmin",
-	"User",
+	"OrgAdmin",
+	"Developer",
+	"Viewer",
+	"OrgMember",
 }
 
 func (v *UserRole) UnmarshalJSON(src []byte) error {

@@ -21,6 +21,7 @@ type Secret struct {
 	Name           string       `json:"name"`
 	Description    *string      `json:"description,omitempty"`
 	OrganisationId *string      `json:"organisation_id,omitempty"`
+	TeamId         *string      `json:"team_id,omitempty"`
 	Type           SecretType   `json:"type"`
 	Data           []SecretData `json:"data"`
 	CreatedAt      *time.Time   `json:"created_at,omitempty"`
@@ -167,6 +168,38 @@ func (o *Secret) SetOrganisationId(v string) {
 	o.OrganisationId = &v
 }
 
+// GetTeamId returns the TeamId field value if set, zero value otherwise.
+func (o *Secret) GetTeamId() string {
+	if o == nil || o.TeamId == nil {
+		var ret string
+		return ret
+	}
+	return *o.TeamId
+}
+
+// GetTeamIdOk returns a tuple with the TeamId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Secret) GetTeamIdOk() (*string, bool) {
+	if o == nil || o.TeamId == nil {
+		return nil, false
+	}
+	return o.TeamId, true
+}
+
+// HasTeamId returns a boolean if a field has been set.
+func (o *Secret) HasTeamId() bool {
+	if o != nil && o.TeamId != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetTeamId gets a reference to the given string and assigns it to the TeamId field.
+func (o *Secret) SetTeamId(v string) {
+	o.TeamId = &v
+}
+
 // GetType returns the Type field value
 func (o *Secret) GetType() SecretType {
 	if o == nil {
@@ -292,6 +325,9 @@ func (o Secret) MarshalJSON() ([]byte, error) {
 	}
 	if o.OrganisationId != nil {
 		toSerialize["organisation_id"] = o.OrganisationId
+	}
+	if o.TeamId != nil {
+		toSerialize["team_id"] = o.TeamId
 	}
 	if true {
 		toSerialize["type"] = o.Type

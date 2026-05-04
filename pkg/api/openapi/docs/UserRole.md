@@ -3,11 +3,13 @@
 ## Enum
 
 
-* `ORGANISATION_ADMIN` (value: `"OrganisationAdmin"`)
+* `ORG_ADMIN` (value: `"OrgAdmin"`)
 
-* `PLATFORM_ADMIN` (value: `"PlatformAdmin"`)
+* `DEVELOPER` (value: `"Developer"`)
 
-* `USER` (value: `"User"`)
+* `VIEWER` (value: `"Viewer"`)
+
+* `ORG_MEMBER` (value: `"OrgMember"`)
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

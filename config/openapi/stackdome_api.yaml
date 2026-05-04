@@ -2341,9 +2341,10 @@ components:
     UserRole:
       type: string
       enum:
-      - OrganisationAdmin
-      - PlatformAdmin
-      - User
+      - OrgAdmin
+      - Developer
+      - Viewer
+      - OrgMember
     LoginRequest:
       type: object
       required:
@@ -2377,6 +2378,8 @@ components:
         user_id:
           type: string
         org_id:
+          type: string
+        team_id:
           type: string
         workspaces:
           type: array
@@ -2548,6 +2551,9 @@ components:
         - spec
       properties:
         id:
+          type: string
+          readOnly: true
+        team_id:
           type: string
           readOnly: true
         name:
@@ -2735,6 +2741,9 @@ components:
           type: string
           readOnly: true
         organisation_id:
+          type: string
+          readOnly: true
+        team_id:
           type: string
           readOnly: true
         user_id:
@@ -2977,6 +2986,9 @@ components:
         description:
           type: string
         organisation_id:
+          type: string
+          readOnly: true
+        team_id:
           type: string
           readOnly: true
         type:
@@ -3409,6 +3421,9 @@ components:
         organisation_id:
           type: string
           readOnly: true
+        team_id:
+          type: string
+          readOnly: true
         name:
           type: string
           description: Unique name for this object store configuration
@@ -3548,6 +3563,9 @@ components:
           type: string
           readOnly: true
         organisation_id:
+          type: string
+          readOnly: true
+        team_id:
           type: string
           readOnly: true
         user_id:
@@ -4017,3 +4035,72 @@ components:
           additionalProperties:
             type: string
           description: Maps addon credential fields to environment variable names. Valid fields are host, port, username, password, database, sslmode, connectionString, caCertificate.
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+        organisation_id:
+          type: string
+          readOnly: true
+        default_team:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+        - name
+    TeamList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Team'
+        total:
+          type: integer
+    TeamMembership:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        team_id:
+          type: string
+        user_id:
+          type: string
+        role:
+          type: string
+          enum:
+            - Developer
+            - Viewer
+        team:
+          $ref: '#/components/schemas/Team'
+        user:
+          $ref: '#/components/schemas/User'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+        - team_id
+        - user_id
+        - role
+    TeamMembershipList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamMembership'
+        total:
+          type: integer

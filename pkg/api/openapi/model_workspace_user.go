@@ -20,6 +20,7 @@ type WorkspaceUser struct {
 	Id         *string              `json:"id,omitempty"`
 	UserId     *string              `json:"user_id,omitempty"`
 	OrgId      *string              `json:"org_id,omitempty"`
+	TeamId     *string              `json:"team_id,omitempty"`
 	Workspaces []string             `json:"workspaces"`
 	Version    *int32               `json:"version,omitempty"`
 	Status     *WorkspaceUserStatus `json:"status,omitempty"`
@@ -141,6 +142,38 @@ func (o *WorkspaceUser) HasOrgId() bool {
 // SetOrgId gets a reference to the given string and assigns it to the OrgId field.
 func (o *WorkspaceUser) SetOrgId(v string) {
 	o.OrgId = &v
+}
+
+// GetTeamId returns the TeamId field value if set, zero value otherwise.
+func (o *WorkspaceUser) GetTeamId() string {
+	if o == nil || o.TeamId == nil {
+		var ret string
+		return ret
+	}
+	return *o.TeamId
+}
+
+// GetTeamIdOk returns a tuple with the TeamId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *WorkspaceUser) GetTeamIdOk() (*string, bool) {
+	if o == nil || o.TeamId == nil {
+		return nil, false
+	}
+	return o.TeamId, true
+}
+
+// HasTeamId returns a boolean if a field has been set.
+func (o *WorkspaceUser) HasTeamId() bool {
+	if o != nil && o.TeamId != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetTeamId gets a reference to the given string and assigns it to the TeamId field.
+func (o *WorkspaceUser) SetTeamId(v string) {
+	o.TeamId = &v
 }
 
 // GetWorkspaces returns the Workspaces field value
@@ -369,6 +402,9 @@ func (o WorkspaceUser) MarshalJSON() ([]byte, error) {
 	}
 	if o.OrgId != nil {
 		toSerialize["org_id"] = o.OrgId
+	}
+	if o.TeamId != nil {
+		toSerialize["team_id"] = o.TeamId
 	}
 	if true {
 		toSerialize["workspaces"] = o.Workspaces

@@ -47,6 +47,7 @@ func NewUserService(spec UserServiceSpec) UserService {
 		jwtClaimsBuilder:        spec.JWTClaimsBuilder,
 		organisationService:     spec.OrganisationService,
 		permissions:             spec.Permissions,
+		teamService:             spec.TeamService,
 	}
 }
 
@@ -58,6 +59,7 @@ type UserServiceSpec struct {
 	JWTClaimsBuilder            jwtClaimsBuilder
 	OrganisationService         OrganisationService
 	Permissions                 auth.PermissionService
+	TeamService                 TeamService
 }
 
 type usersService struct {
@@ -68,6 +70,7 @@ type usersService struct {
 	resourceAccessPolicyMgr resourceaccess.ResourceAccessPolicyManager
 	jwtClaimsBuilder        jwtClaimsBuilder
 	permissions             auth.PermissionService
+	teamService             TeamService
 }
 
 func (u usersService) Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError) {
@@ -104,6 +107,13 @@ func (u usersService) Create(ctx context.Context, user *models.User) (*openapi.U
 		}
 		user.OrganisationID = createdOrganisation.ID
 		user.Role = models.OrgAdminRole
+
+		if u.teamService != nil {
+			if _, teamErr := u.teamService.CreateDefaultTeam(ctx, createdOrganisation.ID); teamErr != nil {
+				u.logger.Errorf("failed to create default team: %s", teamErr.Error())
+				return nil, errors.GeneralError("failed to create default team")
+			}
+		}
 	}
 
 	createdUser, serr := u.userStore.Create(ctx, user)
@@ -149,6 +159,12 @@ func (u usersService) CreateOAuthUser(ctx context.Context, email, name, githubID
 	createdOrg, serr := u.organisationService.Create(ctx, org)
 	if serr != nil {
 		return nil, fmt.Errorf("failed to create organisation for oauth user: %w", serr)
+	}
+
+	if u.teamService != nil {
+		if _, teamErr := u.teamService.CreateDefaultTeam(ctx, createdOrg.ID); teamErr != nil {
+			return nil, fmt.Errorf("failed to create default team for oauth user: %w", teamErr)
+		}
 	}
 
 	user := &models.User{

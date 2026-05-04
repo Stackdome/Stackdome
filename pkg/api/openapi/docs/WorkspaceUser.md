@@ -7,6 +7,7 @@ Name | Type | Description | Notes
 **Id** | Pointer to **string** |  | [optional] 
 **UserId** | Pointer to **string** |  | [optional] 
 **OrgId** | Pointer to **string** |  | [optional] 
+**TeamId** | Pointer to **string** |  | [optional] 
 **Workspaces** | **[]string** |  | 
 **Version** | Pointer to **int32** |  | [optional] [readonly] 
 **Status** | Pointer to [**WorkspaceUserStatus**](WorkspaceUserStatus.md) |  | [optional] 
@@ -108,6 +109,31 @@ SetOrgId sets OrgId field to given value.
 `func (o *WorkspaceUser) HasOrgId() bool`
 
 HasOrgId returns a boolean if a field has been set.
+
+### GetTeamId
+
+`func (o *WorkspaceUser) GetTeamId() string`
+
+GetTeamId returns the TeamId field if non-nil, zero value otherwise.
+
+### GetTeamIdOk
+
+`func (o *WorkspaceUser) GetTeamIdOk() (*string, bool)`
+
+GetTeamIdOk returns a tuple with the TeamId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTeamId
+
+`func (o *WorkspaceUser) SetTeamId(v string)`
+
+SetTeamId sets TeamId field to given value.
+
+### HasTeamId
+
+`func (o *WorkspaceUser) HasTeamId() bool`
+
+HasTeamId returns a boolean if a field has been set.
 
 ### GetWorkspaces
 

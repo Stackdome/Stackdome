@@ -20,6 +20,7 @@ type AuthnMiddleware interface {
 
 type UserGetter interface {
 	Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
+	GetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError)
 }
 
 type authenticator interface {
@@ -79,6 +80,12 @@ func (a *jwtAuthenticator) AuthenticaticationHandler(w http.ResponseWriter, r *h
 	}
 	// Append the username to the request context
 	ctx = SetUserInContext(ctx, user)
+	ctx = SetIdentityInContext(ctx, &Identity{
+		UserID:     user.ID,
+		OrgID:      user.OrganisationID,
+		Role:       string(user.Role),
+		AuthMethod: AuthMethodJWT,
+	})
 	*r = *r.WithContext(ctx)
 
 	next.ServeHTTP(w, r)

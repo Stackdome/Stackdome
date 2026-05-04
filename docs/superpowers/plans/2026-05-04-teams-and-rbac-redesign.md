@@ -17,7 +17,7 @@
 |-------|--------|---------|
 | 1. Foundation | DONE | See `docs/superpowers/plans/2026-05-04-chunk1-completed.md` for details and deviations |
 | 2. Team service + permissions | DONE | TeamService created, PermissionService simplified, GrantAccess/RevokeAllAccess removed from all services |
-| 3. Service layer migration | NOT STARTED | |
+| 3. Service layer migration | DONE | See `docs/superpowers/plans/2026-05-04-chunk3-completed.md` for details and deviations |
 | 4. API layer | NOT STARTED | |
 
 **Key deviations from plan (Chunk 1):**

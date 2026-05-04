@@ -2914,9 +2914,10 @@ components:
       type: object
     UserRole:
       enum:
-      - OrganisationAdmin
-      - PlatformAdmin
-      - User
+      - OrgAdmin
+      - Developer
+      - Viewer
+      - OrgMember
       type: string
     LoginRequest:
       example:
@@ -2963,6 +2964,7 @@ components:
         org_id: org_id
         created_at: 2000-01-23T04:56:07.000+00:00
         id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        team_id: team_id
         workspaces:
         - workspaces
         - workspaces
@@ -3000,6 +3002,8 @@ components:
         user_id:
           type: string
         org_id:
+          type: string
+        team_id:
           type: string
         workspaces:
           items:
@@ -3336,6 +3340,7 @@ components:
         - value: value
           key: key
         id: id
+        team_id: team_id
         spec:
           needs_sync_before_use: true
           storage_class: storage_class
@@ -3394,6 +3399,9 @@ components:
         id:
           readOnly: true
           type: string
+        team_id:
+          readOnly: true
+          type: string
         name:
           type: string
         labels:
@@ -3423,6 +3431,7 @@ components:
           - value: value
             key: key
           id: id
+          team_id: team_id
           spec:
             needs_sync_before_use: true
             storage_class: storage_class
@@ -3484,6 +3493,7 @@ components:
           - value: value
             key: key
           id: id
+          team_id: team_id
           spec:
             needs_sync_before_use: true
             storage_class: storage_class
@@ -3795,18 +3805,13 @@ components:
       type: object
     Stack:
       example:
-        organisation_id: organisation_id
-        updated_at: 2000-01-23T04:56:07.000+00:00
-        user_id: user_id
-        name: name
-        namespace: namespace
         annotations:
         - value: value
           key: key
         - value: value
           key: key
         created_at: 2000-01-23T04:56:07.000+00:00
-        id: id
+        team_id: team_id
         spec:
           stack_resources:
           - depends_on:
@@ -4091,6 +4096,7 @@ components:
             - value: value
               key: key
             id: id
+            team_id: team_id
             spec:
               needs_sync_before_use: true
               storage_class: storage_class
@@ -4152,6 +4158,7 @@ components:
             - value: value
               key: key
             id: id
+            team_id: team_id
             spec:
               needs_sync_before_use: true
               storage_class: storage_class
@@ -4212,6 +4219,12 @@ components:
         - value: value
           key: key
         revision: revision
+        organisation_id: organisation_id
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        user_id: user_id
+        name: name
+        namespace: namespace
+        id: id
         status:
           state: state
           message: message
@@ -4234,6 +4247,9 @@ components:
           readOnly: true
           type: string
         organisation_id:
+          readOnly: true
+          type: string
+        team_id:
           readOnly: true
           type: string
         user_id:
@@ -4275,18 +4291,13 @@ components:
       example:
         total: 1
         items:
-        - organisation_id: organisation_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          user_id: user_id
-          name: name
-          namespace: namespace
-          annotations:
+        - annotations:
           - value: value
             key: key
           - value: value
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
+          team_id: team_id
           spec:
             stack_resources:
             - depends_on:
@@ -4571,6 +4582,7 @@ components:
               - value: value
                 key: key
               id: id
+              team_id: team_id
               spec:
                 needs_sync_before_use: true
                 storage_class: storage_class
@@ -4632,6 +4644,7 @@ components:
               - value: value
                 key: key
               id: id
+              team_id: team_id
               spec:
                 needs_sync_before_use: true
                 storage_class: storage_class
@@ -4692,6 +4705,12 @@ components:
           - value: value
             key: key
           revision: revision
+          organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          name: name
+          namespace: namespace
+          id: id
           status:
             state: state
             message: message
@@ -4709,18 +4728,13 @@ components:
               observed_generation: 1
               status: status
             observed_revision: observed_revision
-        - organisation_id: organisation_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          user_id: user_id
-          name: name
-          namespace: namespace
-          annotations:
+        - annotations:
           - value: value
             key: key
           - value: value
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
+          team_id: team_id
           spec:
             stack_resources:
             - depends_on:
@@ -5005,6 +5019,7 @@ components:
               - value: value
                 key: key
               id: id
+              team_id: team_id
               spec:
                 needs_sync_before_use: true
                 storage_class: storage_class
@@ -5066,6 +5081,7 @@ components:
               - value: value
                 key: key
               id: id
+              team_id: team_id
               spec:
                 needs_sync_before_use: true
                 storage_class: storage_class
@@ -5126,6 +5142,12 @@ components:
           - value: value
             key: key
           revision: revision
+          organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          name: name
+          namespace: namespace
+          id: id
           status:
             state: state
             message: message
@@ -5436,6 +5458,7 @@ components:
           - value: value
             key: key
           id: id
+          team_id: team_id
           spec:
             needs_sync_before_use: true
             storage_class: storage_class
@@ -5497,6 +5520,7 @@ components:
           - value: value
             key: key
           id: id
+          team_id: team_id
           spec:
             needs_sync_before_use: true
             storage_class: storage_class
@@ -6319,6 +6343,7 @@ components:
         description: description
         created_at: 2000-01-23T04:56:07.000+00:00
         id: id
+        team_id: team_id
         type: null
       properties:
         id:
@@ -6329,6 +6354,9 @@ components:
         description:
           type: string
         organisation_id:
+          readOnly: true
+          type: string
+        team_id:
           readOnly: true
           type: string
         type:
@@ -6365,6 +6393,7 @@ components:
           description: description
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
+          team_id: team_id
           type: null
         - organisation_id: organisation_id
           data:
@@ -6377,6 +6406,7 @@ components:
           description: description
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
+          team_id: team_id
           type: null
       properties:
         items:
@@ -6958,6 +6988,7 @@ components:
         name: name
         created_at: 2000-01-23T04:56:07.000+00:00
         id: id
+        team_id: team_id
         spec:
           destination_path: destination_path
           retention_policy: 7d
@@ -6990,6 +7021,9 @@ components:
         organisation_id:
           readOnly: true
           type: string
+        team_id:
+          readOnly: true
+          type: string
         name:
           description: Unique name for this object store configuration
           type: string
@@ -7018,6 +7052,7 @@ components:
           name: name
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
+          team_id: team_id
           spec:
             destination_path: destination_path
             retention_policy: 7d
@@ -7048,6 +7083,7 @@ components:
           name: name
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
+          team_id: team_id
           spec:
             destination_path: destination_path
             retention_policy: 7d
@@ -7248,6 +7284,7 @@ components:
         - value: value
           key: key
         created_at: 2000-01-23T04:56:07.000+00:00
+        team_id: team_id
         spec:
           databases:
           - extensions:
@@ -7372,6 +7409,9 @@ components:
         organisation_id:
           readOnly: true
           type: string
+        team_id:
+          readOnly: true
+          type: string
         user_id:
           readOnly: true
           type: string
@@ -7421,6 +7461,7 @@ components:
           - value: value
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
+          team_id: team_id
           spec:
             databases:
             - extensions:
@@ -7544,6 +7585,7 @@ components:
           - value: value
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
+          team_id: team_id
           spec:
             databases:
             - extensions:
@@ -8215,6 +8257,75 @@ components:
       required:
       - addon_id
       - env_mapping
+      type: object
+    Team:
+      properties:
+        id:
+          readOnly: true
+          type: string
+        name:
+          type: string
+        organisation_id:
+          readOnly: true
+          type: string
+        default_team:
+          readOnly: true
+          type: boolean
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+        updated_at:
+          format: date-time
+          readOnly: true
+          type: string
+      required:
+      - name
+      type: object
+    TeamList:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Team'
+          type: array
+        total:
+          type: integer
+      type: object
+    TeamMembership:
+      properties:
+        id:
+          readOnly: true
+          type: string
+        team_id:
+          type: string
+        user_id:
+          type: string
+        role:
+          enum:
+          - Developer
+          - Viewer
+          type: string
+        team:
+          $ref: '#/components/schemas/Team'
+        user:
+          $ref: '#/components/schemas/User'
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+      required:
+      - role
+      - team_id
+      - user_id
+      type: object
+    TeamMembershipList:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/TeamMembership'
+          type: array
+        total:
+          type: integer
       type: object
     _api_v1_organizations__org_id__clusters__cluster_id__image_registries_get_200_response:
       example:

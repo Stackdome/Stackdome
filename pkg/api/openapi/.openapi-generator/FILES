@@ -115,6 +115,10 @@ docs/StackResourceList.md
 docs/StackResourceStatus.md
 docs/StackSpec.md
 docs/StackStatus.md
+docs/Team.md
+docs/TeamList.md
+docs/TeamMembership.md
+docs/TeamMembershipList.md
 docs/User.md
 docs/UserRole.md
 docs/UserSignupRequest.md
@@ -244,6 +248,10 @@ model_stack_resource_list.go
 model_stack_resource_status.go
 model_stack_spec.go
 model_stack_status.go
+model_team.go
+model_team_list.go
+model_team_membership.go
+model_team_membership_list.go
 model_user.go
 model_user_role.go
 model_user_signup_request.go

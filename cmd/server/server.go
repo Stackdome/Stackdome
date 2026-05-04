@@ -12,6 +12,8 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/config/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/golang/glog"
 	gorillahandlers "github.com/gorilla/handlers"
 )
@@ -106,7 +108,28 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 		auth.CanAuthenticateWithCookie,
 	)
 
+	// Wire API token authentication
+	apiTokenValidator := auth.NewAPITokenValidator(
+		&tokenLookupAdapter{svc: env.Environment().Services.APITokenService},
+		env.Environment().Services.UserService,
+	)
+	apiTokenAuthnHandler := auth.NewAPITokenAuthnHandler(mainHandler, apiTokenValidator)
+	authenticationHandler.Add(apiTokenAuthnHandler, auth.CanAuthenticateWithAPIToken)
+
 	return authenticationHandler
+}
+
+// tokenLookupAdapter adapts APITokenService to the auth.TokenLookup interface.
+type tokenLookupAdapter struct {
+	svc services.APITokenService
+}
+
+func (a *tokenLookupAdapter) ValidateToken(ctx context.Context, rawToken string) (*models.APIToken, error) {
+	token, serr := a.svc.ValidateToken(ctx, rawToken)
+	if serr != nil {
+		return nil, serr
+	}
+	return token, nil
 }
 
 // Serve start the blocking call to Serve.
