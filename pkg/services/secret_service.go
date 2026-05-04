@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -48,6 +49,7 @@ type SecretServiceSpec struct {
 	EncryptionService   EncryptionService
 	ClusterClientGetter ClusterClientGetter
 	Logger              logger.Logger
+	Permissions         auth.PermissionService
 }
 
 type secretService struct {
@@ -57,6 +59,7 @@ type secretService struct {
 	validator           validator.SecretValidator
 	clusterClientGetter ClusterClientGetter
 	logger              logger.Logger
+	permissions         auth.PermissionService
 }
 
 func NewSecretService(spec SecretServiceSpec) SecretService {
@@ -71,11 +74,16 @@ func NewSecretService(spec SecretServiceSpec) SecretService {
 		encryptionService:   spec.EncryptionService,
 		clusterClientGetter: spec.ClusterClientGetter,
 		logger:              spec.Logger,
+		permissions:         spec.Permissions,
 	}
 	return s
 }
 
 func (s *secretService) Create(ctx context.Context, secret *models.Secret) (*models.Secret, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, secret.OrganisationID, auth.ResourceSecrets, "", auth.ActionCreate); permErr != nil {
+		return nil, permErr
+	}
+
 	if err := s.validator.ValidateSecretData(secret); err != nil {
 		return nil, err
 	}
@@ -103,6 +111,9 @@ func (s *secretService) GetByID(ctx context.Context, ID string) (*models.Secret,
 	secret, err := s.secretStore.GetByID(ctx, ID)
 	if err != nil {
 		return nil, err
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, secret.OrganisationID, auth.ResourceSecrets, ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
 	}
 	return secret, nil
 }
@@ -169,6 +180,9 @@ func (s *secretService) Update(ctx context.Context, id string, secret *models.Se
 	if err != nil {
 		return nil, err
 	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, existingSecret.OrganisationID, auth.ResourceSecrets, id, auth.ActionWrite); permErr != nil {
+		return nil, permErr
+	}
 	secret.ID = existingSecret.ID
 	secret.OrganisationID = existingSecret.OrganisationID
 	secret.UserID = existingSecret.UserID
@@ -201,6 +215,14 @@ func (s *secretService) Update(ctx context.Context, id string, secret *models.Se
 }
 
 func (s *secretService) Delete(ctx context.Context, ID string) *errors.ServiceError {
+	secret, sErr := s.secretStore.GetByID(ctx, ID)
+	if sErr != nil {
+		return sErr
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, secret.OrganisationID, auth.ResourceSecrets, ID, auth.ActionDelete); permErr != nil {
+		return permErr
+	}
+
 	usages, err := s.secretUsageStore.GetBySecretID(ctx, ID)
 	if err != nil {
 		return errors.GeneralError("failed to fetch secret usages for secret ID %s: %s", ID, err.Error())
@@ -213,10 +235,14 @@ func (s *secretService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 	if err := s.secretStore.Delete(ctx, ID); err != nil {
 		return err
 	}
+
 	return nil
 }
 
 func (s *secretService) ListByOrganisation(ctx context.Context, organisationID string) ([]*models.Secret, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, organisationID, auth.ResourceSecrets, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
 	secrets, err := s.secretStore.ListByOrganisation(ctx, organisationID)
 	if err != nil {
 		return nil, err

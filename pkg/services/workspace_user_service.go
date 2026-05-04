@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -43,6 +44,7 @@ func NewWorkspaceUserService(spec WorkspaceUserServiceSpec) WorkspaceUserService
 		logger:           spec.Logger,
 		dbClusterService: spec.ClusterService,
 		usersService:     spec.UserService,
+		permissions:      spec.Permissions,
 	}
 }
 
@@ -51,6 +53,7 @@ type WorkspaceUserServiceSpec struct {
 	Logger         logger.Logger
 	ClusterService ClusterService
 	UserService    UserService
+	Permissions    auth.PermissionService
 }
 
 type workspaceUserService struct {
@@ -58,6 +61,7 @@ type workspaceUserService struct {
 	dbClusterService       ClusterService
 	logger                 logger.Logger
 	usersService           UserService
+	permissions            auth.PermissionService
 	clusterResourceService clusterresource.WorkspaceUserClusterResourceService
 }
 
@@ -71,9 +75,21 @@ func (s *workspaceUserService) GetByID(ctx context.Context, ID string) (*models.
 		s.logger.Errorf("failed to get workspace user: %v", err)
 		return nil, err
 	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, request.OrganisationID, auth.ResourceWorkspaceUsers, ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	return request, nil
 }
+
 func (s *workspaceUserService) GetWorkspaceUser(ctx context.Context, userID string) (*models.WorkspaceUser, *errors.ServiceError) {
+	identity := auth.GetIdentityFromCtx(ctx)
+	orgID := ""
+	if identity != nil {
+		orgID = identity.OrgID
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, orgID, auth.ResourceWorkspaceUsers, "", auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	request, err := s.workspaceUserStore.GetByUserID(ctx, userID)
 	if err != nil {
 		s.logger.Errorf("failed to get workspace user: %v", err)
@@ -92,6 +108,9 @@ func (s *workspaceUserService) InternalList(ctx context.Context, query string, a
 }
 
 func (s *workspaceUserService) Create(ctx context.Context, spec *models.WorkspaceUser, user *models.User) (*models.WorkspaceUser, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, spec.OrganisationID, auth.ResourceWorkspaceUsers, "", auth.ActionCreate); permErr != nil {
+		return nil, permErr
+	}
 	spec.Status.State = models.WorkspaceUserProvisionPending
 	spec.Status.Message = "Provision pending"
 	s.setNamespacesForCreate(spec, user)
@@ -112,7 +131,10 @@ func (s *workspaceUserService) Create(ctx context.Context, spec *models.Workspac
 		}
 		return nil
 	})
-	return createdWorkspaceUser, createErr
+	if createErr != nil {
+		return nil, createErr
+	}
+	return createdWorkspaceUser, nil
 }
 
 func (s *workspaceUserService) Update(ctx context.Context, id string, spec *models.WorkspaceUser, user *models.User) (*models.WorkspaceUser, *errors.ServiceError) {
@@ -120,6 +142,9 @@ func (s *workspaceUserService) Update(ctx context.Context, id string, spec *mode
 	if err != nil {
 		s.logger.Errorf("failed to get workspace user: %v", err)
 		return nil, err
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, current.OrganisationID, auth.ResourceWorkspaceUsers, id, auth.ActionWrite); permErr != nil {
+		return nil, permErr
 	}
 	s.setNamespacesForUpdate(spec, current, user)
 	cluster, serr := s.dbClusterService.GetClusterForOrg(ctx, user.OrganisationID)
@@ -173,9 +198,12 @@ func (s *workspaceUserService) InternalDelete(ctx context.Context, id string) *e
 }
 
 func (s *workspaceUserService) Delete(ctx context.Context, ID string) *errors.ServiceError {
-	workspaceUser, serr := s.GetByID(ctx, ID)
+	workspaceUser, serr := s.workspaceUserStore.GetByID(ctx, ID)
 	if serr != nil {
 		return serr
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, workspaceUser.OrganisationID, auth.ResourceWorkspaceUsers, ID, auth.ActionDelete); permErr != nil {
+		return permErr
 	}
 	workspaceUser.DeletionTimeStamp = ptr.To(time.Now().UTC())
 
@@ -189,7 +217,10 @@ func (s *workspaceUserService) Delete(ctx context.Context, ID string) *errors.Se
 		}
 		return s.workspaceUserStore.DeleteWithTx(ctx, ID)
 	})
-	return deleteErr
+	if deleteErr != nil {
+		return deleteErr
+	}
+	return nil
 }
 
 func (s *workspaceUserService) setNamespacesForCreate(spec *models.WorkspaceUser, user *models.User) {

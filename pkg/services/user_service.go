@@ -2,9 +2,11 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -20,8 +22,9 @@ import (
 
 type UserService interface {
 	Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
-	GetDefaultUser(ctx context.Context) (*models.User, *errors.ServiceError)
+	GetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError)
 	Create(ctx context.Context, user *models.User) (*openapi.UserSignupResponse, *errors.ServiceError)
+	CreateOAuthUser(ctx context.Context, email, name, githubID, avatarURL string) (*models.User, error)
 	Login(ctx context.Context, loginRequest *openapi.LoginRequest) (*openapi.LoginResponse, *errors.ServiceError)
 }
 
@@ -43,6 +46,7 @@ func NewUserService(spec UserServiceSpec) UserService {
 		resourceAccessPolicyMgr: spec.ResourceAccessPolicyManager,
 		jwtClaimsBuilder:        spec.JWTClaimsBuilder,
 		organisationService:     spec.OrganisationService,
+		permissions:             spec.Permissions,
 	}
 }
 
@@ -53,6 +57,7 @@ type UserServiceSpec struct {
 	ResourceAccessPolicyManager resourceaccess.ResourceAccessPolicyManager
 	JWTClaimsBuilder            jwtClaimsBuilder
 	OrganisationService         OrganisationService
+	Permissions                 auth.PermissionService
 }
 
 type usersService struct {
@@ -62,14 +67,18 @@ type usersService struct {
 	jwtSecretKey            string
 	resourceAccessPolicyMgr resourceaccess.ResourceAccessPolicyManager
 	jwtClaimsBuilder        jwtClaimsBuilder
+	permissions             auth.PermissionService
 }
 
 func (u usersService) Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(u.permissions, ctx, "", auth.ResourceUsers, ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	return u.userStore.GetByID(ctx, ID)
 }
 
-func (u usersService) GetDefaultUser(ctx context.Context) (*models.User, *errors.ServiceError) {
-	return u.userStore.GetDefaultUser(ctx)
+func (u usersService) GetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError) {
+	return u.userStore.GetByEmail(ctx, email)
 }
 
 func (u usersService) Create(ctx context.Context, user *models.User) (*openapi.UserSignupResponse, *errors.ServiceError) {
@@ -83,37 +92,42 @@ func (u usersService) Create(ctx context.Context, user *models.User) (*openapi.U
 		return nil, errors.GeneralError("failed to create user")
 	}
 	user.Password = string(hashedPassword)
-	if len(user.Role) == 0 {
-		user.Role = models.UserRole
-	}
 
 	if user.OrganisationID == "" {
 		if user.Organisation == nil {
 			return nil, errors.BadRequest("organisation is required")
 		}
-		// We create an organisation for the user if organisation ID is not provided.
 		createdOrganisation, err := u.organisationService.Create(ctx, user.Organisation)
 		if err != nil {
 			u.logger.Errorf("failed to create organisation, %s", err.Error())
 			return nil, errors.GeneralError("failed to create user")
 		}
 		user.OrganisationID = createdOrganisation.ID
-		// That mean this user is the organisation admin.
-		user.Role = models.OrganisationAdminRole
+		user.Role = models.OrgAdminRole
 	}
+
 	createdUser, serr := u.userStore.Create(ctx, user)
 	if serr != nil {
 		return nil, serr
 	}
 
-	// TODO: Wrap user creation in a transaction so that we can rollback if policyAddErr is not nil.
+	if createdUser.Role == models.OrgAdminRole {
+		if policyAddErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
+			createdUser.ID,
+			string(models.OrgAdminRole),
+			createdUser.OrganisationID,
+		); policyAddErr != nil {
+			u.logger.Errorf("failed to add OrgAdmin policy for user: %s", policyAddErr.Error())
+			return nil, errors.GeneralError("failed to create user")
+		}
+	}
+
 	if policyAddErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
 		createdUser.ID,
-		createdUser.Role.String(),
+		string(models.OrgMemberRole),
 		createdUser.OrganisationID,
 	); policyAddErr != nil {
-		u.logger.Errorf("failed to add policy for user: %s", policyAddErr.Error())
-		return nil, errors.GeneralError("failed to create user")
+		u.logger.Errorf("failed to add OrgMember policy for user: %s", policyAddErr.Error())
 	}
 	expirationTime := time.Now().UTC().Add(10 * 24 * time.Hour)
 	claims := u.jwtClaimsBuilder.BuildClaims(createdUser, expirationTime)
@@ -128,6 +142,47 @@ func (u usersService) Create(ctx context.Context, user *models.User) (*openapi.U
 	}
 
 	return &res, nil
+}
+
+func (u usersService) CreateOAuthUser(ctx context.Context, email, name, githubID, avatarURL string) (*models.User, error) {
+	org := &models.Organisation{Name: fmt.Sprintf("%s-org", name)}
+	createdOrg, serr := u.organisationService.Create(ctx, org)
+	if serr != nil {
+		return nil, fmt.Errorf("failed to create organisation for oauth user: %w", serr)
+	}
+
+	user := &models.User{
+		Email:          email,
+		Name:           name,
+		Role:           models.OrgAdminRole,
+		OrganisationID: createdOrg.ID,
+		GithubID:       &githubID,
+		AvatarURL:      &avatarURL,
+	}
+
+	createdUser, serr := u.userStore.Create(ctx, user)
+	if serr != nil {
+		return nil, fmt.Errorf("failed to create oauth user: %w", serr)
+	}
+
+	if policyErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
+		createdUser.ID,
+		string(models.OrgAdminRole),
+		createdUser.OrganisationID,
+	); policyErr != nil {
+		u.logger.Errorf("failed to add OrgAdmin policy for oauth user: %s", policyErr.Error())
+		return nil, fmt.Errorf("failed to add access policy: %w", policyErr)
+	}
+
+	if policyErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
+		createdUser.ID,
+		string(models.OrgMemberRole),
+		createdUser.OrganisationID,
+	); policyErr != nil {
+		u.logger.Errorf("failed to add OrgMember policy for oauth user: %s", policyErr.Error())
+	}
+
+	return createdUser, nil
 }
 
 func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequest) (*openapi.LoginResponse, *errors.ServiceError) {

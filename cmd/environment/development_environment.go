@@ -24,7 +24,6 @@ import (
 	workspaceusercontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceuser"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
@@ -61,12 +60,12 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 		d.setupLogger,
 		d.setupDatabase,
 		d.initializeResourceAccessPolicyManager,
+		d.initializePermissionService,
 		d.loadServices,
 		d.initializeClusterManager,
 		d.initializeWorkerManager,
 		d.injectClusterResourceServices,
 		d.initializeBaseResourceAccessPolicies,
-		d.ensureDefaultPlatformAdminUser,
 		d.startManagers,
 	}
 
@@ -253,6 +252,18 @@ func (d *developmentEnvironment) initializeResourceAccessPolicyManager(ctx conte
 	return nil
 }
 
+func (d *developmentEnvironment) initializePermissionService(ctx context.Context) error {
+	teamStore := pgstore.NewTeamStore(pgstore.TeamStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+	d.PermissionService = auth.NewPermissionService(auth.PermissionServiceConfig{
+		PolicyManager: d.ResourceAccessPolicyManager,
+		TeamStore:     teamStore,
+		Logger:        d.Logger,
+	})
+	return nil
+}
+
 func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	d.Logger.Debugf("Initializing services")
 
@@ -266,6 +277,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SessionFactory:    d.DBSession,
 		Logger:            d.Logger,
 		EncryptionService: encryptionService,
+		Permissions:       d.PermissionService,
 	})
 
 	stackDomainService := services.NewStackDomainsService(services.StackDomainsServiceSpec{
@@ -282,7 +294,15 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OrganisationDomainService: organisationDomainService,
 		StackQueryService:         d.Services.StackService,
 		SessionFactory:            d.DBSession,
+		Permissions:               d.PermissionService,
 		Logger:                    d.Logger,
+	})
+
+	teamService := services.NewTeamService(services.TeamServiceSpec{
+		SessionFactory: d.DBSession,
+		PolicyManager:  d.ResourceAccessPolicyManager,
+		Permissions:    d.PermissionService,
+		Logger:         d.Logger,
 	})
 
 	userService := services.NewUserService(services.UserServiceSpec{
@@ -292,11 +312,13 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		ResourceAccessPolicyManager: d.ResourceAccessPolicyManager,
 		JWTClaimsBuilder:            auth.NewJWTClaimsBuilder(),
 		OrganisationService:         organisationService,
+		Permissions:                 d.PermissionService,
 	})
 
 	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
 		SessionFactory: d.DBSession,
 		Logger:         d.Logger,
+		Permissions:    d.PermissionService,
 	})
 
 	clusterService := services.NewClusterService(services.ClusterServiceSpec{
@@ -304,6 +326,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		ImageRegistryService: imageRegistryService,
 		SessionFactory:       d.DBSession,
 		Logger:               d.Logger,
+		Permissions:          d.PermissionService,
 	})
 
 	workspaceUserService := services.NewWorkspaceUserService(services.WorkspaceUserServiceSpec{
@@ -311,23 +334,31 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:         d.Logger,
 		ClusterService: clusterService,
 		UserService:    userService,
+		Permissions:    d.PermissionService,
 	})
 
 	volumeService := services.NewVolumeService(services.VolumeServiceSpec{
 		SessionFactory: d.DBSession,
 		Logger:         d.Logger,
+		Permissions:    d.PermissionService,
 	})
+
+	stackStore := pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: d.DBSession})
 
 	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
 		SessionFactory:       d.DBSession,
 		Logger:               d.Logger,
 		WorkspaceUserService: workspaceUserService,
+		Permissions:          d.PermissionService,
+		StackStore:           stackStore,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
 		StackResourceService: stackResourceService,
 		SessionFactory:       d.DBSession,
 		Logger:               d.Logger,
+		Permissions:          d.PermissionService,
+		StackStore:           stackStore,
 	})
 
 	namespaceService := services.NewNamespaceService(services.NamespaceServiceSpec{
@@ -345,6 +376,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SecretService:  secretService,
 		ClusterManager: d.ClusterManager,
 		Logger:         d.Logger,
+		Permissions:    d.PermissionService,
 	})
 
 	postgresBackupService := services.NewPostgresBackupService(services.PostgresBackupServiceSpec{
@@ -365,6 +397,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		ObjectStoreService:    objectStoreService,
 		ClusterManager:        d.ClusterManager,
 		Logger:                d.Logger,
+		Permissions:           d.PermissionService,
 	})
 
 	stackService := services.NewStackService(services.StackServiceSpec{
@@ -378,6 +411,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		NamespaceService:       namespaceService,
 		SecretService:          secretService,
 		PostgresAddonService:   postgresAddonService,
+		Permissions:            d.PermissionService,
 	})
 
 	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
@@ -385,6 +419,15 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		StackResourceService: stackResourceService,
 		StackService:         stackService,
 		Logger:               d.Logger,
+	})
+
+	apiTokenService := services.NewAPITokenService(services.APITokenServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         d.Logger,
+	})
+
+	d.RefreshTokenStore = pgstore.NewRefreshTokenStore(pgstore.RefreshTokenStoreSpec{
+		SessionFactory: d.DBSession,
 	})
 
 	d.Services = Services{
@@ -409,6 +452,8 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		PostgresAddonService:        postgresAddonService,
 		PostgresBackupService:       postgresBackupService,
 		AddonUsageService:           addonUsageService,
+		APITokenService:             apiTokenService,
+		TeamService:                 teamService,
 	}
 
 	return nil
@@ -486,69 +531,10 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 
 func (d *developmentEnvironment) initializeBaseResourceAccessPolicies(ctx context.Context) error {
 	d.Logger.Debugf("Initializing base resource access policies")
-
-	policies := []struct {
-		subject         string
-		domain          string
-		resource        string
-		action          string
-		resourceOwnerID string
-	}{
-		{models.UserRole.String(), "*", "/*", "*", "self"},
-		{models.OrganisationAdminRole.String(), "*", "/*", "*", "*"},
-		{models.PlatformAdminRole.String(), "*", "/*", "*", "*"},
-	}
-
-	for _, policy := range policies {
-		if err := d.ResourceAccessPolicyManager.AddPolicy(
-			policy.subject,
-			policy.domain,
-			policy.resource,
-			policy.action,
-			policy.resourceOwnerID,
-		); err != nil {
-			return fmt.Errorf("failed to add %s policy: %w", policy.subject, err)
-		}
+	if err := auth.LoadDefaultPolicies(d.ResourceAccessPolicyManager.AddPolicy); err != nil {
+		return fmt.Errorf("failed to load default policies: %w", err)
 	}
 	d.Logger.Debugf("Base resource access policies initialized")
-	return nil
-}
-
-func (d *developmentEnvironment) ensureDefaultPlatformAdminUser(ctx context.Context) error {
-	d.Logger.Debugf("Ensuring default platform admin user exists")
-
-	defaultOrg, err := pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
-		SessionFactory: d.DBSession,
-	}).GetDefaultOrg(ctx)
-	if err != nil {
-		return err
-	}
-
-	_, err = d.Services.UserService.GetDefaultUser(ctx)
-	if err != nil {
-		if err.Code == errors.ErrorNotFound {
-			defaultUserInfo := d.BootstrapConfig.DefaultUser
-			if validateErr := defaultUserInfo.Validate(); validateErr != nil {
-				return fmt.Errorf("invalid default user config: %w", validateErr)
-			}
-
-			defaultUser := &models.User{
-				Email:          defaultUserInfo.Email,
-				Role:           models.PlatformAdminRole,
-				Name:           defaultUserInfo.Name,
-				Password:       defaultUserInfo.Password, // Assumes service handles hashing
-				OrganisationID: defaultOrg.ID,
-				DefaultUser:    true,
-			}
-
-			if _, createErr := d.Services.UserService.Create(ctx, defaultUser); createErr != nil {
-				return fmt.Errorf("failed to create default user: %v", createErr)
-			}
-			d.Logger.Infof("Created default platform admin user")
-			return nil
-		}
-		return fmt.Errorf("error checking for default user: %v", err)
-	}
 	return nil
 }
 

@@ -27,9 +27,6 @@ func NewUserStore(spec UserStoreSpec) stores.UserStore {
 
 func (d dbUserStore) Create(ctx context.Context, user *models.User) (*models.User, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
-	if user.DefaultUser && user.Role != models.PlatformAdminRole {
-		return nil, errors.GeneralError("default user must have role %s", models.PlatformAdminRole)
-	}
 	err := grm.Create(&user).Error
 	if err != nil {
 		return nil, errors.GeneralError("failed to create user: %s", err.Error())
@@ -65,16 +62,19 @@ func (d dbUserStore) GetByEmail(ctx context.Context, email string) (*models.User
 	return &user, nil
 }
 
-func (d dbUserStore) GetDefaultUser(ctx context.Context) (*models.User, *errors.ServiceError) {
+func (d dbUserStore) Update(ctx context.Context, id string, user *models.User) (*models.User, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
-	var user models.User
-	if err := grm.Model(&models.User{}).
-		Preload(clause.Associations).
-		Where("default_user = ?", true).First(&user).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, errors.NotFound("default user not found")
-		}
-		return nil, errors.GeneralError("failed to fetch default user: %s", err.Error())
+	if err := grm.Model(&models.User{}).Where("id = ?", id).Updates(user).Error; err != nil {
+		return nil, errors.GeneralError("failed to update user: %s", err.Error())
 	}
-	return &user, nil
+	return d.GetByID(ctx, id)
+}
+
+func (d dbUserStore) ListByOrgAndRole(ctx context.Context, orgID string, role models.Role) ([]*models.User, *errors.ServiceError) {
+	grm := d.sessionFactory.New(ctx)
+	var users []*models.User
+	if err := grm.Where("organisation_id = ? AND role = ?", orgID, string(role)).Find(&users).Error; err != nil {
+		return nil, errors.GeneralError("failed to list users by org and role: %s", err.Error())
+	}
+	return users, nil
 }

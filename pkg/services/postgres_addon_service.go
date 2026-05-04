@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -58,6 +59,7 @@ type PostgresAddonServiceSpec struct {
 	PostgresBackupService PostgresBackupService
 	ClusterManager        clustermanager.ClusterManager
 	Logger                logger.Logger
+	Permissions           auth.PermissionService
 }
 
 type postgresAddonService struct {
@@ -73,6 +75,7 @@ type postgresAddonService struct {
 	validator          validator.PostgresAddonValidator
 	logger             logger.Logger
 	sessionFactory     db.SessionFactory
+	permissions        auth.PermissionService
 
 	BackgroundJobEnqueuerDep
 	ClusterResourceServiceDeps
@@ -105,6 +108,7 @@ func NewPostgresAddonService(spec PostgresAddonServiceSpec) PostgresAddonService
 		validator:          postgresaddon.NewPostgresAddonValidator(),
 		logger:             spec.Logger,
 		sessionFactory:     spec.SessionFactory,
+		permissions:        spec.Permissions,
 	}
 }
 
@@ -113,6 +117,10 @@ func (s *postgresAddonService) InjectClusterManager(clusterManager clustermanage
 }
 
 func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgresAddon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, postgresAddon.OrganisationID, auth.ResourceAddonsPostgres, "", auth.ActionCreate); permErr != nil {
+		return nil, permErr
+	}
+
 	// Validate input
 	if err := s.validator.ValidateForCreate(ctx, postgresAddon); err != nil {
 		return nil, err
@@ -245,7 +253,14 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 }
 
 func (s *postgresAddonService) GetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError) {
-	return s.postgresAddonStore.GetByID(ctx, id)
+	addon, err := s.postgresAddonStore.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, addon.OrganisationID, auth.ResourceAddonsPostgres, id, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
+	return addon, nil
 }
 
 func (s *postgresAddonService) GetPostgresAddonByName(ctx context.Context, organisationID, name string) (*models.PostgresAddon, *errors.ServiceError) {
@@ -253,9 +268,12 @@ func (s *postgresAddonService) GetPostgresAddonByName(ctx context.Context, organ
 }
 
 func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id string, postgresAddon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
-	existingPostgresAddon, err := s.GetPostgresAddon(ctx, id)
+	existingPostgresAddon, err := s.postgresAddonStore.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, existingPostgresAddon.OrganisationID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
+		return nil, permErr
 	}
 
 	// Validate update using validator
@@ -375,9 +393,12 @@ func (s *postgresAddonService) extensionsEqual(a, b models.PostgresExtensions) b
 }
 
 func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError) {
-	postgresAddon, err := s.GetPostgresAddon(ctx, id)
+	postgresAddon, err := s.postgresAddonStore.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, postgresAddon.OrganisationID, auth.ResourceAddonsPostgres, id, auth.ActionDelete); permErr != nil {
+		return nil, permErr
 	}
 
 	// Check addon usage before deletion
@@ -408,6 +429,9 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 }
 
 func (s *postgresAddonService) ListPostgresAddonsByOrganisation(ctx context.Context, organisationID string) ([]*models.PostgresAddon, *errors.ServiceError) {
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, organisationID, auth.ResourceAddonsPostgres, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
 	return s.postgresAddonStore.ListByOrganisation(ctx, organisationID)
 }
 
@@ -553,6 +577,14 @@ func (s *postgresAddonService) DatabaseService() PostgresAddonDatabaseService {
 
 // TriggerBackup triggers a backup for the postgres addon
 func (s *postgresAddonService) TriggerBackup(ctx context.Context, id string) *errors.ServiceError {
+	addon, err := s.postgresAddonStore.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, addon.OrganisationID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
+		return permErr
+	}
+
 	// Update the backup requested timestamp
 	now := time.Now()
 	if err := s.postgresAddonStore.UpdateBackupRequestedAt(ctx, id, &now); err != nil {
@@ -570,37 +602,62 @@ func (s *postgresAddonService) TriggerBackup(ctx context.Context, id string) *er
 // TriggerHibernate triggers hibernation for the postgres addon
 func (s *postgresAddonService) TriggerHibernate(ctx context.Context, id string, enabled bool) *errors.ServiceError {
 	// Get the current postgres addon
-	postgresAddon, err := s.GetPostgresAddon(ctx, id)
+	postgresAddon, err := s.postgresAddonStore.GetByID(ctx, id)
 	if err != nil {
 		return err
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, postgresAddon.OrganisationID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
+		return permErr
 	}
 
 	// Update lifecycle config
 	postgresAddon.LifecycleConfig.HibernationEnabled = enabled
 
-	// Update the postgres addon
-	_, err = s.UpdatePostgresAddon(ctx, id, postgresAddon)
-	return err
+	_, err = s.postgresAddonStore.Update(ctx, postgresAddon)
+	if err != nil {
+		return err
+	}
+
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{ID: id}); err != nil {
+		return errors.GeneralError("failed to enqueue hibernation job for postgres addon '%s': %s", postgresAddon.Name, err.Error())
+	}
+	return nil
 }
 
 // TriggerFence triggers fencing for the postgres addon
 func (s *postgresAddonService) TriggerFence(ctx context.Context, id string, enabled bool) *errors.ServiceError {
 	// Get the current postgres addon
-	postgresAddon, err := s.GetPostgresAddon(ctx, id)
+	postgresAddon, err := s.postgresAddonStore.GetByID(ctx, id)
 	if err != nil {
 		return err
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, postgresAddon.OrganisationID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
+		return permErr
 	}
 
 	// Update lifecycle config
 	postgresAddon.LifecycleConfig.FencingEnabled = enabled
 
-	// Update the postgres addon
-	_, err = s.UpdatePostgresAddon(ctx, id, postgresAddon)
-	return err
+	_, err = s.postgresAddonStore.Update(ctx, postgresAddon)
+	if err != nil {
+		return err
+	}
+
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{ID: id}); err != nil {
+		return errors.GeneralError("failed to enqueue fencing job for postgres addon '%s': %s", postgresAddon.Name, err.Error())
+	}
+	return nil
 }
 
 // ListBackups lists all backups for a postgres addon
 func (s *postgresAddonService) ListBackups(ctx context.Context, postgresAddonID string) ([]*models.PostgresBackup, *errors.ServiceError) {
+	addon, err := s.postgresAddonStore.GetByID(ctx, postgresAddonID)
+	if err != nil {
+		return nil, err
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, addon.OrganisationID, auth.ResourceAddonsPostgres, postgresAddonID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	return s.backupService.ListByPostgresAddon(ctx, postgresAddonID)
 }
 
@@ -608,6 +665,9 @@ func (s *postgresAddonService) GetCredentials(ctx context.Context, addonID strin
 	addon, err := s.postgresAddonStore.GetByID(ctx, addonID)
 	if err != nil {
 		return nil, err
+	}
+	if permErr := auth.CheckServicePermission(s.permissions, ctx, addon.OrganisationID, auth.ResourceAddonsPostgres, addonID, auth.ActionRead); permErr != nil {
+		return nil, permErr
 	}
 
 	ok := models.IsConditionTrue(addon.Status.Conditions, string(models.PostgresAddonConditionReadyOnce))

@@ -12,10 +12,12 @@ import (
 )
 
 type ResourceAccessPolicyManager interface {
-	AddPolicy(subject, orgID, resource, action, resourceOwnerID string) error
-	RemovePolicy(subject, orgID, resource, action, resourceOwnerID string) error
-	CheckPermission(subject, orgID, resource, action, resourceOwnerID string) (bool, error)
+	AddPolicy(subject, orgID, resource, action string) error
+	RemovePolicy(subject, orgID, resource, action string) error
+	RemoveFilteredPolicy(fieldIndex int, fieldValues ...string) error
+	CheckPermission(subject, orgID, resource, action string) (bool, error)
 	AddGroupingPolicy(subject, role, orgID string) error
+	RemoveGroupingPolicy(subject, role, orgID string) error
 	RefreshPolicies() error
 }
 
@@ -65,21 +67,26 @@ func NewResourceAccessPolicyManager(cfg CasbinResourceAccessPolicyManagerConfig)
 	}, nil
 }
 
-func (r *casbinResourceAccessPolicyManager) AddPolicy(subject, org, resource, action, resourceOwnerID string) error {
-	_, err := r.enforcer.AddPolicy(subject, org, resource, action, resourceOwnerID)
+func (r *casbinResourceAccessPolicyManager) AddPolicy(subject, org, resource, action string) error {
+	_, err := r.enforcer.AddPolicy(subject, org, resource, action)
 	return err
 }
 
-func (r *casbinResourceAccessPolicyManager) RemovePolicy(subject, org, resource, action, resourceOwnerID string) error {
-	_, err := r.enforcer.RemovePolicy(subject, org, resource, action, resourceOwnerID)
+func (r *casbinResourceAccessPolicyManager) RemovePolicy(subject, org, resource, action string) error {
+	_, err := r.enforcer.RemovePolicy(subject, org, resource, action)
 	return err
 }
 
-func (r *casbinResourceAccessPolicyManager) CheckPermission(subject, org, resource, action, resourceOwnerID string) (bool, error) {
+func (r *casbinResourceAccessPolicyManager) RemoveFilteredPolicy(fieldIndex int, fieldValues ...string) error {
+	_, err := r.enforcer.RemoveFilteredPolicy(fieldIndex, fieldValues...)
+	return err
+}
+
+func (r *casbinResourceAccessPolicyManager) CheckPermission(subject, org, resource, action string) (bool, error) {
 	if r.debug {
 		r.logger.Infof("=== Access Check ===")
-		r.logger.Infof("Request: subject=%s, org=%s, resource=%s, action=%s, owner=%s",
-			subject, org, resource, action, resourceOwnerID)
+		r.logger.Infof("Request: subject=%s, org=%s, resource=%s, action=%s",
+			subject, org, resource, action)
 	}
 
 	// Check role assignment
@@ -88,7 +95,7 @@ func (r *casbinResourceAccessPolicyManager) CheckPermission(subject, org, resour
 		r.logger.Infof("User roles: %v", roles)
 	}
 
-	ok, err := r.enforcer.Enforce(subject, org, resource, action, resourceOwnerID)
+	ok, err := r.enforcer.Enforce(subject, org, resource, action)
 	if r.debug {
 		r.logger.Infof("Final decision: %v (err: %v)", ok, err)
 	}
@@ -104,5 +111,10 @@ func (r *casbinResourceAccessPolicyManager) RefreshPolicies() error {
 
 func (r *casbinResourceAccessPolicyManager) AddGroupingPolicy(subject, role, orgID string) error {
 	_, err := r.enforcer.AddGroupingPolicy(subject, role, orgID)
+	return err
+}
+
+func (r *casbinResourceAccessPolicyManager) RemoveGroupingPolicy(subject, role, orgID string) error {
+	_, err := r.enforcer.RemoveGroupingPolicy(subject, role, orgID)
 	return err
 }
