@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PlusCircle, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy, Info, Cog } from "lucide-react";
+import { PlusCircle, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy, Info, Puzzle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
@@ -30,7 +30,7 @@ import { variantFromState } from "@/components/branded";
 import type { FormStackResourceData, FormEnvVarData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { UseSecretsReturn } from "../../hooks/use-secrets";
 import { EnvRow, type EnvFrom, type EnvRowErrors, type AddonBindingPatch } from "./env-row";
-import EnvAddonGroup, { type EnvAddonBinding } from "./env-addon-group";
+import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 import type { PostgresAddon } from "@/api/addons";
 
 export type AddonGroupStateMap = Map<string, "idle" | "editing-binding" | "detaching">;
@@ -86,10 +86,6 @@ export default function StackResourceItem({
   secrets,
   addons,
   addonNameById,
-  addonGroupState,
-  onEditAddonBinding,
-  onDetachAddon,
-  onCancelDetachAddon,
 }: StackResourceItemProps) {
   // Helper for updating resource fields
   const update = (patch: Partial<FormStackResourceData>) => {
@@ -148,13 +144,13 @@ export default function StackResourceItem({
   };
 
   // Helper for adding an environment variable (defaults to a stack-literal row)
-  const addEnvVar = () => {
+  const addEnvVar = (next: FormEnvVarData = { from: "stack", name: "", value: "" }) => {
     update({
       execution_config: {
         ...resource.execution_config,
         environment_variables: [
           ...(resource.execution_config?.environment_variables || []),
-          { from: "stack", name: "", value: "" },
+          next,
         ],
       },
     });
@@ -429,13 +425,13 @@ export default function StackResourceItem({
                 )}
               </span>
               {errors._form && (
-                <span className="text-xs text-destructive mt-0.5 pl-6">{errors._form}</span>
+                <span className="text-xs text-danger mt-0.5 pl-6">{errors._form}</span>
               )}
             </div>
             <div className="ml-auto flex items-center gap-3 shrink-0 mr-2">
               {addonCount > 0 && (
                 <span className="inline-flex items-center gap-1 rounded-md border bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
-                  <Cog className="h-3 w-3" />
+                  <Puzzle className="h-3 w-3" />
                   {addonCount} {addonCount === 1 ? "addon" : "addons"}
                 </span>
               )}
@@ -461,7 +457,7 @@ export default function StackResourceItem({
                     <div>
                       <div className="flex items-center gap-1 mb-2">
                         <Label htmlFor={`resource-name-${index}`} className="text-sm font-medium">
-                          Resource Name <span className="text-red-500">*</span>
+                          Resource Name <span className="text-danger">*</span>
                         </Label>
                         <Tooltip delayDuration={300}>
                           <TooltipTrigger asChild>
@@ -475,12 +471,12 @@ export default function StackResourceItem({
                         placeholder="e.g., api, database, frontend"
                         value={resource.name || ""}
                         onChange={e => update({ name: e.target.value })}
-                        className={`max-w-xl ${getError(errors, "name") ? "border-destructive" : ""}`}
+                        className={`max-w-xl ${getError(errors, "name") ? "border-danger" : ""}`}
                         required
                         aria-invalid={!!getError(errors, "name")}
                       />
                       {getError(errors, "name") && (
-                        <p className="text-sm text-destructive mt-1">{getError(errors, "name")}</p>
+                        <p className="text-sm text-danger mt-1">{getError(errors, "name")}</p>
                       )}
                     </div>
 
@@ -501,7 +497,7 @@ export default function StackResourceItem({
                         <div className="text-sm text-muted-foreground">No dependency information available</div>
                       )}
                       {errors["depends_on"] && (
-                        <p className="text-sm text-destructive">{errors["depends_on"]}</p>
+                        <p className="text-sm text-danger">{errors["depends_on"]}</p>
                       )}
                       <p className="text-xs text-muted-foreground">Select resources this service depends on. They will be started first.</p>
                     </div>
@@ -509,7 +505,7 @@ export default function StackResourceItem({
                     <div>
                       <div className="flex items-center gap-1 mb-2">
                         <Label htmlFor={`resource-source-${index}`} className="text-sm font-medium">
-                      Build From <span className="text-red-500">*</span>
+                      Build From <span className="text-danger">*</span>
                         </Label>
                         <Tooltip delayDuration={300}>
                           <TooltipTrigger asChild>
@@ -548,7 +544,7 @@ export default function StackResourceItem({
                         <div>
                           <div className="flex items-center gap-1 mb-2">
                             <Label htmlFor={`container-image-${index}`} className="text-sm font-medium">
-                            Container Image <span className="text-red-500">*</span>
+                            Container Image <span className="text-danger">*</span>
                             </Label>
                             <Tooltip delayDuration={300}>
                               <TooltipTrigger asChild>
@@ -564,12 +560,12 @@ export default function StackResourceItem({
                             placeholder="e.g., nginx:latest, redis:7"
                             value={resource.image_spec?.image || ""}
                             onChange={e => updateImageSpec({ image: e.target.value })}
-                            className={`max-w-xl ${getError(errors, "image_spec.image") ? "border-destructive" : ""}`}
+                            className={`max-w-xl ${getError(errors, "image_spec.image") ? "border-danger" : ""}`}
                             required={resource.sourceType === "image"}
                             aria-invalid={!!getError(errors, "image_spec.image")}
                           />
                           {getError(errors, "image_spec.image") && (
-                            <p className="text-sm text-destructive mt-1">{getError(errors, "image_spec.image")}</p>
+                            <p className="text-sm text-danger mt-1">{getError(errors, "image_spec.image")}</p>
                           )}
                         </div>
 
@@ -637,7 +633,7 @@ export default function StackResourceItem({
                         <div>
                           <div className="flex items-center gap-1 mb-2">
                             <Label htmlFor={`git-repo-${index}`} className="text-sm font-medium">
-                            Git Repository URL <span className="text-red-500">*</span>
+                            Git Repository URL <span className="text-danger">*</span>
                             </Label>
                             <Tooltip delayDuration={300}>
                               <TooltipTrigger asChild>
@@ -651,12 +647,12 @@ export default function StackResourceItem({
                             value={resource.build_spec?.source_context?.git_repo?.repo_url || ""}
                             onChange={e => updateBuildSpec({ source_context: { git_repo: { repo_url: e.target.value }}})}
                             placeholder="https://github.com/username/repository.git"
-                            className={`max-w-xl ${getError(errors, "build_spec.source_context.git_repo.repo_url") ? "border-destructive" : ""}`}
+                            className={`max-w-xl ${getError(errors, "build_spec.source_context.git_repo.repo_url") ? "border-danger" : ""}`}
                             required={resource.sourceType === "git"}
                             aria-invalid={!!getError(errors, "build_spec.source_context.git_repo.repo_url")}
                           />
                           {getError(errors, "build_spec.source_context.git_repo.repo_url") && (
-                            <p className="text-sm text-destructive">{getError(errors, "build_spec.source_context.git_repo.repo_url")}</p>
+                            <p className="text-sm text-danger">{getError(errors, "build_spec.source_context.git_repo.repo_url")}</p>
                           )}
                         </div>
 
@@ -721,7 +717,7 @@ export default function StackResourceItem({
                         <div>
                           <div className="flex items-ce nter gap-1 mb-2">
                             <Label htmlFor={`external-image-repo-url-${index}`} className="text-sm font-medium">
-                            Image Repository URL <span className="text-red-500">*</span>
+                            Image Repository URL <span className="text-danger">*</span>
                             </Label>
                             <Tooltip delayDuration={300}>
                               <TooltipTrigger asChild>
@@ -737,18 +733,18 @@ export default function StackResourceItem({
                             value={resource.build_spec?.image_repository?.external_image_repo_url || ""}
                             onChange={e => updateBuildSpec({ image_repository: { external_image_repo_url: e.target.value } })}
                             placeholder="e.g., ghcr.io/your-org/your-image"
-                            className={`max-w-xl ${getError(errors, "build_spec.image_repository.external_image_repo_url") ? "border-destructive" : ""}`}
+                            className={`max-w-xl ${getError(errors, "build_spec.image_repository.external_image_repo_url") ? "border-danger" : ""}`}
                             required={resource.sourceType === "git"}
                             aria-invalid={!!getError(errors, "build_spec.image_repository.external_image_repo_url")}
                           />
                           {getError(errors, "build_spec.image_repository.external_image_repo_url") && (
-                            <p className="text-sm text-destructive">{getError(errors, "build_spec.image_repository.external_image_repo_url")}</p>
+                            <p className="text-sm text-danger">{getError(errors, "build_spec.image_repository.external_image_repo_url")}</p>
                           )}
                         </div>
                         <div>
                           <div className="flex items-center gap-1 mb-2">
                             <Label htmlFor={`git-revision-type-${index}`} className="text-sm font-medium">
-                            Git Revision Type <span className="text-red-500">*</span>
+                            Git Revision Type <span className="text-danger">*</span>
                             </Label>
                             <Tooltip delayDuration={300}>
                               <TooltipTrigger asChild>
@@ -763,7 +759,7 @@ export default function StackResourceItem({
                           >
                             <SelectTrigger
                               id={`git-revision-type-${index}`}
-                              className={`max-w-xl ${getError(errors, "gitRevisionType") ? "border-destructive" : ""}`}
+                              className={`max-w-xl ${getError(errors, "gitRevisionType") ? "border-danger" : ""}`}
                             >
                               <SelectValue placeholder="Select revision type" />
                             </SelectTrigger>
@@ -774,7 +770,7 @@ export default function StackResourceItem({
                             </SelectContent>
                           </Select>
                           {getError(errors, "gitRevisionType") && (
-                            <p className="text-sm text-destructive mt-1">{getError(errors, "gitRevisionType")}</p>
+                            <p className="text-sm text-danger mt-1">{getError(errors, "gitRevisionType")}</p>
                           )}
                         </div>
                         {resource.gitRevisionType && (
@@ -785,7 +781,7 @@ export default function StackResourceItem({
                                   ? "Branch Name"
                                   : resource.gitRevisionType === "commit"
                                     ? "Commit Hash"
-                                    : "Tag Name"} <span className="text-red-500">*</span>
+                                    : "Tag Name"} <span className="text-danger">*</span>
                               </Label>
                               <Tooltip delayDuration={300}>
                                 <TooltipTrigger asChild>
@@ -811,7 +807,7 @@ export default function StackResourceItem({
                                     ? "e.g., a1b2c3d4e5..."
                                     : "e.g., v1.0.0"
                               }
-                              className={`max-w-xl ${getError(errors, "gitRevisionValue") ? "border-destructive" : ""}`}
+                              className={`max-w-xl ${getError(errors, "gitRevisionValue") ? "border-danger" : ""}`}
                               required={!!resource.gitRevisionType}
                               aria-invalid={!!getError(errors, "gitRevisionValue")}
                               onBlur={() => {
@@ -822,7 +818,7 @@ export default function StackResourceItem({
                               }}
                             />
                             {getError(errors, "gitRevisionValue") && (
-                              <p className="text-sm text-destructive mt-1">{getError(errors, "gitRevisionValue")}</p>
+                              <p className="text-sm text-danger mt-1">{getError(errors, "gitRevisionValue")}</p>
                             )}
                           </div>
                         )}
@@ -840,7 +836,7 @@ export default function StackResourceItem({
                         <div>
                           <div className="flex items-center gap-1 mb-2">
                             <Label htmlFor={`volume-name-${index}-${vmIdx}`} className="text-sm font-medium">
-                            Volume <span className="text-red-500">*</span>
+                            Volume <span className="text-danger">*</span>
                             </Label>
                             <Tooltip delayDuration={300}>
                               <TooltipTrigger asChild>
@@ -855,7 +851,7 @@ export default function StackResourceItem({
                           >
                             <SelectTrigger
                               id={`volume-name-${index}-${vmIdx}`}
-                              className={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) ? "border-destructive" : ""}
+                              className={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) ? "border-danger" : ""}
                             >
                               <SelectValue placeholder="Select volume" />
                             </SelectTrigger>
@@ -876,7 +872,7 @@ export default function StackResourceItem({
                             </SelectContent>
                           </Select>
                           {getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) && (
-                            <p className="text-sm text-destructive">{getError(errors, `volume_mounts.${vmIdx}.source_volume_name`)}</p>
+                            <p className="text-sm text-danger">{getError(errors, `volume_mounts.${vmIdx}.source_volume_name`)}</p>
                           )}
                         </div>
                         <div>
@@ -901,7 +897,7 @@ export default function StackResourceItem({
                         <div>
                           <div className="flex items-center gap-1 mb-2">
                             <Label htmlFor={`volume-target-${index}-${vmIdx}`} className="text-sm font-medium">
-                            Target Path <span className="text-red-500">*</span>
+                            Target Path <span className="text-danger">*</span>
                             </Label>
                             <Tooltip delayDuration={300}>
                               <TooltipTrigger asChild>
@@ -915,11 +911,11 @@ export default function StackResourceItem({
                             value={vm.target_path || ""}
                             onChange={(e) => updateVolumeMount(vmIdx, { target_path: e.target.value })}
                             placeholder="e.g., /mnt/data"
-                            className={getError(errors, `volume_mounts.${vmIdx}.target_path`) ? "border-destructive" : ""}
+                            className={getError(errors, `volume_mounts.${vmIdx}.target_path`) ? "border-danger" : ""}
                             required
                           />
                           {getError(errors, `volume_mounts.${vmIdx}.target_path`) && (
-                            <p className="text-sm text-destructive">{getError(errors, `volume_mounts.${vmIdx}.target_path`)}</p>
+                            <p className="text-sm text-danger">{getError(errors, `volume_mounts.${vmIdx}.target_path`)}</p>
                           )}
                         </div>
                         <div className="flex justify-end">
@@ -936,7 +932,7 @@ export default function StackResourceItem({
                     ))}
                     <div>
                       <Button
-                        variant="ghost"
+                        variant="addAction"
                         size="sm"
                         onClick={addVolumeMount}
                         disabled={(volumes || []).length === 0}
@@ -959,7 +955,7 @@ export default function StackResourceItem({
                         <div>
                           <div className="flex items-center gap-1 mb-2">
                             <Label htmlFor={`port-number-${index}-${pidx}`} className="text-sm font-medium">
-                            Port Number <span className="text-red-500">*</span>
+                            Port Number <span className="text-danger">*</span>
                             </Label>
                             <Tooltip delayDuration={300}>
                               <TooltipTrigger asChild>
@@ -975,11 +971,11 @@ export default function StackResourceItem({
                             max="65535"
                             value={port.number?.toString() || ""}
                             onChange={(e) => updatePort(pidx, { number: parseInt(e.target.value) || 0 })}
-                            className={getError(errors, `ports.${pidx}.number`) ? "border-destructive" : ""}
+                            className={getError(errors, `ports.${pidx}.number`) ? "border-danger" : ""}
                             required
                           />
                           {getError(errors, `ports.${pidx}.number`) && (
-                            <p className="text-sm text-destructive">{getError(errors, `ports.${pidx}.number`)}</p>
+                            <p className="text-sm text-danger">{getError(errors, `ports.${pidx}.number`)}</p>
                           )}
                         </div>
                         <div>
@@ -1043,7 +1039,7 @@ export default function StackResourceItem({
                       </div>
                     ))}
                     <div>
-                      <Button variant="ghost" size="sm" onClick={addPort}>
+                      <Button variant="addAction" size="sm" onClick={addPort}>
                         <PlusCircle className="h-4 w-4 mr-2" />Add Port
                       </Button>
                     </div>
@@ -1149,7 +1145,7 @@ export default function StackResourceItem({
                 <div className="flex items-center mb-3">
                   <h3 className="text-lg font-medium">Environment Variables</h3>
                   <div className="ml-auto flex gap-2">
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => {
+                    <Button variant="dangerAction" size="sm" onClick={() => {
                       if (resource.execution_config?.environment_variables?.length) {
                         update({
                           execution_config: {
@@ -1169,7 +1165,7 @@ export default function StackResourceItem({
                     {/* Paste Variables button */}
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="gap-2">
+                        <Button variant="utility" size="sm" className="gap-2">
                           <Copy className="h-4 w-4" />
                           <span>Paste Variables</span>
                         </Button>
@@ -1224,7 +1220,7 @@ export default function StackResourceItem({
                     {/* Import from file button */}
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="utility" size="sm">
                           <Upload className="h-4 w-4 mr-2" /> Import File
                         </Button>
                       </DialogTrigger>
@@ -1293,7 +1289,7 @@ export default function StackResourceItem({
                         if ((dirty || errPath("database")) && !r.superuser && !r.database) out.database = "Pick a database";
                         if ((dirty || errPath("credField")) && !r.credField) out.credField = "Pick a field";
                       }
-                      if ((dirty || errPath("name")) && !r.name) out.name = "Environment variable name is required";
+                      if ((dirty || errPath("name")) && !r.name) out.name = "Required";
                       return Object.keys(out).length === 0 ? undefined : out;
                     };
 
@@ -1304,23 +1300,47 @@ export default function StackResourceItem({
                         </div>
                       );
                     }
-                    const nonAddon = envVars
-                      .map((env, envIdx) => ({ env, envIdx }))
-                      .filter(({ env }) => env.from !== "addon");
-                    return nonAddon.map(({ env, envIdx }) => (
+
+                    type PlainGroup = { kind: "plain"; items: { env: FormEnvVarData; envIdx: number }[] };
+                    type AddonGroup = { kind: "addon"; addonId: string; database: string; items: { env: FormEnvVarData; envIdx: number }[] };
+                    type Group = PlainGroup | AddonGroup;
+                    const groups: Group[] = [];
+                    const addonGroupByKey = new Map<string, AddonGroup>();
+                    envVars.forEach((env, envIdx) => {
+                      if (env.from === "addon") {
+                        const aid = env.addonId || "";
+                        const db = env.database || "";
+                        const key = `${aid}|${db}`;
+                        let g = addonGroupByKey.get(key);
+                        if (!g) {
+                          g = { kind: "addon", addonId: aid, database: db, items: [] };
+                          addonGroupByKey.set(key, g);
+                          groups.push(g);
+                        }
+                        g.items.push({ env, envIdx });
+                      } else {
+                        const last = groups[groups.length - 1];
+                        if (last && last.kind === "plain") {
+                          last.items.push({ env, envIdx });
+                        } else {
+                          groups.push({ kind: "plain", items: [{ env, envIdx }] });
+                        }
+                      }
+                    });
+
+                    const renderRow = ({ env, envIdx }: { env: FormEnvVarData; envIdx: number }) => (
                       <EnvRow
                         key={envIdx}
-                        row={env as FormEnvVarData}
+                        row={env}
                         index={envIdx}
                         resourceIndex={index}
                         secrets={secrets.secrets}
                         secretsLoading={secrets.isLoading}
-                        addons={addons}
                         addonNameById={addonNameById}
                         rowErrors={rowErrorsForIndex(envIdx)}
                         onChangeAddon={(patch) => onChangeAddonForRow(envIdx, patch)}
                         onChangeName={(name) => {
-                          replaceEnvVar(envIdx, { ...(env as FormEnvVarData), name });
+                          replaceEnvVar(envIdx, { ...env, name });
                         }}
                         onChangeValue={(value) => {
                           if (env.from === "stack") {
@@ -1342,78 +1362,172 @@ export default function StackResourceItem({
                         onBlur={() => markEnvRowDirty(envIdx)}
                         onRemove={() => removeEnvVar(envIdx)}
                       />
-                    ));
+                    );
+
+                    return groups.map((g, gIdx) => {
+                      if (g.kind === "plain") {
+                        return <div key={`p-${gIdx}`}>{g.items.map(renderRow)}</div>;
+                      }
+                      const aid = g.addonId;
+                      const db = g.database;
+                      const selectedAddon = addons.find((a) => a.id === aid);
+                      const databases = ((selectedAddon?.spec as unknown as { databases?: { name?: string }[] })
+                        ?.databases ?? []) as { name?: string }[];
+                      const name = aid ? (addonNameById?.get(aid) ?? aid) : null;
+
+                      const updateAllInGroup = (patch: { addonId?: string; database?: string | undefined }) => {
+                        const current = (resource.execution_config?.environment_variables || []) as FormEnvVarData[];
+                        const next = current.map((e, i) => {
+                          if (g.items.some((it) => it.envIdx === i) && e.from === "addon") {
+                            return { ...e, ...patch };
+                          }
+                          return e;
+                        });
+                        update({
+                          execution_config: {
+                            ...resource.execution_config,
+                            environment_variables: next,
+                          },
+                        });
+                      };
+
+                      // Disallow picking an (addon, db) combo that already has its own group.
+                      const usedDbsByAddon = new Map<string, Set<string>>();
+                      const usedAddonsByDb = new Map<string, Set<string>>();
+                      for (const og of groups) {
+                        if (og.kind !== "addon" || og === g) continue;
+                        if (og.addonId) {
+                          if (!usedDbsByAddon.has(og.addonId)) usedDbsByAddon.set(og.addonId, new Set());
+                          if (og.database) usedDbsByAddon.get(og.addonId)!.add(og.database);
+                        }
+                        if (og.database) {
+                          if (!usedAddonsByDb.has(og.database)) usedAddonsByDb.set(og.database, new Set());
+                          if (og.addonId) usedAddonsByDb.get(og.database)!.add(og.addonId);
+                        }
+                      }
+                      const dbBlocked = (dbName: string) =>
+                        aid !== "" && (usedDbsByAddon.get(aid)?.has(dbName) ?? false);
+                      const addonBlocked = (addonId: string) =>
+                        db !== "" && (usedAddonsByDb.get(db)?.has(addonId) ?? false);
+
+                      const handleAddonChange = (newAid: string) => {
+                        const a = addons.find((x) => x.id === newAid);
+                        const dbs = ((a?.spec as unknown as { databases?: { name?: string }[] })?.databases ?? []) as { name?: string }[];
+                        const usedDbs = usedDbsByAddon.get(newAid) ?? new Set();
+                        const firstFreeDb = dbs.find((d) => d.name && !usedDbs.has(d.name))?.name;
+                        const newDb = dbs.length === 1 ? dbs[0].name : firstFreeDb;
+                        updateAllInGroup({ addonId: newAid, database: newDb });
+                      };
+                      const handleDbChange = (newDb: string) => {
+                        updateAllInGroup({ database: newDb });
+                      };
+                      const handleAddBinding = () => {
+                        addEnvVar({
+                          from: "addon",
+                          name: "",
+                          addonType: "postgres",
+                          addonId: aid,
+                          database: db || undefined,
+                          superuser: false,
+                          credField: undefined,
+                        });
+                      };
+
+                      return (
+                        <div
+                          key={`a-${gIdx}-${aid}-${db}`}
+                          className="rounded-md border border-dashed border-foreground/25 my-2"
+                        >
+                          <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+                            <Select value={aid || undefined} onValueChange={handleAddonChange}>
+                              <SelectTrigger className="h-7 w-[200px] text-[12.5px] font-semibold gap-2">
+                                <span className="flex items-center gap-2 min-w-0">
+                                  {aid && <AddonTypeIcon type="postgres" size={14} />}
+                                  <SelectValue placeholder="Pick addon">
+                                    {aid ? name : undefined}
+                                  </SelectValue>
+                                </span>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {addons.length === 0 ? (
+                                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                                    No addons linked. Add one from the bottom panel.
+                                  </div>
+                                ) : (
+                                  addons.map((a) => (
+                                    <SelectItem
+                                      key={a.id}
+                                      value={a.id!}
+                                      disabled={a.id !== aid && addonBlocked(a.id!)}
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        <AddonTypeIcon type="postgres" size={14} />
+                                        <span>{a.name}</span>
+                                        {a.id !== aid && addonBlocked(a.id!) && (
+                                          <span className="ml-1 text-[10px] text-muted-foreground">
+                                            in use
+                                          </span>
+                                        )}
+                                      </span>
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            {aid && (
+                              <>
+                                <span className="text-muted-foreground/60">·</span>
+                                {databases.length > 1 ? (
+                                  <Select value={db || undefined} onValueChange={handleDbChange}>
+                                    <SelectTrigger className="h-7 w-[160px] text-[12.5px]">
+                                      <SelectValue placeholder="Pick database" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {databases.map((d) =>
+                                        d.name ? (
+                                          <SelectItem
+                                            key={d.name}
+                                            value={d.name}
+                                            disabled={d.name !== db && dbBlocked(d.name)}
+                                          >
+                                            {d.name}
+                                            {d.name !== db && dbBlocked(d.name) && (
+                                              <span className="ml-2 text-[10px] text-muted-foreground">
+                                                in use
+                                              </span>
+                                            )}
+                                          </SelectItem>
+                                        ) : null,
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <span className="text-[12px] text-muted-foreground">
+                                    db: {db || databases[0]?.name || "—"}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          {g.items.map(renderRow)}
+                          <div className="px-3 py-1.5 flex justify-end">
+                            <Button
+                              variant="addAction"
+                              size="sm"
+                              onClick={handleAddBinding}
+                              className="h-7 text-[12.5px]"
+                            >
+                              <PlusCircle className="h-3 w-3 mr-1" /> Add binding
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    });
                   })()}
                 </div>
-                {/* Inline addon binding groups */}
-                {(() => {
-                  const envVars = (resource.execution_config?.environment_variables || []) as FormEnvVarData[];
-                  type GroupKey = string;
-                  const groups = new Map<GroupKey, {
-                    addonId: string;
-                    database?: string;
-                    superuser: boolean;
-                    bindings: EnvAddonBinding[];
-                    rowIndices: number[];
-                  }>();
-                  envVars.forEach((env, envIdx) => {
-                    if (env.from !== "addon" || !env.addonId) return;
-                    const key = `${env.addonId}|${env.database ?? ""}|${env.superuser ? "1" : "0"}`;
-                    if (!groups.has(key)) {
-                      groups.set(key, {
-                        addonId: env.addonId,
-                        database: env.database,
-                        superuser: !!env.superuser,
-                        bindings: [],
-                        rowIndices: [],
-                      });
-                    }
-                    const g = groups.get(key)!;
-                    g.bindings.push({ envName: env.name || "", credField: env.credField });
-                    g.rowIndices.push(envIdx);
-                  });
-                  if (groups.size === 0) return null;
-                  return (
-                    <div className="mt-3 space-y-3">
-                      {Array.from(groups.values()).map((g) => {
-                        const groupState = addonGroupState?.get(g.addonId) ?? "idle";
-                        return (
-                          <EnvAddonGroup
-                            key={`${g.addonId}-${g.database ?? ""}-${g.superuser ? "su" : ""}`}
-                            addonId={g.addonId}
-                            addonName={addonNameById?.get(g.addonId) ?? g.addonId}
-                            bindings={g.bindings}
-                            database={g.database}
-                            superuser={g.superuser}
-                            state={groupState}
-                            onEditBinding={onEditAddonBinding ? () => onEditAddonBinding(g.addonId) : undefined}
-                            onDetach={onDetachAddon ? () => onDetachAddon(g.addonId) : undefined}
-                            onCancelDetach={onCancelDetachAddon ? () => onCancelDetachAddon(g.addonId) : undefined}
-                            onChangeBinding={(oldCredField, newCredField) => {
-                              const idx = g.rowIndices.find((i) => {
-                                const v = envVars[i];
-                                return v?.from === "addon" && v.credField === oldCredField;
-                              });
-                              if (idx !== undefined) {
-                                const cur = envVars[idx];
-                                if (cur && cur.from === "addon") {
-                                  replaceEnvVar(idx, { ...cur, credField: newCredField });
-                                }
-                              }
-                            }}
-                            onRemoveBinding={(_credField, envName) => {
-                              const idx = g.rowIndices.find((i) => envVars[i]?.name === envName);
-                              if (idx !== undefined) removeEnvVar(idx);
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
                 {/* Add Variable button */}
                 <div className="flex justify-end mt-2">
-                  <Button variant="ghost" size="sm" onClick={addEnvVar}>
+                  <Button variant="addAction" size="sm" onClick={() => addEnvVar()}>
                     <PlusCircle className="h-4 w-4 mr-2" /> Add Variable
                   </Button>
                 </div>
@@ -1425,7 +1539,7 @@ export default function StackResourceItem({
                 <Button
                   type="button"
                   variant="ghost"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10"
+                  className="text-danger hover:text-danger hover:bg-danger-bg focus-visible:bg-danger-bg"
                   onClick={() => onRemove(index)}
                 >
                   <Trash2 className="h-4 w-4 mr-1" />

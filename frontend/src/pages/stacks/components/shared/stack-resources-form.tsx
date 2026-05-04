@@ -21,6 +21,7 @@ interface StackResourcesFormProps {
   onEditAddonBinding?: (addonId: string) => void;
   onDetachAddon?: (addonId: string) => void;
   onCancelDetachAddon?: (addonId: string) => void;
+  availableAddonIds?: Set<string>;
 }
 
 function getDefaultResource(): Partial<FormStackResourceData> {
@@ -48,13 +49,21 @@ export default function StackResourcesForm({
   onEditAddonBinding,
   onDetachAddon,
   onCancelDetachAddon,
+  availableAddonIds,
 }: StackResourcesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
   const secrets = useSecrets();
-  const { addons } = usePostgresAddons();
+  const { addons: allAddons } = usePostgresAddons();
+  const addons = useMemo(
+    () =>
+      availableAddonIds
+        ? allAddons.filter((a: PostgresAddon) => a.id && availableAddonIds.has(a.id))
+        : allAddons,
+    [allAddons, availableAddonIds],
+  );
   const addonNameById = useMemo(
-    () => new Map(addons.filter((a: PostgresAddon) => a.id).map((a: PostgresAddon) => [a.id!, a.name])),
-    [addons],
+    () => new Map(allAddons.filter((a: PostgresAddon) => a.id).map((a: PostgresAddon) => [a.id!, a.name])),
+    [allAddons],
   );
 
   const isResourceFilled = (res: Partial<FormStackResourceData>) => {
@@ -105,17 +114,23 @@ export default function StackResourcesForm({
         )}
         defaultAllCollapsed={!accordionDefaultOpen}
         defaultOpenIndex={defaultOpenResourceIdx}
+        emptyTitle="No resources added yet"
+        emptyDescription="Add a service to start running it. Each resource is a container or build that becomes part of this stack."
+        emptyCtaLabel="Add resource"
+        emptyOnAdd={() => onResourcesChange([...resources, getDefaultResource()])}
       />
-      <div className="flex justify-center mt-4">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => onResourcesChange([...resources, getDefaultResource()])}
-        >
-          <PlusCircle className="h-4 w-4" />
-          Add Resource
-        </Button>
-      </div>
+      {resources.length > 0 && (
+        <div className="flex justify-center mt-4">
+          <Button
+            type="button"
+            variant="addAction"
+            onClick={() => onResourcesChange([...resources, getDefaultResource()])}
+          >
+            <PlusCircle className="h-4 w-4" />
+            Add Resource
+          </Button>
+        </div>
+      )}
       <Dialog open={pendingRemoveIdx !== null} onOpenChange={open => !open && setPendingRemoveIdx(null)}>
         <DialogContent>
           <DialogHeader>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PlusCircle, Loader2, AlertCircle, Package } from "lucide-react";
+import { PlusCircle, Loader2, AlertCircle, Puzzle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageHeader, Panel, EmptyState } from "@/components/branded";
@@ -108,7 +108,7 @@ export default function AddonsPage() {
         >
           {addons.length === 0 ? (
             <EmptyState
-              icon={<Package className="h-8 w-8" />}
+              icon={<Puzzle className="h-8 w-8" />}
               title="No addons yet"
               description="Add an addon to provision a managed Postgres for your stacks."
               action={

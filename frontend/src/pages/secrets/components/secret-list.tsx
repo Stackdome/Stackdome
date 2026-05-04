@@ -105,7 +105,7 @@ export function SecretList({ secrets, onEdit, onDelete }: SecretListProps) {
                       Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
+                      className="text-danger focus:text-danger"
                       onClick={() => onDelete(secret)}
                     >
                       <Trash2 className="h-4 w-4" />

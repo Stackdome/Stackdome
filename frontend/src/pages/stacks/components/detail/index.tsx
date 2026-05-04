@@ -90,7 +90,6 @@ export default function StackDetailPage() {
     new Map(),
   );
   const [detachConfirmOpen, setDetachConfirmOpen] = useState(false);
-  const [unboundConfirmOpen, setUnboundConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{
     resources: { [index: number]: { [field: string]: string | undefined } };
     volumes: { [index: number]: { [field: string]: string | undefined } };
@@ -302,8 +301,14 @@ export default function StackDetailPage() {
     }
     const unbound = computeUnboundLinked();
     if (unbound.length > 0) {
-      setUnboundConfirmOpen(true);
-      return;
+      // Silently drop phantom links — addons that were added to the stack
+      // but never referenced in any env var. They have no API representation
+      // anyway (links are derived from env vars), so this is just cleanup.
+      session.setLinkedAddonIds((prev) => {
+        const next = new Set(prev);
+        for (const id of unbound) next.delete(id);
+        return next;
+      });
     }
     void performSave();
   };
@@ -398,12 +403,6 @@ export default function StackDetailPage() {
                 {stackToShow.status.state}
               </StatusPill>
             )}
-            {session.isActive && (
-              <span className="inline-flex items-center gap-[7px] rounded-full border px-2.5 py-1 leading-none font-mono text-[11px] font-bold uppercase tracking-[0.08em] bg-brand-bg border-brand/40 text-brand">
-                <span className="inline-block h-[7px] w-[7px] rounded-full bg-brand animate-pulse" />
-                Editing
-              </span>
-            )}
           </span>
         }
         subtitle={subtitleParts.map((p, i) => (
@@ -439,33 +438,6 @@ export default function StackDetailPage() {
 
         {/* Configuration Tab: Stack Resources and Volumes */}
         <TabsContent value="configuration" className="space-y-8">
-          {(() => {
-            const baseline = { resources: baselineResources, volumes: baselineVolumes };
-            const ensureActive = () => {
-              if (!session.isActive) session.start(baseline);
-            };
-            return (
-              <AddonsInStackPanel
-                resources={(session.isActive ? session.draft.resources : baselineResources) as Partial<FormStackResourceData>[]}
-                linkedAddonIds={session.linkedAddonIds}
-                onLinkAddon={(addonId) => {
-                  ensureActive();
-                  session.setLinkedAddonIds((prev) => {
-                    const next = new Set(prev);
-                    next.add(addonId);
-                    return next;
-                  });
-                }}
-                onRemoveLinkedAddon={(addonId) => {
-                  session.setLinkedAddonIds((prev) => {
-                    const next = new Set(prev);
-                    next.delete(addonId);
-                    return next;
-                  });
-                }}
-              />
-            );
-          })()}
           <Panel
             title="Stack Resources"
             count={baselineResources.length}
@@ -483,6 +455,16 @@ export default function StackDetailPage() {
                 onEditAddonBinding={handleEditAddonBinding}
                 onDetachAddon={handleDetachAddon}
                 onCancelDetachAddon={handleCancelDetachAddon}
+                availableAddonIds={(() => {
+                  const ids = new Set(session.linkedAddonIds);
+                  for (const r of session.draft.resources) {
+                    const envs = (r?.execution_config?.environment_variables || []) as FormEnvVarData[];
+                    for (const e of envs) {
+                      if (e.from === "addon" && e.addonId) ids.add(e.addonId);
+                    }
+                  }
+                  return ids;
+                })()}
               />
             ) : (
               <StackResourcesDetail
@@ -519,6 +501,34 @@ export default function StackDetailPage() {
               />
             )}
           </Panel>
+
+          {(() => {
+            const baseline = { resources: baselineResources, volumes: baselineVolumes };
+            const ensureActive = () => {
+              if (!session.isActive) session.start(baseline);
+            };
+            return (
+              <AddonsInStackPanel
+                resources={(session.isActive ? session.draft.resources : baselineResources) as Partial<FormStackResourceData>[]}
+                linkedAddonIds={session.linkedAddonIds}
+                onLinkAddon={(addonId) => {
+                  ensureActive();
+                  session.setLinkedAddonIds((prev) => {
+                    const next = new Set(prev);
+                    next.add(addonId);
+                    return next;
+                  });
+                }}
+                onRemoveLinkedAddon={(addonId) => {
+                  session.setLinkedAddonIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(addonId);
+                    return next;
+                  });
+                }}
+              />
+            );
+          })()}
         </TabsContent>
 
         {/* Logs Tab */}
@@ -565,38 +575,16 @@ export default function StackDetailPage() {
                 setDetachConfirmOpen(false);
                 const unbound = computeUnboundLinked();
                 if (unbound.length > 0) {
-                  setUnboundConfirmOpen(true);
-                } else {
-                  void performSave();
+                  session.setLinkedAddonIds((prev) => {
+                    const next = new Set(prev);
+                    for (const id of unbound) next.delete(id);
+                    return next;
+                  });
                 }
-              }}
-            >
-              Confirm and detach
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={unboundConfirmOpen} onOpenChange={setUnboundConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Some addons aren't linked to any stack resource.</AlertDialogTitle>
-            <AlertDialogDescription>
-              {computeUnboundLinked()
-                .map((aid) => addonNameById.get(aid) ?? aid)
-                .join(", ")}{" "}
-              will be removed on save.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setUnboundConfirmOpen(false);
                 void performSave();
               }}
             >
-              Confirm and deploy
+              Confirm and detach
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

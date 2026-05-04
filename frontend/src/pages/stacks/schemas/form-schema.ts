@@ -21,18 +21,18 @@ const FormGitRevisionTypeSchema = z.enum(["commit", "branch", "tag"]);
 const FormEnvVarSchema = z.union([
   z.object({
     from: z.literal("stack"),
-    name: z.string().min(1, "Environment variable name is required"),
+    name: z.string().min(1, "Required"),
     value: z.string(),
   }),
   z.object({
     from: z.literal("secret"),
-    name: z.string().min(1, "Environment variable name is required"),
+    name: z.string().min(1, "Required"),
     secretId: z.string().min(1),
     secretKey: z.string().min(1),
   }),
   z.object({
     from: z.literal("addon"),
-    name: z.string().min(1, "Environment variable name is required"),
+    name: z.string().min(1, "Required"),
     addonType: z.literal("postgres"),
     addonId: z.string().min(1, "Pick an addon"),
     database: z.string().optional(),
@@ -77,7 +77,7 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
     if (!data.gitRevisionType) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Git revision type is required when using a Git repository",
+        message: "Required when source is Git",
         path: ["gitRevisionType"],
       });
     }
@@ -85,7 +85,7 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
     if (!data.gitRevisionValue) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Git revision value is required when using a Git repository",
+        message: "Required when source is Git",
         path: ["gitRevisionValue"],
       });
     }
@@ -94,7 +94,7 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
     if (!data.build_spec?.source_context?.git_repo?.repo_url) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Git repository URL is required when using a Git repository",
+        message: "Required when source is Git",
         path: ["build_spec", "source_context", "git_repo", "repo_url"],
       });
     }
@@ -105,7 +105,7 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
     if (!data.image_spec?.image) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Container image URL is required",
+        message: "Required",
         path: ["image_spec", "image"],
       });
     }
@@ -118,8 +118,7 @@ const FormVolumeSourceSchema = ApiVolumeSourceSchema.superRefine(
     if (data.source_type === "GitRepo" && !data.git_repo_source) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message:
-          "Git repository source is required when source type is GitRepo",
+        message: "Required for GitRepo source",
         path: ["git_repo_source"],
       });
     }
@@ -127,7 +126,7 @@ const FormVolumeSourceSchema = ApiVolumeSourceSchema.superRefine(
     if (data.source_type === "RemoteDir" && !data.remote_source) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Remote source is required when source type is RemoteDir",
+        message: "Required for RemoteDir source",
         path: ["remote_source"],
       });
     }
@@ -138,8 +137,7 @@ const FormVolumeSourceSchema = ApiVolumeSourceSchema.superRefine(
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message:
-          "Build artifacts are required when source type is BuildArtifact",
+        message: "Required for BuildArtifact source",
         path: ["build_source"],
       });
     }
@@ -166,7 +164,7 @@ const FormStackSchema = ApiStackSchema.extend({
   spec: ApiStackSchema.shape.spec.extend({
     stack_resources: z
       .array(FormStackResourceSchema)
-      .min(1, "At least one stack resource is required"),
+      .min(1, "Add at least one resource"),
     volumes: z.array(FormVolumeSchema).optional(),
   }),
 });

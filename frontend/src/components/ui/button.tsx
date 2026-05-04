@@ -26,6 +26,15 @@ const buttonVariants = cva(
         // Mono terminal-style CTA per design system.
         mono:
           "bg-popover text-foreground border border-border font-mono uppercase tracking-[1.5px] hover:border-brand hover:text-brand",
+        // Brand-tinted ghost for additive inline actions (Add Variable, Link addon, Add binding, etc.)
+        addAction:
+          "text-brand hover:bg-brand-bg hover:text-brand-press",
+        // Subtle ghost for utility actions (Paste, Import) — neutral muted.
+        utility:
+          "text-muted-foreground hover:bg-accent hover:text-foreground",
+        // Danger-tinted ghost for destructive inline actions (Clear All).
+        dangerAction:
+          "text-danger hover:bg-danger-bg hover:text-danger",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

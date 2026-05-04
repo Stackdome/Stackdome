@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/select";
 import type { FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { Secret } from "@/api/secrets";
-import type { PostgresAddon } from "@/api/addons";
 import {
   CRED_FIELDS,
   CLUSTER_WIDE_FIELDS,
@@ -40,7 +39,6 @@ interface EnvRowProps {
   resourceIndex: number;
   secrets: Secret[];
   secretsLoading: boolean;
-  addons: PostgresAddon[];
   addonNameById?: Map<string, string>;
   rowErrors?: EnvRowErrors;
   onChangeName: (name: string) => void;
@@ -58,7 +56,6 @@ export function EnvRow({
   resourceIndex,
   secrets,
   secretsLoading,
-  addons,
   addonNameById,
   rowErrors,
   onChangeName,
@@ -91,7 +88,7 @@ export function EnvRow({
             value={row.name || ""}
             onChange={(e) => onChangeName(e.target.value)}
             className={`w-full text-sm font-mono ${isOrphanAddon ? "opacity-60" : ""} ${
-              rowErrors?.duplicate || rowErrors?.name ? "border-destructive" : ""
+              rowErrors?.duplicate || rowErrors?.name ? "border-danger" : ""
             }`}
             placeholder="KEY"
             readOnly={isOrphanAddon}
@@ -125,11 +122,11 @@ export function EnvRow({
               superuser={row.superuser}
             />
           ) : (
-            <AddonInlinePickers
-              row={row}
-              addons={addons}
-              onChangeAddon={onChangeAddon}
-              rowErrors={rowErrors}
+            <AddonCredFieldPicker
+              credField={row.credField}
+              onChange={(v) => onChangeAddon({ credField: v })}
+              error={rowErrors?.credField}
+              disabled={!row.addonId}
             />
           ))}
         </div>
@@ -146,6 +143,7 @@ export function EnvRow({
             <SelectContent>
               <SelectItem value="stack">Stack</SelectItem>
               <SelectItem value="secret">Secret</SelectItem>
+              <SelectItem value="addon">Addon</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -155,7 +153,7 @@ export function EnvRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
+            className="h-6 w-6 hover:bg-danger-bg hover:text-danger"
             onClick={onRemove}
             aria-label="Remove env var"
           >
@@ -164,12 +162,12 @@ export function EnvRow({
         </div>
       </div>
       {rowErrors?.duplicate && (
-        <p className="col-span-full text-xs text-destructive mt-0.5 mb-1 px-3">
+        <p className="col-span-full text-xs text-danger mt-0.5 mb-1 px-3">
           {rowErrors.duplicate}
         </p>
       )}
       {rowErrors?.name && (
-        <p className="col-span-full text-xs text-destructive mt-0.5 mb-1 px-3">
+        <p className="col-span-full text-xs text-danger mt-0.5 mb-1 px-3">
           {rowErrors.name}
         </p>
       )}
@@ -256,8 +254,6 @@ function SecretValueCell({
   );
 }
 
-const ALL_DATABASES_VALUE = "__ALL_DATABASES__";
-
 function AddonOrphanReadOnly({
   database,
   credField,
@@ -275,142 +271,47 @@ function AddonOrphanReadOnly({
   );
 }
 
-function AddonInlinePickers({
-  row,
-  addons,
-  onChangeAddon,
-  rowErrors,
+function AddonCredFieldPicker({
+  credField,
+  onChange,
+  error,
+  disabled,
 }: {
-  row: Extract<FormEnvVarData, { from: "addon" }>;
-  addons: PostgresAddon[];
-  onChangeAddon: (patch: AddonBindingPatch) => void;
-  rowErrors?: EnvRowErrors;
+  credField?: CredField;
+  onChange: (v: CredField) => void;
+  error?: string;
+  disabled?: boolean;
 }) {
-  const selectedAddon = addons.find((a) => a.id === row.addonId);
-  const databases = ((selectedAddon?.spec as unknown as { databases?: { name?: string }[] })
-    ?.databases ?? []) as { name?: string }[];
-  const supportsSuperuser =
-    (selectedAddon?.spec as unknown as {
-      configuration?: { enable_superuser_access?: boolean };
-    })?.configuration?.enable_superuser_access === true;
-
-  const handleAddonChange = (addonId: string) => {
-    const a = addons.find((x) => x.id === addonId);
-    const dbs = ((a?.spec as unknown as { databases?: { name?: string }[] })?.databases ?? []) as {
-      name?: string;
-    }[];
-    const aSupportsSU =
-      (a?.spec as unknown as {
-        configuration?: { enable_superuser_access?: boolean };
-      })?.configuration?.enable_superuser_access === true;
-    if (dbs.length === 1 && !aSupportsSU && dbs[0]?.name) {
-      onChangeAddon({ addonId, database: dbs[0].name, superuser: false });
-    } else {
-      onChangeAddon({ addonId, database: null, superuser: false });
-    }
-  };
-
-  const handleDatabaseChange = (value: string) => {
-    if (value === ALL_DATABASES_VALUE) {
-      onChangeAddon({ database: null, superuser: true });
-    } else {
-      onChangeAddon({ database: value, superuser: false });
-    }
-  };
-
   return (
     <div>
-      <div className="flex gap-2">
-        <Select
-          value={row.addonId || undefined}
-          onValueChange={handleAddonChange}
+      <Select
+        value={credField || undefined}
+        onValueChange={(v) => onChange(v as CredField)}
+        disabled={disabled}
+      >
+        <SelectTrigger
+          className={`w-full ${error ? "border-danger" : ""}`}
+          data-testid="field-picker-trigger"
         >
-          <SelectTrigger
-            className={`w-[160px] ${rowErrors?.addonId ? "border-destructive" : ""}`}
-            data-testid="addon-picker-trigger"
-          >
-            <SelectValue placeholder="Addon" />
-          </SelectTrigger>
-          <SelectContent>
-            {addons.length === 0 ? (
-              <div className="px-3 py-3 text-sm">
-                <p className="text-muted-foreground mb-2">No Postgres addons yet.</p>
-                <a
-                  href="/addons/create/postgres"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary underline"
-                >
-                + Create Postgres addon
-                </a>
-              </div>
-            ) : (
-              addons.map((a) => (
-                <SelectItem key={a.id} value={a.id!}>
-                  {a.name} (Postgres · {a.status?.state ?? "Unknown"})
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-        <Select
-          value={row.superuser ? ALL_DATABASES_VALUE : row.database || undefined}
-          onValueChange={handleDatabaseChange}
-          disabled={!row.addonId}
-        >
-          <SelectTrigger
-            className={`w-[140px] ${rowErrors?.database ? "border-destructive" : ""}`}
-            data-testid="database-picker-trigger"
-          >
-            <SelectValue placeholder={row.addonId ? "Database" : "Pick an addon first"} />
-          </SelectTrigger>
-          <SelectContent>
-            {supportsSuperuser && (
-              <SelectItem value={ALL_DATABASES_VALUE}>─ All databases ─</SelectItem>
-            )}
-            {databases.map((d) =>
-              d.name ? (
-                <SelectItem key={d.name} value={d.name}>
-                  {d.name}
-                </SelectItem>
-              ) : null,
-            )}
-          </SelectContent>
-        </Select>
-        <Select
-          value={row.credField || undefined}
-          onValueChange={(v) => onChangeAddon({ credField: v as CredField })}
-          disabled={!row.addonId}
-        >
-          <SelectTrigger
-            className={`w-[140px] ${rowErrors?.credField ? "border-destructive" : ""}`}
-            data-testid="field-picker-trigger"
-          >
-            <SelectValue placeholder={row.addonId ? "Field" : "Pick an addon first"} />
-          </SelectTrigger>
-          <SelectContent>
-            {CRED_FIELDS.map((f) => (
-              <SelectItem key={f} value={f}>
-                <span className="flex items-center gap-2">
-                  <span>{f}</span>
-                  {CLUSTER_WIDE_FIELDS.has(f) && (
-                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <SelectValue placeholder={disabled ? "Pick an addon first" : "Select field"} />
+        </SelectTrigger>
+        <SelectContent>
+          {CRED_FIELDS.map((f) => (
+            <SelectItem key={f} value={f}>
+              <span className="flex items-center gap-2">
+                <span>{f}</span>
+                {CLUSTER_WIDE_FIELDS.has(f) && (
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                     cluster
-                    </span>
-                  )}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      {(rowErrors?.addonId || rowErrors?.database || rowErrors?.credField) && (
-        <div className="mt-1 space-y-0.5">
-          {rowErrors?.addonId && <p className="text-xs text-destructive">{rowErrors.addonId}</p>}
-          {rowErrors?.database && <p className="text-xs text-destructive">{rowErrors.database}</p>}
-          {rowErrors?.credField && <p className="text-xs text-destructive">{rowErrors.credField}</p>}
-        </div>
-      )}
+                  </span>
+                )}
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {error && <p className="text-xs text-danger mt-1">{error}</p>}
     </div>
   );
 }
+

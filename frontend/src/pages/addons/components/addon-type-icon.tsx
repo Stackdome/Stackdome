@@ -1,4 +1,4 @@
-import { Database } from "lucide-react";
+import { Puzzle } from "lucide-react";
 import postgresqlIconUrl from "@/assets/addons/postgresql.svg";
 
 // Add new addon types here as they ship. Keys mirror the API's addon-type
@@ -16,8 +16,8 @@ interface AddonTypeIconProps {
 }
 
 /**
- * Brand icon for an addon type. Falls back to a generic Database glyph for
- * types we don't have a brand SVG for yet.
+ * Brand icon for an addon type. Falls back to the generic addon Puzzle glyph
+ * for types we don't have a brand SVG for yet.
  */
 export function AddonTypeIcon({ type, className, size = 16 }: AddonTypeIconProps) {
   const url = BRAND_ICONS[type];
@@ -33,5 +33,5 @@ export function AddonTypeIcon({ type, className, size = 16 }: AddonTypeIconProps
       />
     );
   }
-  return <Database className={className} style={{ width: size, height: size }} />;
+  return <Puzzle className={className} style={{ width: size, height: size }} />;
 }

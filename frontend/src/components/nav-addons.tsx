@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, useLocation } from "react-router-dom"
-import { Package } from "lucide-react"
+import { Puzzle } from "lucide-react"
 
 import {
   SidebarMenu,
@@ -22,7 +22,7 @@ export function NavAddons() {
           isActive={isAddonsActive}
         >
           <Link to="/addons">
-            <Package />
+            <Puzzle />
             <span>Addons</span>
           </Link>
         </SidebarMenuButton>

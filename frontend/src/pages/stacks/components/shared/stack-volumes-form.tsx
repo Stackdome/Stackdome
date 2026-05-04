@@ -81,21 +81,27 @@ export default function StackVolumesForm({
         onItemsChange={onVolumesChange}
         createDefaultItem={getDefaultVolume}
         errors={errors}
-        emptyText="No volumes added."
-        emptyIcon={<Database className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />}
+        emptyTitle="No volumes added"
+        emptyOptional
+        emptyDescription="Add a persistent volume if your services need to keep data across restarts. Otherwise, you can skip this."
+        emptyCtaLabel="Add volume"
+        emptyOnAdd={() => onVolumesChange([...volumes, getDefaultVolume()])}
+        emptyIcon={<Database className="h-6 w-6" />}
         defaultAllCollapsed={!accordionDefaultOpen}
         defaultOpenIndex={defaultOpenVolumeIdx}
       />
-      <div className="flex justify-center mt-4">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => onVolumesChange([...volumes, getDefaultVolume()])}
-        >
-          <PlusCircle className="h-4 w-4" />
-          Add Volume
-        </Button>
-      </div>
+      {volumes.length > 0 && (
+        <div className="flex justify-center mt-4">
+          <Button
+            type="button"
+            variant="addAction"
+            onClick={() => onVolumesChange([...volumes, getDefaultVolume()])}
+          >
+            <PlusCircle className="h-4 w-4" />
+            Add Volume
+          </Button>
+        </div>
+      )}
       <Dialog open={pendingRemoveIdx !== null} onOpenChange={open => !open && setPendingRemoveIdx(null)}>
         <DialogContent>
           <DialogHeader>

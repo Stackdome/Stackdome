@@ -45,8 +45,10 @@ export default function StackVolumesDetail({
             />
           );
         }}
-        emptyText="No volumes added."
-        emptyIcon={<Database className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />}
+        emptyTitle="No volumes added"
+        emptyOptional
+        emptyDescription="No persistent volumes are configured for this stack."
+        emptyIcon={<Database className="h-6 w-6" />}
         defaultAllCollapsed={!accordionDefaultOpen}
       />
     </div>

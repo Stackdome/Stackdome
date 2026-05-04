@@ -9,11 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { Box, GitBranch, ExternalLink, Copy, Pencil } from "lucide-react";
-import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
+import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 import type { z } from "zod";
 import type { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
 import { variantFromState } from "@/components/branded";
-import { SoftLabel } from "@/pages/stacks/components/shared/section-label";
 
 interface StackResourceDetailProps {
   resource: Partial<FormStackResourceData>;
@@ -38,6 +39,8 @@ export default function StackResourceDetail({
   detachedProvenance,
 }: StackResourceDetailProps) {
   const { toast } = useToast();
+  const { addons: allAddons } = usePostgresAddons();
+  const addonNameById = new Map(allAddons.filter((a) => a.id).map((a) => [a.id!, a.name]));
   const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
   const status = statusObj.state?.toLowerCase() || 'pending';
   const statusVariant = variantFromState(statusObj.state);
@@ -436,42 +439,81 @@ export default function StackResourceDetail({
             <TabsContent value="environment" className="pt-4 space-y-6">
               <div>
                 <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Environment variables</h3>
-                {resource.execution_config?.environment_variables &&
-                resource.execution_config.environment_variables.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full border border-muted rounded-md">
-                        <thead className="bg-muted/30">
-                          <tr>
-                            <th className="text-left px-6 py-3"><SoftLabel>Name</SoftLabel></th>
-                            <th className="text-left px-6 py-3"><SoftLabel>Value</SoftLabel></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {resource.execution_config.environment_variables.map((env, idx) => {
-                            const prov = env.name
-                              ? detachedProvenance?.get(`${index}::${env.name}`)
-                              : undefined;
-                            return (
-                              <tr key={idx} className="border-t border-muted">
-                                <td className="px-6 py-2 text-sm align-top">{env.name}</td>
-                                <td className="px-6 py-2 text-sm font-mono align-top">
-                                  {(env as { value?: string }).value}
-                                  {prov && (
-                                    <div className="mt-1 text-[11px] font-sans text-muted-foreground not-italic">
-                                      ↶ was bound to {prov.addonName}
-                                      {prov.credField ? `.${prov.credField}` : ""}
-                                    </div>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                {(() => {
+                  const envs = (resource.execution_config?.environment_variables || []) as FormEnvVarData[];
+                  if (envs.length === 0) {
+                    return (
+                      <div className="text-sm text-muted-foreground">No environment variables configured</div>
+                    );
+                  }
+                  // Group: non-addon rows in original order first, then one
+                  // group per addonId in first-seen order.
+                  const general: { env: FormEnvVarData; idx: number }[] = [];
+                  const groupOrder: string[] = [];
+                  const groups = new Map<string, { env: FormEnvVarData; idx: number }[]>();
+                  envs.forEach((env, idx) => {
+                    if (env.from === "addon" && env.addonId) {
+                      if (!groups.has(env.addonId)) {
+                        groups.set(env.addonId, []);
+                        groupOrder.push(env.addonId);
+                      }
+                      groups.get(env.addonId)!.push({ env, idx });
+                    } else {
+                      general.push({ env, idx });
+                    }
+                  });
+                  const renderRow = ({ env, idx }: { env: FormEnvVarData; idx: number }) => {
+                    const prov = env.name
+                      ? detachedProvenance?.get(`${index}::${env.name}`)
+                      : undefined;
+                    return (
+                      <div
+                        key={idx}
+                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 px-3 py-2 border-t border-border first:border-t-0"
+                      >
+                        <div className="text-sm font-mono truncate">{env.name}</div>
+                        <div className="text-sm font-mono truncate">
+                          {(env as { value?: string }).value}
+                          {prov && (
+                            <div className="mt-1 text-[11px] font-sans text-muted-foreground not-italic">
+                              ↶ was bound to {prov.addonName}
+                              {prov.credField ? `.${prov.credField}` : ""}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  };
+                  return (
+                    <div className="space-y-4">
+                      {general.length > 0 && (
+                        <div className="rounded-md border border-border bg-background">
+                          {general.map(renderRow)}
+                        </div>
+                      )}
+                      {groupOrder.map((addonId) => {
+                        const rows = groups.get(addonId)!;
+                        const name = addonNameById.get(addonId) ?? addonId;
+                        return (
+                          <div
+                            key={addonId}
+                            className="rounded-md border border-dashed border-border bg-background"
+                          >
+                            <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
+                              <AddonTypeIcon type="postgres" size={14} />
+                              <span className="text-sm font-medium text-foreground">{name}</span>
+                              <span className="text-muted-foreground">·</span>
+                              <span className="text-[11.5px] uppercase tracking-wider text-muted-foreground">
+                                Postgres
+                              </span>
+                            </div>
+                            {rows.map(renderRow)}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">No environment variables configured</div>
-                  )}
+                  );
+                })()}
               </div>
             </TabsContent>
           </Tabs>

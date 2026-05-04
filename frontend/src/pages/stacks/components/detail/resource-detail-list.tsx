@@ -7,7 +7,9 @@ import { Container } from "lucide-react";
 interface ResourceDetailListProps<T> {
   items: T[];
   renderItem: (props: { item: T; index: number }) => ReactNode;
-  emptyText?: string;
+  emptyTitle?: string;
+  emptyOptional?: boolean;
+  emptyDescription?: string;
   emptyIcon?: ReactNode;
   defaultAllCollapsed?: boolean;
 }
@@ -15,7 +17,9 @@ interface ResourceDetailListProps<T> {
 export default function ResourceDetailList<T>({
   items,
   renderItem,
-  emptyText = "No Resources found.",
+  emptyTitle = "Nothing added yet",
+  emptyOptional = false,
+  emptyDescription,
   emptyIcon,
   defaultAllCollapsed = false,
 }: ResourceDetailListProps<T>) {
@@ -37,13 +41,23 @@ export default function ResourceDetailList<T>({
   // If no items, show empty state
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 bg-muted/20 rounded-md">
+      <div className="flex flex-col items-center justify-center text-center py-14 px-6">
         {emptyIcon ? (
-          <>{emptyIcon}</>
+          <div className="mb-4 text-muted-foreground/70">{emptyIcon}</div>
         ) : (
-          <Container className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />
+          <Container className="h-6 w-6 mb-4 text-muted-foreground/70" />
         )}
-        <div className="text-lg text-muted-foreground font-medium mb-1">{emptyText}</div>
+        <h3 className="text-sm font-semibold text-foreground">
+          {emptyTitle}
+          {emptyOptional && (
+            <span className="ml-1.5 font-normal text-muted-foreground">(optional)</span>
+          )}
+        </h3>
+        {emptyDescription && (
+          <p className="text-[12.5px] text-muted-foreground mt-2 max-w-sm leading-relaxed">
+            {emptyDescription}
+          </p>
+        )}
       </div>
     );
   }

@@ -90,7 +90,7 @@ export default function StackVolumeItem({
               </span>
             </span>
             {errors._form && (
-              <span className="text-xs text-destructive mt-0.5 pl-6">{errors._form}</span>
+              <span className="text-xs text-danger mt-0.5 pl-6">{errors._form}</span>
             )}
           </div>
         </div>
@@ -101,18 +101,18 @@ export default function StackVolumeItem({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor={`volume-name-${index}`}>
-                Name <span className="text-destructive">*</span>
+                Name <span className="text-danger">*</span>
               </Label>
               <Input
                 id={`volume-name-${index}`}
                 placeholder="Volume name"
                 value={volume.name || ""}
                 onChange={(e) => update({ name: e.target.value })}
-                className={errors.name || isDuplicate ? "border-destructive" : ""}
+                className={errors.name || isDuplicate ? "border-danger" : ""}
                 aria-invalid={!!errors.name || isDuplicate}
               />
               {(errors.name || isDuplicate) && (
-                <p className="text-sm text-destructive">
+                <p className="text-sm text-danger">
                   {errors.name || (isDuplicate ? "Volume name must be unique" : "")}
                 </p>
               )}
@@ -120,7 +120,7 @@ export default function StackVolumeItem({
 
             <div className="space-y-2">
               <Label htmlFor={`volume-size-${index}`}>
-                Size <span className="text-destructive">*</span>
+                Size <span className="text-danger">*</span>
               </Label>
               <Input
                 id={`volume-size-${index}`}
@@ -134,10 +134,10 @@ export default function StackVolumeItem({
                     access_mode: volume.spec?.access_mode ?? "ReadWriteOnce",
                   }
                 })}
-                className={errors["spec.size"] ? "border-destructive" : ""}
+                className={errors["spec.size"] ? "border-danger" : ""}
                 aria-invalid={!!errors["spec.size"]}
               />
-              {errors["spec.size"] && <p className="text-sm text-destructive">{errors["spec.size"]}</p>}
+              {errors["spec.size"] && <p className="text-sm text-danger">{errors["spec.size"]}</p>}
               <p className="text-xs text-muted-foreground">Volume size (e.g., 1Gi, 500Mi)</p>
             </div>
           </div>
@@ -169,7 +169,7 @@ export default function StackVolumeItem({
               <Button
                 type="button"
                 variant="ghost"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:bg-destructive/10"
+                className="text-danger hover:text-danger hover:bg-danger-bg focus-visible:bg-danger-bg"
                 onClick={() => onRemove(index)}
                 title="Remove volume"
               >

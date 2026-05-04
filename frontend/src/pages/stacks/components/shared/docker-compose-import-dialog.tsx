@@ -110,7 +110,7 @@ services:
             disabled={isLoading}
           />
           {error && (
-            <div className="text-red-500 text-xs mt-1 px-1 w-full text-left">{error}</div>
+            <div className="text-danger text-xs mt-1 px-1 w-full text-left">{error}</div>
           )}
         </div>
         <DialogFooter className="px-6 pb-6 pt-2 flex-row gap-2">

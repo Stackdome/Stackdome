@@ -299,10 +299,10 @@ export function SecretFormDialog({
                   }
                 }}
                 placeholder="e.g., docker.io, gcr.io, your-registry.com"
-                className={formErrors.registry ? "border-destructive" : ""}
+                className={formErrors.registry ? "border-danger" : ""}
               />
               {formErrors.registry && (
-                <p className="text-sm text-destructive">{formErrors.registry}</p>
+                <p className="text-sm text-danger">{formErrors.registry}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -317,10 +317,10 @@ export function SecretFormDialog({
                   }
                 }}
                 placeholder="Enter username"
-                className={formErrors.username ? "border-destructive" : ""}
+                className={formErrors.username ? "border-danger" : ""}
               />
               {formErrors.username && (
-                <p className="text-sm text-destructive">{formErrors.username}</p>
+                <p className="text-sm text-danger">{formErrors.username}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -337,7 +337,7 @@ export function SecretFormDialog({
                     }
                   }}
                   placeholder="Enter password"
-                  className={formErrors.password ? "border-destructive pr-10" : "pr-10"}
+                  className={formErrors.password ? "border-danger pr-10" : "pr-10"}
                 />
                 <Button
                   type="button"
@@ -350,7 +350,7 @@ export function SecretFormDialog({
                 </Button>
               </div>
               {formErrors.password && (
-                <p className="text-sm text-destructive">{formErrors.password}</p>
+                <p className="text-sm text-danger">{formErrors.password}</p>
               )}
             </div>
           </div>
@@ -360,7 +360,7 @@ export function SecretFormDialog({
         return (
           <div className="space-y-4">
             {formErrors.credentials && (
-              <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+              <div className="text-sm text-danger bg-danger-bg p-3 rounded-md">
                 {formErrors.credentials}
               </div>
             )}
@@ -455,10 +455,10 @@ export function SecretFormDialog({
                   }
                 }}
                 placeholder="Enter username"
-                className={formErrors.username ? "border-destructive" : ""}
+                className={formErrors.username ? "border-danger" : ""}
               />
               {formErrors.username && (
-                <p className="text-sm text-destructive">{formErrors.username}</p>
+                <p className="text-sm text-danger">{formErrors.username}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -475,7 +475,7 @@ export function SecretFormDialog({
                     }
                   }}
                   placeholder="Enter password"
-                  className={formErrors.password ? "border-destructive pr-10" : "pr-10"}
+                  className={formErrors.password ? "border-danger pr-10" : "pr-10"}
                 />
                 <Button
                   type="button"
@@ -488,7 +488,7 @@ export function SecretFormDialog({
                 </Button>
               </div>
               {formErrors.password && (
-                <p className="text-sm text-destructive">{formErrors.password}</p>
+                <p className="text-sm text-danger">{formErrors.password}</p>
               )}
             </div>
           </div>
@@ -510,7 +510,7 @@ export function SecretFormDialog({
                   }
                 }}
                 placeholder="Enter token (min 8 characters)"
-                className={formErrors.token ? "border-destructive pr-10" : "pr-10"}
+                className={formErrors.token ? "border-danger pr-10" : "pr-10"}
               />
               <Button
                 type="button"
@@ -523,7 +523,7 @@ export function SecretFormDialog({
               </Button>
             </div>
             {formErrors.token && (
-              <p className="text-sm text-destructive">{formErrors.token}</p>
+              <p className="text-sm text-danger">{formErrors.token}</p>
             )}
           </div>
         );
@@ -542,11 +542,11 @@ export function SecretFormDialog({
                 }
               }}
               placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----"
-              className={formErrors.sshPrivateKey ? "border-destructive [field-sizing:fixed]" : "[field-sizing:fixed]"}
+              className={formErrors.sshPrivateKey ? "border-danger [field-sizing:fixed]" : "[field-sizing:fixed]"}
               rows={6}
             />
             {formErrors.sshPrivateKey && (
-              <p className="text-sm text-destructive">{formErrors.sshPrivateKey}</p>
+              <p className="text-sm text-danger">{formErrors.sshPrivateKey}</p>
             )}
           </div>
         );
@@ -576,10 +576,10 @@ export function SecretFormDialog({
                       value={item.key}
                       onChange={(e) => updateGenericDataPair(index, "key", e.target.value)}
                       placeholder="Key"
-                      className={formErrors[`key-${index}`] ? "border-destructive" : ""}
+                      className={formErrors[`key-${index}`] ? "border-danger" : ""}
                     />
                     {formErrors[`key-${index}`] && (
-                      <p className="text-xs text-destructive">{formErrors[`key-${index}`]}</p>
+                      <p className="text-xs text-danger">{formErrors[`key-${index}`]}</p>
                     )}
                   </div>
                   <div className="flex-1 space-y-1">
@@ -589,7 +589,7 @@ export function SecretFormDialog({
                         onChange={(e) => updateGenericDataPair(index, "value", e.target.value)}
                         placeholder="Value"
                         type={showPassword[`value-${index}`] ? "text" : "password"}
-                        className={formErrors[`value-${index}`] ? "border-destructive pr-10" : "pr-10"}
+                        className={formErrors[`value-${index}`] ? "border-danger pr-10" : "pr-10"}
                       />
                       <Button
                         type="button"
@@ -602,7 +602,7 @@ export function SecretFormDialog({
                       </Button>
                     </div>
                     {formErrors[`value-${index}`] && (
-                      <p className="text-xs text-destructive">{formErrors[`value-${index}`]}</p>
+                      <p className="text-xs text-danger">{formErrors[`value-${index}`]}</p>
                     )}
                   </div>
                   <Button
@@ -618,7 +618,7 @@ export function SecretFormDialog({
               ))}
             </div>
             {formErrors.data && (
-              <p className="text-sm text-destructive">{formErrors.data}</p>
+              <p className="text-sm text-danger">{formErrors.data}</p>
             )}
           </div>
         );
@@ -637,7 +637,7 @@ export function SecretFormDialog({
         <div className="flex-1 overflow-y-auto px-1">
           <div className="space-y-4 py-4 max-w-full overflow-hidden">
             {error && (
-              <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+              <div className="text-sm text-danger bg-danger-bg p-3 rounded-md">
                 {error}
               </div>
             )}
@@ -654,10 +654,10 @@ export function SecretFormDialog({
                   }
                 }}
                 placeholder="Enter secret name"
-                className={formErrors.name ? "border-destructive" : ""}
+                className={formErrors.name ? "border-danger" : ""}
               />
               {formErrors.name && (
-                <p className="text-sm text-destructive">{formErrors.name}</p>
+                <p className="text-sm text-danger">{formErrors.name}</p>
               )}
             </div>
 

@@ -46,8 +46,9 @@ export default function StackResourcesDetail({
             />
           );
         }}
-        emptyText="No Resources added."
-        emptyIcon={<Container className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />}
+        emptyTitle="No resources added yet"
+        emptyDescription="This stack has no resources. Edit the stack to add a service."
+        emptyIcon={<Container className="h-6 w-6" />}
         defaultAllCollapsed={!accordionDefaultOpen}
       />
     </div>
