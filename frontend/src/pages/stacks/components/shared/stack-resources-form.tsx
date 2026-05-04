@@ -3,7 +3,7 @@ import ResourceFormList from "@/pages/stacks/components/shared/resource-form-lis
 import StackResourceItem from "@/pages/stacks/components/shared/stack-resource-item";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { PlusCircle } from "lucide-react";
 import { useSecrets } from "../../hooks/use-secrets";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
@@ -82,13 +82,21 @@ export default function StackResourcesForm({
     return !!(res.name || res.ports?.length || res.volume_mounts?.length || res.labels?.length || res.depends_on?.length || res.execution_config?.environment_variables?.length || res.build_spec || (res.image_spec && res.image_spec.image));
   };
 
-  const handleRemove = (idx: number) => {
-    if (isResourceFilled(resources[idx])) {
+  // Use refs so handleRemove identity stays stable across keystrokes —
+  // otherwise it'd be a fresh closure every render and break React.memo
+  // on every StackResourceItem child.
+  const resourcesRef = useRef(resources);
+  resourcesRef.current = resources;
+  const onResourcesChangeRef = useRef(onResourcesChange);
+  onResourcesChangeRef.current = onResourcesChange;
+  const handleRemove = useCallback((idx: number) => {
+    const cur = resourcesRef.current;
+    if (isResourceFilled(cur[idx])) {
       setPendingRemoveIdx(idx);
     } else {
-      onResourcesChange(resources.filter((_, i) => i !== idx));
+      onResourcesChangeRef.current(cur.filter((_, i) => i !== idx));
     }
-  };
+  }, []);
 
   const confirmRemove = () => {
     if (pendingRemoveIdx !== null) {

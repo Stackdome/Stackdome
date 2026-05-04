@@ -122,6 +122,70 @@ function uniqueAddonIds(resources: ResourceArr): Set<string> {
   return ids;
 }
 
+/**
+ * Per-resource and per-volume diff caches, keyed by draft ref. Most
+ * resources are reference-stable across keystrokes (only the resource
+ * being edited gets a fresh ref), so we can reuse the prior diff result
+ * for the others and skip O(R) deepEqual walks per render. The cache is
+ * a WeakMap so stale entries are GC'd with the resource clone.
+ *
+ * Each entry stores both the dirty flag and the per-X stats; on a cache
+ * hit we return both without walking.
+ */
+type ResourceDiffEntry = { dirty: false } | { dirty: true; stats: PerResourceDirty };
+type VolumeDiffEntry = { dirty: false } | { dirty: true; stats: PerVolumeDirty };
+const resourceDiffCache = new WeakMap<object, ResourceDiffEntry>();
+const volumeDiffCache = new WeakMap<object, VolumeDiffEntry>();
+
+function diffOneResource(
+  d: Partial<FormStackResourceData> | undefined,
+  b: Partial<FormStackResourceData> | undefined,
+): ResourceDiffEntry {
+  if (d && typeof d === "object") {
+    const cached = resourceDiffCache.get(d);
+    if (cached !== undefined) return cached;
+  }
+  const dirty = isResourceDirty(d, b);
+  const entry: ResourceDiffEntry = dirty
+    ? {
+        dirty: true,
+        stats: {
+          rowsChanged: countEnvRowsChanged(d, b),
+          fieldsChanged: countChangedFields(
+            d as Record<string, unknown> | undefined,
+            b as Record<string, unknown> | undefined,
+          ),
+        },
+      }
+    : { dirty: false };
+  if (d && typeof d === "object") resourceDiffCache.set(d, entry);
+  return entry;
+}
+
+function diffOneVolume(
+  d: Partial<FormVolumeExtendedData> | undefined,
+  b: Partial<FormVolumeExtendedData> | undefined,
+): VolumeDiffEntry {
+  if (d && typeof d === "object") {
+    const cached = volumeDiffCache.get(d);
+    if (cached !== undefined) return cached;
+  }
+  const dirty = isVolumeDirty(d, b);
+  const entry: VolumeDiffEntry = dirty
+    ? {
+        dirty: true,
+        stats: {
+          fieldsChanged: countChangedFields(
+            d as Record<string, unknown> | undefined,
+            b as Record<string, unknown> | undefined,
+          ),
+        },
+      }
+    : { dirty: false };
+  if (d && typeof d === "object") volumeDiffCache.set(d, entry);
+  return entry;
+}
+
 export function diffStack(
   draft: { resources: ResourceArr; volumes: VolumeArr },
   baseline: { resources: ResourceArr; volumes: VolumeArr },
@@ -130,33 +194,20 @@ export function diffStack(
   const perResourceDirty = new Map<number, PerResourceDirty>();
   const maxR = Math.max(draft.resources.length, baseline.resources.length);
   for (let i = 0; i < maxR; i++) {
-    const d = draft.resources[i];
-    const b = baseline.resources[i];
-    if (!isResourceDirty(d, b)) continue;
+    const entry = diffOneResource(draft.resources[i], baseline.resources[i]);
+    if (!entry.dirty) continue;
     dirtyResourceIdx.add(i);
-    perResourceDirty.set(i, {
-      rowsChanged: countEnvRowsChanged(d, b),
-      fieldsChanged: countChangedFields(
-        d as Record<string, unknown> | undefined,
-        b as Record<string, unknown> | undefined,
-      ),
-    });
+    perResourceDirty.set(i, entry.stats);
   }
 
   const dirtyVolumeIdx = new Set<number>();
   const perVolumeDirty = new Map<number, PerVolumeDirty>();
   const maxV = Math.max(draft.volumes.length, baseline.volumes.length);
   for (let i = 0; i < maxV; i++) {
-    const d = draft.volumes[i];
-    const b = baseline.volumes[i];
-    if (!isVolumeDirty(d, b)) continue;
+    const entry = diffOneVolume(draft.volumes[i], baseline.volumes[i]);
+    if (!entry.dirty) continue;
     dirtyVolumeIdx.add(i);
-    perVolumeDirty.set(i, {
-      fieldsChanged: countChangedFields(
-        d as Record<string, unknown> | undefined,
-        b as Record<string, unknown> | undefined,
-      ),
-    });
+    perVolumeDirty.set(i, entry.stats);
   }
 
   // Only count addons that are *newly* linked in this session — IDs present
@@ -393,6 +444,68 @@ export function isPathDirty(
   path: string,
 ): boolean {
   return !deepEqual(getAtPath(draft, path), getAtPath(baseline, path));
+}
+
+/**
+ * Walk an entire resource (or any object subtree) once and produce a Set of
+ * every dot-path whose draft value differs from baseline. Includes ALL
+ * prefix paths of every dirty leaf — so a `<DirtyField path="ports.0">`
+ * lookup hits even when only `ports.0.number` actually differs.
+ *
+ * This replaces N individual `isPathDirty` walks (one per <DirtyField>) with
+ * a single O(resource size) walk; the field-side lookup becomes O(1) via
+ * `Set.has`.
+ */
+export function dirtyPathsForResource(
+  draft: unknown,
+  baseline: unknown,
+): Set<string> {
+  const acc = new Set<string>();
+  walkPaths(draft, baseline, "", acc);
+  return acc;
+}
+
+function walkPaths(
+  draft: unknown,
+  baseline: unknown,
+  prefix: string,
+  acc: Set<string>,
+): void {
+  if (deepEqual(draft, baseline)) return;
+
+  // Mark this prefix and every parent prefix as dirty (so wrappers at
+  // ancestor levels light up too).
+  if (prefix) {
+    acc.add(prefix);
+    for (let i = prefix.indexOf("."); i !== -1; i = prefix.indexOf(".", i + 1)) {
+      acc.add(prefix.slice(0, i));
+    }
+  }
+
+  const draftIsObj = draft && typeof draft === "object";
+  const baseIsObj = baseline && typeof baseline === "object";
+  const draftIsArr = Array.isArray(draft);
+  const baseIsArr = Array.isArray(baseline);
+
+  // Type mismatch (or one side is primitive) — leaf is already marked above.
+  if (!draftIsObj || !baseIsObj || draftIsArr !== baseIsArr) return;
+
+  if (draftIsArr && baseIsArr) {
+    const dArr = draft as unknown[];
+    const bArr = baseline as unknown[];
+    const max = Math.max(dArr.length, bArr.length);
+    for (let i = 0; i < max; i++) {
+      walkPaths(dArr[i], bArr[i], prefix ? `${prefix}.${i}` : String(i), acc);
+    }
+    return;
+  }
+
+  const dObj = draft as Record<string, unknown>;
+  const bObj = baseline as Record<string, unknown>;
+  const keys = new Set<string>([...Object.keys(dObj), ...Object.keys(bObj)]);
+  for (const k of keys) {
+    walkPaths(dObj[k], bObj[k], prefix ? `${prefix}.${k}` : k, acc);
+  }
 }
 
 /** Revert a single dot-path field on a resource to its baseline value. */
