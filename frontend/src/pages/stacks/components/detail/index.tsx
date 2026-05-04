@@ -3,7 +3,7 @@ import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
 import { Loader2, MoreHorizontal } from "lucide-react";
 import { PageHeader, Panel, StatusPill, variantFromState } from "@/components/branded";
-import { useMemo, useState, useEffect, useCallback, useTransition } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -313,23 +313,18 @@ export default function StackDetailPage() {
     void performSave();
   };
 
-  // Defer the session state update behind a transition. The user's keystroke
-  // commits synchronously into the input DOM (React 19 reconciles the
-  // controlled value lazily), and the heavy re-render of the resource
-  // accordion + dirty-viz computations happens at low priority — keystrokes
-  // can interrupt and supersede each other instead of queuing.
-  const [, startResourcesTransition] = useTransition();
+  // NOTE: this used to be wrapped in useTransition, which improved
+  // typing throughput but broke caret position on controlled inputs —
+  // when React commits the deferred state, it re-applies the input's
+  // value prop and the browser moves the caret to the end. Mid-string
+  // edits became impossible. The win from Cycle 6 (per-tab memoization)
+  // gives us most of the throughput back without the side effect.
   const handleResourcesChange = useCallback((updatedResources: Partial<FormStackResourceData>[]) => {
-    startResourcesTransition(() => {
-      session.updateResources(updatedResources as FormStackResourceData[]);
-    });
+    session.updateResources(updatedResources as FormStackResourceData[]);
   }, [session]);
 
-  const [, startVolumesTransition] = useTransition();
   const handleVolumesChange = useCallback((updatedVolumes: Partial<VolumeFormData>[]) => {
-    startVolumesTransition(() => {
-      session.updateVolumes(updatedVolumes as VolumeFormData[]);
-    });
+    session.updateVolumes(updatedVolumes as VolumeFormData[]);
   }, [session]);
 
   const handleDiscardEnvRow = useCallback(
