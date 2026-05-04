@@ -41,4 +41,11 @@ var MigrationList = []*gormigrate.Migration{
 	createPostgresAddonDatabasesTable(),
 	addNamespaceIdToPostgresAddons(),
 	createAddonUsagesTable(),
+	addAPITokensTable(),
+	addRefreshTokensTable(),
+	addGitHubOAuthFields(),
+	createTeamsTable(),
+	createTeamMembershipsTable(),
+	addTeamIDToResources(),
+	updateUserRoles(),
 }

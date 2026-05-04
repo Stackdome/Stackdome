@@ -17,9 +17,10 @@ func (r Role) String() string {
 }
 
 const (
-	UserRole              Role = "User"
-	OrganisationAdminRole Role = "OrganisationAdmin"
-	PlatformAdminRole     Role = "PlatformAdmin"
+	OrgAdminRole  Role = "OrgAdmin"
+	DeveloperRole Role = "Developer"
+	ViewerRole    Role = "Viewer"
+	OrgMemberRole Role = "OrgMember"
 )
 
 type User struct {
@@ -32,66 +33,30 @@ type User struct {
 	Organisation   *Organisation `gorm:"foreignKey:OrganisationID"`
 	Role           Role
 	OrganisationID string
-	DefaultUser    bool
+	GithubID       *string `gorm:"column:github_id;uniqueIndex"`
+	AvatarURL      *string `gorm:"column:avatar_url"`
+}
+
+func (u *User) IsOrgAdmin() bool {
+	return u.Role == OrgAdminRole
 }
 
 func (u *User) ClusterAccessRules() []rbacv1.PolicyRule {
-	switch u.Role {
-	case UserRole:
-		return []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods", "pods/log"},
-				Verbs:     []string{"get", "list"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods/exec", "pods/portforward"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"services"},
-				Verbs:     []string{"get"},
-			},
-		}
-	case OrganisationAdminRole:
-		return []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods", "pods/log"},
-				Verbs:     []string{"get", "list"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods/exec", "pods/portforward"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"services"},
-				Verbs:     []string{"get"},
-			},
-		}
-	case PlatformAdminRole:
-		return []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods", "pods/log"},
-				Verbs:     []string{"get", "list"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods/exec", "pods/portforward"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"services"},
-				Verbs:     []string{"get"},
-			},
-		}
-	default:
-		return []rbacv1.PolicyRule{}
+	return []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods", "pods/log"},
+			Verbs:     []string{"get", "list"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods/exec", "pods/portforward"},
+			Verbs:     []string{"create"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"services"},
+			Verbs:     []string{"get"},
+		},
 	}
 }

@@ -18,10 +18,8 @@ func PresentUser(in *models.User) openapi.User {
 
 func PresentRole(in models.Role) openapi.UserRole {
 	switch in {
-	case models.OrganisationAdminRole:
+	case models.OrgAdminRole:
 		return openapi.ORGANISATION_ADMIN
-	case models.PlatformAdminRole:
-		return openapi.PLATFORM_ADMIN
 	default:
 		return openapi.USER
 	}
@@ -48,10 +46,8 @@ func ConvertUser(in *openapi.UserSignupRequest) *models.User {
 func convertRole(in openapi.UserRole) models.Role {
 	switch in {
 	case openapi.ORGANISATION_ADMIN:
-		return models.OrganisationAdminRole
-	case openapi.PLATFORM_ADMIN:
-		return models.PlatformAdminRole
+		return models.OrgAdminRole
 	default:
-		return models.UserRole
+		return ""
 	}
 }
