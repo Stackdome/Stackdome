@@ -14,7 +14,7 @@ const buttonVariants = cva(
         destructive:
           "bg-danger text-white shadow-xs hover:bg-danger/90 focus-visible:ring-danger/30",
         outline:
-          "border border-border bg-transparent text-foreground transition-colors hover:border-brand hover:text-brand",
+          "border border-border bg-transparent text-foreground transition-colors hover:border-brand hover:text-brand hover:bg-brand-bg",
         secondary:
           "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
         ghost:
@@ -26,21 +26,25 @@ const buttonVariants = cva(
         // Mono terminal-style CTA per design system.
         mono:
           "bg-popover text-foreground border border-border font-mono uppercase tracking-[1.5px] hover:border-brand hover:text-brand",
-        // Brand-tinted ghost for additive inline actions (Add Variable, Link addon, Add binding, etc.)
-        addAction:
-          "text-brand hover:bg-brand-bg hover:text-brand-press",
-        // Subtle ghost for utility actions (Paste, Import) — neutral muted.
-        utility:
-          "text-muted-foreground hover:bg-accent hover:text-foreground",
-        // Danger-tinted ghost for destructive inline actions (Clear All).
-        dangerAction:
-          "text-danger hover:bg-danger-bg hover:text-danger",
+        // Console-rail primary — mono caps, brand-solid. ONLY for persistent
+        // action rails (session edit bar, command palette, debug overlays)
+        // where the surrounding chrome is already terminal-flavored. Do NOT
+        // use for in-page CTAs — use `default` instead.
+        railPrimary:
+          "font-mono text-[11px] font-bold uppercase tracking-[1.5px] bg-brand text-primary-foreground hover:bg-brand-hover active:bg-brand-press",
+        // Console-rail secondary — paired with railPrimary (Cancel, Discard).
+        railGhost:
+          "font-mono text-[11px] font-bold uppercase tracking-[1.5px] bg-transparent border border-border text-foreground hover:border-foreground",
+        // Console-rail destructive — paired with railPrimary in destructive flows.
+        railDanger:
+          "font-mono text-[11px] font-bold uppercase tracking-[1.5px] bg-danger text-white hover:bg-danger/90",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
         sm: "h-8 rounded-sm gap-1.5 px-3 has-[>svg]:px-2.5",
         lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
         icon: "size-8",
+        rail: "h-8 rounded-sm gap-1.5 px-3",
       },
     },
     defaultVariants: {

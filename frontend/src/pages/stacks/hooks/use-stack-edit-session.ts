@@ -4,6 +4,8 @@ import {
   diffStack,
   revertResource,
   revertVolume,
+  revertEnvRow,
+  revertResourceField,
   type StackDiff,
   type ResourceArr,
   type VolumeArr,
@@ -56,6 +58,8 @@ export interface UseStackEditSession {
   discard: () => void;
   discardResource: (idx: number) => void;
   discardVolume: (idx: number) => void;
+  discardEnvRow: (resourceIdx: number, envIdx: number) => void;
+  discardResourceField: (resourceIdx: number, path: string) => void;
   updateResources: (
     updater:
       | ResourceArr
@@ -121,6 +125,22 @@ export function useStackEditSession(): UseStackEditSession {
     });
   }, []);
 
+  const discardEnvRow = useCallback((resourceIdx: number, envIdx: number) => {
+    setState((prev) => {
+      if (!prev.isActive) return prev;
+      const nextDraft = revertEnvRow(prev.draft, prev.baseline, resourceIdx, envIdx);
+      return { ...prev, draft: nextDraft };
+    });
+  }, []);
+
+  const discardResourceField = useCallback((resourceIdx: number, path: string) => {
+    setState((prev) => {
+      if (!prev.isActive) return prev;
+      const nextDraft = revertResourceField(prev.draft, prev.baseline, resourceIdx, path);
+      return { ...prev, draft: nextDraft };
+    });
+  }, []);
+
   const updateResources = useCallback(
     (updater: ResourceArr | ((prev: ResourceArr) => ResourceArr)) => {
       setState((prev) => {
@@ -182,6 +202,8 @@ export function useStackEditSession(): UseStackEditSession {
     discard,
     discardResource,
     discardVolume,
+    discardEnvRow,
+    discardResourceField,
     updateResources,
     updateVolumes,
     setLinkedAddonIds,

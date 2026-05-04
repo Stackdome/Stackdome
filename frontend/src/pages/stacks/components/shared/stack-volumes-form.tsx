@@ -15,7 +15,7 @@ interface StackVolumesFormProps {
   defaultOpenVolumeIdx?: number | null;
 }
 
-function getDefaultVolume(): Partial<VolumeFormData> {
+export function getDefaultVolume(): Partial<VolumeFormData> {
   return {
     name: "",
     sourceType: "None",
@@ -94,7 +94,7 @@ export default function StackVolumesForm({
         <div className="flex justify-center mt-4">
           <Button
             type="button"
-            variant="addAction"
+            variant="ghost"
             onClick={() => onVolumesChange([...volumes, getDefaultVolume()])}
           >
             <PlusCircle className="h-4 w-4" />

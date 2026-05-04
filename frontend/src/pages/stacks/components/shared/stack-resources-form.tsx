@@ -22,9 +22,17 @@ interface StackResourcesFormProps {
   onDetachAddon?: (addonId: string) => void;
   onCancelDetachAddon?: (addonId: string) => void;
   availableAddonIds?: Set<string>;
+  /** Baseline resources (immutable session snapshot) — when provided, dirty visualization renders on each row. */
+  baselineResources?: Partial<FormStackResourceData>[];
+  /** Discard a single env row in a resource. Required for the per-row reset arrow. */
+  onDiscardEnvRow?: (resourceIdx: number, envIdx: number) => void;
+  /** Discard all changes for a resource. Required for the Modified pill ✕. */
+  onDiscardResource?: (resourceIdx: number) => void;
+  /** Discard a single field on a resource by dot-path. Required for per-field reset arrows. */
+  onDiscardResourceField?: (resourceIdx: number, path: string) => void;
 }
 
-function getDefaultResource(): Partial<FormStackResourceData> {
+export function getDefaultResource(): Partial<FormStackResourceData> {
   return {
     name: "",
     sourceType: "image",
@@ -50,6 +58,10 @@ export default function StackResourcesForm({
   onDetachAddon,
   onCancelDetachAddon,
   availableAddonIds,
+  baselineResources,
+  onDiscardEnvRow,
+  onDiscardResource,
+  onDiscardResourceField,
 }: StackResourcesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
   const secrets = useSecrets();
@@ -85,6 +97,16 @@ export default function StackResourcesForm({
     }
   };
 
+  // Stable reference for the depends-on options. Recomputed only when the
+  // names or count of resources change, NOT on every keystroke into a body
+  // field. Without this, every keystroke would hand a new array to each
+  // StackResourceItem and break React.memo.
+  const allResourcesRef = useMemo(
+    () => resources.map((r, i) => ({ name: r.name || `Resource ${i + 1}`, index: i })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- name list is the only structural input
+    [resources.length, ...resources.map((r) => r.name)],
+  );
+
   return (
     <div>
       <ResourceFormList<Partial<FormStackResourceData>>
@@ -101,7 +123,7 @@ export default function StackResourcesForm({
             onChange={onChange}
             errors={errors}
             volumes={volumes}
-            allResources={resources.map((r, i) => ({ name: r.name || `Resource ${i + 1}`, index: i }))}
+            allResources={allResourcesRef}
             onRemove={handleRemove}
             secrets={secrets}
             addons={addons}
@@ -110,6 +132,10 @@ export default function StackResourcesForm({
             onEditAddonBinding={onEditAddonBinding}
             onDetachAddon={onDetachAddon}
             onCancelDetachAddon={onCancelDetachAddon}
+            baselineResource={baselineResources?.[index]}
+            onDiscardEnvRow={onDiscardEnvRow ? (envIdx) => onDiscardEnvRow(index, envIdx) : undefined}
+            onDiscardResource={onDiscardResource ? () => onDiscardResource(index) : undefined}
+            onDiscardField={onDiscardResourceField ? (path) => onDiscardResourceField(index, path) : undefined}
           />
         )}
         defaultAllCollapsed={!accordionDefaultOpen}
@@ -123,7 +149,7 @@ export default function StackResourcesForm({
         <div className="flex justify-center mt-4">
           <Button
             type="button"
-            variant="addAction"
+            variant="ghost"
             onClick={() => onResourcesChange([...resources, getDefaultResource()])}
           >
             <PlusCircle className="h-4 w-4" />

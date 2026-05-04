@@ -194,7 +194,7 @@ export default function StacksPage() {
             title="No stacks deployed yet"
             description="Deploy your first stack to get started."
             action={
-              <Button onClick={handleCreateNewStack} variant="outline">
+              <Button onClick={handleCreateNewStack}>
                 <PlusCircle className="h-4 w-4" />
                 Create New Stack
               </Button>

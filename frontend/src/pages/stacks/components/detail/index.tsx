@@ -3,7 +3,7 @@ import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
 import { Loader2, MoreHorizontal } from "lucide-react";
 import { PageHeader, Panel, StatusPill, variantFromState } from "@/components/branded";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -11,8 +11,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import StackResourcesForm from "@/pages/stacks/components/shared/stack-resources-form";
-import StackVolumesForm from "@/pages/stacks/components/shared/stack-volumes-form";
+import StackResourcesForm, { getDefaultResource } from "@/pages/stacks/components/shared/stack-resources-form";
+import StackVolumesForm, { getDefaultVolume } from "@/pages/stacks/components/shared/stack-volumes-form";
 import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resources-detail";
 import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
 import SessionEditBar from "@/pages/stacks/components/detail/session-edit-bar";
@@ -313,13 +313,26 @@ export default function StackDetailPage() {
     void performSave();
   };
 
-  const handleResourcesChange = (updatedResources: Partial<FormStackResourceData>[]) => {
+  const handleResourcesChange = useCallback((updatedResources: Partial<FormStackResourceData>[]) => {
     session.updateResources(updatedResources as FormStackResourceData[]);
-  };
+  }, [session]);
 
-  const handleVolumesChange = (updatedVolumes: Partial<VolumeFormData>[]) => {
+  const handleVolumesChange = useCallback((updatedVolumes: Partial<VolumeFormData>[]) => {
     session.updateVolumes(updatedVolumes as VolumeFormData[]);
-  };
+  }, [session]);
+
+  const handleDiscardEnvRow = useCallback(
+    (rIdx: number, eIdx: number) => session.discardEnvRow(rIdx, eIdx),
+    [session],
+  );
+  const handleDiscardResource = useCallback(
+    (rIdx: number) => session.discardResource(rIdx),
+    [session],
+  );
+  const handleDiscardResourceField = useCallback(
+    (rIdx: number, path: string) => session.discardResourceField(rIdx, path),
+    [session],
+  );
 
   if (loading) {
     return (
@@ -455,6 +468,10 @@ export default function StackDetailPage() {
                 onEditAddonBinding={handleEditAddonBinding}
                 onDetachAddon={handleDetachAddon}
                 onCancelDetachAddon={handleCancelDetachAddon}
+                baselineResources={session.baseline.resources}
+                onDiscardEnvRow={handleDiscardEnvRow}
+                onDiscardResource={handleDiscardResource}
+                onDiscardResourceField={handleDiscardResourceField}
                 availableAddonIds={(() => {
                   const ids = new Set(session.linkedAddonIds);
                   for (const r of session.draft.resources) {
@@ -473,6 +490,17 @@ export default function StackDetailPage() {
                 onEditResource={(idx) =>
                   activateEdit({ resourceIdx: idx, openTab: "environment" })
                 }
+                onAddResource={() => {
+                  const nextIdx = baselineResources.length;
+                  session.start(
+                    {
+                      resources: [...baselineResources, getDefaultResource() as FormStackResourceData],
+                      volumes: baselineVolumes,
+                    },
+                    { openResourceIdx: nextIdx, openTab: "configuration" },
+                  );
+                  setEditingBindingIds(new Set());
+                }}
                 detachedProvenance={detachedProvenance}
               />
             )}
@@ -498,6 +526,17 @@ export default function StackDetailPage() {
                 stackResources={baselineResources}
                 accordionDefaultOpen={false}
                 onEditVolume={(idx) => activateEdit({ volumeIdx: idx })}
+                onAddVolume={() => {
+                  const nextIdx = baselineVolumes.length;
+                  session.start(
+                    {
+                      resources: baselineResources,
+                      volumes: [...baselineVolumes, getDefaultVolume() as VolumeFormData],
+                    },
+                    { openVolumeIdx: nextIdx },
+                  );
+                  setEditingBindingIds(new Set());
+                }}
               />
             )}
           </Panel>

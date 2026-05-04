@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, X, Rocket, ExternalLink, AlertCircle, ChevronDown } from "lucide-react";
+import { Loader2, ExternalLink, AlertCircle, ChevronDown } from "lucide-react";
 import { ZodError } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -296,17 +296,12 @@ export default function PostgresFormPage() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" size="lg" onClick={handleCancel} disabled={submitting}>
-              <X className="h-4 w-4" />
+            <Button variant="ghost" onClick={handleCancel} disabled={submitting}>
               Cancel
             </Button>
-            <Button size="lg" onClick={handleSubmit} disabled={submitting}>
-              {submitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Rocket className="h-4 w-4" />
-              )}
-              <span className="font-semibold">{submitLabel}</span>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {submitLabel}
             </Button>
           </div>
         </div>

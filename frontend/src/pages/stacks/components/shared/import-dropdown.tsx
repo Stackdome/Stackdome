@@ -5,7 +5,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import type { VariantProps } from 'class-variance-authority';
 import { ChevronDown, Upload } from 'lucide-react';
 import dockerIconUrl from '@/assets/docker.svg';
 
@@ -19,8 +20,8 @@ export interface ImportOption {
 }
 
 interface ImportDropdownProps {
-  variant?: 'default' | 'outline';
-  size?: 'default' | 'sm' | 'lg';
+  variant?: VariantProps<typeof buttonVariants>['variant'];
+  size?: VariantProps<typeof buttonVariants>['size'];
   children?: React.ReactNode;
   className?: string;
   disabled?: boolean;
@@ -77,8 +78,8 @@ export default function ImportDropdown({
 // Pre-configured Docker Compose import dropdown
 interface DockerComposeImportDropdownProps {
   onDockerComposeImport: () => void;
-  variant?: 'default' | 'outline';
-  size?: 'default' | 'sm' | 'lg';
+  variant?: VariantProps<typeof buttonVariants>['variant'];
+  size?: VariantProps<typeof buttonVariants>['size'];
   children?: React.ReactNode;
   className?: string;
   disabled?: boolean;

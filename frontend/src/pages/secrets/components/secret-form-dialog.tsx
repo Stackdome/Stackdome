@@ -695,7 +695,7 @@ export function SecretFormDialog({
         </div>
 
         <DialogFooter className="flex-shrink-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading}>

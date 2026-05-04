@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import StackResourcesForm from "../shared/stack-resources-form";
 import StackVolumesForm from "../shared/stack-volumes-form";
 import { Button } from "@/components/ui/button";
-import { Rocket, X, AlertTriangle } from "lucide-react";
+import { X, AlertTriangle, Rocket } from "lucide-react";
 import { Panel, FieldError } from "@/components/branded";
 import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
 import { Separator } from "@/components/ui/separator";
@@ -436,19 +436,18 @@ export default function StackCreatePage() {
             </div>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" size="lg" onClick={() => {
+            <Button variant="ghost" onClick={() => {
               if (window.history.length > 2 && window.history.state && window.history.state.idx !== 0) {
                 navigate(-1);
               } else {
                 navigate("/stacks", { replace: true });
               }
             }}>
-              <X className="h-4 w-4" />
               Cancel
             </Button>
-            <Button variant="default" size="lg" onClick={handleSubmit} disabled={isLoading}>
+            <Button onClick={handleSubmit} disabled={isLoading}>
               <Rocket className="h-4 w-4" />
-              <span className="font-semibold">{isLoading ? "Deploying..." : "Deploy"}</span>
+              {isLoading ? "Deploying…" : "Deploy"}
             </Button>
           </div>
         </div>

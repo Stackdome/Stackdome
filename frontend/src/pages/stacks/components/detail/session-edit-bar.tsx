@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, Rocket } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import type { StackDiff } from "@/pages/stacks/lib/stack-diff";
 
 interface SessionEditBarProps {
@@ -40,9 +41,6 @@ export default function SessionEditBar({
   const resourceCount = dirty.dirtyResourceIdx.size;
   const volumeCount = dirty.dirtyVolumeIdx.size;
   const dirtyEntities = resourceCount + volumeCount;
-  let envCount = 0;
-  for (const v of dirty.perResourceDirty.values()) envCount += v.rowsChanged;
-  const addonLinks = dirty.addonLinkCount;
 
   const handleDiscardAllClick = () => {
     if (dirtyEntities > 1) {
@@ -55,16 +53,13 @@ export default function SessionEditBar({
   type Segment = { num: number; label: string };
   const segments: Segment[] = [];
   if (resourceCount > 0) {
-    segments.push({ num: resourceCount, label: resourceCount === 1 ? "RESOURCE" : "RESOURCES" });
+    segments.push({ num: resourceCount, label: resourceCount === 1 ? "RESOURCE MODIFIED" : "RESOURCES MODIFIED" });
   }
   if (volumeCount > 0) {
-    segments.push({ num: volumeCount, label: volumeCount === 1 ? "VOLUME" : "VOLUMES" });
+    segments.push({ num: volumeCount, label: volumeCount === 1 ? "VOLUME MODIFIED" : "VOLUMES MODIFIED" });
   }
-  if (envCount > 0) {
-    segments.push({ num: envCount, label: "ENV" });
-  }
-  if (addonLinks > 0) {
-    segments.push({ num: addonLinks, label: addonLinks === 1 ? "ADDON LINK" : "ADDON LINKS" });
+  if (dirty.addonLinkCount > 0) {
+    segments.push({ num: dirty.addonLinkCount, label: dirty.addonLinkCount === 1 ? "ADDON LINK" : "ADDON LINKS" });
   }
 
   const bar = (
@@ -87,19 +82,21 @@ export default function SessionEditBar({
           </span>
         ))}
         <div className="grow" />
-        <button
+        <Button
           type="button"
+          variant="railGhost"
+          size="rail"
           onClick={handleDiscardAllClick}
           disabled={isDeploying}
-          className="font-mono text-[11px] font-bold uppercase tracking-[1.5px] text-foreground border border-border bg-transparent px-3 py-1.5 rounded-sm hover:border-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           Discard all
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="railPrimary"
+          size="rail"
           onClick={onDeploy}
           disabled={isDeploying}
-          className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-[1.5px] text-primary-foreground bg-brand hover:bg-brand-hover active:bg-brand-press disabled:opacity-60 disabled:cursor-not-allowed px-3 py-1.5 rounded-sm transition-colors"
         >
           {isDeploying ? (
             <>
@@ -108,10 +105,10 @@ export default function SessionEditBar({
             </>
           ) : (
             <>
-              Deploy <span aria-hidden>→</span>
+              Deploy <Rocket className="h-3.5 w-3.5" />
             </>
           )}
-        </button>
+        </Button>
       </div>
   );
 

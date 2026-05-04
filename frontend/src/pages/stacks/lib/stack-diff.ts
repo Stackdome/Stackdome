@@ -159,7 +159,15 @@ export function diffStack(
     });
   }
 
-  const addonLinkCount = uniqueAddonIds(draft.resources).size;
+  // Only count addons that are *newly* linked in this session — IDs present
+  // in the draft env vars but absent from the baseline. Pre-existing addon
+  // links shouldn't be flagged as pending changes.
+  const baselineAddonIds = uniqueAddonIds(baseline.resources);
+  const draftAddonIds = uniqueAddonIds(draft.resources);
+  let addonLinkCount = 0;
+  for (const id of draftAddonIds) {
+    if (!baselineAddonIds.has(id)) addonLinkCount += 1;
+  }
 
   return {
     dirtyResourceIdx,
@@ -188,6 +196,220 @@ export function revertResource(
     next.resources.splice(idx, 1);
   }
   return next;
+}
+
+/**
+ * Per-row status of env vars in a resource's draft, relative to baseline.
+ * Rows are matched by `name` (the env KEY) for stable identity across edits;
+ * unnamed rows fall back to positional matching. Baseline rows that don't
+ * appear in the draft don't surface here — they live in baseline only.
+ */
+export type EnvRowStatus = "unchanged" | "modified" | "added";
+
+export function envRowsDiff(
+  draftRows: Array<Record<string, unknown>>,
+  baselineRows: Array<Record<string, unknown>>,
+): EnvRowStatus[] {
+  const baselineByName = new Map<string, Record<string, unknown>>();
+  baselineRows.forEach((r) => {
+    const name = typeof r?.name === "string" ? r.name : "";
+    if (name) baselineByName.set(name, r);
+  });
+
+  return draftRows.map((draft, i) => {
+    const draftName = typeof draft?.name === "string" ? draft.name : "";
+    if (draftName) {
+      const base = baselineByName.get(draftName);
+      if (!base) return "added";
+      return deepEqual(draft, base) ? "unchanged" : "modified";
+    }
+    // Unnamed row — fall back to positional match.
+    const base = baselineRows[i];
+    if (!base) return "added";
+    return deepEqual(draft, base) ? "unchanged" : "modified";
+  });
+}
+
+/**
+ * Revert a single env row in `draft.resources[resourceIdx]` to its baseline
+ * value, matched by name (or positional fallback for unnamed rows). If the
+ * row is "added" with no baseline counterpart, it's removed entirely.
+ */
+export function revertEnvRow(
+  draft: { resources: ResourceArr; volumes: VolumeArr },
+  baseline: { resources: ResourceArr; volumes: VolumeArr },
+  resourceIdx: number,
+  envIdx: number,
+): { resources: ResourceArr; volumes: VolumeArr } {
+  const draftResource = draft.resources[resourceIdx];
+  if (!draftResource) return draft;
+  const draftRows = (draftResource.execution_config?.environment_variables ?? []) as Array<
+    Record<string, unknown>
+  >;
+  const draftRow = draftRows[envIdx];
+  if (!draftRow) return draft;
+
+  const baselineResource = baseline.resources[resourceIdx];
+  const baselineRows = (baselineResource?.execution_config?.environment_variables ?? []) as Array<
+    Record<string, unknown>
+  >;
+
+  const draftName = typeof draftRow.name === "string" ? draftRow.name : "";
+  let baselineRow: Record<string, unknown> | undefined;
+  if (draftName) {
+    baselineRow = baselineRows.find((r) => (typeof r?.name === "string" ? r.name : "") === draftName);
+  } else {
+    baselineRow = baselineRows[envIdx];
+  }
+
+  const nextRows = draftRows.slice();
+  if (baselineRow) {
+    nextRows[envIdx] = cloneJson(baselineRow);
+  } else {
+    // No baseline counterpart — the row is newly added; drop it.
+    nextRows.splice(envIdx, 1);
+  }
+
+  const nextResources = draft.resources.slice();
+  nextResources[resourceIdx] = {
+    ...draftResource,
+    execution_config: {
+      ...draftResource.execution_config,
+      environment_variables: nextRows as never,
+    },
+  };
+  return { ...draft, resources: nextResources };
+}
+
+/**
+ * Tabs in the resource accordion. Used by callers to decide which tab
+ * triggers should render a dirty dot.
+ */
+export type ResourceTab = "configuration" | "deployment" | "environment";
+
+/**
+ * Buckets indicating which tabs of a resource contain dirty fields. The
+ * env-vars list is its own tab (Environment); everything else lives in
+ * Configuration or Deployment per the existing tab structure.
+ */
+export interface ResourceDirtyTabs {
+  configuration: boolean;
+  deployment: boolean;
+  environment: boolean;
+}
+
+const DEPLOYMENT_KEYS = new Set([
+  "init_spec",
+  "ports",
+  "volume_mounts",
+  "depends_on",
+]);
+
+export function dirtyTabsForResource(
+  draft: Partial<FormStackResourceData> | undefined,
+  baseline: Partial<FormStackResourceData> | undefined,
+): ResourceDirtyTabs {
+  const out: ResourceDirtyTabs = {
+    configuration: false,
+    deployment: false,
+    environment: false,
+  };
+  if (deepEqual(draft, baseline)) return out;
+
+  const dKeys = new Set(Object.keys((draft ?? {}) as Record<string, unknown>));
+  const bKeys = new Set(Object.keys((baseline ?? {}) as Record<string, unknown>));
+  const keys = new Set<string>([...dKeys, ...bKeys]);
+
+  for (const k of keys) {
+    const dv = (draft as Record<string, unknown> | undefined)?.[k];
+    const bv = (baseline as Record<string, unknown> | undefined)?.[k];
+    if (deepEqual(dv, bv)) continue;
+
+    if (k === "execution_config") {
+      // Split env-vars vs command/args. env-vars → environment; rest → deployment? No — command/args live with image, so put under configuration.
+      const dEC = (dv ?? {}) as Record<string, unknown>;
+      const bEC = (bv ?? {}) as Record<string, unknown>;
+      if (!deepEqual(dEC.environment_variables, bEC.environment_variables)) {
+        out.environment = true;
+      }
+      if (!deepEqual(dEC.command, bEC.command) || !deepEqual(dEC.args, bEC.args)) {
+        out.configuration = true;
+      }
+    } else if (DEPLOYMENT_KEYS.has(k)) {
+      out.deployment = true;
+    } else {
+      out.configuration = true;
+    }
+  }
+
+  return out;
+}
+
+// --- Generic dot-path helpers, used by per-field dirty/reset infra. ---
+
+/** Read a nested value via dot-path. Returns undefined for missing segments. */
+export function getAtPath(obj: unknown, path: string): unknown {
+  if (!path) return obj;
+  const parts = path.split(".");
+  let cur: unknown = obj;
+  for (const p of parts) {
+    if (cur == null || typeof cur !== "object") return undefined;
+    cur = (cur as Record<string, unknown>)[p];
+  }
+  return cur;
+}
+
+/** Immutably set a nested value via dot-path; returns a clone of `obj` with `path` set.
+ * Preserves array-ness: `{...arr}` would coerce arrays into plain objects with
+ * numeric keys, so we shallow-clone arrays with `arr.slice()` instead. */
+export function setAtPath<T>(obj: T, path: string, value: unknown): T {
+  if (!path) return value as T;
+  const parts = path.split(".");
+  const cloneNode = (node: unknown): Record<string, unknown> | unknown[] => {
+    if (Array.isArray(node)) return node.slice() as unknown[];
+    if (node && typeof node === "object") return { ...(node as Record<string, unknown>) };
+    return {};
+  };
+  const root = cloneNode(obj);
+  let cur: Record<string, unknown> | unknown[] = root;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const k = parts[i];
+    const idx = Array.isArray(cur) ? Number(k) : k;
+    const next = (cur as Record<string | number, unknown>)[idx as string];
+    const cloned = cloneNode(next);
+    (cur as Record<string | number, unknown>)[idx as string] = cloned;
+    cur = cloned;
+  }
+  const lastKey = parts[parts.length - 1];
+  const lastIdx = Array.isArray(cur) ? Number(lastKey) : lastKey;
+  (cur as Record<string | number, unknown>)[lastIdx as string] = value;
+  return root as T;
+}
+
+/** Is a single dot-path different between draft and baseline (deep)? */
+export function isPathDirty(
+  draft: unknown,
+  baseline: unknown,
+  path: string,
+): boolean {
+  return !deepEqual(getAtPath(draft, path), getAtPath(baseline, path));
+}
+
+/** Revert a single dot-path field on a resource to its baseline value. */
+export function revertResourceField(
+  draft: { resources: ResourceArr; volumes: VolumeArr },
+  baseline: { resources: ResourceArr; volumes: VolumeArr },
+  resourceIdx: number,
+  path: string,
+): { resources: ResourceArr; volumes: VolumeArr } {
+  const draftResource = draft.resources[resourceIdx];
+  if (!draftResource) return draft;
+  const baselineResource = baseline.resources[resourceIdx];
+  const baselineValue = getAtPath(baselineResource, path);
+  const nextResource = setAtPath(draftResource, path, cloneJson(baselineValue));
+  const nextResources = draft.resources.slice();
+  nextResources[resourceIdx] = nextResource;
+  return { ...draft, resources: nextResources };
 }
 
 export function revertVolume(

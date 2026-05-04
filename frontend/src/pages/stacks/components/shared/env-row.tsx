@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,6 +41,8 @@ interface EnvRowProps {
   secretsLoading: boolean;
   addonNameById?: Map<string, string>;
   rowErrors?: EnvRowErrors;
+  /** Diff status vs baseline. "modified" tints + shows reset; "added" stays neutral; "unchanged" stays neutral. */
+  status?: "unchanged" | "modified" | "added";
   onChangeName: (name: string) => void;
   onChangeValue: (value: string) => void;
   onChangeFrom: (from: EnvFrom) => void;
@@ -48,6 +50,8 @@ interface EnvRowProps {
   onChangeAddon: (patch: AddonBindingPatch) => void;
   onBlur?: () => void;
   onRemove: () => void;
+  /** When provided and row is "modified", clicking the reset arrow restores the row to baseline. */
+  onReset?: () => void;
 }
 
 export function EnvRow({
@@ -58,6 +62,7 @@ export function EnvRow({
   secretsLoading,
   addonNameById,
   rowErrors,
+  status = "unchanged",
   onChangeName,
   onChangeValue,
   onChangeFrom,
@@ -65,6 +70,7 @@ export function EnvRow({
   onChangeAddon,
   onBlur,
   onRemove,
+  onReset,
 }: EnvRowProps) {
   const isOrphanAddon =
     row.from === "addon" &&
@@ -72,10 +78,17 @@ export function EnvRow({
     !!row.addonId &&
     !addonNameById.has(row.addonId);
 
+  const isModified = status === "modified";
+  const isAdded = status === "added";
+  const isDirty = isModified || isAdded;
   return (
     <div
       className={`border-b last:border-b-0 ${
-        isOrphanAddon ? "border-l-4 border-l-yellow-500/60 pl-2 bg-yellow-500/5" : ""
+        isOrphanAddon
+          ? "border-l-4 border-l-yellow-500/60 pl-2 bg-yellow-500/5"
+          : isDirty
+          ? "border-l-4 border-l-brand bg-brand-bg"
+          : ""
       }`}
       data-testid={`env-row-${resourceIndex}-${index}`}
       onBlur={onBlur}
@@ -93,6 +106,11 @@ export function EnvRow({
             placeholder="KEY"
             readOnly={isOrphanAddon}
           />
+          {(rowErrors?.duplicate || rowErrors?.name) && (
+            <p className="text-xs text-danger mt-1">
+              {rowErrors.duplicate || rowErrors.name}
+            </p>
+          )}
         </div>
 
         {/* Value */}
@@ -148,29 +166,32 @@ export function EnvRow({
           </Select>
         </div>
 
-        {/* Remove */}
+        {/* Reset (when dirty — restore baseline, removes added rows) or Remove (when clean) */}
         <div className="col-span-1 flex justify-center items-start pt-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 hover:bg-danger-bg hover:text-danger"
-            onClick={onRemove}
-            aria-label="Remove env var"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          {isDirty && onReset ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-brand hover:bg-brand-bg hover:text-brand-press"
+              onClick={onReset}
+              aria-label={isAdded ? "Remove this newly added env var" : "Reset env var to original value"}
+              title={isAdded ? "Remove (newly added)" : "Reset to original value"}
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 hover:bg-danger-bg hover:text-danger"
+              onClick={onRemove}
+              aria-label="Remove env var"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
-      {rowErrors?.duplicate && (
-        <p className="col-span-full text-xs text-danger mt-0.5 mb-1 px-3">
-          {rowErrors.duplicate}
-        </p>
-      )}
-      {rowErrors?.name && (
-        <p className="col-span-full text-xs text-danger mt-0.5 mb-1 px-3">
-          {rowErrors.name}
-        </p>
-      )}
       {isOrphanAddon && (
         <p className="col-span-full text-xs text-yellow-700 dark:text-yellow-400 mt-0.5 mb-1 px-3">
           Addon was deleted. This variable won't resolve. Remove to clean up.

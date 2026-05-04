@@ -12,6 +12,7 @@ interface StackVolumesDetailProps {
   dirty?: StackDiff;
   onEditVolume?: (idx: number) => void;
   onDiscardVolume?: (idx: number) => void;
+  onAddVolume?: () => void;
 }
 
 export default function StackVolumesDetail({
@@ -22,6 +23,7 @@ export default function StackVolumesDetail({
   dirty,
   onEditVolume,
   onDiscardVolume,
+  onAddVolume,
 }: StackVolumesDetailProps) {
   return (
     <div>
@@ -47,9 +49,11 @@ export default function StackVolumesDetail({
         }}
         emptyTitle="No volumes added"
         emptyOptional
-        emptyDescription="No persistent volumes are configured for this stack."
+        emptyDescription="Add a persistent volume if your services need to keep data across restarts. Otherwise, you can skip this."
         emptyIcon={<Database className="h-6 w-6" />}
         defaultAllCollapsed={!accordionDefaultOpen}
+        onAdd={onAddVolume}
+        addLabel="Add Volume"
       />
     </div>
   );

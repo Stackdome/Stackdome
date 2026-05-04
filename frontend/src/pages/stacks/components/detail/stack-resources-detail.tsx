@@ -11,6 +11,7 @@ interface StackResourcesDetailProps {
   dirty?: StackDiff;
   onEditResource?: (idx: number) => void;
   onDiscardResource?: (idx: number) => void;
+  onAddResource?: () => void;
   /** Map of `${resourceIdx}::${envName}` → provenance for converted env rows. */
   detachedProvenance?: Map<string, { addonName: string; credField?: string }>;
 }
@@ -22,6 +23,7 @@ export default function StackResourcesDetail({
   dirty,
   onEditResource,
   onDiscardResource,
+  onAddResource,
   detachedProvenance,
 }: StackResourcesDetailProps) {
   return (
@@ -47,9 +49,11 @@ export default function StackResourcesDetail({
           );
         }}
         emptyTitle="No resources added yet"
-        emptyDescription="This stack has no resources. Edit the stack to add a service."
+        emptyDescription="Add a service to start running it. Each resource is a container or build that becomes part of this stack."
         emptyIcon={<Container className="h-6 w-6" />}
         defaultAllCollapsed={!accordionDefaultOpen}
+        onAdd={onAddResource}
+        addLabel="Add Resource"
       />
     </div>
   );

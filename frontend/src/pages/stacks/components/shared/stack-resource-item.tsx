@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   AccordionItem,
   AccordionTrigger,
@@ -20,10 +20,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PlusCircle, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy, Info, Puzzle } from "lucide-react";
+import { PlusCircle, X, GitBranch, Box, Trash2, Database, Upload, FileText, Copy, Info } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
+import { dirtyTabsForResource, envRowsDiff, isResourceDirty } from "@/pages/stacks/lib/stack-diff";
+import { DirtyField } from "@/pages/stacks/components/shared/dirty-field";
 import type { z } from "zod";
 import { variantFromState } from "@/components/branded";
 
@@ -51,6 +53,14 @@ interface StackResourceItemProps {
   onEditAddonBinding?: (addonId: string) => void;
   onDetachAddon?: (addonId: string) => void;
   onCancelDetachAddon?: (addonId: string) => void;
+  /** Baseline snapshot of this resource. When provided, the component renders dirty visualization (modified row tints, tab dots, Modified pill) and exposes per-row reset. */
+  baselineResource?: Partial<FormStackResourceData>;
+  /** Reset a single env row to its baseline value. Required for the per-row reset arrow to render. */
+  onDiscardEnvRow?: (envIdx: number) => void;
+  /** Discard all changes for this resource. Required for the Modified pill ✕ affordance. */
+  onDiscardResource?: () => void;
+  /** Discard a single field on this resource by dot-path. Required for per-field reset arrows. */
+  onDiscardField?: (path: string) => void;
 }
 
 const getError = (errors: { [field: string]: string | undefined }, path: string) => {
@@ -74,7 +84,7 @@ const getError = (errors: { [field: string]: string | undefined }, path: string)
   return undefined;
 };
 
-export default function StackResourceItem({
+function StackResourceItemImpl({
   resource,
   index,
   itemRef,
@@ -86,19 +96,31 @@ export default function StackResourceItem({
   secrets,
   addons,
   addonNameById,
+  baselineResource,
+  onDiscardEnvRow,
+  onDiscardResource,
+  onDiscardField,
 }: StackResourceItemProps) {
   // Helper for updating resource fields
   const update = (patch: Partial<FormStackResourceData>) => {
     onChange(index, { ...resource, ...patch });
   };
 
-  const addonCount = useMemo(() => {
-    const ids = new Set<string>();
-    ((resource.execution_config?.environment_variables || []) as FormEnvVarData[]).forEach((r) => {
-      if (r.from === "addon") ids.add(r.addonId);
-    });
-    return ids.size;
-  }, [resource.execution_config?.environment_variables]);
+  // Per-row diff status for env vars, used to tint modified rows + render reset arrow.
+  const envRowStatuses = useMemo(() => {
+    if (!baselineResource) return [];
+    const draftRows = (resource.execution_config?.environment_variables || []) as Array<Record<string, unknown>>;
+    const baselineRows = (baselineResource.execution_config?.environment_variables || []) as Array<Record<string, unknown>>;
+    return envRowsDiff(draftRows, baselineRows);
+  }, [resource.execution_config?.environment_variables, baselineResource]);
+
+  // Per-tab dirty bucketing → renders the small brand dot next to each tab label.
+  const dirtyTabs = useMemo(
+    () => (baselineResource ? dirtyTabsForResource(resource, baselineResource) : { configuration: false, deployment: false, environment: false }),
+    [resource, baselineResource],
+  );
+
+  const isDirty = baselineResource ? isResourceDirty(resource, baselineResource) : false;
 
   const [dirtyEnvRows, setDirtyEnvRows] = useState<Set<number>>(new Set());
   const markEnvRowDirty = (envIdx: number) => {
@@ -428,14 +450,22 @@ export default function StackResourceItem({
                 <span className="text-xs text-danger mt-0.5 pl-6">{errors._form}</span>
               )}
             </div>
-            <div className="ml-auto flex items-center gap-3 shrink-0 mr-2">
-              {addonCount > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-md border bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
-                  <Puzzle className="h-3 w-3" />
-                  {addonCount} {addonCount === 1 ? "addon" : "addons"}
+            {isDirty && onDiscardResource && (
+              <div className="ml-auto flex items-center shrink-0 mr-2" onClick={(e) => e.stopPropagation()}>
+                <span className="inline-flex items-center gap-1.5 rounded-md border border-brand-border bg-brand-bg pl-2 pr-1 py-0.5 text-[11px] font-medium text-brand">
+                  Modified
+                  <button
+                    type="button"
+                    onClick={onDiscardResource}
+                    aria-label="Discard changes to this resource"
+                    title="Discard changes to this resource"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded hover:bg-brand/15"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                 </span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </AccordionTrigger>
         <AccordionContent className="bg-secondary border-t border-border pb-4 pt-4 px-1">
@@ -443,9 +473,18 @@ export default function StackResourceItem({
             <Tabs defaultValue="general" className="w-full">
               <div className="mt-1 mb-3">
                 <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-1 px-2">
-                  <TabsTrigger value="general" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Configuration</TabsTrigger>
-                  <TabsTrigger value="deployment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Deployment</TabsTrigger>
-                  <TabsTrigger value="environment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Environment</TabsTrigger>
+                  <TabsTrigger value="general" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">
+                    Configuration
+                    {dirtyTabs.configuration && <span aria-hidden className="ml-1.5 inline-block size-1.5 rounded-full bg-brand" />}
+                  </TabsTrigger>
+                  <TabsTrigger value="deployment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">
+                    Deployment
+                    {dirtyTabs.deployment && <span aria-hidden className="ml-1.5 inline-block size-1.5 rounded-full bg-brand" />}
+                  </TabsTrigger>
+                  <TabsTrigger value="environment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">
+                    Environment
+                    {dirtyTabs.environment && <span aria-hidden className="ml-1.5 inline-block size-1.5 rounded-full bg-brand" />}
+                  </TabsTrigger>
                 </TabsList>
               </div>
 
@@ -466,15 +505,22 @@ export default function StackResourceItem({
                           <TooltipContent side="top">A unique name for this resource</TooltipContent>
                         </Tooltip>
                       </div>
-                      <Input
-                        id={`resource-name-${index}`}
-                        placeholder="e.g., api, database, frontend"
-                        value={resource.name || ""}
-                        onChange={e => update({ name: e.target.value })}
-                        className={`max-w-xl ${getError(errors, "name") ? "border-danger" : ""}`}
-                        required
-                        aria-invalid={!!getError(errors, "name")}
-                      />
+                      <DirtyField
+                        draft={resource}
+                        baseline={baselineResource}
+                        path="name"
+                        onReset={onDiscardField ? () => onDiscardField("name") : undefined}
+                      >
+                        <Input
+                          id={`resource-name-${index}`}
+                          placeholder="e.g., api, database, frontend"
+                          value={resource.name || ""}
+                          onChange={e => update({ name: e.target.value })}
+                          className={`max-w-xl ${getError(errors, "name") ? "border-danger" : ""}`}
+                          required
+                          aria-invalid={!!getError(errors, "name")}
+                        />
+                      </DirtyField>
                       {getError(errors, "name") && (
                         <p className="text-sm text-danger mt-1">{getError(errors, "name")}</p>
                       )}
@@ -482,20 +528,27 @@ export default function StackResourceItem({
 
                     <div className="space-y-2">
                       <Label>Depends On</Label>
-                      {_allResources ? (
-                        <MultiSelect
-                          options={_allResources
-                            .filter((r) => r.index !== index && r.name && r.name.trim() !== "")
-                            .map((r) => ({ label: r.name, value: r.name }))}
-                          onValueChange={updateDependsOn}
-                          defaultValue={resource.depends_on || []}
-                          placeholder={_allResources.length <= 1 ? "No other resources available" : "Select dependencies"}
-                          disabled={_allResources.length <= 1}
-                          className="w-full"
-                        />
-                      ) : (
-                        <div className="text-sm text-muted-foreground">No dependency information available</div>
-                      )}
+                      <DirtyField
+                        draft={resource}
+                        baseline={baselineResource}
+                        path="depends_on"
+                        onReset={onDiscardField ? () => onDiscardField("depends_on") : undefined}
+                      >
+                        {_allResources ? (
+                          <MultiSelect
+                            options={_allResources
+                              .filter((r) => r.index !== index && r.name && r.name.trim() !== "")
+                              .map((r) => ({ label: r.name, value: r.name }))}
+                            onValueChange={updateDependsOn}
+                            defaultValue={resource.depends_on || []}
+                            placeholder={_allResources.length <= 1 ? "No other resources available" : "Select dependencies"}
+                            disabled={_allResources.length <= 1}
+                            className="w-full"
+                          />
+                        ) : (
+                          <div className="text-sm text-muted-foreground">No dependency information available</div>
+                        )}
+                      </DirtyField>
                       {errors["depends_on"] && (
                         <p className="text-sm text-danger">{errors["depends_on"]}</p>
                       )}
@@ -516,28 +569,30 @@ export default function StackResourceItem({
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <Select
-                        value={resource.sourceType || "image"}
-                        onValueChange={val => update({ sourceType: val as "image" | "git" })}
-                      >
-                        <SelectTrigger className="w-[200px]">
-                          <SelectValue placeholder="Select source type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="image">
-                            <div className="flex items-center gap-2">
-                              <Box size={16} />
-                              <span>Container Image</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="git">
-                            <div className="flex items-center gap-2">
-                              <GitBranch size={16} />
-                              <span>Git Repository</span>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <DirtyField draft={resource} baseline={baselineResource} path="sourceType" onReset={onDiscardField ? () => onDiscardField("sourceType") : undefined}>
+                        <Select
+                          value={resource.sourceType || "image"}
+                          onValueChange={val => update({ sourceType: val as "image" | "git" })}
+                        >
+                          <SelectTrigger className="w-[200px]">
+                            <SelectValue placeholder="Select source type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="image">
+                              <div className="flex items-center gap-2">
+                                <Box size={16} />
+                                <span>Container Image</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="git">
+                              <div className="flex items-center gap-2">
+                                <GitBranch size={16} />
+                                <span>Git Repository</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </DirtyField>
                     </div>
                     {resource.sourceType === "image" ? (
                       <div className="grid gap-4 max-w-3xl">
@@ -555,15 +610,22 @@ export default function StackResourceItem({
                               </TooltipContent>
                             </Tooltip>
                           </div>
-                          <Input
-                            id={`container-image-${index}`}
-                            placeholder="e.g., nginx:latest, redis:7"
-                            value={resource.image_spec?.image || ""}
-                            onChange={e => updateImageSpec({ image: e.target.value })}
-                            className={`max-w-xl ${getError(errors, "image_spec.image") ? "border-danger" : ""}`}
-                            required={resource.sourceType === "image"}
-                            aria-invalid={!!getError(errors, "image_spec.image")}
-                          />
+                          <DirtyField
+                            draft={resource}
+                            baseline={baselineResource}
+                            path="image_spec.image"
+                            onReset={onDiscardField ? () => onDiscardField("image_spec.image") : undefined}
+                          >
+                            <Input
+                              id={`container-image-${index}`}
+                              placeholder="e.g., nginx:latest, redis:7"
+                              value={resource.image_spec?.image || ""}
+                              onChange={e => updateImageSpec({ image: e.target.value })}
+                              className={`max-w-xl ${getError(errors, "image_spec.image") ? "border-danger" : ""}`}
+                              required={resource.sourceType === "image"}
+                              aria-invalid={!!getError(errors, "image_spec.image")}
+                            />
+                          </DirtyField>
                           {getError(errors, "image_spec.image") && (
                             <p className="text-sm text-danger mt-1">{getError(errors, "image_spec.image")}</p>
                           )}
@@ -642,15 +704,17 @@ export default function StackResourceItem({
                               <TooltipContent side="top">URL to the Git repository for this resource</TooltipContent>
                             </Tooltip>
                           </div>
-                          <Input
-                            id={`git-repo-${index}`}
-                            value={resource.build_spec?.source_context?.git_repo?.repo_url || ""}
-                            onChange={e => updateBuildSpec({ source_context: { git_repo: { repo_url: e.target.value }}})}
-                            placeholder="https://github.com/username/repository.git"
-                            className={`max-w-xl ${getError(errors, "build_spec.source_context.git_repo.repo_url") ? "border-danger" : ""}`}
-                            required={resource.sourceType === "git"}
-                            aria-invalid={!!getError(errors, "build_spec.source_context.git_repo.repo_url")}
-                          />
+                          <DirtyField draft={resource} baseline={baselineResource} path="build_spec.source_context.git_repo.repo_url" onReset={onDiscardField ? () => onDiscardField("build_spec.source_context.git_repo.repo_url") : undefined}>
+                            <Input
+                              id={`git-repo-${index}`}
+                              value={resource.build_spec?.source_context?.git_repo?.repo_url || ""}
+                              onChange={e => updateBuildSpec({ source_context: { git_repo: { repo_url: e.target.value }}})}
+                              placeholder="https://github.com/username/repository.git"
+                              className={`max-w-xl ${getError(errors, "build_spec.source_context.git_repo.repo_url") ? "border-danger" : ""}`}
+                              required={resource.sourceType === "git"}
+                              aria-invalid={!!getError(errors, "build_spec.source_context.git_repo.repo_url")}
+                            />
+                          </DirtyField>
                           {getError(errors, "build_spec.source_context.git_repo.repo_url") && (
                             <p className="text-sm text-danger">{getError(errors, "build_spec.source_context.git_repo.repo_url")}</p>
                           )}
@@ -728,15 +792,17 @@ export default function StackResourceItem({
                               </TooltipContent>
                             </Tooltip>
                           </div>
-                          <Input
-                            id={`external-image-repo-url-${index}`}
-                            value={resource.build_spec?.image_repository?.external_image_repo_url || ""}
-                            onChange={e => updateBuildSpec({ image_repository: { external_image_repo_url: e.target.value } })}
-                            placeholder="e.g., ghcr.io/your-org/your-image"
-                            className={`max-w-xl ${getError(errors, "build_spec.image_repository.external_image_repo_url") ? "border-danger" : ""}`}
-                            required={resource.sourceType === "git"}
-                            aria-invalid={!!getError(errors, "build_spec.image_repository.external_image_repo_url")}
-                          />
+                          <DirtyField draft={resource} baseline={baselineResource} path="build_spec.image_repository.external_image_repo_url" onReset={onDiscardField ? () => onDiscardField("build_spec.image_repository.external_image_repo_url") : undefined}>
+                            <Input
+                              id={`external-image-repo-url-${index}`}
+                              value={resource.build_spec?.image_repository?.external_image_repo_url || ""}
+                              onChange={e => updateBuildSpec({ image_repository: { external_image_repo_url: e.target.value } })}
+                              placeholder="e.g., ghcr.io/your-org/your-image"
+                              className={`max-w-xl ${getError(errors, "build_spec.image_repository.external_image_repo_url") ? "border-danger" : ""}`}
+                              required={resource.sourceType === "git"}
+                              aria-invalid={!!getError(errors, "build_spec.image_repository.external_image_repo_url")}
+                            />
+                          </DirtyField>
                           {getError(errors, "build_spec.image_repository.external_image_repo_url") && (
                             <p className="text-sm text-danger">{getError(errors, "build_spec.image_repository.external_image_repo_url")}</p>
                           )}
@@ -753,22 +819,24 @@ export default function StackResourceItem({
                               <TooltipContent side="top">Select the type of Git revision to use</TooltipContent>
                             </Tooltip>
                           </div>
-                          <Select
-                            value={resource.gitRevisionType}
-                            onValueChange={val => update({ gitRevisionType: val as "branch" | "commit" | "tag" })}
-                          >
-                            <SelectTrigger
-                              id={`git-revision-type-${index}`}
-                              className={`max-w-xl ${getError(errors, "gitRevisionType") ? "border-danger" : ""}`}
+                          <DirtyField draft={resource} baseline={baselineResource} path="gitRevisionType" onReset={onDiscardField ? () => onDiscardField("gitRevisionType") : undefined}>
+                            <Select
+                              value={resource.gitRevisionType}
+                              onValueChange={val => update({ gitRevisionType: val as "branch" | "commit" | "tag" })}
                             >
-                              <SelectValue placeholder="Select revision type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="branch">Branch</SelectItem>
-                              <SelectItem value="commit">Commit</SelectItem>
-                              <SelectItem value="tag">Tag</SelectItem>
-                            </SelectContent>
-                          </Select>
+                              <SelectTrigger
+                                id={`git-revision-type-${index}`}
+                                className={`max-w-xl ${getError(errors, "gitRevisionType") ? "border-danger" : ""}`}
+                              >
+                                <SelectValue placeholder="Select revision type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="branch">Branch</SelectItem>
+                                <SelectItem value="commit">Commit</SelectItem>
+                                <SelectItem value="tag">Tag</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </DirtyField>
                           {getError(errors, "gitRevisionType") && (
                             <p className="text-sm text-danger mt-1">{getError(errors, "gitRevisionType")}</p>
                           )}
@@ -796,27 +864,29 @@ export default function StackResourceItem({
                                 </TooltipContent>
                               </Tooltip>
                             </div>
-                            <Input
-                              id={`git-revision-value-${index}`}
-                              value={resource.gitRevisionValue || ""}
-                              onChange={e => update({ gitRevisionValue: e.target.value })}
-                              placeholder={
-                                resource.gitRevisionType === "branch"
-                                  ? "e.g., main, develop"
-                                  : resource.gitRevisionType === "commit"
-                                    ? "e.g., a1b2c3d4e5..."
-                                    : "e.g., v1.0.0"
-                              }
-                              className={`max-w-xl ${getError(errors, "gitRevisionValue") ? "border-danger" : ""}`}
-                              required={!!resource.gitRevisionType}
-                              aria-invalid={!!getError(errors, "gitRevisionValue")}
-                              onBlur={() => {
-                              // Mark as touched to trigger error display on submit
-                                if (!resource.gitRevisionValue) {
-                                  update({ gitRevisionValue: "" });
+                            <DirtyField draft={resource} baseline={baselineResource} path="gitRevisionValue" onReset={onDiscardField ? () => onDiscardField("gitRevisionValue") : undefined}>
+                              <Input
+                                id={`git-revision-value-${index}`}
+                                value={resource.gitRevisionValue || ""}
+                                onChange={e => update({ gitRevisionValue: e.target.value })}
+                                placeholder={
+                                  resource.gitRevisionType === "branch"
+                                    ? "e.g., main, develop"
+                                    : resource.gitRevisionType === "commit"
+                                      ? "e.g., a1b2c3d4e5..."
+                                      : "e.g., v1.0.0"
                                 }
-                              }}
-                            />
+                                className={`max-w-xl ${getError(errors, "gitRevisionValue") ? "border-danger" : ""}`}
+                                required={!!resource.gitRevisionType}
+                                aria-invalid={!!getError(errors, "gitRevisionValue")}
+                                onBlur={() => {
+                                // Mark as touched to trigger error display on submit
+                                  if (!resource.gitRevisionValue) {
+                                    update({ gitRevisionValue: "" });
+                                  }
+                                }}
+                              />
+                            </DirtyField>
                             {getError(errors, "gitRevisionValue") && (
                               <p className="text-sm text-danger mt-1">{getError(errors, "gitRevisionValue")}</p>
                             )}
@@ -832,7 +902,15 @@ export default function StackResourceItem({
                   <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Volume Mounts</h3>
                   <div className="grid gap-6 max-w-3xl">
                     {(resource.volume_mounts || []).map((vm, vmIdx) => (
-                      <div key={vmIdx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
+                      <DirtyField
+                        key={vmIdx}
+                        draft={resource}
+                        baseline={baselineResource}
+                        path={`volume_mounts.${vmIdx}`}
+                        onReset={onDiscardField ? () => onDiscardField(`volume_mounts.${vmIdx}`) : undefined}
+                        compact
+                      >
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
                         <div>
                           <div className="flex items-center gap-1 mb-2">
                             <Label htmlFor={`volume-name-${index}-${vmIdx}`} className="text-sm font-medium">
@@ -929,10 +1007,11 @@ export default function StackResourceItem({
                           </Button>
                         </div>
                       </div>
+                      </DirtyField>
                     ))}
                     <div>
                       <Button
-                        variant="addAction"
+                        variant="ghost"
                         size="sm"
                         onClick={addVolumeMount}
                         disabled={(volumes || []).length === 0}
@@ -951,7 +1030,15 @@ export default function StackResourceItem({
                   <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Ports</h3>
                   <div className="grid gap-6 max-w-3xl">
                     {(resource.ports || []).map((port, pidx) => (
-                      <div key={pidx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
+                      <DirtyField
+                        key={pidx}
+                        draft={resource}
+                        baseline={baselineResource}
+                        path={`ports.${pidx}`}
+                        onReset={onDiscardField ? () => onDiscardField(`ports.${pidx}`) : undefined}
+                        compact
+                      >
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
                         <div>
                           <div className="flex items-center gap-1 mb-2">
                             <Label htmlFor={`port-number-${index}-${pidx}`} className="text-sm font-medium">
@@ -1037,9 +1124,10 @@ export default function StackResourceItem({
                           </Button>
                         </div>
                       </div>
+                      </DirtyField>
                     ))}
                     <div>
-                      <Button variant="addAction" size="sm" onClick={addPort}>
+                      <Button variant="ghost" size="sm" onClick={addPort}>
                         <PlusCircle className="h-4 w-4 mr-2" />Add Port
                       </Button>
                     </div>
@@ -1065,12 +1153,14 @@ export default function StackResourceItem({
                           <TooltipContent side="top">Pre-deployment init command (comma separated)</TooltipContent>
                         </Tooltip>
                       </div>
-                      <Input
-                        id={`init-command-${index}`}
-                        value={resource.init_spec?.command?.join(",") || ""}
-                        onChange={e => update({ init_spec: { ...resource.init_spec, command: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
-                        placeholder="e.g., sh,/scripts/init.sh"
-                      />
+                      <DirtyField draft={resource} baseline={baselineResource} path="init_spec.command" onReset={onDiscardField ? () => onDiscardField("init_spec.command") : undefined}>
+                        <Input
+                          id={`init-command-${index}`}
+                          value={resource.init_spec?.command?.join(",") || ""}
+                          onChange={e => update({ init_spec: { ...resource.init_spec, command: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
+                          placeholder="e.g., sh,/scripts/init.sh"
+                        />
+                      </DirtyField>
                     </div>
                     <div>
                       <div className="flex items-center gap-1 mb-2">
@@ -1084,12 +1174,14 @@ export default function StackResourceItem({
                           <TooltipContent side="top">Pre-deployment arguments (comma separated)</TooltipContent>
                         </Tooltip>
                       </div>
-                      <Input
-                        id={`init-args-${index}`}
-                        value={resource.init_spec?.args?.join(",") || ""}
-                        onChange={e => update({ init_spec: { ...resource.init_spec, args: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
-                        placeholder="e.g., arg1,arg2,arg3"
-                      />
+                      <DirtyField draft={resource} baseline={baselineResource} path="init_spec.args" onReset={onDiscardField ? () => onDiscardField("init_spec.args") : undefined}>
+                        <Input
+                          id={`init-args-${index}`}
+                          value={resource.init_spec?.args?.join(",") || ""}
+                          onChange={e => update({ init_spec: { ...resource.init_spec, args: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
+                          placeholder="e.g., arg1,arg2,arg3"
+                        />
+                      </DirtyField>
                     </div>
                   </div>
                 </div>
@@ -1110,12 +1202,14 @@ export default function StackResourceItem({
                           <TooltipContent side="top">Container runtime command (comma separated)</TooltipContent>
                         </Tooltip>
                       </div>
-                      <Input
-                        id={`exec-command-${index}`}
-                        value={resource.execution_config?.command?.join(",") || ""}
-                        onChange={e => update({ execution_config: { ...resource.execution_config, command: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
-                        placeholder="e.g., node,server.js"
-                      />
+                      <DirtyField draft={resource} baseline={baselineResource} path="execution_config.command" onReset={onDiscardField ? () => onDiscardField("execution_config.command") : undefined}>
+                        <Input
+                          id={`exec-command-${index}`}
+                          value={resource.execution_config?.command?.join(",") || ""}
+                          onChange={e => update({ execution_config: { ...resource.execution_config, command: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
+                          placeholder="e.g., node,server.js"
+                        />
+                      </DirtyField>
                     </div>
                     <div>
                       <div className="flex items-center gap-1 mb-2">
@@ -1129,12 +1223,14 @@ export default function StackResourceItem({
                           <TooltipContent side="top">Container runtime arguments (comma separated)</TooltipContent>
                         </Tooltip>
                       </div>
-                      <Input
-                        id={`exec-args-${index}`}
-                        value={resource.execution_config?.args?.join(",") || ""}
-                        onChange={e => update({ execution_config: { ...resource.execution_config, args: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
-                        placeholder="e.g., --port=3000,--verbose"
-                      />
+                      <DirtyField draft={resource} baseline={baselineResource} path="execution_config.args" onReset={onDiscardField ? () => onDiscardField("execution_config.args") : undefined}>
+                        <Input
+                          id={`exec-args-${index}`}
+                          value={resource.execution_config?.args?.join(",") || ""}
+                          onChange={e => update({ execution_config: { ...resource.execution_config, args: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
+                          placeholder="e.g., --port=3000,--verbose"
+                        />
+                      </DirtyField>
                     </div>
                   </div>
                 </div>
@@ -1145,7 +1241,7 @@ export default function StackResourceItem({
                 <div className="flex items-center mb-3">
                   <h3 className="text-lg font-medium">Environment Variables</h3>
                   <div className="ml-auto flex gap-2">
-                    <Button variant="dangerAction" size="sm" onClick={() => {
+                    <Button variant="ghost" className="text-danger hover:text-danger hover:bg-danger-bg" size="sm" onClick={() => {
                       if (resource.execution_config?.environment_variables?.length) {
                         update({
                           execution_config: {
@@ -1165,7 +1261,7 @@ export default function StackResourceItem({
                     {/* Paste Variables button */}
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="utility" size="sm" className="gap-2">
+                        <Button variant="ghost" size="sm" className="gap-2">
                           <Copy className="h-4 w-4" />
                           <span>Paste Variables</span>
                         </Button>
@@ -1220,7 +1316,7 @@ export default function StackResourceItem({
                     {/* Import from file button */}
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="utility" size="sm">
+                        <Button variant="ghost" size="sm">
                           <Upload className="h-4 w-4 mr-2" /> Import File
                         </Button>
                       </DialogTrigger>
@@ -1338,6 +1434,8 @@ export default function StackResourceItem({
                         secretsLoading={secrets.isLoading}
                         addonNameById={addonNameById}
                         rowErrors={rowErrorsForIndex(envIdx)}
+                        status={envRowStatuses[envIdx] ?? "unchanged"}
+                        onReset={onDiscardEnvRow ? () => onDiscardEnvRow(envIdx) : undefined}
                         onChangeAddon={(patch) => onChangeAddonForRow(envIdx, patch)}
                         onChangeName={(name) => {
                           replaceEnvVar(envIdx, { ...env, name });
@@ -1512,7 +1610,7 @@ export default function StackResourceItem({
                           {g.items.map(renderRow)}
                           <div className="px-3 py-1.5 flex justify-end">
                             <Button
-                              variant="addAction"
+                              variant="ghost"
                               size="sm"
                               onClick={handleAddBinding}
                               className="h-7 text-[12.5px]"
@@ -1527,7 +1625,7 @@ export default function StackResourceItem({
                 </div>
                 {/* Add Variable button */}
                 <div className="flex justify-end mt-2">
-                  <Button variant="addAction" size="sm" onClick={() => addEnvVar()}>
+                  <Button variant="ghost" size="sm" onClick={() => addEnvVar()}>
                     <PlusCircle className="h-4 w-4 mr-2" /> Add Variable
                   </Button>
                 </div>
@@ -1553,3 +1651,14 @@ export default function StackResourceItem({
     </TooltipProvider>
   );
 }
+
+/**
+ * The form is heavy (~1500 lines of JSX) and Radix Accordion keeps closed
+ * items mounted, so a keystroke in one resource would otherwise re-render
+ * every other resource. React.memo with the default shallow compare keeps
+ * unchanged items idle as long as the parent passes stable refs (handled by
+ * useCallback in detail/index.tsx and useRef'd EMPTY_ERRORS in
+ * resource-form-list.tsx).
+ */
+const StackResourceItem = React.memo(StackResourceItemImpl);
+export default StackResourceItem;

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { Accordion } from "@/components/ui/accordion";
-import { Container } from "lucide-react";
+import { Container, PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Generic detail list props that can be used for different types of details
 interface ResourceDetailListProps<T> {
@@ -12,6 +13,9 @@ interface ResourceDetailListProps<T> {
   emptyDescription?: string;
   emptyIcon?: ReactNode;
   defaultAllCollapsed?: boolean;
+  /** When provided, renders an Add CTA (empty-state + below-list) that begins an edit session and adds an item. */
+  onAdd?: () => void;
+  addLabel?: string;
 }
 
 export default function ResourceDetailList<T>({
@@ -22,6 +26,8 @@ export default function ResourceDetailList<T>({
   emptyDescription,
   emptyIcon,
   defaultAllCollapsed = false,
+  onAdd,
+  addLabel = "Add",
 }: ResourceDetailListProps<T>) {
   const [openAccordions, setOpenAccordions] = useState<string[]>(
     defaultAllCollapsed ? [] : items.map((_, i) => String(i))
@@ -58,6 +64,17 @@ export default function ResourceDetailList<T>({
             {emptyDescription}
           </p>
         )}
+        {onAdd && (
+          <Button
+            type="button"
+            variant="secondary"
+            className="mt-5"
+            onClick={onAdd}
+          >
+            <PlusCircle className="h-4 w-4" />
+            {addLabel}
+          </Button>
+        )}
       </div>
     );
   }
@@ -72,6 +89,14 @@ export default function ResourceDetailList<T>({
       >
         {items.map((item, index) => renderItem({ item, index }))}
       </Accordion>
+      {onAdd && (
+        <div className="flex justify-center mt-4">
+          <Button type="button" variant="ghost" onClick={onAdd}>
+            <PlusCircle className="h-4 w-4" />
+            {addLabel}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

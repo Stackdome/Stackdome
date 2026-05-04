@@ -91,7 +91,7 @@ export default function AddonsInStackPanel({
 
   return (
     <Panel
-      title="Linked addons"
+      title="Stack Addons Linked"
       count={totalRows}
       bodyClassName="p-0"
     >
@@ -110,7 +110,7 @@ export default function AddonsInStackPanel({
           {noAddonsInSystem ? (
             <Button
               type="button"
-              size="sm"
+              variant="secondary"
               className="mt-5"
               onClick={() => window.open("/addons", "_blank")}
             >
@@ -119,7 +119,7 @@ export default function AddonsInStackPanel({
           ) : (
             <Button
               type="button"
-              size="sm"
+              variant="secondary"
               className="mt-5"
               onClick={addPendingRow}
             >
@@ -213,13 +213,13 @@ export default function AddonsInStackPanel({
         ))}
       </div>
       {totalRows > 0 && (
-        <div className="flex justify-center px-5 py-3 border-t border-border">
+        <div className="flex justify-center mt-4">
           {(() => {
             const allLinked = !noAddonsInSystem && availablePostgres.length === 0;
             const button = (
               <Button
                 type="button"
-                variant="addAction"
+                variant="ghost"
                 disabled={allLinked}
                 onClick={noAddonsInSystem ? () => window.open("/addons", "_blank") : addPendingRow}
               >

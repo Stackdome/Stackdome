@@ -111,17 +111,24 @@ export default function ResourceFormList<T>({
     }
   }, [lastAddedIndex]);
 
-  // Update an existing item
-  const handleItemChange = useCallback((index: number, updatedItem: Partial<T>) => {
-    onItemsChange(
-      items.map((item, i) => i === index ? updatedItem : item)
-    );
-  }, [items, onItemsChange]);
+  // Stable refs to the latest items + onItemsChange. Without this the
+  // change/remove handlers below would be recreated on every keystroke
+  // (because items changes), which defeats React.memo on each item child
+  // and forces every other resource to re-render.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const onItemsChangeRef = useRef(onItemsChange);
+  onItemsChangeRef.current = onItemsChange;
 
-  // Remove an item
+  const handleItemChange = useCallback((index: number, updatedItem: Partial<T>) => {
+    onItemsChangeRef.current(
+      itemsRef.current.map((item, i) => i === index ? updatedItem : item)
+    );
+  }, []);
+
   const handleRemoveItem = useCallback((index: number) => {
-    onItemsChange(items.filter((_, i) => i !== index));
-  }, [items, onItemsChange]);
+    onItemsChangeRef.current(itemsRef.current.filter((_, i) => i !== index));
+  }, []);
 
   // Track state of accordions
   const handleValueChange = useCallback((value: string[]) => {
@@ -134,6 +141,9 @@ export default function ResourceFormList<T>({
       itemRefs.current[index] = el;
     };
   }, []);
+
+  // Stable empty-errors reference — passing `{}` inline would break downstream memo.
+  const EMPTY_ERRORS = useRef({}).current;
 
   return (
     <div>
@@ -158,7 +168,7 @@ export default function ResourceFormList<T>({
           {emptyOnAdd && emptyCtaLabel && (
             <Button
               type="button"
-              size="sm"
+              variant="secondary"
               className="mt-5"
               onClick={emptyOnAdd}
             >
@@ -183,7 +193,7 @@ export default function ResourceFormList<T>({
                   isOnlyItem: items.length === 1,
                   onChange: handleItemChange,
                   onRemove: handleRemoveItem,
-                  errors: errors[index] || {},
+                  errors: errors[index] || EMPTY_ERRORS,
                 })}
               </div>
             ))}

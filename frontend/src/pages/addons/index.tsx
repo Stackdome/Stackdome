@@ -112,7 +112,7 @@ export default function AddonsPage() {
               title="No addons yet"
               description="Add an addon to provision a managed Postgres for your stacks."
               action={
-                <Button onClick={() => setPickerOpen(true)} variant="outline">
+                <Button onClick={() => setPickerOpen(true)}>
                   <PlusCircle className="h-4 w-4" />
                   Add Addon
                 </Button>
