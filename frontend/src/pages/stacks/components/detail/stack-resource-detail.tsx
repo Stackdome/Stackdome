@@ -194,13 +194,13 @@ export default function StackResourceDetail({
           </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="bg-secondary border-t border-border pb-4 pt-4 px-1">
+      <AccordionContent className="bg-background dark:bg-secondary border-t border-border pb-4 pt-4 px-1">
         <div className="px-4 space-y-4">
           <Tabs defaultValue="configuration" className="w-full">
             <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-1 px-2">
-              <TabsTrigger value="configuration" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Configuration</TabsTrigger>
-              <TabsTrigger value="deployment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Deployment</TabsTrigger>
-              <TabsTrigger value="environment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Environment</TabsTrigger>
+              <TabsTrigger value="configuration" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-background dark:data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Configuration</TabsTrigger>
+              <TabsTrigger value="deployment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-background dark:data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Deployment</TabsTrigger>
+              <TabsTrigger value="environment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-background dark:data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Environment</TabsTrigger>
             </TabsList>
             <TabsContent value="configuration" className="pt-4 space-y-6">
               <div>
@@ -288,63 +288,55 @@ export default function StackResourceDetail({
 
               {/* Ingress Section */}
               <div>
-                <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Ingress</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">Ingress</h3>
                 {resource.ports && resource.ports.length > 0 ? (
-                  <div className="grid gap-3 w-full">
+                  <div className="space-y-2">
                     {resource.ports.map((port, pidx) => {
                       const portUrl = getUrlForPort(port.number);
                       return (
-                        <div key={pidx} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-3 rounded-md bg-muted/10 border">
-                          <div className="md:col-span-2">
-                            <div className="mb-1 text-sm font-medium">URL</div>
+                        <div key={pidx} className="rounded-md border border-border bg-muted/10 p-3">
+                          <div className="flex items-center gap-2">
+                            <ExternalLink className="h-3.5 w-3.5 text-brand shrink-0" />
                             {portUrl ? (
-                              <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
-                                <button
-                                  onClick={() => window.open(portUrl, '_blank', 'noopener,noreferrer')}
-                                  className="flex-1 text-sm font-mono break-all text-blue-600 hover:text-blue-800 hover:underline text-left cursor-pointer bg-transparent border-none p-0"
+                              <>
+                                <a
+                                  href={portUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-mono text-[13px] text-brand hover:text-brand-press hover:underline truncate min-w-0 flex-1"
+                                  title={portUrl}
                                 >
                                   {portUrl}
-                                </button>
+                                </a>
                                 <Button
                                   variant="ghost"
-                                  size="sm"
-                                  className="shrink-0 h-6 w-6 p-0"
+                                  size="icon"
+                                  className="shrink-0 h-6 w-6 text-muted-foreground hover:text-foreground"
                                   onClick={() => copyToClipboard(portUrl)}
                                   title="Copy URL"
                                 >
                                   <Copy className="h-3 w-3" />
                                 </Button>
-                              </div>
+                              </>
                             ) : (
-                              <div className="p-2 bg-muted/30 rounded-md text-sm text-muted-foreground">
-                                {port.exposed_to_public ? "Pending..." : "Not exposed"}
-                              </div>
+                              <span className="font-mono text-[13px] text-muted-foreground italic">
+                                {port.exposed_to_public ? "Pending…" : "Not exposed"}
+                              </span>
                             )}
                           </div>
-                          <div>
-                            <div className="mb-1 text-sm font-medium">Port</div>
-                            <div className="p-2 bg-muted/30 rounded-md">
-                              {port.number}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="mb-1 text-sm font-medium">Protocol</div>
-                            <div className="p-2 bg-muted/30 rounded-md">
-                              {port.protocol || "TCP"}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="mb-1 text-sm font-medium">Public Access</div>
-                            <div className="p-2 bg-muted/30 rounded-md">
-                              {port.exposed_to_public ? "Exposed" : "Internal Only"}
-                            </div>
+                          <div className="font-mono text-[12px] text-muted-foreground pl-5 mt-1">
+                            port {port.number}
+                            <span className="mx-1.5 text-muted-foreground/60">·</span>
+                            {port.protocol || "tcp"}
+                            <span className="mx-1.5 text-muted-foreground/60">·</span>
+                            {port.exposed_to_public ? "exposed" : "internal only"}
                           </div>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground">No ports configured</div>
+                  <p className="text-sm text-muted-foreground">No ports configured</p>
                 )}
               </div>
               <Separator className="my-4" />

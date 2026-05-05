@@ -85,124 +85,14 @@ describe("EnvRow (addon variant)", () => {
     expect(fromTrigger).not.toBeDisabled();
   });
 
-  it("renders three picker triggers (Addon, Database, Field) on the second line of an addon row", () => {
+  it("renders the field picker on addon rows", () => {
+    // After the inline-addon-picker refactor, only the credField picker lives
+    // on each env row. Addon + database selection moved up to the addon-group
+    // header in stack-resource-environment-tab.
     render(<EnvRow row={baseAddonRow()} {...noopProps} />);
-    expect(screen.getByTestId("addon-picker-trigger")).toBeInTheDocument();
-    expect(screen.getByTestId("database-picker-trigger")).toBeInTheDocument();
     expect(screen.getByTestId("field-picker-trigger")).toBeInTheDocument();
-  });
-
-  it("lists addons in the addon picker with name and state", async () => {
-    const user = userEvent.setup();
-    render(
-      <EnvRow
-        row={baseAddonRow({ addonId: "" })}
-        {...noopProps}
-        addons={[
-          mkAddon({ id: "a", name: "primary", status: { state: "Ready" } }),
-          mkAddon({ id: "b", name: "secondary", status: { state: "Pending" } }),
-        ]}
-      />,
-    );
-    await user.click(screen.getByTestId("addon-picker-trigger"));
-    expect(
-      await screen.findByRole("option", { name: /primary.*Postgres.*Ready/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: /secondary.*Postgres.*Pending/i }),
-    ).toBeInTheDocument();
-  });
-
-  it("shows '+ Create Postgres addon' link when addons list is empty", async () => {
-    const user = userEvent.setup();
-    render(
-      <EnvRow row={baseAddonRow({ addonId: "" })} {...noopProps} addons={[]} />,
-    );
-    await user.click(screen.getByTestId("addon-picker-trigger"));
-    const link = await screen.findByRole("link", { name: /create postgres addon/i });
-    expect(link).toHaveAttribute("href", "/addons/create/postgres");
-    expect(link).toHaveAttribute("target", "_blank");
-  });
-
-  it("calls onChangeAddon when an addon is picked", async () => {
-    const user = userEvent.setup();
-    const onChangeAddon = vi.fn();
-    render(
-      <EnvRow
-        row={baseAddonRow({ addonId: "" })}
-        {...noopProps}
-        onChangeAddon={onChangeAddon}
-        addons={[mkAddon({ id: "addon-x" })]}
-      />,
-    );
-    await user.click(screen.getByTestId("addon-picker-trigger"));
-    await user.click(await screen.findByRole("option", { name: /tooljet-db/i }));
-    expect(onChangeAddon).toHaveBeenCalledWith(
-      expect.objectContaining({ addonId: "addon-x" }),
-    );
-  });
-
-  it("database picker is disabled when no addon is picked", () => {
-    render(
-      <EnvRow
-        row={baseAddonRow({ addonId: "", database: undefined })}
-        {...noopProps}
-        addons={[mkAddon()]}
-      />,
-    );
-    expect(screen.getByTestId("database-picker-trigger")).toBeDisabled();
-  });
-
-  it("database picker lists addon's databases when an addon is picked", async () => {
-    const user = userEvent.setup();
-    render(<EnvRow row={baseAddonRow({ database: undefined })} {...noopProps} />);
-    await user.click(screen.getByTestId("database-picker-trigger"));
-    expect(await screen.findByRole("option", { name: /tooljet/i })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /analytics/i })).toBeInTheDocument();
-  });
-
-  it("does NOT show 'All databases' when addon does not enable superuser", async () => {
-    const user = userEvent.setup();
-    render(<EnvRow row={baseAddonRow({ database: undefined })} {...noopProps} />);
-    await user.click(screen.getByTestId("database-picker-trigger"));
-    expect(screen.queryByRole("option", { name: /all databases/i })).not.toBeInTheDocument();
-  });
-
-  it("shows 'All databases' when addon enables superuser", async () => {
-    const user = userEvent.setup();
-    const su = mkAddon({
-      spec: {
-        ...mkAddon().spec,
-        configuration: { enable_superuser_access: true },
-      } as PostgresAddonSpec,
-    });
-    render(
-      <EnvRow row={baseAddonRow({ database: undefined })} {...noopProps} addons={[su]} />,
-    );
-    await user.click(screen.getByTestId("database-picker-trigger"));
-    expect(await screen.findByRole("option", { name: /all databases/i })).toBeInTheDocument();
-  });
-
-  it("calls onChangeAddon with superuser=true and database=null when 'All databases' is picked", async () => {
-    const user = userEvent.setup();
-    const onChangeAddon = vi.fn();
-    const su = mkAddon({
-      spec: {
-        ...mkAddon().spec,
-        configuration: { enable_superuser_access: true },
-      } as PostgresAddonSpec,
-    });
-    render(
-      <EnvRow
-        row={baseAddonRow({ database: undefined })}
-        {...noopProps}
-        addons={[su]}
-        onChangeAddon={onChangeAddon}
-      />,
-    );
-    await user.click(screen.getByTestId("database-picker-trigger"));
-    await user.click(await screen.findByRole("option", { name: /all databases/i }));
-    expect(onChangeAddon).toHaveBeenCalledWith({ database: null, superuser: true });
+    expect(screen.queryByTestId("addon-picker-trigger")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("database-picker-trigger")).not.toBeInTheDocument();
   });
 
   it("field picker is disabled when no addon is picked", () => {
@@ -255,31 +145,8 @@ describe("EnvRow (addon variant)", () => {
 
   it("renders no error styling without rowErrors", () => {
     render(<EnvRow row={baseAddonRow()} {...noopProps} />);
-    expect(screen.getByTestId("addon-picker-trigger")).not.toHaveClass("border-destructive");
-  });
-
-  it("renders red border + message on addon picker when rowErrors.addonId set", () => {
-    render(
-      <EnvRow
-        row={baseAddonRow({ addonId: "" })}
-        {...noopProps}
-        rowErrors={{ addonId: "Pick an addon" }}
-      />,
-    );
-    expect(screen.getByTestId("addon-picker-trigger")).toHaveClass("border-destructive");
-    expect(screen.getByText("Pick an addon")).toBeInTheDocument();
-  });
-
-  it("renders red border + message on database picker when rowErrors.database set", () => {
-    render(
-      <EnvRow
-        row={baseAddonRow({ database: undefined })}
-        {...noopProps}
-        rowErrors={{ database: "Pick a database" }}
-      />,
-    );
-    expect(screen.getByTestId("database-picker-trigger")).toHaveClass("border-destructive");
-    expect(screen.getByText("Pick a database")).toBeInTheDocument();
+    expect(screen.getByTestId("field-picker-trigger")).not.toHaveClass("border-danger");
+    expect(screen.getByPlaceholderText("KEY")).not.toHaveClass("border-danger");
   });
 
   it("renders red border + message on field picker when rowErrors.credField set", () => {
@@ -290,7 +157,7 @@ describe("EnvRow (addon variant)", () => {
         rowErrors={{ credField: "Pick a field" }}
       />,
     );
-    expect(screen.getByTestId("field-picker-trigger")).toHaveClass("border-destructive");
+    expect(screen.getByTestId("field-picker-trigger")).toHaveClass("border-danger");
     expect(screen.getByText("Pick a field")).toBeInTheDocument();
   });
 
@@ -302,7 +169,7 @@ describe("EnvRow (addon variant)", () => {
         rowErrors={{ duplicate: 'Duplicate name "PG_HOST"' }}
       />,
     );
-    expect(screen.getByPlaceholderText("KEY")).toHaveClass("border-destructive");
+    expect(screen.getByPlaceholderText("KEY")).toHaveClass("border-danger");
     expect(screen.getByText('Duplicate name "PG_HOST"')).toBeInTheDocument();
   });
 
@@ -328,30 +195,4 @@ describe("EnvRow (addon variant)", () => {
     expect(fromTrigger).not.toBeDisabled();
   });
 
-  it("auto-selects the only database when picking an addon with one db and no superuser", async () => {
-    const user = userEvent.setup();
-    const onChangeAddon = vi.fn();
-    const single = mkAddon({
-      id: "addon-single",
-      spec: {
-        ...mkAddon().spec,
-        databases: [{ name: "only-one" }],
-      } as PostgresAddonSpec,
-    });
-    render(
-      <EnvRow
-        row={baseAddonRow({ addonId: "", database: undefined })}
-        {...noopProps}
-        addons={[single]}
-        onChangeAddon={onChangeAddon}
-      />,
-    );
-    await user.click(screen.getByTestId("addon-picker-trigger"));
-    await user.click(await screen.findByRole("option", { name: /tooljet-db/i }));
-    expect(onChangeAddon).toHaveBeenCalledWith({
-      addonId: "addon-single",
-      database: "only-one",
-      superuser: false,
-    });
-  });
 });

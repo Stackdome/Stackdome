@@ -32,8 +32,23 @@ export interface StackDiff {
 }
 
 /** Recursive structural equality that treats `undefined` like a missing key. */
+/** True when `v` carries no semantic content — undefined/null, empty string,
+ *  empty array, or an object whose values are all themselves structurally empty.
+ *  Used by deepEqual so that `{cmd: []}` vs `undefined` (a common form/baseline
+ *  mismatch produced by clearing a comma-separated field) reads as equal. */
+function isStructurallyEmpty(v: unknown): boolean {
+  if (v === null || v === undefined) return true;
+  if (typeof v === "string") return v === "";
+  if (Array.isArray(v)) return v.every(isStructurallyEmpty);
+  if (typeof v === "object") {
+    return Object.values(v as Record<string, unknown>).every(isStructurallyEmpty);
+  }
+  return false;
+}
+
 function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
+  if (isStructurallyEmpty(a) && isStructurallyEmpty(b)) return true;
   if (a === null || b === null) return a === b;
   if (typeof a !== typeof b) return false;
   if (typeof a !== "object") return false;
@@ -229,8 +244,10 @@ export function diffStack(
   };
 }
 
-/** Deep clone via JSON round-trip. Form data is plain JSON so this is safe. */
+/** Deep clone via JSON round-trip. Form data is plain JSON so this is safe.
+ *  Passes undefined through (JSON.parse(JSON.stringify(undefined)) throws). */
 export function cloneJson<T>(v: T): T {
+  if (v === undefined) return v;
   return JSON.parse(JSON.stringify(v)) as T;
 }
 

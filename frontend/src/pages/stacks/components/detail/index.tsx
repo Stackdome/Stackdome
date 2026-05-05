@@ -1,16 +1,10 @@
 import { useParams, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
-import { Loader2, MoreHorizontal, Rocket } from "lucide-react";
+import { Loader2, Pencil, Rocket, Trash2 } from "lucide-react";
 import { PageHeader, Panel, StatusPill, variantFromState } from "@/components/branded";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import StackResourcesForm, { getDefaultResource } from "@/pages/stacks/components/shared/stack-resources-form";
 import StackVolumesForm, { getDefaultVolume } from "@/pages/stacks/components/shared/stack-volumes-form";
 import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resources-detail";
@@ -39,7 +33,7 @@ import { getStackById, updateStack } from "@/api/stacks";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import type { z } from "zod";
-import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convertFormStackToApiStack } from "@/pages/stacks/schemas/form-schema";
+import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
 import { useToast } from "@/components/ui/use-toast";
 import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/schemas/api-schema";
 
@@ -266,6 +260,29 @@ export default function StackDetailPage() {
         }
       };
 
+      const validation = FormStackSchema.safeParse(formStackData);
+      if (!validation.success) {
+        const nextErrors: typeof validationErrors = { resources: {}, volumes: {} };
+        for (const issue of validation.error.issues) {
+          const [scope0, scope1, idxRaw, ...rest] = issue.path;
+          if (scope0 !== "spec" || (scope1 !== "stack_resources" && scope1 !== "volumes")) continue;
+          const idx = typeof idxRaw === "number" ? idxRaw : Number(idxRaw);
+          if (Number.isNaN(idx)) continue;
+          const bucket = scope1 === "stack_resources" ? nextErrors.resources : nextErrors.volumes;
+          if (!bucket[idx]) bucket[idx] = {};
+          const fieldKey = rest.join(".");
+          if (!bucket[idx][fieldKey]) bucket[idx][fieldKey] = issue.message;
+        }
+        setValidationErrors(nextErrors);
+        toast({
+          title: "Validation error",
+          description: "Please fix the highlighted errors before deploying.",
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return;
+      }
+
       const apiData = convertFormStackToApiStack(formStackData);
       const updatedStack = await updateStack(orgId, id, apiData);
 
@@ -396,26 +413,34 @@ export default function StackDetailPage() {
     `${volumeCount} ${volumeCount === 1 ? "volume" : "volumes"}`,
   ];
 
-  const overflowMenu = (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="More actions">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem
-          onClick={() =>
-            toast({
-              title: "Not implemented",
-              description: "Delete stack will land in a follow-up.",
-            })
-          }
-        >
-          Delete stack
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => activateEdit({})}
+        disabled={session.isActive}
+        aria-label={session.isActive ? "Stack is being edited" : "Edit stack"}
+      >
+        <Pencil className="h-3.5 w-3.5" />
+        {session.isActive ? "Editing" : "Edit stack"}
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-muted-foreground/70 hover:text-danger hover:bg-danger-bg"
+        onClick={() =>
+          toast({
+            title: "Not implemented",
+            description: "Delete stack will land in a follow-up.",
+          })
+        }
+        aria-label="Delete stack"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+        Delete stack
+      </Button>
+    </div>
   );
 
   return (
@@ -484,7 +509,7 @@ export default function StackDetailPage() {
             {p}
           </span>
         ))}
-        actions={overflowMenu}
+        actions={headerActions}
       />
 
       <Tabs defaultValue="configuration" className="w-full">
@@ -568,6 +593,7 @@ export default function StackDetailPage() {
                 onVolumesChange={handleVolumesChange}
                 errors={validationErrors.volumes}
                 stackResources={session.draft.resources}
+                baselineVolumes={baselineVolumes}
                 accordionDefaultOpen={false}
                 defaultOpenVolumeIdx={session.openVolumeIdx}
               />

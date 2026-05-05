@@ -553,7 +553,6 @@ export default function StackCreatePage() {
           count={formData.spec?.stack_resources?.length ?? 0}
           bodyClassName="p-0"
           invalid={!!formErrors["spec.stack_resources"]}
-          errorMessage={formErrors["spec.stack_resources"]}
         >
             <StackResourcesForm
               resources={formData.spec?.stack_resources || []}

@@ -167,6 +167,25 @@ const FormStackSchema = ApiStackSchema.extend({
       .min(1, "Add at least one resource"),
     volumes: z.array(FormVolumeSchema).optional(),
   }),
+}).superRefine((stack, ctx) => {
+  const names = new Set(
+    (stack.spec?.stack_resources ?? [])
+      .map(r => r?.name)
+      .filter((n): n is string => !!n),
+  );
+  (stack.spec?.stack_resources ?? []).forEach((r, idx) => {
+    (r?.depends_on ?? []).forEach((dep, depIdx) => {
+      if (!dep || !names.has(dep)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["spec", "stack_resources", idx, "depends_on", depIdx],
+          message: dep
+            ? `Unknown resource "${dep}"`
+            : "Required",
+        });
+      }
+    });
+  });
 });
 
 /**

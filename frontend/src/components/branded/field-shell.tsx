@@ -40,9 +40,7 @@ export function FieldShell({
       >
         {label}
         {required && (
-          <span className="ml-2 font-mono text-[10.5px] uppercase tracking-[1px] text-muted-foreground">
-            required
-          </span>
+          <span className="ml-0.5 text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span>
         )}
       </Label>
       {children}

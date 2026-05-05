@@ -11,6 +11,9 @@ interface StackVolumesFormProps {
   onVolumesChange: (updatedVolumes: Partial<VolumeFormData>[]) => void;
   errors: { [index: number]: { [field: string]: string | undefined } };
   stackResources?: Partial<FormStackResourceData>[];
+  /** Baseline snapshot — when provided, removing a volume that exists in
+   *  baseline shows a confirm dialog. Newly-added drafts are removed silently. */
+  baselineVolumes?: Partial<VolumeFormData>[];
   accordionDefaultOpen?: boolean; // If false, all collapsed by default
   defaultOpenVolumeIdx?: number | null;
 }
@@ -33,22 +36,16 @@ export default function StackVolumesForm({
   onVolumesChange,
   errors,
   stackResources = [],
+  baselineVolumes,
   accordionDefaultOpen = true,
   defaultOpenVolumeIdx = null,
 }: StackVolumesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
 
-  // Helper function to check if a volume is being used by resources
-  const isVolumeUsed = (volumeName: string) => {
-    return stackResources.some(res =>
-      res.volume_mounts?.some(vm => vm.source_volume_name === volumeName)
-    );
-  };
-
-  // Helper function to check if a volume has data
-  const isVolumeFilled = (vol: Partial<VolumeFormData>) => {
-    return !!(vol.name || vol.spec?.size || vol.labels?.length || vol.spec?.needs_sync_before_use || vol.spec?.access_mode !== undefined);
-  };
+  // Removing a volume is destructive only when it exists in the baseline —
+  // i.e., it was already deployed. Newly-added drafts are removed silently.
+  const wasInBaseline = (vol: Partial<VolumeFormData>) =>
+    !!(vol.name && baselineVolumes?.some(b => b.name === vol.name));
 
   return (
     <div className="space-y-3">
@@ -60,13 +57,7 @@ export default function StackVolumesForm({
             itemRef={itemRef}
             onChange={onChange}
             onRemove={(idx) => {
-              if (item.name && isVolumeUsed(item.name)) {
-                // Show error dialog
-                console.error(`Volume ${item.name} is in use and cannot be removed.`);
-                return;
-              }
-
-              if (isVolumeFilled(item)) {
+              if (wasInBaseline(item)) {
                 setPendingRemoveIdx(idx);
               } else {
                 onRemove(idx);

@@ -314,3 +314,98 @@ describe("FormEnvVarSchema (addon variant) — refines", () => {
     }
   });
 });
+
+describe("FormStackSchema — depends_on cross-validation", () => {
+  /** Minimal valid stack resource skeleton — fields irrelevant to depends_on. */
+  const stackResource = (over: { name: string; depends_on?: string[] }) => ({
+    name: over.name,
+    sourceType: "image" as const,
+    useImageSecret: false,
+    useGitSecret: false,
+    image_spec: { image: "nginx:latest" },
+    depends_on: over.depends_on,
+  });
+
+  const stackOf = (...resources: ReturnType<typeof stackResource>[]) => ({
+    name: "demo",
+    labels: [],
+    spec: { stack_resources: resources, volumes: [] },
+  });
+
+  it("accepts depends_on that points to an existing resource", async () => {
+    const { FormStackSchema } = await import("./form-schema");
+    const result = FormStackSchema.safeParse(
+      stackOf(
+        stackResource({ name: "redis" }),
+        stackResource({ name: "api", depends_on: ["redis"] }),
+      ),
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an absent or empty depends_on (it is optional)", async () => {
+    const { FormStackSchema } = await import("./form-schema");
+    expect(
+      FormStackSchema.safeParse(stackOf(stackResource({ name: "solo" }))).success,
+    ).toBe(true);
+    expect(
+      FormStackSchema.safeParse(
+        stackOf(stackResource({ name: "solo", depends_on: [] })),
+      ).success,
+    ).toBe(true);
+  });
+
+  it("rejects depends_on referencing an unknown resource", async () => {
+    const { FormStackSchema } = await import("./form-schema");
+    const result = FormStackSchema.safeParse(
+      stackOf(
+        stackResource({ name: "redis" }),
+        stackResource({ name: "api", depends_on: ["ghost"] }),
+      ),
+    );
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) =>
+          i.path[0] === "spec" &&
+          i.path[1] === "stack_resources" &&
+          i.path[2] === 1 &&
+          i.path[3] === "depends_on" &&
+          i.path[4] === 0,
+      );
+      expect(issue?.message).toMatch(/unknown resource/i);
+    }
+  });
+
+  it("flags a dangling reference once its target is renamed", async () => {
+    // Reproduces the bug the user hit on the edit page: rename a depended-upon
+    // resource and the dependent's depends_on entry now points nowhere.
+    const { FormStackSchema } = await import("./form-schema");
+    const result = FormStackSchema.safeParse(
+      stackOf(
+        stackResource({ name: "redis-renamed" }),
+        stackResource({ name: "api", depends_on: ["redis"] }),
+      ),
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it("emits one issue per dangling entry, not just the first", async () => {
+    const { FormStackSchema } = await import("./form-schema");
+    const result = FormStackSchema.safeParse(
+      stackOf(
+        stackResource({ name: "api", depends_on: ["ghost1", "ghost2"] }),
+      ),
+    );
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const dangling = result.error.issues.filter(
+        (i) =>
+          i.path[0] === "spec" &&
+          i.path[1] === "stack_resources" &&
+          i.path[3] === "depends_on",
+      );
+      expect(dangling).toHaveLength(2);
+    }
+  });
+});

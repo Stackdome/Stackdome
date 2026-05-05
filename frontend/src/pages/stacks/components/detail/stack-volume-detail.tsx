@@ -118,7 +118,7 @@ export default function StackVolumeDetail({
           </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="bg-secondary border-t border-border pb-4 pt-4 px-1">
+      <AccordionContent className="bg-background dark:bg-secondary border-t border-border pb-4 pt-4 px-1">
         <div className="px-4 space-y-4">
           {/* Basic info section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

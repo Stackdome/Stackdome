@@ -72,7 +72,7 @@ export default function StickyActionBar({
 
   const bar = (
     <div
-      className="flex h-11 items-center gap-3 bg-secondary px-6 text-foreground border-b border-border"
+      className="flex h-11 items-center gap-3 bg-card dark:bg-secondary px-6 text-foreground border-b border-border"
       style={{ boxShadow: "inset 3px 0 0 var(--brand)" }}
     >
       <span className="h-2 w-2 rounded-full bg-brand animate-pulse" aria-hidden />

@@ -55,12 +55,18 @@ export function DirtyField({
   const dirty = isPathDirty(draft, baseline, path);
   const showReset = dirty && !hideReset && !!onReset;
 
+  // Negative margin extends the wrapper out to the accordion's left edge so the
+  // 4px brand stripe aligns with the accordion border. Padding pushes children
+  // back to the original FieldShell edge, so labels and inputs stay flush.
+  // Compact mode (inline mount/port rows) only extends 4px since rows have
+  // their own card border to align against.
   return (
     <div
       className={cn(
-        "border-l-4 transition-colors",
+        "transition-colors border-l-4",
+        compact ? "-ml-1" : "-ml-5 pl-4",
         dirty ? "border-l-brand bg-brand-bg" : "border-l-transparent",
-        compact ? "pl-2 pr-1 py-1" : "pl-3 pr-2 py-2",
+        compact ? "py-1 pr-1" : "py-1 pr-2",
         className,
       )}
     >
