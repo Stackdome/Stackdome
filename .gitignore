@@ -7,3 +7,4 @@ bin/
 local_dev_env.yaml
 
 .superpowers/
+.worktrees/
