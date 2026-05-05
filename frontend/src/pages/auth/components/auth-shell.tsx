@@ -34,7 +34,7 @@ export function AuthShell({
   children,
 }: AuthShellProps) {
   return (
-    <div className="relative min-h-svh text-foreground overflow-hidden bg-[oklch(0.88_0.02_85)] dark:bg-background">
+    <div className="relative min-h-svh text-foreground overflow-hidden bg-background">
       {/* Page-wide grid backdrop, masked to fade at edges (matches reference .grid-bg) */}
       <div
         aria-hidden="true"
@@ -147,7 +147,7 @@ export function AuthShell({
         </aside>
 
         {/* Form band — light mode: a touch darker than pure bg; dark mode: lighter navy than bg */}
-        <main className="relative flex items-center justify-center bg-[oklch(0.93_0.018_85)] dark:bg-secondary px-6 py-10 sm:px-10 lg:border-x lg:border-border">
+        <main className="relative flex items-center justify-center bg-card dark:bg-secondary px-6 py-10 sm:px-10 lg:border-x lg:border-border">
           <div className="w-full max-w-[360px]">
             {/* Mobile-only brand mark */}
             <div className="mb-8 lg:hidden">

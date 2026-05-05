@@ -4,26 +4,27 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* ── Light mode: warm cream ── */
-  --background: oklch(0.96 0.015 85);
-  --foreground: oklch(0.14 0 0);
-  --card: oklch(0.97 0.018 85);
-  --card-foreground: oklch(0.14 0 0);
-  --popover: oklch(0.97 0.018 85);
-  --popover-foreground: oklch(0.14 0 0);
-  --primary: oklch(0.72 0.20 40);
-  --primary-foreground: oklch(0.14 0 0);
-  --secondary: oklch(0.92 0.02 85);
-  --secondary-foreground: oklch(0.14 0 0);
-  --muted: oklch(0.92 0.02 85);
-  --muted-foreground: oklch(0.45 0.02 265);
-  --accent: oklch(0.88 0.02 85);
-  --accent-foreground: oklch(0.14 0 0);
+  /* ── Light mode: Bright — strict 6-swatch palette ──
+     bg #fdfcf9 · card #ffffff · fg #0d0d0d · border #e8e4d6 · muted #9c9c9c · amber #f97316 */
+  --background: oklch(0.992 0.004 85);     /* bg #fdfcf9 */
+  --foreground: oklch(0.137 0 0);          /* fg #0d0d0d */
+  --card: oklch(1 0 0);                    /* card #ffffff */
+  --card-foreground: oklch(0.137 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.137 0 0);
+  --primary: oklch(0.72 0.20 40);          /* amber #f97316 */
+  --primary-foreground: oklch(0.137 0 0);
+  --secondary: oklch(0.920 0.018 85);      /* border #e8e4d6 */
+  --secondary-foreground: oklch(0.137 0 0);
+  --muted: oklch(0.920 0.018 85);          /* border #e8e4d6 */
+  --muted-foreground: oklch(0.668 0 0);    /* muted #9c9c9c */
+  --accent: oklch(0.920 0.018 85);         /* border #e8e4d6 */
+  --accent-foreground: oklch(0.137 0 0);
   --destructive: oklch(0.55 0.20 23);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.83 0.025 85);
-  --border-strong: oklch(0.76 0.03 85);
-  --input: oklch(1 0 0);
+  --border: oklch(0.920 0.018 85);         /* border #e8e4d6 */
+  --border-strong: oklch(0.668 0 0);       /* muted #9c9c9c */
+  --input: oklch(1 0 0);                   /* card #ffffff */
   --ring: oklch(0.72 0.20 40);
 
   /* ── Brand tokens (light) — design system: amber #f97316, hover #ea6a0e, press #c25809 ── */
@@ -35,9 +36,9 @@
   --brand-bg-hover: oklch(0.72 0.20 40 / 0.16);
   --brand-border: oklch(0.72 0.20 40 / 0.30);
 
-  /* ── Foreground hierarchy (light) — design system: fg-1 #1a1a1a, fg-2 #4b5563, fg-3 #6b7280, fg-muted #94a3b8 ── */
-  --fg-2: oklch(0.41 0.013 264);
-  --fg-muted: oklch(0.66 0.018 250);
+  /* ── Foreground hierarchy (light) — palette only has 2 ink tones (fg, muted) ── */
+  --fg-2: oklch(0.668 0 0);                /* muted #9c9c9c */
+  --fg-muted: oklch(0.668 0 0);            /* muted #9c9c9c */
 
   /* ── Status semantic tokens (light) — design system: ok #15803d, warn #a16207, err #b91c1c, info #1d4ed8 ── */
   --success: oklch(0.51 0.16 145);
@@ -59,13 +60,13 @@
   --chart-4: oklch(0.74 0.16 85);
   --chart-5: oklch(0.55 0.20 25);
 
-  --sidebar: oklch(0.94 0.02 85);
-  --sidebar-foreground: oklch(0.14 0 0);
-  --sidebar-primary: oklch(0.14 0 0);
+  --sidebar: oklch(1 0 0);                 /* card #ffffff */
+  --sidebar-foreground: oklch(0.137 0 0);
+  --sidebar-primary: oklch(0.137 0 0);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.72 0.20 40 / 0.10);
   --sidebar-accent-foreground: oklch(0.65 0.22 35);
-  --sidebar-border: oklch(0.83 0.025 85);
+  --sidebar-border: oklch(0.920 0.018 85); /* border #e8e4d6 */
   --sidebar-ring: oklch(0.72 0.20 40);
 
   --font-sans: Geist, sans-serif;
