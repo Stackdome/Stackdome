@@ -162,10 +162,11 @@ export default function StackResourcesForm({
           <Button
             type="button"
             variant="ghost"
+            size="sm"
             onClick={() => onResourcesChange([...resources, getDefaultResource()])}
           >
-            <PlusCircle className="h-4 w-4" />
-            Add Resource
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Add resource
           </Button>
         </div>
       )}

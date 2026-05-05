@@ -663,7 +663,7 @@ function StackResourceConfigurationTabImpl({
               onClick={addVolumeMount}
               disabled={(volumes || []).length === 0}
             >
-              <PlusCircle className="h-4 w-4 mr-2" />Add Mount
+              <PlusCircle className="h-4 w-4 mr-2" />Add mount
             </Button>
             {(volumes || []).length === 0 && (
               <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
@@ -744,7 +744,7 @@ function StackResourceConfigurationTabImpl({
           ))}
           <div>
             <Button variant="ghost" size="sm" onClick={addPort}>
-              <PlusCircle className="h-4 w-4 mr-2" />Add Port
+              <PlusCircle className="h-4 w-4 mr-2" />Add port
             </Button>
           </div>
         </div>

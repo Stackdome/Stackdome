@@ -552,9 +552,9 @@ function StackResourceEnvironmentTabImpl({
         })()}
       </div>
       {/* Add Variable button */}
-      <div className="flex justify-end mt-2">
+      <div className="mt-2">
         <Button variant="ghost" size="sm" onClick={() => addEnvVar()}>
-          <PlusCircle className="h-4 w-4 mr-2" /> Add Variable
+          <PlusCircle className="h-4 w-4 mr-2" />Add variable
         </Button>
       </div>
     </TabsContent>

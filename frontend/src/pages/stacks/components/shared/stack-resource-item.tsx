@@ -294,18 +294,17 @@ function StackResourceItemImpl({
               />
             </Tabs>
 
-            <div className="flex justify-center items-center mt-8">
-              <span className="flex items-center justify-center w-full py-3 rounded-md bg-muted/70">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-danger hover:text-danger hover:bg-danger-bg focus-visible:bg-danger-bg"
-                  onClick={() => onRemove(index)}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Remove Resource
-                </Button>
-              </span>
+            <div className="mt-8 pt-3 border-t border-border flex justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-[12.5px] text-muted-foreground/70 hover:text-danger hover:bg-danger-bg"
+                onClick={() => onRemove(index)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Remove resource
+              </Button>
             </div>
           </div>
         </AccordionContent>
