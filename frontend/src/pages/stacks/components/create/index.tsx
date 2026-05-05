@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { X, AlertTriangle, Rocket } from "lucide-react";
 import { Panel, FieldError } from "@/components/branded";
 import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
+import StickyActionBar, { type StickyActionBarSegment } from "@/pages/stacks/components/shared/sticky-action-bar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label as UILabel } from "@/components/ui/label";
@@ -423,32 +424,47 @@ export default function StackCreatePage() {
       return acc;
     }, {});
 
+  const resourceCount = formData.spec?.stack_resources?.length ?? 0;
+  const volumeCount = formData.spec?.volumes?.length ?? 0;
+  const segments: StickyActionBarSegment[] = [];
+  if (resourceCount > 0) {
+    segments.push({ num: resourceCount, label: resourceCount === 1 ? "RESOURCE" : "RESOURCES" });
+  }
+  if (volumeCount > 0) {
+    segments.push({ num: volumeCount, label: volumeCount === 1 ? "VOLUME" : "VOLUMES" });
+  }
+  const handleCancel = () => {
+    if (window.history.length > 2 && window.history.state && window.history.state.idx !== 0) {
+      navigate(-1);
+    } else {
+      navigate("/stacks", { replace: true });
+    }
+  };
+
   return (
     <div className="p-6">
+      <StickyActionBar
+        leadLabel="Draft"
+        segments={segments}
+        primary={{
+          label: "Deploy",
+          loadingLabel: "Deploying",
+          icon: <Rocket className="h-3.5 w-3.5" />,
+          isLoading: isLoading,
+          onClick: handleSubmit,
+        }}
+        secondary={{
+          label: "Cancel",
+          onClick: handleCancel,
+        }}
+      />
       <header className="mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold">Create New Stack</h1>
-            </div>
-            <div className="flex items-center gap-4 text-muted-foreground text-sm mb-1">
-              <span>Define your stack to provision infrastructure</span>
-            </div>
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-2xl font-bold">Create New Stack</h1>
           </div>
-          <div className="flex gap-3">
-            <Button variant="ghost" onClick={() => {
-              if (window.history.length > 2 && window.history.state && window.history.state.idx !== 0) {
-                navigate(-1);
-              } else {
-                navigate("/stacks", { replace: true });
-              }
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={isLoading}>
-              <Rocket className="h-4 w-4" />
-              {isLoading ? "Deploying…" : "Deploy"}
-            </Button>
+          <div className="flex items-center gap-4 text-muted-foreground text-sm mb-1">
+            <span>Define your stack to provision infrastructure</span>
           </div>
         </div>
         <Separator className="mt-4" />
@@ -536,11 +552,14 @@ export default function StackCreatePage() {
           title="Stack Resources"
           count={formData.spec?.stack_resources?.length ?? 0}
           bodyClassName="p-0"
+          invalid={!!formErrors["spec.stack_resources"]}
+          errorMessage={formErrors["spec.stack_resources"]}
         >
             <StackResourcesForm
               resources={formData.spec?.stack_resources || []}
               onResourcesChange={handleResourcesChange}
               errors={resourcesErrors}
+              emptyError={formErrors["spec.stack_resources"]}
               volumes={formData.spec?.volumes || []}
               availableAddonIds={(() => {
                 const ids = new Set(linkedAddonIds);
@@ -554,26 +573,6 @@ export default function StackCreatePage() {
               })()}
             />
         </Panel>
-
-        {formErrors["spec.stack_resources"] && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Resource Error</AlertTitle>
-            <AlertDescription>
-              {formErrors["spec.stack_resources"]}
-              {formData.spec?.stack_resources.length === 0 && (
-                <div className="mt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleResourcesChange([{ name: "", sourceType: "image" }])}>
-                    Add a resource
-                  </Button>
-                </div>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
 
         <Panel
           title="Stack Volumes"

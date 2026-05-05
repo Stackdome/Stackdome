@@ -171,7 +171,7 @@ function StackResourceEnvironmentTabImpl({
   return (
     <TabsContent value="environment" className="pt-4">
       <div className="flex items-center mb-3">
-        <h3 className="text-lg font-medium">Environment Variables</h3>
+        <h3 className="text-sm font-semibold text-foreground">Environment Variables</h3>
         <div className="ml-auto flex gap-2">
           <Button
             variant="ghost"

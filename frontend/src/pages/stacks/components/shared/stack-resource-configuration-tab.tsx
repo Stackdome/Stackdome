@@ -3,7 +3,6 @@ import { TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -13,10 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { PlusCircle, GitBranch, Box, Trash2, Database, Info } from "lucide-react";
+import { PlusCircle, GitBranch, Box, Trash2, Database } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { DirtyField } from "@/pages/stacks/components/shared/dirty-field";
+import { FieldShell } from "@/components/branded";
 
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { UseSecretsReturn } from "../../hooks/use-secrets";
@@ -205,20 +205,15 @@ function StackResourceConfigurationTabImpl({
   return (
     <TabsContent value="general" className="pt-4 space-y-6">
       <div>
-        <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">General</h3>
-        <div className="grid gap-4 max-w-3xl">
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <Label htmlFor={`resource-name-${index}`} className="text-sm font-medium">
-                Resource Name <span className="text-danger">*</span>
-              </Label>
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                </TooltipTrigger>
-                <TooltipContent side="top">A unique name for this resource</TooltipContent>
-              </Tooltip>
-            </div>
+        <h3 className="text-sm font-semibold text-foreground mb-3">General</h3>
+        <div className="grid gap-5 max-w-3xl">
+          <FieldShell
+            label="Resource Name"
+            htmlFor={`resource-name-${index}`}
+            required
+            hint="A unique identifier within this stack — lowercase, no spaces."
+            error={getError(errors, "name")}
+          >
             <DirtyField
               draft={draft}
               baseline={baseline}
@@ -235,13 +230,13 @@ function StackResourceConfigurationTabImpl({
                 aria-invalid={!!getError(errors, "name")}
               />
             </DirtyField>
-            {getError(errors, "name") && (
-              <p className="text-sm text-danger mt-1">{getError(errors, "name")}</p>
-            )}
-          </div>
+          </FieldShell>
 
-          <div className="space-y-2">
-            <Label>Depends On</Label>
+          <FieldShell
+            label="Depends On"
+            hint="Other resources this service depends on. They are started first."
+            error={errors["depends_on"]}
+          >
             <DirtyField
               draft={draft}
               baseline={baseline}
@@ -263,26 +258,14 @@ function StackResourceConfigurationTabImpl({
                 <div className="text-sm text-muted-foreground">No dependency information available</div>
               )}
             </DirtyField>
-            {errors["depends_on"] && (
-              <p className="text-sm text-danger">{errors["depends_on"]}</p>
-            )}
-            <p className="text-xs text-muted-foreground">Select resources this service depends on. They will be started first.</p>
-          </div>
+          </FieldShell>
 
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <Label htmlFor={`resource-source-${index}`} className="text-sm font-medium">
-                Build From <span className="text-danger">*</span>
-              </Label>
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  <p>Select how this resource should be built: from a pre-built Box image or from a Git repository.</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
+          <FieldShell
+            label="Build From"
+            htmlFor={`resource-source-${index}`}
+            required
+            hint="Build from a pre-built container image or from a Git repository."
+          >
             <DirtyField
               draft={draft}
               baseline={baseline}
@@ -312,23 +295,16 @@ function StackResourceConfigurationTabImpl({
                 </SelectContent>
               </Select>
             </DirtyField>
-          </div>
+          </FieldShell>
           {draft.sourceType === "image" ? (
-            <div className="grid gap-4 max-w-3xl">
-              <div>
-                <div className="flex items-center gap-1 mb-2">
-                  <Label htmlFor={`container-image-${index}`} className="text-sm font-medium">
-                    Container Image <span className="text-danger">*</span>
-                  </Label>
-                  <Tooltip delayDuration={300}>
-                    <TooltipTrigger asChild>
-                      <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>Docker image URL (e.g., nginx:latest)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+            <div className="grid gap-5 max-w-3xl">
+              <FieldShell
+                label="Container Image"
+                htmlFor={`container-image-${index}`}
+                required
+                hint="Docker image reference, e.g., nginx:latest or ghcr.io/org/app:1.2.3."
+                error={getError(errors, "image_spec.image")}
+              >
                 <DirtyField
                   draft={draft}
                   baseline={baseline}
@@ -345,13 +321,10 @@ function StackResourceConfigurationTabImpl({
                     aria-invalid={!!getError(errors, "image_spec.image")}
                   />
                 </DirtyField>
-                {getError(errors, "image_spec.image") && (
-                  <p className="text-sm text-danger mt-1">{getError(errors, "image_spec.image")}</p>
-                )}
-              </div>
+              </FieldShell>
 
-              {/* Docker Registry Secret Section */}
-              <div className="space-y-3">
+              {/* Docker Registry Secret — sub-option of Container Image */}
+              <div className="pl-3 border-l border-border space-y-3">
                 <div className="flex items-center space-x-2">
                   <Switch
                     id={`use-image-secret-${index}`}
@@ -368,16 +341,13 @@ function StackResourceConfigurationTabImpl({
                     }}
                     disabled={secrets.isLoading}
                   />
-                  <Label htmlFor={`use-image-secret-${index}`} className="text-sm font-medium">
-                    Use secret
+                  <Label htmlFor={`use-image-secret-${index}`} className="text-[12.5px] font-medium text-muted-foreground">
+                    Use secret to pull this image
                   </Label>
                 </div>
 
                 {draft.useImageSecret && (
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">
-                      Select secret
-                    </Label>
+                  <FieldShell label="Select secret">
                     <Select
                       value={draft.selectedImageSecretId || ""}
                       onValueChange={(value) => update({ selectedImageSecretId: value })}
@@ -405,24 +375,19 @@ function StackResourceConfigurationTabImpl({
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </FieldShell>
                 )}
               </div>
             </div>
           ) : (
-            <div className="grid gap-4 max-w-3xl">
-              <div>
-                <div className="flex items-center gap-1 mb-2">
-                  <Label htmlFor={`git-repo-${index}`} className="text-sm font-medium">
-                    Git Repository URL <span className="text-danger">*</span>
-                  </Label>
-                  <Tooltip delayDuration={300}>
-                    <TooltipTrigger asChild>
-                      <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top">URL to the Git repository for this resource</TooltipContent>
-                  </Tooltip>
-                </div>
+            <div className="grid gap-5 max-w-3xl">
+              <FieldShell
+                label="Git Repository URL"
+                htmlFor={`git-repo-${index}`}
+                required
+                hint="HTTPS or SSH URL of the source repository."
+                error={getError(errors, "build_spec.source_context.git_repo.repo_url")}
+              >
                 <DirtyField
                   draft={draft}
                   baseline={baseline}
@@ -439,13 +404,10 @@ function StackResourceConfigurationTabImpl({
                     aria-invalid={!!getError(errors, "build_spec.source_context.git_repo.repo_url")}
                   />
                 </DirtyField>
-                {getError(errors, "build_spec.source_context.git_repo.repo_url") && (
-                  <p className="text-sm text-danger">{getError(errors, "build_spec.source_context.git_repo.repo_url")}</p>
-                )}
-              </div>
+              </FieldShell>
 
-              {/* Git Credentials Secret Section */}
-              <div className="space-y-3">
+              {/* Git Credentials — sub-option of Git Repository URL */}
+              <div className="pl-3 border-l border-border space-y-3">
                 <div className="flex items-center space-x-2">
                   <Switch
                     id={`use-git-secret-${index}`}
@@ -462,16 +424,13 @@ function StackResourceConfigurationTabImpl({
                     }}
                     disabled={secrets.isLoading}
                   />
-                  <Label htmlFor={`use-git-secret-${index}`} className="text-sm font-medium">
-                    Use secret
+                  <Label htmlFor={`use-git-secret-${index}`} className="text-[12.5px] font-medium text-muted-foreground">
+                    Use Git credentials secret
                   </Label>
                 </div>
 
                 {draft.useGitSecret && (
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">
-                      Select secret
-                    </Label>
+                  <FieldShell label="Select secret">
                     <Select
                       value={draft.selectedGitSecretId || ""}
                       onValueChange={(value) => update({ selectedGitSecretId: value })}
@@ -499,23 +458,17 @@ function StackResourceConfigurationTabImpl({
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </FieldShell>
                 )}
               </div>
-              <div>
-                <div className="flex items-ce nter gap-1 mb-2">
-                  <Label htmlFor={`external-image-repo-url-${index}`} className="text-sm font-medium">
-                    Image Repository URL <span className="text-danger">*</span>
-                  </Label>
-                  <Tooltip delayDuration={300}>
-                    <TooltipTrigger asChild>
-                      <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs">
-                      <p>The external container registry URL where images built from this Git repo will be pushed (e.g., ghcr.io/your-org/your-image).</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+
+              <FieldShell
+                label="Image Repository URL"
+                htmlFor={`external-image-repo-url-${index}`}
+                required
+                hint="External registry where built images are pushed, e.g., ghcr.io/your-org/your-image."
+                error={getError(errors, "build_spec.image_repository.external_image_repo_url")}
+              >
                 <DirtyField
                   draft={draft}
                   baseline={baseline}
@@ -532,22 +485,15 @@ function StackResourceConfigurationTabImpl({
                     aria-invalid={!!getError(errors, "build_spec.image_repository.external_image_repo_url")}
                   />
                 </DirtyField>
-                {getError(errors, "build_spec.image_repository.external_image_repo_url") && (
-                  <p className="text-sm text-danger">{getError(errors, "build_spec.image_repository.external_image_repo_url")}</p>
-                )}
-              </div>
-              <div>
-                <div className="flex items-center gap-1 mb-2">
-                  <Label htmlFor={`git-revision-type-${index}`} className="text-sm font-medium">
-                    Git Revision Type <span className="text-danger">*</span>
-                  </Label>
-                  <Tooltip delayDuration={300}>
-                    <TooltipTrigger asChild>
-                      <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top">Select the type of Git revision to use</TooltipContent>
-                  </Tooltip>
-                </div>
+              </FieldShell>
+
+              <FieldShell
+                label="Git Revision Type"
+                htmlFor={`git-revision-type-${index}`}
+                required
+                hint="Pin builds to a branch, a specific commit, or a tag."
+                error={getError(errors, "gitRevisionType")}
+              >
                 <DirtyField
                   draft={draft}
                   baseline={baseline}
@@ -571,33 +517,28 @@ function StackResourceConfigurationTabImpl({
                     </SelectContent>
                   </Select>
                 </DirtyField>
-                {getError(errors, "gitRevisionType") && (
-                  <p className="text-sm text-danger mt-1">{getError(errors, "gitRevisionType")}</p>
-                )}
-              </div>
+              </FieldShell>
+
               {draft.gitRevisionType && (
-                <div>
-                  <div className="flex items-center gap-1 mb-2">
-                    <Label htmlFor={`git-revision-value-${index}`} className="text-sm font-medium">
-                      {draft.gitRevisionType === "branch"
-                        ? "Branch Name"
-                        : draft.gitRevisionType === "commit"
-                          ? "Commit Hash"
-                          : "Tag Name"} <span className="text-danger">*</span>
-                    </Label>
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        {draft.gitRevisionType === "branch"
-                          ? "The branch to checkout (e.g., main)"
-                          : draft.gitRevisionType === "commit"
-                            ? "The full commit hash to checkout"
-                            : "The tag to checkout (e.g., v1.0.0)"}
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
+                <FieldShell
+                  label={
+                    draft.gitRevisionType === "branch"
+                      ? "Branch Name"
+                      : draft.gitRevisionType === "commit"
+                        ? "Commit Hash"
+                        : "Tag Name"
+                  }
+                  htmlFor={`git-revision-value-${index}`}
+                  required
+                  hint={
+                    draft.gitRevisionType === "branch"
+                      ? "The branch to check out, e.g., main."
+                      : draft.gitRevisionType === "commit"
+                        ? "The full commit SHA to check out."
+                        : "The tag to check out, e.g., v1.0.0."
+                  }
+                  error={getError(errors, "gitRevisionValue")}
+                >
                   <DirtyField
                     draft={draft}
                     baseline={baseline}
@@ -625,20 +566,17 @@ function StackResourceConfigurationTabImpl({
                       }}
                     />
                   </DirtyField>
-                  {getError(errors, "gitRevisionValue") && (
-                    <p className="text-sm text-danger mt-1">{getError(errors, "gitRevisionValue")}</p>
-                  )}
-                </div>
+                </FieldShell>
               )}
             </div>
           )}
         </div>
       </div>
-      <Separator className="my-4" />
+      <Separator className="my-6" />
       {/* Volume Mounts Section */}
       <div>
-        <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Volume Mounts</h3>
-        <div className="grid gap-6 max-w-3xl">
+        <h3 className="text-sm font-semibold text-foreground mb-3">Volume Mounts</h3>
+        <div className="grid gap-5 max-w-3xl">
           {(draft.volume_mounts || []).map((vm: VolumeMount, vmIdx: number) => (
             <DirtyField
               key={vmIdx}
@@ -648,19 +586,13 @@ function StackResourceConfigurationTabImpl({
               onReset={onDiscardField ? () => onDiscardField(`volume_mounts.${vmIdx}`) : undefined}
               compact
             >
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
-                <div>
-                  <div className="flex items-center gap-1 mb-2">
-                    <Label htmlFor={`volume-name-${index}-${vmIdx}`} className="text-sm font-medium">
-                      Volume <span className="text-danger">*</span>
-                    </Label>
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top">Select the volume to mount</TooltipContent>
-                    </Tooltip>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start border p-3 rounded-md bg-muted/10">
+                <FieldShell
+                  label="Volume"
+                  htmlFor={`volume-name-${index}-${vmIdx}`}
+                  required
+                  error={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`)}
+                >
                   <Select
                     value={vm.source_volume_name || ""}
                     onValueChange={(value) => updateVolumeMount(vmIdx, { source_volume_name: value })}
@@ -687,41 +619,21 @@ function StackResourceConfigurationTabImpl({
                       )}
                     </SelectContent>
                   </Select>
-                  {getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) && (
-                    <p className="text-sm text-danger">{getError(errors, `volume_mounts.${vmIdx}.source_volume_name`)}</p>
-                  )}
-                </div>
-                <div>
-                  <div className="flex items-center gap-1 mb-2">
-                    <Label htmlFor={`volume-subpath-${index}-${vmIdx}`} className="text-sm font-medium">
-                      Sub Path
-                    </Label>
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top">Optional path within the volume</TooltipContent>
-                    </Tooltip>
-                  </div>
+                </FieldShell>
+                <FieldShell label="Sub Path" htmlFor={`volume-subpath-${index}-${vmIdx}`}>
                   <Input
                     id={`volume-subpath-${index}-${vmIdx}`}
                     value={vm.source_sub_path || ""}
                     onChange={(e) => updateVolumeMount(vmIdx, { source_sub_path: e.target.value })}
                     placeholder="e.g., data/config"
                   />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1 mb-2">
-                    <Label htmlFor={`volume-target-${index}-${vmIdx}`} className="text-sm font-medium">
-                      Target Path <span className="text-danger">*</span>
-                    </Label>
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top">Path in container to mount the volume</TooltipContent>
-                    </Tooltip>
-                  </div>
+                </FieldShell>
+                <FieldShell
+                  label="Target Path"
+                  htmlFor={`volume-target-${index}-${vmIdx}`}
+                  required
+                  error={getError(errors, `volume_mounts.${vmIdx}.target_path`)}
+                >
                   <Input
                     id={`volume-target-${index}-${vmIdx}`}
                     value={vm.target_path || ""}
@@ -730,10 +642,7 @@ function StackResourceConfigurationTabImpl({
                     className={getError(errors, `volume_mounts.${vmIdx}.target_path`) ? "border-danger" : ""}
                     required
                   />
-                  {getError(errors, `volume_mounts.${vmIdx}.target_path`) && (
-                    <p className="text-sm text-danger">{getError(errors, `volume_mounts.${vmIdx}.target_path`)}</p>
-                  )}
-                </div>
+                </FieldShell>
                 <div className="flex justify-end">
                   <Button
                     variant="ghost"
@@ -762,11 +671,11 @@ function StackResourceConfigurationTabImpl({
           </div>
         </div>
       </div>
-      <Separator className="my-4" />
+      <Separator className="my-6" />
       {/* Ports Section */}
       <div>
-        <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Ports</h3>
-        <div className="grid gap-6 max-w-3xl">
+        <h3 className="text-sm font-semibold text-foreground mb-3">Ports</h3>
+        <div className="grid gap-5 max-w-3xl">
           {(draft.ports || []).map((port: Port, pidx: number) => (
             <DirtyField
               key={pidx}
@@ -776,19 +685,13 @@ function StackResourceConfigurationTabImpl({
               onReset={onDiscardField ? () => onDiscardField(`ports.${pidx}`) : undefined}
               compact
             >
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-3 rounded-md bg-muted/10">
-                <div>
-                  <div className="flex items-center gap-1 mb-2">
-                    <Label htmlFor={`port-number-${index}-${pidx}`} className="text-sm font-medium">
-                      Port Number <span className="text-danger">*</span>
-                    </Label>
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top">Container port number</TooltipContent>
-                    </Tooltip>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start border p-3 rounded-md bg-muted/10">
+                <FieldShell
+                  label="Port Number"
+                  htmlFor={`port-number-${index}-${pidx}`}
+                  required
+                  error={getError(errors, `ports.${pidx}.number`)}
+                >
                   <Input
                     id={`port-number-${index}-${pidx}`}
                     type="number"
@@ -799,22 +702,8 @@ function StackResourceConfigurationTabImpl({
                     className={getError(errors, `ports.${pidx}.number`) ? "border-danger" : ""}
                     required
                   />
-                  {getError(errors, `ports.${pidx}.number`) && (
-                    <p className="text-sm text-danger">{getError(errors, `ports.${pidx}.number`)}</p>
-                  )}
-                </div>
-                <div>
-                  <div className="flex items-center gap-1 mb-2">
-                    <Label htmlFor={`port-protocol-${index}-${pidx}`} className="text-sm font-medium">
-                      Protocol
-                    </Label>
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top">Port communication protocol</TooltipContent>
-                    </Tooltip>
-                  </div>
+                </FieldShell>
+                <FieldShell label="Protocol" htmlFor={`port-protocol-${index}-${pidx}`}>
                   <Select
                     value={port.protocol || "tcp"}
                     onValueChange={(value) => updatePort(pidx, { protocol: value as "tcp" | "http" })}
@@ -827,30 +716,19 @@ function StackResourceConfigurationTabImpl({
                       <SelectItem value="http">HTTP</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-                <div>
-                  <div className="flex items-center gap-1 mb-2">
-                    <Label htmlFor={`port-expose-${index}-${pidx}`} className="text-sm font-medium">
-                      Public Access
-                    </Label>
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top">Make this port accessible from outside the cluster</TooltipContent>
-                    </Tooltip>
-                  </div>
+                </FieldShell>
+                <FieldShell label="Public Access" htmlFor={`port-expose-${index}-${pidx}`}>
                   <div className="flex items-center space-x-2 h-[40px]">
                     <Switch
                       id={`port-expose-${index}-${pidx}`}
                       checked={port.exposed_to_public || false}
                       onCheckedChange={(checked) => updatePort(pidx, { exposed_to_public: checked })}
                     />
-                    <Label htmlFor={`port-expose-${index}-${pidx}`} className="text-sm font-medium cursor-pointer">
+                    <Label htmlFor={`port-expose-${index}-${pidx}`} className="text-[12.5px] text-muted-foreground cursor-pointer">
                       {port.exposed_to_public ? "Exposed" : "Internal Only"}
                     </Label>
                   </div>
-                </div>
+                </FieldShell>
                 <div className="flex justify-end">
                   <Button
                     variant="ghost"

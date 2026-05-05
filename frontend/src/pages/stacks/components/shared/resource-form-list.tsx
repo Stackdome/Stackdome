@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Accordion } from "@/components/ui/accordion";
 import { Container } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 // Generic form list props that can be used for different types of forms
 interface ResourceFormListProps<T> {
@@ -27,6 +28,8 @@ interface ResourceFormListProps<T> {
   emptyCtaLabel?: string;
   emptyOnAdd?: () => void;
   emptyIcon?: ReactNode;
+  /** When set, replaces the empty-state title with this message in danger color to flag a validation error. */
+  emptyError?: string;
   defaultAllCollapsed?: boolean; // If true, all accordions start closed
   defaultOpenIndex?: number | null; // If set (and not null), open this index by default instead of [0]
 }
@@ -44,6 +47,7 @@ export default function ResourceFormList<T>({
   emptyCtaLabel,
   emptyOnAdd,
   emptyIcon,
+  emptyError,
   defaultAllCollapsed = false,
   defaultOpenIndex = null,
 }: ResourceFormListProps<T>) {
@@ -150,13 +154,13 @@ export default function ResourceFormList<T>({
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center text-center py-14 px-6">
           {emptyIcon !== undefined ? (
-            <div className="mb-4 text-muted-foreground/70">{emptyIcon}</div>
+            <div className={cn("mb-4", emptyError ? "text-danger" : "text-muted-foreground/70")}>{emptyIcon}</div>
           ) : (
-            <Container className="h-6 w-6 mb-4 text-muted-foreground/70" />
+            <Container className={cn("h-6 w-6 mb-4", emptyError ? "text-danger" : "text-muted-foreground/70")} />
           )}
-          <h3 className="text-sm font-semibold text-foreground">
-            {emptyTitle}
-            {emptyOptional && (
+          <h3 className={cn("text-sm font-semibold", emptyError ? "text-danger" : "text-foreground")}>
+            {emptyError ?? emptyTitle}
+            {!emptyError && emptyOptional && (
               <span className="ml-1.5 font-normal text-muted-foreground">(optional)</span>
             )}
           </h3>

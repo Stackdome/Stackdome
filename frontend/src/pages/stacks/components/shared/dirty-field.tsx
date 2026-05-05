@@ -45,7 +45,14 @@ export function DirtyField({
   className,
   children,
 }: DirtyFieldProps) {
-  const dirty = baseline !== undefined && isPathDirty(draft, baseline, path);
+  // No baseline means there's no edit session to diff against (e.g., the
+  // create-stack page). Skip the visual frame entirely so inputs sit flush
+  // with their labels instead of leaving a permanently-empty inset.
+  if (baseline === undefined) {
+    return <>{children}</>;
+  }
+
+  const dirty = isPathDirty(draft, baseline, path);
   const showReset = dirty && !hideReset && !!onReset;
 
   return (

@@ -30,6 +30,8 @@ interface StackResourcesFormProps {
   onDiscardResource?: (resourceIdx: number) => void;
   /** Discard a single field on a resource by dot-path. Required for per-field reset arrows. */
   onDiscardResourceField?: (resourceIdx: number, path: string) => void;
+  /** When set, replaces the empty-state title with this message in danger color. */
+  emptyError?: string;
 }
 
 export function getDefaultResource(): Partial<FormStackResourceData> {
@@ -62,6 +64,7 @@ export default function StackResourcesForm({
   onDiscardEnvRow,
   onDiscardResource,
   onDiscardResourceField,
+  emptyError,
 }: StackResourcesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
   const secrets = useSecrets();
@@ -151,6 +154,7 @@ export default function StackResourcesForm({
         emptyTitle="No resources added yet"
         emptyDescription="Add a service to start running it. Each resource is a container or build that becomes part of this stack."
         emptyCtaLabel="Add resource"
+        emptyError={emptyError}
         emptyOnAdd={() => onResourcesChange([...resources, getDefaultResource()])}
       />
       {resources.length > 0 && (

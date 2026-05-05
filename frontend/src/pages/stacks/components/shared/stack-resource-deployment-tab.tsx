@@ -1,11 +1,9 @@
 import React from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Info } from "lucide-react";
 import { DirtyField } from "@/pages/stacks/components/shared/dirty-field";
+import { FieldShell } from "@/components/branded";
 
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 
@@ -58,20 +56,13 @@ function StackResourceDeploymentTabImpl({
     <TabsContent value="deployment" className="pt-4 space-y-6">
       {/* Pre-Deploy Section (Init) */}
       <div>
-        <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Pre-Deployment step</h3>
-        <div className="grid gap-4 max-w-3xl">
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <Label htmlFor={`init-command-${index}`} className="text-sm font-medium">
-                Init Command
-              </Label>
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                </TooltipTrigger>
-                <TooltipContent side="top">Pre-deployment init command (comma separated)</TooltipContent>
-              </Tooltip>
-            </div>
+        <h3 className="text-sm font-semibold text-foreground mb-3">Pre-Deployment step</h3>
+        <div className="grid gap-5 max-w-3xl">
+          <FieldShell
+            label="Init Command"
+            htmlFor={`init-command-${index}`}
+            hint="Runs before the main container starts. Comma-separate the executable and its segments."
+          >
             <DirtyField
               draft={draft}
               baseline={baseline}
@@ -89,19 +80,12 @@ function StackResourceDeploymentTabImpl({
                 placeholder="e.g., sh,/scripts/init.sh"
               />
             </DirtyField>
-          </div>
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <Label htmlFor={`init-args-${index}`} className="text-sm font-medium">
-                Init Arguments
-              </Label>
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                </TooltipTrigger>
-                <TooltipContent side="top">Pre-deployment arguments (comma separated)</TooltipContent>
-              </Tooltip>
-            </div>
+          </FieldShell>
+          <FieldShell
+            label="Init Arguments"
+            htmlFor={`init-args-${index}`}
+            hint="Comma-separated arguments passed to the init command."
+          >
             <DirtyField
               draft={draft}
               baseline={baseline}
@@ -119,26 +103,19 @@ function StackResourceDeploymentTabImpl({
                 placeholder="e.g., arg1,arg2,arg3"
               />
             </DirtyField>
-          </div>
+          </FieldShell>
         </div>
       </div>
-      <Separator className="my-4" />
+      <Separator className="my-6" />
       {/* Post-Deploy Section (Execution) */}
       <div>
-        <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Main container step</h3>
-        <div className="grid gap-4 max-w-3xl">
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <Label htmlFor={`exec-command-${index}`} className="text-sm font-medium">
-                Command
-              </Label>
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                </TooltipTrigger>
-                <TooltipContent side="top">Container runtime command (comma separated)</TooltipContent>
-              </Tooltip>
-            </div>
+        <h3 className="text-sm font-semibold text-foreground mb-3">Main container step</h3>
+        <div className="grid gap-5 max-w-3xl">
+          <FieldShell
+            label="Command"
+            htmlFor={`exec-command-${index}`}
+            hint="Overrides the container's default ENTRYPOINT. Comma-separate the executable and its segments."
+          >
             <DirtyField
               draft={draft}
               baseline={baseline}
@@ -156,19 +133,12 @@ function StackResourceDeploymentTabImpl({
                 placeholder="e.g., node,server.js"
               />
             </DirtyField>
-          </div>
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <Label htmlFor={`exec-args-${index}`} className="text-sm font-medium">
-                Arguments
-              </Label>
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                </TooltipTrigger>
-                <TooltipContent side="top">Container runtime arguments (comma separated)</TooltipContent>
-              </Tooltip>
-            </div>
+          </FieldShell>
+          <FieldShell
+            label="Arguments"
+            htmlFor={`exec-args-${index}`}
+            hint="Comma-separated arguments passed to the command."
+          >
             <DirtyField
               draft={draft}
               baseline={baseline}
@@ -186,7 +156,7 @@ function StackResourceDeploymentTabImpl({
                 placeholder="e.g., --port=3000,--verbose"
               />
             </DirtyField>
-          </div>
+          </FieldShell>
         </div>
       </div>
     </TabsContent>

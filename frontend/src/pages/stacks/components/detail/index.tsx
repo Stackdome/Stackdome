@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
-import { Loader2, MoreHorizontal } from "lucide-react";
+import { Loader2, MoreHorizontal, Rocket } from "lucide-react";
 import { PageHeader, Panel, StatusPill, variantFromState } from "@/components/branded";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,7 +15,7 @@ import StackResourcesForm, { getDefaultResource } from "@/pages/stacks/component
 import StackVolumesForm, { getDefaultVolume } from "@/pages/stacks/components/shared/stack-volumes-form";
 import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resources-detail";
 import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
-import SessionEditBar from "@/pages/stacks/components/detail/session-edit-bar";
+import StickyActionBar, { type StickyActionBarSegment } from "@/pages/stacks/components/shared/sticky-action-bar";
 import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
 import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
@@ -420,14 +420,52 @@ export default function StackDetailPage() {
 
   return (
     <div className="p-8 space-y-8">
-      {session.isActive && (
-        <SessionEditBar
-          dirty={session.dirty}
-          onDiscardAll={() => session.discard()}
-          onDeploy={handleSave}
-          isDeploying={isSaving}
-        />
-      )}
+      {session.isActive && (() => {
+        const resourceCount = session.dirty.dirtyResourceIdx.size;
+        const volumeCount = session.dirty.dirtyVolumeIdx.size;
+        const dirtyEntities = resourceCount + volumeCount;
+        const segments: StickyActionBarSegment[] = [];
+        if (resourceCount > 0) {
+          segments.push({ num: resourceCount, label: resourceCount === 1 ? "RESOURCE MODIFIED" : "RESOURCES MODIFIED" });
+        }
+        if (volumeCount > 0) {
+          segments.push({ num: volumeCount, label: volumeCount === 1 ? "VOLUME MODIFIED" : "VOLUMES MODIFIED" });
+        }
+        if (session.dirty.addonLinkCount > 0) {
+          segments.push({ num: session.dirty.addonLinkCount, label: session.dirty.addonLinkCount === 1 ? "ADDON LINK" : "ADDON LINKS" });
+        }
+        return (
+          <StickyActionBar
+            leadLabel="Draft"
+            segments={segments}
+            primary={{
+              label: "Deploy",
+              loadingLabel: "Deploying",
+              icon: <Rocket className="h-3.5 w-3.5" />,
+              isLoading: isSaving,
+              onClick: handleSave,
+            }}
+            secondary={{
+              label: "Discard all",
+              onClick: () => session.discard(),
+              dirtyCount: dirtyEntities,
+              confirm: {
+                threshold: 2,
+                title: "Discard all changes?",
+                description: (
+                  <>
+                    You have unsaved edits across {dirtyEntities}{" "}
+                    {dirtyEntities === 1 ? "item" : "items"}. This will revert every
+                    change in this session.
+                  </>
+                ),
+                confirmLabel: "Discard all",
+                cancelLabel: "Keep editing",
+              },
+            }}
+          />
+        );
+      })()}
 
       <PageHeader
         title={stackToShow.name}

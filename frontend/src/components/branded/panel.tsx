@@ -13,6 +13,10 @@ interface PanelProps {
    * "soft" — sans, sentence-case header for the stack-detail redesign.
    */
   tone?: "default" | "soft";
+  /** When true, frames the panel with the danger border to flag a section-level validation error. */
+  invalid?: boolean;
+  /** Optional error message rendered below the header when `invalid` is true. */
+  errorMessage?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -20,17 +24,19 @@ interface PanelProps {
  * Panel composes a section: optional eyebrow header (title + count + amber action link)
  * with a hairline divider above the body content.
  */
-export function Panel({ title, count, action, className, bodyClassName, bare, tone = "default", children }: PanelProps) {
+export function Panel({ title, count, action, className, bodyClassName, bare, tone = "default", invalid, errorMessage, children }: PanelProps) {
   return (
     <section
       className={cn(
-        !bare && "rounded-lg border border-border bg-card",
+        !bare && "rounded-lg border bg-card",
+        !bare && (invalid ? "border-danger-border" : "border-border"),
         className,
       )}
     >
       {(title || action) && (
         <header className={cn(
-          "flex items-center justify-between gap-4 px-5 py-3 border-b border-border",
+          "flex items-center justify-between gap-4 px-5 py-3 border-b",
+          invalid ? "border-danger-border" : "border-border",
           bare && "px-0",
         )}>
           {tone === "soft" ? (
@@ -60,6 +66,11 @@ export function Panel({ title, count, action, className, bodyClassName, bare, to
             )
           )}
         </header>
+      )}
+      {invalid && errorMessage && (
+        <p className="px-5 py-2 text-[12.5px] text-danger border-b border-danger-border">
+          {errorMessage}
+        </p>
       )}
       <div className={cn(!bare && "px-5 py-4", bodyClassName)}>{children}</div>
     </section>
