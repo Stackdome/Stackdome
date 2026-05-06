@@ -93,7 +93,7 @@ export function LoginForm() {
             name="email"
             type="email"
             autoComplete="username"
-            placeholder="you@company.dev"
+            placeholder="g.freeman@blackmesa.dev"
             value={formData.email}
             onChange={handleChange}
             disabled={isLoading}
@@ -121,7 +121,7 @@ export function LoginForm() {
           )}
         </div>
 
-        <Button type="submit" variant="inverse" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="animate-spin h-4 w-4" />

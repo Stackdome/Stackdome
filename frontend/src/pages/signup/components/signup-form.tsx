@@ -106,7 +106,7 @@ export function SignupForm() {
             id="name"
             name="name"
             type="text"
-            placeholder="Jane Cooper"
+            placeholder="Gordon Freeman"
             value={formData.name || ""}
             onChange={handleChange}
             aria-invalid={!!errors.name}
@@ -120,7 +120,7 @@ export function SignupForm() {
             id="organisationName"
             name="organisationName"
             type="text"
-            placeholder="Acme Inc."
+            placeholder="Black Mesa Labs"
             value={formData.organisationName || ""}
             onChange={handleChange}
             aria-invalid={!!errors.organisationName}
@@ -131,7 +131,7 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="email">work email</FieldLabel>
+          <FieldLabel htmlFor="email">email</FieldLabel>
           <Input
             id="email"
             name="email"
@@ -139,7 +139,7 @@ export function SignupForm() {
             autoCapitalize="none"
             autoComplete="email"
             autoCorrect="off"
-            placeholder="you@company.dev"
+            placeholder="g.freeman@blackmesa.dev"
             value={formData.email}
             onChange={handleChange}
             aria-invalid={!!errors.email}
@@ -181,7 +181,7 @@ export function SignupForm() {
           )}
         </div>
 
-        <Button type="submit" variant="inverse" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="animate-spin h-4 w-4" />

@@ -1,7 +1,13 @@
 import { useParams, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pencil, Rocket, Trash2 } from "lucide-react";
+import { Loader2, MoreHorizontal, Pencil, Rocket, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { PageHeader, Panel, StatusPill, variantFromState } from "@/components/branded";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -414,33 +420,34 @@ export default function StackDetailPage() {
   ];
 
   const headerActions = (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => activateEdit({})}
-        disabled={session.isActive}
-        aria-label={session.isActive ? "Stack is being edited" : "Edit stack"}
-      >
-        <Pencil className="h-3.5 w-3.5" />
-        {session.isActive ? "Editing" : "Edit stack"}
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-muted-foreground/70 hover:text-danger hover:bg-danger-bg"
-        onClick={() =>
-          toast({
-            title: "Not implemented",
-            description: "Delete stack will land in a follow-up.",
-          })
-        }
-        aria-label="Delete stack"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-        Delete stack
-      </Button>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Stack actions">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-[160px]">
+        <DropdownMenuItem
+          onClick={() => activateEdit({})}
+          disabled={session.isActive}
+        >
+          <Pencil className="h-4 w-4" />
+          {session.isActive ? "Editing" : "Edit"}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-danger focus:text-danger"
+          onClick={() =>
+            toast({
+              title: "Not implemented",
+              description: "Delete stack will land in a follow-up.",
+            })
+          }
+        >
+          <Trash2 className="h-4 w-4 text-danger" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 
   return (

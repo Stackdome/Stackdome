@@ -180,6 +180,12 @@ export function useMetricsStream({
     };
   }, [stopStreaming]);
 
+  // Tearing down clears connections + flips isStreaming to false. The
+  // auto-start effect above then sees enabled && !isStreaming and reconnects.
+  const retry = useCallback(() => {
+    stopStreaming();
+  }, [stopStreaming]);
+
   return {
     stackMetrics,
     resourceMetrics,
@@ -188,6 +194,7 @@ export function useMetricsStream({
     error,
     startStreaming,
     stopStreaming,
+    retry,
     lastUpdated,
     updateResources,
   };

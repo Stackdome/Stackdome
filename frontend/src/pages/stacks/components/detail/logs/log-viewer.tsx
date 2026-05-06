@@ -4,7 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Wifi, WifiOff, AlertCircle, Check, Clock, ChevronDown, Layers } from 'lucide-react';
+import { Loader2, AlertCircle, Check, Clock, ChevronDown, Layers, ScrollText, WifiOff, RefreshCw } from 'lucide-react';
+import { StatusPill, EmptyState, type StatusVariant } from '@/components/branded';
 import {
   Popover,
   PopoverContent,
@@ -22,43 +23,18 @@ import type { LogViewerProps, ConnectionStatus, TimeRangeOption, LogFilters } fr
 import { useLogStream } from './use-log-stream';
 import { convertLogsToLazyLogFormat, getTimeRangeLabel } from './utils';
 
-function getConnectionStatusInfo(status: ConnectionStatus) {
+function connectionStatusInfo(status: ConnectionStatus): { variant: StatusVariant; label: string } {
   switch (status) {
     case 'connecting':
-      return {
-        icon: Loader2,
-        text: 'Connecting...',
-        className: 'text-warn bg-warn-bg border-warn-border',
-        iconClass: 'animate-spin',
-      };
+      return { variant: 'pending', label: 'Connecting' };
     case 'connected':
-      return {
-        icon: Wifi,
-        text: 'Connected',
-        className: 'text-success bg-success-bg border-success-border',
-        iconClass: '',
-      };
+      return { variant: 'ready', label: 'Connected' };
     case 'disconnected':
-      return {
-        icon: WifiOff,
-        text: 'Disconnected',
-        className: 'text-muted-foreground bg-muted border-border',
-        iconClass: '',
-      };
+      return { variant: 'neutral', label: 'Disconnected' };
     case 'error':
-      return {
-        icon: AlertCircle,
-        text: 'Error',
-        className: 'text-danger bg-danger-bg border-danger-border',
-        iconClass: '',
-      };
+      return { variant: 'error', label: 'Error' };
     default:
-      return {
-        icon: WifiOff,
-        text: 'Unknown',
-        className: 'text-muted-foreground bg-muted border-border',
-        iconClass: '',
-      };
+      return { variant: 'neutral', label: 'Unknown' };
   }
 }
 
@@ -69,7 +45,7 @@ export function LogViewer({ stackId, organizationId, resources = [], className =
     timeRange: 'live-4h',
   });
 
-  const { logs, connectionStatus, error } = useLogStream({
+  const { logs, connectionStatus, error, retry } = useLogStream({
     stackId,
     organizationId,
     filters,
@@ -97,8 +73,7 @@ export function LogViewer({ stackId, organizationId, resources = [], className =
     setFilters((prev: LogFilters) => ({ ...prev, timeRange }));
   };
 
-  const statusInfo = getConnectionStatusInfo(connectionStatus);
-  const StatusIcon = statusInfo.icon;
+  const statusInfo = connectionStatusInfo(connectionStatus);
 
   const logText = useMemo(() => {
     return convertLogsToLazyLogFormat(filteredLogs);
@@ -126,12 +101,7 @@ export function LogViewer({ stackId, organizationId, resources = [], className =
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-4">
           <h3 className="text-lg font-semibold">Stack Logs</h3>
-
-          {/* Connection Status */}
-          <Badge variant="outline" className={statusInfo.className}>
-            <StatusIcon className={`mr-2 h-3 w-3 ${statusInfo.iconClass}`} />
-            {statusInfo.text}
-          </Badge>
+          <StatusPill variant={statusInfo.variant}>{statusInfo.label}</StatusPill>
         </div>
 
         <div className="flex items-center gap-2">
@@ -200,10 +170,10 @@ export function LogViewer({ stackId, organizationId, resources = [], className =
       )}
 
       {/* Log Display */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="h-96 border rounded-md bg-gray-900">
-            {logText ? (
+      {logText ? (
+        <Card>
+          <CardContent className="p-0">
+            <div className="h-96 border rounded-md bg-gray-900">
               <LazyLog
                 text={logText}
                 extraLines={1}
@@ -211,7 +181,7 @@ export function LogViewer({ stackId, organizationId, resources = [], className =
                 caseInsensitive
                 selectableLines
                 follow={filters.timeRange === 'live-4h'}
-                height={384} // 24rem in pixels
+                height={384}
                 style={{
                   backgroundColor: '#111827',
                   color: '#f9fafb',
@@ -219,23 +189,34 @@ export function LogViewer({ stackId, organizationId, resources = [], className =
                   fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
                 }}
               />
-            ) : (
-              <div className="h-96 flex items-center justify-center text-gray-400">
-                {connectionStatus === 'connecting' ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Connecting to log stream...</span>
-                  </div>
-                ) : connectionStatus === 'connected' ? (
-                  <span>No logs available</span>
-                ) : (
-                  <span>Disconnected from log stream</span>
-                )}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+          </CardContent>
+        </Card>
+      ) : connectionStatus === 'connecting' ? (
+        <EmptyState
+          icon={<Loader2 className="h-6 w-6 animate-spin" />}
+          title="Connecting to log stream"
+          description="Waiting for the first event to arrive."
+        />
+      ) : connectionStatus === 'connected' ? (
+        <EmptyState
+          icon={<ScrollText className="h-6 w-6" />}
+          title="No logs yet"
+          description="Logs will appear once the stack starts emitting them."
+        />
+      ) : (
+        <EmptyState
+          icon={<WifiOff className="h-6 w-6" />}
+          title="Disconnected from log stream"
+          description="The connection dropped. Try reconnecting."
+          action={
+            <Button variant="outline" size="sm" onClick={retry}>
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </Button>
+          }
+        />
+      )}
     </div>
   );
 }

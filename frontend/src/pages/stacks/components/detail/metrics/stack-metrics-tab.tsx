@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Activity, Cpu, MemoryStick, Clock, Loader2, Wifi, WifiOff, AlertCircle } from "lucide-react";
+import { Activity, Cpu, MemoryStick, Clock, AlertCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
+import { EmptyState, StatusPill, type StatusVariant } from "@/components/branded";
 import { useMetricsStream } from "./use-metrics-stream";
 import type { StackResource } from "@/pages/stacks/types";
 import type { ResourceMetricsData } from "./types";
@@ -17,43 +17,18 @@ import {
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
-function getConnectionStatusInfo(status: ConnectionStatus) {
+function connectionStatusInfo(status: ConnectionStatus): { variant: StatusVariant; label: string } {
   switch (status) {
     case 'connecting':
-      return {
-        icon: Loader2,
-        text: 'Connecting...',
-        className: 'text-warn bg-warn-bg border-warn-border',
-        iconClass: 'animate-spin',
-      };
+      return { variant: 'pending', label: 'Connecting' };
     case 'connected':
-      return {
-        icon: Wifi,
-        text: 'Connected',
-        className: 'text-success bg-success-bg border-success-border',
-        iconClass: '',
-      };
+      return { variant: 'ready', label: 'Connected' };
     case 'disconnected':
-      return {
-        icon: WifiOff,
-        text: 'Disconnected',
-        className: 'text-muted-foreground bg-muted border-border',
-        iconClass: '',
-      };
+      return { variant: 'neutral', label: 'Disconnected' };
     case 'error':
-      return {
-        icon: AlertCircle,
-        text: 'Error',
-        className: 'text-danger bg-danger-bg border-danger-border',
-        iconClass: '',
-      };
+      return { variant: 'error', label: 'Error' };
     default:
-      return {
-        icon: WifiOff,
-        text: 'Unknown',
-        className: 'text-muted-foreground bg-muted border-border',
-        iconClass: '',
-      };
+      return { variant: 'neutral', label: 'Unknown' };
   }
 }
 
@@ -89,8 +64,7 @@ export function StackMetricsTab({ stackId, organizationId, resources }: StackMet
     displayMetrics: convertToDisplayMetrics(metrics)
   }));
 
-  const statusInfo = getConnectionStatusInfo(connectionStatus);
-  const StatusIcon = statusInfo.icon;
+  const statusInfo = connectionStatusInfo(connectionStatus);
 
   return (
     <div className="space-y-4">
@@ -98,12 +72,7 @@ export function StackMetricsTab({ stackId, organizationId, resources }: StackMet
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-4">
           <h3 className="text-lg font-semibold">Stack Metrics</h3>
-
-          {/* Connection Status Badge */}
-          <Badge variant="outline" className={statusInfo.className}>
-            <StatusIcon className={`mr-2 h-3 w-3 ${statusInfo.iconClass}`} />
-            {statusInfo.text}
-          </Badge>
+          <StatusPill variant={statusInfo.variant}>{statusInfo.label}</StatusPill>
         </div>
       </div>
 
@@ -164,14 +133,11 @@ export function StackMetricsTab({ stackId, organizationId, resources }: StackMet
       <div>
         <h3 className="text-md font-semibold mb-4">Resource Metrics</h3>
         {currentResourceMetrics.length === 0 ? (
-          <Card>
-            <CardContent className="py-8">
-              <div className="text-center text-muted-foreground">
-                <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No resource metrics available</p>
-              </div>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={<Activity className="h-6 w-6" />}
+            title="No resource metrics yet"
+            description="Metrics will appear once the stack starts emitting data."
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {currentResourceMetrics.map((resourceData) => (

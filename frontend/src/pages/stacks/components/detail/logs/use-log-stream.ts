@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { LogEntry, ConnectionStatus, LogFilters } from './types';
 import { parseLogEntry, getLogStreamParams } from './utils';
 import { buildStackLogStreamUrl, buildStackResourceLogStreamUrl } from '@/api/observability';
@@ -14,6 +14,7 @@ interface UseLogStreamReturn {
   logs: LogEntry[];
   connectionStatus: ConnectionStatus;
   error: string | null;
+  retry: () => void;
 }
 
 export function useLogStream({
@@ -25,7 +26,10 @@ export function useLogStream({
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [error, setError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
   const eventSourcesRef = useRef<EventSource[]>([]);
+
+  const retry = useCallback(() => setRetryNonce((n) => n + 1), []);
 
   useEffect(() => {
     if (!enabled || !stackId || !organizationId) {
@@ -133,11 +137,12 @@ export function useLogStream({
       eventSourcesRef.current.forEach(source => source.close());
       eventSourcesRef.current = [];
     };
-  }, [stackId, organizationId, filters.timeRange, filters.sources, enabled]);
+  }, [stackId, organizationId, filters.timeRange, filters.sources, enabled, retryNonce]);
 
   return {
     logs,
     connectionStatus,
     error,
+    retry,
   };
 }
