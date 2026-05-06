@@ -138,6 +138,22 @@ function uniqueAddonIds(resources: ResourceArr): Set<string> {
 }
 
 /**
+ * Count distinct addons attached to a draft stack. Used by the create page's
+ * sticky action bar where there is no baseline to diff against — every linked
+ * addon counts. Sources are unioned: addons linked explicitly via the
+ * AddonsInStackPanel (`linkedAddonIds`) plus addons referenced as env-var
+ * sources on resources (`from: "addon"`). The same id in both is counted once.
+ */
+export function getAddonLinkCount(
+  linkedAddonIds: ReadonlySet<string> | Iterable<string>,
+  resources: ResourceArr,
+): number {
+  const ids = new Set<string>(linkedAddonIds);
+  for (const id of uniqueAddonIds(resources)) ids.add(id);
+  return ids.size;
+}
+
+/**
  * Per-resource and per-volume diff caches, keyed by draft ref. Most
  * resources are reference-stable across keystrokes (only the resource
  * being edited gets a fresh ref), so we can reuse the prior diff result

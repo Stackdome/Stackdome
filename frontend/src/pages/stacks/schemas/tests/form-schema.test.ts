@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   convertApiResourceToFormResource,
   convertFormStackToApiStack,
-} from "./form-schema";
+} from "../form-schema";
 import type { StackResource } from "@/api/stacks";
 
 const TOOLJET_ADDON_ID = "57fa98c8-27ca-47a8-9761-15504d60d349";
@@ -248,7 +248,7 @@ describe("env round-trip", () => {
 
 describe("FormEnvVarSchema (addon variant) — refines", () => {
   it("requires database when superuser is false", async () => {
-    const { FormEnvVarSchema } = await import("./form-schema");
+    const { FormEnvVarSchema } = await import("../form-schema");
     const result = FormEnvVarSchema.safeParse({
       from: "addon",
       name: "PG_HOST",
@@ -265,7 +265,7 @@ describe("FormEnvVarSchema (addon variant) — refines", () => {
   });
 
   it("allows missing database when superuser is true", async () => {
-    const { FormEnvVarSchema } = await import("./form-schema");
+    const { FormEnvVarSchema } = await import("../form-schema");
     const result = FormEnvVarSchema.safeParse({
       from: "addon",
       name: "PG_HOST",
@@ -279,7 +279,7 @@ describe("FormEnvVarSchema (addon variant) — refines", () => {
   });
 
   it("requires credField on addon rows", async () => {
-    const { FormEnvVarSchema } = await import("./form-schema");
+    const { FormEnvVarSchema } = await import("../form-schema");
     const result = FormEnvVarSchema.safeParse({
       from: "addon",
       name: "PG_HOST",
@@ -296,7 +296,7 @@ describe("FormEnvVarSchema (addon variant) — refines", () => {
   });
 
   it("uses 'Pick an addon' message on empty addonId", async () => {
-    const { FormEnvVarSchema } = await import("./form-schema");
+    const { FormEnvVarSchema } = await import("../form-schema");
     const result = FormEnvVarSchema.safeParse({
       from: "addon",
       name: "PG_HOST",
@@ -333,7 +333,7 @@ describe("FormStackSchema — depends_on cross-validation", () => {
   });
 
   it("accepts depends_on that points to an existing resource", async () => {
-    const { FormStackSchema } = await import("./form-schema");
+    const { FormStackSchema } = await import("../form-schema");
     const result = FormStackSchema.safeParse(
       stackOf(
         stackResource({ name: "redis" }),
@@ -344,7 +344,7 @@ describe("FormStackSchema — depends_on cross-validation", () => {
   });
 
   it("accepts an absent or empty depends_on (it is optional)", async () => {
-    const { FormStackSchema } = await import("./form-schema");
+    const { FormStackSchema } = await import("../form-schema");
     expect(
       FormStackSchema.safeParse(stackOf(stackResource({ name: "solo" }))).success,
     ).toBe(true);
@@ -356,7 +356,7 @@ describe("FormStackSchema — depends_on cross-validation", () => {
   });
 
   it("rejects depends_on referencing an unknown resource", async () => {
-    const { FormStackSchema } = await import("./form-schema");
+    const { FormStackSchema } = await import("../form-schema");
     const result = FormStackSchema.safeParse(
       stackOf(
         stackResource({ name: "redis" }),
@@ -380,7 +380,7 @@ describe("FormStackSchema — depends_on cross-validation", () => {
   it("flags a dangling reference once its target is renamed", async () => {
     // Reproduces the bug the user hit on the edit page: rename a depended-upon
     // resource and the dependent's depends_on entry now points nowhere.
-    const { FormStackSchema } = await import("./form-schema");
+    const { FormStackSchema } = await import("../form-schema");
     const result = FormStackSchema.safeParse(
       stackOf(
         stackResource({ name: "redis-renamed" }),
@@ -391,7 +391,7 @@ describe("FormStackSchema — depends_on cross-validation", () => {
   });
 
   it("emits one issue per dangling entry, not just the first", async () => {
-    const { FormStackSchema } = await import("./form-schema");
+    const { FormStackSchema } = await import("../form-schema");
     const result = FormStackSchema.safeParse(
       stackOf(
         stackResource({ name: "api", depends_on: ["ghost1", "ghost2"] }),

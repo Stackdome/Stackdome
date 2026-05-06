@@ -93,7 +93,7 @@ export function LoginForm() {
             name="email"
             type="email"
             autoComplete="username"
-            placeholder="g.freeman@blackmesa.dev"
+            placeholder="you@company.com"
             value={formData.email}
             onChange={handleChange}
             disabled={isLoading}

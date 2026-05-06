@@ -464,7 +464,7 @@ export default function StackDetailPage() {
           segments.push({ num: volumeCount, label: volumeCount === 1 ? "VOLUME MODIFIED" : "VOLUMES MODIFIED" });
         }
         if (session.dirty.addonLinkCount > 0) {
-          segments.push({ num: session.dirty.addonLinkCount, label: session.dirty.addonLinkCount === 1 ? "ADDON LINK" : "ADDON LINKS" });
+          segments.push({ num: session.dirty.addonLinkCount, label: session.dirty.addonLinkCount === 1 ? "ADDON" : "ADDONS" });
         }
         return (
           <StickyActionBar

@@ -7,6 +7,7 @@ import { X, AlertTriangle, Rocket } from "lucide-react";
 import { Panel, FieldError } from "@/components/branded";
 import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
 import StickyActionBar, { type StickyActionBarSegment } from "@/pages/stacks/components/shared/sticky-action-bar";
+import { getAddonLinkCount } from "@/pages/stacks/lib/stack-diff";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label as UILabel } from "@/components/ui/label";
@@ -426,12 +427,16 @@ export default function StackCreatePage() {
 
   const resourceCount = formData.spec?.stack_resources?.length ?? 0;
   const volumeCount = formData.spec?.volumes?.length ?? 0;
+  const addonLinkCount = getAddonLinkCount(linkedAddonIds, formData.spec?.stack_resources || []);
   const segments: StickyActionBarSegment[] = [];
   if (resourceCount > 0) {
     segments.push({ num: resourceCount, label: resourceCount === 1 ? "RESOURCE" : "RESOURCES" });
   }
   if (volumeCount > 0) {
     segments.push({ num: volumeCount, label: volumeCount === 1 ? "VOLUME" : "VOLUMES" });
+  }
+  if (addonLinkCount > 0) {
+    segments.push({ num: addonLinkCount, label: addonLinkCount === 1 ? "ADDON" : "ADDONS" });
   }
   const handleCancel = () => {
     if (window.history.length > 2 && window.history.state && window.history.state.idx !== 0) {

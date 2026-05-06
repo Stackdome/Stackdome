@@ -106,7 +106,7 @@ export function SignupForm() {
             id="name"
             name="name"
             type="text"
-            placeholder="Gordon Freeman"
+            placeholder="Your name"
             value={formData.name || ""}
             onChange={handleChange}
             aria-invalid={!!errors.name}
@@ -120,7 +120,7 @@ export function SignupForm() {
             id="organisationName"
             name="organisationName"
             type="text"
-            placeholder="Black Mesa Labs"
+            placeholder="Founder Labs"
             value={formData.organisationName || ""}
             onChange={handleChange}
             aria-invalid={!!errors.organisationName}
@@ -139,7 +139,7 @@ export function SignupForm() {
             autoCapitalize="none"
             autoComplete="email"
             autoCorrect="off"
-            placeholder="g.freeman@blackmesa.dev"
+            placeholder="you@company.com"
             value={formData.email}
             onChange={handleChange}
             aria-invalid={!!errors.email}
