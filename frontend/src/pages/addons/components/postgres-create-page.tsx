@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -336,7 +337,11 @@ export default function PostgresFormPage() {
 
         <Panel title="Configuration">
             <h3 className="text-sm font-semibold text-foreground mb-3">Plan</h3>
-            <div className="rounded-md border border-border overflow-hidden max-w-3xl">
+            <RadioGroup
+              value={values.plan}
+              onValueChange={(v) => update("plan", v as PlanId)}
+              className="rounded-md border border-border overflow-hidden max-w-3xl gap-0"
+            >
               <table className="w-full text-sm">
                 <thead className="bg-muted/30">
                   <tr>
@@ -348,6 +353,7 @@ export default function PostgresFormPage() {
                 <tbody>
                   {PLAN_PRESETS.map((preset) => {
                     const selected = values.plan === preset.id;
+                    const radioId = `plan-${preset.id}`;
                     return (
                       <tr
                         key={preset.id}
@@ -359,15 +365,8 @@ export default function PostgresFormPage() {
                         onClick={() => update("plan", preset.id as PlanId)}
                       >
                         <td className="px-4 py-2.5">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="plan"
-                              value={preset.id}
-                              checked={selected}
-                              onChange={() => update("plan", preset.id as PlanId)}
-                              className="cursor-pointer accent-brand outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full"
-                            />
+                          <label htmlFor={radioId} className="flex items-center gap-2 cursor-pointer">
+                            <RadioGroupItem id={radioId} value={preset.id} />
                             <span className={selected ? "font-medium text-foreground" : "text-foreground"}>
                               {preset.label}
                             </span>
@@ -380,7 +379,7 @@ export default function PostgresFormPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </RadioGroup>
 
             {showCustomCompute && (
               <div className="pl-3 border-l border-border mt-4 max-w-2xl space-y-3">
@@ -443,7 +442,7 @@ export default function PostgresFormPage() {
                     min={1}
                     value={values.storageGB}
                     onChange={(e) => update("storageGB", Number(e.target.value) || 0)}
-                    className={cn("font-mono", errors.storageGB ? "border-danger" : "")}
+                    className={cn("font-mono w-32", errors.storageGB ? "border-danger" : "")}
                     aria-invalid={!!errors.storageGB}
                   />
                   <span className="font-mono text-[12.5px] text-muted-foreground">GB</span>
@@ -485,7 +484,7 @@ export default function PostgresFormPage() {
               <FieldShell
                 label="Generate superuser credentials"
                 htmlFor="superuser-toggle"
-                hint="Adds a separate secret for migrations and admin tasks. App connections continue to use the default role."
+                hint="By default the database only exposes a limited app user. Enable to also generate a privileged secret for migrations and admin tasks."
               >
                 <div className="flex items-center h-10">
                   <Switch
