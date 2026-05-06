@@ -21,8 +21,9 @@ const buttonVariants = cva(
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-brand underline-offset-4 hover:underline",
         // Inverse foreground CTA — used on auth pages to contrast with the cream/navy band.
+        // Default: foreground (white in dark / navy in light). Hover & active flip to brand amber.
         inverse:
-          "bg-foreground text-background shadow-xs hover:bg-foreground/90",
+          "bg-foreground text-background shadow-xs hover:bg-brand hover:text-white dark:hover:text-primary-foreground active:bg-brand-press",
         // Mono terminal-style CTA per design system.
         mono:
           "bg-popover text-foreground border border-border font-mono uppercase tracking-[1.5px] hover:border-brand hover:text-brand",
