@@ -1,15 +1,36 @@
 import { useParams, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Rocket, Pencil, Loader2, X } from "lucide-react";
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, MoreHorizontal, Pencil, Rocket, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { PageHeader, Panel, StatusPill, variantFromState } from "@/components/branded";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import StackResourcesForm from "@/pages/stacks/components/shared/stack-resources-form";
-import StackVolumesForm from "@/pages/stacks/components/shared/stack-volumes-form";
+import StackResourcesForm, { getDefaultResource } from "@/pages/stacks/components/shared/stack-resources-form";
+import StackVolumesForm, { getDefaultVolume } from "@/pages/stacks/components/shared/stack-volumes-form";
 import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resources-detail";
 import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
+import StickyActionBar, { type StickyActionBarSegment } from "@/pages/stacks/components/shared/sticky-action-bar";
+import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
+import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
+import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import type { FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
+import type { AddonGroupStateMap } from "@/pages/stacks/components/shared/stack-resource-item";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
@@ -18,7 +39,7 @@ import { getStackById, updateStack } from "@/api/stacks";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import type { z } from "zod";
-import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convertFormStackToApiStack } from "@/pages/stacks/schemas/form-schema";
+import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
 import { useToast } from "@/components/ui/use-toast";
 import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/schemas/api-schema";
 
@@ -54,12 +75,21 @@ export default function StackDetailPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [isEditing, setIsEditing] = useState(false);
+  const session = useStackEditSession();
+  const { addons: postgresAddons } = usePostgresAddons();
+  const addonNameById = useMemo(
+    () => new Map(postgresAddons.filter((a) => a.id).map((a) => [a.id!, a.name])),
+    [postgresAddons],
+  );
   const [isSaving, setIsSaving] = useState(false);
-  const [editFormData, setEditFormData] = useState<{
-    resources: FormStackResourceData[];
-    volumes: VolumeFormData[];
-  } | null>(null);
+  const [editingBindingIds, setEditingBindingIds] = useState<Set<string>>(new Set());
+  // Per-addonId provenance for converted env rows after a successful detach
+  // save. Keyed by `${resourceIdx}::${envName}`. Page-state only — vanishes
+  // on reload by design (no API field for it).
+  const [detachedProvenance, setDetachedProvenance] = useState<Map<string, { addonName: string; credField?: string }>>(
+    new Map(),
+  );
+  const [detachConfirmOpen, setDetachConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{
     resources: { [index: number]: { [field: string]: string | undefined } };
     volumes: { [index: number]: { [field: string]: string | undefined } };
@@ -109,59 +139,164 @@ export default function StackDetailPage() {
 
   const stackToShow = currentStack || fetchedStack;
 
-  const initializeEditForm = () => {
-    if (!stackToShow) return;
+  const baselineResources = useMemo<FormStackResourceData[]>(
+    () => (stackToShow?.spec.stack_resources || []).map(mapStackResourceToFormData),
+    [stackToShow],
+  );
+  const baselineVolumes = useMemo<VolumeFormData[]>(
+    () => (stackToShow?.spec?.volumes || []).map(mapVolumeToFormData),
+    [stackToShow],
+  );
 
-    const resourcesForForm: FormStackResourceData[] = (stackToShow.spec.stack_resources || []).map(mapStackResourceToFormData);
-    const volumesForForm = (stackToShow.spec?.volumes || []).map(mapVolumeToFormData);
+  const activateEdit = (opts?: { resourceIdx?: number; volumeIdx?: number; openTab?: EditSessionTab }) => {
+    session.start(
+      { resources: baselineResources, volumes: baselineVolumes },
+      {
+        openResourceIdx: opts?.resourceIdx ?? null,
+        openVolumeIdx: opts?.volumeIdx ?? null,
+        openTab: opts?.openTab ?? null,
+      },
+    );
+    setEditingBindingIds(new Set());
+  };
 
-    setEditFormData({
-      resources: resourcesForForm,
-      volumes: volumesForForm
+  // Page-derived per-addonId state map. Detaching wins over editing.
+  const addonGroupState = useMemo<AddonGroupStateMap>(() => {
+    const m = new Map<string, "idle" | "editing-binding" | "detaching">();
+    for (const id of editingBindingIds) m.set(id, "editing-binding");
+    for (const id of session.pendingDetach) m.set(id, "detaching");
+    return m;
+  }, [editingBindingIds, session.pendingDetach]);
+
+  const handleEditAddonBinding = useCallback((addonId: string) => {
+    setEditingBindingIds((prev) => {
+      const next = new Set(prev);
+      next.add(addonId);
+      return next;
     });
-  };
+  }, []);
 
-  const handleEditToggle = () => {
-    if (!isEditing) {
-      initializeEditForm();
-      setIsEditing(true);
-    } else {
-      // Cancel edit mode
-      setIsEditing(false);
-      setEditFormData(null);
-      setValidationErrors({ resources: {}, volumes: {} });
+  const handleDetachAddon = useCallback((addonId: string) => {
+    setEditingBindingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(addonId);
+      return next;
+    });
+    session.setPendingDetach((prev) => {
+      const next = new Set(prev);
+      next.add(addonId);
+      return next;
+    });
+  }, [session]);
+
+  const handleCancelDetachAddon = useCallback((addonId: string) => {
+    session.setPendingDetach((prev) => {
+      const next = new Set(prev);
+      next.delete(addonId);
+      return next;
+    });
+    setEditingBindingIds((prev) => {
+      const next = new Set(prev);
+      next.add(addonId);
+      return next;
+    });
+  }, [session]);
+
+  // Compute "linked but unbound" — addons in linkedAddonIds with zero env
+  // bindings across the draft.
+  const computeUnboundLinked = (): string[] => {
+    const referenced = new Set<string>();
+    for (const r of session.draft.resources) {
+      const envs = (r?.execution_config?.environment_variables || []) as FormEnvVarData[];
+      for (const e of envs) {
+        if (e.from === "addon" && e.addonId) referenced.add(e.addonId);
+      }
     }
+    return Array.from(session.linkedAddonIds).filter((id) => !referenced.has(id));
   };
 
-  const handleSave = async () => {
-    if (!stackToShow || !editFormData || !id) return;
+  // Convert addon rows in pendingDetach to plain stack rows. Returns the new
+  // resources array and the provenance map of resourceIdx::envName entries.
+  const applyPendingDetach = (): {
+    resources: Partial<FormStackResourceData>[];
+    provenance: Map<string, { addonName: string; credField?: string }>;
+  } => {
+    const provenance = new Map<string, { addonName: string; credField?: string }>();
+    const resources = session.draft.resources.map((r, rIdx) => {
+      const envs = (r?.execution_config?.environment_variables || []) as FormEnvVarData[];
+      const newEnvs = envs.map((e) => {
+        if (e.from === "addon" && session.pendingDetach.has(e.addonId)) {
+          provenance.set(`${rIdx}::${e.name}`, {
+            addonName: addonNameById.get(e.addonId) ?? e.addonId,
+            credField: e.credField,
+          });
+          return { from: "stack" as const, name: e.name, value: "" };
+        }
+        return e;
+      });
+      return {
+        ...r,
+        execution_config: {
+          ...(r.execution_config || {}),
+          environment_variables: newEnvs,
+        },
+      };
+    });
+    return { resources, provenance };
+  };
 
+  const performSave = async () => {
+    if (!stackToShow || !session.isActive || !id) return;
     setIsSaving(true);
     setValidationErrors({ resources: {}, volumes: {} });
 
     try {
       const orgId = getCurrentOrganizationId();
-      if (!orgId) {
-        throw new Error("Organization ID not found");
-      }
+      if (!orgId) throw new Error("Organization ID not found");
 
-      // Convert form data to API format
+      const detachResult = session.pendingDetach.size > 0 ? applyPendingDetach() : null;
+      const resources = (detachResult?.resources ?? session.draft.resources) as FormStackResourceData[];
+
       const formStackData: FormStackData = {
         name: stackToShow.name || '',
         labels: stackToShow.labels || [],
         spec: {
-          stack_resources: editFormData.resources,
-          volumes: editFormData.volumes
+          stack_resources: resources,
+          volumes: session.draft.volumes as VolumeFormData[],
         }
       };
+
+      const validation = FormStackSchema.safeParse(formStackData);
+      if (!validation.success) {
+        const nextErrors: typeof validationErrors = { resources: {}, volumes: {} };
+        for (const issue of validation.error.issues) {
+          const [scope0, scope1, idxRaw, ...rest] = issue.path;
+          if (scope0 !== "spec" || (scope1 !== "stack_resources" && scope1 !== "volumes")) continue;
+          const idx = typeof idxRaw === "number" ? idxRaw : Number(idxRaw);
+          if (Number.isNaN(idx)) continue;
+          const bucket = scope1 === "stack_resources" ? nextErrors.resources : nextErrors.volumes;
+          if (!bucket[idx]) bucket[idx] = {};
+          const fieldKey = rest.join(".");
+          if (!bucket[idx][fieldKey]) bucket[idx][fieldKey] = issue.message;
+        }
+        setValidationErrors(nextErrors);
+        toast({
+          title: "Validation error",
+          description: "Please fix the highlighted errors before deploying.",
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return;
+      }
 
       const apiData = convertFormStackToApiStack(formStackData);
       const updatedStack = await updateStack(orgId, id, apiData);
 
-      // Update local state
       setFetchedStack(updatedStack);
-      setIsEditing(false);
-      setEditFormData(null);
+      if (detachResult) setDetachedProvenance(detachResult.provenance);
+      else setDetachedProvenance(new Map());
+      session.discard();
+      setEditingBindingIds(new Set());
 
       toast({
         title: "Stack updated successfully",
@@ -169,11 +304,11 @@ export default function StackDetailPage() {
         variant: "default"
       });
 
-    } catch (error) {
-      console.error('Failed to update stack:', error);
+    } catch (err) {
+      console.error('Failed to update stack:', err);
       toast({
         title: "Failed to update stack",
-        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
+        description: err instanceof Error ? err.message : "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -181,21 +316,68 @@ export default function StackDetailPage() {
     }
   };
 
-  const handleResourcesChange = (updatedResources: Partial<FormStackResourceData>[]) => {
-    if (!editFormData) return;
-    setEditFormData({
-      ...editFormData,
-      resources: updatedResources as FormStackResourceData[]
-    });
+  const handleSave = () => {
+    if (!session.isActive) return;
+    if (session.pendingDetach.size > 0) {
+      setDetachConfirmOpen(true);
+      return;
+    }
+    const unbound = computeUnboundLinked();
+    if (unbound.length > 0) {
+      // Silently drop phantom links — addons that were added to the stack
+      // but never referenced in any env var. They have no API representation
+      // anyway (links are derived from env vars), so this is just cleanup.
+      session.setLinkedAddonIds((prev) => {
+        const next = new Set(prev);
+        for (const id of unbound) next.delete(id);
+        return next;
+      });
+    }
+    void performSave();
   };
 
-  const handleVolumesChange = (updatedVolumes: Partial<VolumeFormData>[]) => {
-    if (!editFormData) return;
-    setEditFormData({
-      ...editFormData,
-      volumes: updatedVolumes as VolumeFormData[]
-    });
-  };
+  // NOTE: this used to be wrapped in useTransition, which improved
+  // typing throughput but broke caret position on controlled inputs —
+  // when React commits the deferred state, it re-applies the input's
+  // value prop and the browser moves the caret to the end. Mid-string
+  // edits became impossible. The win from Cycle 6 (per-tab memoization)
+  // gives us most of the throughput back without the side effect.
+  const handleResourcesChange = useCallback((updatedResources: Partial<FormStackResourceData>[]) => {
+    session.updateResources(updatedResources as FormStackResourceData[]);
+  }, [session]);
+
+  const handleVolumesChange = useCallback((updatedVolumes: Partial<VolumeFormData>[]) => {
+    session.updateVolumes(updatedVolumes as VolumeFormData[]);
+  }, [session]);
+
+  const handleDiscardEnvRow = useCallback(
+    (rIdx: number, eIdx: number) => session.discardEnvRow(rIdx, eIdx),
+    [session],
+  );
+  const handleDiscardResource = useCallback(
+    (rIdx: number) => session.discardResource(rIdx),
+    [session],
+  );
+  const handleDiscardResourceField = useCallback(
+    (rIdx: number, path: string) => session.discardResourceField(rIdx, path),
+    [session],
+  );
+
+  // Stable Set of every addonId currently available to env rows: explicit
+  // links + addons referenced by existing env vars. Without useMemo this
+  // would be a fresh Set every render of detail/index.tsx, breaking memo
+  // on every StackResourceItem child via the addons → availableAddonIds
+  // → addons.filter chain.
+  const availableAddonIds = useMemo(() => {
+    const ids = new Set(session.linkedAddonIds);
+    for (const r of session.draft.resources) {
+      const envs = (r?.execution_config?.environment_variables || []) as FormEnvVarData[];
+      for (const e of envs) {
+        if (e.from === "addon" && e.addonId) ids.add(e.addonId);
+      }
+    }
+    return ids;
+  }, [session.linkedAddonIds, session.draft.resources]);
 
   if (loading) {
     return (
@@ -230,142 +412,246 @@ export default function StackDetailPage() {
     );
   }
 
-  const resourcesForForm: FormStackResourceData[] = (stackToShow?.spec.stack_resources || []).map(mapStackResourceToFormData);
-  const volumesForForm = (stackToShow.spec?.volumes || []).map(mapVolumeToFormData);
+  const resourceCount = stackToShow.spec?.stack_resources?.length || 0;
+  const volumeCount = stackToShow.spec?.volumes?.length || 0;
+  const subtitleParts: React.ReactNode[] = [
+    `${resourceCount} ${resourceCount === 1 ? "service" : "services"}`,
+    `${volumeCount} ${volumeCount === 1 ? "volume" : "volumes"}`,
+  ];
+
+  const headerActions = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Stack actions">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-[160px]">
+        <DropdownMenuItem
+          onClick={() => activateEdit({})}
+          disabled={session.isActive}
+        >
+          <Pencil className="h-4 w-4" />
+          {session.isActive ? "Editing" : "Edit"}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-danger focus:text-danger"
+          onClick={() =>
+            toast({
+              title: "Not implemented",
+              description: "Delete stack will land in a follow-up.",
+            })
+          }
+        >
+          <Trash2 className="h-4 w-4 text-danger" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
-    <div className="p-6">
-      <header className="mb-6">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-2xl font-bold">{stackToShow.name}</h1>
-                {/* Status label */}
-                {stackToShow.status?.state && (
-                  <span>
-                    {stackToShow.status.state.toLowerCase() === 'ready' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-300">Ready</span>
-                    )}
-                    {stackToShow.status.state.toLowerCase() === 'pending' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">Pending</span>
-                    )}
-                    {stackToShow.status.state.toLowerCase() === 'failed' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-300">Failed</span>
-                    )}
-                    {!['ready','pending','failed'].includes(stackToShow.status.state.toLowerCase()) && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300">{stackToShow.status.state}</span>
-                    )}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-4 text-muted-foreground text-sm mb-1">
-                <span>Services: {stackToShow.spec?.stack_resources?.length || 0}</span>
-                <span>Volumes: {stackToShow.spec?.volumes?.length || 0}</span>
-              </div>
-            </div>
-          </div>
+    <div className="p-8 space-y-8">
+      {session.isActive && (() => {
+        const resourceCount = session.dirty.dirtyResourceIdx.size;
+        const volumeCount = session.dirty.dirtyVolumeIdx.size;
+        const dirtyEntities = resourceCount + volumeCount;
+        const segments: StickyActionBarSegment[] = [];
+        if (resourceCount > 0) {
+          segments.push({ num: resourceCount, label: resourceCount === 1 ? "RESOURCE MODIFIED" : "RESOURCES MODIFIED" });
+        }
+        if (volumeCount > 0) {
+          segments.push({ num: volumeCount, label: volumeCount === 1 ? "VOLUME MODIFIED" : "VOLUMES MODIFIED" });
+        }
+        if (session.dirty.addonLinkCount > 0) {
+          segments.push({ num: session.dirty.addonLinkCount, label: session.dirty.addonLinkCount === 1 ? "ADDON" : "ADDONS" });
+        }
+        return (
+          <StickyActionBar
+            leadLabel="Draft"
+            segments={segments}
+            primary={{
+              label: "Deploy",
+              loadingLabel: "Deploying",
+              icon: <Rocket className="h-3.5 w-3.5" />,
+              isLoading: isSaving,
+              onClick: handleSave,
+            }}
+            secondary={{
+              label: "Discard all",
+              onClick: () => session.discard(),
+              dirtyCount: dirtyEntities,
+              confirm: {
+                threshold: 2,
+                title: "Discard all changes?",
+                description: (
+                  <>
+                    You have unsaved edits across {dirtyEntities}{" "}
+                    {dirtyEntities === 1 ? "item" : "items"}. This will revert every
+                    change in this session.
+                  </>
+                ),
+                confirmLabel: "Discard all",
+                cancelLabel: "Keep editing",
+              },
+            }}
+          />
+        );
+      })()}
 
-          <div className="flex gap-3">
-            {/* Edit Mode Toggle */}
-            {isEditing ? (
-              <>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleEditToggle}
-                  disabled={isSaving}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button
-                  variant="default"
-                  size="lg"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Deploying...
-                    </>
-                  ) : (
-                    <>
-                      <Rocket className="mr-2 h-4 w-4" />
-                      Deploy
-                    </>
-                  )}
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={handleEditToggle}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
+      <PageHeader
+        title={stackToShow.name}
+        status={
+          <span className="flex items-center gap-2">
+            {stackToShow.status?.state && (
+              <StatusPill variant={variantFromState(stackToShow.status.state)}>
+                {stackToShow.status.state}
+              </StatusPill>
             )}
-          </div>
-        </div>
-        <Separator className="mt-4" />
-      </header>
+          </span>
+        }
+        subtitle={subtitleParts.map((p, i) => (
+          <span key={i}>
+            {i > 0 && <span className="mx-2 text-muted-foreground/50">·</span>}
+            {p}
+          </span>
+        ))}
+        actions={headerActions}
+      />
 
       <Tabs defaultValue="configuration" className="w-full">
-        <TabsList className="mb-6 w-full justify-start">
-          <TabsTrigger value="configuration" className="flex-1">Configuration</TabsTrigger>
-          <TabsTrigger value="logs" className="flex-1">Logs</TabsTrigger>
-          <TabsTrigger value="metrics" className="flex-1">Metrics</TabsTrigger>
+        <TabsList className="mb-6 w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-6">
+          <TabsTrigger
+            value="configuration"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
+          >
+            Configuration
+          </TabsTrigger>
+          <TabsTrigger
+            value="logs"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
+          >
+            Logs
+          </TabsTrigger>
+          <TabsTrigger
+            value="metrics"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
+          >
+            Metrics
+          </TabsTrigger>
         </TabsList>
 
         {/* Configuration Tab: Stack Resources and Volumes */}
         <TabsContent value="configuration" className="space-y-8">
-          <Card className="mb-6 rounded-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl">Stack Resources</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {isEditing ? (
-                <StackResourcesForm
-                  resources={editFormData?.resources || []}
-                  onResourcesChange={handleResourcesChange}
-                  errors={validationErrors.resources}
-                  volumes={editFormData?.volumes || []}
-                  accordionDefaultOpen={false}
-                />
-              ) : (
-                <StackResourcesDetail
-                  resources={resourcesForForm}
-                  accordionDefaultOpen={false}
-                />
-              )}
-            </CardContent>
-          </Card>
+          <Panel
+            title="Stack Resources"
+            count={baselineResources.length}
+            bodyClassName="p-0"
+          >
+            {session.isActive ? (
+              <StackResourcesForm
+                resources={session.draft.resources}
+                onResourcesChange={handleResourcesChange}
+                errors={validationErrors.resources}
+                volumes={session.draft.volumes}
+                accordionDefaultOpen={false}
+                defaultOpenResourceIdx={session.openResourceIdx}
+                addonGroupState={addonGroupState}
+                onEditAddonBinding={handleEditAddonBinding}
+                onDetachAddon={handleDetachAddon}
+                onCancelDetachAddon={handleCancelDetachAddon}
+                baselineResources={session.baseline.resources}
+                onDiscardEnvRow={handleDiscardEnvRow}
+                onDiscardResource={handleDiscardResource}
+                onDiscardResourceField={handleDiscardResourceField}
+                availableAddonIds={availableAddonIds}
+              />
+            ) : (
+              <StackResourcesDetail
+                resources={baselineResources}
+                accordionDefaultOpen={false}
+                onEditResource={(idx) =>
+                  activateEdit({ resourceIdx: idx, openTab: "environment" })
+                }
+                onAddResource={() => {
+                  const nextIdx = baselineResources.length;
+                  session.start(
+                    {
+                      resources: [...baselineResources, getDefaultResource() as FormStackResourceData],
+                      volumes: baselineVolumes,
+                    },
+                    { openResourceIdx: nextIdx, openTab: "configuration" },
+                  );
+                  setEditingBindingIds(new Set());
+                }}
+                detachedProvenance={detachedProvenance}
+              />
+            )}
+          </Panel>
 
-          <Card className="mb-6 rounded-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl">Stack Volumes</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {isEditing ? (
-                <StackVolumesForm
-                  volumes={editFormData?.volumes || []}
-                  onVolumesChange={handleVolumesChange}
-                  errors={validationErrors.volumes}
-                  stackResources={editFormData?.resources || []}
-                  accordionDefaultOpen={false}
-                />
-              ) : (
-                <StackVolumesDetail
-                  volumes={volumesForForm}
-                  stackResources={resourcesForForm}
-                  accordionDefaultOpen={false}
-                />
-              )}
-            </CardContent>
-          </Card>
+          <Panel
+            title="Stack Volumes"
+            count={baselineVolumes.length}
+            bodyClassName="p-0"
+          >
+            {session.isActive ? (
+              <StackVolumesForm
+                volumes={session.draft.volumes}
+                onVolumesChange={handleVolumesChange}
+                errors={validationErrors.volumes}
+                stackResources={session.draft.resources}
+                baselineVolumes={baselineVolumes}
+                accordionDefaultOpen={false}
+                defaultOpenVolumeIdx={session.openVolumeIdx}
+              />
+            ) : (
+              <StackVolumesDetail
+                volumes={baselineVolumes}
+                stackResources={baselineResources}
+                accordionDefaultOpen={false}
+                onEditVolume={(idx) => activateEdit({ volumeIdx: idx })}
+                onAddVolume={() => {
+                  const nextIdx = baselineVolumes.length;
+                  session.start(
+                    {
+                      resources: baselineResources,
+                      volumes: [...baselineVolumes, getDefaultVolume() as VolumeFormData],
+                    },
+                    { openVolumeIdx: nextIdx },
+                  );
+                  setEditingBindingIds(new Set());
+                }}
+              />
+            )}
+          </Panel>
+
+          {(() => {
+            const baseline = { resources: baselineResources, volumes: baselineVolumes };
+            const ensureActive = () => {
+              if (!session.isActive) session.start(baseline);
+            };
+            return (
+              <AddonsInStackPanel
+                resources={(session.isActive ? session.draft.resources : baselineResources) as Partial<FormStackResourceData>[]}
+                linkedAddonIds={session.linkedAddonIds}
+                onLinkAddon={(addonId) => {
+                  ensureActive();
+                  session.setLinkedAddonIds((prev) => {
+                    const next = new Set(prev);
+                    next.add(addonId);
+                    return next;
+                  });
+                }}
+                onRemoveLinkedAddon={(addonId) => {
+                  session.setLinkedAddonIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(addonId);
+                    return next;
+                  });
+                }}
+              />
+            );
+          })()}
         </TabsContent>
 
         {/* Logs Tab */}
@@ -394,6 +680,38 @@ export default function StackDetailPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={detachConfirmOpen} onOpenChange={setDetachConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Detach {session.pendingDetach.size} {session.pendingDetach.size === 1 ? "addon" : "addons"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Bound env keys will be converted to plain stack vars with their last-known values. Confirm to continue.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setDetachConfirmOpen(false);
+                const unbound = computeUnboundLinked();
+                if (unbound.length > 0) {
+                  session.setLinkedAddonIds((prev) => {
+                    const next = new Set(prev);
+                    for (const id of unbound) next.delete(id);
+                    return next;
+                  });
+                }
+                void performSave();
+              }}
+            >
+              Confirm and detach
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

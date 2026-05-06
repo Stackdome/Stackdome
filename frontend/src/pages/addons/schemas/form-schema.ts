@@ -6,7 +6,7 @@ const NAME_PATTERN = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
 export const PostgresAddonFormSchema = z.object({
   name: z
     .string()
-    .min(1, "Name is required")
+    .min(1, "Required")
     .max(63, "Name must be 63 characters or fewer")
     .regex(
       NAME_PATTERN,
@@ -27,7 +27,7 @@ export const PostgresAddonFormSchema = z.object({
   superuserAccess: z.boolean(),
   databases: z.array(
     z.object({
-      name: z.string().min(1, "Database name required"),
+      name: z.string().min(1, "Required"),
       extensions: z.array(z.literal("vector")),
     }),
   ),
@@ -35,7 +35,7 @@ export const PostgresAddonFormSchema = z.object({
     z.object({ type: z.literal("new") }),
     z.object({
       type: z.literal("restore_from_backup"),
-      backupId: z.string().min(1, "Pick a backup to restore from"),
+      backupId: z.string().min(1, "Pick a backup"),
     }),
   ]),
   advancedJson: z.string(),

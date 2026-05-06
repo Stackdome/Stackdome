@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { ReactNode } from "react";
 import { Accordion } from "@/components/ui/accordion";
-import { Container } from "lucide-react";
+import { Container, PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 // Generic form list props that can be used for different types of forms
 interface ResourceFormListProps<T> {
@@ -20,9 +22,16 @@ interface ResourceFormListProps<T> {
   }) => ReactNode;
   addButtonText?: string;
   autoAddFirstItem?: boolean;
-  emptyText?: string;
+  emptyTitle?: string;
+  emptyOptional?: boolean;
+  emptyDescription?: string;
+  emptyCtaLabel?: string;
+  emptyOnAdd?: () => void;
   emptyIcon?: ReactNode;
+  /** When set, replaces the empty-state title with this message in danger color to flag a validation error. */
+  emptyError?: string;
   defaultAllCollapsed?: boolean; // If true, all accordions start closed
+  defaultOpenIndex?: number | null; // If set (and not null), open this index by default instead of [0]
 }
 
 export default function ResourceFormList<T>({
@@ -32,14 +41,23 @@ export default function ResourceFormList<T>({
   createDefaultItem,
   renderItem,
   autoAddFirstItem = false, // default to false for blank state
-  emptyText = "No Resources added.",
+  emptyTitle = "Nothing added yet",
+  emptyOptional = false,
+  emptyDescription,
+  emptyCtaLabel,
+  emptyOnAdd,
   emptyIcon,
+  emptyError,
   defaultAllCollapsed = false,
+  defaultOpenIndex = null,
 }: ResourceFormListProps<T>) {
-  // Set initial open accordions based on defaultAllCollapsed
-  const [openAccordions, setOpenAccordions] = useState<string[]>(
-    defaultAllCollapsed ? [] : ["0"]
-  );
+  // Set initial open accordions based on defaultAllCollapsed / defaultOpenIndex
+  const [openAccordions, setOpenAccordions] = useState<string[]>(() => {
+    if (defaultOpenIndex !== null && defaultOpenIndex !== undefined) {
+      return [String(defaultOpenIndex)];
+    }
+    return defaultAllCollapsed ? [] : ["0"];
+  });
   const [lastAddedIndex, setLastAddedIndex] = useState<number | null>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -97,17 +115,24 @@ export default function ResourceFormList<T>({
     }
   }, [lastAddedIndex]);
 
-  // Update an existing item
-  const handleItemChange = useCallback((index: number, updatedItem: Partial<T>) => {
-    onItemsChange(
-      items.map((item, i) => i === index ? updatedItem : item)
-    );
-  }, [items, onItemsChange]);
+  // Stable refs to the latest items + onItemsChange. Without this the
+  // change/remove handlers below would be recreated on every keystroke
+  // (because items changes), which defeats React.memo on each item child
+  // and forces every other resource to re-render.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const onItemsChangeRef = useRef(onItemsChange);
+  onItemsChangeRef.current = onItemsChange;
 
-  // Remove an item
+  const handleItemChange = useCallback((index: number, updatedItem: Partial<T>) => {
+    onItemsChangeRef.current(
+      itemsRef.current.map((item, i) => i === index ? updatedItem : item)
+    );
+  }, []);
+
   const handleRemoveItem = useCallback((index: number) => {
-    onItemsChange(items.filter((_, i) => i !== index));
-  }, [items, onItemsChange]);
+    onItemsChangeRef.current(itemsRef.current.filter((_, i) => i !== index));
+  }, []);
 
   // Track state of accordions
   const handleValueChange = useCallback((value: string[]) => {
@@ -121,19 +146,39 @@ export default function ResourceFormList<T>({
     };
   }, []);
 
+  // Stable empty-errors reference — passing `{}` inline would break downstream memo.
+  const EMPTY_ERRORS = useRef({}).current;
+
   return (
     <div>
       {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12">
+        <div className="flex flex-col items-center justify-center text-center py-14 px-6">
           {emptyIcon !== undefined ? (
-            <>{emptyIcon}</>
+            <div className={cn("mb-4", emptyError ? "text-danger" : "text-muted-foreground/70")}>{emptyIcon}</div>
           ) : (
-            <Container className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />
+            <Container className={cn("h-6 w-6 mb-4", emptyError ? "text-danger" : "text-muted-foreground/70")} />
           )}
-          <div className="text-lg text-muted-foreground font-medium mb-1">{emptyText}</div>
-          {/* For volumes, show (Optional) below the text, centered */}
-          {emptyText.toLowerCase().includes("volume") && (
-            <div className="text-sm text-muted-foreground mt-1">(Optional)</div>
+          <h3 className={cn("text-sm font-semibold", emptyError ? "text-danger" : "text-foreground")}>
+            {emptyError ?? emptyTitle}
+            {!emptyError && emptyOptional && (
+              <span className="ml-1.5 font-normal text-muted-foreground">(optional)</span>
+            )}
+          </h3>
+          {emptyDescription && (
+            <p className="text-[12.5px] text-muted-foreground mt-2 max-w-sm leading-relaxed">
+              {emptyDescription}
+            </p>
+          )}
+          {emptyOnAdd && emptyCtaLabel && (
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-5"
+              onClick={emptyOnAdd}
+            >
+              <PlusCircle className="h-4 w-4" />
+              {emptyCtaLabel}
+            </Button>
           )}
         </div>
       ) : (
@@ -153,7 +198,7 @@ export default function ResourceFormList<T>({
                   isOnlyItem: items.length === 1,
                   onChange: handleItemChange,
                   onRemove: handleRemoveItem,
-                  errors: errors[index] || {},
+                  errors: errors[index] || EMPTY_ERRORS,
                 })}
               </div>
             ))}

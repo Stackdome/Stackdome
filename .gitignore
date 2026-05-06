@@ -5,3 +5,6 @@ cluster_config.yaml
 database.yaml
 bin/
 local_dev_env.yaml
+
+.superpowers/
+.worktrees/

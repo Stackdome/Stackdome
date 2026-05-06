@@ -1,27 +1,24 @@
-import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
-import { useSignup } from '../hooks/use-signup';
-import type { UserSignupRequest, UserSignupResponse } from '@/api/users';
-import type { SignupFormData } from '../types';
-import { signupSchema } from '../types';
-import { setAuthSession } from '@/helpers/common';
-import { getErrorMessage } from '@/api/client';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { Loader2 } from "lucide-react";
+import { useSignup } from "../hooks/use-signup";
+import type { UserSignupRequest, UserSignupResponse } from "@/api/users";
+import type { SignupFormData } from "../types";
+import { signupSchema } from "../types";
+import { setAuthSession } from "@/helpers/common";
+import { getErrorMessage } from "@/api/client";
+import { FormHead, FieldLabel } from "@/pages/auth/components/auth-shell";
 
-export function SignupForm({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+export function SignupForm() {
   const [formData, setFormData] = useState<SignupFormData>({
     email: "",
     password: "",
     confirmPassword: "",
     name: "",
-    organisationName: ""
+    organisationName: "",
   });
   const [errors, setErrors] = useState<Partial<SignupFormData>>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -33,7 +30,7 @@ export function SignupForm({
     const result = signupSchema.safeParse(formData);
     if (!result.success) {
       const fieldErrors: Partial<SignupFormData> = {};
-      result.error.errors.forEach(err => {
+      result.error.errors.forEach((err) => {
         const field = err.path[0] as keyof SignupFormData;
         fieldErrors[field] = err.message;
       });
@@ -46,9 +43,9 @@ export function SignupForm({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name as keyof SignupFormData]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
     setServerError(null);
   };
@@ -64,7 +61,7 @@ export function SignupForm({
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        organisation: { name: formData.organisationName }
+        organisation: { name: formData.organisationName },
       };
       const response: UserSignupResponse = await signup(payload);
       if (response && response.jwt_token && response.user) {
@@ -79,113 +76,124 @@ export function SignupForm({
   };
 
   return (
-    <div className={cn("mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]", className)} {...props}>
-      <div className="flex flex-col space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Create an account</h1>
-        <p className="text-sm text-muted-foreground">Enter your email below to create your account</p>
-      </div>
-      <div className="grid gap-6">
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4">
-            {serverError && (
-              <div className="text-red-500 text-sm text-center">{serverError}</div>
-            )}
-            <div className="grid gap-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                value={formData.name || ''}
-                onChange={handleChange}
-                className={errors.name ? "border-red-500" : ""}
-              />
-              {errors.name && (
-                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="organisationName">Organization Name</Label>
-              <Input
-                id="organisationName"
-                name="organisationName"
-                type="text"
-                value={formData.organisationName || ''}
-                onChange={handleChange}
-                className={errors.organisationName ? "border-red-500" : ""}
-              />
-              {errors.organisationName && (
-                <p className="text-red-500 text-sm mt-1">{errors.organisationName}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoCapitalize="none"
-                autoComplete="email"
-                autoCorrect="off"
-                value={formData.email}
-                onChange={handleChange}
-                className={errors.email ? "border-red-500" : ""}
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                value={formData.password}
-                onChange={handleChange}
-                className={errors.password ? "border-red-500" : ""}
-              />
-              {errors.password && (
-                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className={errors.confirmPassword ? "border-red-500" : ""}
-              />
-              {errors.confirmPassword && (
-                <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
-              )}
-            </div>
-            <Button type="submit" className="w-full mt-2" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" />
-                  Creating account...
-                </>
-              ) : (
-                "Sign Up"
-              )}
-            </Button>
+    <div>
+      <FormHead
+        step="create account"
+        title="Own your stack."
+        trailing={
+          <>
+            Already have one?{" "}
+            <Link to="/sign-in" className="text-foreground">
+              <span className="underline underline-offset-4 decoration-[1.5px] decoration-brand/80 hover:decoration-brand">
+                Sign in
+              </span>
+              <span className="text-brand">.</span>
+            </Link>
+          </>
+        }
+      />
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {serverError && (
+          <div className="rounded-sm border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+            {serverError}
           </div>
-        </form>
-      </div>
-      <div className="text-center">
-        <p className="text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link to="/login" className="underline underline-offset-4 hover:text-primary">
-            Login
-          </Link>
-        </p>
-      </div>
+        )}
+
+        <div className="space-y-2">
+          <FieldLabel htmlFor="name">full name</FieldLabel>
+          <Input
+            id="name"
+            name="name"
+            type="text"
+            placeholder="Your name"
+            value={formData.name || ""}
+            onChange={handleChange}
+            aria-invalid={!!errors.name}
+          />
+          {errors.name && <p className="text-xs text-danger">{errors.name}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <FieldLabel htmlFor="organisationName">organization</FieldLabel>
+          <Input
+            id="organisationName"
+            name="organisationName"
+            type="text"
+            placeholder="Founder Labs"
+            value={formData.organisationName || ""}
+            onChange={handleChange}
+            aria-invalid={!!errors.organisationName}
+          />
+          {errors.organisationName && (
+            <p className="text-xs text-danger">{errors.organisationName}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <FieldLabel htmlFor="email">email</FieldLabel>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoCapitalize="none"
+            autoComplete="email"
+            autoCorrect="off"
+            placeholder="you@company.com"
+            value={formData.email}
+            onChange={handleChange}
+            aria-invalid={!!errors.email}
+          />
+          {errors.email && <p className="text-xs text-danger">{errors.email}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <FieldLabel htmlFor="password" hint="min. 8 characters">
+            password
+          </FieldLabel>
+          <PasswordInput
+            id="password"
+            name="password"
+            autoComplete="new-password"
+            placeholder="••••••••••••"
+            value={formData.password}
+            onChange={handleChange}
+            aria-invalid={!!errors.password}
+          />
+          {errors.password && (
+            <p className="text-xs text-danger">{errors.password}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <FieldLabel htmlFor="confirmPassword">confirm</FieldLabel>
+          <PasswordInput
+            id="confirmPassword"
+            name="confirmPassword"
+            autoComplete="new-password"
+            placeholder="••••••••••••"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            aria-invalid={!!errors.confirmPassword}
+          />
+          {errors.confirmPassword && (
+            <p className="text-xs text-danger">{errors.confirmPassword}</p>
+          )}
+        </div>
+
+        <Button type="submit" variant="inverse" className="w-full" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="animate-spin h-4 w-4" />
+              Creating account…
+            </>
+          ) : (
+            <>
+              Create account <span className="font-mono">→</span>
+            </>
+          )}
+        </Button>
+      </form>
     </div>
-  )
+  );
 }

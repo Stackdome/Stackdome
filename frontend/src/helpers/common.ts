@@ -30,7 +30,7 @@ export function clearAuthSession() {
   localStorage.removeItem('currentUser');
 }
 
-export function logoutAndRedirect(redirectTo: string = "/login") {
+export function logoutAndRedirect(redirectTo: string = "/sign-in") {
   clearAuthSession();
   window.location.href = redirectTo;
 }

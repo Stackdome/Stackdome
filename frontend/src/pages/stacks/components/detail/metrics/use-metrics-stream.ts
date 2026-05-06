@@ -17,6 +17,7 @@ interface UseMetricsStreamReturn {
   error: string | null;
   startStreaming: () => void;
   stopStreaming: () => void;
+  retry: () => void;
   lastUpdated: Date | null;
   updateResources: (resources: string[]) => void;
 }
@@ -180,6 +181,12 @@ export function useMetricsStream({
     };
   }, [stopStreaming]);
 
+  // Tearing down clears connections + flips isStreaming to false. The
+  // auto-start effect above then sees enabled && !isStreaming and reconnects.
+  const retry = useCallback(() => {
+    stopStreaming();
+  }, [stopStreaming]);
+
   return {
     stackMetrics,
     resourceMetrics,
@@ -188,6 +195,7 @@ export function useMetricsStream({
     error,
     startStreaming,
     stopStreaming,
+    retry,
     lastUpdated,
     updateResources,
   };

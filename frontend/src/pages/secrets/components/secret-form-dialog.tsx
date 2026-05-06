@@ -3,6 +3,7 @@ import { Plus, Trash2, Loader2, Eye, EyeOff } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { FieldShell } from "@/components/branded";
 import {
   Select,
   SelectContent,
@@ -299,10 +301,10 @@ export function SecretFormDialog({
                   }
                 }}
                 placeholder="e.g., docker.io, gcr.io, your-registry.com"
-                className={formErrors.registry ? "border-destructive" : ""}
+                className={formErrors.registry ? "border-danger" : ""}
               />
               {formErrors.registry && (
-                <p className="text-sm text-destructive">{formErrors.registry}</p>
+                <p className="text-sm text-danger">{formErrors.registry}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -317,10 +319,10 @@ export function SecretFormDialog({
                   }
                 }}
                 placeholder="Enter username"
-                className={formErrors.username ? "border-destructive" : ""}
+                className={formErrors.username ? "border-danger" : ""}
               />
               {formErrors.username && (
-                <p className="text-sm text-destructive">{formErrors.username}</p>
+                <p className="text-sm text-danger">{formErrors.username}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -337,7 +339,7 @@ export function SecretFormDialog({
                     }
                   }}
                   placeholder="Enter password"
-                  className={formErrors.password ? "border-destructive pr-10" : "pr-10"}
+                  className={formErrors.password ? "border-danger pr-10" : "pr-10"}
                 />
                 <Button
                   type="button"
@@ -350,7 +352,7 @@ export function SecretFormDialog({
                 </Button>
               </div>
               {formErrors.password && (
-                <p className="text-sm text-destructive">{formErrors.password}</p>
+                <p className="text-sm text-danger">{formErrors.password}</p>
               )}
             </div>
           </div>
@@ -360,7 +362,7 @@ export function SecretFormDialog({
         return (
           <div className="space-y-4">
             {formErrors.credentials && (
-              <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+              <div className="text-sm text-danger bg-danger-bg p-3 rounded-md">
                 {formErrors.credentials}
               </div>
             )}
@@ -455,10 +457,10 @@ export function SecretFormDialog({
                   }
                 }}
                 placeholder="Enter username"
-                className={formErrors.username ? "border-destructive" : ""}
+                className={formErrors.username ? "border-danger" : ""}
               />
               {formErrors.username && (
-                <p className="text-sm text-destructive">{formErrors.username}</p>
+                <p className="text-sm text-danger">{formErrors.username}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -475,7 +477,7 @@ export function SecretFormDialog({
                     }
                   }}
                   placeholder="Enter password"
-                  className={formErrors.password ? "border-destructive pr-10" : "pr-10"}
+                  className={formErrors.password ? "border-danger pr-10" : "pr-10"}
                 />
                 <Button
                   type="button"
@@ -488,7 +490,7 @@ export function SecretFormDialog({
                 </Button>
               </div>
               {formErrors.password && (
-                <p className="text-sm text-destructive">{formErrors.password}</p>
+                <p className="text-sm text-danger">{formErrors.password}</p>
               )}
             </div>
           </div>
@@ -510,7 +512,7 @@ export function SecretFormDialog({
                   }
                 }}
                 placeholder="Enter token (min 8 characters)"
-                className={formErrors.token ? "border-destructive pr-10" : "pr-10"}
+                className={formErrors.token ? "border-danger pr-10" : "pr-10"}
               />
               <Button
                 type="button"
@@ -523,7 +525,7 @@ export function SecretFormDialog({
               </Button>
             </div>
             {formErrors.token && (
-              <p className="text-sm text-destructive">{formErrors.token}</p>
+              <p className="text-sm text-danger">{formErrors.token}</p>
             )}
           </div>
         );
@@ -542,11 +544,11 @@ export function SecretFormDialog({
                 }
               }}
               placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----"
-              className={formErrors.sshPrivateKey ? "border-destructive [field-sizing:fixed]" : "[field-sizing:fixed]"}
+              className={formErrors.sshPrivateKey ? "border-danger [field-sizing:fixed]" : "[field-sizing:fixed]"}
               rows={6}
             />
             {formErrors.sshPrivateKey && (
-              <p className="text-sm text-destructive">{formErrors.sshPrivateKey}</p>
+              <p className="text-sm text-danger">{formErrors.sshPrivateKey}</p>
             )}
           </div>
         );
@@ -556,14 +558,19 @@ export function SecretFormDialog({
         return (
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label>Secret Data *</Label>
+              <Label className="text-[13px] font-medium text-foreground">
+                <span>
+                  Secret Data
+                  <span className="ml-0.5 text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span>
+                </span>
+              </Label>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={addGenericDataPair}
               >
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="h-4 w-4" />
                 Add Key-Value Pair
               </Button>
             </div>
@@ -576,10 +583,10 @@ export function SecretFormDialog({
                       value={item.key}
                       onChange={(e) => updateGenericDataPair(index, "key", e.target.value)}
                       placeholder="Key"
-                      className={formErrors[`key-${index}`] ? "border-destructive" : ""}
+                      className={formErrors[`key-${index}`] ? "border-danger" : ""}
                     />
                     {formErrors[`key-${index}`] && (
-                      <p className="text-xs text-destructive">{formErrors[`key-${index}`]}</p>
+                      <p className="text-xs text-danger">{formErrors[`key-${index}`]}</p>
                     )}
                   </div>
                   <div className="flex-1 space-y-1">
@@ -589,7 +596,7 @@ export function SecretFormDialog({
                         onChange={(e) => updateGenericDataPair(index, "value", e.target.value)}
                         placeholder="Value"
                         type={showPassword[`value-${index}`] ? "text" : "password"}
-                        className={formErrors[`value-${index}`] ? "border-destructive pr-10" : "pr-10"}
+                        className={formErrors[`value-${index}`] ? "border-danger pr-10" : "pr-10"}
                       />
                       <Button
                         type="button"
@@ -602,15 +609,17 @@ export function SecretFormDialog({
                       </Button>
                     </div>
                     {formErrors[`value-${index}`] && (
-                      <p className="text-xs text-destructive">{formErrors[`value-${index}`]}</p>
+                      <p className="text-xs text-danger">{formErrors[`value-${index}`]}</p>
                     )}
                   </div>
                   <Button
                     type="button"
-                    variant="outline"
-                    size="sm"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => removeGenericDataPair(index)}
                     disabled={genericData.length === 1}
+                    className="text-danger hover:text-danger hover:bg-danger-bg"
+                    title="Remove key-value pair"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -618,7 +627,7 @@ export function SecretFormDialog({
               ))}
             </div>
             {formErrors.data && (
-              <p className="text-sm text-destructive">{formErrors.data}</p>
+              <p className="text-sm text-danger">{formErrors.data}</p>
             )}
           </div>
         );
@@ -632,18 +641,27 @@ export function SecretFormDialog({
           <DialogTitle>
             {isEditing ? "Edit Secret" : "Create New Secret"}
           </DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? "Update the secret's metadata or rotate its values."
+              : "Securely store API keys, passwords, or certificates for your stacks."}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-1">
-          <div className="space-y-4 py-4 max-w-full overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-5 py-4">
             {error && (
-              <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+              <div className="text-sm text-danger bg-danger-bg p-3 rounded-md">
                 {error}
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+            <FieldShell
+              label="Name"
+              htmlFor="name"
+              required
+              error={formErrors.name}
+            >
               <Input
                 id="name"
                 value={name}
@@ -654,30 +672,24 @@ export function SecretFormDialog({
                   }
                 }}
                 placeholder="Enter secret name"
-                className={formErrors.name ? "border-destructive" : ""}
+                className={formErrors.name ? "border-danger" : ""}
               />
-              {formErrors.name && (
-                <p className="text-sm text-destructive">{formErrors.name}</p>
-              )}
-            </div>
+            </FieldShell>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+            <FieldShell label="Description" htmlFor="description">
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Enter secret description (optional)"
                 rows={2}
-                className="max-w-full resize-none w-full [field-sizing:fixed]"
-                style={{ wordWrap: 'break-word', whiteSpace: 'pre-wrap' }}
+                className="resize-none [field-sizing:fixed]"
               />
-            </div>
+            </FieldShell>
 
-            <div className="space-y-2">
-              <Label htmlFor="type">Type *</Label>
+            <FieldShell label="Type" htmlFor="type" required>
               <Select value={type} onValueChange={(value: SecretType) => setType(value)}>
-                <SelectTrigger>
+                <SelectTrigger id="type" className="w-full">
                   <SelectValue placeholder="Select secret type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -688,7 +700,7 @@ export function SecretFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FieldShell>
 
             {renderTypeSpecificFields()}
           </div>
@@ -699,7 +711,7 @@ export function SecretFormDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
             {isEditing ? "Update Secret" : "Create Secret"}
           </Button>
         </DialogFooter>

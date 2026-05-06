@@ -2,9 +2,11 @@ import React, { useState, useCallback, Fragment, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import StackResourcesForm from "../shared/stack-resources-form";
 import StackVolumesForm from "../shared/stack-volumes-form";
-import { Button } from "@/components/ui/button";
-import { Rocket, X, AlertTriangle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { X, AlertTriangle, Rocket } from "lucide-react";
+import { Panel, FieldError } from "@/components/branded";
+import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
+import StickyActionBar, { type StickyActionBarSegment } from "@/pages/stacks/components/shared/sticky-action-bar";
+import { getAddonLinkCount } from "@/pages/stacks/lib/stack-diff";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label as UILabel } from "@/components/ui/label";
@@ -34,6 +36,7 @@ export default function StackCreatePage() {
     },
   });
   const [currentLabelInput, setCurrentLabelInput] = useState("");
+  const [linkedAddonIds, setLinkedAddonIds] = useState<Set<string>>(new Set());
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -348,9 +351,6 @@ export default function StackCreatePage() {
         description: 'Please fix the highlighted errors before submitting the form.',
         variant: 'destructive',
       });
-      if (Object.keys(newErrors).length > 0 && !apiError) {
-        setApiError('Please fix the highlighted errors before submitting the form');
-      }
       return;
     }
 
@@ -424,77 +424,81 @@ export default function StackCreatePage() {
       return acc;
     }, {});
 
+  const resourceCount = formData.spec?.stack_resources?.length ?? 0;
+  const volumeCount = formData.spec?.volumes?.length ?? 0;
+  const addonLinkCount = getAddonLinkCount(linkedAddonIds, formData.spec?.stack_resources || []);
+  const segments: StickyActionBarSegment[] = [];
+  if (resourceCount > 0) {
+    segments.push({ num: resourceCount, label: resourceCount === 1 ? "RESOURCE" : "RESOURCES" });
+  }
+  if (volumeCount > 0) {
+    segments.push({ num: volumeCount, label: volumeCount === 1 ? "VOLUME" : "VOLUMES" });
+  }
+  if (addonLinkCount > 0) {
+    segments.push({ num: addonLinkCount, label: addonLinkCount === 1 ? "ADDON" : "ADDONS" });
+  }
+  const handleCancel = () => {
+    if (window.history.length > 2 && window.history.state && window.history.state.idx !== 0) {
+      navigate(-1);
+    } else {
+      navigate("/stacks", { replace: true });
+    }
+  };
+
   return (
     <div className="p-6">
+      <StickyActionBar
+        leadLabel="Draft"
+        segments={segments}
+        primary={{
+          label: "Deploy",
+          loadingLabel: "Deploying",
+          icon: <Rocket className="h-3.5 w-3.5" />,
+          isLoading: isLoading,
+          onClick: handleSubmit,
+        }}
+        secondary={{
+          label: "Cancel",
+          onClick: handleCancel,
+        }}
+      />
       <header className="mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold">Create New Stack</h1>
-            </div>
-            <div className="flex items-center gap-4 text-muted-foreground text-sm mb-1">
-              <span>Define your stack to provision infrastructure</span>
-            </div>
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-2xl font-bold">Create New Stack</h1>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" size="lg" onClick={() => {
-              if (window.history.length > 2 && window.history.state && window.history.state.idx !== 0) {
-                navigate(-1);
-              } else {
-                navigate("/stacks", { replace: true });
-              }
-            }}>
-              <X className="mr-2 h-4 w-4" />
-              Cancel
-            </Button>
-            <Button variant="default" size="lg" onClick={handleSubmit} disabled={isLoading}>
-              <Rocket className="mr-2 h-4 w-4" />
-              <span className="font-semibold">{isLoading ? "Deploying..." : "Deploy"}</span>
-            </Button>
+          <div className="flex items-center gap-4 text-muted-foreground text-sm mb-1">
+            <span>Define your stack to provision infrastructure</span>
           </div>
         </div>
         <Separator className="mt-4" />
       </header>
 
-      {Object.keys(formErrors).length > 0 && (
-        <div className="bg-red-500/10 border border-red-500 rounded-lg px-4 py-3 mb-6">
-          <h3 className="text-red-500 font-semibold flex items-center">
-            <AlertTriangle className="w-4 mr-2" />
-            Please fix errors on the form to deploy.
-          </h3>
-        </div>
-      )}
-
-      {formErrors[""] && (
+      {(apiError || formErrors[""]) && (
         <Alert variant="destructive" className="mb-6">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Configuration Error</AlertTitle>
-          <AlertDescription className="text-red-500">{formErrors[""]}</AlertDescription>
+          <AlertTitle>{formErrors[""] ? "Configuration Error" : "Could not deploy"}</AlertTitle>
+          <AlertDescription>{formErrors[""] || apiError}</AlertDescription>
         </Alert>
       )}
 
-      <div className="flex flex-col">
-        <Card className="mb-6 rounded-lg overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl">Stack Information</CardTitle>
-          </CardHeader>
-          <Separator />
-          <CardContent className="pt-6">
+      <div className="flex flex-col gap-8">
+        <Panel title="Stack Information">
             <div className="grid gap-6 max-w-5xl">
               <div>
                 <UILabel htmlFor="stack-name" className="text-sm font-medium flex items-center gap-1 mb-2">
-                  Stack Name <span className="text-red-500">*</span>
+                  Stack Name <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span>
                 </UILabel>
                 <Input
                   id="stack-name"
                   value={formData.name || ""}
                   onChange={(e) => handleChange("name", e.target.value)}
-                  className={`max-w-md ${formErrors.name ? "border-red-500" : ""}`}
+                  className={`max-w-md ${formErrors.name ? "border-danger" : ""}`}
                   placeholder="my-application-stack"
                   required
                   aria-invalid={!!formErrors.name}
                 />
-                {formErrors.name && <p className="text-sm text-destructive">{formErrors.name}</p>}
+                <FieldError>{formErrors.name}</FieldError>
               </div>
 
               <div>
@@ -507,21 +511,21 @@ export default function StackCreatePage() {
                     value={currentLabelInput}
                     onChange={handleLabelInputChange}
                     onKeyDown={handleAddLabel}
-                    className={`max-w-md ${formErrors.labels ? "border-red-500" : ""}`}
+                    className={`max-w-md ${formErrors.labels ? "border-danger" : ""}`}
                     placeholder="e.g., dev, prod, mytag (press Enter to add)"
                     aria-invalid={!!formErrors.labels}
                   />
                 </div>
-                {formErrors.labels && <p className="text-sm text-destructive whitespace-pre-line">{formErrors.labels}</p>}
+                <FieldError className="whitespace-pre-line">{formErrors.labels}</FieldError>
                 {(formData.labels || []).map((_label, idx) => {
                   const keyError = formErrors[`labels.${idx}.key`];
                   const valueError = formErrors[`labels.${idx}.value`];
                   const itemError = formErrors[`labels.${idx}`];
                   return (
                     <Fragment key={`label-err-${idx}`}>
-                      {itemError && <p className="text-sm text-destructive">{`Label ${idx + 1}: ${itemError}`}</p>}
-                      {keyError && <p className="text-sm text-destructive">{`Label ${idx + 1} Key: ${keyError}`}</p>}
-                      {valueError && <p className="text-sm text-destructive">{`Label ${idx + 1} Value: ${valueError}`}</p>}
+                      <FieldError>{itemError && `Label ${idx + 1}: ${itemError}`}</FieldError>
+                      <FieldError>{keyError && `Label ${idx + 1} Key: ${keyError}`}</FieldError>
+                      <FieldError>{valueError && `Label ${idx + 1} Value: ${valueError}`}</FieldError>
                     </Fragment>
                   );
                 })}
@@ -547,62 +551,62 @@ export default function StackCreatePage() {
                 )}
               </div>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="mb-6 rounded-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl">Stack Resources</CardTitle>
-            <CardDescription className="mt-1">
-              Configure the containerized services that make up your stack
-            </CardDescription>
-          </CardHeader>
-          <Separator />
-          <CardContent className="p-0">
+        </Panel>
+        <Panel
+          title="Stack Resources"
+          count={formData.spec?.stack_resources?.length ?? 0}
+          bodyClassName="p-0"
+          invalid={!!formErrors["spec.stack_resources"]}
+        >
             <StackResourcesForm
               resources={formData.spec?.stack_resources || []}
               onResourcesChange={handleResourcesChange}
               errors={resourcesErrors}
+              emptyError={formErrors["spec.stack_resources"]}
               volumes={formData.spec?.volumes || []}
+              availableAddonIds={(() => {
+                const ids = new Set(linkedAddonIds);
+                for (const r of formData.spec?.stack_resources || []) {
+                  const envs = (r?.execution_config?.environment_variables || []) as Array<{ from?: string; addonId?: string }>;
+                  for (const e of envs) {
+                    if (e.from === "addon" && e.addonId) ids.add(e.addonId);
+                  }
+                }
+                return ids;
+              })()}
             />
-          </CardContent>
-        </Card>
+        </Panel>
 
-        {formErrors["spec.stack_resources"] && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Resource Error</AlertTitle>
-            <AlertDescription>
-              {formErrors["spec.stack_resources"]}
-              {formData.spec?.stack_resources.length === 0 && (
-                <div className="mt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleResourcesChange([{ name: "", sourceType: "image" }])}>
-                    Add a resource
-                  </Button>
-                </div>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <Card className="mb-6 rounded-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl">Stack Volumes</CardTitle>
-            <CardDescription className="mt-1">
-              Configure persistent volumes that your stack resources can use
-            </CardDescription>
-          </CardHeader>
-          <Separator />
-          <CardContent className="p-0">
+        <Panel
+          title="Stack Volumes"
+          count={formData.spec?.volumes?.length ?? 0}
+          bodyClassName="p-0"
+        >
             <StackVolumesForm
               volumes={formData.spec?.volumes || []}
               onVolumesChange={handleVolumesChange}
               errors={volumesErrors}
             />
-          </CardContent>
-        </Card>
+        </Panel>
+
+        <AddonsInStackPanel
+          resources={formData.spec?.stack_resources || []}
+          linkedAddonIds={linkedAddonIds}
+          onLinkAddon={(addonId) =>
+            setLinkedAddonIds((prev) => {
+              const next = new Set(prev);
+              next.add(addonId);
+              return next;
+            })
+          }
+          onRemoveLinkedAddon={(addonId) =>
+            setLinkedAddonIds((prev) => {
+              const next = new Set(prev);
+              next.delete(addonId);
+              return next;
+            })
+          }
+        />
       </div>
     </div>
   );

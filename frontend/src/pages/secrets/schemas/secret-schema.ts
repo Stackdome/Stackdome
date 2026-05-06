@@ -10,25 +10,25 @@ export const SecretTypeSchema = z.enum([
 ]);
 
 export const SecretDataSchema = z.object({
-  key: z.string().min(1, "Key is required"),
-  value: z.string().min(1, "Value is required"),
+  key: z.string().min(1, "Required"),
+  value: z.string().min(1, "Required"),
 });
 
 const BaseSecretSchema = z.object({
-  name: z.string().min(1, "Secret name is required").max(255, "Name too long"),
+  name: z.string().min(1, "Required").max(255, "Name too long"),
   description: z.string().optional(),
 });
 
 export const GenericSecretSchema = BaseSecretSchema.extend({
   type: z.literal("Generic"),
-  data: z.array(SecretDataSchema).min(1, "At least one key-value pair is required"),
+  data: z.array(SecretDataSchema).min(1, "Add at least one entry"),
 });
 
 export const DockerRegistrySecretSchema = BaseSecretSchema.extend({
   type: z.literal("DockerRegistry"),
-  registry: z.string().min(1, "Registry URL is required"),
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  registry: z.string().min(1, "Required"),
+  username: z.string().min(1, "Required"),
+  password: z.string().min(1, "Required"),
 });
 
 export const GitCredentialsSecretSchema = BaseSecretSchema.extend({
@@ -40,8 +40,8 @@ export const GitCredentialsSecretSchema = BaseSecretSchema.extend({
 
 export const UsernamePasswordSecretSchema = BaseSecretSchema.extend({
   type: z.literal("UsernamePassword"),
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  username: z.string().min(1, "Required"),
+  password: z.string().min(1, "Required"),
 });
 
 export const TokenSecretSchema = BaseSecretSchema.extend({
@@ -52,7 +52,7 @@ export const TokenSecretSchema = BaseSecretSchema.extend({
 export const SSHKeySecretSchema = BaseSecretSchema.extend({
   type: z.literal("SSHKey"),
   sshPrivateKey: z.string()
-    .min(1, "SSH private key is required")
+    .min(1, "Required")
     .refine(
       (key) => key.includes("-----BEGIN") && key.includes("-----END"),
       "SSH private key must be in PEM format"

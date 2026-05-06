@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { AlertCircle, Info } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { type DomainName, validateDomainName } from "../schemas/api-schema";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { FieldShell } from "@/components/branded";
 import {
   Dialog,
   DialogClose,
@@ -13,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AddDomainDialogProps {
   open: boolean;
@@ -90,20 +89,13 @@ export default function AddDomainDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <Label htmlFor="domain-fqdn" className="text-sm font-medium">Domain Name</Label>
-              <TooltipProvider>
-                <Tooltip delayDuration={300}>
-                  <TooltipTrigger asChild>
-                    <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    Enter a valid domain name like example.com
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+          <FieldShell
+            label="Domain Name"
+            htmlFor="domain-fqdn"
+            required
+            hint="Examples: example.com, subdomain.example.org, app.company.co.uk"
+            error={error}
+          >
             <Input
               id="domain-fqdn"
               placeholder="example.com"
@@ -114,18 +106,9 @@ export default function AddDomainDialog({
                   handleAddDomain();
                 }
               }}
-              className={error ? "border-red-500 focus:border-red-500" : ""}
+              className={error ? "border-danger focus:border-danger" : ""}
             />
-            {error && (
-              <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
-                <AlertCircle className="h-4 w-4" />
-                {error}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">
-              Examples: example.com, subdomain.example.org, app.company.co.uk
-            </p>
-          </div>
+          </FieldShell>
         </div>
         <DialogFooter>
           <DialogClose asChild>
@@ -135,7 +118,8 @@ export default function AddDomainDialog({
             onClick={handleAddDomain}
             disabled={!domainFqdn.trim() || !!error || isLoading}
           >
-            {isLoading ? "Adding..." : "Add Domain"}
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            Add Domain
           </Button>
         </DialogFooter>
       </DialogContent>

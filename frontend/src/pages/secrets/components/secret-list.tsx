@@ -101,14 +101,14 @@ export function SecretList({ secrets, onEdit, onDelete }: SecretListProps) {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[160px]">
                     <DropdownMenuItem onClick={() => onEdit(secret)}>
-                      <Edit className="mr-2 h-4 w-4" />
+                      <Edit className="h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
+                      className="text-danger focus:text-danger"
                       onClick={() => onDelete(secret)}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>

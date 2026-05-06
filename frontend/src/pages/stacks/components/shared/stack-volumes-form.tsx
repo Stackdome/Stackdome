@@ -11,10 +11,14 @@ interface StackVolumesFormProps {
   onVolumesChange: (updatedVolumes: Partial<VolumeFormData>[]) => void;
   errors: { [index: number]: { [field: string]: string | undefined } };
   stackResources?: Partial<FormStackResourceData>[];
+  /** Baseline snapshot — when provided, removing a volume that exists in
+   *  baseline shows a confirm dialog. Newly-added drafts are removed silently. */
+  baselineVolumes?: Partial<VolumeFormData>[];
   accordionDefaultOpen?: boolean; // If false, all collapsed by default
+  defaultOpenVolumeIdx?: number | null;
 }
 
-function getDefaultVolume(): Partial<VolumeFormData> {
+export function getDefaultVolume(): Partial<VolumeFormData> {
   return {
     name: "",
     sourceType: "None",
@@ -32,21 +36,16 @@ export default function StackVolumesForm({
   onVolumesChange,
   errors,
   stackResources = [],
+  baselineVolumes,
   accordionDefaultOpen = true,
+  defaultOpenVolumeIdx = null,
 }: StackVolumesFormProps) {
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number | null>(null);
 
-  // Helper function to check if a volume is being used by resources
-  const isVolumeUsed = (volumeName: string) => {
-    return stackResources.some(res =>
-      res.volume_mounts?.some(vm => vm.source_volume_name === volumeName)
-    );
-  };
-
-  // Helper function to check if a volume has data
-  const isVolumeFilled = (vol: Partial<VolumeFormData>) => {
-    return !!(vol.name || vol.spec?.size || vol.labels?.length || vol.spec?.needs_sync_before_use || vol.spec?.access_mode !== undefined);
-  };
+  // Removing a volume is destructive only when it exists in the baseline —
+  // i.e., it was already deployed. Newly-added drafts are removed silently.
+  const wasInBaseline = (vol: Partial<VolumeFormData>) =>
+    !!(vol.name && baselineVolumes?.some(b => b.name === vol.name));
 
   return (
     <div className="space-y-3">
@@ -58,13 +57,7 @@ export default function StackVolumesForm({
             itemRef={itemRef}
             onChange={onChange}
             onRemove={(idx) => {
-              if (item.name && isVolumeUsed(item.name)) {
-                // Show error dialog
-                console.error(`Volume ${item.name} is in use and cannot be removed.`);
-                return;
-              }
-
-              if (isVolumeFilled(item)) {
+              if (wasInBaseline(item)) {
                 setPendingRemoveIdx(idx);
               } else {
                 onRemove(idx);
@@ -79,20 +72,27 @@ export default function StackVolumesForm({
         onItemsChange={onVolumesChange}
         createDefaultItem={getDefaultVolume}
         errors={errors}
-        emptyText="No volumes added."
-        emptyIcon={<Database className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />}
+        emptyTitle="No volumes added"
+        emptyOptional
+        emptyDescription="Add a persistent volume if your services need to keep data across restarts. Otherwise, you can skip this."
+        emptyCtaLabel="Add Volume"
+        emptyOnAdd={() => onVolumesChange([...volumes, getDefaultVolume()])}
+        emptyIcon={<Database className="h-6 w-6" />}
         defaultAllCollapsed={!accordionDefaultOpen}
+        defaultOpenIndex={defaultOpenVolumeIdx}
       />
-      <div className="flex justify-center mt-4">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => onVolumesChange([...volumes, getDefaultVolume()])}
-        >
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Volume
-        </Button>
-      </div>
+      {volumes.length > 0 && (
+        <div className="flex justify-center mt-4">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onVolumesChange([...volumes, getDefaultVolume()])}
+          >
+            <PlusCircle className="h-4 w-4" />
+            Add Volume
+          </Button>
+        </div>
+      )}
       <Dialog open={pendingRemoveIdx !== null} onOpenChange={open => !open && setPendingRemoveIdx(null)}>
         <DialogContent>
           <DialogHeader>
@@ -100,7 +100,7 @@ export default function StackVolumesForm({
           </DialogHeader>
           <div>Are you sure you want to remove this volume? This action cannot be undone.</div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setPendingRemoveIdx(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setPendingRemoveIdx(null)}>Cancel</Button>
             <Button variant="destructive" onClick={() => {
               if (pendingRemoveIdx !== null) {
                 onVolumesChange(volumes.filter((_, i) => i !== pendingRemoveIdx));

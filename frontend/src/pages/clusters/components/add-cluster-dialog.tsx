@@ -3,8 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Info, Eye, EyeOff } from "lucide-react";
+import { FieldShell } from "@/components/branded";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogClose,
@@ -154,181 +154,133 @@ export default function AddClusterDialog({
 
         <div className="space-y-6">
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+            <div className="text-sm text-danger bg-danger-bg p-3 rounded-md">
               {error}
             </div>
           )}
 
           <div className="space-y-4">
-            <div>
-              <div className="flex items-center gap-1 mb-2">
-                <Label htmlFor="name" className="text-sm font-medium">
-                  Cluster Name <span className="text-red-500">*</span>
-                </Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>A friendly name for your cluster</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+            <FieldShell
+              label="Cluster Name"
+              htmlFor="name"
+              required
+              error={errors.name}
+            >
               <Input
                 id="name"
                 name="name"
                 placeholder="My Production Cluster"
                 value={formData.name}
                 onChange={handleChange}
-                className={errors.name ? "border-red-500" : ""}
+                className={errors.name ? "border-danger" : ""}
               />
-              {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
-            </div>
+            </FieldShell>
 
-            <div>
-              <div className="flex items-center gap-1 mb-2">
-                <Label htmlFor="cluster_url" className="text-sm font-medium">
-                  Cluster URL <span className="text-red-500">*</span>
-                </Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>The API server URL for your Kubernetes cluster</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+            <FieldShell
+              label="Cluster URL"
+              htmlFor="cluster_url"
+              required
+              error={errors.cluster_url}
+            >
               <Input
                 id="cluster_url"
                 name="cluster_url"
                 placeholder="https://k8s-api.example.com:6443"
                 value={formData.cluster_url}
                 onChange={handleChange}
-                className={errors.cluster_url ? "border-red-500" : ""}
+                className={errors.cluster_url ? "border-danger" : ""}
               />
-              {errors.cluster_url && <p className="text-sm text-red-600 mt-1">{errors.cluster_url}</p>}
-            </div>
+            </FieldShell>
 
-            <div>
-              <div className="flex items-center gap-1 mb-2">
-                <Label htmlFor="cluster_ca_data" className="text-sm font-medium">
-                  CA Certificate Data <span className="text-red-500">*</span>
-                </Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Base64 encoded CA certificate for cluster verification</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+            <FieldShell
+              label="CA Certificate Data"
+              htmlFor="cluster_ca_data"
+              required
+              hint="Base64-encoded."
+              error={errors.cluster_ca_data}
+            >
+              <div className="relative">
+                <Input
+                  id="cluster_ca_data"
+                  name="cluster_ca_data"
+                  type={showCAData ? "text" : "password"}
+                  placeholder="LS0tLS1CRUdJTi..."
+                  value={formData.cluster_ca_data}
+                  onChange={handleChange}
+                  className={errors.cluster_ca_data ? "border-danger pr-10" : "pr-10"}
+                />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
                   onClick={() => setShowCAData(!showCAData)}
-                  className="h-6 w-6 p-0"
                 >
                   {showCAData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
-              <Input
-                id="cluster_ca_data"
-                name="cluster_ca_data"
-                type={showCAData ? "text" : "password"}
-                placeholder="LS0tLS1CRUdJTi..."
-                value={formData.cluster_ca_data}
-                onChange={handleChange}
-                className={errors.cluster_ca_data ? "border-red-500" : ""}
-              />
-              {errors.cluster_ca_data && <p className="text-sm text-red-600 mt-1">{errors.cluster_ca_data}</p>}
-            </div>
+            </FieldShell>
 
-            <div>
-              <div className="flex items-center gap-1 mb-2">
-                <Label htmlFor="cluster_sa_token" className="text-sm font-medium">
-                  Service Account Token <span className="text-red-500">*</span>
-                </Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Token for authenticating with the cluster</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+            <FieldShell
+              label="Service Account Token"
+              htmlFor="cluster_sa_token"
+              required
+              error={errors.cluster_sa_token}
+            >
+              <div className="relative">
+                <Input
+                  id="cluster_sa_token"
+                  name="cluster_sa_token"
+                  type={showSAToken ? "text" : "password"}
+                  placeholder="eyJhbGciOiJSUzI1NiIs..."
+                  value={formData.cluster_sa_token}
+                  onChange={handleChange}
+                  className={errors.cluster_sa_token ? "border-danger pr-10" : "pr-10"}
+                />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
                   onClick={() => setShowSAToken(!showSAToken)}
-                  className="h-6 w-6 p-0"
                 >
                   {showSAToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
-              <Input
-                id="cluster_sa_token"
-                name="cluster_sa_token"
-                type={showSAToken ? "text" : "password"}
-                placeholder="eyJhbGciOiJSUzI1NiIs..."
-                value={formData.cluster_sa_token}
-                onChange={handleChange}
-                className={errors.cluster_sa_token ? "border-red-500" : ""}
-              />
-              {errors.cluster_sa_token && <p className="text-sm text-red-600 mt-1">{errors.cluster_sa_token}</p>}
-            </div>
+            </FieldShell>
 
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
+            <div className="space-y-3 pt-2">
+              <div className="flex items-start gap-3">
                 <Switch
                   id="enable-registry"
                   checked={!!formData.cluster_image_registry}
                   onCheckedChange={handleImageRegistryToggle}
+                  className="mt-0.5"
                 />
-                <div className="flex items-center gap-1">
-                  <Label htmlFor="enable-registry" className="text-sm font-medium">
+                <div className="space-y-1">
+                  <Label htmlFor="enable-registry" className="text-[13px] font-medium text-foreground">
                     Enable Image Registry
                   </Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="size-3.5 text-muted-foreground cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Enable a private image registry for this cluster</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <p className="text-[12px] text-muted-foreground leading-relaxed">
+                    Provisions a private registry for build artifacts.
+                  </p>
                 </div>
               </div>
 
               {formData.cluster_image_registry && (
-                <div className="ml-6 space-y-3">
-                  <div>
-                    <Label htmlFor="registry-size" className="text-sm font-medium">
-                      Backend Storage Size
-                    </Label>
+                <div className="pl-11">
+                  <FieldShell
+                    label="Backend Storage Size"
+                    htmlFor="registry-size"
+                    hint="e.g. 20Gi, 100Gi"
+                  >
                     <Input
                       id="registry-size"
                       placeholder="20Gi"
                       value={formData.cluster_image_registry.spec?.backend_storage_size || ""}
                       onChange={handleRegistrySizeChange}
-                      className="mt-1"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Specify storage size (e.g., 20Gi, 100Gi)
-                    </p>
-                  </div>
+                  </FieldShell>
                 </div>
               )}
             </div>
@@ -343,7 +295,8 @@ export default function AddClusterDialog({
             onClick={handleSubmit}
             disabled={!isFormValid || isLoading}
           >
-            {isLoading ? "Adding..." : "Add Cluster"}
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            Add Cluster
           </Button>
         </DialogFooter>
       </DialogContent>

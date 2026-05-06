@@ -1,23 +1,33 @@
 import { useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { Accordion } from "@/components/ui/accordion";
-import { Container } from "lucide-react";
+import { Container, PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Generic detail list props that can be used for different types of details
 interface ResourceDetailListProps<T> {
   items: T[];
   renderItem: (props: { item: T; index: number }) => ReactNode;
-  emptyText?: string;
+  emptyTitle?: string;
+  emptyOptional?: boolean;
+  emptyDescription?: string;
   emptyIcon?: ReactNode;
   defaultAllCollapsed?: boolean;
+  /** When provided, renders an Add CTA (empty-state + below-list) that begins an edit session and adds an item. */
+  onAdd?: () => void;
+  addLabel?: string;
 }
 
 export default function ResourceDetailList<T>({
   items,
   renderItem,
-  emptyText = "No Resources found.",
+  emptyTitle = "Nothing added yet",
+  emptyOptional = false,
+  emptyDescription,
   emptyIcon,
   defaultAllCollapsed = false,
+  onAdd,
+  addLabel = "Add",
 }: ResourceDetailListProps<T>) {
   const [openAccordions, setOpenAccordions] = useState<string[]>(
     defaultAllCollapsed ? [] : items.map((_, i) => String(i))
@@ -37,13 +47,34 @@ export default function ResourceDetailList<T>({
   // If no items, show empty state
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 bg-muted/20 rounded-md">
+      <div className="flex flex-col items-center justify-center text-center py-14 px-6">
         {emptyIcon ? (
-          <>{emptyIcon}</>
+          <div className="mb-4 text-muted-foreground/70">{emptyIcon}</div>
         ) : (
-          <Container className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />
+          <Container className="h-6 w-6 mb-4 text-muted-foreground/70" />
         )}
-        <div className="text-lg text-muted-foreground font-medium mb-1">{emptyText}</div>
+        <h3 className="text-sm font-semibold text-foreground">
+          {emptyTitle}
+          {emptyOptional && (
+            <span className="ml-1.5 font-normal text-muted-foreground">(optional)</span>
+          )}
+        </h3>
+        {emptyDescription && (
+          <p className="text-[12.5px] text-muted-foreground mt-2 max-w-sm leading-relaxed">
+            {emptyDescription}
+          </p>
+        )}
+        {onAdd && (
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-5"
+            onClick={onAdd}
+          >
+            <PlusCircle className="h-4 w-4" />
+            {addLabel}
+          </Button>
+        )}
       </div>
     );
   }
@@ -58,6 +89,14 @@ export default function ResourceDetailList<T>({
       >
         {items.map((item, index) => renderItem({ item, index }))}
       </Accordion>
+      {onAdd && (
+        <div className="flex justify-center mt-4">
+          <Button type="button" variant="ghost" onClick={onAdd}>
+            <PlusCircle className="h-4 w-4" />
+            {addLabel}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

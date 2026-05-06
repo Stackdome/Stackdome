@@ -44,11 +44,11 @@ export function DeleteAddonDialog({
           )}
         </div>
         <DialogFooter>
-          <Button variant="secondary" onClick={onCancel} disabled={loading}>
+          <Button variant="outline" onClick={onCancel} disabled={loading}>
             Cancel
           </Button>
           <Button variant="destructive" onClick={onConfirm} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             Delete
           </Button>
         </DialogFooter>

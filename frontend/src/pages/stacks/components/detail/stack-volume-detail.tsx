@@ -4,7 +4,8 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { HardDrive } from "lucide-react";
+import { HardDrive, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData   } from "@/pages/stacks/schemas/form-schema";
 import type { z } from "zod";
 import { ApiVolumeStatusSchema } from "@/pages/stacks/schemas/api-schema";
@@ -13,22 +14,32 @@ interface StackVolumeDetailProps {
   volume: Partial<VolumeFormData>;
   index: number;
   allStackResources?: Partial<FormStackResourceData>[];
+  isSessionActive?: boolean;
+  isDirty?: boolean;
+  dirtyCount?: number;
+  onEdit?: () => void;
+  onDiscard?: () => void;
 }
 
 export default function StackVolumeDetail({
   volume,
   index,
   allStackResources = [],
+  isSessionActive = false,
+  isDirty = false,
+  dirtyCount = 0,
+  onEdit,
+  onDiscard,
 }: StackVolumeDetailProps) {
   // Determine status color based on volume.status.phase
   const statusObj = (volume.status ?? {}) as z.infer<typeof ApiVolumeStatusSchema>;
   const status = statusObj.phase?.toLowerCase() || 'pending';
-  let statusColor = 'bg-yellow-500'; // Default for pending
+  let statusColor = 'bg-warn';
 
   if (status === 'ready' || status === 'running') {
-    statusColor = 'bg-green-500';
+    statusColor = 'bg-success';
   } else if (status === 'failed') {
-    statusColor = 'bg-red-500';
+    statusColor = 'bg-danger';
   }
 
   // Helper to find resources that mount this volume
@@ -45,9 +56,9 @@ export default function StackVolumeDetail({
     : [];
 
   return (
-    <AccordionItem value={String(index)} className="border-0">
+    <AccordionItem value={String(index)} className="border-t border-border first:border-t-0">
       <AccordionTrigger
-        className="px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
+        className="group/row px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
       >
         <div className="flex items-center gap-2 text-left flex-grow">
           <div className="flex flex-col flex-grow min-w-0">
@@ -69,9 +80,45 @@ export default function StackVolumeDetail({
               </span>
             </span>
           </div>
+          <div className="flex items-center gap-3 shrink-0 mr-2">
+            {!isSessionActive && onEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground border border-border opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+              >
+                <Pencil className="h-3 w-3" />
+                Edit
+              </Button>
+            )}
+            {isSessionActive && isDirty && (
+              <>
+                <span className="text-[11.5px] font-medium text-foreground bg-brand-bg px-2 py-0.5 rounded-sm">
+                  {dirtyCount} changed
+                </span>
+                {onDiscard && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs hover:bg-danger-bg hover:text-danger hover:border-danger border border-transparent"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDiscard();
+                    }}
+                  >
+                    Discard
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="pb-4 pt-2">
+      <AccordionContent className="bg-background dark:bg-secondary border-t border-border pb-4 pt-4 px-1">
         <div className="px-4 space-y-4">
           {/* Basic info section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -8,30 +8,47 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import { Box, GitBranch, ExternalLink, Copy } from "lucide-react";
-import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
+import { Box, GitBranch, ExternalLink, Copy, Pencil } from "lucide-react";
+import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
+import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 import type { z } from "zod";
 import type { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
+import { variantFromState } from "@/components/branded";
 
 interface StackResourceDetailProps {
   resource: Partial<FormStackResourceData>;
   index: number;
+  isSessionActive?: boolean;
+  isDirty?: boolean;
+  dirtyCount?: number;
+  onEdit?: () => void;
+  onDiscard?: () => void;
+  /** Map of `${resourceIdx}::${envName}` → provenance for converted env rows. */
+  detachedProvenance?: Map<string, { addonName: string; credField?: string }>;
 }
 
 export default function StackResourceDetail({
   resource,
   index,
+  isSessionActive = false,
+  isDirty = false,
+  dirtyCount = 0,
+  onEdit,
+  onDiscard,
+  detachedProvenance,
 }: StackResourceDetailProps) {
   const { toast } = useToast();
+  const { addons: allAddons } = usePostgresAddons();
+  const addonNameById = new Map(allAddons.filter((a) => a.id).map((a) => [a.id!, a.name]));
   const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
   const status = statusObj.state?.toLowerCase() || 'pending';
-  let statusColor = 'bg-yellow-500';
-
-  if (status === 'ready' || status === 'running') {
-    statusColor = 'bg-green-500';
-  } else if (status === 'failed') {
-    statusColor = 'bg-red-500';
-  }
+  const statusVariant = variantFromState(statusObj.state);
+  const statusDotColor =
+    statusVariant === "ready" ? "bg-success"
+    : statusVariant === "error" ? "bg-danger"
+    : statusVariant === "pending" ? "bg-warn"
+    : "bg-muted-foreground";
 
   const ensureAbsoluteUrl = (url: string): string => {
     if (!url) return url;
@@ -80,21 +97,21 @@ export default function StackResourceDetail({
   };
 
   return (
-    <AccordionItem value={String(index)} className="border-0">
+    <AccordionItem value={String(index)} className="border-t border-border first:border-t-0">
       <AccordionTrigger
-        className="px-4 py-3 hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground rounded-t-md [&[data-state=open]]:rounded-b-none"
+        className="group/row px-4 py-3 hover:bg-muted/40 data-[state=open]:bg-muted/30 rounded-t-md [&[data-state=open]]:rounded-b-none"
       >
-        <div className="flex items-center gap-2 text-left flex-grow">
+        <div className="flex items-center gap-3 text-left flex-grow">
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <span className={`h-2 w-2 rounded-full shrink-0 ${statusDotColor}`}></span>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p className="capitalize">{status}</p>
+            </TooltipContent>
+          </Tooltip>
           <div className="flex flex-col flex-grow min-w-0">
             <span className="font-medium flex items-center gap-2">
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <span className={`h-2 w-2 rounded-full ${statusColor}`}></span>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p className="capitalize">{status}</p>
-                </TooltipContent>
-              </Tooltip>
               {resource.name || `Resource ${index + 1}`}
               {firstPublicUrl && (
                 <Tooltip delayDuration={300}>
@@ -139,19 +156,55 @@ export default function StackResourceDetail({
               )}
             </span>
           </div>
+          <div className="flex items-center gap-3 shrink-0 mr-2">
+            {!isSessionActive && onEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground border border-border opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+              >
+                <Pencil className="h-3 w-3" />
+                Edit
+              </Button>
+            )}
+            {isSessionActive && isDirty && (
+              <>
+                <span className="text-[11.5px] font-medium text-foreground bg-brand-bg px-2 py-0.5 rounded-sm">
+                  {dirtyCount} changed
+                </span>
+                {onDiscard && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs hover:bg-danger-bg hover:text-danger hover:border-danger border border-transparent"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDiscard();
+                    }}
+                  >
+                    Discard
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="pb-4 pt-2">
+      <AccordionContent className="bg-background dark:bg-secondary border-t border-border pb-4 pt-4 px-1">
         <div className="px-4 space-y-4">
           <Tabs defaultValue="configuration" className="w-full">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="configuration" className="flex-1">Configuration</TabsTrigger>
-              <TabsTrigger value="deployment" className="flex-1">Deployment</TabsTrigger>
-              <TabsTrigger value="environment" className="flex-1">Environment</TabsTrigger>
+            <TabsList className="w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-1 px-2">
+              <TabsTrigger value="configuration" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-background dark:data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Configuration</TabsTrigger>
+              <TabsTrigger value="deployment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-background dark:data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Deployment</TabsTrigger>
+              <TabsTrigger value="environment" className="flex-none rounded-t-md rounded-b-none border border-transparent px-4 py-2 text-[13px] text-muted-foreground hover:text-foreground -mb-px data-[state=active]:bg-background dark:data-[state=active]:bg-secondary data-[state=active]:border-border data-[state=active]:border-b-transparent data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:shadow-none">Environment</TabsTrigger>
             </TabsList>
             <TabsContent value="configuration" className="pt-4 space-y-6">
               <div>
-                <h3 className="text-lg font-medium mb-3">General</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">General</h3>
                 <div className="grid gap-4 max-w-3xl">
                   <div>
                     <div className="mb-1 text-sm font-medium">Resource Name</div>
@@ -235,70 +288,62 @@ export default function StackResourceDetail({
 
               {/* Ingress Section */}
               <div>
-                <h3 className="text-lg font-medium mb-3">Ingress</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">Ingress</h3>
                 {resource.ports && resource.ports.length > 0 ? (
-                  <div className="grid gap-3 w-full">
+                  <div className="space-y-2">
                     {resource.ports.map((port, pidx) => {
                       const portUrl = getUrlForPort(port.number);
                       return (
-                        <div key={pidx} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-3 rounded-md bg-muted/10 border">
-                          <div className="md:col-span-2">
-                            <div className="mb-1 text-sm font-medium">URL</div>
+                        <div key={pidx} className="rounded-md border border-border bg-muted/10 p-3">
+                          <div className="flex items-center gap-2">
+                            <ExternalLink className="h-3.5 w-3.5 text-brand shrink-0" />
                             {portUrl ? (
-                              <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-md">
-                                <button
-                                  onClick={() => window.open(portUrl, '_blank', 'noopener,noreferrer')}
-                                  className="flex-1 text-sm font-mono break-all text-blue-600 hover:text-blue-800 hover:underline text-left cursor-pointer bg-transparent border-none p-0"
+                              <>
+                                <a
+                                  href={portUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-mono text-[13px] text-brand hover:text-brand-press hover:underline truncate min-w-0 flex-1"
+                                  title={portUrl}
                                 >
                                   {portUrl}
-                                </button>
+                                </a>
                                 <Button
                                   variant="ghost"
-                                  size="sm"
-                                  className="shrink-0 h-6 w-6 p-0"
+                                  size="icon"
+                                  className="shrink-0 h-6 w-6 text-muted-foreground hover:text-foreground"
                                   onClick={() => copyToClipboard(portUrl)}
                                   title="Copy URL"
                                 >
                                   <Copy className="h-3 w-3" />
                                 </Button>
-                              </div>
+                              </>
                             ) : (
-                              <div className="p-2 bg-muted/30 rounded-md text-sm text-muted-foreground">
-                                {port.exposed_to_public ? "Pending..." : "Not exposed"}
-                              </div>
+                              <span className="font-mono text-[13px] text-muted-foreground italic">
+                                {port.exposed_to_public ? "Pending…" : "Not exposed"}
+                              </span>
                             )}
                           </div>
-                          <div>
-                            <div className="mb-1 text-sm font-medium">Port</div>
-                            <div className="p-2 bg-muted/30 rounded-md">
-                              {port.number}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="mb-1 text-sm font-medium">Protocol</div>
-                            <div className="p-2 bg-muted/30 rounded-md">
-                              {port.protocol || "TCP"}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="mb-1 text-sm font-medium">Public Access</div>
-                            <div className="p-2 bg-muted/30 rounded-md">
-                              {port.exposed_to_public ? "Exposed" : "Internal Only"}
-                            </div>
+                          <div className="font-mono text-[12px] text-muted-foreground pl-5 mt-1">
+                            port {port.number}
+                            <span className="mx-1.5 text-muted-foreground/60">·</span>
+                            {port.protocol || "tcp"}
+                            <span className="mx-1.5 text-muted-foreground/60">·</span>
+                            {port.exposed_to_public ? "exposed" : "internal only"}
                           </div>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground">No ports configured</div>
+                  <p className="text-sm text-muted-foreground">No ports configured</p>
                 )}
               </div>
               <Separator className="my-4" />
 
               {/* Volume Mounts Section */}
               <div>
-                <h3 className="text-lg font-medium mb-3">Volume Mounts</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Volume Mounts</h3>
                 {resource.volume_mounts && resource.volume_mounts.length > 0 ? (
                   <div className="grid gap-3 max-w-3xl">
                     {resource.volume_mounts.map((vm, vmIdx) => (
@@ -333,7 +378,7 @@ export default function StackResourceDetail({
             <TabsContent value="deployment" className="pt-4 space-y-6">
               {/* Pre-deploy Section (Init) */}
               <div>
-                <h3 className="text-lg font-medium mb-3">Pre-deployment step</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Pre-deployment step</h3>
                 <div className="grid gap-4 max-w-3xl">
                   {resource.init_spec ? (
                     <>
@@ -359,7 +404,7 @@ export default function StackResourceDetail({
 
               {/* Main Container (Execution) */}
               <div>
-                <h3 className="text-lg font-medium mb-3">Main container step</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Main container step</h3>
                 <div className="grid gap-4 max-w-3xl">
                   {resource.execution_config ? (
                     <>
@@ -385,30 +430,82 @@ export default function StackResourceDetail({
 
             <TabsContent value="environment" className="pt-4 space-y-6">
               <div>
-                <h3 className="text-lg font-medium mb-3">Environment Variables</h3>
-                {resource.execution_config?.environment_variables &&
-                resource.execution_config.environment_variables.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full border border-muted rounded-md">
-                        <thead className="bg-muted/30">
-                          <tr>
-                            <th className="text-left px-6 py-3 text-sm">Name</th>
-                            <th className="text-left px-6 py-3 text-sm">Value</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {resource.execution_config.environment_variables.map((env, idx) => (
-                            <tr key={idx} className="border-t border-muted">
-                              <td className="px-6 py-2 text-sm">{env.name}</td>
-                              <td className="px-6 py-2 text-sm font-mono">{env.value}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                <h3 className="text-xs font-semibold text-muted-foreground mb-2.5">Environment variables</h3>
+                {(() => {
+                  const envs = (resource.execution_config?.environment_variables || []) as FormEnvVarData[];
+                  if (envs.length === 0) {
+                    return (
+                      <div className="text-sm text-muted-foreground">No environment variables configured</div>
+                    );
+                  }
+                  // Group: non-addon rows in original order first, then one
+                  // group per addonId in first-seen order.
+                  const general: { env: FormEnvVarData; idx: number }[] = [];
+                  const groupOrder: string[] = [];
+                  const groups = new Map<string, { env: FormEnvVarData; idx: number }[]>();
+                  envs.forEach((env, idx) => {
+                    if (env.from === "addon" && env.addonId) {
+                      if (!groups.has(env.addonId)) {
+                        groups.set(env.addonId, []);
+                        groupOrder.push(env.addonId);
+                      }
+                      groups.get(env.addonId)!.push({ env, idx });
+                    } else {
+                      general.push({ env, idx });
+                    }
+                  });
+                  const renderRow = ({ env, idx }: { env: FormEnvVarData; idx: number }) => {
+                    const prov = env.name
+                      ? detachedProvenance?.get(`${index}::${env.name}`)
+                      : undefined;
+                    return (
+                      <div
+                        key={idx}
+                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 px-3 py-2 border-t border-border first:border-t-0"
+                      >
+                        <div className="text-sm font-mono truncate">{env.name}</div>
+                        <div className="text-sm font-mono truncate">
+                          {(env as { value?: string }).value}
+                          {prov && (
+                            <div className="mt-1 text-[11px] font-sans text-muted-foreground not-italic">
+                              ↶ was bound to {prov.addonName}
+                              {prov.credField ? `.${prov.credField}` : ""}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  };
+                  return (
+                    <div className="space-y-4">
+                      {general.length > 0 && (
+                        <div className="rounded-md border border-border bg-background">
+                          {general.map(renderRow)}
+                        </div>
+                      )}
+                      {groupOrder.map((addonId) => {
+                        const rows = groups.get(addonId)!;
+                        const name = addonNameById.get(addonId) ?? addonId;
+                        return (
+                          <div
+                            key={addonId}
+                            className="rounded-md border border-dashed border-border bg-background"
+                          >
+                            <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
+                              <AddonTypeIcon type="postgres" size={14} />
+                              <span className="text-sm font-medium text-foreground">{name}</span>
+                              <span className="text-muted-foreground">·</span>
+                              <span className="text-[11.5px] uppercase tracking-wider text-muted-foreground">
+                                Postgres
+                              </span>
+                            </div>
+                            {rows.map(renderRow)}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">No environment variables configured</div>
-                  )}
+                  );
+                })()}
               </div>
             </TabsContent>
           </Tabs>

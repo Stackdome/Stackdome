@@ -17,7 +17,7 @@ interface AddonTypePickerDialogProps {
 }
 
 interface AddonTypeOption {
-  id: AddonType | "redis" | "mysql";
+  id: AddonType | "redis" | "ollama";
   name: string;
   description: string;
   available: boolean;
@@ -37,9 +37,9 @@ const OPTIONS: AddonTypeOption[] = [
     available: false,
   },
   {
-    id: "mysql",
-    name: "MySQL",
-    description: "Managed MySQL database.",
+    id: "ollama",
+    name: "Ollama",
+    description: "Self-hosted LLM runtime for embeddings and chat completions.",
     available: false,
   },
 ];
@@ -53,7 +53,7 @@ export function AddonTypePickerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>Add an addon</DialogTitle>
+          <DialogTitle>Add Addon</DialogTitle>
           <DialogDescription>
             Pick a service to provision for your stacks.
           </DialogDescription>
@@ -66,22 +66,22 @@ export function AddonTypePickerDialog({
               disabled={!option.available}
               onClick={() => option.available && onSelect(option.id as AddonType)}
               className={cn(
-                "text-left rounded-lg border p-4 transition-colors",
+                "text-left rounded-md border border-border bg-card p-4 transition-colors",
                 option.available
-                  ? "hover:border-primary hover:bg-accent cursor-pointer"
-                  : "opacity-50 cursor-not-allowed",
+                  ? "hover:bg-muted/40 hover:border-brand-border cursor-pointer"
+                  : "opacity-60 cursor-not-allowed",
               )}
             >
               <div className="flex items-center gap-2 mb-2">
                 <AddonTypeIcon type={option.id} size={20} />
-                <span className="font-medium">{option.name}</span>
+                <span className="font-medium text-foreground">{option.name}</span>
                 {!option.available && (
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    Coming soon
+                  <span className="ml-auto font-mono text-[10.5px] uppercase tracking-[1px] text-muted-foreground">
+                    Soon
                   </span>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[12.5px] text-muted-foreground leading-relaxed">
                 {option.description}
               </p>
             </button>

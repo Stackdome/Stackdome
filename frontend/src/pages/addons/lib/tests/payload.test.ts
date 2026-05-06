@@ -5,11 +5,11 @@ import {
   deepMerge,
   parseAdvancedJson,
   JsonAreaParseError,
-} from "./payload";
+} from "../payload";
 import {
   defaultFormValues,
   type PostgresAddonFormValues,
-} from "../schemas/form-schema";
+} from "../../schemas/form-schema";
 import type { PostgresAddon } from "@/api/addons";
 
 const baseValues = (overrides: Partial<PostgresAddonFormValues> = {}): PostgresAddonFormValues => ({
