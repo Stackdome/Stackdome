@@ -34,7 +34,7 @@ export function SecretDeleteDialog({
           {secretName && <strong>"{secretName}"</strong>}? This action cannot be undone.
         </div>
         <DialogFooter>
-          <Button variant="secondary" onClick={onCancel} disabled={loading}>
+          <Button variant="outline" onClick={onCancel} disabled={loading}>
             Cancel
           </Button>
           <Button

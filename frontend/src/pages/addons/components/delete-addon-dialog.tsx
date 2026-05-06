@@ -44,7 +44,7 @@ export function DeleteAddonDialog({
           )}
         </div>
         <DialogFooter>
-          <Button variant="secondary" onClick={onCancel} disabled={loading}>
+          <Button variant="outline" onClick={onCancel} disabled={loading}>
             Cancel
           </Button>
           <Button variant="destructive" onClick={onConfirm} disabled={loading}>

@@ -177,7 +177,7 @@ export default function StackResourcesForm({
           </DialogHeader>
           <div>Are you sure you want to remove this resource? This action cannot be undone.</div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setPendingRemoveIdx(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setPendingRemoveIdx(null)}>Cancel</Button>
             <Button variant="destructive" onClick={confirmRemove}>Remove Resource</Button>
           </DialogFooter>
         </DialogContent>

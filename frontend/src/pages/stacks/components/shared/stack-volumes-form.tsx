@@ -100,7 +100,7 @@ export default function StackVolumesForm({
           </DialogHeader>
           <div>Are you sure you want to remove this volume? This action cannot be undone.</div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setPendingRemoveIdx(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setPendingRemoveIdx(null)}>Cancel</Button>
             <Button variant="destructive" onClick={() => {
               if (pendingRemoveIdx !== null) {
                 onVolumesChange(volumes.filter((_, i) => i !== pendingRemoveIdx));

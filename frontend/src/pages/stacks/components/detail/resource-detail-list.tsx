@@ -67,7 +67,7 @@ export default function ResourceDetailList<T>({
         {onAdd && (
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             className="mt-5"
             onClick={onAdd}
           >
