@@ -115,8 +115,8 @@ export default function StickyActionBar({
           </>
         ) : (
           <>
-            {primary.label}
             {primary.icon}
+            {primary.label}
           </>
         )}
       </Button>

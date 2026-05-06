@@ -63,7 +63,7 @@ function AppLayoutContent({
                 <SidebarTrigger />
                 <div className="border-l-2 h-4 w-0 mx-2" />
                 <Breadcrumb>
-                  <BreadcrumbList className="font-mono text-[11px] uppercase tracking-[1.5px] gap-2 sm:gap-2">
+                  <BreadcrumbList className="font-mono text-[12px] gap-2 sm:gap-2">
                     {breadcrumbItems.map((item, index) => (
                       <React.Fragment key={index}>
                         {index > 0 && (

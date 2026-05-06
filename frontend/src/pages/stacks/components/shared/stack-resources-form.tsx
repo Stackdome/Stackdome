@@ -153,7 +153,7 @@ export default function StackResourcesForm({
         defaultOpenIndex={defaultOpenResourceIdx}
         emptyTitle="No resources added yet"
         emptyDescription="Add a service to start running it. Each resource is a container or build that becomes part of this stack."
-        emptyCtaLabel="Add resource"
+        emptyCtaLabel="Add Resource"
         emptyError={emptyError}
         emptyOnAdd={() => onResourcesChange([...resources, getDefaultResource()])}
       />
@@ -165,8 +165,8 @@ export default function StackResourcesForm({
             size="sm"
             onClick={() => onResourcesChange([...resources, getDefaultResource()])}
           >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add resource
+            <PlusCircle className="h-4 w-4" />
+            Add Resource
           </Button>
         </div>
       )}

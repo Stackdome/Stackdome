@@ -75,7 +75,7 @@ export default function StackVolumesForm({
         emptyTitle="No volumes added"
         emptyOptional
         emptyDescription="Add a persistent volume if your services need to keep data across restarts. Otherwise, you can skip this."
-        emptyCtaLabel="Add volume"
+        emptyCtaLabel="Add Volume"
         emptyOnAdd={() => onVolumesChange([...volumes, getDefaultVolume()])}
         emptyIcon={<Database className="h-6 w-6" />}
         defaultAllCollapsed={!accordionDefaultOpen}

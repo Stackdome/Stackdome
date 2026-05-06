@@ -366,7 +366,7 @@ export default function PostgresFormPage() {
                               value={preset.id}
                               checked={selected}
                               onChange={() => update("plan", preset.id as PlanId)}
-                              className="cursor-pointer accent-brand"
+                              className="cursor-pointer accent-brand outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full"
                             />
                             <span className={selected ? "font-medium text-foreground" : "text-foreground"}>
                               {preset.label}
@@ -483,9 +483,9 @@ export default function PostgresFormPage() {
               </FieldShell>
 
               <FieldShell
-                label="Superuser access"
+                label="Generate superuser credentials"
                 htmlFor="superuser-toggle"
-                hint="Provisions superuser credentials as a separate secret. Useful for migrations and admin tasks; keep app connections on the default role."
+                hint="Adds a separate secret for migrations and admin tasks. App connections continue to use the default role."
               >
                 <div className="flex items-center h-10">
                   <Switch

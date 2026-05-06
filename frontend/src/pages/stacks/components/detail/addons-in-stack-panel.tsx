@@ -110,20 +110,22 @@ export default function AddonsInStackPanel({
           {noAddonsInSystem ? (
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               className="mt-5"
               onClick={() => window.open("/addons", "_blank")}
             >
-              + Create addon
+              <PlusCircle className="h-4 w-4" />
+              Create Addon
             </Button>
           ) : (
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               className="mt-5"
               onClick={addPendingRow}
             >
-              + Add addon
+              <PlusCircle className="h-4 w-4" />
+              Add Addon
             </Button>
           )}
         </div>

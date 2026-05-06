@@ -155,11 +155,6 @@ export default function StacksPage() {
     );
   }
 
-  const subtitleParts: string[] = [`${stacks.length} deployed`];
-  if (counts.ready) subtitleParts.push(`${counts.ready} healthy`);
-  if (counts.pending) subtitleParts.push(`${counts.pending} pending`);
-  if (counts.error) subtitleParts.push(`${counts.error} failing`);
-
   const sortLabel = SORT_OPTIONS.find((o) => o.key === sortKey)?.label ?? "Sort";
 
   return (
@@ -168,12 +163,7 @@ export default function StacksPage() {
         <PageHeader
           eyebrow="Platform"
           title="Stacks"
-          subtitle={subtitleParts.map((p, i) => (
-            <span key={i}>
-              {i > 0 && <span className="mx-2 text-muted-foreground/50">·</span>}
-              {p}
-            </span>
-          ))}
+          subtitle="Provision and manage your application stacks"
           actions={
             <>
               <DockerComposeImportDropdown

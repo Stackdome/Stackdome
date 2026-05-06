@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { ReactNode } from "react";
 import { Accordion } from "@/components/ui/accordion";
-import { Container } from "lucide-react";
+import { Container, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -172,11 +172,12 @@ export default function ResourceFormList<T>({
           {emptyOnAdd && emptyCtaLabel && (
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               className="mt-5"
               onClick={emptyOnAdd}
             >
-              + {emptyCtaLabel}
+              <PlusCircle className="h-4 w-4" />
+              {emptyCtaLabel}
             </Button>
           )}
         </div>
