@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { PlusCircle, GitBranch, Box, Trash2, Database } from "lucide-react";
+import { PlusCircle, GitBranch, Box, Trash2, Database, X } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { DirtyField } from "@/pages/stacks/components/shared/dirty-field";
@@ -736,9 +736,10 @@ function StackResourceConfigurationTabImpl({
                     size="icon"
                     onClick={() => removePort(pidx)}
                     title="Remove port"
-                    className="text-danger hover:text-danger hover:bg-danger-bg"
+                    aria-label="Remove port"
+                    className="h-7 w-7 hover:bg-danger-bg hover:text-danger"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <X className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>

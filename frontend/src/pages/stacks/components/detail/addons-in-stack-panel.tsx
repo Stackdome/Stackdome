@@ -91,7 +91,7 @@ export default function AddonsInStackPanel({
 
   return (
     <Panel
-      title="Stack Addons Linked"
+      title="Stack Addons"
       count={totalRows}
       bodyClassName="p-0"
     >
@@ -181,22 +181,22 @@ export default function AddonsInStackPanel({
         {pendingSlots.map((slot) => (
           <div key={slot} className="flex items-center gap-3 px-5 py-3">
             <Select onValueChange={(v) => handlePick(slot, v)}>
-              <SelectTrigger className="h-8 w-[280px] text-[13px] gap-2">
-                <span className="flex items-center gap-2 min-w-0">
-                  <AddonTypeIcon type="postgres" size={16} />
-                  <SelectValue
-                    placeholder={
-                      availablePostgres.length === 0
-                        ? "No unlinked Postgres addons available"
-                        : "Select an addon"
-                    }
-                  />
-                </span>
+              <SelectTrigger className="h-8 w-[280px] text-[13px]">
+                <SelectValue
+                  placeholder={
+                    availablePostgres.length === 0
+                      ? "No unlinked Postgres addons available"
+                      : "Select an addon"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {availablePostgres.map((a) => (
                   <SelectItem key={a.id} value={a.id!}>
-                    {a.name}
+                    <span className="flex items-center gap-2">
+                      <AddonTypeIcon type="postgres" size={14} />
+                      {a.name}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
