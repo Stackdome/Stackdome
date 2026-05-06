@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, ExternalLink, AlertCircle, ChevronDown } from "lucide-react";
+import { Loader2, ExternalLink, AlertCircle, ChevronDown, Rocket } from "lucide-react";
 import { ZodError } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -14,13 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -35,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Panel, FieldShell } from "@/components/branded";
 import { cn } from "@/lib/utils";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
@@ -300,7 +293,7 @@ export default function PostgresFormPage() {
               Cancel
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
               {submitLabel}
             </Button>
           </div>
@@ -309,60 +302,47 @@ export default function PostgresFormPage() {
       </header>
 
       {submitError && (
-        <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md mb-6">
+        <div className="text-sm text-danger bg-danger-bg border border-danger-border p-3 rounded-md mb-6">
           {submitError}
         </div>
       )}
 
-      <div className="flex flex-col">
-        <Card className="mb-6 rounded-lg overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl">Addon Information</CardTitle>
-          </CardHeader>
-          <Separator />
-          <CardContent className="pt-6">
-            <div className="grid gap-6 max-w-5xl">
-              <div>
-                <Label htmlFor="addon-name" className="text-sm font-medium flex items-center gap-1 mb-2">
-                  Name <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="addon-name"
-                  value={values.name}
-                  onChange={(e) => update("name", e.target.value)}
-                  placeholder="e.g. main-db"
-                  disabled={isEdit}
-                  className={cn("max-w-md", errors.name ? "border-destructive" : "")}
-                />
-                <p className="text-xs text-muted-foreground mt-2">
-                  {isEdit
-                    ? "Name cannot be changed after creation."
-                    : "Lowercase letters, numbers, and hyphens. Must start and end with a letter or number."}
-                </p>
-                {errors.name && (
-                  <p className="text-sm text-destructive mt-1">{errors.name}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex flex-col gap-6">
+        <Panel title="Addon Information">
+          <div className="grid gap-5 max-w-3xl">
+            <FieldShell
+              label="Name"
+              htmlFor="addon-name"
+              required
+              hint={
+                isEdit
+                  ? "Name cannot be changed after creation."
+                  : "Lowercase letters, numbers, and hyphens. Must start and end with a letter or number."
+              }
+              error={errors.name}
+            >
+              <Input
+                id="addon-name"
+                value={values.name}
+                onChange={(e) => update("name", e.target.value)}
+                placeholder="e.g. main-db"
+                disabled={isEdit}
+                className={cn("max-w-md font-mono", errors.name ? "border-danger" : "")}
+                aria-invalid={!!errors.name}
+              />
+            </FieldShell>
+          </div>
+        </Panel>
 
-        <Card className="mb-6 rounded-lg overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl">Configuration</CardTitle>
-            <CardDescription className="mt-1">
-              Pick a plan, set storage, and choose a Postgres version.
-            </CardDescription>
-          </CardHeader>
-          <Separator />
-          <CardContent className="pt-6">
-            <div className="rounded-md border overflow-hidden max-w-3xl">
+        <Panel title="Configuration">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Plan</h3>
+            <div className="rounded-md border border-border overflow-hidden max-w-3xl">
               <table className="w-full text-sm">
                 <thead className="bg-muted/30">
                   <tr>
-                    <th className="text-left px-4 py-2.5 font-medium">Plan</th>
-                    <th className="text-left px-4 py-2.5 font-medium">CPU</th>
-                    <th className="text-left px-4 py-2.5 font-medium">Memory</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-[12.5px] text-muted-foreground">Plan</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-[12.5px] text-muted-foreground">CPU</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-[12.5px] text-muted-foreground">Memory</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -372,9 +352,10 @@ export default function PostgresFormPage() {
                       <tr
                         key={preset.id}
                         className={cn(
-                          "border-t cursor-pointer transition-colors",
-                          selected ? "bg-primary/5" : "hover:bg-muted/30",
+                          "border-t border-border cursor-pointer transition-colors",
+                          selected ? "bg-brand-bg" : "hover:bg-muted/30",
                         )}
+                        style={selected ? { boxShadow: "inset 3px 0 0 var(--brand)" } : undefined}
                         onClick={() => update("plan", preset.id as PlanId)}
                       >
                         <td className="px-4 py-2.5">
@@ -385,15 +366,15 @@ export default function PostgresFormPage() {
                               value={preset.id}
                               checked={selected}
                               onChange={() => update("plan", preset.id as PlanId)}
-                              className="cursor-pointer"
+                              className="cursor-pointer accent-brand"
                             />
-                            <span className={selected ? "font-medium" : ""}>
+                            <span className={selected ? "font-medium text-foreground" : "text-foreground"}>
                               {preset.label}
                             </span>
                           </label>
                         </td>
-                        <td className="px-4 py-2.5 text-muted-foreground">{preset.cpu}</td>
-                        <td className="px-4 py-2.5 text-muted-foreground">{preset.memory}</td>
+                        <td className="px-4 py-2.5 font-mono text-[12.5px] text-muted-foreground">{preset.cpu}</td>
+                        <td className="px-4 py-2.5 font-mono text-[12.5px] text-muted-foreground">{preset.memory}</td>
                       </tr>
                     );
                   })}
@@ -402,57 +383,59 @@ export default function PostgresFormPage() {
             </div>
 
             {showCustomCompute && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 max-w-2xl border rounded-md p-4 bg-muted/20">
-                <p className="sm:col-span-2 text-sm font-medium">Custom resources</p>
-                <div className="space-y-1">
-                  <Label htmlFor="cpu-req" className="text-xs">CPU request</Label>
-                  <Input
-                    id="cpu-req"
-                    placeholder="250m"
-                    value={values.customCpuRequest ?? ""}
-                    onChange={(e) => update("customCpuRequest", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="cpu-lim" className="text-xs">CPU limit</Label>
-                  <Input
-                    id="cpu-lim"
-                    placeholder="500m"
-                    value={values.customCpuLimit ?? ""}
-                    onChange={(e) => update("customCpuLimit", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="mem-req" className="text-xs">Memory request</Label>
-                  <Input
-                    id="mem-req"
-                    placeholder="512Mi"
-                    value={values.customMemoryRequest ?? ""}
-                    onChange={(e) => update("customMemoryRequest", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="mem-lim" className="text-xs">Memory limit</Label>
-                  <Input
-                    id="mem-lim"
-                    placeholder="1Gi"
-                    value={values.customMemoryLimit ?? ""}
-                    onChange={(e) => update("customMemoryLimit", e.target.value)}
-                  />
+              <div className="pl-3 border-l border-border mt-4 max-w-2xl space-y-3">
+                <h4 className="text-[12.5px] font-medium text-muted-foreground">Custom resources</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FieldShell label="CPU request" htmlFor="cpu-req">
+                    <Input
+                      id="cpu-req"
+                      placeholder="250m"
+                      value={values.customCpuRequest ?? ""}
+                      onChange={(e) => update("customCpuRequest", e.target.value)}
+                      className="font-mono"
+                    />
+                  </FieldShell>
+                  <FieldShell label="CPU limit" htmlFor="cpu-lim">
+                    <Input
+                      id="cpu-lim"
+                      placeholder="500m"
+                      value={values.customCpuLimit ?? ""}
+                      onChange={(e) => update("customCpuLimit", e.target.value)}
+                      className="font-mono"
+                    />
+                  </FieldShell>
+                  <FieldShell label="Memory request" htmlFor="mem-req">
+                    <Input
+                      id="mem-req"
+                      placeholder="512Mi"
+                      value={values.customMemoryRequest ?? ""}
+                      onChange={(e) => update("customMemoryRequest", e.target.value)}
+                      className="font-mono"
+                    />
+                  </FieldShell>
+                  <FieldShell label="Memory limit" htmlFor="mem-lim">
+                    <Input
+                      id="mem-lim"
+                      placeholder="1Gi"
+                      value={values.customMemoryLimit ?? ""}
+                      onChange={(e) => update("customMemoryLimit", e.target.value)}
+                      className="font-mono"
+                    />
+                  </FieldShell>
                 </div>
                 {errors.customCpuRequest && (
-                  <p className="sm:col-span-2 text-sm text-destructive">
-                    {errors.customCpuRequest}
-                  </p>
+                  <p className="text-[11.5px] text-danger">{errors.customCpuRequest}</p>
                 )}
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6 max-w-3xl">
-              <div>
-                <Label htmlFor="storage-size" className="text-sm font-medium mb-2 block">
-                  Storage size
-                </Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-6 max-w-3xl">
+              <FieldShell
+                label="Storage size"
+                htmlFor="storage-size"
+                hint="Allocated disk in GB."
+                error={errors.storageGB}
+              >
                 <div className="flex items-center gap-2">
                   <Input
                     id="storage-size"
@@ -460,24 +443,19 @@ export default function PostgresFormPage() {
                     min={1}
                     value={values.storageGB}
                     onChange={(e) => update("storageGB", Number(e.target.value) || 0)}
-                    className={errors.storageGB ? "border-destructive" : ""}
+                    className={cn("font-mono", errors.storageGB ? "border-danger" : "")}
+                    aria-invalid={!!errors.storageGB}
                   />
-                  <span className="text-sm text-muted-foreground">GB</span>
+                  <span className="font-mono text-[12.5px] text-muted-foreground">GB</span>
                 </div>
-                {errors.storageGB && (
-                  <p className="text-sm text-destructive mt-1">{errors.storageGB}</p>
-                )}
-              </div>
+              </FieldShell>
 
-              <div>
-                <Label htmlFor="pg-version" className="text-sm font-medium mb-2 block">
-                  Version
-                </Label>
+              <FieldShell label="Version" htmlFor="pg-version">
                 <Select
                   value={String(values.versionMajor)}
                   onValueChange={(v) => update("versionMajor", Number(v))}
                 >
-                  <SelectTrigger id="pg-version">
+                  <SelectTrigger id="pg-version" className="font-mono">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -488,40 +466,52 @@ export default function PostgresFormPage() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FieldShell>
 
-              <div>
-                <Label htmlFor="ha-toggle" className="text-sm font-medium mb-2 block">
-                  High availability
-                </Label>
-                <div className="flex items-center justify-between h-10">
-                  <span className="text-sm text-muted-foreground">
-                    Replicated across 2 instances
-                  </span>
+              <FieldShell
+                label="High availability"
+                htmlFor="ha-toggle"
+                hint="Replicated across 2 instances."
+              >
+                <div className="flex items-center h-10">
                   <Switch
                     id="ha-toggle"
                     checked={values.highAvailability}
                     onCheckedChange={(c) => update("highAvailability", c)}
                   />
                 </div>
-              </div>
+              </FieldShell>
+
+              <FieldShell
+                label="Superuser access"
+                htmlFor="superuser-toggle"
+                hint="Provisions superuser credentials as a separate secret. Useful for migrations and admin tasks; keep app connections on the default role."
+              >
+                <div className="flex items-center h-10">
+                  <Switch
+                    id="superuser-toggle"
+                    checked={values.superuserAccess}
+                    onCheckedChange={(c) => update("superuserAccess", c)}
+                  />
+                </div>
+              </FieldShell>
             </div>
 
             <Collapsible
               defaultOpen={isEdit && Boolean(values.advancedJson)}
-              className="mt-8 -mx-6 -mb-6 border-t"
+              className="mt-8 -mx-5 -mb-4 border-t border-border"
             >
               <div className="flex items-center gap-3 hover:bg-muted/30 transition-colors">
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
-                    className="flex-1 text-left group focus:outline-none px-6 py-4"
+                    className="flex-1 text-left group focus:outline-none px-5 py-3"
                   >
                     <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-base font-semibold">Advanced</span>
+                      <span className="text-sm font-semibold text-foreground">Advanced</span>
                       <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
                       {isEdit && advancedDirty && (
-                        <span className="text-[10px] uppercase tracking-wide font-medium text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/40 px-1.5 py-0.5 rounded">
+                        <span className="font-mono text-[10.5px] uppercase tracking-[1px] font-bold text-brand bg-brand-bg px-1.5 py-0.5 rounded">
                           Modified
                         </span>
                       )}
@@ -532,7 +522,7 @@ export default function PostgresFormPage() {
                   href={ADVANCED_DOCS_URL}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="text-sm text-primary hover:underline inline-flex items-center gap-1 whitespace-nowrap pr-6"
+                  className="text-[12.5px] text-brand hover:text-brand-press hover:underline inline-flex items-center gap-1 whitespace-nowrap pr-5"
                   onClick={(e) => e.stopPropagation()}
                 >
                   Read the documentation
@@ -540,13 +530,13 @@ export default function PostgresFormPage() {
                 </a>
               </div>
               <CollapsibleContent>
-                <div className="px-6 pb-6 pt-3 space-y-2">
+                <div className="px-5 pb-5 pt-3 space-y-2">
                   {isEdit && advancedDirty && (
                     <div className="flex items-center justify-between text-xs text-muted-foreground max-w-3xl">
                       <span className="inline-flex items-center gap-1.5">
                         {advancedCleared && (
                           <>
-                            <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                            <AlertCircle className="h-3.5 w-3.5 text-brand" />
                             <span>
                               These advanced fields will be removed on save.
                             </span>
@@ -556,7 +546,7 @@ export default function PostgresFormPage() {
                       <button
                         type="button"
                         onClick={handleResetAdvanced}
-                        className="text-primary hover:underline font-medium"
+                        className="text-brand hover:text-brand-press hover:underline font-medium"
                       >
                         Reset to current
                       </button>
@@ -570,20 +560,19 @@ export default function PostgresFormPage() {
                     placeholder={'{\n  "configuration": {\n    "parameters": { "max_connections": "200" }\n  }\n}'}
                     className={cn(
                       "font-mono text-xs [field-sizing:fixed] max-w-3xl",
-                      errors.advancedJson ? "border-destructive" : "",
+                      errors.advancedJson ? "border-danger" : "",
                     )}
                     spellCheck={false}
                   />
                   {errors.advancedJson && (
-                    <p className="text-sm text-destructive mt-2 whitespace-pre-wrap">
+                    <p className="text-[11.5px] text-danger mt-2 whitespace-pre-wrap">
                       {errors.advancedJson}
                     </p>
                   )}
                 </div>
               </CollapsibleContent>
             </Collapsible>
-          </CardContent>
-        </Card>
+        </Panel>
       </div>
 
       <Dialog

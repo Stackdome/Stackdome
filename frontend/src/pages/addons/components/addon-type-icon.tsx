@@ -1,10 +1,14 @@
 import { Puzzle } from "lucide-react";
 import postgresqlIconUrl from "@/assets/addons/postgresql.svg";
+import redisIconUrl from "@/assets/addons/redis.svg";
+import ollamaIconUrl from "@/assets/addons/ollama.svg";
 
 // Add new addon types here as they ship. Keys mirror the API's addon-type
 // discriminator strings; values are URLs to brand SVGs in src/assets/addons/.
 const BRAND_ICONS: Record<string, string> = {
   postgres: postgresqlIconUrl,
+  redis: redisIconUrl,
+  ollama: ollamaIconUrl,
 };
 
 interface AddonTypeIconProps {

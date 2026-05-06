@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Info, Eye, EyeOff } from "lucide-react";
+import { Info, Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogClose,
@@ -154,7 +154,7 @@ export default function AddClusterDialog({
 
         <div className="space-y-6">
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+            <div className="text-sm text-danger bg-danger-bg p-3 rounded-md">
               {error}
             </div>
           )}
@@ -163,7 +163,7 @@ export default function AddClusterDialog({
             <div>
               <div className="flex items-center gap-1 mb-2">
                 <Label htmlFor="name" className="text-sm font-medium">
-                  Cluster Name <span className="text-red-500">*</span>
+                  Cluster Name *
                 </Label>
                 <TooltipProvider>
                   <Tooltip>
@@ -182,15 +182,15 @@ export default function AddClusterDialog({
                 placeholder="My Production Cluster"
                 value={formData.name}
                 onChange={handleChange}
-                className={errors.name ? "border-red-500" : ""}
+                className={errors.name ? "border-danger" : ""}
               />
-              {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
+              {errors.name && <p className="text-sm text-danger mt-1">{errors.name}</p>}
             </div>
 
             <div>
               <div className="flex items-center gap-1 mb-2">
                 <Label htmlFor="cluster_url" className="text-sm font-medium">
-                  Cluster URL <span className="text-red-500">*</span>
+                  Cluster URL *
                 </Label>
                 <TooltipProvider>
                   <Tooltip>
@@ -209,15 +209,15 @@ export default function AddClusterDialog({
                 placeholder="https://k8s-api.example.com:6443"
                 value={formData.cluster_url}
                 onChange={handleChange}
-                className={errors.cluster_url ? "border-red-500" : ""}
+                className={errors.cluster_url ? "border-danger" : ""}
               />
-              {errors.cluster_url && <p className="text-sm text-red-600 mt-1">{errors.cluster_url}</p>}
+              {errors.cluster_url && <p className="text-sm text-danger mt-1">{errors.cluster_url}</p>}
             </div>
 
             <div>
               <div className="flex items-center gap-1 mb-2">
                 <Label htmlFor="cluster_ca_data" className="text-sm font-medium">
-                  CA Certificate Data <span className="text-red-500">*</span>
+                  CA Certificate Data *
                 </Label>
                 <TooltipProvider>
                   <Tooltip>
@@ -246,15 +246,15 @@ export default function AddClusterDialog({
                 placeholder="LS0tLS1CRUdJTi..."
                 value={formData.cluster_ca_data}
                 onChange={handleChange}
-                className={errors.cluster_ca_data ? "border-red-500" : ""}
+                className={errors.cluster_ca_data ? "border-danger" : ""}
               />
-              {errors.cluster_ca_data && <p className="text-sm text-red-600 mt-1">{errors.cluster_ca_data}</p>}
+              {errors.cluster_ca_data && <p className="text-sm text-danger mt-1">{errors.cluster_ca_data}</p>}
             </div>
 
             <div>
               <div className="flex items-center gap-1 mb-2">
                 <Label htmlFor="cluster_sa_token" className="text-sm font-medium">
-                  Service Account Token <span className="text-red-500">*</span>
+                  Service Account Token *
                 </Label>
                 <TooltipProvider>
                   <Tooltip>
@@ -283,9 +283,9 @@ export default function AddClusterDialog({
                 placeholder="eyJhbGciOiJSUzI1NiIs..."
                 value={formData.cluster_sa_token}
                 onChange={handleChange}
-                className={errors.cluster_sa_token ? "border-red-500" : ""}
+                className={errors.cluster_sa_token ? "border-danger" : ""}
               />
-              {errors.cluster_sa_token && <p className="text-sm text-red-600 mt-1">{errors.cluster_sa_token}</p>}
+              {errors.cluster_sa_token && <p className="text-sm text-danger mt-1">{errors.cluster_sa_token}</p>}
             </div>
 
             <div className="space-y-3">
@@ -343,7 +343,8 @@ export default function AddClusterDialog({
             onClick={handleSubmit}
             disabled={!isFormValid || isLoading}
           >
-            {isLoading ? "Adding..." : "Add Cluster"}
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            Add Cluster
           </Button>
         </DialogFooter>
       </DialogContent>

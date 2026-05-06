@@ -28,35 +28,35 @@ function getConnectionStatusInfo(status: ConnectionStatus) {
       return {
         icon: Loader2,
         text: 'Connecting...',
-        className: 'text-yellow-600 bg-yellow-50 border-yellow-200',
+        className: 'text-warn bg-warn-bg border-warn-border',
         iconClass: 'animate-spin',
       };
     case 'connected':
       return {
         icon: Wifi,
         text: 'Connected',
-        className: 'text-green-600 bg-green-50 border-green-200',
+        className: 'text-success bg-success-bg border-success-border',
         iconClass: '',
       };
     case 'disconnected':
       return {
         icon: WifiOff,
         text: 'Disconnected',
-        className: 'text-gray-600 bg-gray-50 border-gray-200',
+        className: 'text-muted-foreground bg-muted border-border',
         iconClass: '',
       };
     case 'error':
       return {
         icon: AlertCircle,
         text: 'Error',
-        className: 'text-red-600 bg-red-50 border-red-200',
+        className: 'text-danger bg-danger-bg border-danger-border',
         iconClass: '',
       };
     default:
       return {
         icon: WifiOff,
         text: 'Unknown',
-        className: 'text-gray-600 bg-gray-50 border-gray-200',
+        className: 'text-muted-foreground bg-muted border-border',
         iconClass: '',
       };
   }

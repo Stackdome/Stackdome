@@ -41,11 +41,11 @@ export default function StackVolumeItem({
 
   const statusObj = (volume.status ?? {}) as z.infer<typeof ApiVolumeStatusSchema>;
   const status = statusObj.phase?.toLowerCase() || 'pending';
-  let statusColor = 'bg-yellow-500';
+  let statusColor = 'bg-warn';
   if (status === 'ready') {
-    statusColor = 'bg-green-500';
+    statusColor = 'bg-success';
   } else if (status === 'failed') {
-    statusColor = 'bg-red-500';
+    statusColor = 'bg-danger';
   }
 
   const mountingInfo = volume.name

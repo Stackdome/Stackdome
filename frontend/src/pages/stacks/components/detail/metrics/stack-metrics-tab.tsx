@@ -23,35 +23,35 @@ function getConnectionStatusInfo(status: ConnectionStatus) {
       return {
         icon: Loader2,
         text: 'Connecting...',
-        className: 'text-yellow-600 bg-yellow-50 border-yellow-200',
+        className: 'text-warn bg-warn-bg border-warn-border',
         iconClass: 'animate-spin',
       };
     case 'connected':
       return {
         icon: Wifi,
         text: 'Connected',
-        className: 'text-green-600 bg-green-50 border-green-200',
+        className: 'text-success bg-success-bg border-success-border',
         iconClass: '',
       };
     case 'disconnected':
       return {
         icon: WifiOff,
         text: 'Disconnected',
-        className: 'text-gray-600 bg-gray-50 border-gray-200',
+        className: 'text-muted-foreground bg-muted border-border',
         iconClass: '',
       };
     case 'error':
       return {
         icon: AlertCircle,
         text: 'Error',
-        className: 'text-red-600 bg-red-50 border-red-200',
+        className: 'text-danger bg-danger-bg border-danger-border',
         iconClass: '',
       };
     default:
       return {
         icon: WifiOff,
         text: 'Unknown',
-        className: 'text-gray-600 bg-gray-50 border-gray-200',
+        className: 'text-muted-foreground bg-muted border-border',
         iconClass: '',
       };
   }
@@ -129,7 +129,7 @@ export function StackMetricsTab({ stackId, organizationId, resources }: StackMet
               {/* CPU Usage */}
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <Cpu className="h-4 w-4 text-blue-500" />
+                  <Cpu className="h-4 w-4 text-info" />
                   <span className="text-sm font-medium">CPU Usage</span>
                 </div>
                 <div className="text-2xl font-bold">
@@ -140,7 +140,7 @@ export function StackMetricsTab({ stackId, organizationId, resources }: StackMet
               {/* Memory Usage */}
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <MemoryStick className="h-4 w-4 text-green-500" />
+                  <MemoryStick className="h-4 w-4 text-success" />
                   <span className="text-sm font-medium">Memory Usage</span>
                 </div>
                 <div className="text-2xl font-bold">
@@ -193,14 +193,14 @@ export function StackMetricsTab({ stackId, organizationId, resources }: StackMet
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center space-x-2">
-                        <Cpu className="h-4 w-4 text-blue-500" />
+                        <Cpu className="h-4 w-4 text-info" />
                         <span className="text-muted-foreground">CPU</span>
                       </div>
                       <span className="font-medium">{resourceData.displayMetrics.cpu}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center space-x-2">
-                        <MemoryStick className="h-4 w-4 text-green-500" />
+                        <MemoryStick className="h-4 w-4 text-success" />
                         <span className="text-muted-foreground">Memory</span>
                       </div>
                       <span className="font-medium">{resourceData.displayMetrics.memory}</span>

@@ -50,7 +50,7 @@ export function ClusterList({ clusters, onEdit, onDelete }: ClusterListProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => onDelete(cluster)}
-                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="h-8 w-8 p-0 text-danger hover:text-danger hover:bg-danger-bg"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

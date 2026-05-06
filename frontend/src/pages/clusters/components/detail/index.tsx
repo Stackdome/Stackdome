@@ -114,7 +114,7 @@ export default function ClusterDetailPage() {
               variant="outline"
               size="lg"
               onClick={() => setShowDeleteDialog(true)}
-              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              className="border-danger-border text-danger hover:bg-danger-bg hover:text-danger"
             >
               <Trash2 className="h-4 w-4" />
               Delete Cluster
@@ -221,14 +221,14 @@ export default function ClusterDetailPage() {
                   <span className="flex items-center gap-2 font-mono text-sm">
                     {(() => {
                       const state = cluster.cluster_image_registry.status?.state || "Unknown";
-                      let color = "bg-gray-500";
+                      let color = "bg-muted-foreground";
 
                       if (state === "ImageRegistryRunning") {
-                        color = "bg-green-500";
+                        color = "bg-success";
                       } else if (state === "ImageRegistryError") {
-                        color = "bg-red-500";
+                        color = "bg-danger";
                       } else if (state === "ImageRegistryPending") {
-                        color = "bg-yellow-500";
+                        color = "bg-warn";
                       }
 
                       return (
@@ -270,7 +270,7 @@ export default function ClusterDetailPage() {
             </DialogDescription>
           </DialogHeader>
           {deleteError && (
-            <div className="bg-red-50 text-red-500 p-3 rounded flex items-center">
+            <div className="bg-danger-bg text-danger p-3 rounded flex items-center">
               <AlertCircle size={16} className="mr-2 flex-shrink-0" />
               <span>{deleteError}</span>
             </div>

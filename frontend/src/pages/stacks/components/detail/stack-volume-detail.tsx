@@ -34,12 +34,12 @@ export default function StackVolumeDetail({
   // Determine status color based on volume.status.phase
   const statusObj = (volume.status ?? {}) as z.infer<typeof ApiVolumeStatusSchema>;
   const status = statusObj.phase?.toLowerCase() || 'pending';
-  let statusColor = 'bg-yellow-500'; // Default for pending
+  let statusColor = 'bg-warn';
 
   if (status === 'ready' || status === 'running') {
-    statusColor = 'bg-green-500';
+    statusColor = 'bg-success';
   } else if (status === 'failed') {
-    statusColor = 'bg-red-500';
+    statusColor = 'bg-danger';
   }
 
   // Helper to find resources that mount this volume

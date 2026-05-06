@@ -114,10 +114,10 @@ export default function AddDomainDialog({
                   handleAddDomain();
                 }
               }}
-              className={error ? "border-red-500 focus:border-red-500" : ""}
+              className={error ? "border-danger focus:border-danger" : ""}
             />
             {error && (
-              <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+              <p className="text-sm text-danger mt-1 flex items-center gap-1">
                 <AlertCircle className="h-4 w-4" />
                 {error}
               </p>

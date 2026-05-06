@@ -3,6 +3,7 @@ import { Plus, Trash2, Loader2, Eye, EyeOff } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -632,6 +633,11 @@ export function SecretFormDialog({
           <DialogTitle>
             {isEditing ? "Edit Secret" : "Create New Secret"}
           </DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? "Update the secret's metadata or rotate its values."
+              : "Securely store API keys, passwords, or certificates for your stacks."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-1">
@@ -695,7 +701,7 @@ export function SecretFormDialog({
         </div>
 
         <DialogFooter className="flex-shrink-0">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isLoading}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading}>

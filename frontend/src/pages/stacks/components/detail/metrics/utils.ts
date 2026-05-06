@@ -40,15 +40,15 @@ export function convertToDisplayMetrics(metrics: ResourceMetrics): MetricsDispla
 export function getStatusColor(status: MetricsDisplayData['status']): string {
   switch (status) {
     case 'running':
-      return 'bg-green-500';
+      return 'bg-success';
     case 'pending':
-      return 'bg-yellow-500';
+      return 'bg-warn';
     case 'failed':
-      return 'bg-red-500';
+      return 'bg-danger';
     case 'stopped':
-      return 'bg-gray-500';
+      return 'bg-muted-foreground';
     default:
-      return 'bg-gray-500';
+      return 'bg-muted-foreground';
   }
 }
 

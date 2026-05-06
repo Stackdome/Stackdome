@@ -193,7 +193,7 @@ export function EnvRow({
         </div>
       </div>
       {isOrphanAddon && (
-        <p className="col-span-full text-xs text-yellow-700 dark:text-yellow-400 mt-0.5 mb-1 px-3">
+        <p className="col-span-full text-xs text-warn mt-0.5 mb-1 px-3">
           Addon was deleted. This variable won't resolve. Remove to clean up.
         </p>
       )}
@@ -286,7 +286,7 @@ function AddonOrphanReadOnly({
 }) {
   const dbLabel = superuser ? "(superuser)" : database ?? "—";
   return (
-    <div className="text-xs italic px-3 py-2 text-yellow-600">
+    <div className="text-xs italic px-3 py-2 text-warn">
       ⚙ &lt;missing addon&gt; · {dbLabel} · {credField ?? "—"}
     </div>
   );
