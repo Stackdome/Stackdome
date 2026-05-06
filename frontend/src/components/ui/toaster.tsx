@@ -25,7 +25,7 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, variant, ...props }) {
+      {[...toasts].reverse().map(function ({ id, title, description, action, variant, ...props }) {
         const { Icon, color } = variantChip(variant);
         return (
           <Toast key={id} variant={variant} {...props}>
