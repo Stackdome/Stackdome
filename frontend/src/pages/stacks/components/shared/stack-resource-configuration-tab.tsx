@@ -586,7 +586,7 @@ function StackResourceConfigurationTabImpl({
               onReset={onDiscardField ? () => onDiscardField(`volume_mounts.${vmIdx}`) : undefined}
               compact
             >
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start border p-3 rounded-md bg-muted/10">
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-start border p-3 rounded-md bg-muted/10">
                 <FieldShell
                   label="Volume"
                   htmlFor={`volume-name-${index}-${vmIdx}`}
@@ -643,7 +643,7 @@ function StackResourceConfigurationTabImpl({
                     required
                   />
                 </FieldShell>
-                <div className="flex justify-end">
+                <div className="pt-[26px]">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -686,61 +686,61 @@ function StackResourceConfigurationTabImpl({
               onReset={onDiscardField ? () => onDiscardField(`ports.${pidx}`) : undefined}
               compact
             >
-              <div className="relative border p-3 pr-12 rounded-md bg-muted/10">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-                  <FieldShell
-                    label="Port Number"
-                    htmlFor={`port-number-${index}-${pidx}`}
-                    required
-                    error={getError(errors, `ports.${pidx}.number`)}
-                  >
-                    <Input
-                      id={`port-number-${index}-${pidx}`}
-                      type="number"
-                      min="1"
-                      max="65535"
-                      value={port.number?.toString() || ""}
-                      onChange={(e) => updatePort(pidx, { number: parseInt(e.target.value) || 0 })}
-                      className={getError(errors, `ports.${pidx}.number`) ? "border-danger" : ""}
-                      required
-                    />
-                  </FieldShell>
-                  <FieldShell label="Protocol" htmlFor={`port-protocol-${index}-${pidx}`}>
-                    <Select
-                      value={port.protocol || "tcp"}
-                      onValueChange={(value) => updatePort(pidx, { protocol: value as "tcp" | "http" })}
-                    >
-                      <SelectTrigger id={`port-protocol-${index}-${pidx}`}>
-                        <SelectValue placeholder="Select protocol" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tcp">TCP</SelectItem>
-                        <SelectItem value="http">HTTP</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FieldShell>
-                  <FieldShell label="Public Access" htmlFor={`port-expose-${index}-${pidx}`}>
-                    <div className="flex items-center space-x-2 h-[40px]">
-                      <Switch
-                        id={`port-expose-${index}-${pidx}`}
-                        checked={port.exposed_to_public || false}
-                        onCheckedChange={(checked) => updatePort(pidx, { exposed_to_public: checked })}
-                      />
-                      <Label htmlFor={`port-expose-${index}-${pidx}`} className="text-[12.5px] text-muted-foreground cursor-pointer">
-                        {port.exposed_to_public ? "Exposed" : "Internal Only"}
-                      </Label>
-                    </div>
-                  </FieldShell>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removePort(pidx)}
-                  title="Remove port"
-                  className="absolute top-2 right-2 text-danger hover:text-danger hover:bg-danger-bg"
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-start border p-3 rounded-md bg-muted/10">
+                <FieldShell
+                  label="Port Number"
+                  htmlFor={`port-number-${index}-${pidx}`}
+                  required
+                  error={getError(errors, `ports.${pidx}.number`)}
                 >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                  <Input
+                    id={`port-number-${index}-${pidx}`}
+                    type="number"
+                    min="1"
+                    max="65535"
+                    value={port.number?.toString() || ""}
+                    onChange={(e) => updatePort(pidx, { number: parseInt(e.target.value) || 0 })}
+                    className={getError(errors, `ports.${pidx}.number`) ? "border-danger" : ""}
+                    required
+                  />
+                </FieldShell>
+                <FieldShell label="Protocol" htmlFor={`port-protocol-${index}-${pidx}`}>
+                  <Select
+                    value={port.protocol || "tcp"}
+                    onValueChange={(value) => updatePort(pidx, { protocol: value as "tcp" | "http" })}
+                  >
+                    <SelectTrigger id={`port-protocol-${index}-${pidx}`}>
+                      <SelectValue placeholder="Select protocol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tcp">TCP</SelectItem>
+                      <SelectItem value="http">HTTP</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FieldShell>
+                <FieldShell label="Public Access" htmlFor={`port-expose-${index}-${pidx}`}>
+                  <div className="flex items-center space-x-2 h-[40px]">
+                    <Switch
+                      id={`port-expose-${index}-${pidx}`}
+                      checked={port.exposed_to_public || false}
+                      onCheckedChange={(checked) => updatePort(pidx, { exposed_to_public: checked })}
+                    />
+                    <Label htmlFor={`port-expose-${index}-${pidx}`} className="text-[12.5px] text-muted-foreground cursor-pointer">
+                      {port.exposed_to_public ? "Exposed" : "Internal Only"}
+                    </Label>
+                  </div>
+                </FieldShell>
+                <div className="self-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removePort(pidx)}
+                    title="Remove port"
+                    className="text-danger hover:text-danger hover:bg-danger-bg"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </DirtyField>
           ))}

@@ -368,9 +368,6 @@ export interface ResourceDirtyTabs {
 
 const DEPLOYMENT_KEYS = new Set([
   "init_spec",
-  "ports",
-  "volume_mounts",
-  "depends_on",
 ]);
 
 export function dirtyTabsForResource(
