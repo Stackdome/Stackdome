@@ -17,6 +17,7 @@ interface UseMetricsStreamReturn {
   error: string | null;
   startStreaming: () => void;
   stopStreaming: () => void;
+  retry: () => void;
   lastUpdated: Date | null;
   updateResources: (resources: string[]) => void;
 }

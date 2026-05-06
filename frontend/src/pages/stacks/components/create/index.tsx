@@ -2,7 +2,6 @@ import React, { useState, useCallback, Fragment, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import StackResourcesForm from "../shared/stack-resources-form";
 import StackVolumesForm from "../shared/stack-volumes-form";
-import { Button } from "@/components/ui/button";
 import { X, AlertTriangle, Rocket } from "lucide-react";
 import { Panel, FieldError } from "@/components/branded";
 import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
