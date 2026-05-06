@@ -164,7 +164,6 @@ export default function AddClusterDialog({
               label="Cluster Name"
               htmlFor="name"
               required
-              hint="A friendly name for your cluster."
               error={errors.name}
             >
               <Input
@@ -181,7 +180,6 @@ export default function AddClusterDialog({
               label="Cluster URL"
               htmlFor="cluster_url"
               required
-              hint="API server URL for your Kubernetes cluster."
               error={errors.cluster_url}
             >
               <Input
@@ -198,7 +196,7 @@ export default function AddClusterDialog({
               label="CA Certificate Data"
               htmlFor="cluster_ca_data"
               required
-              hint="Base64-encoded CA certificate used to verify the cluster."
+              hint="Base64-encoded."
               error={errors.cluster_ca_data}
             >
               <div className="relative">
@@ -227,7 +225,6 @@ export default function AddClusterDialog({
               label="Service Account Token"
               htmlFor="cluster_sa_token"
               required
-              hint="Bearer token used to authenticate with the cluster."
               error={errors.cluster_sa_token}
             >
               <div className="relative">
@@ -265,7 +262,7 @@ export default function AddClusterDialog({
                     Enable Image Registry
                   </Label>
                   <p className="text-[12px] text-muted-foreground leading-relaxed">
-                    Provision a private container registry inside this cluster for build artifacts.
+                    Provisions a private registry for build artifacts.
                   </p>
                 </div>
               </div>
@@ -275,7 +272,7 @@ export default function AddClusterDialog({
                   <FieldShell
                     label="Backend Storage Size"
                     htmlFor="registry-size"
-                    hint="Persistent volume size for the registry (e.g. 20Gi, 100Gi)."
+                    hint="e.g. 20Gi, 100Gi"
                   >
                     <Input
                       id="registry-size"
