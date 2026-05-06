@@ -13,7 +13,7 @@ export function EmptyState({ icon, title, description, action, dashed = true, cl
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-2 rounded-md py-10 px-6 text-center",
+        "flex flex-col items-center justify-center gap-2 rounded-md py-14 px-6 text-center min-h-[260px]",
         dashed ? "border border-dashed border-border" : "border border-border",
         className,
       )}

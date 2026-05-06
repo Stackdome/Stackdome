@@ -10,7 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-brand text-primary-foreground shadow-xs hover:bg-brand-hover active:bg-brand-press",
+          "bg-brand text-white dark:text-primary-foreground shadow-xs hover:bg-brand-hover active:bg-brand-press",
         destructive:
           "bg-danger text-white shadow-xs hover:bg-danger/90 focus-visible:ring-danger/30",
         outline:
@@ -31,7 +31,7 @@ const buttonVariants = cva(
         // where the surrounding chrome is already terminal-flavored. Do NOT
         // use for in-page CTAs — use `default` instead.
         railPrimary:
-          "font-mono text-[11px] font-bold uppercase tracking-[1.5px] bg-brand text-primary-foreground hover:bg-brand-hover active:bg-brand-press",
+          "font-mono text-[11px] font-bold uppercase tracking-[1.5px] bg-brand text-white dark:text-primary-foreground hover:bg-brand-hover active:bg-brand-press",
         // Console-rail secondary — paired with railPrimary (Cancel, Discard).
         railGhost:
           "font-mono text-[11px] font-bold uppercase tracking-[1.5px] bg-transparent border border-border text-foreground hover:border-foreground",
