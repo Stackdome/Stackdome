@@ -52,28 +52,29 @@ export default function DomainsPage() {
     loadOrganization();
   }, [setCustomLabel, setPathLoading]);
 
-  const handleDomainsChange = async (updatedDomains: Partial<DomainName>[]) => {
-    if (!organization) return;
+  const persistDomains = async (updatedDomains: Partial<DomainName>[]): Promise<boolean> => {
+    if (!organization) return false;
 
     const orgId = getCurrentOrganizationId();
-    if (!orgId) return;
+    if (!orgId) return false;
 
     setSaving(true);
 
     try {
-      // Validate and convert domains
       const validatedDomains = updatedDomains
         .filter(domain => domain.fqdn && domain.fqdn.trim())
         .map(domain => createDomainFromForm({ fqdn: domain.fqdn }));
 
+      // Send only fields the server actually consumes; timestamps + id are server-managed.
       const updatedOrg = await organizationApi.updateOrganization(orgId, {
-        ...organization,
-        domains: validatedDomains
+        id: organization.id,
+        name: organization.name,
+        is_default: organization.is_default,
+        domains: validatedDomains,
       });
 
       setOrganization(updatedOrg);
-
-
+      return true;
     } catch (err) {
       console.error("Failed to update domains:", err);
       toast({
@@ -81,16 +82,19 @@ export default function DomainsPage() {
         description: getErrorMessage(err),
         variant: "destructive",
       });
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
-  const handleAddDomain = (newDomain: DomainName) => {
+  const handleAddDomain = async (newDomain: DomainName) => {
     if (!organization) return;
 
     const updatedDomains = [...(organization.domains || []), newDomain];
-    handleDomainsChange(updatedDomains);
+    const ok = await persistDomains(updatedDomains);
+    if (!ok) return;
+
     setShowAddDialog(false);
     toast({
       title: "Domain added",
@@ -98,12 +102,13 @@ export default function DomainsPage() {
     });
   };
 
-  const handleRemoveDomain = (index: number) => {
+  const handleRemoveDomain = async (index: number) => {
     if (!organization) return;
 
     const updatedDomains = [...(organization.domains || [])];
     updatedDomains.splice(index, 1);
-    handleDomainsChange(updatedDomains);
+    const ok = await persistDomains(updatedDomains);
+    if (!ok) return;
 
     toast({
       title: "Domain deleted",
