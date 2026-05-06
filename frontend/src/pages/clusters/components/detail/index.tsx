@@ -5,7 +5,7 @@ import * as clusterApi from "@/api/clusters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Trash2, AlertCircle, Loader2 } from "lucide-react";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import {
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
-import { PageHeader, Panel, FieldShell } from "@/components/branded";
+import { PageHeader, Panel, FieldShell, StatusPill, variantFromState } from "@/components/branded";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -29,8 +29,6 @@ export default function ClusterDetailPage() {
   const [loading, setLoading] = useState(true);
   const { deleteCluster, loading: deleting, error: deleteError } = useDeleteCluster();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showCa, setShowCa] = useState(false);
-  const [showToken, setShowToken] = useState(false);
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const { toast } = useToast();
 
@@ -95,11 +93,11 @@ export default function ClusterDetailPage() {
   );
 
   const registryState = cluster.cluster_image_registry?.status?.state ?? "Unknown";
-  const registryStatus = (() => {
-    if (registryState === "ImageRegistryRunning") return { label: "Running", dot: "bg-success" };
-    if (registryState === "ImageRegistryError") return { label: "Error", dot: "bg-danger" };
-    if (registryState === "ImageRegistryPending") return { label: "Pending", dot: "bg-warn" };
-    return { label: registryState, dot: "bg-muted-foreground" };
+  const registryLabel = (() => {
+    if (registryState === "ImageRegistryRunning") return "Running";
+    if (registryState === "ImageRegistryError") return "Error";
+    if (registryState === "ImageRegistryPending") return "Pending";
+    return registryState;
   })();
 
   return (
@@ -131,44 +129,24 @@ export default function ClusterDetailPage() {
               />
             </FieldShell>
 
-            <FieldShell label="CA Certificate" hint="Base64-encoded.">
-              <div className="relative">
-                <Input
-                  type={showCa ? "text" : "password"}
-                  value={cluster.cluster_ca_data ?? "••••••••••••••••••••••"}
-                  disabled
-                  className="font-mono bg-muted pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowCa(!showCa)}
-                >
-                  {showCa ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
+            <FieldShell label="CA Certificate" hint="Encrypted at rest. Re-create the cluster to rotate.">
+              <Input
+                type="password"
+                value="••••••••••••••••••••••"
+                disabled
+                readOnly
+                className="font-mono bg-muted"
+              />
             </FieldShell>
 
-            <FieldShell label="Service Account Token">
-              <div className="relative">
-                <Input
-                  type={showToken ? "text" : "password"}
-                  value={cluster.cluster_sa_token ?? "••••••••••••••••••••••"}
-                  disabled
-                  className="font-mono bg-muted pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowToken(!showToken)}
-                >
-                  {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
+            <FieldShell label="Service Account Token" hint="Encrypted at rest. Re-create the cluster to rotate.">
+              <Input
+                type="password"
+                value="••••••••••••••••••••••"
+                disabled
+                readOnly
+                className="font-mono bg-muted"
+              />
             </FieldShell>
 
             <div className="space-y-3 pt-2">
@@ -198,10 +176,9 @@ export default function ClusterDetailPage() {
                   </div>
                   <div>
                     <Label className="text-[13px] font-medium text-foreground">Registry Status</Label>
-                    <p className="flex items-center gap-2 font-mono text-sm text-muted-foreground mt-1">
-                      <span className={`inline-block w-2 h-2 rounded-full ${registryStatus.dot}`} />
-                      <span>{registryStatus.label}</span>
-                    </p>
+                    <div className="mt-1.5">
+                      <StatusPill variant={variantFromState(registryLabel)}>{registryLabel}</StatusPill>
+                    </div>
                   </div>
                 </div>
               )}

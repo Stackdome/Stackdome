@@ -483,7 +483,7 @@ export default function StackCreatePage() {
             <div className="grid gap-6 max-w-5xl">
               <div>
                 <UILabel htmlFor="stack-name" className="text-sm font-medium flex items-center gap-1 mb-2">
-                  Stack Name <span className="text-danger">*</span>
+                  Stack Name <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span>
                 </UILabel>
                 <Input
                   id="stack-name"

@@ -6,8 +6,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { VariantProps } from 'class-variance-authority';
-import { ChevronDown, Upload } from 'lucide-react';
+import { ChevronDown, Import, LayoutTemplate } from 'lucide-react';
 import dockerIconUrl from '@/assets/docker.svg';
 
 export interface ImportOption {
@@ -47,7 +48,7 @@ export default function ImportDropdown({
         >
           {children || (
             <>
-              <Upload className="h-4 w-4" />
+              <Import className="h-4 w-4" />
               Import
               <ChevronDown className="ml-2 h-4 w-4" />
             </>
@@ -59,17 +60,31 @@ export default function ImportDropdown({
         className="w-56"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        {importOptions.map((option) => (
-          <DropdownMenuItem
-            key={option.id}
-            onClick={option.onClick}
-            disabled={option.disabled}
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            {option.icon}
-            <span>{option.description}</span>
-          </DropdownMenuItem>
-        ))}
+        <TooltipProvider delayDuration={200}>
+          {importOptions.map((option) => {
+            const item = (
+              <DropdownMenuItem
+                onClick={option.onClick}
+                disabled={option.disabled}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                {option.icon}
+                <span>{option.label}</span>
+              </DropdownMenuItem>
+            );
+            if (option.disabled) {
+              return (
+                <Tooltip key={option.id}>
+                  <TooltipTrigger asChild>
+                    <div>{item}</div>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">Coming soon</TooltipContent>
+                </Tooltip>
+              );
+            }
+            return <React.Fragment key={option.id}>{item}</React.Fragment>;
+          })}
+        </TooltipProvider>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -97,19 +112,18 @@ export function DockerComposeImportDropdown({
     {
       id: 'docker-compose',
       label: 'Docker Compose',
-      description: 'from Docker Compose',
+      description: 'Import from a docker-compose.yml file',
       icon: <img src={dockerIconUrl} alt="Docker" className="h-4 w-4" />,
       onClick: onDockerComposeImport,
     },
-    // Future import options can be added here:
-    // {
-    //   id: 'kubernetes',
-    //   label: 'Kubernetes YAML',
-    //   description: 'Import from Kubernetes manifests',
-    //   icon: <KubernetesIcon className="h-4 w-4 text-info" />,
-    //   onClick: onKubernetesImport,
-    //   disabled: true, // Coming soon
-    // },
+    {
+      id: 'templates',
+      label: 'Templates',
+      description: 'Start from a curated stack template',
+      icon: <LayoutTemplate className="h-4 w-4" />,
+      onClick: () => {},
+      disabled: true,
+    },
   ];
 
   return (

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { FieldShell } from "@/components/branded";
 import {
   Select,
   SelectContent,
@@ -557,7 +558,12 @@ export function SecretFormDialog({
         return (
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label>Secret Data *</Label>
+              <Label className="text-[13px] font-medium text-foreground">
+                <span>
+                  Secret Data
+                  <span className="ml-0.5 text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span>
+                </span>
+              </Label>
               <Button
                 type="button"
                 variant="outline"
@@ -608,10 +614,12 @@ export function SecretFormDialog({
                   </div>
                   <Button
                     type="button"
-                    variant="outline"
-                    size="sm"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => removeGenericDataPair(index)}
                     disabled={genericData.length === 1}
+                    className="text-danger hover:text-danger hover:bg-danger-bg"
+                    title="Remove key-value pair"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -640,16 +648,20 @@ export function SecretFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-1">
-          <div className="space-y-4 py-4 max-w-full overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-5 py-4">
             {error && (
               <div className="text-sm text-danger bg-danger-bg p-3 rounded-md">
                 {error}
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+            <FieldShell
+              label="Name"
+              htmlFor="name"
+              required
+              error={formErrors.name}
+            >
               <Input
                 id="name"
                 value={name}
@@ -662,28 +674,22 @@ export function SecretFormDialog({
                 placeholder="Enter secret name"
                 className={formErrors.name ? "border-danger" : ""}
               />
-              {formErrors.name && (
-                <p className="text-sm text-danger">{formErrors.name}</p>
-              )}
-            </div>
+            </FieldShell>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+            <FieldShell label="Description" htmlFor="description">
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Enter secret description (optional)"
                 rows={2}
-                className="max-w-full resize-none w-full [field-sizing:fixed]"
-                style={{ wordWrap: 'break-word', whiteSpace: 'pre-wrap' }}
+                className="resize-none [field-sizing:fixed]"
               />
-            </div>
+            </FieldShell>
 
-            <div className="space-y-2">
-              <Label htmlFor="type">Type *</Label>
+            <FieldShell label="Type" htmlFor="type" required>
               <Select value={type} onValueChange={(value: SecretType) => setType(value)}>
-                <SelectTrigger>
+                <SelectTrigger id="type" className="w-full">
                   <SelectValue placeholder="Select secret type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -694,7 +700,7 @@ export function SecretFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FieldShell>
 
             {renderTypeSpecificFields()}
           </div>

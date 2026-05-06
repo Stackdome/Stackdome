@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload } from 'lucide-react';
+import { FieldShell } from '@/components/branded';
+import { Loader2, Upload } from 'lucide-react';
 
 interface DockerComposeImportDialogProps {
   open: boolean;
@@ -19,6 +21,25 @@ interface DockerComposeImportDialogProps {
   onClearError: () => void;
 }
 
+const SAMPLE_YAML = `version: '3.8'
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    environment:
+      - ENV=production
+  api:
+    image: node:18
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_PASSWORD=secret`;
+
 export default function DockerComposeImportDialog({
   open,
   onOpenChange,
@@ -28,6 +49,7 @@ export default function DockerComposeImportDialog({
   onClearError,
 }: DockerComposeImportDialogProps) {
   const [yamlContent, setYamlContent] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImport = async () => {
     await onImport(yamlContent);
@@ -61,63 +83,58 @@ export default function DockerComposeImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-full p-0 overflow-hidden min-h-[600px]">
-        <DialogHeader className="px-6 pt-6 pb-2">
-          <DialogTitle className="text-lg">Create your stack by</DialogTitle>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Import from Docker Compose</DialogTitle>
+          <DialogDescription>
+            Upload a <span className="font-mono">docker-compose.yml</span> file or paste its contents to scaffold a new stack.
+          </DialogDescription>
         </DialogHeader>
-        <div className="px-6 pb-2 flex flex-col gap-4 items-center">
-          <label
-            htmlFor="file-upload"
-            className="cursor-pointer flex items-center gap-2 px-4 py-2 border border-dashed border-border rounded-md hover:border-border-strong transition-colors bg-muted/40 text-sm font-medium mb-1"
-            style={{ width: 'fit-content' }}
-          >
-            <Upload className="h-4 w-4" />
-            Upload <span className="font-mono">docker-compose.yml</span>
+
+        <div className="space-y-5">
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+            >
+              <Upload className="h-4 w-4" />
+              Choose file…
+            </Button>
             <input
-              id="file-upload"
+              ref={fileInputRef}
               type="file"
               accept=".yml,.yaml"
               onChange={handleFileUpload}
               className="hidden"
               disabled={isLoading}
             />
-          </label>
-          <div className="text-xs text-muted-foreground mb-2">or paste below</div>
-          <Textarea
-            id="yaml-content"
-            placeholder={`version: '3.8'
-services:
-  web:
-    image: nginx:latest
-    ports:
-      - "8080:80"
-    environment:
-      - ENV=production
-  api:
-    image: node:18
-    ports:
-      - "3000:3000"
-    depends_on:
-      - db
-  db:
-    image: postgres:15
-    environment:
-      - POSTGRES_PASSWORD=secret`}
-            value={yamlContent}
-            onChange={e => handleContentChange(e.target.value)}
-            className="h-96 font-mono text-sm resize-none bg-background border border-border rounded-md px-3 py-2 w-full overflow-auto"
-            style={{ minHeight: '24rem', maxHeight: '24rem' }}
-            disabled={isLoading}
-          />
-          {error && (
-            <div className="text-danger text-xs mt-1 px-1 w-full text-left">{error}</div>
-          )}
+          </div>
+
+          <FieldShell
+            label="YAML"
+            htmlFor="yaml-content"
+            hint="Paste your docker-compose YAML below."
+            error={error}
+          >
+            <Textarea
+              id="yaml-content"
+              placeholder={SAMPLE_YAML}
+              value={yamlContent}
+              onChange={(e) => handleContentChange(e.target.value)}
+              className="h-96 font-mono text-sm resize-none"
+              disabled={isLoading}
+            />
+          </FieldShell>
         </div>
-        <DialogFooter className="px-6 pb-6 pt-2 flex-row gap-2">
+
+        <DialogFooter>
           <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleImport} disabled={!isValidYaml || isLoading} className="min-w-[100px]">
+          <Button onClick={handleImport} disabled={!isValidYaml || isLoading}>
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
             Import
           </Button>
         </DialogFooter>
