@@ -68,7 +68,7 @@ export default function DockerComposeImportDialog({
         <div className="px-6 pb-2 flex flex-col gap-4 items-center">
           <label
             htmlFor="file-upload"
-            className="cursor-pointer flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded-md hover:border-gray-400 transition-colors bg-muted/40 text-sm font-medium mb-1"
+            className="cursor-pointer flex items-center gap-2 px-4 py-2 border border-dashed border-border rounded-md hover:border-border-strong transition-colors bg-muted/40 text-sm font-medium mb-1"
             style={{ width: 'fit-content' }}
           >
             <Upload className="h-4 w-4" />
@@ -105,7 +105,7 @@ services:
       - POSTGRES_PASSWORD=secret`}
             value={yamlContent}
             onChange={e => handleContentChange(e.target.value)}
-            className="h-96 font-mono text-sm resize-none bg-background border border-gray-300 rounded-md px-3 py-2 w-full overflow-auto"
+            className="h-96 font-mono text-sm resize-none bg-background border border-border rounded-md px-3 py-2 w-full overflow-auto"
             style={{ minHeight: '24rem', maxHeight: '24rem' }}
             disabled={isLoading}
           />

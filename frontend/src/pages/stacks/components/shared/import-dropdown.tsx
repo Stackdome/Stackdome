@@ -106,7 +106,7 @@ export function DockerComposeImportDropdown({
     //   id: 'kubernetes',
     //   label: 'Kubernetes YAML',
     //   description: 'Import from Kubernetes manifests',
-    //   icon: <KubernetesIcon className="h-4 w-4 text-blue-500" />,
+    //   icon: <KubernetesIcon className="h-4 w-4 text-info" />,
     //   onClick: onKubernetesImport,
     //   disabled: true, // Coming soon
     // },

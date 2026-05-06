@@ -184,7 +184,7 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 flex items-center px-3 mt-1 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  className="absolute inset-y-0 right-0 flex items-center px-3 mt-1 text-muted-foreground hover:text-foreground focus:outline-none"
                   onClick={() => setShowCAData(!showCAData)}
                 >
                   {showCAData ? (
@@ -220,7 +220,7 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 flex items-center px-3 mt-1 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  className="absolute inset-y-0 right-0 flex items-center px-3 mt-1 text-muted-foreground hover:text-foreground focus:outline-none"
                   onClick={() => setShowSAToken(!showSAToken)}
                 >
                   {showSAToken ? (

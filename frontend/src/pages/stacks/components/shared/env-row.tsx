@@ -85,7 +85,7 @@ export function EnvRow({
     <div
       className={`border-b last:border-b-0 ${
         isOrphanAddon
-          ? "border-l-4 border-l-yellow-500/60 pl-2 bg-yellow-500/5"
+          ? "border-l-4 border-l-warn/60 pl-2 bg-warn/5"
           : isDirty
           ? "border-l-4 border-l-brand bg-brand-bg"
           : ""

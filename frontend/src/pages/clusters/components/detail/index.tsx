@@ -90,7 +90,7 @@ export default function ClusterDetailPage() {
   if (!cluster) return (
     <div className="flex flex-col items-center justify-center h-screen">
       <div className="text-xl font-medium mb-2">Cluster not found</div>
-      <p className="text-gray-500 mb-4">The cluster you're looking for doesn't exist or you don't have access.</p>
+      <p className="text-muted-foreground mb-4">The cluster you're looking for doesn't exist or you don't have access.</p>
       <Button onClick={() => navigate("/clusters")}>
         Back to Clusters
       </Button>
@@ -170,7 +170,7 @@ export default function ClusterDetailPage() {
                   className="font-mono bg-muted"
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center px-3">
-                  <EyeOff className="h-4 w-4 text-gray-400" />
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
             </div>
@@ -194,7 +194,7 @@ export default function ClusterDetailPage() {
                   className="font-mono bg-muted"
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center px-3">
-                  <EyeOff className="h-4 w-4 text-gray-400" />
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
             </div>
