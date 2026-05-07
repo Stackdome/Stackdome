@@ -153,8 +153,22 @@ func mustGetEnv(key string) string {
 // Core Build Functions (Global Namespace)
 // =============================================================================
 
-// Build builds the API server binary
+// BuildFrontend builds the Vite SPA into pkg/web/dist, where it is
+// picked up by //go:embed in pkg/web/web.go.
+func BuildFrontend() error {
+	fmt.Println("Building frontend (pnpm install + build)...")
+	if err := sh.RunV("pnpm", "--prefix", "frontend", "install", "--frozen-lockfile"); err != nil {
+		return fmt.Errorf("pnpm install failed: %w", err)
+	}
+	if err := sh.RunV("pnpm", "--prefix", "frontend", "build"); err != nil {
+		return fmt.Errorf("pnpm build failed: %w", err)
+	}
+	return nil
+}
+
+// Build builds the API server binary.
 func Build() error {
+	mg.Deps(BuildFrontend)
 	fmt.Println("Building API server...")
 	return sh.Run("go", "build", "-o", "bin/api-server", "./cmd")
 }

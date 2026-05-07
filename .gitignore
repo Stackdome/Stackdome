@@ -8,3 +8,8 @@ local_dev_env.yaml
 
 .superpowers/
 .worktrees/
+
+# Vite output. Placeholder kept so //go:embed succeeds before first build.
+pkg/web/dist/*
+!pkg/web/dist/.gitkeep
+!pkg/web/dist/index.html

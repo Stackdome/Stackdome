@@ -14,7 +14,12 @@ generate:
 	rm pkg/api/openapi/go.sum
 .PHONY: generate
 
-binary:
+frontend:
+	pnpm --prefix frontend install --frozen-lockfile
+	pnpm --prefix frontend build
+.PHONY: frontend
+
+binary: frontend
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o bin/stackdome-server cmd/main.go
 .PHONY: binary
 

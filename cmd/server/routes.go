@@ -2,10 +2,12 @@ package server
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api"
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/handlers"
+	"github.com/ashishmax31/stackdome-api-server/pkg/web"
 	"github.com/gorilla/mux"
 )
 
@@ -210,6 +212,15 @@ func (s apiServer) routes() *mux.Router {
 	objectStoreRouter.HandleFunc("/{id}", objectStoreHandler.GetByID).Methods(http.MethodGet)
 	objectStoreRouter.HandleFunc("/{id}", objectStoreHandler.Update).Methods(http.MethodPut)
 	objectStoreRouter.HandleFunc("/{id}", objectStoreHandler.Delete).Methods(http.MethodDelete)
+
+	// Excludes /api/ and /health so unknown paths there reach
+	// NotFoundHandler (JSON 404) instead of returning index.html.
+	mainRouter.PathPrefix("/").
+		MatcherFunc(func(r *http.Request, _ *mux.RouteMatch) bool {
+			p := r.URL.Path
+			return !strings.HasPrefix(p, "/api/") && p != "/health"
+		}).
+		Handler(web.Handler())
 
 	return mainRouter
 }
