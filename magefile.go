@@ -160,6 +160,15 @@ func mustGetEnv(key string) string {
 // gated on type-check errors that exist elsewhere in the repo.
 func BuildFrontend() error {
 	fmt.Println("Building frontend (pnpm install + vite build)...")
+	if _, err := exec.LookPath("node"); err != nil {
+		return fmt.Errorf("node not found on PATH (Node >=20.12 required, see frontend/package.json engines)")
+	}
+	if _, err := exec.LookPath("pnpm"); err != nil {
+		return fmt.Errorf("pnpm not found on PATH.\n" +
+			"frontend/package.json pins pnpm@10. Install via Corepack (ships with Node):\n" +
+			"  corepack enable && (cd frontend && corepack prepare --activate)\n" +
+			"Or install directly: https://pnpm.io/installation")
+	}
 	if err := sh.RunV("pnpm", "--prefix", "frontend", "install", "--frozen-lockfile"); err != nil {
 		return fmt.Errorf("pnpm install failed: %w", err)
 	}
