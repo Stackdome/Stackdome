@@ -38,11 +38,15 @@ export interface SidebarSection {
 
 interface ProjectSidebarProps {
   sections: SidebarSection[];
-  children?: React.ReactNode;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function ProjectSidebar({ sections, children }: ProjectSidebarProps) {
+export function ProjectSidebar({ sections }: ProjectSidebarProps) {
+  const currentUser = getCurrentUser();
+  const navUser = {
+    name: currentUser?.name ?? "",
+    email: currentUser?.email ?? "",
+    avatar: "",
+  };
   return (
     <Sidebar variant="inset">
       <SidebarHeader>
@@ -104,7 +108,7 @@ export function ProjectSidebar({ sections, children }: ProjectSidebarProps) {
         </Accordion>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser />
+        <NavUser user={navUser} />
       </SidebarFooter>
     </Sidebar>
   );

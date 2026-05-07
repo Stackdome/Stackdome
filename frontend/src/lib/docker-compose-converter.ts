@@ -541,10 +541,10 @@ function convertEnvironmentVariables(
   environment: DockerComposeService['environment'],
   serviceName: string,
   warnings: ConversionWarning[]
-): Array<{ name: string; value: string; useSecret: boolean }> {
+): Array<{ name: string; value: string; from: "stack" }> {
   if (!environment) return [];
 
-  const envVars: Array<{ name: string; value: string; useSecret: boolean }> = [];
+  const envVars: Array<{ name: string; value: string; from: "stack" }> = [];
 
   try {
     if (Array.isArray(environment)) {
@@ -557,7 +557,7 @@ function convertEnvironmentVariables(
               envVars.push({
                 name,
                 value: valueParts.join('=') || '',
-                useSecret: false,
+                from: "stack",
               });
             }
           }
@@ -577,7 +577,7 @@ function convertEnvironmentVariables(
         envVars.push({
           name,
           value: String(value ?? ''),
-          useSecret: false,
+          from: "stack",
         });
       });
     }

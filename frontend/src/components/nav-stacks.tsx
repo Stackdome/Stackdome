@@ -1,15 +1,13 @@
 "use client"
 
 import { Link, useLocation } from "react-router-dom"
-import { Layers, Plus } from "lucide-react"
+import { Layers } from "lucide-react"
 
 import {
-  SidebarGroup,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { cn } from "@/lib/utils"
 
 export function NavStacks() {
   const location = useLocation();

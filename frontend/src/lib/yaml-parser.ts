@@ -1,5 +1,6 @@
 import { load } from "js-yaml";
-import type { StackCompose } from "@/types/stack";
+
+type StackCompose = Record<string, any>;
 
 // Sample stack configuration for demo purposes
 const SAMPLE_STACK = `

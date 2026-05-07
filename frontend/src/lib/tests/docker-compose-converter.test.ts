@@ -97,7 +97,7 @@ describe('convertDockerComposeToStackData', () => {
     expect(resource.execution_config.environment_variables[0]).toEqual({
       name: 'NODE_ENV',
       value: 'production',
-      useSecret: false,
+      from: 'stack',
     });
   });
 
@@ -449,17 +449,17 @@ describe('convertServiceToStackResource', () => {
     expect(result.data!.execution_config.environment_variables[0]).toEqual({
       name: 'NODE_ENV',
       value: 'production',
-      useSecret: false,
+      from: 'stack',
     });
     expect(result.data!.execution_config.environment_variables[2]).toEqual({
       name: 'DEBUG',
       value: '',
-      useSecret: false,
+      from: 'stack',
     });
     expect(result.data!.execution_config.environment_variables[3]).toEqual({
       name: 'FEATURE_FLAG',
       value: '',
-      useSecret: false,
+      from: 'stack',
     });
   });
 
