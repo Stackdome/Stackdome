@@ -1,4 +1,4 @@
-import { Route, RouterProvider, createBrowserRouter, createRoutesFromElements } from "react-router-dom"
+import { Navigate, Route, RouterProvider, createBrowserRouter, createRoutesFromElements } from "react-router-dom"
 import Login from "@/pages/login"
 import Signup from "@/pages/signup"
 import StacksPage from "@/pages/stacks/components/list"
@@ -11,7 +11,7 @@ import DomainsPage from "@/pages/domains"
 import AddonsPage from "@/pages/addons"
 import PostgresFormPage from "@/pages/addons/components/postgres-create-page"
 import { StackProvider } from "@/pages/stacks/contexts/stack-context"
-import { logoutAndRedirect } from "@/helpers/common"
+import { isUserLoggedIn, logoutAndRedirect } from "@/helpers/common"
 import { AppLayout } from "@/components/app-layout"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/contexts/theme-provider"
@@ -21,11 +21,18 @@ const Logout = () => {
   return null;
 }
 
+const RequireAuth = ({ children }: { children: React.ReactNode }) => {
+  if (!isUserLoggedIn()) {
+    return <Navigate to="/sign-in" replace />;
+  }
+  return <>{children}</>;
+}
+
 // Create router with routes
 const router = createBrowserRouter(
   createRoutesFromElements(
     <>
-      <Route element={<AppLayout />}>
+      <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
         <Route path="/" element={<StacksPage />} />
         <Route path="/dashboard" element={<StacksPage />} />
         <Route path="/stacks" element={<StacksPage />} />

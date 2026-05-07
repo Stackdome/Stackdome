@@ -49,10 +49,24 @@ func NewAPIServer(env environment.EnvImpl) Server {
 	// Setup authentication handlers.
 	// Currently this uses jwt as the default auth mechanism - Reads the jwt token from the authorization header and sets
 	// the jwt payload in the request context.
-	mainHandler = setupAuthenticationMiddleWare(
-		mainHandler,
-		env,
-	)
+	authProtected := setupAuthenticationMiddleWare(mainHandler, env)
+
+	// Auth applies only to /api/* paths. SPA assets, react-router routes,
+	// and /health bypass auth and reach mainRouter directly.
+	//
+	// Upstream removeTrailingSlash strips "/" → "", which leaves the path
+	// empty for the SPA route. Restore "/" here so http.ServeFileFS sees a
+	// valid absolute path.
+	mainHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			authProtected.ServeHTTP(w, r)
+			return
+		}
+		if r.URL.Path == "" {
+			r.URL.Path = "/"
+		}
+		mainRouter.ServeHTTP(w, r)
+	})
 
 	// Setup CORS
 	mainHandler = gorillahandlers.CORS(

@@ -100,4 +100,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Redirect to /sign-in when the server tells us the session is invalid.
+// Skipped on the auth pages themselves so a wrong-password 403 there
+// shows an inline error instead of a refresh loop.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const path = window.location.pathname;
+    const onAuthPage = path === '/sign-in' || path === '/sign-up';
+    if ((status === 401 || status === 403) && !onAuthPage) {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUser');
+      window.location.href = '/sign-in';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;

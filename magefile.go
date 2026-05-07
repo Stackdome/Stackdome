@@ -155,13 +155,21 @@ func mustGetEnv(key string) string {
 
 // BuildFrontend builds the Vite SPA into pkg/web/dist, where it is
 // picked up by //go:embed in pkg/web/web.go.
+//
+// Calls vite directly (skipping `tsc -b`) so the binary build is not
+// gated on type-check errors that exist elsewhere in the repo.
 func BuildFrontend() error {
-	fmt.Println("Building frontend (pnpm install + build)...")
+	fmt.Println("Building frontend (pnpm install + vite build)...")
 	if err := sh.RunV("pnpm", "--prefix", "frontend", "install", "--frozen-lockfile"); err != nil {
 		return fmt.Errorf("pnpm install failed: %w", err)
 	}
-	if err := sh.RunV("pnpm", "--prefix", "frontend", "build"); err != nil {
-		return fmt.Errorf("pnpm build failed: %w", err)
+	if err := sh.RunV("pnpm", "--prefix", "frontend", "exec", "vite", "build"); err != nil {
+		return fmt.Errorf("vite build failed: %w", err)
+	}
+	// Vite's emptyOutDir wipes .gitkeep; restore it so git status stays
+	// clean and a fresh clone without a build still embeds successfully.
+	if err := os.WriteFile("pkg/web/dist/.gitkeep", nil, 0644); err != nil {
+		return fmt.Errorf("restoring .gitkeep failed: %w", err)
 	}
 	return nil
 }

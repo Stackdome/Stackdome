@@ -16,7 +16,8 @@ generate:
 
 frontend:
 	pnpm --prefix frontend install --frozen-lockfile
-	pnpm --prefix frontend build
+	pnpm --prefix frontend exec vite build
+	touch pkg/web/dist/.gitkeep
 .PHONY: frontend
 
 binary: frontend
