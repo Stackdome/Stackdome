@@ -20,12 +20,15 @@ frontend:
 	touch pkg/web/dist/.gitkeep
 .PHONY: frontend
 
-binary: frontend
+binary:
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o bin/stackdome-server cmd/main.go
 .PHONY: binary
 
+all: frontend binary
+.PHONY: all
+
 image: GOOS=linux
-image: binary
+image: frontend binary
 	@if [ -z "$(EXTERNAL_IMAGE_REGISTRY)" ]; then \
 	  echo "Error: EXTERNAL_IMAGE_REGISTRY is not set"; \
 	  exit 1; \
