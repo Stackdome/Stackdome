@@ -91,7 +91,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsIdPut**](docs/DefaultApi.md#apiv1organizationsidput) | **Put** /api/v1/organizations/{id} | Update an organization
 *DefaultApi* | [**ApiV1OrganizationsOrgIdAdminsGet**](docs/DefaultApi.md#apiv1organizationsorgidadminsget) | **Get** /api/v1/organizations/{org_id}/admins | List organization admins
 *DefaultApi* | [**ApiV1OrganizationsOrgIdAdminsPost**](docs/DefaultApi.md#apiv1organizationsorgidadminspost) | **Post** /api/v1/organizations/{org_id}/admins | Promote a user to organization admin
-*DefaultApi* | [**ApiV1OrganizationsOrgIdAdminsUserIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidadminsuseriddelete) | **Delete** /api/v1/organizations/{org_id}/admins/{user_id} | Demote an organization admin
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAdminsUserIdDemotePost**](docs/DefaultApi.md#apiv1organizationsorgidadminsuseriddemotepost) | **Post** /api/v1/organizations/{org_id}/admins/{user_id}/demote | Demote an organization admin
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesget) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries | List all image registries for a cluster
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesiddelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Delete an image registry
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesidget) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Get a specific image registry
@@ -155,6 +155,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPut**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameworkspaceusersidput) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id} | Update a workspace user
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameworkspaceuserspost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users | Create a new workspace user
 *DefaultApi* | [**ApiV1OrganizationsOrgIdUsersGet**](docs/DefaultApi.md#apiv1organizationsorgidusersget) | **Get** /api/v1/organizations/{org_id}/users | List all users in an organization
+*DefaultApi* | [**ApiV1TeamRolesGet**](docs/DefaultApi.md#apiv1teamrolesget) | **Get** /api/v1/team-roles | List available team membership roles
 *DefaultApi* | [**ApiV1UserSignupPost**](docs/DefaultApi.md#apiv1usersignuppost) | **Post** /api/v1/user-signup | Create new user
 *DefaultApi* | [**ApiV1UsersCurrentGet**](docs/DefaultApi.md#apiv1userscurrentget) | **Get** /api/v1/users/current | Get the current authenticated user
 *DefaultApi* | [**ApiV1UsersCurrentTeamsGet**](docs/DefaultApi.md#apiv1userscurrentteamsget) | **Get** /api/v1/users/current/teams | List teams for the current authenticated user
@@ -192,6 +193,7 @@ Class | Method | HTTP request | Description
  - [ClusterImageRegistryStatus](docs/ClusterImageRegistryStatus.md)
  - [ClusterList](docs/ClusterList.md)
  - [Condition](docs/Condition.md)
+ - [DemoteAdminRequest](docs/DemoteAdminRequest.md)
  - [DomainName](docs/DomainName.md)
  - [EnvVar](docs/EnvVar.md)
  - [EnvVarFromSecret](docs/EnvVarFromSecret.md)
@@ -279,6 +281,8 @@ Class | Method | HTTP request | Description
  - [TeamList](docs/TeamList.md)
  - [TeamMembership](docs/TeamMembership.md)
  - [TeamMembershipList](docs/TeamMembershipList.md)
+ - [TeamRole](docs/TeamRole.md)
+ - [TeamRoleList](docs/TeamRoleList.md)
  - [TeamUpdateRequest](docs/TeamUpdateRequest.md)
  - [UpdateTeamMemberRoleRequest](docs/UpdateTeamMemberRoleRequest.md)
  - [User](docs/User.md)

@@ -20,6 +20,7 @@ func (r UserRole) String() string {
 }
 
 const (
+	NoRole        UserRole = ""
 	OrgAdminRole  UserRole = "OrgAdmin"
 	OrgMemberRole UserRole = "OrgMember"
 )

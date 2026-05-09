@@ -241,20 +241,21 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:         te.Logger,
 	})
 
-	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
-		OrganisationDomainService: organisationDomainService,
-		StackQueryService:         te.Services.StackService,
-		SessionFactory:            te.DBSession,
-		PolicyManager:             te.ResourceAccessPolicyManager,
-		Logger:                    te.Logger,
-		Permissions:               te.PermissionService,
-	})
-
 	teamService := services.NewTeamService(services.TeamServiceSpec{
 		SessionFactory: te.DBSession,
 		PolicyManager:  te.ResourceAccessPolicyManager,
 		Permissions:    te.PermissionService,
 		Logger:         te.Logger,
+	})
+
+	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
+		OrganisationDomainService: organisationDomainService,
+		StackQueryService:         te.Services.StackService,
+		SessionFactory:            te.DBSession,
+		TeamService:               teamService,
+		PolicyManager:             te.ResourceAccessPolicyManager,
+		Logger:                    te.Logger,
+		Permissions:               te.PermissionService,
 	})
 
 	secretService := services.NewSecretService(services.SecretServiceSpec{

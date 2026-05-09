@@ -36,6 +36,7 @@ docs/ClusterImageRegistryStatus.md
 docs/ClusterList.md
 docs/Condition.md
 docs/DefaultApi.md
+docs/DemoteAdminRequest.md
 docs/DomainName.md
 docs/EnvVar.md
 docs/EnvVarFromSecret.md
@@ -123,6 +124,8 @@ docs/TeamCreateRequest.md
 docs/TeamList.md
 docs/TeamMembership.md
 docs/TeamMembershipList.md
+docs/TeamRole.md
+docs/TeamRoleList.md
 docs/TeamUpdateRequest.md
 docs/UpdateTeamMemberRoleRequest.md
 docs/User.md
@@ -177,6 +180,7 @@ model_cluster_image_registry_state.go
 model_cluster_image_registry_status.go
 model_cluster_list.go
 model_condition.go
+model_demote_admin_request.go
 model_domain_name.go
 model_env_var.go
 model_env_var_from_secret.go
@@ -264,6 +268,8 @@ model_team_create_request.go
 model_team_list.go
 model_team_membership.go
 model_team_membership_list.go
+model_team_role.go
+model_team_role_list.go
 model_team_update_request.go
 model_update_team_member_role_request.go
 model_user.go

@@ -1,11 +1,11 @@
-# UserRole
+# TeamRole
 
 ## Enum
 
 
-* `ORG_ADMIN` (value: `"OrgAdmin"`)
+* `DEVELOPER` (value: `"Developer"`)
 
-* `ORG_MEMBER` (value: `"OrgMember"`)
+* `VIEWER` (value: `"Viewer"`)
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

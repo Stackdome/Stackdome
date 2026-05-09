@@ -37,6 +37,7 @@ func (s apiServer) routes() *mux.Router {
 
 	organizationHandler := handlers.NewOrganisationHandler(handlers.OrganisationHandlerSpec{
 		OrganisationService: services.OrganisationService,
+		TeamService:         services.TeamService,
 	})
 
 	teamHandler := handlers.NewTeamHandler(handlers.TeamHandlerSpec{
@@ -100,16 +101,15 @@ func (s apiServer) routes() *mux.Router {
 		TeamService:        services.TeamService,
 	})
 
-	// authenticationMiddleware := auth.NewAuthMiddleware(services.UserService)
-
 	apiV1Router := mainRouter.PathPrefix("/api/v1").Subrouter()
+
+	apiV1Router.HandleFunc("/team-roles", teamHandler.ListTeamRoles).Methods(http.MethodGet)
 
 	userSignupRouter := apiV1Router.PathPrefix("/user-signup").Subrouter()
 	userSignupRouter.HandleFunc("", userHandler.Signup).Methods(http.MethodPost)
 
 	userRouter := apiV1Router.PathPrefix("/users").Subrouter()
 	organizationsRouter := apiV1Router.PathPrefix("/organizations").Subrouter()
-	// organizationsRouter.Use(authenticationMiddleware.AuthenticateUser)
 	organizationsRouter.HandleFunc("/{id}", organizationHandler.GetByID).Methods(http.MethodGet)
 	organizationsRouter.HandleFunc("/{id}", organizationHandler.Update).Methods(http.MethodPut)
 
@@ -122,7 +122,6 @@ func (s apiServer) routes() *mux.Router {
 
 	// Cluster routes (org-scoped)
 	clusterRouter := apiV1Router.PathPrefix("/organizations/{org_id}/clusters").Subrouter()
-	// clusterRouter.Use(authenticationMiddleware.AuthenticateUser)
 	clusterRouter.HandleFunc("", clusterHandler.ListClustersForOrg).Methods(http.MethodGet)
 	clusterRouter.HandleFunc("", clusterHandler.AddClusterForOrg).Methods(http.MethodPost)
 	clusterRouter.HandleFunc("/{id}", clusterHandler.GetClusterForOrg).Methods(http.MethodGet)
@@ -135,7 +134,6 @@ func (s apiServer) routes() *mux.Router {
 	clusterRouter.HandleFunc("/{cluster_id}/image_registries/{id}", clusterImageRegistryHandler.DeleteRegistry).Methods(http.MethodDelete)
 
 	authenticatedUserRouter := userRouter.NewRoute().Subrouter()
-	// authenticatedUserRouter.Use(authenticationMiddleware.AuthenticateUser)
 	authenticatedUserRouter.HandleFunc("/current", userHandler.GetCurrentUser).Methods(http.MethodGet)
 	authenticatedUserRouter.HandleFunc("/current/teams", teamHandler.ListCurrentUserTeams).Methods(http.MethodGet)
 	authenticatedUserRouter.HandleFunc("/{id}", userHandler.Get).Methods(http.MethodGet)
@@ -155,6 +153,7 @@ func (s apiServer) routes() *mux.Router {
 			RefreshTokenStore: s.environment.Environment().RefreshTokenStore,
 			JWTSecret:         []byte(s.environment.Environment().Config.JwtSecret),
 			JWTClaimsBuilder:  auth.NewJWTClaimsBuilder(),
+			Logger:            logger,
 		})
 		authenticationRouter.HandleFunc("/github", githubAuthHandler.HandleInitiate).Methods(http.MethodGet)
 		authenticationRouter.HandleFunc("/github/callback", githubAuthHandler.HandleCallback).Methods(http.MethodGet)
@@ -187,7 +186,7 @@ func (s apiServer) routes() *mux.Router {
 	// OrgAdmin management routes
 	organizationsRouter.HandleFunc("/{org_id}/admins", organizationHandler.PromoteToAdmin).Methods(http.MethodPost)
 	organizationsRouter.HandleFunc("/{org_id}/admins", organizationHandler.ListAdmins).Methods(http.MethodGet)
-	organizationsRouter.HandleFunc("/{org_id}/admins/{user_id}", organizationHandler.DemoteAdmin).Methods(http.MethodDelete)
+	organizationsRouter.HandleFunc("/{org_id}/admins/{user_id}/demote", organizationHandler.DemoteAdmin).Methods(http.MethodPost)
 
 	// Team-scoped resource routes
 	teamResourceRouter := teamRouter.PathPrefix("/{team_name}").Subrouter()

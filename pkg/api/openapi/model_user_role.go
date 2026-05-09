@@ -21,16 +21,12 @@ type UserRole string
 // List of UserRole
 const (
 	ORG_ADMIN  UserRole = "OrgAdmin"
-	DEVELOPER  UserRole = "Developer"
-	VIEWER     UserRole = "Viewer"
 	ORG_MEMBER UserRole = "OrgMember"
 )
 
 // All allowed values of UserRole enum
 var AllowedUserRoleEnumValues = []UserRole{
 	"OrgAdmin",
-	"Developer",
-	"Viewer",
 	"OrgMember",
 }
 

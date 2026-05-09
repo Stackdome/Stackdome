@@ -282,12 +282,14 @@ func (s *secretService) ListSecretsForCurrentUser(ctx context.Context, orgID str
 		return nil, serr
 	}
 
-	teamIDs := make([]string, len(memberships))
-	for i, m := range memberships {
-		teamIDs[i] = m.TeamID
+	var allowedTeamIDs []string
+	for _, m := range memberships {
+		if permErr := s.permissions.Check(ctx, m.TeamID, auth.ResourceSecrets, "", auth.ActionList); permErr == nil {
+			allowedTeamIDs = append(allowedTeamIDs, m.TeamID)
+		}
 	}
 
-	return s.secretStore.ListByTeamIDs(ctx, teamIDs)
+	return s.secretStore.ListByTeamIDs(ctx, allowedTeamIDs)
 }
 
 func (s *secretService) ListByUser(ctx context.Context, organisationID, userID string) ([]*models.Secret, *errors.ServiceError) {

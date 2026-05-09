@@ -10,6 +10,7 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/golang-jwt/jwt"
@@ -34,6 +35,7 @@ type GitHubOAuthHandlerSpec struct {
 	RefreshTokenStore stores.RefreshTokenStore
 	JWTSecret         []byte
 	JWTClaimsBuilder  JWTClaimsBuilder
+	Logger            logger.Logger
 }
 
 type gitHubOAuthHandler struct {
@@ -45,6 +47,7 @@ type gitHubOAuthHandler struct {
 	refreshTokenStore stores.RefreshTokenStore
 	jwtSecret         []byte
 	jwtClaimsBuilder  JWTClaimsBuilder
+	logger            logger.Logger
 }
 
 func NewGitHubOAuthHandler(spec GitHubOAuthHandlerSpec) *gitHubOAuthHandler {
@@ -57,6 +60,7 @@ func NewGitHubOAuthHandler(spec GitHubOAuthHandlerSpec) *gitHubOAuthHandler {
 		refreshTokenStore: spec.RefreshTokenStore,
 		jwtSecret:         spec.JWTSecret,
 		jwtClaimsBuilder:  spec.JWTClaimsBuilder,
+		logger:            spec.Logger,
 	}
 }
 
@@ -77,6 +81,10 @@ func (h *gitHubOAuthHandler) HandleInitiate(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	state := hex.EncodeToString(stateBytes)
+
+	if err := h.oauthStateStore.DeleteExpired(r.Context(), oauthStateExpiry); err != nil {
+		h.logger.Errorf("failed to cleanup expired oauth states: %s", err.Error())
+	}
 
 	oauthState := &models.OAuthState{
 		State:     state,

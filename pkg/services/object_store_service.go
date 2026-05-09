@@ -282,12 +282,14 @@ func (s *objectStoreService) ListObjectStoresForCurrentUser(ctx context.Context,
 		return nil, serr
 	}
 
-	teamIDs := make([]string, len(memberships))
-	for i, m := range memberships {
-		teamIDs[i] = m.TeamID
+	var allowedTeamIDs []string
+	for _, m := range memberships {
+		if permErr := s.permissions.Check(ctx, m.TeamID, auth.ResourceObjectStores, "", auth.ActionList); permErr == nil {
+			allowedTeamIDs = append(allowedTeamIDs, m.TeamID)
+		}
 	}
 
-	return s.objectStoreStore.ListByTeamIDs(ctx, teamIDs)
+	return s.objectStoreStore.ListByTeamIDs(ctx, allowedTeamIDs)
 }
 
 func (s *objectStoreService) ValidateObjectStoreExists(ctx context.Context, objectStoreID string) (bool, *errors.ServiceError) {

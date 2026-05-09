@@ -5,11 +5,16 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"gorm.io/gorm"
 )
 
 type atomicExecutor struct {
 	sessionFactory db.SessionFactory
+}
+
+func NewAtomicExecutor(sf db.SessionFactory) stores.AtomicExecutor {
+	return &atomicExecutor{sessionFactory: sf}
 }
 
 func (a *atomicExecutor) WithTransaction(ctx context.Context, fn func(ctx context.Context) *errors.ServiceError) *errors.ServiceError {

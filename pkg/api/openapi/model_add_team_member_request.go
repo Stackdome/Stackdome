@@ -17,16 +17,15 @@ import (
 // AddTeamMemberRequest struct for AddTeamMemberRequest
 type AddTeamMemberRequest struct {
 	// The ID of the user to add
-	UserId string `json:"user_id"`
-	// The role for the team member
-	Role string `json:"role"`
+	UserId string   `json:"user_id"`
+	Role   TeamRole `json:"role"`
 }
 
 // NewAddTeamMemberRequest instantiates a new AddTeamMemberRequest object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewAddTeamMemberRequest(userId string, role string) *AddTeamMemberRequest {
+func NewAddTeamMemberRequest(userId string, role TeamRole) *AddTeamMemberRequest {
 	this := AddTeamMemberRequest{}
 	this.UserId = userId
 	this.Role = role
@@ -66,9 +65,9 @@ func (o *AddTeamMemberRequest) SetUserId(v string) {
 }
 
 // GetRole returns the Role field value
-func (o *AddTeamMemberRequest) GetRole() string {
+func (o *AddTeamMemberRequest) GetRole() TeamRole {
 	if o == nil {
-		var ret string
+		var ret TeamRole
 		return ret
 	}
 
@@ -77,7 +76,7 @@ func (o *AddTeamMemberRequest) GetRole() string {
 
 // GetRoleOk returns a tuple with the Role field value
 // and a boolean to check if the value has been set.
-func (o *AddTeamMemberRequest) GetRoleOk() (*string, bool) {
+func (o *AddTeamMemberRequest) GetRoleOk() (*TeamRole, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -85,7 +84,7 @@ func (o *AddTeamMemberRequest) GetRoleOk() (*string, bool) {
 }
 
 // SetRole sets field value
-func (o *AddTeamMemberRequest) SetRole(v string) {
+func (o *AddTeamMemberRequest) SetRole(v TeamRole) {
 	o.Role = v
 }
 

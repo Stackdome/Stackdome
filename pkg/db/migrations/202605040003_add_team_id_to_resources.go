@@ -22,7 +22,7 @@ func addTeamIDToResources() *gormigrate.Migration {
 
 			for _, table := range tables {
 				addCol := fmt.Sprintf(
-					"ALTER TABLE %s ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id);",
+					"ALTER TABLE %s ADD COLUMN IF NOT EXISTS team_id UUID NOT NULL REFERENCES teams(id);",
 					table,
 				)
 				if err := tx.Exec(addCol).Error; err != nil {

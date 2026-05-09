@@ -280,20 +280,21 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:         d.Logger,
 	})
 
-	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
-		OrganisationDomainService: organisationDomainService,
-		StackQueryService:         d.Services.StackService,
-		SessionFactory:            d.DBSession,
-		PolicyManager:             d.ResourceAccessPolicyManager,
-		Permissions:               d.PermissionService,
-		Logger:                    d.Logger,
-	})
-
 	teamService := services.NewTeamService(services.TeamServiceSpec{
 		SessionFactory: d.DBSession,
 		PolicyManager:  d.ResourceAccessPolicyManager,
 		Permissions:    d.PermissionService,
 		Logger:         d.Logger,
+	})
+
+	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
+		OrganisationDomainService: organisationDomainService,
+		StackQueryService:         d.Services.StackService,
+		SessionFactory:            d.DBSession,
+		TeamService:               teamService,
+		PolicyManager:             d.ResourceAccessPolicyManager,
+		Permissions:               d.PermissionService,
+		Logger:                    d.Logger,
 	})
 
 	secretService := services.NewSecretService(services.SecretServiceSpec{

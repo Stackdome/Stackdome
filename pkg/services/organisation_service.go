@@ -20,7 +20,7 @@ type OrganisationService interface {
 	Update(ctx context.Context, ID string, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
 
 	PromoteToOrgAdmin(ctx context.Context, orgID, userID string) *errors.ServiceError
-	DemoteOrgAdmin(ctx context.Context, orgID, userID string) *errors.ServiceError
+	DemoteOrgAdmin(ctx context.Context, orgID, userID, teamID string, role models.TeamRole) *errors.ServiceError
 	ListOrgAdmins(ctx context.Context, orgID string) ([]*models.User, *errors.ServiceError)
 }
 
@@ -29,6 +29,8 @@ type organisationService struct {
 	organisationDomainService OrganisationDomainsService
 	stackQueryService         StackQueryService
 	userStore                 stores.UserStore
+	teamService               TeamService
+	atomicExecutor            stores.AtomicExecutor
 	policyMgr                 resourceaccess.ResourceAccessPolicyManager
 	permissions               auth.PermissionService
 	logger                    logger.Logger
@@ -44,6 +46,8 @@ func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
 		}),
 		stackQueryService:         spec.StackQueryService,
 		organisationDomainService: spec.OrganisationDomainService,
+		teamService:               spec.TeamService,
+		atomicExecutor:            pgstore.NewAtomicExecutor(spec.SessionFactory),
 		policyMgr:                 spec.PolicyManager,
 		permissions:               spec.Permissions,
 		logger:                    spec.Logger,
@@ -54,6 +58,7 @@ type OrganisationServiceSpec struct {
 	SessionFactory            db.SessionFactory
 	OrganisationDomainService OrganisationDomainsService
 	StackQueryService         StackQueryService
+	TeamService               TeamService
 	PolicyManager             resourceaccess.ResourceAccessPolicyManager
 	Permissions               auth.PermissionService
 	Logger                    logger.Logger
@@ -189,6 +194,10 @@ func (s *organisationService) PromoteToOrgAdmin(ctx context.Context, orgID, user
 		return errors.BadRequest("user does not belong to this organisation")
 	}
 
+	if user.IsOrgAdmin() {
+		return errors.BadRequest("user is already an OrgAdmin")
+	}
+
 	user.Role = models.OrgAdminRole
 	if _, serr := s.userStore.Update(ctx, userID, user); serr != nil {
 		return serr
@@ -202,7 +211,7 @@ func (s *organisationService) PromoteToOrgAdmin(ctx context.Context, orgID, user
 	return nil
 }
 
-func (s *organisationService) DemoteOrgAdmin(ctx context.Context, orgID, userID string) *errors.ServiceError {
+func (s *organisationService) DemoteOrgAdmin(ctx context.Context, orgID, userID, teamID string, role models.TeamRole) *errors.ServiceError {
 	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceOrgs, orgID, auth.ActionWrite); permErr != nil {
 		return permErr
 	}
@@ -224,17 +233,28 @@ func (s *organisationService) DemoteOrgAdmin(ctx context.Context, orgID, userID 
 		return errors.BadRequest("user does not belong to this organisation")
 	}
 
-	user.Role = ""
-	if _, serr := s.userStore.Update(ctx, userID, user); serr != nil {
-		return serr
+	if !user.IsOrgAdmin() {
+		return errors.BadRequest("user is not an OrgAdmin")
 	}
 
-	if err := s.policyMgr.RemoveGroupingPolicy(userID, string(models.OrgAdminRole), orgID); err != nil {
-		s.logger.Errorf("failed to remove OrgAdmin grouping: %s", err.Error())
-		return errors.InternalServerError("failed to remove OrgAdmin grouping")
-	}
+	return s.atomicExecutor.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		user.Role = models.NoRole
+		if _, serr := s.userStore.Update(txCtx, userID, user); serr != nil {
+			return serr
+		}
 
-	return nil
+		if _, serr := s.teamService.InternalAddMember(txCtx, teamID, userID, role); serr != nil {
+			s.logger.Errorf("failed to add demoted user to team: %s", serr.Error())
+			return serr
+		}
+
+		if err := s.policyMgr.RemoveGroupingPolicy(userID, string(models.OrgAdminRole), orgID); err != nil {
+			s.logger.Errorf("failed to remove OrgAdmin grouping: %s", err.Error())
+			return errors.InternalServerError("failed to remove OrgAdmin grouping")
+		}
+
+		return nil
+	})
 }
 
 func (s *organisationService) ListOrgAdmins(ctx context.Context, orgID string) ([]*models.User, *errors.ServiceError) {

@@ -1540,27 +1540,35 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdAdminsPostExecute(r ApiApiV1O
 	return localVarHTTPResponse, nil
 }
 
-type ApiApiV1OrganizationsOrgIdAdminsUserIdDeleteRequest struct {
-	ctx        context.Context
-	ApiService *DefaultApiService
-	orgId      string
-	userId     string
+type ApiApiV1OrganizationsOrgIdAdminsUserIdDemotePostRequest struct {
+	ctx                context.Context
+	ApiService         *DefaultApiService
+	orgId              string
+	userId             string
+	demoteAdminRequest *DemoteAdminRequest
 }
 
-func (r ApiApiV1OrganizationsOrgIdAdminsUserIdDeleteRequest) Execute() (*http.Response, error) {
-	return r.ApiService.ApiV1OrganizationsOrgIdAdminsUserIdDeleteExecute(r)
+func (r ApiApiV1OrganizationsOrgIdAdminsUserIdDemotePostRequest) DemoteAdminRequest(demoteAdminRequest DemoteAdminRequest) ApiApiV1OrganizationsOrgIdAdminsUserIdDemotePostRequest {
+	r.demoteAdminRequest = &demoteAdminRequest
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdAdminsUserIdDemotePostRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdAdminsUserIdDemotePostExecute(r)
 }
 
 /*
-ApiV1OrganizationsOrgIdAdminsUserIdDelete Demote an organization admin
+ApiV1OrganizationsOrgIdAdminsUserIdDemotePost Demote an organization admin
+
+Demotes an OrgAdmin and places them in the specified team with the given role (defaults to Viewer).
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param orgId The ID of the organization
 	@param userId The ID of the user
-	@return ApiApiV1OrganizationsOrgIdAdminsUserIdDeleteRequest
+	@return ApiApiV1OrganizationsOrgIdAdminsUserIdDemotePostRequest
 */
-func (a *DefaultApiService) ApiV1OrganizationsOrgIdAdminsUserIdDelete(ctx context.Context, orgId string, userId string) ApiApiV1OrganizationsOrgIdAdminsUserIdDeleteRequest {
-	return ApiApiV1OrganizationsOrgIdAdminsUserIdDeleteRequest{
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAdminsUserIdDemotePost(ctx context.Context, orgId string, userId string) ApiApiV1OrganizationsOrgIdAdminsUserIdDemotePostRequest {
+	return ApiApiV1OrganizationsOrgIdAdminsUserIdDemotePostRequest{
 		ApiService: a,
 		ctx:        ctx,
 		orgId:      orgId,
@@ -1569,28 +1577,31 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdAdminsUserIdDelete(ctx contex
 }
 
 // Execute executes the request
-func (a *DefaultApiService) ApiV1OrganizationsOrgIdAdminsUserIdDeleteExecute(r ApiApiV1OrganizationsOrgIdAdminsUserIdDeleteRequest) (*http.Response, error) {
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdAdminsUserIdDemotePostExecute(r ApiApiV1OrganizationsOrgIdAdminsUserIdDemotePostRequest) (*http.Response, error) {
 	var (
-		localVarHTTPMethod = http.MethodDelete
+		localVarHTTPMethod = http.MethodPost
 		localVarPostBody   interface{}
 		formFiles          []formFile
 	)
 
-	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdAdminsUserIdDelete")
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdAdminsUserIdDemotePost")
 	if err != nil {
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/admins/{user_id}"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/admins/{user_id}/demote"
 	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"user_id"+"}", url.PathEscape(parameterToString(r.userId, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
+	if r.demoteAdminRequest == nil {
+		return nil, reportError("demoteAdminRequest is required and must be specified")
+	}
 
 	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{}
+	localVarHTTPContentTypes := []string{"application/json"}
 
 	// set Content-Type header
 	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
@@ -1606,6 +1617,8 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdAdminsUserIdDeleteExecute(r A
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	// body params
+	localVarPostBody = r.demoteAdminRequest
 	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
 	if err != nil {
 		return nil, err
@@ -9269,6 +9282,106 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdUsersGetExecute(r ApiApiV1Org
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1TeamRolesGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+}
+
+func (r ApiApiV1TeamRolesGetRequest) Execute() (*TeamRoleList, *http.Response, error) {
+	return r.ApiService.ApiV1TeamRolesGetExecute(r)
+}
+
+/*
+ApiV1TeamRolesGet List available team membership roles
+
+Returns the list of roles that can be assigned to team members.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiApiV1TeamRolesGetRequest
+*/
+func (a *DefaultApiService) ApiV1TeamRolesGet(ctx context.Context) ApiApiV1TeamRolesGetRequest {
+	return ApiApiV1TeamRolesGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+	}
+}
+
+// Execute executes the request
+//
+//	@return TeamRoleList
+func (a *DefaultApiService) ApiV1TeamRolesGetExecute(r ApiApiV1TeamRolesGetRequest) (*TeamRoleList, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *TeamRoleList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1TeamRolesGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/team-roles"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

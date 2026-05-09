@@ -115,33 +115,6 @@ func (h *stackHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	handleStreamOrGet(w, r, cfg)
 }
 
-// func (h *stackHandler) ListByUser(w http.ResponseWriter, r *http.Request) {
-// 	cfg := &handlerConfig{
-// 		Action: func() (interface{}, *errors.ServiceError) {
-// 			ctx := r.Context()
-// 			teamID, serr := resolveTeamID(r, h.teamService)
-// 			if serr != nil {
-// 				return nil, serr
-// 			}
-// 			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
-// 			if err != nil {
-// 				return nil, errors.Unauthorized("failed to fetch current user")
-// 			}
-// 			orgID := mux.Vars(r)["org_id"]
-// 			objs, serr := h.stackService.GetStacksByUserID(ctx, teamID, orgID, currentUser.ID)
-// 			if serr != nil {
-// 				return nil, serr
-// 			}
-// 			listResp := openapi.StackList{
-// 				Items: presenters.PresentStackList(objs),
-// 				Total: ptr.To(int32(len(objs))),
-// 			}
-// 			return listResp, nil
-// 		},
-// 	}
-// 	handleList(w, r, cfg)
-// }
-
 func (h *stackHandler) ListByOrgID(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {

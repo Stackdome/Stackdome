@@ -24,6 +24,7 @@ type TeamService interface {
 	UpdateTeam(ctx context.Context, id string, team *models.Team) (*models.Team, *errors.ServiceError)
 	DeleteTeam(ctx context.Context, id string) *errors.ServiceError
 	InternalCreateDefaultTeam(ctx context.Context, orgID string) (*models.Team, *errors.ServiceError)
+	InternalAddMember(ctx context.Context, teamID, userID string, role models.TeamRole) (*models.TeamMembership, *errors.ServiceError)
 
 	AddMember(ctx context.Context, teamID, userID string, role models.TeamRole) (*models.TeamMembership, *errors.ServiceError)
 	RemoveMember(ctx context.Context, membershipID string) *errors.ServiceError
@@ -274,6 +275,47 @@ func (s *teamService) checkTeamDependencies(ctx context.Context, teamID string) 
 	}
 
 	return nil
+}
+
+func (s *teamService) InternalAddMember(ctx context.Context, teamID, userID string, role models.TeamRole) (*models.TeamMembership, *errors.ServiceError) {
+	exists, serr := s.membershipStore.GetByTeamAndUser(ctx, teamID, userID)
+	if serr != nil && serr.Code != errors.ErrorNotFound {
+		return nil, serr
+	}
+	if exists != nil {
+		return exists, nil
+	}
+
+	team, serr := s.teamStore.GetByID(ctx, teamID)
+	if serr != nil {
+		return nil, serr
+	}
+
+	if role != models.DeveloperRole && role != models.ViewerRole {
+		return nil, errors.BadRequest("team membership role must be Developer or Viewer")
+	}
+
+	membership := &models.TeamMembership{
+		TeamID: teamID,
+		UserID: userID,
+		Role:   role,
+	}
+	created, serr := s.membershipStore.Create(ctx, membership)
+	if serr != nil {
+		return nil, serr
+	}
+
+	if err := s.policyMgr.AddGroupingPolicy(userID, string(role), teamID); err != nil {
+		s.logger.Errorf("failed to add team role grouping: %s", err.Error())
+		return nil, errors.InternalServerError("failed to add team role grouping")
+	}
+
+	if err := s.ensureOrgMemberGrouping(ctx, userID, team.OrganisationID); err != nil {
+		s.logger.Errorf("failed to ensure org member grouping: %s", err.Error())
+		return nil, err
+	}
+
+	return created, nil
 }
 
 func (s *teamService) AddMember(ctx context.Context, teamID, userID string, role models.TeamRole) (*models.TeamMembership, *errors.ServiceError) {

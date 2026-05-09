@@ -4,13 +4,13 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Role** | **string** | The new role for the team member | 
+**Role** | [**TeamRole**](TeamRole.md) |  | 
 
 ## Methods
 
 ### NewUpdateTeamMemberRoleRequest
 
-`func NewUpdateTeamMemberRoleRequest(role string, ) *UpdateTeamMemberRoleRequest`
+`func NewUpdateTeamMemberRoleRequest(role TeamRole, ) *UpdateTeamMemberRoleRequest`
 
 NewUpdateTeamMemberRoleRequest instantiates a new UpdateTeamMemberRoleRequest object
 This constructor will assign default values to properties that have it defined,
@@ -27,20 +27,20 @@ but it doesn't guarantee that properties required by API are set
 
 ### GetRole
 
-`func (o *UpdateTeamMemberRoleRequest) GetRole() string`
+`func (o *UpdateTeamMemberRoleRequest) GetRole() TeamRole`
 
 GetRole returns the Role field if non-nil, zero value otherwise.
 
 ### GetRoleOk
 
-`func (o *UpdateTeamMemberRoleRequest) GetRoleOk() (*string, bool)`
+`func (o *UpdateTeamMemberRoleRequest) GetRoleOk() (*TeamRole, bool)`
 
 GetRoleOk returns a tuple with the Role field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetRole
 
-`func (o *UpdateTeamMemberRoleRequest) SetRole(v string)`
+`func (o *UpdateTeamMemberRoleRequest) SetRole(v TeamRole)`
 
 SetRole sets Role field to given value.
 

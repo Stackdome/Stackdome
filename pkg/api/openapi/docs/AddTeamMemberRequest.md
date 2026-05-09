@@ -5,13 +5,13 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **UserId** | **string** | The ID of the user to add | 
-**Role** | **string** | The role for the team member | 
+**Role** | [**TeamRole**](TeamRole.md) |  | 
 
 ## Methods
 
 ### NewAddTeamMemberRequest
 
-`func NewAddTeamMemberRequest(userId string, role string, ) *AddTeamMemberRequest`
+`func NewAddTeamMemberRequest(userId string, role TeamRole, ) *AddTeamMemberRequest`
 
 NewAddTeamMemberRequest instantiates a new AddTeamMemberRequest object
 This constructor will assign default values to properties that have it defined,
@@ -48,20 +48,20 @@ SetUserId sets UserId field to given value.
 
 ### GetRole
 
-`func (o *AddTeamMemberRequest) GetRole() string`
+`func (o *AddTeamMemberRequest) GetRole() TeamRole`
 
 GetRole returns the Role field if non-nil, zero value otherwise.
 
 ### GetRoleOk
 
-`func (o *AddTeamMemberRequest) GetRoleOk() (*string, bool)`
+`func (o *AddTeamMemberRequest) GetRoleOk() (*TeamRole, bool)`
 
 GetRoleOk returns a tuple with the Role field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetRole
 
-`func (o *AddTeamMemberRequest) SetRole(v string)`
+`func (o *AddTeamMemberRequest) SetRole(v TeamRole)`
 
 SetRole sets Role field to given value.
 

@@ -1237,6 +1237,21 @@ paths:
       security:
       - Bearer: []
       summary: Update a team member's role
+  /api/v1/team-roles:
+    get:
+      description: Returns the list of roles that can be assigned to team members.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamRoleList'
+          description: List of available team roles
+        "401":
+          description: Unauthorized
+      security:
+      - Bearer: []
+      summary: List available team membership roles
   /api/v1/organizations/{org_id}/admins:
     get:
       parameters:
@@ -1304,8 +1319,10 @@ paths:
       security:
       - Bearer: []
       summary: Promote a user to organization admin
-  /api/v1/organizations/{org_id}/admins/{user_id}:
-    delete:
+  /api/v1/organizations/{org_id}/admins/{user_id}/demote:
+    post:
+      description: Demotes an OrgAdmin and places them in the specified team with
+        the given role (defaults to Viewer).
       parameters:
       - description: The ID of the organization
         explode: false
@@ -1323,9 +1340,17 @@ paths:
         schema:
           type: string
         style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemoteAdminRequest'
+        required: true
       responses:
-        "204":
+        "200":
           description: Admin demoted successfully
+        "400":
+          description: Bad request
         "401":
           description: Unauthorized
         "403":
@@ -3789,8 +3814,6 @@ components:
     UserRole:
       enum:
       - OrgAdmin
-      - Developer
-      - Viewer
       - OrgMember
       type: string
     RefreshTokenRequest:
@@ -4070,34 +4093,58 @@ components:
       type: object
     AddTeamMemberRequest:
       example:
-        role: Developer
+        role: null
         user_id: user_id
       properties:
         user_id:
           description: The ID of the user to add
           type: string
         role:
-          description: The role for the team member
-          enum:
-          - Developer
-          - Viewer
-          type: string
+          $ref: '#/components/schemas/TeamRole'
       required:
       - role
       - user_id
       type: object
     UpdateTeamMemberRoleRequest:
       example:
-        role: Developer
+        role: null
       properties:
         role:
-          description: The new role for the team member
-          enum:
-          - Developer
-          - Viewer
-          type: string
+          $ref: '#/components/schemas/TeamRole'
       required:
       - role
+      type: object
+    TeamRole:
+      description: A role that can be assigned to a team member
+      enum:
+      - Developer
+      - Viewer
+      type: string
+    TeamRoleList:
+      example:
+        roles:
+        - null
+        - null
+      properties:
+        roles:
+          items:
+            $ref: '#/components/schemas/TeamRole'
+          type: array
+      type: object
+    DemoteAdminRequest:
+      example:
+        role: ""
+        team_name: team_name
+      properties:
+        team_name:
+          description: The name of the team to place the demoted user in
+          type: string
+        role:
+          allOf:
+          - $ref: '#/components/schemas/TeamRole'
+          description: The team role to assign (defaults to Viewer)
+      required:
+      - team_name
       type: object
     PromoteAdminRequest:
       example:

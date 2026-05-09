@@ -17,7 +17,7 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsIdPut**](DefaultApi.md#ApiV1OrganizationsIdPut) | **Put** /api/v1/organizations/{id} | Update an organization
 [**ApiV1OrganizationsOrgIdAdminsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdAdminsGet) | **Get** /api/v1/organizations/{org_id}/admins | List organization admins
 [**ApiV1OrganizationsOrgIdAdminsPost**](DefaultApi.md#ApiV1OrganizationsOrgIdAdminsPost) | **Post** /api/v1/organizations/{org_id}/admins | Promote a user to organization admin
-[**ApiV1OrganizationsOrgIdAdminsUserIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdAdminsUserIdDelete) | **Delete** /api/v1/organizations/{org_id}/admins/{user_id} | Demote an organization admin
+[**ApiV1OrganizationsOrgIdAdminsUserIdDemotePost**](DefaultApi.md#ApiV1OrganizationsOrgIdAdminsUserIdDemotePost) | **Post** /api/v1/organizations/{org_id}/admins/{user_id}/demote | Demote an organization admin
 [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries | List all image registries for a cluster
 [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Delete an image registry
 [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Get a specific image registry
@@ -81,6 +81,7 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPut) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id} | Update a workspace user
 [**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users | Create a new workspace user
 [**ApiV1OrganizationsOrgIdUsersGet**](DefaultApi.md#ApiV1OrganizationsOrgIdUsersGet) | **Get** /api/v1/organizations/{org_id}/users | List all users in an organization
+[**ApiV1TeamRolesGet**](DefaultApi.md#ApiV1TeamRolesGet) | **Get** /api/v1/team-roles | List available team membership roles
 [**ApiV1UserSignupPost**](DefaultApi.md#ApiV1UserSignupPost) | **Post** /api/v1/user-signup | Create new user
 [**ApiV1UsersCurrentGet**](DefaultApi.md#ApiV1UsersCurrentGet) | **Get** /api/v1/users/current | Get the current authenticated user
 [**ApiV1UsersCurrentTeamsGet**](DefaultApi.md#ApiV1UsersCurrentTeamsGet) | **Get** /api/v1/users/current/teams | List teams for the current authenticated user
@@ -939,11 +940,13 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdAdminsUserIdDelete
+## ApiV1OrganizationsOrgIdAdminsUserIdDemotePost
 
-> ApiV1OrganizationsOrgIdAdminsUserIdDelete(ctx, orgId, userId).Execute()
+> ApiV1OrganizationsOrgIdAdminsUserIdDemotePost(ctx, orgId, userId).DemoteAdminRequest(demoteAdminRequest).Execute()
 
 Demote an organization admin
+
+
 
 ### Example
 
@@ -960,12 +963,13 @@ import (
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
     userId := "userId_example" // string | The ID of the user
+    demoteAdminRequest := *openapiclient.NewDemoteAdminRequest("TeamName_example") // DemoteAdminRequest | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAdminsUserIdDelete(context.Background(), orgId, userId).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAdminsUserIdDemotePost(context.Background(), orgId, userId).DemoteAdminRequest(demoteAdminRequest).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAdminsUserIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAdminsUserIdDemotePost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
 }
@@ -982,13 +986,14 @@ Name | Type | Description  | Notes
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAdminsUserIdDeleteRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAdminsUserIdDemotePostRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
 
+ **demoteAdminRequest** | [**DemoteAdminRequest**](DemoteAdminRequest.md) |  | 
 
 ### Return type
 
@@ -1000,7 +1005,7 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -2984,7 +2989,7 @@ func main() {
     orgId := "orgId_example" // string | The ID of the organization
     teamName := "teamName_example" // string | The name of the team
     id := "id_example" // string | The id of record
-    updateTeamMemberRoleRequest := *openapiclient.NewUpdateTeamMemberRoleRequest("Role_example") // UpdateTeamMemberRoleRequest | 
+    updateTeamMemberRoleRequest := *openapiclient.NewUpdateTeamMemberRoleRequest(openapiclient.TeamRole("Developer")) // UpdateTeamMemberRoleRequest | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -3059,7 +3064,7 @@ import (
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
     teamName := "teamName_example" // string | The name of the team
-    addTeamMemberRequest := *openapiclient.NewAddTeamMemberRequest("UserId_example", "Role_example") // AddTeamMemberRequest | 
+    addTeamMemberRequest := *openapiclient.NewAddTeamMemberRequest("UserId_example", openapiclient.TeamRole("Developer")) // AddTeamMemberRequest | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -5633,6 +5638,67 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**UserList**](UserList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1TeamRolesGet
+
+> TeamRoleList ApiV1TeamRolesGet(ctx).Execute()
+
+List available team membership roles
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1TeamRolesGet(context.Background()).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1TeamRolesGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1TeamRolesGet`: TeamRoleList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1TeamRolesGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+This endpoint does not need any parameter.
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1TeamRolesGetRequest struct via the builder pattern
+
+
+### Return type
+
+[**TeamRoleList**](TeamRoleList.md)
 
 ### Authorization
 

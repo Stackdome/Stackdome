@@ -5,6 +5,7 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/gorilla/mux"
@@ -14,11 +15,13 @@ import (
 // OrganisationHandlerSpec is the specification for the OrganisationHandler
 type OrganisationHandlerSpec struct {
 	OrganisationService services.OrganisationService
+	TeamService         services.TeamService
 }
 
 // organisationHandler is the handler for organisation related operations
 type organisationHandler struct {
 	organisationService services.OrganisationService
+	teamService         services.TeamService
 }
 
 // NewOrganisationHandler creates a new OrganisationHandler
@@ -26,6 +29,7 @@ type organisationHandler struct {
 func NewOrganisationHandler(spec OrganisationHandlerSpec) *organisationHandler {
 	return &organisationHandler{
 		organisationService: spec.OrganisationService,
+		teamService:         spec.TeamService,
 	}
 }
 
@@ -78,14 +82,27 @@ func (h *organisationHandler) PromoteToAdmin(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *organisationHandler) DemoteAdmin(w http.ResponseWriter, r *http.Request) {
+	var req openapi.DemoteAdminRequest
 	cfg := &handlerConfig{
+		MarshalInto: &req,
 		Action: func() (interface{}, *errors.ServiceError) {
 			orgID := mux.Vars(r)["org_id"]
 			userID := mux.Vars(r)["user_id"]
-			return nil, h.organisationService.DemoteOrgAdmin(r.Context(), orgID, userID)
+
+			team, serr := h.teamService.GetTeamByOrgAndName(r.Context(), orgID, req.GetTeamName())
+			if serr != nil {
+				return nil, serr
+			}
+
+			role := models.ViewerRole
+			if req.HasRole() {
+				role = presenters.ConvertTeamRole(req.GetRole())
+			}
+
+			return nil, h.organisationService.DemoteOrgAdmin(r.Context(), orgID, userID, team.ID, role)
 		},
 	}
-	handleDelete(w, r, cfg, http.StatusNoContent)
+	handle(w, r, cfg, http.StatusNoContent)
 }
 
 func (h *organisationHandler) ListAdmins(w http.ResponseWriter, r *http.Request) {
