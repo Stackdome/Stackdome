@@ -78,90 +78,104 @@ All URIs are relative to *http://localhost*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+*DefaultApi* | [**ApiV1ApiTokensGet**](docs/DefaultApi.md#apiv1apitokensget) | **Get** /api/v1/api-tokens | List all API tokens for the current user
+*DefaultApi* | [**ApiV1ApiTokensIdDelete**](docs/DefaultApi.md#apiv1apitokensiddelete) | **Delete** /api/v1/api-tokens/{id} | Revoke an API token
+*DefaultApi* | [**ApiV1ApiTokensIdGet**](docs/DefaultApi.md#apiv1apitokensidget) | **Get** /api/v1/api-tokens/{id} | Get an API token by ID
+*DefaultApi* | [**ApiV1ApiTokensPost**](docs/DefaultApi.md#apiv1apitokenspost) | **Post** /api/v1/api-tokens | Create a new API token
+*DefaultApi* | [**ApiV1ApiTokensScopesGet**](docs/DefaultApi.md#apiv1apitokensscopesget) | **Get** /api/v1/api-tokens/scopes | List all available API token scopes
+*DefaultApi* | [**ApiV1AuthGithubCallbackGet**](docs/DefaultApi.md#apiv1authgithubcallbackget) | **Get** /api/v1/auth/github/callback | GitHub OAuth callback
+*DefaultApi* | [**ApiV1AuthGithubGet**](docs/DefaultApi.md#apiv1authgithubget) | **Get** /api/v1/auth/github | Initiate GitHub OAuth flow
 *DefaultApi* | [**ApiV1AuthLoginPost**](docs/DefaultApi.md#apiv1authloginpost) | **Post** /api/v1/auth/login | User login
-*DefaultApi* | [**ApiV1OrganizationsDefaultGet**](docs/DefaultApi.md#apiv1organizationsdefaultget) | **Get** /api/v1/organizations/default | Get the default organization
-*DefaultApi* | [**ApiV1OrganizationsIdClustersGet**](docs/DefaultApi.md#apiv1organizationsidclustersget) | **Get** /api/v1/organizations/{id}/clusters | List all clusters for an organization
-*DefaultApi* | [**ApiV1OrganizationsIdClustersPost**](docs/DefaultApi.md#apiv1organizationsidclusterspost) | **Post** /api/v1/organizations/{id}/clusters | Add a new cluster
+*DefaultApi* | [**ApiV1AuthRefreshPost**](docs/DefaultApi.md#apiv1authrefreshpost) | **Post** /api/v1/auth/refresh | Refresh JWT token
 *DefaultApi* | [**ApiV1OrganizationsIdGet**](docs/DefaultApi.md#apiv1organizationsidget) | **Get** /api/v1/organizations/{id} | Get an organization
 *DefaultApi* | [**ApiV1OrganizationsIdPut**](docs/DefaultApi.md#apiv1organizationsidput) | **Put** /api/v1/organizations/{id} | Update an organization
-*DefaultApi* | [**ApiV1OrganizationsIdRemoteSyncServersGet**](docs/DefaultApi.md#apiv1organizationsidremotesyncserversget) | **Get** /api/v1/organizations/{id}/remote-sync-servers | List all RemoteSyncServer objects for an organization
-*DefaultApi* | [**ApiV1OrganizationsIdRemoteSyncServersPost**](docs/DefaultApi.md#apiv1organizationsidremotesyncserverspost) | **Post** /api/v1/organizations/{id}/remote-sync-servers | Create a new remote sync server
-*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresGet**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresget) | **Get** /api/v1/organizations/{org_id}/addons/postgres | List all PostgresAddons for under an organization
-*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidactionsbackuppost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/backup | Trigger an immediate backup
-*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidactionsfencepost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/fence | Fence or unfence the PostgreSQL cluster
-*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidactionshibernatepost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/hibernate | Hibernate or wake the PostgreSQL cluster
-*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidbackupsget) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id}/backups | List backups for a PostgresAddon
-*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidcredentialsdatabaseget) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id}/credentials/{database} | Get JIT credentials for a PostgresAddon database
-*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresiddelete) | **Delete** /api/v1/organizations/{org_id}/addons/postgres/{id} | Delete a PostgresAddon
-*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdGet**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidget) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id} | Get a specific PostgresAddon
-*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresIdPut**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgresidput) | **Put** /api/v1/organizations/{org_id}/addons/postgres/{id} | Update a PostgresAddon
-*DefaultApi* | [**ApiV1OrganizationsOrgIdAddonsPostgresPost**](docs/DefaultApi.md#apiv1organizationsorgidaddonspostgrespost) | **Post** /api/v1/organizations/{org_id}/addons/postgres | Create a new PostgresAddon
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAdminsGet**](docs/DefaultApi.md#apiv1organizationsorgidadminsget) | **Get** /api/v1/organizations/{org_id}/admins | List organization admins
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAdminsPost**](docs/DefaultApi.md#apiv1organizationsorgidadminspost) | **Post** /api/v1/organizations/{org_id}/admins | Promote a user to organization admin
+*DefaultApi* | [**ApiV1OrganizationsOrgIdAdminsUserIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidadminsuseriddelete) | **Delete** /api/v1/organizations/{org_id}/admins/{user_id} | Demote an organization admin
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesget) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries | List all image registries for a cluster
-*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesiddelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Delete an image registry object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesidget) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Get a specific image registry object
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesiddelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Delete an image registry
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriesidget) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Get a specific image registry
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost**](docs/DefaultApi.md#apiv1organizationsorgidclustersclusteridimageregistriespost) | **Post** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries | Create a new image registry
-*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidclustersiddelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{id} | Delete a cluster object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersidget) | **Get** /api/v1/organizations/{org_id}/clusters/{id} | Get a specific cluster object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdPut**](docs/DefaultApi.md#apiv1organizationsorgidclustersidput) | **Put** /api/v1/organizations/{org_id}/clusters/{id} | Update a cluster object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresGet**](docs/DefaultApi.md#apiv1organizationsorgidobjectstoresget) | **Get** /api/v1/organizations/{org_id}/object-stores | List all ObjectStores for an organization
-*DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidobjectstoresiddelete) | **Delete** /api/v1/organizations/{org_id}/object-stores/{id} | Delete an ObjectStore
-*DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresIdGet**](docs/DefaultApi.md#apiv1organizationsorgidobjectstoresidget) | **Get** /api/v1/organizations/{org_id}/object-stores/{id} | Get a specific ObjectStore
-*DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresIdPut**](docs/DefaultApi.md#apiv1organizationsorgidobjectstoresidput) | **Put** /api/v1/organizations/{org_id}/object-stores/{id} | Update an ObjectStore
-*DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresPost**](docs/DefaultApi.md#apiv1organizationsorgidobjectstorespost) | **Post** /api/v1/organizations/{org_id}/object-stores | Add a new ObjectStore for backup storage
-*DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserverscurrentget) | **Get** /api/v1/organizations/{org_id}/remote-sync-servers/current | Get RemoteSyncServer for the current user
-*DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversiddelete) | **Delete** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Delete a RemoteSyncServer object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversidget) | **Get** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Get a specific RemoteSyncServer object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdRemoteSyncServersIdPut**](docs/DefaultApi.md#apiv1organizationsorgidremotesyncserversidput) | **Put** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Update a RemoteSyncServer object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsGet**](docs/DefaultApi.md#apiv1organizationsorgidsecretsget) | **Get** /api/v1/organizations/{org_id}/secrets | List all secrets for an organization
-*DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidsecretsiddelete) | **Delete** /api/v1/organizations/{org_id}/secrets/{id} | Delete a secret object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsIdGet**](docs/DefaultApi.md#apiv1organizationsorgidsecretsidget) | **Get** /api/v1/organizations/{org_id}/secrets/{id} | Get a specific secret object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsIdPut**](docs/DefaultApi.md#apiv1organizationsorgidsecretsidput) | **Put** /api/v1/organizations/{org_id}/secrets/{id} | Update a secret object
-*DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsPost**](docs/DefaultApi.md#apiv1organizationsorgidsecretspost) | **Post** /api/v1/organizations/{org_id}/secrets | Create a new secret
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidstackscurrentget) | **Get** /api/v1/organizations/{org_id}/stacks/current | List all stacks of the current user
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksget) | **Get** /api/v1/organizations/{org_id}/stacks | List all Stacks for an organization
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidstacksiddelete) | **Delete** /api/v1/organizations/{org_id}/stacks/{id} | Delete a Stack
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksIdGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksidget) | **Get** /api/v1/organizations/{org_id}/stacks/{id} | Get a specific Stack
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksIdLogsGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksidlogsget) | **Get** /api/v1/organizations/{org_id}/stacks/{id}/logs | Get logs for a Stack
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksIdMetricsGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksidmetricsget) | **Get** /api/v1/organizations/{org_id}/stacks/{id}/metrics | Get metrics for a Stack
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksIdPut**](docs/DefaultApi.md#apiv1organizationsorgidstacksidput) | **Put** /api/v1/organizations/{org_id}/stacks/{id} | Update a Stack
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksPost**](docs/DefaultApi.md#apiv1organizationsorgidstackspost) | **Post** /api/v1/organizations/{org_id}/stacks | Create a new stack
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidbuildsbuildidget) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/builds/{build_id} | Get a specific build under a stack
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidbuildsget) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/builds | List all builds under a stack
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdResourcesGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidresourcesget) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources | List all StackResources under a Stack
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidresourcesidbuildsget) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}/builds | List all builds for a StackResource
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidresourcesidget) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id} | Get a specific StackResource
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidresourcesidput) | **Put** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id} | Update a StackResource
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidresourcesresourcenamelogsget) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/logs | Get logs for a StackResource
-*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksstackidresourcesresourcenamemetricsget) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/metrics | Get metrics for a StackResource
-*DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidvolumescurrentget) | **Get** /api/v1/organizations/{org_id}/volumes/current | List of volumes for the current user
-*DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesGet**](docs/DefaultApi.md#apiv1organizationsorgidvolumesget) | **Get** /api/v1/organizations/{org_id}/volumes | List all volumes in an organization.
-*DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidvolumesiddelete) | **Delete** /api/v1/organizations/{org_id}/volumes/{id} | Delete a volume
-*DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidvolumesidget) | **Get** /api/v1/organizations/{org_id}/volumes/{id} | Get a specific volume
-*DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesIdPut**](docs/DefaultApi.md#apiv1organizationsorgidvolumesidput) | **Put** /api/v1/organizations/{org_id}/volumes/{id} | Update a volume
-*DefaultApi* | [**ApiV1OrganizationsOrgIdVolumesPost**](docs/DefaultApi.md#apiv1organizationsorgidvolumespost) | **Post** /api/v1/organizations/{org_id}/volumes | Create a new volume
-*DefaultApi* | [**ApiV1OrganizationsPost**](docs/DefaultApi.md#apiv1organizationspost) | **Post** /api/v1/organizations | Create a new organization
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersget) | **Get** /api/v1/organizations/{org_id}/clusters | List all clusters for an organization
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidclustersiddelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{id} | Delete a cluster
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersidget) | **Get** /api/v1/organizations/{org_id}/clusters/{id} | Get a specific cluster
+*DefaultApi* | [**ApiV1OrganizationsOrgIdClustersPost**](docs/DefaultApi.md#apiv1organizationsorgidclusterspost) | **Post** /api/v1/organizations/{org_id}/clusters | Add a new cluster
+*DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresGet**](docs/DefaultApi.md#apiv1organizationsorgidobjectstoresget) | **Get** /api/v1/organizations/{org_id}/object-stores | List all object stores the user has access to across all teams
+*DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsGet**](docs/DefaultApi.md#apiv1organizationsorgidsecretsget) | **Get** /api/v1/organizations/{org_id}/secrets | List all secrets the user has access to across all teams
+*DefaultApi* | [**ApiV1OrganizationsOrgIdStacksGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksget) | **Get** /api/v1/organizations/{org_id}/stacks | List all stacks the user has access to across all teams
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsget) | **Get** /api/v1/organizations/{org_id}/teams | List all teams in an organization
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsPost**](docs/DefaultApi.md#apiv1organizationsorgidteamspost) | **Post** /api/v1/organizations/{org_id}/teams | Create a new team
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameaddonspostgresget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres | List all PostgresAddons for a team
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameaddonspostgresidactionsbackuppost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/backup | Trigger an immediate backup
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameaddonspostgresidactionsfencepost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/fence | Fence or unfence the PostgreSQL cluster
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameaddonspostgresidactionshibernatepost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/hibernate | Hibernate or wake the PostgreSQL cluster
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdBackupsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameaddonspostgresidbackupsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/backups | List backups for a PostgresAddon
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdCredentialsDatabaseGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameaddonspostgresidcredentialsdatabaseget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/credentials/{database} | Get JIT credentials for a PostgresAddon database
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameaddonspostgresiddelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id} | Delete a PostgresAddon
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameaddonspostgresidget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id} | Get a specific PostgresAddon
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdPut**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameaddonspostgresidput) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id} | Update a PostgresAddon
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameaddonspostgrespost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres | Create a new PostgresAddon
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameDelete**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamedelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name} | Delete a team
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name} | Get a specific team by name
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameMembersGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamemembersget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/members | List members of a team
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamemembersiddelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/members/{id} | Remove a member from a team
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdPut**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamemembersidput) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/members/{id} | Update a team member&#39;s role
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameMembersPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamememberspost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/members | Add a member to a team
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameobjectstoresget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/object-stores | List all ObjectStores for a team
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameobjectstoresiddelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/object-stores/{id} | Delete an ObjectStore
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameobjectstoresidget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/object-stores/{id} | Get a specific ObjectStore
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdPut**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameobjectstoresidput) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/object-stores/{id} | Update an ObjectStore
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameobjectstorespost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/object-stores | Add a new ObjectStore for backup storage
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNamePut**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameput) | **Put** /api/v1/organizations/{org_id}/teams/{team_name} | Update a team
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamesecretsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/secrets | List all secrets for a team
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamesecretsiddelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/secrets/{id} | Delete a secret
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamesecretsidget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/secrets/{id} | Get a specific secret
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdPut**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamesecretsidput) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/secrets/{id} | Update a secret
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameSecretsPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamesecretspost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/secrets | Create a new secret
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks | List all stacks for a team
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidbuildsbuildidget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds/{build_id} | Get a specific build under a stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidbuildsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds | List all builds under a stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksiddelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id} | Delete a stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id} | Get a specific stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidlogsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/logs | Get logs for a stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdMetricsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidmetricsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/metrics | Get metrics for a stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidput) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id} | Update a stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources | List all stack resources under a stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenamebuildsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/builds | List all builds for a stack resource
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenameget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Get a specific stack resource by name
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenamelogsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs | Get logs for a stack resource
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenamemetricsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/metrics | Get metrics for a stack resource
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestackspost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks | Create a new stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamevolumesiddelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id} | Delete a volume
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamevolumesidget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id} | Get a specific volume
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameVolumesPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamevolumespost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/volumes | Create a new volume
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameworkspaceuserscurrentget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/current | Get the workspace user for the current user
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameworkspaceusersiddelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id} | Delete a workspace user
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameworkspaceusersidget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id} | Get a workspace user by ID
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPut**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameworkspaceusersidput) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id} | Update a workspace user
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnameworkspaceuserspost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users | Create a new workspace user
+*DefaultApi* | [**ApiV1OrganizationsOrgIdUsersGet**](docs/DefaultApi.md#apiv1organizationsorgidusersget) | **Get** /api/v1/organizations/{org_id}/users | List all users in an organization
 *DefaultApi* | [**ApiV1UserSignupPost**](docs/DefaultApi.md#apiv1usersignuppost) | **Post** /api/v1/user-signup | Create new user
-*DefaultApi* | [**ApiV1UsersCurrentGet**](docs/DefaultApi.md#apiv1userscurrentget) | **Get** /api/v1/users/current | Get a the current authenticated user
+*DefaultApi* | [**ApiV1UsersCurrentGet**](docs/DefaultApi.md#apiv1userscurrentget) | **Get** /api/v1/users/current | Get the current authenticated user
+*DefaultApi* | [**ApiV1UsersCurrentTeamsGet**](docs/DefaultApi.md#apiv1userscurrentteamsget) | **Get** /api/v1/users/current/teams | List teams for the current authenticated user
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
-*DefaultApi* | [**ApiV1WorkspaceUsersCurrentGet**](docs/DefaultApi.md#apiv1workspaceuserscurrentget) | **Get** /api/v1/workspace-users/current | Get the workspace user object for the current user
-*DefaultApi* | [**ApiV1WorkspaceUsersIdDelete**](docs/DefaultApi.md#apiv1workspaceusersiddelete) | **Delete** /api/v1/workspace-users/{id} | Delete a WorkspaceUser
-*DefaultApi* | [**ApiV1WorkspaceUsersIdGet**](docs/DefaultApi.md#apiv1workspaceusersidget) | **Get** /api/v1/workspace-users/{id} | Get a workspace user object by ID
-*DefaultApi* | [**ApiV1WorkspaceUsersIdPut**](docs/DefaultApi.md#apiv1workspaceusersidput) | **Put** /api/v1/workspace-users/{id} | Update a WorkspaceUser
-*DefaultApi* | [**ApiV1WorkspaceUsersPost**](docs/DefaultApi.md#apiv1workspaceuserspost) | **Post** /api/v1/workspace-users | Create a new workspace user object.
 
 
 ## Documentation For Models
 
+ - [APIToken](docs/APIToken.md)
+ - [APITokenCreateRequest](docs/APITokenCreateRequest.md)
+ - [APITokenCreateResponse](docs/APITokenCreateResponse.md)
+ - [APITokenList](docs/APITokenList.md)
+ - [AddTeamMemberRequest](docs/AddTeamMemberRequest.md)
  - [AddonEnvSource](docs/AddonEnvSource.md)
  - [Annotation](docs/Annotation.md)
- - [ApiV1OrganizationsIdRemoteSyncServersGet200Response](docs/ApiV1OrganizationsIdRemoteSyncServersGet200Response.md)
- - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response.md)
- - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest.md)
- - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost200Response](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost200Response.md)
- - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest.md)
- - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost200Response](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost200Response.md)
- - [ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest](docs/ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest.md)
- - [ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response](docs/ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response.md)
+ - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response.md)
+ - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest.md)
+ - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost200Response](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost200Response.md)
+ - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest.md)
+ - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost200Response](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost200Response.md)
+ - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest.md)
  - [AzureCredentials](docs/AzureCredentials.md)
  - [BuildArtifact](docs/BuildArtifact.md)
  - [BuildArtifactSyncInfo](docs/BuildArtifactSyncInfo.md)
@@ -236,16 +250,16 @@ Class | Method | HTTP request | Description
  - [PostgresResourcesMemory](docs/PostgresResourcesMemory.md)
  - [PostgresStorage](docs/PostgresStorage.md)
  - [PostgresVersion](docs/PostgresVersion.md)
+ - [PromoteAdminRequest](docs/PromoteAdminRequest.md)
+ - [RefreshTokenRequest](docs/RefreshTokenRequest.md)
+ - [RefreshTokenResponse](docs/RefreshTokenResponse.md)
  - [RemoteSource](docs/RemoteSource.md)
- - [RemoteSyncServer](docs/RemoteSyncServer.md)
- - [RemoteSyncServerList](docs/RemoteSyncServerList.md)
- - [RemoteSyncServerSpec](docs/RemoteSyncServerSpec.md)
- - [RemoteSyncServerState](docs/RemoteSyncServerState.md)
- - [RemoteSyncServerStatus](docs/RemoteSyncServerStatus.md)
  - [ResourceMetrics](docs/ResourceMetrics.md)
  - [ResourceMetricsNodeCapacitiesInner](docs/ResourceMetricsNodeCapacitiesInner.md)
  - [S3Credentials](docs/S3Credentials.md)
  - [SSHConfig](docs/SSHConfig.md)
+ - [ScopeList](docs/ScopeList.md)
+ - [ScopeResource](docs/ScopeResource.md)
  - [Secret](docs/Secret.md)
  - [SecretData](docs/SecretData.md)
  - [SecretList](docs/SecretList.md)
@@ -261,13 +275,18 @@ Class | Method | HTTP request | Description
  - [StackSpec](docs/StackSpec.md)
  - [StackStatus](docs/StackStatus.md)
  - [Team](docs/Team.md)
+ - [TeamCreateRequest](docs/TeamCreateRequest.md)
  - [TeamList](docs/TeamList.md)
  - [TeamMembership](docs/TeamMembership.md)
  - [TeamMembershipList](docs/TeamMembershipList.md)
+ - [TeamUpdateRequest](docs/TeamUpdateRequest.md)
+ - [UpdateTeamMemberRoleRequest](docs/UpdateTeamMemberRoleRequest.md)
  - [User](docs/User.md)
+ - [UserList](docs/UserList.md)
  - [UserRole](docs/UserRole.md)
  - [UserSignupRequest](docs/UserSignupRequest.md)
  - [UserSignupResponse](docs/UserSignupResponse.md)
+ - [UserTeamMembership](docs/UserTeamMembership.md)
  - [Volume](docs/Volume.md)
  - [VolumeAccessMode](docs/VolumeAccessMode.md)
  - [VolumeList](docs/VolumeList.md)

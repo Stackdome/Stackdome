@@ -76,8 +76,7 @@ paths:
     get:
       security:
         - Bearer: []
-      summary: Get a the current authenticated user
-      description: Get a the current authenticated user
+      summary: Get the current authenticated user
       responses:
         '200':
           description: User fetched successfully
@@ -97,6 +96,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: Unauthorized to perform operation
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/users/current/teams:
+    get:
+      security:
+        - Bearer: []
+      summary: List teams for the current authenticated user
+      responses:
+        '200':
+          description: Teams listed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamList'
+        '401':
+          description: Unauthorized
         '500':
           description: Internal server error
           content:
@@ -132,33 +151,159 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/default:
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh JWT token
+      description: Exchange a refresh token for a new access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/auth/github:
+    get:
+      summary: Initiate GitHub OAuth flow
+      description: Redirects the user to GitHub for OAuth authorization
+      responses:
+        '302':
+          description: Redirect to GitHub OAuth authorization page
+        '500':
+          description: Internal server error
+  /api/v1/auth/github/callback:
+    get:
+      summary: GitHub OAuth callback
+      description: Handles the callback from GitHub after OAuth authorization
+      parameters:
+        - in: query
+          name: code
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: state
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OAuth login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: OAuth authorization failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/api-tokens:
+    post:
+      security:
+        - Bearer: []
+      summary: Create a new API token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APITokenCreateRequest'
+      responses:
+        '201':
+          description: API token created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APITokenCreateResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     get:
       security:
         - Bearer: []
-      summary: Get the default organization
-      description: Get the default organization
+      summary: List all API tokens for the current user
       responses:
         '200':
-          description: Default organization fetched successfully
+          description: API tokens listed successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Organisation'
+                $ref: '#/components/schemas/APITokenList'
+  /api/v1/api-tokens/scopes:
+    get:
+      security:
+        - Bearer: []
+      summary: List all available API token scopes
+      description: Returns the list of resources and their allowed actions that can be used when creating API tokens
+      responses:
+        '200':
+          description: Scopes listed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScopeList'
         '401':
+          description: Unauthorized
+  /api/v1/api-tokens/{id}:
+    get:
+      security:
+        - Bearer: []
+      summary: Get an API token by ID
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: API token fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIToken'
+        '404':
+          description: API token not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: Auth token is invalid
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Unauthorized to perform operation
-        '500':
-          description: Internal server error
+    delete:
+      security:
+        - Bearer: []
+      summary: Revoke an API token
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: API token revoked successfully
+        '404':
+          description: API token not found
           content:
             application/json:
               schema:
@@ -168,7 +313,6 @@ paths:
       security:
         - Bearer: []
       summary: Get an organization
-      description: Get an organization
       parameters:
         - $ref: '#/components/parameters/id'
       responses:
@@ -200,7 +344,6 @@ paths:
       security:
         - Bearer: []
       summary: Update an organization
-      description: Update an organization
       parameters:
         - $ref: '#/components/parameters/id'
       requestBody:
@@ -234,37 +377,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations:
-    post:
+
+  # User listing (org-scoped)
+  /api/v1/organizations/{org_id}/users:
+    get:
+      summary: List all users in an organization
       security:
         - Bearer: []
-      summary: Create a new organization
-      description: Create a new organization
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Organisation'
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            default: 20
+          description: Number of items per page
       responses:
-        '201':
-          description: Organization created successfully
+        '200':
+          description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Organisation'
+                $ref: '#/components/schemas/UserList'
         '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Auth token is invalid
+          description: Unauthorized
         '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Unauthorized to perform operation
+          description: Forbidden
         '500':
           description: Internal server error
           content:
@@ -272,129 +416,89 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/v1/workspace-users:
-    post:
-      summary: Create a new workspace user object.
-      security:
-        - Bearer: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkspaceUser'
-      responses:
-        '201':
-          description: WorkspaceUser object added successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkspaceUser'
-        '400':
-          description: Invalid request payload
-        '401':
-          description: Unauthorized
-        '500':
-          description: Internal server error
-  /api/v1/workspace-users/{id}:
+  # Org-scoped secret listing (cross-team)
+  /api/v1/organizations/{org_id}/secrets:
     get:
-      summary: Get a workspace user object by ID
+      summary: List all secrets the user has access to across all teams
+      description: Returns secrets from all teams the user belongs to. OrgAdmins see all secrets in the org.
       security:
         - Bearer: []
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/org_id'
       responses:
         '200':
-          description: WorkspaceUser details
+          description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceUser'
+                $ref: '#/components/schemas/SecretList'
         '401':
           description: Unauthorized
-        '404':
-          description: WorkspaceUser object not found
         '500':
           description: Internal server error
-    put:
-      summary: Update a WorkspaceUser
-      security:
-        - Bearer: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkspaceUser'
-      responses:
-        '200':
-          description: WorkspaceUser updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceUser'
-        '400':
-          description: Invalid request payload
-        '401':
-          description: Unauthorized
-        '404':
-          description: WorkspaceUser not found
-        '500':
-          description: Internal server error
-    delete:
-      summary: Delete a WorkspaceUser
-      security:
-        - Bearer: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: WorkspaceUser deleted successfully
-        '401':
-          description: Unauthorized
-        '404':
-          description: WorkspaceUser not found
-        '500':
-          description: Internal server error
-  /api/v1/workspace-users/current:
+                $ref: '#/components/schemas/Error'
+
+  # Org-scoped object store listing (cross-team)
+  /api/v1/organizations/{org_id}/object-stores:
     get:
-      summary: Get the workspace user object for the current user
+      summary: List all object stores the user has access to across all teams
+      description: Returns object stores from all teams the user belongs to. OrgAdmins see all object stores in the org.
       security:
         - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
       responses:
         '200':
-          description: WorkspaceUser details
+          description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceUser'
+                $ref: '#/components/schemas/ObjectStoreList'
         '401':
           description: Unauthorized
-        '404':
-          description: WorkspaceUser object not found
         '500':
           description: Internal server error
-  /api/v1/organizations/{id}/clusters:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Org-scoped stack listing (cross-team)
+  /api/v1/organizations/{org_id}/stacks:
+    get:
+      summary: List all stacks the user has access to across all teams
+      description: Returns stacks from all teams the user belongs to. OrgAdmins see all stacks in the org.
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackList'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Cluster routes (org-scoped)
+  /api/v1/organizations/{org_id}/clusters:
     post:
       summary: Add a new cluster
       security:
         - Bearer: []
       parameters:
-        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/org_id'
       requestBody:
         required: true
         content:
@@ -421,7 +525,7 @@ paths:
       security:
         - Bearer: []
       parameters:
-        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/org_id'
       responses:
         '200':
           description: Successful operation
@@ -437,20 +541,12 @@ paths:
           description: Internal server error
   /api/v1/organizations/{org_id}/clusters/{id}:
     get:
-      summary: Get a specific cluster object
+      summary: Get a specific cluster
       security:
         - Bearer: []
       parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
       responses:
         '200':
           description: Successful operation
@@ -466,60 +562,13 @@ paths:
           description: Forbidden
         '500':
           description: Internal server error
-    put:
-      summary: Update a cluster object
-      security:
-        - Bearer: []
-      parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Cluster'
-      responses:
-        '200':
-          description: Cluster updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Cluster'
-        '400':
-          description: Invalid request payload
-        '404':
-          description: Cluster not found
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
-
     delete:
-      summary: Delete a cluster object
+      summary: Delete a cluster
       security:
         - Bearer: []
       parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Cluster deleted successfully
@@ -531,172 +580,16 @@ paths:
           description: Forbidden
         '500':
           description: Internal server error
-  /api/v1/organizations/{org_id}/secrets:
-    post:
-      summary: Create a new secret
-      security:
-        - Bearer: []
-      parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Secret'
-      responses:
-        '201':
-          description: Secret created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Secret'
-        '400':
-          description: Invalid request payload
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
-    get:
-      summary: List all secrets for an organization
-      security:
-        - Bearer: []
-      parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SecretList'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
-  /api/v1/organizations/{org_id}/secrets/{id}:
-    put:
-      summary: Update a secret object
-      security:
-        - Bearer: []
-      parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Secret'
-      responses:
-        '200':
-          description: Secret updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Secret'
-        '400':
-          description: Invalid request payload
-        '404':
-          description: Secret not found
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
-    get:
-      summary: Get a specific secret object
-      security:
-        - Bearer: []
-      parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Secret'
-        '404':
-          description: Secret not found
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
-    delete:
-      summary: Delete a secret object
-      security:
-        - Bearer: []
-      parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Secret deleted successfully
-        '404':
-          description: Secret not found
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
+
+  # Cluster image registry routes
   /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries:
     post:
-      parameters:
-      - in : path
-        name: org_id
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: cluster_id
-        required: true
-        schema:
-          type: string
       summary: Create a new image registry
       security:
         - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/cluster_id'
       requestBody:
         required: true
         content:
@@ -719,62 +612,34 @@ paths:
         '500':
           description: Internal server error
     get:
-      parameters:
-      - in : path
-        name: org_id
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: cluster_id
-        required: true
-        schema:
-          type: string
       summary: List all image registries for a cluster
       security:
         - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/cluster_id'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/ClusterImageRegistry'
-                  total:
-                    type: integer
+                $ref: '#/components/schemas/ClusterImageRegistryList'
         '401':
           description: Unauthorized
         '403':
           description: Forbidden
         '500':
           description: Internal server error
-
   /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id}:
     get:
-      parameters:
-      - in : path
-        name: org_id
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: cluster_id
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-      summary: Get a specific image registry object
+      summary: Get a specific image registry
       security:
         - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/cluster_id'
+        - $ref: '#/components/parameters/id'
       responses:
         '200':
           description: Successful operation
@@ -791,25 +656,13 @@ paths:
         '500':
           description: Internal server error
     delete:
-      parameters:
-      - in : path
-        name: org_id
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: cluster_id
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-      summary: Delete an image registry object
+      summary: Delete an image registry
       security:
         - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/cluster_id'
+        - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: ImageRegistry deleted successfully
@@ -821,189 +674,13 @@ paths:
           description: Forbidden
         '500':
           description: Internal server error
-  /api/v1/organizations/{id}/remote-sync-servers:
+
+  # Team CRUD routes
+  /api/v1/organizations/{org_id}/teams:
     post:
-      summary: Create a new remote sync server
-      security:
-      - Bearer: []
-      parameters:
-        - $ref: '#/components/parameters/id'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RemoteSyncServer'
-      responses:
-        '201':
-          description: RemoteSyncServer created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RemoteSyncServer'
-        '400':
-          description: Invalid request payload
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
-    get:
-      summary: List all RemoteSyncServer objects for an organization
+      summary: Create a new team
       security:
         - Bearer: []
-      parameters:
-        - $ref: '#/components/parameters/id'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/RemoteSyncServer'
-                  total:
-                    type: integer
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
-
-  /api/v1/organizations/{org_id}/remote-sync-servers/{id}:
-    get:
-      summary: Get a specific RemoteSyncServer object
-      security:
-        - Bearer: []
-      parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RemoteSyncServer'
-        '404':
-          description: RemoteSyncServer not found
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
-    put:
-      summary: Update a RemoteSyncServer object
-      security:
-        - Bearer: []
-      parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RemoteSyncServer'
-      responses:
-        '200':
-          description: RemoteSyncServer updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RemoteSyncServer'
-        '400':
-          description: Invalid request payload
-        '404':
-          description: RemoteSyncServer not found
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
-
-    delete:
-      summary: Delete a RemoteSyncServer object
-      security:
-        - Bearer: []
-      parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: RemoteSyncServer deleted successfully
-        '404':
-          description: RemoteSyncServer not found
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
-
-  # get the remote-sync-server for the current user
-  /api/v1/organizations/{org_id}/remote-sync-servers/current:
-    get:
-      summary: Get RemoteSyncServer for the current user
-      security:
-        - Bearer: []
-      parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RemoteSyncServer'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
-  
-  /api/v1/organizations/{org_id}/volumes:
-    post:
-      summary: Create a new volume
-      security:
-      - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
       requestBody:
@@ -1011,167 +688,342 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Volume'
+              $ref: '#/components/schemas/TeamCreateRequest'
       responses:
         '201':
-          description: Volume created successfully
+          description: Team created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Volume'
+                $ref: '#/components/schemas/Team'
         '400':
-          description: Invalid request payload
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
         '403':
           description: Forbidden
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     get:
-      summary: List all volumes in an organization.
+      summary: List all teams in an organization
       security:
         - Bearer: []
       parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/org_id'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VolumeList'
+                $ref: '#/components/schemas/TeamList'
         '401':
           description: Unauthorized
-        '403':
-          description: Forbidden
         '500':
           description: Internal server error
-  /api/v1/organizations/{org_id}/volumes/{id}:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/teams/{team_name}:
     get:
-      summary: Get a specific volume
+      summary: Get a specific team by name
       security:
         - Bearer: []
       parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Volume'
+                $ref: '#/components/schemas/Team'
         '401':
           description: Unauthorized
-        '403':
-          description: Forbidden
+        '404':
+          description: Team not found
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     put:
-      summary: Update a volume
+      summary: Update a team
       security:
         - Bearer: []
       parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Volume'
+              $ref: '#/components/schemas/TeamUpdateRequest'
       responses:
         '200':
-          description: Volume updated successfully
+          description: Team updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Volume'
+                $ref: '#/components/schemas/Team'
         '400':
-          description: Invalid request payload
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
-        '403':
-          description: Forbidden
+        '404':
+          description: Team not found
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     delete:
-      summary: Delete a volume
+      summary: Delete a team
       security:
         - Bearer: []
       parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
       responses:
         '204':
-          description: Volume deleted successfully
-        '404':
-          description: Volume not found
+          description: Team deleted successfully
         '401':
           description: Unauthorized
-        '403':
-          description: Forbidden
+        '404':
+          description: Team not found
         '500':
           description: Internal server error
-  /api/v1/organizations/{org_id}/volumes/current:
-    get:
-      summary: List of volumes for the current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Team member management routes
+  /api/v1/organizations/{org_id}/teams/{team_name}/members:
+    post:
+      summary: Add a member to a team
       security:
         - Bearer: []
       parameters:
-        - in: path
-          name: org_id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddTeamMemberRequest'
+      responses:
+        '201':
+          description: Member added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMembership'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Team not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      summary: List members of a team
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VolumeList'
+                $ref: '#/components/schemas/TeamMembershipList'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Team not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/teams/{team_name}/members/{id}:
+    put:
+      summary: Update a team member's role
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTeamMemberRoleRequest'
+      responses:
+        '200':
+          description: Member role updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMembership'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Membership not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Remove a member from a team
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Member removed successfully
+        '401':
+          description: Unauthorized
+        '404':
+          description: Membership not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Organization admin management routes
+  /api/v1/organizations/{org_id}/admins:
+    post:
+      summary: Promote a user to organization admin
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoteAdminRequest'
+      responses:
+        '200':
+          description: User promoted to admin successfully
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
         '403':
           description: Forbidden
         '500':
           description: Internal server error
-  /api/v1/organizations/{org_id}/stacks:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      summary: List organization admins
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/admins/{user_id}:
+    delete:
+      summary: Demote an organization admin
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/user_id'
+      responses:
+        '204':
+          description: Admin demoted successfully
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: User not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Team-scoped stack routes
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks:
     post:
       summary: Create a new stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
       requestBody:
         required: true
         content:
@@ -1206,11 +1058,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     get:
-      summary: List all Stacks for an organization
+      summary: List all stacks for a team
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - in: query
           name: limit
           schema:
@@ -1236,14 +1089,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-  /api/v1/organizations/{org_id}/stacks/{id}:
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}:
     get:
-      summary: Get a specific Stack
+      summary: Get a specific stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -1261,11 +1114,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     put:
-      summary: Update a Stack
+      summary: Update a stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -1295,11 +1149,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     delete:
-      summary: Delete a Stack
+      summary: Delete a stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       responses:
         '202':
@@ -1316,13 +1171,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/stacks/{id}/logs:
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/logs:
     get:
-      summary: Get logs for a Stack
+      summary: Get logs for a stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
         - in: query
           name: follow
@@ -1357,15 +1213,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/stacks/{id}/metrics:
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/metrics:
     get:
-      summary: Get metrics for a Stack
+      summary: Get metrics for a stack
       description: |
             Returns metrics for a stack. If `stream=true` is passed, the server responds using Server-Sent Events (SSE).
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
         - in: query
           name: stream
@@ -1394,38 +1251,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  # List of all stacks for the current user
-  /api/v1/organizations/{org_id}/stacks/current:
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources:
     get:
-      summary: List all stacks of the current user
+      summary: List all stack resources under a stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StackList'
-        '401':
-          description: Unauthorized
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources:
-    get:
-      summary: List all StackResources under a Stack
-      security:
-        - Bearer: []
-      parameters:
-        - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/stack_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
       responses:
         '200':
           description: Successful operation
@@ -1441,52 +1275,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}:
-    put:
-      summary: Update a StackResource
-      security:
-        - Bearer: []
-      parameters:
-        - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/stack_id'
-        - $ref: '#/components/parameters/id'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/StackResource'
-      responses:
-        '200':
-          description: StackResource updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StackResource'
-        '401':
-          description: Unauthorized
-        '400':
-          description: Invalid request data
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}:
     get:
-      summary: Get a specific StackResource
+      summary: Get a specific stack resource by name
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/stack_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/resource_name'
       responses:
         '200':
           description: Successful operation
@@ -1502,19 +1300,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/logs:
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs:
     get:
-      summary: Get logs for a StackResource
+      summary: Get logs for a stack resource
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/stack_id'
-        - in: path
-          name: resource_name
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/resource_name'
         - in: query
           name: follow
           required: false
@@ -1548,21 +1343,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/metrics:
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/metrics:
     get:
-      summary: Get metrics for a StackResource
+      summary: Get metrics for a stack resource
       description: |
-        Returns metrics for a StackResource. If `stream=true` is passed, the server responds using Server-Sent Events (SSE).
+        Returns metrics for a stack resource. If `stream=true` is passed, the server responds using Server-Sent Events (SSE).
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/stack_id'
-        - in: path
-          name: resource_name
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/resource_name'
         - in: query
           name: stream
           description: Whether to stream metrics via Server-Sent Events (SSE)
@@ -1579,7 +1371,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResourceMetrics'
-            # If stream is true, return SSE stream
             text/event-stream:
               schema:
                 type: string
@@ -1592,15 +1383,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}/builds:
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/builds:
     get:
-      summary: List all builds for a StackResource
+      summary: List all builds for a stack resource
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/stack_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/resource_name'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageBuildList'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds:
+    get:
+      summary: List all builds under a stack
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -1617,46 +1432,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
- # List all builds under a stack
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/builds:
-    get:
-      summary: List all builds under a stack
-      security:
-        - Bearer: []
-      parameters:
-        - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/stack_id'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ImageBuildList'
-        '401':
-          description: Unauthorized
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/builds/{build_id}:
-  # get a specific build under a stack
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds/{build_id}:
     get:
       summary: Get a specific build under a stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/stack_id'
-        - in: path
-          name: build_id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/build_id'
       responses:
         '200':
           description: Successful operation
@@ -1674,79 +1459,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  # ObjectStore API endpoints
-  /api/v1/organizations/{org_id}/object-stores:
+
+  # Team-scoped secret routes
+  /api/v1/organizations/{org_id}/teams/{team_name}/secrets:
     post:
-      summary: Add a new ObjectStore for backup storage
-      description: Add a new ObjectStore configuration for storing PostgreSQL backups and WAL files
+      summary: Create a new secret
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ObjectStore'
+              $ref: '#/components/schemas/Secret'
       responses:
         '201':
-          description: ObjectStore created successfully
+          description: Secret created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ObjectStore'
+                $ref: '#/components/schemas/Secret'
         '400':
-          description: Invalid request data
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Invalid request payload
         '401':
           description: Unauthorized
         '403':
           description: Forbidden
-        '409':
-          description: ObjectStore already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
     get:
-      summary: List all ObjectStores for an organization
+      summary: List all secrets for a team
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ObjectStoreList'
+                $ref: '#/components/schemas/SecretList'
         '401':
           description: Unauthorized
+        '403':
+          description: Forbidden
         '500':
           description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /api/v1/organizations/{org_id}/object-stores/{id}:
+  /api/v1/organizations/{org_id}/teams/{team_name}/secrets/{id}:
     get:
-      summary: Get a specific ObjectStore
+      summary: Get a specific secret
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -1754,81 +1525,140 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ObjectStore'
+                $ref: '#/components/schemas/Secret'
+        '404':
+          description: Secret not found
         '401':
           description: Unauthorized
-        '404':
-          description: ObjectStore not found
+        '403':
+          description: Forbidden
         '500':
           description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
     put:
-      summary: Update an ObjectStore
+      summary: Update a secret
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ObjectStore'
+              $ref: '#/components/schemas/Secret'
       responses:
         '200':
-          description: ObjectStore updated successfully
+          description: Secret updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ObjectStore'
+                $ref: '#/components/schemas/Secret'
         '400':
-          description: Invalid request data
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Invalid request payload
+        '404':
+          description: Secret not found
         '401':
           description: Unauthorized
-        '404':
-          description: ObjectStore not found
+        '403':
+          description: Forbidden
         '500':
           description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
     delete:
-      summary: Delete an ObjectStore
+      summary: Delete a secret
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       responses:
         '204':
-          description: ObjectStore deleted successfully
+          description: Secret deleted successfully
+        '404':
+          description: Secret not found
         '401':
           description: Unauthorized
-        '404':
-          description: ObjectStore not found
-        '409':
-          description: ObjectStore is in use by PostgresAddons
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
         '500':
           description: Internal server error
+
+  # Team-scoped volume routes
+  /api/v1/organizations/{org_id}/teams/{team_name}/volumes:
+    post:
+      summary: Create a new volume
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Volume'
+      responses:
+        '201':
+          description: Volume created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-  # PostgresAddon API endpoints
-  /api/v1/organizations/{org_id}/addons/postgres:
+                $ref: '#/components/schemas/Volume'
+        '400':
+          description: Invalid request payload
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id}:
+    get:
+      summary: Get a specific volume
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Volume'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+    delete:
+      summary: Delete a volume
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Volume deleted successfully
+        '404':
+          description: Volume not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+
+  # Team-scoped PostgresAddon routes
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres:
     post:
       summary: Create a new PostgresAddon
       description: Create a new PostgreSQL database cluster addon
@@ -1836,6 +1666,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
       requestBody:
         required: true
         content:
@@ -1872,11 +1703,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     get:
-      summary: List all PostgresAddons for under an organization
+      summary: List all PostgresAddons for a team
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
       responses:
         '200':
           description: Successful operation
@@ -1894,14 +1726,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-  /api/v1/organizations/{org_id}/addons/postgres/{id}:
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}:
     get:
       summary: Get a specific PostgresAddon
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -1928,6 +1760,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -1966,6 +1799,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       responses:
         '202':
@@ -1986,13 +1820,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/backup:
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/backup:
     post:
       summary: Trigger an immediate backup
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         content:
@@ -2033,14 +1868,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-  /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/fence:
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/fence:
     post:
       summary: Fence or unfence the PostgreSQL cluster
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -2081,14 +1916,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-  /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/hibernate:
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/hibernate:
     post:
       summary: Hibernate or wake the PostgreSQL cluster
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -2126,14 +1961,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-  /api/v1/organizations/{org_id}/addons/postgres/{id}/backups:
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/backups:
     get:
       summary: List backups for a PostgresAddon
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
         - in: query
           name: limit
@@ -2162,13 +1997,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/addons/postgres/{id}/credentials/{database}:
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/credentials/{database}:
     get:
       summary: Get JIT credentials for a PostgresAddon database
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
         - $ref: '#/components/parameters/database'
         - in: query
@@ -2208,6 +2044,282 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  # Team-scoped object store routes
+  /api/v1/organizations/{org_id}/teams/{team_name}/object-stores:
+    post:
+      summary: Add a new ObjectStore for backup storage
+      description: Add a new ObjectStore configuration for storing PostgreSQL backups and WAL files
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectStore'
+      responses:
+        '201':
+          description: ObjectStore created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStore'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '409':
+          description: ObjectStore already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      summary: List all ObjectStores for a team
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStoreList'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/teams/{team_name}/object-stores/{id}:
+    get:
+      summary: Get a specific ObjectStore
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStore'
+        '401':
+          description: Unauthorized
+        '404':
+          description: ObjectStore not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update an ObjectStore
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectStore'
+      responses:
+        '200':
+          description: ObjectStore updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStore'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '404':
+          description: ObjectStore not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete an ObjectStore
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: ObjectStore deleted successfully
+        '401':
+          description: Unauthorized
+        '404':
+          description: ObjectStore not found
+        '409':
+          description: ObjectStore is in use by PostgresAddons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Team-scoped workspace user routes
+  /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users:
+    post:
+      summary: Create a new workspace user
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceUser'
+      responses:
+        '201':
+          description: WorkspaceUser created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceUser'
+        '400':
+          description: Invalid request payload
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/current:
+    get:
+      summary: Get the workspace user for the current user
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+      responses:
+        '200':
+          description: WorkspaceUser details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceUser'
+        '401':
+          description: Unauthorized
+        '404':
+          description: WorkspaceUser not found
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id}:
+    get:
+      summary: Get a workspace user by ID
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: WorkspaceUser details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceUser'
+        '401':
+          description: Unauthorized
+        '404':
+          description: WorkspaceUser not found
+        '500':
+          description: Internal server error
+    put:
+      summary: Update a workspace user
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceUser'
+      responses:
+        '200':
+          description: WorkspaceUser updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceUser'
+        '400':
+          description: Invalid request payload
+        '401':
+          description: Unauthorized
+        '404':
+          description: WorkspaceUser not found
+        '500':
+          description: Internal server error
+    delete:
+      summary: Delete a workspace user
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: WorkspaceUser deleted successfully
+        '401':
+          description: Unauthorized
+        '404':
+          description: WorkspaceUser not found
+        '500':
+          description: Internal server error
 components:
   securitySchemes:
     Bearer:
@@ -2230,19 +2342,40 @@ components:
         type: string
       description: The ID of the organization
     cluster_id:
-      name: org_id
+      name: cluster_id
       in: path
       required: true
       schema:
         type: string
       description: The ID of the cluster
-    stack_id:
-      name: stack_id
+    team_name:
+      name: team_name
       in: path
       required: true
       schema:
         type: string
-      description: The ID of the stack
+      description: The name of the team
+    user_id:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The ID of the user
+    resource_name:
+      name: resource_name
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The name of the stack resource
+    build_id:
+      name: build_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The ID of the build
     database:
       name: database
       in: path
@@ -2287,6 +2420,9 @@ components:
         jwt_token:
           type: string
           description: JWT token for the authenticated user
+        refresh_token:
+          type: string
+          description: Refresh token for obtaining new access tokens
     User:
       type: object
       properties:
@@ -2311,19 +2447,55 @@ components:
         organisation_id:
           type: string
           description: OrganisationID
+        teams:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserTeamMembership'
+          description: Teams the user belongs to (included in login/signup/current-user responses)
+    UserTeamMembership:
+      type: object
+      properties:
+        team_id:
+          type: string
+        team_name:
+          type: string
+        role:
+          type: string
+          enum:
+            - Developer
+            - Viewer
+        default_team:
+          type: boolean
+    UserList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        total:
+          type: integer
+          description: Total number of records
+        page:
+          type: integer
+          description: Current page number
+        page_size:
+          type: integer
+          description: Number of items per page
+        total_pages:
+          type: integer
+          description: Total number of pages
     UserSignupRequest:
       type: object
       required:
       - name
       - email
       - password
+      - organisation
       properties:
         name:
           type: string
           description: User's name
-        username:
-          type: string
-          description: User's username
         email:
           type: string
           format: email
@@ -2331,13 +2503,8 @@ components:
         password:
           type: string
           description: Users desired password
-        Role:
-          $ref: '#/components/schemas/UserRole'
         organisation:
           $ref: '#/components/schemas/Organisation'
-        organisation_id:
-          type: string
-          description: OrganisationID
     UserRole:
       type: string
       enum:
@@ -2345,6 +2512,23 @@ components:
       - Developer
       - Viewer
       - OrgMember
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: The refresh token to exchange for a new access token
+    RefreshTokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: New access token
+        refreshToken:
+          type: string
+          description: New refresh token (old one is revoked)
     LoginRequest:
       type: object
       required:
@@ -2364,11 +2548,133 @@ components:
         token:
           type: string
           description: Access token for authenticated requests
+        refresh_token:
+          type: string
+          description: Refresh token for obtaining new access tokens
         user:
           $ref: '#/components/schemas/User'
         expires_in:
           type: integer
           description: Token expiration time in seconds
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+        organisation_id:
+          type: string
+          readOnly: true
+        default_team:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+        - name
+    TeamList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Team'
+        total:
+          type: integer
+    TeamMembership:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        team_id:
+          type: string
+        user_id:
+          type: string
+        role:
+          type: string
+          enum:
+            - Developer
+            - Viewer
+        team:
+          $ref: '#/components/schemas/Team'
+        user:
+          $ref: '#/components/schemas/User'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+        - team_id
+        - user_id
+        - role
+    TeamMembershipList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamMembership'
+        total:
+          type: integer
+    TeamCreateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Team name
+    TeamUpdateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Updated team name
+    AddTeamMemberRequest:
+      type: object
+      required:
+        - user_id
+        - role
+      properties:
+        user_id:
+          type: string
+          description: The ID of the user to add
+        role:
+          type: string
+          enum:
+            - Developer
+            - Viewer
+          description: The role for the team member
+    UpdateTeamMemberRoleRequest:
+      type: object
+      required:
+        - role
+      properties:
+        role:
+          type: string
+          enum:
+            - Developer
+            - Viewer
+          description: The new role for the team member
+    PromoteAdminRequest:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+          description: The ID of the user to promote to admin
     WorkspaceUser:
       type: object
       properties:
@@ -2472,76 +2778,6 @@ components:
           type: string
         cluster_image_registry:
           $ref: '#/components/schemas/ClusterImageRegistry'
-    
-    RemoteSyncServer:
-      type: object
-      additionalProperties: false
-      required:
-        - name
-        - spec
-      properties:
-        id:
-          type: string
-          readOnly: true
-        organisation_id:
-          type: string
-          readOnly: true
-        name:
-          type: string
-        namespace:
-          readOnly: true
-          type: string
-        labels:
-          type: array
-          items:
-            $ref: '#/components/schemas/Label'
-        annotations:
-          type: array
-          items:
-            $ref: '#/components/schemas/Annotation'
-        spec:
-          $ref: '#/components/schemas/RemoteSyncServerSpec'
-        status:
-          $ref: '#/components/schemas/RemoteSyncServerStatus'
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-
-    RemoteSyncServerList:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/RemoteSyncServer'
-        total:
-          type: integer
-
-    RemoteSyncServerSpec:
-      type: object
-      required:
-        - volumes
-      additionalProperties: false
-      properties:
-        volumeName:
-          type: string
-        ssh_public_key:
-          type: string
-
-    RemoteSyncServerState:
-      type: string
-      enum:
-      - RemoteSyncServerPending
-      - RemoteSyncServerCreating
-      - RemoteSyncServerCreated
-      - RemoteSyncServerReady
-      - RemoteSyncServerFailed
 
     Volume:
       type: object
@@ -2616,7 +2852,7 @@ components:
         - ReadWriteOnce
         - ReadWriteMany
         - ReadOnlyMany
-    
+
     VolumeSource:
       type: object
       required:
@@ -2690,20 +2926,6 @@ components:
         source_path:
           type: string
         destination_path:
-          type: string
-
-    RemoteSyncServerStatus:
-      type: object
-      properties:
-        observed_version:
-          type: integer
-        conditions:
-          type: array
-          items:
-            $ref: '#/components/schemas/Condition'
-        state:
-          $ref: '#/components/schemas/RemoteSyncServerState'
-        serviceName:
           type: string
 
     VolumeStatus:
@@ -2781,7 +3003,7 @@ components:
       required:
         - name
         - spec
-    
+
     StackList:
       type: object
       properties:
@@ -3540,7 +3762,7 @@ components:
             - zstd
           default: gzip
           description: Compression type for WAL files
-    
+
     ObjectStoreStatus:
       type: object
       properties:
@@ -4035,72 +4257,107 @@ components:
           additionalProperties:
             type: string
           description: Maps addon credential fields to environment variable names. Valid fields are host, port, username, password, database, sslmode, connectionString, caCertificate.
-    Team:
+    ScopeResource:
       type: object
       properties:
-        id:
+        resource:
           type: string
-          readOnly: true
-        name:
-          type: string
-        organisation_id:
-          type: string
-          readOnly: true
-        default_team:
-          type: boolean
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-        - name
-    TeamList:
+          description: The resource name (e.g., stacks, secrets, addons/postgres)
+        actions:
+          type: array
+          items:
+            type: string
+          description: The allowed actions for this resource (e.g., read, write, delete)
+    ScopeList:
       type: object
       properties:
+        full_access_scope:
+          type: string
+          description: The wildcard scope that grants full access (same permissions as the user)
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Team'
+            $ref: '#/components/schemas/ScopeResource'
         total:
           type: integer
-    TeamMembership:
+    APITokenCreateRequest:
+      type: object
+      required:
+        - name
+        - scopes
+      properties:
+        name:
+          type: string
+          description: Display name for the token
+        scopes:
+          type: array
+          items:
+            type: string
+          description: Permission scopes for the token
+        resource_ids:
+          type: array
+          items:
+            type: string
+          description: Optional list of resource IDs to restrict the token to
+        expires_at:
+          type: string
+          format: date-time
+          description: Optional expiration time in RFC3339 format
+    APITokenCreateResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: The raw API token (only returned on creation)
+        id:
+          type: string
+        name:
+          type: string
+        token_prefix:
+          type: string
+          description: Prefix of the token for identification
+        expires_at:
+          type: string
+          format: date-time
+    APIToken:
       type: object
       properties:
         id:
           type: string
-          readOnly: true
-        team_id:
+        name:
           type: string
         user_id:
           type: string
-        role:
+        token_prefix:
           type: string
-          enum:
-            - Developer
-            - Viewer
-        team:
-          $ref: '#/components/schemas/Team'
-        user:
-          $ref: '#/components/schemas/User'
+        scopes:
+          type: array
+          items:
+            type: string
+        resource_ids:
+          type: array
+          items:
+            type: string
+        org_id:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
         created_at:
           type: string
           format: date-time
-          readOnly: true
-      required:
-        - team_id
-        - user_id
-        - role
-    TeamMembershipList:
+        revoked_at:
+          type: string
+          format: date-time
+    APITokenList:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/TeamMembership'
+            $ref: '#/components/schemas/APIToken'
         total:
           type: integer

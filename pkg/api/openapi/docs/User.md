@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **Organisation** | Pointer to **string** | User&#39;s organisation | [optional] 
 **Role** | Pointer to [**UserRole**](UserRole.md) |  | [optional] 
 **OrganisationId** | Pointer to **string** | OrganisationID | [optional] 
+**Teams** | Pointer to [**[]UserTeamMembership**](UserTeamMembership.md) | Teams the user belongs to (included in login/signup/current-user responses) | [optional] 
 
 ## Methods
 
@@ -205,6 +206,31 @@ SetOrganisationId sets OrganisationId field to given value.
 `func (o *User) HasOrganisationId() bool`
 
 HasOrganisationId returns a boolean if a field has been set.
+
+### GetTeams
+
+`func (o *User) GetTeams() []UserTeamMembership`
+
+GetTeams returns the Teams field if non-nil, zero value otherwise.
+
+### GetTeamsOk
+
+`func (o *User) GetTeamsOk() (*[]UserTeamMembership, bool)`
+
+GetTeamsOk returns a tuple with the Teams field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTeams
+
+`func (o *User) SetTeams(v []UserTeamMembership)`
+
+SetTeams sets Teams field to given value.
+
+### HasTeams
+
+`func (o *User) HasTeams() bool`
+
+HasTeams returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -83,7 +83,6 @@ paths:
       summary: Get a user
   /api/v1/users/current:
     get:
-      description: Get a the current authenticated user
       responses:
         "200":
           content:
@@ -111,7 +110,27 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a the current authenticated user
+      summary: Get the current authenticated user
+  /api/v1/users/current/teams:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamList'
+          description: Teams listed successfully
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List teams for the current authenticated user
   /api/v1/auth/login:
     post:
       description: Authenticate user and generate an access token
@@ -141,40 +160,184 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: Internal server error
       summary: User login
-  /api/v1/organizations/default:
-    get:
-      description: Get the default organization
+  /api/v1/auth/refresh:
+    post:
+      description: Exchange a refresh token for a new access token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+        required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Organisation'
-          description: Default organization fetched successfully
+                $ref: '#/components/schemas/RefreshTokenResponse'
+          description: Token refreshed successfully
         "401":
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: Auth token is invalid
-        "403":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Unauthorized to perform operation
+          description: Invalid or expired refresh token
         "500":
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
           description: Internal server error
+      summary: Refresh JWT token
+  /api/v1/auth/github:
+    get:
+      description: Redirects the user to GitHub for OAuth authorization
+      responses:
+        "302":
+          description: Redirect to GitHub OAuth authorization page
+        "500":
+          description: Internal server error
+      summary: Initiate GitHub OAuth flow
+  /api/v1/auth/github/callback:
+    get:
+      description: Handles the callback from GitHub after OAuth authorization
+      parameters:
+      - explode: true
+        in: query
+        name: code
+        required: true
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: state
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: OAuth login successful
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: OAuth authorization failed
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      summary: GitHub OAuth callback
+  /api/v1/api-tokens:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APITokenList'
+          description: API tokens listed successfully
       security:
       - Bearer: []
-      summary: Get the default organization
+      summary: List all API tokens for the current user
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APITokenCreateRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APITokenCreateResponse'
+          description: API token created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+      security:
+      - Bearer: []
+      summary: Create a new API token
+  /api/v1/api-tokens/scopes:
+    get:
+      description: Returns the list of resources and their allowed actions that can
+        be used when creating API tokens
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScopeList'
+          description: Scopes listed successfully
+        "401":
+          description: Unauthorized
+      security:
+      - Bearer: []
+      summary: List all available API token scopes
+  /api/v1/api-tokens/{id}:
+    delete:
+      parameters:
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: API token revoked successfully
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: API token not found
+      security:
+      - Bearer: []
+      summary: Revoke an API token
+    get:
+      parameters:
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIToken'
+          description: API token fetched successfully
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: API token not found
+      security:
+      - Bearer: []
+      summary: Get an API token by ID
   /api/v1/organizations/{id}:
     get:
-      description: Get an organization
       parameters:
       - description: The id of record
         explode: false
@@ -213,7 +376,6 @@ paths:
       - Bearer: []
       summary: Get an organization
     put:
-      description: Update an organization
       parameters:
       - description: The id of record
         explode: false
@@ -257,172 +419,155 @@ paths:
       security:
       - Bearer: []
       summary: Update an organization
-  /api/v1/organizations:
-    post:
-      description: Create a new organization
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Organisation'
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Organisation'
-          description: Organization created successfully
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Auth token is invalid
-        "403":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Unauthorized to perform operation
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Create a new organization
-  /api/v1/workspace-users:
-    post:
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkspaceUser'
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkspaceUser'
-          description: WorkspaceUser object added successfully
-        "400":
-          description: Invalid request payload
-        "401":
-          description: Unauthorized
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Create a new workspace user object.
-  /api/v1/workspace-users/{id}:
-    delete:
-      parameters:
-      - explode: false
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        "204":
-          description: WorkspaceUser deleted successfully
-        "401":
-          description: Unauthorized
-        "404":
-          description: WorkspaceUser not found
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Delete a WorkspaceUser
+  /api/v1/organizations/{org_id}/users:
     get:
       parameters:
-      - explode: false
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkspaceUser'
-          description: WorkspaceUser details
-        "401":
-          description: Unauthorized
-        "404":
-          description: WorkspaceUser object not found
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Get a workspace user object by ID
-    put:
-      parameters:
-      - explode: false
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-        style: simple
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkspaceUser'
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkspaceUser'
-          description: WorkspaceUser updated successfully
-        "400":
-          description: Invalid request payload
-        "401":
-          description: Unauthorized
-        "404":
-          description: WorkspaceUser not found
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Update a WorkspaceUser
-  /api/v1/workspace-users/current:
-    get:
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkspaceUser'
-          description: WorkspaceUser details
-        "401":
-          description: Unauthorized
-        "404":
-          description: WorkspaceUser object not found
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Get the workspace user object for the current user
-  /api/v1/organizations/{id}/clusters:
-    get:
-      parameters:
-      - description: The id of record
+      - description: The ID of the organization
         explode: false
         in: path
-        name: id
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Page number
+        explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          type: integer
+        style: form
+      - description: Number of items per page
+        explode: true
+        in: query
+        name: page_size
+        required: false
+        schema:
+          default: 20
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all users in an organization
+  /api/v1/organizations/{org_id}/secrets:
+    get:
+      description: Returns secrets from all teams the user belongs to. OrgAdmins see
+        all secrets in the org.
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecretList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all secrets the user has access to across all teams
+  /api/v1/organizations/{org_id}/object-stores:
+    get:
+      description: Returns object stores from all teams the user belongs to. OrgAdmins
+        see all object stores in the org.
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStoreList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all object stores the user has access to across all teams
+  /api/v1/organizations/{org_id}/stacks:
+    get:
+      description: Returns stacks from all teams the user belongs to. OrgAdmins see
+        all stacks in the org.
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all stacks the user has access to across all teams
+  /api/v1/organizations/{org_id}/clusters:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
         required: true
         schema:
           type: string
@@ -445,10 +590,10 @@ paths:
       summary: List all clusters for an organization
     post:
       parameters:
-      - description: The id of record
+      - description: The ID of the organization
         explode: false
         in: path
-        name: id
+        name: org_id
         required: true
         schema:
           type: string
@@ -480,14 +625,16 @@ paths:
   /api/v1/organizations/{org_id}/clusters/{id}:
     delete:
       parameters:
-      - explode: false
+      - description: The ID of the organization
+        explode: false
         in: path
         name: org_id
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The id of record
+        explode: false
         in: path
         name: id
         required: true
@@ -507,17 +654,19 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Delete a cluster object
+      summary: Delete a cluster
     get:
       parameters:
-      - explode: false
+      - description: The ID of the organization
+        explode: false
         in: path
         name: org_id
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The id of record
+        explode: false
         in: path
         name: id
         required: true
@@ -541,226 +690,20 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a specific cluster object
-    put:
-      parameters:
-      - explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      - explode: false
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-        style: simple
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Cluster'
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Cluster'
-          description: Cluster updated successfully
-        "400":
-          description: Invalid request payload
-        "404":
-          description: Cluster not found
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Update a cluster object
-  /api/v1/organizations/{org_id}/secrets:
-    get:
-      parameters:
-      - explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SecretList'
-          description: Successful operation
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: List all secrets for an organization
-    post:
-      parameters:
-      - explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Secret'
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Secret'
-          description: Secret created successfully
-        "400":
-          description: Invalid request payload
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Create a new secret
-  /api/v1/organizations/{org_id}/secrets/{id}:
-    delete:
-      parameters:
-      - explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      - explode: false
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        "204":
-          description: Secret deleted successfully
-        "404":
-          description: Secret not found
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Delete a secret object
-    get:
-      parameters:
-      - explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      - explode: false
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Secret'
-          description: Successful operation
-        "404":
-          description: Secret not found
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Get a specific secret object
-    put:
-      parameters:
-      - explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      - explode: false
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-        style: simple
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Secret'
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Secret'
-          description: Secret updated successfully
-        "400":
-          description: Invalid request payload
-        "404":
-          description: Secret not found
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Update a secret object
+      summary: Get a specific cluster
   /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries:
     get:
       parameters:
-      - explode: false
+      - description: The ID of the organization
+        explode: false
         in: path
         name: org_id
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The ID of the cluster
+        explode: false
         in: path
         name: cluster_id
         required: true
@@ -772,7 +715,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__org_id__clusters__cluster_id__image_registries_get_200_response'
+                $ref: '#/components/schemas/ClusterImageRegistryList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -785,14 +728,16 @@ paths:
       summary: List all image registries for a cluster
     post:
       parameters:
-      - explode: false
+      - description: The ID of the organization
+        explode: false
         in: path
         name: org_id
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The ID of the cluster
+        explode: false
         in: path
         name: cluster_id
         required: true
@@ -826,21 +771,24 @@ paths:
   /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id}:
     delete:
       parameters:
-      - explode: false
+      - description: The ID of the organization
+        explode: false
         in: path
         name: org_id
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The ID of the cluster
+        explode: false
         in: path
         name: cluster_id
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The id of record
+        explode: false
         in: path
         name: id
         required: true
@@ -860,24 +808,27 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Delete an image registry object
+      summary: Delete an image registry
     get:
       parameters:
-      - explode: false
+      - description: The ID of the organization
+        explode: false
         in: path
         name: org_id
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The ID of the cluster
+        explode: false
         in: path
         name: cluster_id
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The id of record
+        explode: false
         in: path
         name: id
         required: true
@@ -901,14 +852,14 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a specific image registry object
-  /api/v1/organizations/{id}/remote-sync-servers:
+      summary: Get a specific image registry
+  /api/v1/organizations/{org_id}/teams:
     get:
       parameters:
-      - description: The id of record
+      - description: The ID of the organization
         explode: false
         in: path
-        name: id
+        name: org_id
         required: true
         schema:
           type: string
@@ -918,210 +869,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__id__remote_sync_servers_get_200_response'
+                $ref: '#/components/schemas/TeamList'
           description: Successful operation
         "401":
           description: Unauthorized
-        "403":
-          description: Forbidden
         "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: List all RemoteSyncServer objects for an organization
-    post:
-      parameters:
-      - description: The id of record
-        explode: false
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-        style: simple
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RemoteSyncServer'
-        required: true
-      responses:
-        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RemoteSyncServer'
-          description: RemoteSyncServer created successfully
-        "400":
-          description: Invalid request payload
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
+                $ref: '#/components/schemas/Error'
           description: Internal server error
       security:
       - Bearer: []
-      summary: Create a new remote sync server
-  /api/v1/organizations/{org_id}/remote-sync-servers/{id}:
-    delete:
-      parameters:
-      - explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      - explode: false
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        "204":
-          description: RemoteSyncServer deleted successfully
-        "404":
-          description: RemoteSyncServer not found
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Delete a RemoteSyncServer object
-    get:
-      parameters:
-      - explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      - explode: false
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RemoteSyncServer'
-          description: Successful operation
-        "404":
-          description: RemoteSyncServer not found
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Get a specific RemoteSyncServer object
-    put:
-      parameters:
-      - explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      - explode: false
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-        style: simple
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RemoteSyncServer'
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RemoteSyncServer'
-          description: RemoteSyncServer updated successfully
-        "400":
-          description: Invalid request payload
-        "404":
-          description: RemoteSyncServer not found
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Update a RemoteSyncServer object
-  /api/v1/organizations/{org_id}/remote-sync-servers/current:
-    get:
-      parameters:
-      - explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RemoteSyncServer'
-          description: Successful operation
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Get RemoteSyncServer for the current user
-  /api/v1/organizations/{org_id}/volumes:
-    get:
-      parameters:
-      - explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VolumeList'
-          description: Successful operation
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: List all volumes in an organization.
+      summary: List all teams in an organization
     post:
       parameters:
       - description: The ID of the organization
@@ -1136,69 +896,83 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Volume'
+              $ref: '#/components/schemas/TeamCreateRequest'
         required: true
       responses:
         "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Volume'
-          description: Volume created successfully
+                $ref: '#/components/schemas/Team'
+          description: Team created successfully
         "400":
-          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
         "401":
           description: Unauthorized
         "403":
           description: Forbidden
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
           description: Internal server error
       security:
       - Bearer: []
-      summary: Create a new volume
-  /api/v1/organizations/{org_id}/volumes/{id}:
+      summary: Create a new team
+  /api/v1/organizations/{org_id}/teams/{team_name}:
     delete:
       parameters:
-      - explode: false
+      - description: The ID of the organization
+        explode: false
         in: path
         name: org_id
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The name of the team
+        explode: false
         in: path
-        name: id
+        name: team_name
         required: true
         schema:
           type: string
         style: simple
       responses:
         "204":
-          description: Volume deleted successfully
-        "404":
-          description: Volume not found
+          description: Team deleted successfully
         "401":
           description: Unauthorized
-        "403":
-          description: Forbidden
+        "404":
+          description: Team not found
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
           description: Internal server error
       security:
       - Bearer: []
-      summary: Delete a volume
+      summary: Delete a team
     get:
       parameters:
-      - explode: false
+      - description: The ID of the organization
+        explode: false
         in: path
         name: org_id
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The name of the team
+        explode: false
         in: path
-        name: id
+        name: team_name
         required: true
         schema:
           type: string
@@ -1208,27 +982,223 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Volume'
+                $ref: '#/components/schemas/Team'
           description: Successful operation
         "401":
           description: Unauthorized
-        "403":
-          description: Forbidden
+        "404":
+          description: Team not found
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a specific volume
+      summary: Get a specific team by name
     put:
       parameters:
-      - explode: false
+      - description: The ID of the organization
+        explode: false
         in: path
         name: org_id
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamUpdateRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+          description: Team updated successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "404":
+          description: Team not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update a team
+  /api/v1/organizations/{org_id}/teams/{team_name}/members:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMembershipList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "404":
+          description: Team not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List members of a team
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddTeamMemberRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMembership'
+          description: Member added successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "404":
+          description: Team not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Add a member to a team
+  /api/v1/organizations/{org_id}/teams/{team_name}/members/{id}:
+    delete:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Member removed successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: Membership not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Remove a member from a team
+    put:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
         in: path
         name: id
         required: true
@@ -1239,30 +1209,39 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Volume'
+              $ref: '#/components/schemas/UpdateTeamMemberRoleRequest'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Volume'
-          description: Volume updated successfully
+                $ref: '#/components/schemas/TeamMembership'
+          description: Member role updated successfully
         "400":
-          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
         "401":
           description: Unauthorized
-        "403":
-          description: Forbidden
+        "404":
+          description: Membership not found
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
           description: Internal server error
       security:
       - Bearer: []
-      summary: Update a volume
-  /api/v1/organizations/{org_id}/volumes/current:
+      summary: Update a team member's role
+  /api/v1/organizations/{org_id}/admins:
     get:
       parameters:
-      - explode: false
+      - description: The ID of the organization
+        explode: false
         in: path
         name: org_id
         required: true
@@ -1274,24 +1253,109 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VolumeList'
+                $ref: '#/components/schemas/UserList'
           description: Successful operation
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List organization admins
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoteAdminRequest'
+        required: true
+      responses:
+        "200":
+          description: User promoted to admin successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
         "401":
           description: Unauthorized
         "403":
           description: Forbidden
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
           description: Internal server error
       security:
       - Bearer: []
-      summary: List of volumes for the current user
-  /api/v1/organizations/{org_id}/stacks:
+      summary: Promote a user to organization admin
+  /api/v1/organizations/{org_id}/admins/{user_id}:
+    delete:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The ID of the user
+        explode: false
+        in: path
+        name: user_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Admin demoted successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: User not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Demote an organization admin
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks:
     get:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -1329,13 +1393,21 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all Stacks for an organization
+      summary: List all stacks for a team
     post:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -1376,13 +1448,21 @@ paths:
       security:
       - Bearer: []
       summary: Create a new stack
-  /api/v1/organizations/{org_id}/stacks/{id}:
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}:
     delete:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -1412,13 +1492,21 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Delete a Stack
+      summary: Delete a stack
     get:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -1448,13 +1536,21 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a specific Stack
+      summary: Get a specific stack
     put:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -1496,14 +1592,22 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Update a Stack
-  /api/v1/organizations/{org_id}/stacks/{id}/logs:
+      summary: Update a stack
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/logs:
     get:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -1557,8 +1661,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get logs for a Stack
-  /api/v1/organizations/{org_id}/stacks/{id}/metrics:
+      summary: Get logs for a stack
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/metrics:
     get:
       description: "Returns metrics for a stack. If `stream=true` is passed, the server\
         \ responds using Server-Sent Events (SSE).\n"
@@ -1567,6 +1671,14 @@ paths:
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -1610,8 +1722,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get metrics for a Stack
-  /api/v1/organizations/{org_id}/stacks/current:
+      summary: Get metrics for a stack
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources:
     get:
       parameters:
       - description: The ID of the organization
@@ -1622,39 +1734,18 @@ paths:
         schema:
           type: string
         style: simple
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StackList'
-          description: Successful operation
-        "401":
-          description: Unauthorized
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: List all stacks of the current user
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources:
-    get:
-      parameters:
-      - description: The ID of the organization
+      - description: The name of the team
         explode: false
         in: path
-        name: org_id
+        name: team_name
         required: true
         schema:
           type: string
         style: simple
-      - description: The ID of the stack
+      - description: The id of record
         explode: false
         in: path
-        name: stack_id
+        name: id
         required: true
         schema:
           type: string
@@ -1676,8 +1767,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all StackResources under a Stack
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}:
+      summary: List all stack resources under a stack
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}:
     get:
       parameters:
       - description: The ID of the organization
@@ -1688,10 +1779,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The ID of the stack
+      - description: The name of the team
         explode: false
         in: path
-        name: stack_id
+        name: team_name
         required: true
         schema:
           type: string
@@ -1700,6 +1791,14 @@ paths:
         explode: false
         in: path
         name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the stack resource
+        explode: false
+        in: path
+        name: resource_name
         required: true
         schema:
           type: string
@@ -1721,8 +1820,9 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a specific StackResource
-    put:
+      summary: Get a specific stack resource by name
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs:
+    get:
       parameters:
       - description: The ID of the organization
         explode: false
@@ -1732,10 +1832,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The ID of the stack
+      - description: The name of the team
         explode: false
         in: path
-        name: stack_id
+        name: team_name
         required: true
         schema:
           type: string
@@ -1748,56 +1848,8 @@ paths:
         schema:
           type: string
         style: simple
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/StackResource'
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StackResource'
-          description: StackResource updated successfully
-        "401":
-          description: Unauthorized
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Invalid request data
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Internal server error
-      security:
-      - Bearer: []
-      summary: Update a StackResource
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/logs:
-    get:
-      parameters:
-      - description: The ID of the organization
+      - description: The name of the stack resource
         explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      - description: The ID of the stack
-        explode: false
-        in: path
-        name: stack_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      - explode: false
         in: path
         name: resource_name
         required: true
@@ -1845,10 +1897,10 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get logs for a StackResource
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/metrics:
+      summary: Get logs for a stack resource
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/metrics:
     get:
-      description: "Returns metrics for a StackResource. If `stream=true` is passed,\
+      description: "Returns metrics for a stack resource. If `stream=true` is passed,\
         \ the server responds using Server-Sent Events (SSE).\n"
       parameters:
       - description: The ID of the organization
@@ -1859,15 +1911,24 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The ID of the stack
+      - description: The name of the team
         explode: false
         in: path
-        name: stack_id
+        name: team_name
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the stack resource
+        explode: false
         in: path
         name: resource_name
         required: true
@@ -1906,8 +1967,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get metrics for a StackResource
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}/builds:
+      summary: Get metrics for a stack resource
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/builds:
     get:
       parameters:
       - description: The ID of the organization
@@ -1918,10 +1979,63 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The ID of the stack
+      - description: The name of the team
         explode: false
         in: path
-        name: stack_id
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the stack resource
+        explode: false
+        in: path
+        name: resource_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageBuildList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all builds for a stack resource
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -1951,45 +2065,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all builds for a StackResource
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/builds:
-    get:
-      parameters:
-      - description: The ID of the organization
-        explode: false
-        in: path
-        name: org_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      - description: The ID of the stack
-        explode: false
-        in: path
-        name: stack_id
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ImageBuildList'
-          description: Successful operation
-        "401":
-          description: Unauthorized
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Internal server error
-      security:
-      - Bearer: []
       summary: List all builds under a stack
-  /api/v1/organizations/{org_id}/stacks/{stack_id}/builds/{build_id}:
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds/{build_id}:
     get:
       parameters:
       - description: The ID of the organization
@@ -2000,15 +2077,24 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The ID of the stack
+      - description: The name of the team
         explode: false
         in: path
-        name: stack_id
+        name: team_name
         required: true
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The ID of the build
+        explode: false
         in: path
         name: build_id
         required: true
@@ -2035,7 +2121,7 @@ paths:
       security:
       - Bearer: []
       summary: Get a specific build under a stack
-  /api/v1/organizations/{org_id}/object-stores:
+  /api/v1/organizations/{org_id}/teams/{team_name}/secrets:
     get:
       parameters:
       - description: The ID of the organization
@@ -2046,27 +2132,31 @@ paths:
         schema:
           type: string
         style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ObjectStoreList'
+                $ref: '#/components/schemas/SecretList'
           description: Successful operation
         "401":
           description: Unauthorized
+        "403":
+          description: Forbidden
         "500":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all ObjectStores for an organization
+      summary: List all secrets for a team
     post:
-      description: Add a new ObjectStore configuration for storing PostgreSQL backups
-        and WAL files
       parameters:
       - description: The ID of the organization
         explode: false
@@ -2076,51 +2166,53 @@ paths:
         schema:
           type: string
         style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ObjectStore'
+              $ref: '#/components/schemas/Secret'
         required: true
       responses:
         "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ObjectStore'
-          description: ObjectStore created successfully
+                $ref: '#/components/schemas/Secret'
+          description: Secret created successfully
         "400":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Invalid request data
+          description: Invalid request payload
         "401":
           description: Unauthorized
         "403":
           description: Forbidden
-        "409":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: ObjectStore already exists
         "500":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
           description: Internal server error
       security:
       - Bearer: []
-      summary: Add a new ObjectStore for backup storage
-  /api/v1/organizations/{org_id}/object-stores/{id}:
+      summary: Create a new secret
+  /api/v1/organizations/{org_id}/teams/{team_name}/secrets/{id}:
     delete:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -2135,32 +2227,32 @@ paths:
         style: simple
       responses:
         "204":
-          description: ObjectStore deleted successfully
+          description: Secret deleted successfully
+        "404":
+          description: Secret not found
         "401":
           description: Unauthorized
-        "404":
-          description: ObjectStore not found
-        "409":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: ObjectStore is in use by PostgresAddons
+        "403":
+          description: Forbidden
         "500":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
           description: Internal server error
       security:
       - Bearer: []
-      summary: Delete an ObjectStore
+      summary: Delete a secret
     get:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -2178,27 +2270,33 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ObjectStore'
+                $ref: '#/components/schemas/Secret'
           description: Successful operation
+        "404":
+          description: Secret not found
         "401":
           description: Unauthorized
-        "404":
-          description: ObjectStore not found
+        "403":
+          description: Forbidden
         "500":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a specific ObjectStore
+      summary: Get a specific secret
     put:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -2215,41 +2313,169 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ObjectStore'
+              $ref: '#/components/schemas/Secret'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ObjectStore'
-          description: ObjectStore updated successfully
+                $ref: '#/components/schemas/Secret'
+          description: Secret updated successfully
         "400":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Invalid request data
+          description: Invalid request payload
+        "404":
+          description: Secret not found
         "401":
           description: Unauthorized
-        "404":
-          description: ObjectStore not found
+        "403":
+          description: Forbidden
         "500":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
           description: Internal server error
       security:
       - Bearer: []
-      summary: Update an ObjectStore
-  /api/v1/organizations/{org_id}/addons/postgres:
+      summary: Update a secret
+  /api/v1/organizations/{org_id}/teams/{team_name}/volumes:
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Volume'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Volume'
+          description: Volume created successfully
+        "400":
+          description: Invalid request payload
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Create a new volume
+  /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id}:
+    delete:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Volume deleted successfully
+        "404":
+          description: Volume not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete a volume
     get:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Volume'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a specific volume
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -2273,7 +2499,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all PostgresAddons for under an organization
+      summary: List all PostgresAddons for a team
     post:
       description: Create a new PostgreSQL database cluster addon
       parameters:
@@ -2281,6 +2507,14 @@ paths:
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -2323,13 +2557,21 @@ paths:
       security:
       - Bearer: []
       summary: Create a new PostgresAddon
-  /api/v1/organizations/{org_id}/addons/postgres/{id}:
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}:
     delete:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -2374,6 +2616,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
       - description: The id of record
         explode: false
         in: path
@@ -2410,6 +2660,14 @@ paths:
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -2456,13 +2714,21 @@ paths:
       security:
       - Bearer: []
       summary: Update a PostgresAddon
-  /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/backup:
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/backup:
     post:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -2479,13 +2745,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/_api_v1_organizations__org_id__addons_postgres__id__actions_backup_post_request'
+              $ref: '#/components/schemas/_api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_backup_post_request'
       responses:
         "202":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__org_id__addons_postgres__id__actions_backup_post_202_response'
+                $ref: '#/components/schemas/_api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_backup_post_202_response'
           description: Backup request accepted
         "401":
           description: Unauthorized
@@ -2508,13 +2774,21 @@ paths:
       security:
       - Bearer: []
       summary: Trigger an immediate backup
-  /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/fence:
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/fence:
     post:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -2531,14 +2805,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/_api_v1_organizations__org_id__addons_postgres__id__actions_fence_post_request'
+              $ref: '#/components/schemas/_api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_fence_post_request'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__org_id__addons_postgres__id__actions_fence_post_200_response'
+                $ref: '#/components/schemas/_api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_fence_post_200_response'
           description: Fencing operation successful
         "401":
           description: Unauthorized
@@ -2555,13 +2829,21 @@ paths:
       security:
       - Bearer: []
       summary: Fence or unfence the PostgreSQL cluster
-  /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/hibernate:
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/hibernate:
     post:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -2578,14 +2860,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/_api_v1_organizations__org_id__addons_postgres__id__actions_hibernate_post_request'
+              $ref: '#/components/schemas/_api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_hibernate_post_request'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__org_id__addons_postgres__id__actions_hibernate_post_200_response'
+                $ref: '#/components/schemas/_api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_hibernate_post_200_response'
           description: Hibernation operation successful
         "401":
           description: Unauthorized
@@ -2602,13 +2884,21 @@ paths:
       security:
       - Bearer: []
       summary: Hibernate or wake the PostgreSQL cluster
-  /api/v1/organizations/{org_id}/addons/postgres/{id}/backups:
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/backups:
     get:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -2657,13 +2947,21 @@ paths:
       security:
       - Bearer: []
       summary: List backups for a PostgresAddon
-  /api/v1/organizations/{org_id}/addons/postgres/{id}/credentials/{database}:
+  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/credentials/{database}:
     get:
       parameters:
       - description: The ID of the organization
         explode: false
         in: path
         name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
         required: true
         schema:
           type: string
@@ -2727,6 +3025,461 @@ paths:
       security:
       - Bearer: []
       summary: Get JIT credentials for a PostgresAddon database
+  /api/v1/organizations/{org_id}/teams/{team_name}/object-stores:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStoreList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all ObjectStores for a team
+    post:
+      description: Add a new ObjectStore configuration for storing PostgreSQL backups
+        and WAL files
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectStore'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStore'
+          description: ObjectStore created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ObjectStore already exists
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Add a new ObjectStore for backup storage
+  /api/v1/organizations/{org_id}/teams/{team_name}/object-stores/{id}:
+    delete:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: ObjectStore deleted successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: ObjectStore not found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ObjectStore is in use by PostgresAddons
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete an ObjectStore
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStore'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "404":
+          description: ObjectStore not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a specific ObjectStore
+    put:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectStore'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectStore'
+          description: ObjectStore updated successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "404":
+          description: ObjectStore not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update an ObjectStore
+  /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users:
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceUser'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceUser'
+          description: WorkspaceUser created successfully
+        "400":
+          description: Invalid request payload
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Create a new workspace user
+  /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/current:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceUser'
+          description: WorkspaceUser details
+        "401":
+          description: Unauthorized
+        "404":
+          description: WorkspaceUser not found
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get the workspace user for the current user
+  /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id}:
+    delete:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: WorkspaceUser deleted successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: WorkspaceUser not found
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete a workspace user
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceUser'
+          description: WorkspaceUser details
+        "401":
+          description: Unauthorized
+        "404":
+          description: WorkspaceUser not found
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a workspace user by ID
+    put:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceUser'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceUser'
+          description: WorkspaceUser updated successfully
+        "400":
+          description: Invalid request payload
+        "401":
+          description: Unauthorized
+        "404":
+          description: WorkspaceUser not found
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update a workspace user
 components:
   parameters:
     id:
@@ -2751,16 +3504,43 @@ components:
       description: The ID of the cluster
       explode: false
       in: path
-      name: org_id
+      name: cluster_id
       required: true
       schema:
         type: string
       style: simple
-    stack_id:
-      description: The ID of the stack
+    team_name:
+      description: The name of the team
       explode: false
       in: path
-      name: stack_id
+      name: team_name
+      required: true
+      schema:
+        type: string
+      style: simple
+    user_id:
+      description: The ID of the user
+      explode: false
+      in: path
+      name: user_id
+      required: true
+      schema:
+        type: string
+      style: simple
+    resource_name:
+      description: The name of the stack resource
+      explode: false
+      in: path
+      name: resource_name
+      required: true
+      schema:
+        type: string
+      style: simple
+    build_id:
+      description: The ID of the build
+      explode: false
+      in: path
+      name: build_id
       required: true
       schema:
         type: string
@@ -2819,10 +3599,20 @@ components:
       type: object
     UserSignupResponse:
       example:
+        refresh_token: refresh_token
         jwt_token: jwt_token
         user:
           organisation_id: organisation_id
           role: null
+          teams:
+          - role: Developer
+            default_team: true
+            team_id: team_id
+            team_name: team_name
+          - role: Developer
+            default_team: true
+            team_id: team_id
+            team_name: team_name
           name: name
           organisation: organisation
           id: id
@@ -2834,11 +3624,23 @@ components:
         jwt_token:
           description: JWT token for the authenticated user
           type: string
+        refresh_token:
+          description: Refresh token for obtaining new access tokens
+          type: string
       type: object
     User:
       example:
         organisation_id: organisation_id
         role: null
+        teams:
+        - role: Developer
+          default_team: true
+          team_id: team_id
+          team_name: team_name
+        - role: Developer
+          default_team: true
+          team_id: team_id
+          team_name: team_name
         name: name
         organisation: organisation
         id: id
@@ -2866,11 +3668,91 @@ components:
         organisation_id:
           description: OrganisationID
           type: string
+        teams:
+          description: Teams the user belongs to (included in login/signup/current-user
+            responses)
+          items:
+            $ref: '#/components/schemas/UserTeamMembership'
+          type: array
+      type: object
+    UserTeamMembership:
+      example:
+        role: Developer
+        default_team: true
+        team_id: team_id
+        team_name: team_name
+      properties:
+        team_id:
+          type: string
+        team_name:
+          type: string
+        role:
+          enum:
+          - Developer
+          - Viewer
+          type: string
+        default_team:
+          type: boolean
+      type: object
+    UserList:
+      example:
+        total: 0
+        page: 6
+        total_pages: 5
+        items:
+        - organisation_id: organisation_id
+          role: null
+          teams:
+          - role: Developer
+            default_team: true
+            team_id: team_id
+            team_name: team_name
+          - role: Developer
+            default_team: true
+            team_id: team_id
+            team_name: team_name
+          name: name
+          organisation: organisation
+          id: id
+          email: email
+          username: username
+        - organisation_id: organisation_id
+          role: null
+          teams:
+          - role: Developer
+            default_team: true
+            team_id: team_id
+            team_name: team_name
+          - role: Developer
+            default_team: true
+            team_id: team_id
+            team_name: team_name
+          name: name
+          organisation: organisation
+          id: id
+          email: email
+          username: username
+        page_size: 1
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/User'
+          type: array
+        total:
+          description: Total number of records
+          type: integer
+        page:
+          description: Current page number
+          type: integer
+        page_size:
+          description: Number of items per page
+          type: integer
+        total_pages:
+          description: Total number of pages
+          type: integer
       type: object
     UserSignupRequest:
       example:
-        Role: null
-        organisation_id: organisation_id
         password: password
         name: name
         organisation:
@@ -2885,13 +3767,9 @@ components:
           id: id
           is_default: true
         email: email
-        username: username
       properties:
         name:
           description: User's name
-          type: string
-        username:
-          description: User's username
           type: string
         email:
           description: User's email address
@@ -2900,16 +3778,12 @@ components:
         password:
           description: Users desired password
           type: string
-        Role:
-          $ref: '#/components/schemas/UserRole'
         organisation:
           $ref: '#/components/schemas/Organisation'
-        organisation_id:
-          description: OrganisationID
-          type: string
       required:
       - email
       - name
+      - organisation
       - password
       type: object
     UserRole:
@@ -2919,6 +3793,28 @@ components:
       - Viewer
       - OrgMember
       type: string
+    RefreshTokenRequest:
+      example:
+        refreshToken: refreshToken
+      properties:
+        refreshToken:
+          description: The refresh token to exchange for a new access token
+          type: string
+      required:
+      - refreshToken
+      type: object
+    RefreshTokenResponse:
+      example:
+        token: token
+        refreshToken: refreshToken
+      properties:
+        token:
+          description: New access token
+          type: string
+        refreshToken:
+          description: New refresh token (old one is revoked)
+          type: string
+      type: object
     LoginRequest:
       example:
         password: password
@@ -2937,9 +3833,19 @@ components:
       type: object
     LoginResponse:
       example:
+        refresh_token: refresh_token
         user:
           organisation_id: organisation_id
           role: null
+          teams:
+          - role: Developer
+            default_team: true
+            team_id: team_id
+            team_name: team_name
+          - role: Developer
+            default_team: true
+            team_id: team_id
+            team_name: team_name
           name: name
           organisation: organisation
           id: id
@@ -2951,11 +3857,257 @@ components:
         token:
           description: Access token for authenticated requests
           type: string
+        refresh_token:
+          description: Refresh token for obtaining new access tokens
+          type: string
         user:
           $ref: '#/components/schemas/User'
         expires_in:
           description: Token expiration time in seconds
           type: integer
+      type: object
+    Team:
+      example:
+        organisation_id: organisation_id
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        default_team: true
+        name: name
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
+      properties:
+        id:
+          readOnly: true
+          type: string
+        name:
+          type: string
+        organisation_id:
+          readOnly: true
+          type: string
+        default_team:
+          readOnly: true
+          type: boolean
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+        updated_at:
+          format: date-time
+          readOnly: true
+          type: string
+      required:
+      - name
+      type: object
+    TeamList:
+      example:
+        total: 0
+        items:
+        - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          default_team: true
+          name: name
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+        - organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          default_team: true
+          name: name
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Team'
+          type: array
+        total:
+          type: integer
+      type: object
+    TeamMembership:
+      example:
+        role: Developer
+        user_id: user_id
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
+        team_id: team_id
+        team:
+          organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          default_team: true
+          name: name
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+        user:
+          organisation_id: organisation_id
+          role: null
+          teams:
+          - role: Developer
+            default_team: true
+            team_id: team_id
+            team_name: team_name
+          - role: Developer
+            default_team: true
+            team_id: team_id
+            team_name: team_name
+          name: name
+          organisation: organisation
+          id: id
+          email: email
+          username: username
+      properties:
+        id:
+          readOnly: true
+          type: string
+        team_id:
+          type: string
+        user_id:
+          type: string
+        role:
+          enum:
+          - Developer
+          - Viewer
+          type: string
+        team:
+          $ref: '#/components/schemas/Team'
+        user:
+          $ref: '#/components/schemas/User'
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+      required:
+      - role
+      - team_id
+      - user_id
+      type: object
+    TeamMembershipList:
+      example:
+        total: 0
+        items:
+        - role: Developer
+          user_id: user_id
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          team_id: team_id
+          team:
+            organisation_id: organisation_id
+            updated_at: 2000-01-23T04:56:07.000+00:00
+            default_team: true
+            name: name
+            created_at: 2000-01-23T04:56:07.000+00:00
+            id: id
+          user:
+            organisation_id: organisation_id
+            role: null
+            teams:
+            - role: Developer
+              default_team: true
+              team_id: team_id
+              team_name: team_name
+            - role: Developer
+              default_team: true
+              team_id: team_id
+              team_name: team_name
+            name: name
+            organisation: organisation
+            id: id
+            email: email
+            username: username
+        - role: Developer
+          user_id: user_id
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          team_id: team_id
+          team:
+            organisation_id: organisation_id
+            updated_at: 2000-01-23T04:56:07.000+00:00
+            default_team: true
+            name: name
+            created_at: 2000-01-23T04:56:07.000+00:00
+            id: id
+          user:
+            organisation_id: organisation_id
+            role: null
+            teams:
+            - role: Developer
+              default_team: true
+              team_id: team_id
+              team_name: team_name
+            - role: Developer
+              default_team: true
+              team_id: team_id
+              team_name: team_name
+            name: name
+            organisation: organisation
+            id: id
+            email: email
+            username: username
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/TeamMembership'
+          type: array
+        total:
+          type: integer
+      type: object
+    TeamCreateRequest:
+      example:
+        name: name
+      properties:
+        name:
+          description: Team name
+          type: string
+      required:
+      - name
+      type: object
+    TeamUpdateRequest:
+      example:
+        name: name
+      properties:
+        name:
+          description: Updated team name
+          type: string
+      required:
+      - name
+      type: object
+    AddTeamMemberRequest:
+      example:
+        role: Developer
+        user_id: user_id
+      properties:
+        user_id:
+          description: The ID of the user to add
+          type: string
+        role:
+          description: The role for the team member
+          enum:
+          - Developer
+          - Viewer
+          type: string
+      required:
+      - role
+      - user_id
+      type: object
+    UpdateTeamMemberRoleRequest:
+      example:
+        role: Developer
+      properties:
+        role:
+          description: The new role for the team member
+          enum:
+          - Developer
+          - Viewer
+          type: string
+      required:
+      - role
+      type: object
+    PromoteAdminRequest:
+      example:
+        user_id: user_id
+      properties:
+        user_id:
+          description: The ID of the user to promote to admin
+          type: string
+      required:
+      - user_id
       type: object
     WorkspaceUser:
       example:
@@ -3225,111 +4377,6 @@ components:
       - cluster_url
       - name
       type: object
-    RemoteSyncServer:
-      additionalProperties: false
-      example:
-        organisation_id: organisation_id
-        updated_at: 2000-01-23T04:56:07.000+00:00
-        name: name
-        namespace: namespace
-        annotations:
-        - value: value
-          key: key
-        - value: value
-          key: key
-        created_at: 2000-01-23T04:56:07.000+00:00
-        id: id
-        spec:
-          ssh_public_key: ssh_public_key
-          volumeName: volumeName
-        labels:
-        - value: value
-          key: key
-        - value: value
-          key: key
-        status:
-          observed_version: 0
-          state: null
-          conditions:
-          - reason: reason
-            last_transition_time: 2000-01-23T04:56:07.000+00:00
-            type: type
-            message: message
-            observed_generation: 1
-            status: status
-          - reason: reason
-            last_transition_time: 2000-01-23T04:56:07.000+00:00
-            type: type
-            message: message
-            observed_generation: 1
-            status: status
-          serviceName: serviceName
-      properties:
-        id:
-          readOnly: true
-          type: string
-        organisation_id:
-          readOnly: true
-          type: string
-        name:
-          type: string
-        namespace:
-          readOnly: true
-          type: string
-        labels:
-          items:
-            $ref: '#/components/schemas/Label'
-          type: array
-        annotations:
-          items:
-            $ref: '#/components/schemas/Annotation'
-          type: array
-        spec:
-          $ref: '#/components/schemas/RemoteSyncServerSpec'
-        status:
-          $ref: '#/components/schemas/RemoteSyncServerStatus'
-        created_at:
-          format: date-time
-          readOnly: true
-          type: string
-        updated_at:
-          format: date-time
-          readOnly: true
-          type: string
-      required:
-      - name
-      - spec
-      type: object
-    RemoteSyncServerList:
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/RemoteSyncServer'
-          type: array
-        total:
-          type: integer
-      type: object
-    RemoteSyncServerSpec:
-      additionalProperties: false
-      example:
-        ssh_public_key: ssh_public_key
-        volumeName: volumeName
-      properties:
-        volumeName:
-          type: string
-        ssh_public_key:
-          type: string
-      required:
-      - volumes
-      type: object
-    RemoteSyncServerState:
-      enum:
-      - RemoteSyncServerPending
-      - RemoteSyncServerCreating
-      - RemoteSyncServerCreated
-      - RemoteSyncServerReady
-      - RemoteSyncServerFailed
-      type: string
     Volume:
       additionalProperties: false
       example:
@@ -3421,133 +4468,6 @@ components:
       - spec
       type: object
     VolumeList:
-      example:
-        total: 0
-        items:
-        - name: name
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          id: id
-          team_id: team_id
-          spec:
-            needs_sync_before_use: true
-            storage_class: storage_class
-            size: size
-            source:
-              git_repo_source:
-                repo_url: repo_url
-                revision:
-                  commit: commit
-                  tag: tag
-                  branch:
-                    name: name
-                    head_sha: head_sha
-              remote_source:
-                path: path
-                current_directory_hash: current_directory_hash
-              build_source:
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              source_type: null
-            access_mode: null
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            phase: phase
-            build_artifact_syncs:
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            last_synced_git_revision: last_synced_git_revision
-            last_remote_sync_hash: last_remote_sync_hash
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-        - name: name
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          id: id
-          team_id: team_id
-          spec:
-            needs_sync_before_use: true
-            storage_class: storage_class
-            size: size
-            source:
-              git_repo_source:
-                repo_url: repo_url
-                revision:
-                  commit: commit
-                  tag: tag
-                  branch:
-                    name: name
-                    head_sha: head_sha
-              remote_source:
-                path: path
-                current_directory_hash: current_directory_hash
-              build_source:
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              source_type: null
-            access_mode: null
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            phase: phase
-            build_artifact_syncs:
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            last_synced_git_revision: last_synced_git_revision
-            last_remote_sync_hash: last_remote_sync_hash
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
       properties:
         items:
           items:
@@ -3718,36 +4638,6 @@ components:
       - destination_path
       - resource_ref
       - source_path
-      type: object
-    RemoteSyncServerStatus:
-      example:
-        observed_version: 0
-        state: null
-        conditions:
-        - reason: reason
-          last_transition_time: 2000-01-23T04:56:07.000+00:00
-          type: type
-          message: message
-          observed_generation: 1
-          status: status
-        - reason: reason
-          last_transition_time: 2000-01-23T04:56:07.000+00:00
-          type: type
-          message: message
-          observed_generation: 1
-          status: status
-        serviceName: serviceName
-      properties:
-        observed_version:
-          type: integer
-        conditions:
-          items:
-            $ref: '#/components/schemas/Condition'
-          type: array
-        state:
-          $ref: '#/components/schemas/RemoteSyncServerState'
-        serviceName:
-          type: string
       type: object
     VolumeStatus:
       example:
@@ -4289,7 +5179,7 @@ components:
       type: object
     StackList:
       example:
-        total: 1
+        total: 5
         items:
         - annotations:
           - value: value
@@ -6441,6 +7331,63 @@ components:
       - value
       type: object
     ClusterImageRegistryList:
+      example:
+        total: 0
+        items:
+        - organisation_id: organisation_id
+          cluster_id: cluster_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          name: name
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          spec:
+            backend_storage_size: backend_storage_size
+            max_repositories: 0
+            backend_storage_class: backend_storage_class
+            tags_per_repository: 6
+            delete_untagged: true
+          status:
+            state: null
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+        - organisation_id: organisation_id
+          cluster_id: cluster_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          name: name
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          spec:
+            backend_storage_size: backend_storage_size
+            max_repositories: 0
+            backend_storage_class: backend_storage_class
+            tags_per_repository: 6
+            delete_untagged: true
+          status:
+            state: null
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
       properties:
         items:
           items:
@@ -8258,232 +9205,200 @@ components:
       - addon_id
       - env_mapping
       type: object
-    Team:
+    ScopeResource:
+      example:
+        resource: resource
+        actions:
+        - actions
+        - actions
       properties:
-        id:
-          readOnly: true
+        resource:
+          description: "The resource name (e.g., stacks, secrets, addons/postgres)"
           type: string
+        actions:
+          description: "The allowed actions for this resource (e.g., read, write,\
+            \ delete)"
+          items:
+            type: string
+          type: array
+      type: object
+    ScopeList:
+      example:
+        total: 0
+        full_access_scope: full_access_scope
+        items:
+        - resource: resource
+          actions:
+          - actions
+          - actions
+        - resource: resource
+          actions:
+          - actions
+          - actions
+      properties:
+        full_access_scope:
+          description: The wildcard scope that grants full access (same permissions
+            as the user)
+          type: string
+        items:
+          items:
+            $ref: '#/components/schemas/ScopeResource'
+          type: array
+        total:
+          type: integer
+      type: object
+    APITokenCreateRequest:
+      example:
+        expires_at: 2000-01-23T04:56:07.000+00:00
+        name: name
+        scopes:
+        - scopes
+        - scopes
+        resource_ids:
+        - resource_ids
+        - resource_ids
+      properties:
         name:
+          description: Display name for the token
           type: string
-        organisation_id:
-          readOnly: true
-          type: string
-        default_team:
-          readOnly: true
-          type: boolean
-        created_at:
+        scopes:
+          description: Permission scopes for the token
+          items:
+            type: string
+          type: array
+        resource_ids:
+          description: Optional list of resource IDs to restrict the token to
+          items:
+            type: string
+          type: array
+        expires_at:
+          description: Optional expiration time in RFC3339 format
           format: date-time
-          readOnly: true
-          type: string
-        updated_at:
-          format: date-time
-          readOnly: true
           type: string
       required:
       - name
+      - scopes
       type: object
-    TeamList:
+    APITokenCreateResponse:
+      example:
+        expires_at: 2000-01-23T04:56:07.000+00:00
+        name: name
+        token_prefix: token_prefix
+        id: id
+        token: token
       properties:
-        items:
-          items:
-            $ref: '#/components/schemas/Team'
-          type: array
-        total:
-          type: integer
+        token:
+          description: The raw API token (only returned on creation)
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        token_prefix:
+          description: Prefix of the token for identification
+          type: string
+        expires_at:
+          format: date-time
+          type: string
       type: object
-    TeamMembership:
+    APIToken:
+      example:
+        last_used_at: 2000-01-23T04:56:07.000+00:00
+        expires_at: 2000-01-23T04:56:07.000+00:00
+        revoked_at: 2000-01-23T04:56:07.000+00:00
+        user_id: user_id
+        org_id: org_id
+        name: name
+        token_prefix: token_prefix
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
+        scopes:
+        - scopes
+        - scopes
+        resource_ids:
+        - resource_ids
+        - resource_ids
       properties:
         id:
-          readOnly: true
           type: string
-        team_id:
+        name:
           type: string
         user_id:
           type: string
-        role:
-          enum:
-          - Developer
-          - Viewer
+        token_prefix:
           type: string
-        team:
-          $ref: '#/components/schemas/Team'
-        user:
-          $ref: '#/components/schemas/User'
+        scopes:
+          items:
+            type: string
+          type: array
+        resource_ids:
+          items:
+            type: string
+          type: array
+        org_id:
+          type: string
+        expires_at:
+          format: date-time
+          type: string
+        last_used_at:
+          format: date-time
+          type: string
         created_at:
           format: date-time
-          readOnly: true
           type: string
-      required:
-      - role
-      - team_id
-      - user_id
+        revoked_at:
+          format: date-time
+          type: string
       type: object
-    TeamMembershipList:
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/TeamMembership'
-          type: array
-        total:
-          type: integer
-      type: object
-    _api_v1_organizations__org_id__clusters__cluster_id__image_registries_get_200_response:
+    APITokenList:
       example:
         total: 0
         items:
-        - organisation_id: organisation_id
-          cluster_id: cluster_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
+        - last_used_at: 2000-01-23T04:56:07.000+00:00
+          expires_at: 2000-01-23T04:56:07.000+00:00
+          revoked_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          org_id: org_id
           name: name
+          token_prefix: token_prefix
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          spec:
-            backend_storage_size: backend_storage_size
-            max_repositories: 0
-            backend_storage_class: backend_storage_class
-            tags_per_repository: 6
-            delete_untagged: true
-          status:
-            state: null
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-        - organisation_id: organisation_id
-          cluster_id: cluster_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
+          scopes:
+          - scopes
+          - scopes
+          resource_ids:
+          - resource_ids
+          - resource_ids
+        - last_used_at: 2000-01-23T04:56:07.000+00:00
+          expires_at: 2000-01-23T04:56:07.000+00:00
+          revoked_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          org_id: org_id
           name: name
+          token_prefix: token_prefix
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          spec:
-            backend_storage_size: backend_storage_size
-            max_repositories: 0
-            backend_storage_class: backend_storage_class
-            tags_per_repository: 6
-            delete_untagged: true
-          status:
-            state: null
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
+          scopes:
+          - scopes
+          - scopes
+          resource_ids:
+          - resource_ids
+          - resource_ids
       properties:
         items:
           items:
-            $ref: '#/components/schemas/ClusterImageRegistry'
+            $ref: '#/components/schemas/APIToken'
           type: array
         total:
           type: integer
       type: object
-    _api_v1_organizations__id__remote_sync_servers_get_200_response:
-      example:
-        total: 6
-        items:
-        - organisation_id: organisation_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          name: name
-          namespace: namespace
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
-          spec:
-            ssh_public_key: ssh_public_key
-            volumeName: volumeName
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            observed_version: 0
-            state: null
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            serviceName: serviceName
-        - organisation_id: organisation_id
-          updated_at: 2000-01-23T04:56:07.000+00:00
-          name: name
-          namespace: namespace
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
-          spec:
-            ssh_public_key: ssh_public_key
-            volumeName: volumeName
-          labels:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          status:
-            observed_version: 0
-            state: null
-            conditions:
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            - reason: reason
-              last_transition_time: 2000-01-23T04:56:07.000+00:00
-              type: type
-              message: message
-              observed_generation: 1
-              status: status
-            serviceName: serviceName
-      properties:
-        items:
-          items:
-            $ref: '#/components/schemas/RemoteSyncServer'
-          type: array
-        total:
-          type: integer
-      type: object
-    _api_v1_organizations__org_id__addons_postgres__id__actions_backup_post_request:
+    _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_backup_post_request:
       properties:
         description:
           description: Optional description for this backup
           type: string
       type: object
-    _api_v1_organizations__org_id__addons_postgres__id__actions_backup_post_202_response:
+    _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_backup_post_202_response:
       example:
         backup_id: backup_id
         message: message
@@ -8493,7 +9408,7 @@ components:
         backup_id:
           type: string
       type: object
-    _api_v1_organizations__org_id__addons_postgres__id__actions_fence_post_request:
+    _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_fence_post_request:
       properties:
         fence:
           description: "true to fence the cluster, false to unfence"
@@ -8504,7 +9419,7 @@ components:
       required:
       - fence
       type: object
-    _api_v1_organizations__org_id__addons_postgres__id__actions_fence_post_200_response:
+    _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_fence_post_200_response:
       example:
         fenced: true
         message: message
@@ -8514,7 +9429,7 @@ components:
         fenced:
           type: boolean
       type: object
-    _api_v1_organizations__org_id__addons_postgres__id__actions_hibernate_post_request:
+    _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_hibernate_post_request:
       properties:
         hibernate:
           description: "true to hibernate, false to wake"
@@ -8522,7 +9437,7 @@ components:
       required:
       - hibernate
       type: object
-    _api_v1_organizations__org_id__addons_postgres__id__actions_hibernate_post_200_response:
+    _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_hibernate_post_200_response:
       example:
         hibernated: true
         message: message

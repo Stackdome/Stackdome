@@ -18,7 +18,9 @@ import (
 type LoginResponse struct {
 	// Access token for authenticated requests
 	Token *string `json:"token,omitempty"`
-	User  *User   `json:"user,omitempty"`
+	// Refresh token for obtaining new access tokens
+	RefreshToken *string `json:"refresh_token,omitempty"`
+	User         *User   `json:"user,omitempty"`
 	// Token expiration time in seconds
 	ExpiresIn *int32 `json:"expires_in,omitempty"`
 }
@@ -70,6 +72,38 @@ func (o *LoginResponse) HasToken() bool {
 // SetToken gets a reference to the given string and assigns it to the Token field.
 func (o *LoginResponse) SetToken(v string) {
 	o.Token = &v
+}
+
+// GetRefreshToken returns the RefreshToken field value if set, zero value otherwise.
+func (o *LoginResponse) GetRefreshToken() string {
+	if o == nil || o.RefreshToken == nil {
+		var ret string
+		return ret
+	}
+	return *o.RefreshToken
+}
+
+// GetRefreshTokenOk returns a tuple with the RefreshToken field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *LoginResponse) GetRefreshTokenOk() (*string, bool) {
+	if o == nil || o.RefreshToken == nil {
+		return nil, false
+	}
+	return o.RefreshToken, true
+}
+
+// HasRefreshToken returns a boolean if a field has been set.
+func (o *LoginResponse) HasRefreshToken() bool {
+	if o != nil && o.RefreshToken != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetRefreshToken gets a reference to the given string and assigns it to the RefreshToken field.
+func (o *LoginResponse) SetRefreshToken(v string) {
+	o.RefreshToken = &v
 }
 
 // GetUser returns the User field value if set, zero value otherwise.
@@ -140,6 +174,9 @@ func (o LoginResponse) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Token != nil {
 		toSerialize["token"] = o.Token
+	}
+	if o.RefreshToken != nil {
+		toSerialize["refresh_token"] = o.RefreshToken
 	}
 	if o.User != nil {
 		toSerialize["user"] = o.User

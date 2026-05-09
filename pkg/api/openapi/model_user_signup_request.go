@@ -18,27 +18,23 @@ import (
 type UserSignupRequest struct {
 	// User's name
 	Name string `json:"name"`
-	// User's username
-	Username *string `json:"username,omitempty"`
 	// User's email address
 	Email string `json:"email"`
 	// Users desired password
-	Password     string        `json:"password"`
-	Role         *UserRole     `json:"Role,omitempty"`
-	Organisation *Organisation `json:"organisation,omitempty"`
-	// OrganisationID
-	OrganisationId *string `json:"organisation_id,omitempty"`
+	Password     string       `json:"password"`
+	Organisation Organisation `json:"organisation"`
 }
 
 // NewUserSignupRequest instantiates a new UserSignupRequest object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewUserSignupRequest(name string, email string, password string) *UserSignupRequest {
+func NewUserSignupRequest(name string, email string, password string, organisation Organisation) *UserSignupRequest {
 	this := UserSignupRequest{}
 	this.Name = name
 	this.Email = email
 	this.Password = password
+	this.Organisation = organisation
 	return &this
 }
 
@@ -72,38 +68,6 @@ func (o *UserSignupRequest) GetNameOk() (*string, bool) {
 // SetName sets field value
 func (o *UserSignupRequest) SetName(v string) {
 	o.Name = v
-}
-
-// GetUsername returns the Username field value if set, zero value otherwise.
-func (o *UserSignupRequest) GetUsername() string {
-	if o == nil || o.Username == nil {
-		var ret string
-		return ret
-	}
-	return *o.Username
-}
-
-// GetUsernameOk returns a tuple with the Username field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *UserSignupRequest) GetUsernameOk() (*string, bool) {
-	if o == nil || o.Username == nil {
-		return nil, false
-	}
-	return o.Username, true
-}
-
-// HasUsername returns a boolean if a field has been set.
-func (o *UserSignupRequest) HasUsername() bool {
-	if o != nil && o.Username != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetUsername gets a reference to the given string and assigns it to the Username field.
-func (o *UserSignupRequest) SetUsername(v string) {
-	o.Username = &v
 }
 
 // GetEmail returns the Email field value
@@ -154,100 +118,28 @@ func (o *UserSignupRequest) SetPassword(v string) {
 	o.Password = v
 }
 
-// GetRole returns the Role field value if set, zero value otherwise.
-func (o *UserSignupRequest) GetRole() UserRole {
-	if o == nil || o.Role == nil {
-		var ret UserRole
-		return ret
-	}
-	return *o.Role
-}
-
-// GetRoleOk returns a tuple with the Role field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *UserSignupRequest) GetRoleOk() (*UserRole, bool) {
-	if o == nil || o.Role == nil {
-		return nil, false
-	}
-	return o.Role, true
-}
-
-// HasRole returns a boolean if a field has been set.
-func (o *UserSignupRequest) HasRole() bool {
-	if o != nil && o.Role != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetRole gets a reference to the given UserRole and assigns it to the Role field.
-func (o *UserSignupRequest) SetRole(v UserRole) {
-	o.Role = &v
-}
-
-// GetOrganisation returns the Organisation field value if set, zero value otherwise.
+// GetOrganisation returns the Organisation field value
 func (o *UserSignupRequest) GetOrganisation() Organisation {
-	if o == nil || o.Organisation == nil {
+	if o == nil {
 		var ret Organisation
 		return ret
 	}
-	return *o.Organisation
+
+	return o.Organisation
 }
 
-// GetOrganisationOk returns a tuple with the Organisation field value if set, nil otherwise
+// GetOrganisationOk returns a tuple with the Organisation field value
 // and a boolean to check if the value has been set.
 func (o *UserSignupRequest) GetOrganisationOk() (*Organisation, bool) {
-	if o == nil || o.Organisation == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.Organisation, true
+	return &o.Organisation, true
 }
 
-// HasOrganisation returns a boolean if a field has been set.
-func (o *UserSignupRequest) HasOrganisation() bool {
-	if o != nil && o.Organisation != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetOrganisation gets a reference to the given Organisation and assigns it to the Organisation field.
+// SetOrganisation sets field value
 func (o *UserSignupRequest) SetOrganisation(v Organisation) {
-	o.Organisation = &v
-}
-
-// GetOrganisationId returns the OrganisationId field value if set, zero value otherwise.
-func (o *UserSignupRequest) GetOrganisationId() string {
-	if o == nil || o.OrganisationId == nil {
-		var ret string
-		return ret
-	}
-	return *o.OrganisationId
-}
-
-// GetOrganisationIdOk returns a tuple with the OrganisationId field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *UserSignupRequest) GetOrganisationIdOk() (*string, bool) {
-	if o == nil || o.OrganisationId == nil {
-		return nil, false
-	}
-	return o.OrganisationId, true
-}
-
-// HasOrganisationId returns a boolean if a field has been set.
-func (o *UserSignupRequest) HasOrganisationId() bool {
-	if o != nil && o.OrganisationId != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetOrganisationId gets a reference to the given string and assigns it to the OrganisationId field.
-func (o *UserSignupRequest) SetOrganisationId(v string) {
-	o.OrganisationId = &v
+	o.Organisation = v
 }
 
 func (o UserSignupRequest) MarshalJSON() ([]byte, error) {
@@ -255,23 +147,14 @@ func (o UserSignupRequest) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["name"] = o.Name
 	}
-	if o.Username != nil {
-		toSerialize["username"] = o.Username
-	}
 	if true {
 		toSerialize["email"] = o.Email
 	}
 	if true {
 		toSerialize["password"] = o.Password
 	}
-	if o.Role != nil {
-		toSerialize["Role"] = o.Role
-	}
-	if o.Organisation != nil {
+	if true {
 		toSerialize["organisation"] = o.Organisation
-	}
-	if o.OrganisationId != nil {
-		toSerialize["organisation_id"] = o.OrganisationId
 	}
 	return json.Marshal(toSerialize)
 }

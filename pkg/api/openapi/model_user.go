@@ -29,6 +29,8 @@ type User struct {
 	Role         *UserRole `json:"role,omitempty"`
 	// OrganisationID
 	OrganisationId *string `json:"organisation_id,omitempty"`
+	// Teams the user belongs to (included in login/signup/current-user responses)
+	Teams []UserTeamMembership `json:"teams,omitempty"`
 }
 
 // NewUser instantiates a new User object
@@ -272,6 +274,38 @@ func (o *User) SetOrganisationId(v string) {
 	o.OrganisationId = &v
 }
 
+// GetTeams returns the Teams field value if set, zero value otherwise.
+func (o *User) GetTeams() []UserTeamMembership {
+	if o == nil || o.Teams == nil {
+		var ret []UserTeamMembership
+		return ret
+	}
+	return o.Teams
+}
+
+// GetTeamsOk returns a tuple with the Teams field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *User) GetTeamsOk() ([]UserTeamMembership, bool) {
+	if o == nil || o.Teams == nil {
+		return nil, false
+	}
+	return o.Teams, true
+}
+
+// HasTeams returns a boolean if a field has been set.
+func (o *User) HasTeams() bool {
+	if o != nil && o.Teams != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetTeams gets a reference to the given []UserTeamMembership and assigns it to the Teams field.
+func (o *User) SetTeams(v []UserTeamMembership) {
+	o.Teams = v
+}
+
 func (o User) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Id != nil {
@@ -294,6 +328,9 @@ func (o User) MarshalJSON() ([]byte, error) {
 	}
 	if o.OrganisationId != nil {
 		toSerialize["organisation_id"] = o.OrganisationId
+	}
+	if o.Teams != nil {
+		toSerialize["teams"] = o.Teams
 	}
 	return json.Marshal(toSerialize)
 }

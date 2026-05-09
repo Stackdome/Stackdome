@@ -4,77 +4,533 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**ApiV1ApiTokensGet**](DefaultApi.md#ApiV1ApiTokensGet) | **Get** /api/v1/api-tokens | List all API tokens for the current user
+[**ApiV1ApiTokensIdDelete**](DefaultApi.md#ApiV1ApiTokensIdDelete) | **Delete** /api/v1/api-tokens/{id} | Revoke an API token
+[**ApiV1ApiTokensIdGet**](DefaultApi.md#ApiV1ApiTokensIdGet) | **Get** /api/v1/api-tokens/{id} | Get an API token by ID
+[**ApiV1ApiTokensPost**](DefaultApi.md#ApiV1ApiTokensPost) | **Post** /api/v1/api-tokens | Create a new API token
+[**ApiV1ApiTokensScopesGet**](DefaultApi.md#ApiV1ApiTokensScopesGet) | **Get** /api/v1/api-tokens/scopes | List all available API token scopes
+[**ApiV1AuthGithubCallbackGet**](DefaultApi.md#ApiV1AuthGithubCallbackGet) | **Get** /api/v1/auth/github/callback | GitHub OAuth callback
+[**ApiV1AuthGithubGet**](DefaultApi.md#ApiV1AuthGithubGet) | **Get** /api/v1/auth/github | Initiate GitHub OAuth flow
 [**ApiV1AuthLoginPost**](DefaultApi.md#ApiV1AuthLoginPost) | **Post** /api/v1/auth/login | User login
-[**ApiV1OrganizationsDefaultGet**](DefaultApi.md#ApiV1OrganizationsDefaultGet) | **Get** /api/v1/organizations/default | Get the default organization
-[**ApiV1OrganizationsIdClustersGet**](DefaultApi.md#ApiV1OrganizationsIdClustersGet) | **Get** /api/v1/organizations/{id}/clusters | List all clusters for an organization
-[**ApiV1OrganizationsIdClustersPost**](DefaultApi.md#ApiV1OrganizationsIdClustersPost) | **Post** /api/v1/organizations/{id}/clusters | Add a new cluster
+[**ApiV1AuthRefreshPost**](DefaultApi.md#ApiV1AuthRefreshPost) | **Post** /api/v1/auth/refresh | Refresh JWT token
 [**ApiV1OrganizationsIdGet**](DefaultApi.md#ApiV1OrganizationsIdGet) | **Get** /api/v1/organizations/{id} | Get an organization
 [**ApiV1OrganizationsIdPut**](DefaultApi.md#ApiV1OrganizationsIdPut) | **Put** /api/v1/organizations/{id} | Update an organization
-[**ApiV1OrganizationsIdRemoteSyncServersGet**](DefaultApi.md#ApiV1OrganizationsIdRemoteSyncServersGet) | **Get** /api/v1/organizations/{id}/remote-sync-servers | List all RemoteSyncServer objects for an organization
-[**ApiV1OrganizationsIdRemoteSyncServersPost**](DefaultApi.md#ApiV1OrganizationsIdRemoteSyncServersPost) | **Post** /api/v1/organizations/{id}/remote-sync-servers | Create a new remote sync server
-[**ApiV1OrganizationsOrgIdAddonsPostgresGet**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresGet) | **Get** /api/v1/organizations/{org_id}/addons/postgres | List all PostgresAddons for under an organization
-[**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/backup | Trigger an immediate backup
-[**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/fence | Fence or unfence the PostgreSQL cluster
-[**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost) | **Post** /api/v1/organizations/{org_id}/addons/postgres/{id}/actions/hibernate | Hibernate or wake the PostgreSQL cluster
-[**ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id}/backups | List backups for a PostgresAddon
-[**ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id}/credentials/{database} | Get JIT credentials for a PostgresAddon database
-[**ApiV1OrganizationsOrgIdAddonsPostgresIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdDelete) | **Delete** /api/v1/organizations/{org_id}/addons/postgres/{id} | Delete a PostgresAddon
-[**ApiV1OrganizationsOrgIdAddonsPostgresIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdGet) | **Get** /api/v1/organizations/{org_id}/addons/postgres/{id} | Get a specific PostgresAddon
-[**ApiV1OrganizationsOrgIdAddonsPostgresIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresIdPut) | **Put** /api/v1/organizations/{org_id}/addons/postgres/{id} | Update a PostgresAddon
-[**ApiV1OrganizationsOrgIdAddonsPostgresPost**](DefaultApi.md#ApiV1OrganizationsOrgIdAddonsPostgresPost) | **Post** /api/v1/organizations/{org_id}/addons/postgres | Create a new PostgresAddon
+[**ApiV1OrganizationsOrgIdAdminsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdAdminsGet) | **Get** /api/v1/organizations/{org_id}/admins | List organization admins
+[**ApiV1OrganizationsOrgIdAdminsPost**](DefaultApi.md#ApiV1OrganizationsOrgIdAdminsPost) | **Post** /api/v1/organizations/{org_id}/admins | Promote a user to organization admin
+[**ApiV1OrganizationsOrgIdAdminsUserIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdAdminsUserIdDelete) | **Delete** /api/v1/organizations/{org_id}/admins/{user_id} | Demote an organization admin
 [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries | List all image registries for a cluster
-[**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Delete an image registry object
-[**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Get a specific image registry object
+[**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Delete an image registry
+[**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet) | **Get** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id} | Get a specific image registry
 [**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesPost) | **Post** /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries | Create a new image registry
-[**ApiV1OrganizationsOrgIdClustersIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersIdDelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{id} | Delete a cluster object
-[**ApiV1OrganizationsOrgIdClustersIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersIdGet) | **Get** /api/v1/organizations/{org_id}/clusters/{id} | Get a specific cluster object
-[**ApiV1OrganizationsOrgIdClustersIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersIdPut) | **Put** /api/v1/organizations/{org_id}/clusters/{id} | Update a cluster object
-[**ApiV1OrganizationsOrgIdObjectStoresGet**](DefaultApi.md#ApiV1OrganizationsOrgIdObjectStoresGet) | **Get** /api/v1/organizations/{org_id}/object-stores | List all ObjectStores for an organization
-[**ApiV1OrganizationsOrgIdObjectStoresIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdObjectStoresIdDelete) | **Delete** /api/v1/organizations/{org_id}/object-stores/{id} | Delete an ObjectStore
-[**ApiV1OrganizationsOrgIdObjectStoresIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdObjectStoresIdGet) | **Get** /api/v1/organizations/{org_id}/object-stores/{id} | Get a specific ObjectStore
-[**ApiV1OrganizationsOrgIdObjectStoresIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdObjectStoresIdPut) | **Put** /api/v1/organizations/{org_id}/object-stores/{id} | Update an ObjectStore
-[**ApiV1OrganizationsOrgIdObjectStoresPost**](DefaultApi.md#ApiV1OrganizationsOrgIdObjectStoresPost) | **Post** /api/v1/organizations/{org_id}/object-stores | Add a new ObjectStore for backup storage
-[**ApiV1OrganizationsOrgIdRemoteSyncServersCurrentGet**](DefaultApi.md#ApiV1OrganizationsOrgIdRemoteSyncServersCurrentGet) | **Get** /api/v1/organizations/{org_id}/remote-sync-servers/current | Get RemoteSyncServer for the current user
-[**ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete) | **Delete** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Delete a RemoteSyncServer object
-[**ApiV1OrganizationsOrgIdRemoteSyncServersIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdRemoteSyncServersIdGet) | **Get** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Get a specific RemoteSyncServer object
-[**ApiV1OrganizationsOrgIdRemoteSyncServersIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdRemoteSyncServersIdPut) | **Put** /api/v1/organizations/{org_id}/remote-sync-servers/{id} | Update a RemoteSyncServer object
-[**ApiV1OrganizationsOrgIdSecretsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdSecretsGet) | **Get** /api/v1/organizations/{org_id}/secrets | List all secrets for an organization
-[**ApiV1OrganizationsOrgIdSecretsIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdSecretsIdDelete) | **Delete** /api/v1/organizations/{org_id}/secrets/{id} | Delete a secret object
-[**ApiV1OrganizationsOrgIdSecretsIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdSecretsIdGet) | **Get** /api/v1/organizations/{org_id}/secrets/{id} | Get a specific secret object
-[**ApiV1OrganizationsOrgIdSecretsIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdSecretsIdPut) | **Put** /api/v1/organizations/{org_id}/secrets/{id} | Update a secret object
-[**ApiV1OrganizationsOrgIdSecretsPost**](DefaultApi.md#ApiV1OrganizationsOrgIdSecretsPost) | **Post** /api/v1/organizations/{org_id}/secrets | Create a new secret
-[**ApiV1OrganizationsOrgIdStacksCurrentGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksCurrentGet) | **Get** /api/v1/organizations/{org_id}/stacks/current | List all stacks of the current user
-[**ApiV1OrganizationsOrgIdStacksGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksGet) | **Get** /api/v1/organizations/{org_id}/stacks | List all Stacks for an organization
-[**ApiV1OrganizationsOrgIdStacksIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdDelete) | **Delete** /api/v1/organizations/{org_id}/stacks/{id} | Delete a Stack
-[**ApiV1OrganizationsOrgIdStacksIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdGet) | **Get** /api/v1/organizations/{org_id}/stacks/{id} | Get a specific Stack
-[**ApiV1OrganizationsOrgIdStacksIdLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdLogsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{id}/logs | Get logs for a Stack
-[**ApiV1OrganizationsOrgIdStacksIdMetricsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdMetricsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{id}/metrics | Get metrics for a Stack
-[**ApiV1OrganizationsOrgIdStacksIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksIdPut) | **Put** /api/v1/organizations/{org_id}/stacks/{id} | Update a Stack
-[**ApiV1OrganizationsOrgIdStacksPost**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksPost) | **Post** /api/v1/organizations/{org_id}/stacks | Create a new stack
-[**ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/builds/{build_id} | Get a specific build under a stack
-[**ApiV1OrganizationsOrgIdStacksStackIdBuildsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdBuildsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/builds | List all builds under a stack
-[**ApiV1OrganizationsOrgIdStacksStackIdResourcesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources | List all StackResources under a Stack
-[**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}/builds | List all builds for a StackResource
-[**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id} | Get a specific StackResource
-[**ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut) | **Put** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id} | Update a StackResource
-[**ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/logs | Get logs for a StackResource
-[**ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet) | **Get** /api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/metrics | Get metrics for a StackResource
-[**ApiV1OrganizationsOrgIdVolumesCurrentGet**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesCurrentGet) | **Get** /api/v1/organizations/{org_id}/volumes/current | List of volumes for the current user
-[**ApiV1OrganizationsOrgIdVolumesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesGet) | **Get** /api/v1/organizations/{org_id}/volumes | List all volumes in an organization.
-[**ApiV1OrganizationsOrgIdVolumesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesIdDelete) | **Delete** /api/v1/organizations/{org_id}/volumes/{id} | Delete a volume
-[**ApiV1OrganizationsOrgIdVolumesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesIdGet) | **Get** /api/v1/organizations/{org_id}/volumes/{id} | Get a specific volume
-[**ApiV1OrganizationsOrgIdVolumesIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesIdPut) | **Put** /api/v1/organizations/{org_id}/volumes/{id} | Update a volume
-[**ApiV1OrganizationsOrgIdVolumesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdVolumesPost) | **Post** /api/v1/organizations/{org_id}/volumes | Create a new volume
-[**ApiV1OrganizationsPost**](DefaultApi.md#ApiV1OrganizationsPost) | **Post** /api/v1/organizations | Create a new organization
+[**ApiV1OrganizationsOrgIdClustersGet**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersGet) | **Get** /api/v1/organizations/{org_id}/clusters | List all clusters for an organization
+[**ApiV1OrganizationsOrgIdClustersIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersIdDelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{id} | Delete a cluster
+[**ApiV1OrganizationsOrgIdClustersIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersIdGet) | **Get** /api/v1/organizations/{org_id}/clusters/{id} | Get a specific cluster
+[**ApiV1OrganizationsOrgIdClustersPost**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersPost) | **Post** /api/v1/organizations/{org_id}/clusters | Add a new cluster
+[**ApiV1OrganizationsOrgIdObjectStoresGet**](DefaultApi.md#ApiV1OrganizationsOrgIdObjectStoresGet) | **Get** /api/v1/organizations/{org_id}/object-stores | List all object stores the user has access to across all teams
+[**ApiV1OrganizationsOrgIdSecretsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdSecretsGet) | **Get** /api/v1/organizations/{org_id}/secrets | List all secrets the user has access to across all teams
+[**ApiV1OrganizationsOrgIdStacksGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksGet) | **Get** /api/v1/organizations/{org_id}/stacks | List all stacks the user has access to across all teams
+[**ApiV1OrganizationsOrgIdTeamsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsGet) | **Get** /api/v1/organizations/{org_id}/teams | List all teams in an organization
+[**ApiV1OrganizationsOrgIdTeamsPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsPost) | **Post** /api/v1/organizations/{org_id}/teams | Create a new team
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres | List all PostgresAddons for a team
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/backup | Trigger an immediate backup
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/fence | Fence or unfence the PostgreSQL cluster
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/hibernate | Hibernate or wake the PostgreSQL cluster
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdBackupsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdBackupsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/backups | List backups for a PostgresAddon
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdCredentialsDatabaseGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdCredentialsDatabaseGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/credentials/{database} | Get JIT credentials for a PostgresAddon database
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdDelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id} | Delete a PostgresAddon
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id} | Get a specific PostgresAddon
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdPut) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id} | Update a PostgresAddon
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres | Create a new PostgresAddon
+[**ApiV1OrganizationsOrgIdTeamsTeamNameDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameDelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name} | Delete a team
+[**ApiV1OrganizationsOrgIdTeamsTeamNameGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name} | Get a specific team by name
+[**ApiV1OrganizationsOrgIdTeamsTeamNameMembersGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameMembersGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/members | List members of a team
+[**ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdDelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/members/{id} | Remove a member from a team
+[**ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdPut) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/members/{id} | Update a team member&#39;s role
+[**ApiV1OrganizationsOrgIdTeamsTeamNameMembersPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameMembersPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/members | Add a member to a team
+[**ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/object-stores | List all ObjectStores for a team
+[**ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdDelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/object-stores/{id} | Delete an ObjectStore
+[**ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/object-stores/{id} | Get a specific ObjectStore
+[**ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdPut) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/object-stores/{id} | Update an ObjectStore
+[**ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/object-stores | Add a new ObjectStore for backup storage
+[**ApiV1OrganizationsOrgIdTeamsTeamNamePut**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNamePut) | **Put** /api/v1/organizations/{org_id}/teams/{team_name} | Update a team
+[**ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/secrets | List all secrets for a team
+[**ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdDelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/secrets/{id} | Delete a secret
+[**ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/secrets/{id} | Get a specific secret
+[**ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdPut) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/secrets/{id} | Update a secret
+[**ApiV1OrganizationsOrgIdTeamsTeamNameSecretsPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameSecretsPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/secrets | Create a new secret
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks | List all stacks for a team
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds/{build_id} | Get a specific build under a stack
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds | List all builds under a stack
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id} | Delete a stack
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id} | Get a specific stack
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/logs | Get logs for a stack
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdMetricsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdMetricsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/metrics | Get metrics for a stack
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id} | Update a stack
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources | List all stack resources under a stack
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/builds | List all builds for a stack resource
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Get a specific stack resource by name
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs | Get logs for a stack resource
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/metrics | Get metrics for a stack resource
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks | Create a new stack
+[**ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id} | Delete a volume
+[**ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id} | Get a specific volume
+[**ApiV1OrganizationsOrgIdTeamsTeamNameVolumesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameVolumesPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/volumes | Create a new volume
+[**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersCurrentGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersCurrentGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/current | Get the workspace user for the current user
+[**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdDelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id} | Delete a workspace user
+[**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id} | Get a workspace user by ID
+[**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPut) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id} | Update a workspace user
+[**ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users | Create a new workspace user
+[**ApiV1OrganizationsOrgIdUsersGet**](DefaultApi.md#ApiV1OrganizationsOrgIdUsersGet) | **Get** /api/v1/organizations/{org_id}/users | List all users in an organization
 [**ApiV1UserSignupPost**](DefaultApi.md#ApiV1UserSignupPost) | **Post** /api/v1/user-signup | Create new user
-[**ApiV1UsersCurrentGet**](DefaultApi.md#ApiV1UsersCurrentGet) | **Get** /api/v1/users/current | Get a the current authenticated user
+[**ApiV1UsersCurrentGet**](DefaultApi.md#ApiV1UsersCurrentGet) | **Get** /api/v1/users/current | Get the current authenticated user
+[**ApiV1UsersCurrentTeamsGet**](DefaultApi.md#ApiV1UsersCurrentTeamsGet) | **Get** /api/v1/users/current/teams | List teams for the current authenticated user
 [**ApiV1UsersIdGet**](DefaultApi.md#ApiV1UsersIdGet) | **Get** /api/v1/users/{id} | Get a user
-[**ApiV1WorkspaceUsersCurrentGet**](DefaultApi.md#ApiV1WorkspaceUsersCurrentGet) | **Get** /api/v1/workspace-users/current | Get the workspace user object for the current user
-[**ApiV1WorkspaceUsersIdDelete**](DefaultApi.md#ApiV1WorkspaceUsersIdDelete) | **Delete** /api/v1/workspace-users/{id} | Delete a WorkspaceUser
-[**ApiV1WorkspaceUsersIdGet**](DefaultApi.md#ApiV1WorkspaceUsersIdGet) | **Get** /api/v1/workspace-users/{id} | Get a workspace user object by ID
-[**ApiV1WorkspaceUsersIdPut**](DefaultApi.md#ApiV1WorkspaceUsersIdPut) | **Put** /api/v1/workspace-users/{id} | Update a WorkspaceUser
-[**ApiV1WorkspaceUsersPost**](DefaultApi.md#ApiV1WorkspaceUsersPost) | **Post** /api/v1/workspace-users | Create a new workspace user object.
 
+
+
+## ApiV1ApiTokensGet
+
+> APITokenList ApiV1ApiTokensGet(ctx).Execute()
+
+List all API tokens for the current user
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1ApiTokensGet(context.Background()).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1ApiTokensGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1ApiTokensGet`: APITokenList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1ApiTokensGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+This endpoint does not need any parameter.
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1ApiTokensGetRequest struct via the builder pattern
+
+
+### Return type
+
+[**APITokenList**](APITokenList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1ApiTokensIdDelete
+
+> ApiV1ApiTokensIdDelete(ctx, id).Execute()
+
+Revoke an API token
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1ApiTokensIdDelete(context.Background(), id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1ApiTokensIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1ApiTokensIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1ApiTokensIdGet
+
+> APIToken ApiV1ApiTokensIdGet(ctx, id).Execute()
+
+Get an API token by ID
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1ApiTokensIdGet(context.Background(), id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1ApiTokensIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1ApiTokensIdGet`: APIToken
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1ApiTokensIdGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1ApiTokensIdGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+### Return type
+
+[**APIToken**](APIToken.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1ApiTokensPost
+
+> APITokenCreateResponse ApiV1ApiTokensPost(ctx).APITokenCreateRequest(aPITokenCreateRequest).Execute()
+
+Create a new API token
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    aPITokenCreateRequest := *openapiclient.NewAPITokenCreateRequest("Name_example", []string{"Scopes_example"}) // APITokenCreateRequest | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1ApiTokensPost(context.Background()).APITokenCreateRequest(aPITokenCreateRequest).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1ApiTokensPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1ApiTokensPost`: APITokenCreateResponse
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1ApiTokensPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1ApiTokensPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **aPITokenCreateRequest** | [**APITokenCreateRequest**](APITokenCreateRequest.md) |  | 
+
+### Return type
+
+[**APITokenCreateResponse**](APITokenCreateResponse.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1ApiTokensScopesGet
+
+> ScopeList ApiV1ApiTokensScopesGet(ctx).Execute()
+
+List all available API token scopes
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1ApiTokensScopesGet(context.Background()).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1ApiTokensScopesGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1ApiTokensScopesGet`: ScopeList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1ApiTokensScopesGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+This endpoint does not need any parameter.
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1ApiTokensScopesGetRequest struct via the builder pattern
+
+
+### Return type
+
+[**ScopeList**](ScopeList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1AuthGithubCallbackGet
+
+> LoginResponse ApiV1AuthGithubCallbackGet(ctx).Code(code).State(state).Execute()
+
+GitHub OAuth callback
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    code := "code_example" // string | 
+    state := "state_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1AuthGithubCallbackGet(context.Background()).Code(code).State(state).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1AuthGithubCallbackGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1AuthGithubCallbackGet`: LoginResponse
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1AuthGithubCallbackGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1AuthGithubCallbackGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **code** | **string** |  | 
+ **state** | **string** |  | 
+
+### Return type
+
+[**LoginResponse**](LoginResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1AuthGithubGet
+
+> ApiV1AuthGithubGet(ctx).Execute()
+
+Initiate GitHub OAuth flow
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1AuthGithubGet(context.Background()).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1AuthGithubGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+This endpoint does not need any parameter.
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1AuthGithubGetRequest struct via the builder pattern
+
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
 
 
 ## ApiV1AuthLoginPost
@@ -143,72 +599,13 @@ No authorization required
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsDefaultGet
+## ApiV1AuthRefreshPost
 
-> Organisation ApiV1OrganizationsDefaultGet(ctx).Execute()
+> RefreshTokenResponse ApiV1AuthRefreshPost(ctx).RefreshTokenRequest(refreshTokenRequest).Execute()
 
-Get the default organization
-
-
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsDefaultGet(context.Background()).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsDefaultGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsDefaultGet`: Organisation
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsDefaultGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-This endpoint does not need any parameter.
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsDefaultGetRequest struct via the builder pattern
+Refresh JWT token
 
 
-### Return type
-
-[**Organisation**](Organisation.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsIdClustersGet
-
-> ClusterList ApiV1OrganizationsIdClustersGet(ctx, id).Execute()
-
-List all clusters for an organization
 
 ### Example
 
@@ -223,114 +620,40 @@ import (
 )
 
 func main() {
-    id := "id_example" // string | The id of record
+    refreshTokenRequest := *openapiclient.NewRefreshTokenRequest("RefreshToken_example") // RefreshTokenRequest | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsIdClustersGet(context.Background(), id).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1AuthRefreshPost(context.Background()).RefreshTokenRequest(refreshTokenRequest).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsIdClustersGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1AuthRefreshPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsIdClustersGet`: ClusterList
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsIdClustersGet`: %v\n", resp)
+    // response from `ApiV1AuthRefreshPost`: RefreshTokenResponse
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1AuthRefreshPost`: %v\n", resp)
 }
 ```
 
 ### Path Parameters
 
 
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**id** | **string** | The id of record | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsIdClustersGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1AuthRefreshPostRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
-
+ **refreshTokenRequest** | [**RefreshTokenRequest**](RefreshTokenRequest.md) |  | 
 
 ### Return type
 
-[**ClusterList**](ClusterList.md)
+[**RefreshTokenResponse**](RefreshTokenResponse.md)
 
 ### Authorization
 
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsIdClustersPost
-
-> Cluster ApiV1OrganizationsIdClustersPost(ctx, id).Cluster(cluster).Execute()
-
-Add a new cluster
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    id := "id_example" // string | The id of record
-    cluster := *openapiclient.NewCluster("Name_example", "ClusterUrl_example", "ClusterCaData_example", "ClusterSaToken_example") // Cluster | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsIdClustersPost(context.Background(), id).Cluster(cluster).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsIdClustersPost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsIdClustersPost`: Cluster
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsIdClustersPost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsIdClustersPostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
- **cluster** | [**Cluster**](Cluster.md) |  | 
-
-### Return type
-
-[**Cluster**](Cluster.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
+No authorization required
 
 ### HTTP request headers
 
@@ -347,8 +670,6 @@ Name | Type | Description  | Notes
 > Organisation ApiV1OrganizationsIdGet(ctx, id).Execute()
 
 Get an organization
-
-
 
 ### Example
 
@@ -418,8 +739,6 @@ Name | Type | Description  | Notes
 
 Update an organization
 
-
-
 ### Example
 
 ```go
@@ -484,11 +803,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsIdRemoteSyncServersGet
+## ApiV1OrganizationsOrgIdAdminsGet
 
-> ApiV1OrganizationsIdRemoteSyncServersGet200Response ApiV1OrganizationsIdRemoteSyncServersGet(ctx, id).Execute()
+> UserList ApiV1OrganizationsOrgIdAdminsGet(ctx, orgId).Execute()
 
-List all RemoteSyncServer objects for an organization
+List organization admins
 
 ### Example
 
@@ -503,17 +822,17 @@ import (
 )
 
 func main() {
-    id := "id_example" // string | The id of record
+    orgId := "orgId_example" // string | The ID of the organization
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsIdRemoteSyncServersGet(context.Background(), id).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAdminsGet(context.Background(), orgId).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsIdRemoteSyncServersGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAdminsGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsIdRemoteSyncServersGet`: ApiV1OrganizationsIdRemoteSyncServersGet200Response
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsIdRemoteSyncServersGet`: %v\n", resp)
+    // response from `ApiV1OrganizationsOrgIdAdminsGet`: UserList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdAdminsGet`: %v\n", resp)
 }
 ```
 
@@ -523,11 +842,11 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**id** | **string** | The id of record | 
+**orgId** | **string** | The ID of the organization | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsIdRemoteSyncServersGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAdminsGetRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
@@ -536,7 +855,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**ApiV1OrganizationsIdRemoteSyncServersGet200Response**](ApiV1OrganizationsIdRemoteSyncServersGet200Response.md)
+[**UserList**](UserList.md)
 
 ### Authorization
 
@@ -552,81 +871,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsIdRemoteSyncServersPost
+## ApiV1OrganizationsOrgIdAdminsPost
 
-> RemoteSyncServer ApiV1OrganizationsIdRemoteSyncServersPost(ctx, id).RemoteSyncServer(remoteSyncServer).Execute()
+> ApiV1OrganizationsOrgIdAdminsPost(ctx, orgId).PromoteAdminRequest(promoteAdminRequest).Execute()
 
-Create a new remote sync server
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    id := "id_example" // string | The id of record
-    remoteSyncServer := *openapiclient.NewRemoteSyncServer("Name_example", *openapiclient.NewRemoteSyncServerSpec()) // RemoteSyncServer | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsIdRemoteSyncServersPost(context.Background(), id).RemoteSyncServer(remoteSyncServer).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsIdRemoteSyncServersPost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsIdRemoteSyncServersPost`: RemoteSyncServer
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsIdRemoteSyncServersPost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsIdRemoteSyncServersPostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
- **remoteSyncServer** | [**RemoteSyncServer**](RemoteSyncServer.md) |  | 
-
-### Return type
-
-[**RemoteSyncServer**](RemoteSyncServer.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdAddonsPostgresGet
-
-> PostgresAddonList ApiV1OrganizationsOrgIdAddonsPostgresGet(ctx, orgId).Execute()
-
-List all PostgresAddons for under an organization
+Promote a user to organization admin
 
 ### Example
 
@@ -642,16 +891,15 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
+    promoteAdminRequest := *openapiclient.NewPromoteAdminRequest("UserId_example") // PromoteAdminRequest | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresGet(context.Background(), orgId).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAdminsPost(context.Background(), orgId).PromoteAdminRequest(promoteAdminRequest).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAdminsPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdAddonsPostgresGet`: PostgresAddonList
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresGet`: %v\n", resp)
 }
 ```
 
@@ -665,16 +913,86 @@ Name | Type | Description  | Notes
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAddonsPostgresGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAdminsPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **promoteAdminRequest** | [**PromoteAdminRequest**](PromoteAdminRequest.md) |  | 
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdAdminsUserIdDelete
+
+> ApiV1OrganizationsOrgIdAdminsUserIdDelete(ctx, orgId, userId).Execute()
+
+Demote an organization admin
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    userId := "userId_example" // string | The ID of the user
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAdminsUserIdDelete(context.Background(), orgId, userId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAdminsUserIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**userId** | **string** | The ID of the user | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAdminsUserIdDeleteRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
 
+
 ### Return type
 
-[**PostgresAddonList**](PostgresAddonList.md)
+ (empty response body)
 
 ### Authorization
 
@@ -683,663 +1001,6 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost
-
-> ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost(ctx, orgId, id).ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest(apiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest).Execute()
-
-Trigger an immediate backup
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-    apiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest := *openapiclient.NewApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest() // ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest |  (optional)
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost(context.Background(), orgId, id).ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest(apiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost`: ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **apiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest** | [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest**](ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest.md) |  | 
-
-### Return type
-
-[**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response**](ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost202Response.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost
-
-> ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost200Response ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost(ctx, orgId, id).ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest(apiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest).Execute()
-
-Fence or unfence the PostgreSQL cluster
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-    apiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest := *openapiclient.NewApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest(false) // ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost(context.Background(), orgId, id).ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest(apiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost`: ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost200Response
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **apiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest** | [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest**](ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePostRequest.md) |  | 
-
-### Return type
-
-[**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost200Response**](ApiV1OrganizationsOrgIdAddonsPostgresIdActionsFencePost200Response.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost
-
-> ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost200Response ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost(ctx, orgId, id).ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest(apiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest).Execute()
-
-Hibernate or wake the PostgreSQL cluster
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-    apiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest := *openapiclient.NewApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest(false) // ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost(context.Background(), orgId, id).ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest(apiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost`: ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost200Response
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **apiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest** | [**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest**](ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePostRequest.md) |  | 
-
-### Return type
-
-[**ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost200Response**](ApiV1OrganizationsOrgIdAddonsPostgresIdActionsHibernatePost200Response.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet
-
-> PostgresBackupList ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet(ctx, orgId, id).Limit(limit).Offset(offset).Execute()
-
-List backups for a PostgresAddon
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-    limit := int32(56) // int32 |  (optional) (default to 20)
-    offset := int32(56) // int32 |  (optional) (default to 0)
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet(context.Background(), orgId, id).Limit(limit).Offset(offset).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet`: PostgresBackupList
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **limit** | **int32** |  | [default to 20]
- **offset** | **int32** |  | [default to 0]
-
-### Return type
-
-[**PostgresBackupList**](PostgresBackupList.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet
-
-> PostgresCredentials ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet(ctx, orgId, id, database).Superuser(superuser).Execute()
-
-Get JIT credentials for a PostgresAddon database
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-    database := "database_example" // string | The name of the database
-    superuser := true // bool | Whether to return superuser credentials (optional) (default to false)
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet(context.Background(), orgId, id, database).Superuser(superuser).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet`: PostgresCredentials
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-**database** | **string** | The name of the database | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
- **superuser** | **bool** | Whether to return superuser credentials | [default to false]
-
-### Return type
-
-[**PostgresCredentials**](PostgresCredentials.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdAddonsPostgresIdDelete
-
-> PostgresAddon ApiV1OrganizationsOrgIdAddonsPostgresIdDelete(ctx, orgId, id).Execute()
-
-Delete a PostgresAddon
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdDelete(context.Background(), orgId, id).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdDelete``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdAddonsPostgresIdDelete`: PostgresAddon
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdDelete`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAddonsPostgresIdDeleteRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
-### Return type
-
-[**PostgresAddon**](PostgresAddon.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdAddonsPostgresIdGet
-
-> PostgresAddon ApiV1OrganizationsOrgIdAddonsPostgresIdGet(ctx, orgId, id).Execute()
-
-Get a specific PostgresAddon
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdGet(context.Background(), orgId, id).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdAddonsPostgresIdGet`: PostgresAddon
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAddonsPostgresIdGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
-### Return type
-
-[**PostgresAddon**](PostgresAddon.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdAddonsPostgresIdPut
-
-> PostgresAddon ApiV1OrganizationsOrgIdAddonsPostgresIdPut(ctx, orgId, id).PostgresAddon(postgresAddon).Execute()
-
-Update a PostgresAddon
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-    postgresAddon := *openapiclient.NewPostgresAddon("Name_example", *openapiclient.NewPostgresAddonSpec(*openapiclient.NewPostgresVersion(int32(123)), *openapiclient.NewPostgresInstances(int32(123)), *openapiclient.NewPostgresStorage("Size_example", "StorageClass_example"))) // PostgresAddon | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdPut(context.Background(), orgId, id).PostgresAddon(postgresAddon).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdPut``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdAddonsPostgresIdPut`: PostgresAddon
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdPut`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAddonsPostgresIdPutRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **postgresAddon** | [**PostgresAddon**](PostgresAddon.md) |  | 
-
-### Return type
-
-[**PostgresAddon**](PostgresAddon.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdAddonsPostgresPost
-
-> PostgresAddon ApiV1OrganizationsOrgIdAddonsPostgresPost(ctx, orgId).PostgresAddon(postgresAddon).Execute()
-
-Create a new PostgresAddon
-
-
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    postgresAddon := *openapiclient.NewPostgresAddon("Name_example", *openapiclient.NewPostgresAddonSpec(*openapiclient.NewPostgresVersion(int32(123)), *openapiclient.NewPostgresInstances(int32(123)), *openapiclient.NewPostgresStorage("Size_example", "StorageClass_example"))) // PostgresAddon | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresPost(context.Background(), orgId).PostgresAddon(postgresAddon).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresPost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdAddonsPostgresPost`: PostgresAddon
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresPost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdAddonsPostgresPostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
- **postgresAddon** | [**PostgresAddon**](PostgresAddon.md) |  | 
-
-### Return type
-
-[**PostgresAddon**](PostgresAddon.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -1349,7 +1010,7 @@ Name | Type | Description  | Notes
 
 ## ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet
 
-> ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet(ctx, orgId, clusterId).Execute()
+> ClusterImageRegistryList ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet(ctx, orgId, clusterId).Execute()
 
 List all image registries for a cluster
 
@@ -1366,8 +1027,8 @@ import (
 )
 
 func main() {
-    orgId := "orgId_example" // string | 
-    clusterId := "clusterId_example" // string | 
+    orgId := "orgId_example" // string | The ID of the organization
+    clusterId := "clusterId_example" // string | The ID of the cluster
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -1376,7 +1037,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet`: ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response
+    // response from `ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet`: ClusterImageRegistryList
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet`: %v\n", resp)
 }
 ```
@@ -1387,8 +1048,8 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**clusterId** | **string** |  | 
+**orgId** | **string** | The ID of the organization | 
+**clusterId** | **string** | The ID of the cluster | 
 
 ### Other Parameters
 
@@ -1402,7 +1063,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response**](ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet200Response.md)
+[**ClusterImageRegistryList**](ClusterImageRegistryList.md)
 
 ### Authorization
 
@@ -1422,7 +1083,7 @@ Name | Type | Description  | Notes
 
 > ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete(ctx, orgId, clusterId, id).Execute()
 
-Delete an image registry object
+Delete an image registry
 
 ### Example
 
@@ -1437,9 +1098,9 @@ import (
 )
 
 func main() {
-    orgId := "orgId_example" // string | 
-    clusterId := "clusterId_example" // string | 
-    id := "id_example" // string | 
+    orgId := "orgId_example" // string | The ID of the organization
+    clusterId := "clusterId_example" // string | The ID of the cluster
+    id := "id_example" // string | The id of record
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -1457,9 +1118,9 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**clusterId** | **string** |  | 
-**id** | **string** |  | 
+**orgId** | **string** | The ID of the organization | 
+**clusterId** | **string** | The ID of the cluster | 
+**id** | **string** | The id of record | 
 
 ### Other Parameters
 
@@ -1494,7 +1155,7 @@ Name | Type | Description  | Notes
 
 > ClusterImageRegistry ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdGet(ctx, orgId, clusterId, id).Execute()
 
-Get a specific image registry object
+Get a specific image registry
 
 ### Example
 
@@ -1509,9 +1170,9 @@ import (
 )
 
 func main() {
-    orgId := "orgId_example" // string | 
-    clusterId := "clusterId_example" // string | 
-    id := "id_example" // string | 
+    orgId := "orgId_example" // string | The ID of the organization
+    clusterId := "clusterId_example" // string | The ID of the cluster
+    id := "id_example" // string | The id of record
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -1531,9 +1192,9 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**clusterId** | **string** |  | 
-**id** | **string** |  | 
+**orgId** | **string** | The ID of the organization | 
+**clusterId** | **string** | The ID of the cluster | 
+**id** | **string** | The id of record | 
 
 ### Other Parameters
 
@@ -1583,8 +1244,8 @@ import (
 )
 
 func main() {
-    orgId := "orgId_example" // string | 
-    clusterId := "clusterId_example" // string | 
+    orgId := "orgId_example" // string | The ID of the organization
+    clusterId := "clusterId_example" // string | The ID of the cluster
     clusterImageRegistry := *openapiclient.NewClusterImageRegistry("Name_example") // ClusterImageRegistry | 
 
     configuration := openapiclient.NewConfiguration()
@@ -1605,8 +1266,8 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**clusterId** | **string** |  | 
+**orgId** | **string** | The ID of the organization | 
+**clusterId** | **string** | The ID of the cluster | 
 
 ### Other Parameters
 
@@ -1637,11 +1298,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdClustersIdDelete
+## ApiV1OrganizationsOrgIdClustersGet
 
-> ApiV1OrganizationsOrgIdClustersIdDelete(ctx, orgId, id).Execute()
+> ClusterList ApiV1OrganizationsOrgIdClustersGet(ctx, orgId).Execute()
 
-Delete a cluster object
+List all clusters for an organization
 
 ### Example
 
@@ -1656,8 +1317,76 @@ import (
 )
 
 func main() {
-    orgId := "orgId_example" // string | 
-    id := "id_example" // string | 
+    orgId := "orgId_example" // string | The ID of the organization
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdClustersGet(context.Background(), orgId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdClustersGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdClustersGet`: ClusterList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdClustersGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdClustersGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+### Return type
+
+[**ClusterList**](ClusterList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdClustersIdDelete
+
+> ApiV1OrganizationsOrgIdClustersIdDelete(ctx, orgId, id).Execute()
+
+Delete a cluster
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -1675,8 +1404,8 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**id** | **string** |  | 
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
 
 ### Other Parameters
 
@@ -1710,7 +1439,7 @@ Name | Type | Description  | Notes
 
 > Cluster ApiV1OrganizationsOrgIdClustersIdGet(ctx, orgId, id).Execute()
 
-Get a specific cluster object
+Get a specific cluster
 
 ### Example
 
@@ -1725,8 +1454,8 @@ import (
 )
 
 func main() {
-    orgId := "orgId_example" // string | 
-    id := "id_example" // string | 
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -1746,8 +1475,8 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**id** | **string** |  | 
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
 
 ### Other Parameters
 
@@ -1777,11 +1506,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdClustersIdPut
+## ApiV1OrganizationsOrgIdClustersPost
 
-> Cluster ApiV1OrganizationsOrgIdClustersIdPut(ctx, orgId, id).Cluster(cluster).Execute()
+> Cluster ApiV1OrganizationsOrgIdClustersPost(ctx, orgId).Cluster(cluster).Execute()
 
-Update a cluster object
+Add a new cluster
 
 ### Example
 
@@ -1796,19 +1525,18 @@ import (
 )
 
 func main() {
-    orgId := "orgId_example" // string | 
-    id := "id_example" // string | 
+    orgId := "orgId_example" // string | The ID of the organization
     cluster := *openapiclient.NewCluster("Name_example", "ClusterUrl_example", "ClusterCaData_example", "ClusterSaToken_example") // Cluster | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdClustersIdPut(context.Background(), orgId, id).Cluster(cluster).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdClustersPost(context.Background(), orgId).Cluster(cluster).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdClustersIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdClustersPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdClustersIdPut`: Cluster
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdClustersIdPut`: %v\n", resp)
+    // response from `ApiV1OrganizationsOrgIdClustersPost`: Cluster
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdClustersPost`: %v\n", resp)
 }
 ```
 
@@ -1818,17 +1546,15 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**id** | **string** |  | 
+**orgId** | **string** | The ID of the organization | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdClustersIdPutRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdClustersPostRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
-
 
  **cluster** | [**Cluster**](Cluster.md) |  | 
 
@@ -1854,7 +1580,9 @@ Name | Type | Description  | Notes
 
 > ObjectStoreList ApiV1OrganizationsOrgIdObjectStoresGet(ctx, orgId).Execute()
 
-List all ObjectStores for an organization
+List all object stores the user has access to across all teams
+
+
 
 ### Example
 
@@ -1918,577 +1646,13 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdObjectStoresIdDelete
-
-> ApiV1OrganizationsOrgIdObjectStoresIdDelete(ctx, orgId, id).Execute()
-
-Delete an ObjectStore
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdDelete(context.Background(), orgId, id).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdDelete``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdObjectStoresIdDeleteRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
-### Return type
-
- (empty response body)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdObjectStoresIdGet
-
-> ObjectStore ApiV1OrganizationsOrgIdObjectStoresIdGet(ctx, orgId, id).Execute()
-
-Get a specific ObjectStore
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdGet(context.Background(), orgId, id).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdObjectStoresIdGet`: ObjectStore
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdObjectStoresIdGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
-### Return type
-
-[**ObjectStore**](ObjectStore.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdObjectStoresIdPut
-
-> ObjectStore ApiV1OrganizationsOrgIdObjectStoresIdPut(ctx, orgId, id).ObjectStore(objectStore).Execute()
-
-Update an ObjectStore
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-    objectStore := *openapiclient.NewObjectStore("Name_example", *openapiclient.NewObjectStoreSpec(*openapiclient.NewObjectStoreConfiguration(), "DestinationPath_example")) // ObjectStore | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdPut(context.Background(), orgId, id).ObjectStore(objectStore).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdPut``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdObjectStoresIdPut`: ObjectStore
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdPut`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdObjectStoresIdPutRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **objectStore** | [**ObjectStore**](ObjectStore.md) |  | 
-
-### Return type
-
-[**ObjectStore**](ObjectStore.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdObjectStoresPost
-
-> ObjectStore ApiV1OrganizationsOrgIdObjectStoresPost(ctx, orgId).ObjectStore(objectStore).Execute()
-
-Add a new ObjectStore for backup storage
-
-
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    objectStore := *openapiclient.NewObjectStore("Name_example", *openapiclient.NewObjectStoreSpec(*openapiclient.NewObjectStoreConfiguration(), "DestinationPath_example")) // ObjectStore | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresPost(context.Background(), orgId).ObjectStore(objectStore).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdObjectStoresPost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdObjectStoresPost`: ObjectStore
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdObjectStoresPost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdObjectStoresPostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
- **objectStore** | [**ObjectStore**](ObjectStore.md) |  | 
-
-### Return type
-
-[**ObjectStore**](ObjectStore.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdRemoteSyncServersCurrentGet
-
-> RemoteSyncServer ApiV1OrganizationsOrgIdRemoteSyncServersCurrentGet(ctx, orgId).Execute()
-
-Get RemoteSyncServer for the current user
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdRemoteSyncServersCurrentGet(context.Background(), orgId).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdRemoteSyncServersCurrentGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdRemoteSyncServersCurrentGet`: RemoteSyncServer
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdRemoteSyncServersCurrentGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdRemoteSyncServersCurrentGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-### Return type
-
-[**RemoteSyncServer**](RemoteSyncServer.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete
-
-> ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete(ctx, orgId, id).Execute()
-
-Delete a RemoteSyncServer object
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | 
-    id := "id_example" // string | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete(context.Background(), orgId, id).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdRemoteSyncServersIdDelete``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**id** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdRemoteSyncServersIdDeleteRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
-### Return type
-
- (empty response body)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: Not defined
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdRemoteSyncServersIdGet
-
-> RemoteSyncServer ApiV1OrganizationsOrgIdRemoteSyncServersIdGet(ctx, orgId, id).Execute()
-
-Get a specific RemoteSyncServer object
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | 
-    id := "id_example" // string | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdRemoteSyncServersIdGet(context.Background(), orgId, id).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdRemoteSyncServersIdGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdRemoteSyncServersIdGet`: RemoteSyncServer
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdRemoteSyncServersIdGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**id** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdRemoteSyncServersIdGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
-### Return type
-
-[**RemoteSyncServer**](RemoteSyncServer.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdRemoteSyncServersIdPut
-
-> RemoteSyncServer ApiV1OrganizationsOrgIdRemoteSyncServersIdPut(ctx, orgId, id).RemoteSyncServer(remoteSyncServer).Execute()
-
-Update a RemoteSyncServer object
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | 
-    id := "id_example" // string | 
-    remoteSyncServer := *openapiclient.NewRemoteSyncServer("Name_example", *openapiclient.NewRemoteSyncServerSpec()) // RemoteSyncServer | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdRemoteSyncServersIdPut(context.Background(), orgId, id).RemoteSyncServer(remoteSyncServer).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdRemoteSyncServersIdPut``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdRemoteSyncServersIdPut`: RemoteSyncServer
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdRemoteSyncServersIdPut`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**id** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdRemoteSyncServersIdPutRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **remoteSyncServer** | [**RemoteSyncServer**](RemoteSyncServer.md) |  | 
-
-### Return type
-
-[**RemoteSyncServer**](RemoteSyncServer.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
 ## ApiV1OrganizationsOrgIdSecretsGet
 
 > SecretList ApiV1OrganizationsOrgIdSecretsGet(ctx, orgId).Execute()
 
-List all secrets for an organization
+List all secrets the user has access to across all teams
+
+
 
 ### Example
 
@@ -2503,7 +1667,7 @@ import (
 )
 
 func main() {
-    orgId := "orgId_example" // string | 
+    orgId := "orgId_example" // string | The ID of the organization
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -2523,7 +1687,7 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
+**orgId** | **string** | The ID of the organization | 
 
 ### Other Parameters
 
@@ -2552,362 +1716,13 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdSecretsIdDelete
-
-> ApiV1OrganizationsOrgIdSecretsIdDelete(ctx, orgId, id).Execute()
-
-Delete a secret object
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | 
-    id := "id_example" // string | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsIdDelete(context.Background(), orgId, id).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdSecretsIdDelete``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**id** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdSecretsIdDeleteRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
-### Return type
-
- (empty response body)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: Not defined
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdSecretsIdGet
-
-> Secret ApiV1OrganizationsOrgIdSecretsIdGet(ctx, orgId, id).Execute()
-
-Get a specific secret object
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | 
-    id := "id_example" // string | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsIdGet(context.Background(), orgId, id).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdSecretsIdGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdSecretsIdGet`: Secret
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdSecretsIdGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**id** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdSecretsIdGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
-### Return type
-
-[**Secret**](Secret.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdSecretsIdPut
-
-> Secret ApiV1OrganizationsOrgIdSecretsIdPut(ctx, orgId, id).Secret(secret).Execute()
-
-Update a secret object
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | 
-    id := "id_example" // string | 
-    secret := *openapiclient.NewSecret("Name_example", openapiclient.SecretType("Generic"), []openapiclient.SecretData{*openapiclient.NewSecretData("Key_example", "Value_example")}) // Secret | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsIdPut(context.Background(), orgId, id).Secret(secret).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdSecretsIdPut``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdSecretsIdPut`: Secret
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdSecretsIdPut`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**id** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdSecretsIdPutRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **secret** | [**Secret**](Secret.md) |  | 
-
-### Return type
-
-[**Secret**](Secret.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdSecretsPost
-
-> Secret ApiV1OrganizationsOrgIdSecretsPost(ctx, orgId).Secret(secret).Execute()
-
-Create a new secret
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | 
-    secret := *openapiclient.NewSecret("Name_example", openapiclient.SecretType("Generic"), []openapiclient.SecretData{*openapiclient.NewSecretData("Key_example", "Value_example")}) // Secret | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsPost(context.Background(), orgId).Secret(secret).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdSecretsPost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdSecretsPost`: Secret
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdSecretsPost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdSecretsPostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
- **secret** | [**Secret**](Secret.md) |  | 
-
-### Return type
-
-[**Secret**](Secret.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdStacksCurrentGet
-
-> StackList ApiV1OrganizationsOrgIdStacksCurrentGet(ctx, orgId).Execute()
-
-List all stacks of the current user
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksCurrentGet(context.Background(), orgId).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksCurrentGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdStacksCurrentGet`: StackList
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksCurrentGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksCurrentGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-### Return type
-
-[**StackList**](StackList.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
 ## ApiV1OrganizationsOrgIdStacksGet
 
-> StackList ApiV1OrganizationsOrgIdStacksGet(ctx, orgId).Limit(limit).Offset(offset).Execute()
+> StackList ApiV1OrganizationsOrgIdStacksGet(ctx, orgId).Execute()
 
-List all Stacks for an organization
+List all stacks the user has access to across all teams
+
+
 
 ### Example
 
@@ -2923,12 +1738,10 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    limit := int32(56) // int32 |  (optional) (default to 20)
-    offset := int32(56) // int32 |  (optional) (default to 0)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksGet(context.Background(), orgId).Limit(limit).Offset(offset).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksGet(context.Background(), orgId).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -2954,6 +1767,2211 @@ Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdSta
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
+
+### Return type
+
+[**StackList**](StackList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsGet
+
+> TeamList ApiV1OrganizationsOrgIdTeamsGet(ctx, orgId).Execute()
+
+List all teams in an organization
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsGet(context.Background(), orgId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsGet`: TeamList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+### Return type
+
+[**TeamList**](TeamList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsPost
+
+> Team ApiV1OrganizationsOrgIdTeamsPost(ctx, orgId).TeamCreateRequest(teamCreateRequest).Execute()
+
+Create a new team
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamCreateRequest := *openapiclient.NewTeamCreateRequest("Name_example") // TeamCreateRequest | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsPost(context.Background(), orgId).TeamCreateRequest(teamCreateRequest).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsPost`: Team
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **teamCreateRequest** | [**TeamCreateRequest**](TeamCreateRequest.md) |  | 
+
+### Return type
+
+[**Team**](Team.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresGet
+
+> PostgresAddonList ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresGet(ctx, orgId, teamName).Execute()
+
+List all PostgresAddons for a team
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresGet(context.Background(), orgId, teamName).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresGet`: PostgresAddonList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**PostgresAddonList**](PostgresAddonList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost
+
+> ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost(ctx, orgId, teamName, id).ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest(apiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest).Execute()
+
+Trigger an immediate backup
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    apiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest := *openapiclient.NewApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest() // ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest |  (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost(context.Background(), orgId, teamName, id).ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest(apiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost`: ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **apiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest** | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest**](ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest.md) |  | 
+
+### Return type
+
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response**](ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost
+
+> ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost200Response ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost(ctx, orgId, teamName, id).ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest(apiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest).Execute()
+
+Fence or unfence the PostgreSQL cluster
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    apiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest := *openapiclient.NewApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest(false) // ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost(context.Background(), orgId, teamName, id).ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest(apiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost`: ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost200Response
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **apiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest** | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest**](ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest.md) |  | 
+
+### Return type
+
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost200Response**](ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost200Response.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost
+
+> ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost200Response ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost(ctx, orgId, teamName, id).ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest(apiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest).Execute()
+
+Hibernate or wake the PostgreSQL cluster
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    apiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest := *openapiclient.NewApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest(false) // ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost(context.Background(), orgId, teamName, id).ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest(apiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost`: ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost200Response
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **apiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest** | [**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest**](ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest.md) |  | 
+
+### Return type
+
+[**ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost200Response**](ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost200Response.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdBackupsGet
+
+> PostgresBackupList ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdBackupsGet(ctx, orgId, teamName, id).Limit(limit).Offset(offset).Execute()
+
+List backups for a PostgresAddon
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    limit := int32(56) // int32 |  (optional) (default to 20)
+    offset := int32(56) // int32 |  (optional) (default to 0)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdBackupsGet(context.Background(), orgId, teamName, id).Limit(limit).Offset(offset).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdBackupsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdBackupsGet`: PostgresBackupList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdBackupsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdBackupsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **limit** | **int32** |  | [default to 20]
+ **offset** | **int32** |  | [default to 0]
+
+### Return type
+
+[**PostgresBackupList**](PostgresBackupList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdCredentialsDatabaseGet
+
+> PostgresCredentials ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdCredentialsDatabaseGet(ctx, orgId, teamName, id, database).Superuser(superuser).Execute()
+
+Get JIT credentials for a PostgresAddon database
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    database := "database_example" // string | The name of the database
+    superuser := true // bool | Whether to return superuser credentials (optional) (default to false)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdCredentialsDatabaseGet(context.Background(), orgId, teamName, id, database).Superuser(superuser).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdCredentialsDatabaseGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdCredentialsDatabaseGet`: PostgresCredentials
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdCredentialsDatabaseGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+**database** | **string** | The name of the database | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdCredentialsDatabaseGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+ **superuser** | **bool** | Whether to return superuser credentials | [default to false]
+
+### Return type
+
+[**PostgresCredentials**](PostgresCredentials.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdDelete
+
+> PostgresAddon ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdDelete(ctx, orgId, teamName, id).Execute()
+
+Delete a PostgresAddon
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdDelete(context.Background(), orgId, teamName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdDelete`: PostgresAddon
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdDelete`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**PostgresAddon**](PostgresAddon.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet
+
+> PostgresAddon ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet(ctx, orgId, teamName, id).Execute()
+
+Get a specific PostgresAddon
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet(context.Background(), orgId, teamName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet`: PostgresAddon
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**PostgresAddon**](PostgresAddon.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdPut
+
+> PostgresAddon ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdPut(ctx, orgId, teamName, id).PostgresAddon(postgresAddon).Execute()
+
+Update a PostgresAddon
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    postgresAddon := *openapiclient.NewPostgresAddon("Name_example", *openapiclient.NewPostgresAddonSpec(*openapiclient.NewPostgresVersion(int32(123)), *openapiclient.NewPostgresInstances(int32(123)), *openapiclient.NewPostgresStorage("Size_example", "StorageClass_example"))) // PostgresAddon | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdPut(context.Background(), orgId, teamName, id).PostgresAddon(postgresAddon).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdPut`: PostgresAddon
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdPut`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdPutRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **postgresAddon** | [**PostgresAddon**](PostgresAddon.md) |  | 
+
+### Return type
+
+[**PostgresAddon**](PostgresAddon.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresPost
+
+> PostgresAddon ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresPost(ctx, orgId, teamName).PostgresAddon(postgresAddon).Execute()
+
+Create a new PostgresAddon
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    postgresAddon := *openapiclient.NewPostgresAddon("Name_example", *openapiclient.NewPostgresAddonSpec(*openapiclient.NewPostgresVersion(int32(123)), *openapiclient.NewPostgresInstances(int32(123)), *openapiclient.NewPostgresStorage("Size_example", "StorageClass_example"))) // PostgresAddon | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresPost(context.Background(), orgId, teamName).PostgresAddon(postgresAddon).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresPost`: PostgresAddon
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **postgresAddon** | [**PostgresAddon**](PostgresAddon.md) |  | 
+
+### Return type
+
+[**PostgresAddon**](PostgresAddon.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameDelete
+
+> ApiV1OrganizationsOrgIdTeamsTeamNameDelete(ctx, orgId, teamName).Execute()
+
+Delete a team
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameDelete(context.Background(), orgId, teamName).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameGet
+
+> Team ApiV1OrganizationsOrgIdTeamsTeamNameGet(ctx, orgId, teamName).Execute()
+
+Get a specific team by name
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameGet(context.Background(), orgId, teamName).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameGet`: Team
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**Team**](Team.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameMembersGet
+
+> TeamMembershipList ApiV1OrganizationsOrgIdTeamsTeamNameMembersGet(ctx, orgId, teamName).Execute()
+
+List members of a team
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersGet(context.Background(), orgId, teamName).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameMembersGet`: TeamMembershipList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameMembersGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**TeamMembershipList**](TeamMembershipList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdDelete
+
+> ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdDelete(ctx, orgId, teamName, id).Execute()
+
+Remove a member from a team
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdDelete(context.Background(), orgId, teamName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameMembersIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdPut
+
+> TeamMembership ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdPut(ctx, orgId, teamName, id).UpdateTeamMemberRoleRequest(updateTeamMemberRoleRequest).Execute()
+
+Update a team member's role
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    updateTeamMemberRoleRequest := *openapiclient.NewUpdateTeamMemberRoleRequest("Role_example") // UpdateTeamMemberRoleRequest | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdPut(context.Background(), orgId, teamName, id).UpdateTeamMemberRoleRequest(updateTeamMemberRoleRequest).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdPut`: TeamMembership
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersIdPut`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameMembersIdPutRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **updateTeamMemberRoleRequest** | [**UpdateTeamMemberRoleRequest**](UpdateTeamMemberRoleRequest.md) |  | 
+
+### Return type
+
+[**TeamMembership**](TeamMembership.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameMembersPost
+
+> TeamMembership ApiV1OrganizationsOrgIdTeamsTeamNameMembersPost(ctx, orgId, teamName).AddTeamMemberRequest(addTeamMemberRequest).Execute()
+
+Add a member to a team
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    addTeamMemberRequest := *openapiclient.NewAddTeamMemberRequest("UserId_example", "Role_example") // AddTeamMemberRequest | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersPost(context.Background(), orgId, teamName).AddTeamMemberRequest(addTeamMemberRequest).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameMembersPost`: TeamMembership
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameMembersPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **addTeamMemberRequest** | [**AddTeamMemberRequest**](AddTeamMemberRequest.md) |  | 
+
+### Return type
+
+[**TeamMembership**](TeamMembership.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresGet
+
+> ObjectStoreList ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresGet(ctx, orgId, teamName).Execute()
+
+List all ObjectStores for a team
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresGet(context.Background(), orgId, teamName).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresGet`: ObjectStoreList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**ObjectStoreList**](ObjectStoreList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdDelete
+
+> ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdDelete(ctx, orgId, teamName, id).Execute()
+
+Delete an ObjectStore
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdDelete(context.Background(), orgId, teamName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdGet
+
+> ObjectStore ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdGet(ctx, orgId, teamName, id).Execute()
+
+Get a specific ObjectStore
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdGet(context.Background(), orgId, teamName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdGet`: ObjectStore
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**ObjectStore**](ObjectStore.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdPut
+
+> ObjectStore ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdPut(ctx, orgId, teamName, id).ObjectStore(objectStore).Execute()
+
+Update an ObjectStore
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    objectStore := *openapiclient.NewObjectStore("Name_example", *openapiclient.NewObjectStoreSpec(*openapiclient.NewObjectStoreConfiguration(), "DestinationPath_example")) // ObjectStore | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdPut(context.Background(), orgId, teamName, id).ObjectStore(objectStore).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdPut`: ObjectStore
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdPut`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdPutRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **objectStore** | [**ObjectStore**](ObjectStore.md) |  | 
+
+### Return type
+
+[**ObjectStore**](ObjectStore.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresPost
+
+> ObjectStore ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresPost(ctx, orgId, teamName).ObjectStore(objectStore).Execute()
+
+Add a new ObjectStore for backup storage
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    objectStore := *openapiclient.NewObjectStore("Name_example", *openapiclient.NewObjectStoreSpec(*openapiclient.NewObjectStoreConfiguration(), "DestinationPath_example")) // ObjectStore | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresPost(context.Background(), orgId, teamName).ObjectStore(objectStore).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresPost`: ObjectStore
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **objectStore** | [**ObjectStore**](ObjectStore.md) |  | 
+
+### Return type
+
+[**ObjectStore**](ObjectStore.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNamePut
+
+> Team ApiV1OrganizationsOrgIdTeamsTeamNamePut(ctx, orgId, teamName).TeamUpdateRequest(teamUpdateRequest).Execute()
+
+Update a team
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    teamUpdateRequest := *openapiclient.NewTeamUpdateRequest("Name_example") // TeamUpdateRequest | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNamePut(context.Background(), orgId, teamName).TeamUpdateRequest(teamUpdateRequest).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNamePut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNamePut`: Team
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNamePut`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNamePutRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **teamUpdateRequest** | [**TeamUpdateRequest**](TeamUpdateRequest.md) |  | 
+
+### Return type
+
+[**Team**](Team.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet
+
+> SecretList ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet(ctx, orgId, teamName).Execute()
+
+List all secrets for a team
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet(context.Background(), orgId, teamName).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet`: SecretList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**SecretList**](SecretList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdDelete
+
+> ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdDelete(ctx, orgId, teamName, id).Execute()
+
+Delete a secret
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdDelete(context.Background(), orgId, teamName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdGet
+
+> Secret ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdGet(ctx, orgId, teamName, id).Execute()
+
+Get a specific secret
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdGet(context.Background(), orgId, teamName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdGet`: Secret
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**Secret**](Secret.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdPut
+
+> Secret ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdPut(ctx, orgId, teamName, id).Secret(secret).Execute()
+
+Update a secret
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    secret := *openapiclient.NewSecret("Name_example", openapiclient.SecretType("Generic"), []openapiclient.SecretData{*openapiclient.NewSecretData("Key_example", "Value_example")}) // Secret | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdPut(context.Background(), orgId, teamName, id).Secret(secret).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdPut`: Secret
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdPut`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdPutRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **secret** | [**Secret**](Secret.md) |  | 
+
+### Return type
+
+[**Secret**](Secret.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameSecretsPost
+
+> Secret ApiV1OrganizationsOrgIdTeamsTeamNameSecretsPost(ctx, orgId, teamName).Secret(secret).Execute()
+
+Create a new secret
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    secret := *openapiclient.NewSecret("Name_example", openapiclient.SecretType("Generic"), []openapiclient.SecretData{*openapiclient.NewSecretData("Key_example", "Value_example")}) // Secret | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsPost(context.Background(), orgId, teamName).Secret(secret).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameSecretsPost`: Secret
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameSecretsPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **secret** | [**Secret**](Secret.md) |  | 
+
+### Return type
+
+[**Secret**](Secret.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet
+
+> StackList ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet(ctx, orgId, teamName).Limit(limit).Offset(offset).Execute()
+
+List all stacks for a team
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    limit := int32(56) // int32 |  (optional) (default to 20)
+    offset := int32(56) // int32 |  (optional) (default to 0)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet(context.Background(), orgId, teamName).Limit(limit).Offset(offset).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet`: StackList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
  **limit** | **int32** |  | [default to 20]
  **offset** | **int32** |  | [default to 0]
 
@@ -2975,446 +3993,9 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdStacksIdDelete
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGet
 
-> Stack ApiV1OrganizationsOrgIdStacksIdDelete(ctx, orgId, id).Execute()
-
-Delete a Stack
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdDelete(context.Background(), orgId, id).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksIdDelete``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdStacksIdDelete`: Stack
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksIdDelete`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksIdDeleteRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
-### Return type
-
-[**Stack**](Stack.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdStacksIdGet
-
-> Stack ApiV1OrganizationsOrgIdStacksIdGet(ctx, orgId, id).Execute()
-
-Get a specific Stack
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdGet(context.Background(), orgId, id).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksIdGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdStacksIdGet`: Stack
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksIdGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksIdGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
-### Return type
-
-[**Stack**](Stack.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdStacksIdLogsGet
-
-> *os.File ApiV1OrganizationsOrgIdStacksIdLogsGet(ctx, orgId, id).Follow(follow).Tail(tail).Since(since).Execute()
-
-Get logs for a Stack
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-    follow := true // bool |  (optional) (default to false)
-    tail := int32(56) // int32 |  (optional) (default to 100)
-    since := "since_example" // string |  (optional)
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdLogsGet(context.Background(), orgId, id).Follow(follow).Tail(tail).Since(since).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksIdLogsGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdStacksIdLogsGet`: *os.File
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksIdLogsGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksIdLogsGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **follow** | **bool** |  | [default to false]
- **tail** | **int32** |  | [default to 100]
- **since** | **string** |  | 
-
-### Return type
-
-[***os.File**](*os.File.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: text/event-stream, application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdStacksIdMetricsGet
-
-> *os.File ApiV1OrganizationsOrgIdStacksIdMetricsGet(ctx, orgId, id).Stream(stream).Execute()
-
-Get metrics for a Stack
-
-
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-    stream := true // bool |  (optional) (default to false)
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdMetricsGet(context.Background(), orgId, id).Stream(stream).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksIdMetricsGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdStacksIdMetricsGet`: *os.File
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksIdMetricsGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksIdMetricsGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **stream** | **bool** |  | [default to false]
-
-### Return type
-
-[***os.File**](*os.File.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: text/event-stream, application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdStacksIdPut
-
-> Stack ApiV1OrganizationsOrgIdStacksIdPut(ctx, orgId, id).Stack(stack).Execute()
-
-Update a Stack
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    id := "id_example" // string | The id of record
-    stack := *openapiclient.NewStack("Name_example", *openapiclient.NewStackSpec([]openapiclient.StackResource{*openapiclient.NewStackResource("Name_example")})) // Stack | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdPut(context.Background(), orgId, id).Stack(stack).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksIdPut``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdStacksIdPut`: Stack
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksIdPut`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**id** | **string** | The id of record | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksIdPutRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **stack** | [**Stack**](Stack.md) |  | 
-
-### Return type
-
-[**Stack**](Stack.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdStacksPost
-
-> Stack ApiV1OrganizationsOrgIdStacksPost(ctx, orgId).Stack(stack).Execute()
-
-Create a new stack
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    stack := *openapiclient.NewStack("Name_example", *openapiclient.NewStackSpec([]openapiclient.StackResource{*openapiclient.NewStackResource("Name_example")})) // Stack | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksPost(context.Background(), orgId).Stack(stack).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksPost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdStacksPost`: Stack
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksPost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksPostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
- **stack** | [**Stack**](Stack.md) |  | 
-
-### Return type
-
-[**Stack**](Stack.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet
-
-> ImageBuild ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet(ctx, orgId, stackId, buildId).Execute()
+> ImageBuild ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGet(ctx, orgId, teamName, id, buildId).Execute()
 
 Get a specific build under a stack
 
@@ -3432,18 +4013,19 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    stackId := "stackId_example" // string | The ID of the stack
-    buildId := "buildId_example" // string | 
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    buildId := "buildId_example" // string | The ID of the build
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet(context.Background(), orgId, stackId, buildId).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGet(context.Background(), orgId, teamName, id, buildId).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet`: ImageBuild
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGet`: %v\n", resp)
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGet`: ImageBuild
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGet`: %v\n", resp)
 }
 ```
 
@@ -3454,16 +4036,18 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**stackId** | **string** | The ID of the stack | 
-**buildId** | **string** |  | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+**buildId** | **string** | The ID of the build | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksStackIdBuildsBuildIdGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGetRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
 
 
@@ -3486,9 +4070,9 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdStacksStackIdBuildsGet
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet
 
-> ImageBuildList ApiV1OrganizationsOrgIdStacksStackIdBuildsGet(ctx, orgId, stackId).Execute()
+> ImageBuildList ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet(ctx, orgId, teamName, id).Execute()
 
 List all builds under a stack
 
@@ -3506,160 +4090,18 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    stackId := "stackId_example" // string | The ID of the stack
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdBuildsGet(context.Background(), orgId, stackId).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdBuildsGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdStacksStackIdBuildsGet`: ImageBuildList
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdBuildsGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**stackId** | **string** | The ID of the stack | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksStackIdBuildsGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
-### Return type
-
-[**ImageBuildList**](ImageBuildList.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdStacksStackIdResourcesGet
-
-> StackResourceList ApiV1OrganizationsOrgIdStacksStackIdResourcesGet(ctx, orgId, stackId).Execute()
-
-List all StackResources under a Stack
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    stackId := "stackId_example" // string | The ID of the stack
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesGet(context.Background(), orgId, stackId).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdStacksStackIdResourcesGet`: StackResourceList
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**stackId** | **string** | The ID of the stack | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksStackIdResourcesGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-
-### Return type
-
-[**StackResourceList**](StackResourceList.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGet
-
-> ImageBuildList ApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGet(ctx, orgId, stackId, id).Execute()
-
-List all builds for a StackResource
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    stackId := "stackId_example" // string | The ID of the stack
+    teamName := "teamName_example" // string | The name of the team
     id := "id_example" // string | The id of record
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGet(context.Background(), orgId, stackId, id).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet(context.Background(), orgId, teamName, id).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGet`: ImageBuildList
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGet`: %v\n", resp)
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet`: ImageBuildList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet`: %v\n", resp)
 }
 ```
 
@@ -3670,12 +4112,12 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**stackId** | **string** | The ID of the stack | 
+**teamName** | **string** | The name of the team | 
 **id** | **string** | The id of record | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksStackIdResourcesIdBuildsGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGetRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
@@ -3702,11 +4144,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete
 
-> StackResource ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet(ctx, orgId, stackId, id).Execute()
+> Stack ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete(ctx, orgId, teamName, id).Execute()
 
-Get a specific StackResource
+Delete a stack
 
 ### Example
 
@@ -3722,18 +4164,18 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    stackId := "stackId_example" // string | The ID of the stack
+    teamName := "teamName_example" // string | The name of the team
     id := "id_example" // string | The id of record
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet(context.Background(), orgId, stackId, id).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete(context.Background(), orgId, teamName, id).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet`: StackResource
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesIdGet`: %v\n", resp)
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete`: Stack
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete`: %v\n", resp)
 }
 ```
 
@@ -3744,12 +4186,12 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**stackId** | **string** | The ID of the stack | 
+**teamName** | **string** | The name of the team | 
 **id** | **string** | The id of record | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksStackIdResourcesIdGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDeleteRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
@@ -3760,7 +4202,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**StackResource**](StackResource.md)
+[**Stack**](Stack.md)
 
 ### Authorization
 
@@ -3776,11 +4218,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet
 
-> StackResource ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut(ctx, orgId, stackId, id).StackResource(stackResource).Execute()
+> Stack ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(ctx, orgId, teamName, id).Execute()
 
-Update a StackResource
+Get a specific stack
 
 ### Example
 
@@ -3796,19 +4238,18 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    stackId := "stackId_example" // string | The ID of the stack
+    teamName := "teamName_example" // string | The name of the team
     id := "id_example" // string | The id of record
-    stackResource := *openapiclient.NewStackResource("Name_example") // StackResource | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut(context.Background(), orgId, stackId, id).StackResource(stackResource).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(context.Background(), orgId, teamName, id).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut`: StackResource
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesIdPut`: %v\n", resp)
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet`: Stack
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet`: %v\n", resp)
 }
 ```
 
@@ -3819,12 +4260,12 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**stackId** | **string** | The ID of the stack | 
+**teamName** | **string** | The name of the team | 
 **id** | **string** | The id of record | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksStackIdResourcesIdPutRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGetRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
@@ -3832,11 +4273,10 @@ Name | Type | Description  | Notes
 
 
 
- **stackResource** | [**StackResource**](StackResource.md) |  | 
 
 ### Return type
 
-[**StackResource**](StackResource.md)
+[**Stack**](Stack.md)
 
 ### Authorization
 
@@ -3844,7 +4284,7 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
-- **Content-Type**: application/json
+- **Content-Type**: Not defined
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -3852,11 +4292,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGet
 
-> *os.File ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet(ctx, orgId, stackId, resourceName).Follow(follow).Tail(tail).Since(since).Execute()
+> *os.File ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGet(ctx, orgId, teamName, id).Follow(follow).Tail(tail).Since(since).Execute()
 
-Get logs for a StackResource
+Get logs for a stack
 
 ### Example
 
@@ -3872,21 +4312,21 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    stackId := "stackId_example" // string | The ID of the stack
-    resourceName := "resourceName_example" // string | 
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
     follow := true // bool |  (optional) (default to false)
     tail := int32(56) // int32 |  (optional) (default to 100)
     since := "since_example" // string |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet(context.Background(), orgId, stackId, resourceName).Follow(follow).Tail(tail).Since(since).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGet(context.Background(), orgId, teamName, id).Follow(follow).Tail(tail).Since(since).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet`: *os.File
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGet`: %v\n", resp)
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGet`: *os.File
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGet`: %v\n", resp)
 }
 ```
 
@@ -3897,12 +4337,12 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**stackId** | **string** | The ID of the stack | 
-**resourceName** | **string** |  | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameLogsGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGetRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
@@ -3932,11 +4372,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdMetricsGet
 
-> ResourceMetrics ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet(ctx, orgId, stackId, resourceName).Stream(stream).Execute()
+> *os.File ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdMetricsGet(ctx, orgId, teamName, id).Stream(stream).Execute()
 
-Get metrics for a StackResource
+Get metrics for a stack
 
 
 
@@ -3954,19 +4394,19 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    stackId := "stackId_example" // string | The ID of the stack
-    resourceName := "resourceName_example" // string | 
-    stream := true // bool | Whether to stream metrics via Server-Sent Events (SSE) (optional) (default to false)
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    stream := true // bool |  (optional) (default to false)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet(context.Background(), orgId, stackId, resourceName).Stream(stream).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdMetricsGet(context.Background(), orgId, teamName, id).Stream(stream).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdMetricsGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet`: ResourceMetrics
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGet`: %v\n", resp)
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdMetricsGet`: *os.File
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdMetricsGet`: %v\n", resp)
 }
 ```
 
@@ -3977,16 +4417,484 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**stackId** | **string** | The ID of the stack | 
-**resourceName** | **string** |  | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdStacksStackIdResourcesResourceNameMetricsGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdMetricsGetRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
+
+
+ **stream** | **bool** |  | [default to false]
+
+### Return type
+
+[***os.File**](*os.File.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: text/event-stream, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut
+
+> Stack ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut(ctx, orgId, teamName, id).Stack(stack).Execute()
+
+Update a stack
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    stack := *openapiclient.NewStack("Name_example", *openapiclient.NewStackSpec([]openapiclient.StackResource{*openapiclient.NewStackResource("Name_example")})) // Stack | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut(context.Background(), orgId, teamName, id).Stack(stack).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut`: Stack
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPutRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **stack** | [**Stack**](Stack.md) |  | 
+
+### Return type
+
+[**Stack**](Stack.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesGet
+
+> StackResourceList ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesGet(ctx, orgId, teamName, id).Execute()
+
+List all stack resources under a stack
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesGet(context.Background(), orgId, teamName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesGet`: StackResourceList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**StackResourceList**](StackResourceList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGet
+
+> ImageBuildList ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGet(ctx, orgId, teamName, id, resourceName).Execute()
+
+List all builds for a stack resource
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    resourceName := "resourceName_example" // string | The name of the stack resource
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGet(context.Background(), orgId, teamName, id, resourceName).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGet`: ImageBuildList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+**resourceName** | **string** | The name of the stack resource | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+
+### Return type
+
+[**ImageBuildList**](ImageBuildList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet
+
+> StackResource ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet(ctx, orgId, teamName, id, resourceName).Execute()
+
+Get a specific stack resource by name
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    resourceName := "resourceName_example" // string | The name of the stack resource
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet(context.Background(), orgId, teamName, id, resourceName).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet`: StackResource
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+**resourceName** | **string** | The name of the stack resource | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+
+### Return type
+
+[**StackResource**](StackResource.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet
+
+> *os.File ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet(ctx, orgId, teamName, id, resourceName).Follow(follow).Tail(tail).Since(since).Execute()
+
+Get logs for a stack resource
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    resourceName := "resourceName_example" // string | The name of the stack resource
+    follow := true // bool |  (optional) (default to false)
+    tail := int32(56) // int32 |  (optional) (default to 100)
+    since := "since_example" // string |  (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet(context.Background(), orgId, teamName, id, resourceName).Follow(follow).Tail(tail).Since(since).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet`: *os.File
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+**resourceName** | **string** | The name of the stack resource | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+ **follow** | **bool** |  | [default to false]
+ **tail** | **int32** |  | [default to 100]
+ **since** | **string** |  | 
+
+### Return type
+
+[***os.File**](*os.File.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: text/event-stream, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet
+
+> ResourceMetrics ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet(ctx, orgId, teamName, id, resourceName).Stream(stream).Execute()
+
+Get metrics for a stack resource
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    resourceName := "resourceName_example" // string | The name of the stack resource
+    stream := true // bool | Whether to stream metrics via Server-Sent Events (SSE) (optional) (default to false)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet(context.Background(), orgId, teamName, id, resourceName).Stream(stream).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet`: ResourceMetrics
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+**resourceName** | **string** | The name of the stack resource | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
 
 
 
@@ -4010,79 +4918,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdVolumesCurrentGet
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost
 
-> VolumeList ApiV1OrganizationsOrgIdVolumesCurrentGet(ctx, orgId).Execute()
+> Stack ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost(ctx, orgId, teamName).Stack(stack).Execute()
 
-List of volumes for the current user
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdVolumesCurrentGet(context.Background(), orgId).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdVolumesCurrentGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdVolumesCurrentGet`: VolumeList
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdVolumesCurrentGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdVolumesCurrentGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-### Return type
-
-[**VolumeList**](VolumeList.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdVolumesGet
-
-> VolumeList ApiV1OrganizationsOrgIdVolumesGet(ctx, orgId).Execute()
-
-List all volumes in an organization.
+Create a new stack
 
 ### Example
 
@@ -4097,17 +4937,19 @@ import (
 )
 
 func main() {
-    orgId := "orgId_example" // string | 
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    stack := *openapiclient.NewStack("Name_example", *openapiclient.NewStackSpec([]openapiclient.StackResource{*openapiclient.NewStackResource("Name_example")})) // Stack | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdVolumesGet(context.Background(), orgId).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost(context.Background(), orgId, teamName).Stack(stack).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdVolumesGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdVolumesGet`: VolumeList
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdVolumesGet`: %v\n", resp)
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost`: Stack
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost`: %v\n", resp)
 }
 ```
 
@@ -4117,20 +4959,23 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdVolumesGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksPostRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
 
+ **stack** | [**Stack**](Stack.md) |  | 
+
 ### Return type
 
-[**VolumeList**](VolumeList.md)
+[**Stack**](Stack.md)
 
 ### Authorization
 
@@ -4138,7 +4983,7 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -4146,9 +4991,9 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdVolumesIdDelete
+## ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDelete
 
-> ApiV1OrganizationsOrgIdVolumesIdDelete(ctx, orgId, id).Execute()
+> ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDelete(ctx, orgId, teamName, id).Execute()
 
 Delete a volume
 
@@ -4165,14 +5010,15 @@ import (
 )
 
 func main() {
-    orgId := "orgId_example" // string | 
-    id := "id_example" // string | 
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdVolumesIdDelete(context.Background(), orgId, id).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDelete(context.Background(), orgId, teamName, id).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdVolumesIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDelete``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
 }
@@ -4184,16 +5030,18 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**id** | **string** |  | 
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdVolumesIdDeleteRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDeleteRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
 
 
@@ -4215,9 +5063,9 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdVolumesIdGet
+## ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet
 
-> Volume ApiV1OrganizationsOrgIdVolumesIdGet(ctx, orgId, id).Execute()
+> Volume ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet(ctx, orgId, teamName, id).Execute()
 
 Get a specific volume
 
@@ -4234,18 +5082,19 @@ import (
 )
 
 func main() {
-    orgId := "orgId_example" // string | 
-    id := "id_example" // string | 
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdVolumesIdGet(context.Background(), orgId, id).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet(context.Background(), orgId, teamName, id).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdVolumesIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdVolumesIdGet`: Volume
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdVolumesIdGet`: %v\n", resp)
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet`: Volume
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet`: %v\n", resp)
 }
 ```
 
@@ -4255,16 +5104,18 @@ func main() {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**id** | **string** |  | 
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdVolumesIdGetRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGetRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
 
 
@@ -4286,82 +5137,9 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsOrgIdVolumesIdPut
+## ApiV1OrganizationsOrgIdTeamsTeamNameVolumesPost
 
-> Volume ApiV1OrganizationsOrgIdVolumesIdPut(ctx, orgId, id).Volume(volume).Execute()
-
-Update a volume
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | 
-    id := "id_example" // string | 
-    volume := *openapiclient.NewVolume("Name_example", *openapiclient.NewVolumeSpec("Size_example", false, openapiclient.VolumeAccessMode("ReadWriteOnce"))) // Volume | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdVolumesIdPut(context.Background(), orgId, id).Volume(volume).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdVolumesIdPut``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdVolumesIdPut`: Volume
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdVolumesIdPut`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** |  | 
-**id** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdVolumesIdPutRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **volume** | [**Volume**](Volume.md) |  | 
-
-### Return type
-
-[**Volume**](Volume.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdVolumesPost
-
-> Volume ApiV1OrganizationsOrgIdVolumesPost(ctx, orgId).Volume(volume).Execute()
+> Volume ApiV1OrganizationsOrgIdTeamsTeamNameVolumesPost(ctx, orgId, teamName).Volume(volume).Execute()
 
 Create a new volume
 
@@ -4379,17 +5157,18 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
     volume := *openapiclient.NewVolume("Name_example", *openapiclient.NewVolumeSpec("Size_example", false, openapiclient.VolumeAccessMode("ReadWriteOnce"))) // Volume | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdVolumesPost(context.Background(), orgId).Volume(volume).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameVolumesPost(context.Background(), orgId, teamName).Volume(volume).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdVolumesPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameVolumesPost``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdVolumesPost`: Volume
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdVolumesPost`: %v\n", resp)
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameVolumesPost`: Volume
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameVolumesPost`: %v\n", resp)
 }
 ```
 
@@ -4400,14 +5179,16 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdVolumesPostRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameVolumesPostRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **volume** | [**Volume**](Volume.md) |  | 
 
@@ -4429,13 +5210,11 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
-## ApiV1OrganizationsPost
+## ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersCurrentGet
 
-> Organisation ApiV1OrganizationsPost(ctx).Organisation(organisation).Execute()
+> WorkspaceUser ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersCurrentGet(ctx, orgId, teamName).Execute()
 
-Create a new organization
-
-
+Get the workspace user for the current user
 
 ### Example
 
@@ -4450,36 +5229,265 @@ import (
 )
 
 func main() {
-    organisation := *openapiclient.NewOrganisation() // Organisation | 
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsPost(context.Background()).Organisation(organisation).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersCurrentGet(context.Background(), orgId, teamName).Execute()
     if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersCurrentGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsPost`: Organisation
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsPost`: %v\n", resp)
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersCurrentGet`: WorkspaceUser
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersCurrentGet`: %v\n", resp)
 }
 ```
 
 ### Path Parameters
 
 
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
 
 ### Other Parameters
 
-Other parameters are passed through a pointer to a apiApiV1OrganizationsPostRequest struct via the builder pattern
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersCurrentGetRequest struct via the builder pattern
 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **organisation** | [**Organisation**](Organisation.md) |  | 
+
+
 
 ### Return type
 
-[**Organisation**](Organisation.md)
+[**WorkspaceUser**](WorkspaceUser.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdDelete
+
+> ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdDelete(ctx, orgId, teamName, id).Execute()
+
+Delete a workspace user
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdDelete(context.Background(), orgId, teamName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdGet
+
+> WorkspaceUser ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdGet(ctx, orgId, teamName, id).Execute()
+
+Get a workspace user by ID
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdGet(context.Background(), orgId, teamName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdGet`: WorkspaceUser
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**WorkspaceUser**](WorkspaceUser.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPut
+
+> WorkspaceUser ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPut(ctx, orgId, teamName, id).WorkspaceUser(workspaceUser).Execute()
+
+Update a workspace user
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    workspaceUser := *openapiclient.NewWorkspaceUser([]string{"Workspaces_example"}) // WorkspaceUser | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPut(context.Background(), orgId, teamName, id).WorkspaceUser(workspaceUser).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPut`: WorkspaceUser
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPut`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersIdPutRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **workspaceUser** | [**WorkspaceUser**](WorkspaceUser.md) |  | 
+
+### Return type
+
+[**WorkspaceUser**](WorkspaceUser.md)
 
 ### Authorization
 
@@ -4488,6 +5496,151 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
 - **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPost
+
+> WorkspaceUser ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPost(ctx, orgId, teamName).WorkspaceUser(workspaceUser).Execute()
+
+Create a new workspace user
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    workspaceUser := *openapiclient.NewWorkspaceUser([]string{"Workspaces_example"}) // WorkspaceUser | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPost(context.Background(), orgId, teamName).WorkspaceUser(workspaceUser).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPost`: WorkspaceUser
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameWorkspaceUsersPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **workspaceUser** | [**WorkspaceUser**](WorkspaceUser.md) |  | 
+
+### Return type
+
+[**WorkspaceUser**](WorkspaceUser.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdUsersGet
+
+> UserList ApiV1OrganizationsOrgIdUsersGet(ctx, orgId).Page(page).PageSize(pageSize).Execute()
+
+List all users in an organization
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    page := int32(56) // int32 | Page number (optional) (default to 1)
+    pageSize := int32(56) // int32 | Number of items per page (optional) (default to 20)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdUsersGet(context.Background(), orgId).Page(page).PageSize(pageSize).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdUsersGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdUsersGet`: UserList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdUsersGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdUsersGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **page** | **int32** | Page number | [default to 1]
+ **pageSize** | **int32** | Number of items per page | [default to 20]
+
+### Return type
+
+[**UserList**](UserList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -4516,7 +5669,7 @@ import (
 )
 
 func main() {
-    userSignupRequest := *openapiclient.NewUserSignupRequest("Name_example", "Email_example", "Password_example") // UserSignupRequest | 
+    userSignupRequest := *openapiclient.NewUserSignupRequest("Name_example", "Email_example", "Password_example", *openapiclient.NewOrganisation()) // UserSignupRequest | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -4565,9 +5718,7 @@ No authorization required
 
 > User ApiV1UsersCurrentGet(ctx).Execute()
 
-Get a the current authenticated user
-
-
+Get the current authenticated user
 
 ### Example
 
@@ -4607,6 +5758,65 @@ Other parameters are passed through a pointer to a apiApiV1UsersCurrentGetReques
 ### Return type
 
 [**User**](User.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1UsersCurrentTeamsGet
+
+> TeamList ApiV1UsersCurrentTeamsGet(ctx).Execute()
+
+List teams for the current authenticated user
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1UsersCurrentTeamsGet(context.Background()).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1UsersCurrentTeamsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1UsersCurrentTeamsGet`: TeamList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1UsersCurrentTeamsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+This endpoint does not need any parameter.
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1UsersCurrentTeamsGetRequest struct via the builder pattern
+
+
+### Return type
+
+[**TeamList**](TeamList.md)
 
 ### Authorization
 
@@ -4685,333 +5895,6 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1WorkspaceUsersCurrentGet
-
-> WorkspaceUser ApiV1WorkspaceUsersCurrentGet(ctx).Execute()
-
-Get the workspace user object for the current user
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceUsersCurrentGet(context.Background()).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceUsersCurrentGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1WorkspaceUsersCurrentGet`: WorkspaceUser
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1WorkspaceUsersCurrentGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-This endpoint does not need any parameter.
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1WorkspaceUsersCurrentGetRequest struct via the builder pattern
-
-
-### Return type
-
-[**WorkspaceUser**](WorkspaceUser.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1WorkspaceUsersIdDelete
-
-> ApiV1WorkspaceUsersIdDelete(ctx, id).Execute()
-
-Delete a WorkspaceUser
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    id := "id_example" // string | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceUsersIdDelete(context.Background(), id).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceUsersIdDelete``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**id** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1WorkspaceUsersIdDeleteRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-### Return type
-
- (empty response body)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: Not defined
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1WorkspaceUsersIdGet
-
-> WorkspaceUser ApiV1WorkspaceUsersIdGet(ctx, id).Execute()
-
-Get a workspace user object by ID
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    id := "id_example" // string | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceUsersIdGet(context.Background(), id).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceUsersIdGet``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1WorkspaceUsersIdGet`: WorkspaceUser
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1WorkspaceUsersIdGet`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**id** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1WorkspaceUsersIdGetRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
-### Return type
-
-[**WorkspaceUser**](WorkspaceUser.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1WorkspaceUsersIdPut
-
-> WorkspaceUser ApiV1WorkspaceUsersIdPut(ctx, id).WorkspaceUser(workspaceUser).Execute()
-
-Update a WorkspaceUser
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    id := "id_example" // string | 
-    workspaceUser := *openapiclient.NewWorkspaceUser([]string{"Workspaces_example"}) // WorkspaceUser | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceUsersIdPut(context.Background(), id).WorkspaceUser(workspaceUser).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceUsersIdPut``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1WorkspaceUsersIdPut`: WorkspaceUser
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1WorkspaceUsersIdPut`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**id** | **string** |  | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1WorkspaceUsersIdPutRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
- **workspaceUser** | [**WorkspaceUser**](WorkspaceUser.md) |  | 
-
-### Return type
-
-[**WorkspaceUser**](WorkspaceUser.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1WorkspaceUsersPost
-
-> WorkspaceUser ApiV1WorkspaceUsersPost(ctx).WorkspaceUser(workspaceUser).Execute()
-
-Create a new workspace user object.
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    workspaceUser := *openapiclient.NewWorkspaceUser([]string{"Workspaces_example"}) // WorkspaceUser | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1WorkspaceUsersPost(context.Background()).WorkspaceUser(workspaceUser).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WorkspaceUsersPost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1WorkspaceUsersPost`: WorkspaceUser
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1WorkspaceUsersPost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1WorkspaceUsersPostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **workspaceUser** | [**WorkspaceUser**](WorkspaceUser.md) |  | 
-
-### Return type
-
-[**WorkspaceUser**](WorkspaceUser.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)

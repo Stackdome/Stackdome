@@ -19,6 +19,8 @@ type UserSignupResponse struct {
 	User *User `json:"user,omitempty"`
 	// JWT token for the authenticated user
 	JwtToken *string `json:"jwt_token,omitempty"`
+	// Refresh token for obtaining new access tokens
+	RefreshToken *string `json:"refresh_token,omitempty"`
 }
 
 // NewUserSignupResponse instantiates a new UserSignupResponse object
@@ -102,6 +104,38 @@ func (o *UserSignupResponse) SetJwtToken(v string) {
 	o.JwtToken = &v
 }
 
+// GetRefreshToken returns the RefreshToken field value if set, zero value otherwise.
+func (o *UserSignupResponse) GetRefreshToken() string {
+	if o == nil || o.RefreshToken == nil {
+		var ret string
+		return ret
+	}
+	return *o.RefreshToken
+}
+
+// GetRefreshTokenOk returns a tuple with the RefreshToken field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *UserSignupResponse) GetRefreshTokenOk() (*string, bool) {
+	if o == nil || o.RefreshToken == nil {
+		return nil, false
+	}
+	return o.RefreshToken, true
+}
+
+// HasRefreshToken returns a boolean if a field has been set.
+func (o *UserSignupResponse) HasRefreshToken() bool {
+	if o != nil && o.RefreshToken != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetRefreshToken gets a reference to the given string and assigns it to the RefreshToken field.
+func (o *UserSignupResponse) SetRefreshToken(v string) {
+	o.RefreshToken = &v
+}
+
 func (o UserSignupResponse) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.User != nil {
@@ -109,6 +143,9 @@ func (o UserSignupResponse) MarshalJSON() ([]byte, error) {
 	}
 	if o.JwtToken != nil {
 		toSerialize["jwt_token"] = o.JwtToken
+	}
+	if o.RefreshToken != nil {
+		toSerialize["refresh_token"] = o.RefreshToken
 	}
 	return json.Marshal(toSerialize)
 }
