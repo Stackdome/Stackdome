@@ -63,7 +63,7 @@ func (s *stackResourceService) GetByStackID(ctx context.Context, stackID string)
 	if stackErr != nil {
 		return nil, stackErr
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return s.stackResourceStore.GetByStackID(ctx, stackID)
@@ -78,7 +78,7 @@ func (s *stackResourceService) GetByID(ctx context.Context, ID string) (*models.
 	if stackErr != nil {
 		return nil, stackErr
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, stack.TeamID, auth.ResourceStacks, resource.StackID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, resource.StackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return resource, nil
@@ -89,7 +89,7 @@ func (s *stackResourceService) GetByStackIDAndResourceName(ctx context.Context, 
 	if stackErr != nil {
 		return nil, stackErr
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return s.stackResourceStore.GetByStackIDAndResourceName(ctx, stackID, resourceName)

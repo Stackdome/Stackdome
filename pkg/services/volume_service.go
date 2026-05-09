@@ -21,7 +21,7 @@ type VolumeService interface {
 	CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateInDbWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateInCluster(ctx context.Context, spec *models.Volume) *errors.ServiceError
-	ListByUserID(ctx context.Context, userID string) ([]*models.Volume, *errors.ServiceError)
+	ListByUserID(ctx context.Context, teamID, userID string) ([]*models.Volume, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.VolumeStatus) *errors.ServiceError
 	UpdateGitRepoSourceRevision(ctx context.Context, ID string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError)
 	UpdateRemoteSourceRevision(ctx context.Context, ID string, revision models.RemoteDirSource) (*models.Volume, *errors.ServiceError)
@@ -77,7 +77,7 @@ func (s *volumeService) Get(ctx context.Context, ID string) (*models.Volume, *er
 		s.logger.Errorf("failed to get volume: %v", err)
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return volume, nil
@@ -150,11 +150,9 @@ func (s *volumeService) GetByVolumeNameAndNamespace(ctx context.Context, volumeN
 	return volume, nil
 }
 
-func (s *volumeService) ListByUserID(ctx context.Context, userID string) ([]*models.Volume, *errors.ServiceError) {
-	if identity := auth.GetIdentityFromCtx(ctx); identity != nil {
-		if permErr := auth.CheckServicePermission(s.permissions, ctx, identity.OrgID, auth.ResourceVolumes, "", auth.ActionList); permErr != nil {
-			return nil, permErr
-		}
+func (s *volumeService) ListByUserID(ctx context.Context, teamID, userID string) ([]*models.Volume, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, teamID, auth.ResourceVolumes, "", auth.ActionList); permErr != nil {
+		return nil, permErr
 	}
 	volumes, err := s.volumeStore.GetByUserID(ctx, userID)
 	if err != nil {
@@ -227,7 +225,7 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 }
 
 func (s *volumeService) Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, spec.TeamID, auth.ResourceVolumes, "", auth.ActionCreate); permErr != nil {
+	if permErr := s.permissions.Check(ctx, spec.TeamID, auth.ResourceVolumes, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
 
@@ -315,7 +313,7 @@ func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 		return err
 	}
 
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionDelete); permErr != nil {
+	if permErr := s.permissions.Check(ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
 

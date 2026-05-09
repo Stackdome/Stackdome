@@ -18,6 +18,7 @@ type PostgresAddonStore interface {
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	ListByOrganisation(ctx context.Context, organisationID string) ([]*models.PostgresAddon, *errors.ServiceError)
 	ListByTeamID(ctx context.Context, teamID string) ([]*models.PostgresAddon, *errors.ServiceError)
+	ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*models.PostgresAddon, *errors.ServiceError)
 	ListByCluster(ctx context.Context, clusterID string) ([]*models.PostgresAddon, *errors.ServiceError)
 
 	// Validation

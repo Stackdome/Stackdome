@@ -72,12 +72,8 @@ func (s *clusterService) InternalListAllClusters(ctx context.Context) ([]*models
 }
 
 func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError) {
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, cluster.OrganisationID, auth.ResourceClusters, "", auth.ActionCreate); permErr != nil {
+	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
-	}
-	identity := auth.GetIdentityFromCtx(ctx)
-	if identity != nil && identity.OrgID != cluster.OrganisationID && !identity.IsOrgAdmin() {
-		return nil, errors.Forbidden("insufficient permissions")
 	}
 	// Check if the cluster already exists for the org
 	existingCluster, err := s.clusterStore.GetClusterForOrg(ctx, cluster.OrganisationID)
@@ -140,12 +136,8 @@ func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceE
 		s.logger.Errorf("failed to get cluster: %v", err)
 		return err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionDelete); permErr != nil {
+	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionDelete); permErr != nil {
 		return permErr
-	}
-	identity := auth.GetIdentityFromCtx(ctx)
-	if identity != nil && identity.OrgID != cluster.OrganisationID && !identity.IsOrgAdmin() {
-		return errors.Forbidden("insufficient permissions")
 	}
 	// // Unregister the cluster from the cluster manager
 	// cerr := s.clusterManager.UnregisterCluster(cluster.ID)
@@ -162,7 +154,7 @@ func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceE
 				return errors.GeneralError("image registry is nil")
 			}
 			s.logger.Infof("Deleting image registry %s", registry.ID)
-			err := s.imageRegistryService.Delete(ctx, registry.ID)
+			err := s.imageRegistryService.Delete(ctx, cluster.OrganisationID, registry.ID)
 			if err != nil {
 				s.logger.Errorf("failed to delete image registry: %v", err)
 				return err
@@ -264,7 +256,7 @@ func (s *clusterService) PersistManagerState(ctx context.Context, clusterID stri
 }
 
 func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, orgID, auth.ResourceClusters, "", auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceClusters, "", auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	cluster, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
@@ -290,7 +282,7 @@ func (s *clusterService) Get(ctx context.Context, ID string) (*models.Cluster, *
 		s.logger.Errorf("failed to get cluster: %v", err)
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return cluster, nil

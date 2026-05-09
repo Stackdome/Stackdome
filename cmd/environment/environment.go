@@ -34,6 +34,7 @@ type Env struct {
 	ResourceAccessPolicyManager resourceaccess.ResourceAccessPolicyManager
 	PermissionService           auth.PermissionService
 	RefreshTokenStore           stores.RefreshTokenStore
+	OAuthStateStore             stores.OAuthStateStore
 	Logger                      applogger.Logger
 }
 

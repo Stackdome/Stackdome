@@ -34,6 +34,16 @@ func (d dbOrganisationStore) Create(ctx context.Context, org *models.Organisatio
 	return d.Get(ctx, org.ID)
 }
 
+func (d dbOrganisationStore) OrganisationNameExists(ctx context.Context, name string) (bool, *errors.ServiceError) {
+	grm := d.sessionFactory.New(ctx)
+	var count int64
+	err := grm.Model(&models.Organisation{}).Where("name = ?", name).Count(&count).Error
+	if err != nil {
+		return false, errors.GeneralError("failed to check if organisation name exists: %s", err.Error())
+	}
+	return count > 0, nil
+}
+
 func (d dbOrganisationStore) Get(ctx context.Context, id string) (*models.Organisation, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var org models.Organisation

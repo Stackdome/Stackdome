@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/controllers"
 	apperrors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -39,7 +40,7 @@ type VolumeReconcilerSpec struct {
 	Env            string
 }
 
-func NewVolumeReconciler(spec VolumeReconcilerSpec) *volumeReconciler {
+func NewVolumeReconciler(spec VolumeReconcilerSpec) clustermanager.Controller {
 	return &volumeReconciler{
 		Log:            spec.Log,
 		StorageService: spec.StorageService,

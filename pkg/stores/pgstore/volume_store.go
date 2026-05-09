@@ -181,3 +181,14 @@ func (v *volumeStore) GetByUserID(ctx context.Context, userID string) ([]*models
 	}
 	return res, nil
 }
+
+func (v *volumeStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.Volume, *errors.ServiceError) {
+	var volumes []*models.Volume
+	if err := v.sessionFactory.New(ctx).
+		Where("team_id = ?", teamID).
+		Order("created_at DESC").
+		Find(&volumes).Error; err != nil {
+		return nil, errors.GeneralError("failed to list volumes by team: %s", err.Error())
+	}
+	return volumes, nil
+}

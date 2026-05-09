@@ -115,29 +115,51 @@ func (h *stackHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	handleStreamOrGet(w, r, cfg)
 }
 
-func (h *stackHandler) ListByUser(w http.ResponseWriter, r *http.Request) {
+// func (h *stackHandler) ListByUser(w http.ResponseWriter, r *http.Request) {
+// 	cfg := &handlerConfig{
+// 		Action: func() (interface{}, *errors.ServiceError) {
+// 			ctx := r.Context()
+// 			teamID, serr := resolveTeamID(r, h.teamService)
+// 			if serr != nil {
+// 				return nil, serr
+// 			}
+// 			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
+// 			if err != nil {
+// 				return nil, errors.Unauthorized("failed to fetch current user")
+// 			}
+// 			orgID := mux.Vars(r)["org_id"]
+// 			objs, serr := h.stackService.GetStacksByUserID(ctx, teamID, orgID, currentUser.ID)
+// 			if serr != nil {
+// 				return nil, serr
+// 			}
+// 			listResp := openapi.StackList{
+// 				Items: presenters.PresentStackList(objs),
+// 				Total: ptr.To(int32(len(objs))),
+// 			}
+// 			return listResp, nil
+// 		},
+// 	}
+// 	handleList(w, r, cfg)
+// }
+
+func (h *stackHandler) ListByOrgID(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
-			ctx := r.Context()
-			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
-			if err != nil {
-				return nil, errors.Unauthorized("failed to fetch current user")
-			}
-			objs, serr := h.stackService.GetStacksByUserID(ctx, currentUser.ID)
+			orgID := mux.Vars(r)["org_id"]
+			objs, serr := h.stackService.ListStacksForCurrentUser(r.Context(), orgID)
 			if serr != nil {
 				return nil, serr
 			}
-			listResp := openapi.StackList{
+			return openapi.StackList{
 				Items: presenters.PresentStackList(objs),
 				Total: ptr.To(int32(len(objs))),
-			}
-			return listResp, nil
+			}, nil
 		},
 	}
 	handleList(w, r, cfg)
 }
 
-func (h *stackHandler) ListByTeamID(w http.ResponseWriter, r *http.Request) {
+func (h *stackHandler) ListByTeamName(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
@@ -171,18 +193,18 @@ func (h *stackHandler) Create(w http.ResponseWriter, r *http.Request) {
 				return nil, serr
 			}
 			convertedObject := presenters.ConvertStack(&ws)
-			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
-			if err != nil {
+			identity := auth.GetIdentityFromCtx(ctx)
+			if identity == nil {
 				return nil, errors.Unauthorized("failed to fetch user")
 			}
 			orgID := mux.Vars(r)["org_id"]
 			convertedObject.OrganisationID = orgID
 			convertedObject.TeamID = teamID
-			convertedObject.UserID = currentUser.ID
+			convertedObject.UserID = identity.UserID
 
 			obj, serr := h.stackService.CreateStack(ctx, convertedObject)
 			if serr != nil {
-				h.logger.Errorf("failed to create workspace: %v", serr)
+				h.logger.Errorf("failed to create stack: %v", serr)
 				return nil, serr
 			}
 			return presenters.PresentStack(obj), nil
@@ -200,14 +222,21 @@ func (h *stackHandler) Update(w http.ResponseWriter, r *http.Request) {
 		func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
 			id := mux.Vars(r)["id"]
-			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
-			if err != nil {
+			identity := auth.GetIdentityFromCtx(ctx)
+			if identity == nil {
 				return nil, errors.Unauthorized("failed to fetch user")
 			}
+
+			teamID, serr := resolveTeamID(r, h.teamService)
+			if serr != nil {
+				return nil, serr
+			}
+
 			convertedObject := presenters.ConvertStack(&ws)
 			orgID := mux.Vars(r)["org_id"]
 			convertedObject.OrganisationID = orgID
-			convertedObject.UserID = currentUser.ID
+			convertedObject.TeamID = teamID
+			convertedObject.UserID = identity.UserID
 
 			obj, serr := h.stackService.UpdateStack(ctx, id, convertedObject)
 			if serr != nil {

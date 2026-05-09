@@ -55,6 +55,23 @@ func (h *objectStoreHandler) Create(w http.ResponseWriter, r *http.Request) {
 	handle(w, r, cfg, http.StatusCreated)
 }
 
+func (h *objectStoreHandler) ListByOrgID(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			orgID := mux.Vars(r)["org_id"]
+			objs, serr := h.objectStoreService.ListObjectStoresForCurrentUser(r.Context(), orgID)
+			if serr != nil {
+				return nil, serr
+			}
+			return openapi.ObjectStoreList{
+				Items: presenters.PresentObjectStoreList(objs),
+				Total: ptr.To(int32(len(objs))),
+			}, nil
+		},
+	}
+	handleList(w, r, cfg)
+}
+
 func (h *objectStoreHandler) List(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {

@@ -16,23 +16,13 @@ func ValidateUserCreate(in *openapi.UserSignupRequest) Validate {
 			}
 			return nil
 		},
-		validateOrganisation(in),
+		func() *errors.ServiceError {
+			if in.Organisation.GetName() == "" {
+				return errors.Validation("organisation name is required")
+			}
+			return nil
+		},
 	})
-}
-
-func validateOrganisation(in *openapi.UserSignupRequest) Validate {
-	return func() *errors.ServiceError {
-		if in.HasOrganisationId() && in.HasOrganisation() {
-			return errors.Validation("only one of organisation_id or organisation should be set")
-		}
-		if in.HasOrganisationId() && in.GetOrganisationId() == "" {
-			return errors.Validation("organisation_id should not be empty")
-		}
-		if in.HasOrganisation() && in.Organisation.GetName() == "" {
-			return errors.Validation("organisation name should not be empty")
-		}
-		return nil
-	}
 }
 
 func ValidateUserLogin(in *openapi.LoginRequest) Validate {

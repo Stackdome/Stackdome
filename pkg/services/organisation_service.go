@@ -8,22 +8,28 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 )
 
 type OrganisationService interface {
-	GetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError)
-	Create(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
+	InternalCreate(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	Update(ctx context.Context, ID string, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
+
+	PromoteToOrgAdmin(ctx context.Context, orgID, userID string) *errors.ServiceError
+	DemoteOrgAdmin(ctx context.Context, orgID, userID string) *errors.ServiceError
+	ListOrgAdmins(ctx context.Context, orgID string) ([]*models.User, *errors.ServiceError)
 }
 
 type organisationService struct {
 	organisationStore         stores.OrganisationStore
 	organisationDomainService OrganisationDomainsService
 	stackQueryService         StackQueryService
+	userStore                 stores.UserStore
+	policyMgr                 resourceaccess.ResourceAccessPolicyManager
 	permissions               auth.PermissionService
 	logger                    logger.Logger
 }
@@ -33,8 +39,12 @@ func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
 		organisationStore: pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
+		userStore: pgstore.NewUserStore(pgstore.UserStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
 		stackQueryService:         spec.StackQueryService,
 		organisationDomainService: spec.OrganisationDomainService,
+		policyMgr:                 spec.PolicyManager,
 		permissions:               spec.Permissions,
 		logger:                    spec.Logger,
 	}
@@ -44,26 +54,12 @@ type OrganisationServiceSpec struct {
 	SessionFactory            db.SessionFactory
 	OrganisationDomainService OrganisationDomainsService
 	StackQueryService         StackQueryService
+	PolicyManager             resourceaccess.ResourceAccessPolicyManager
 	Permissions               auth.PermissionService
 	Logger                    logger.Logger
 }
 
-func (s *organisationService) GetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {
-	org, err := s.organisationStore.GetDefaultOrg(ctx)
-	if err != nil {
-		s.logger.Errorf("failed to get default organisation: %v", err)
-		return nil, err
-	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, org.ID, auth.ResourceOrgs, org.ID, auth.ActionRead); permErr != nil {
-		return nil, permErr
-	}
-	return org, nil
-}
-
-func (s *organisationService) Create(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, "", auth.ResourceOrgs, "", auth.ActionCreate); permErr != nil {
-		return nil, permErr
-	}
+func (s *organisationService) InternalCreate(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
 	if len(spec.Name) == 0 {
 		return nil, errors.BadRequest("organisation name is required")
 	}
@@ -85,7 +81,7 @@ func (s *organisationService) Create(ctx context.Context, spec *models.Organisat
 }
 
 func (s *organisationService) Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError) {
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, ID, auth.ResourceOrgs, ID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, ID, auth.ResourceOrgs, ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	org, err := s.organisationStore.Get(ctx, ID)
@@ -98,7 +94,7 @@ func (s *organisationService) Get(ctx context.Context, ID string) (*models.Organ
 
 // TODO: Org is the root of almost everything, so we need to be careful when deleting it.
 func (s *organisationService) Delete(ctx context.Context, ID string) *errors.ServiceError {
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, ID, auth.ResourceOrgs, ID, auth.ActionDelete); permErr != nil {
+	if permErr := s.permissions.Check(ctx, ID, auth.ResourceOrgs, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
 	stacks, err := s.stackQueryService.GetStacksByOrganisationID(ctx, ID)
@@ -118,18 +114,8 @@ func (s *organisationService) Delete(ctx context.Context, ID string) *errors.Ser
 
 // Update updates an organisation
 func (s *organisationService) Update(ctx context.Context, ID string, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, ID, auth.ResourceOrgs, ID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, ID, auth.ResourceOrgs, ID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
-	}
-	identity := auth.GetIdentityFromCtx(ctx)
-	if identity != nil {
-		role := identity.Role
-		if role != string(models.OrgAdminRole) {
-			return nil, errors.Forbidden("insufficient permissions")
-		}
-		if identity.OrgID != ID {
-			return nil, errors.Forbidden("insufficient permissions")
-		}
 	}
 	existing, err := s.Get(ctx, ID)
 	if err != nil {
@@ -137,10 +123,19 @@ func (s *organisationService) Update(ctx context.Context, ID string, spec *model
 	}
 
 	if spec.Name != "" && existing.Name != spec.Name {
-		return nil, errors.BadRequest("organisation name cannot be updated")
+		nameExists, err := s.organisationStore.OrganisationNameExists(ctx, spec.Name)
+		if err != nil {
+			s.logger.Errorf("failed to check if organisation name exists: %v", err)
+			return nil, errors.GeneralError("failed to update organisation")
+		}
+		if nameExists {
+			return nil, errors.Conflict("organisation with the same name already exists")
+		}
 	}
 
-	spec.Name = existing.Name
+	if len(spec.Name) == 0 {
+		spec.Name = existing.Name
+	}
 	org, err := s.organisationStore.Update(ctx, ID, spec)
 	if err != nil {
 		s.logger.Errorf("failed to update organisation: %v", err)
@@ -178,4 +173,73 @@ func (s *organisationService) Update(ctx context.Context, ID string, spec *model
 		}
 	}
 	return s.Get(ctx, org.ID)
+}
+
+func (s *organisationService) PromoteToOrgAdmin(ctx context.Context, orgID, userID string) *errors.ServiceError {
+	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceOrgs, orgID, auth.ActionWrite); permErr != nil {
+		return permErr
+	}
+
+	user, serr := s.userStore.GetByID(ctx, userID)
+	if serr != nil {
+		return serr
+	}
+
+	if user.OrganisationID != orgID {
+		return errors.BadRequest("user does not belong to this organisation")
+	}
+
+	user.Role = models.OrgAdminRole
+	if _, serr := s.userStore.Update(ctx, userID, user); serr != nil {
+		return serr
+	}
+
+	if err := s.policyMgr.AddGroupingPolicy(userID, string(models.OrgAdminRole), orgID); err != nil {
+		s.logger.Errorf("failed to add OrgAdmin grouping: %s", err.Error())
+		return errors.InternalServerError("failed to add OrgAdmin grouping")
+	}
+
+	return nil
+}
+
+func (s *organisationService) DemoteOrgAdmin(ctx context.Context, orgID, userID string) *errors.ServiceError {
+	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceOrgs, orgID, auth.ActionWrite); permErr != nil {
+		return permErr
+	}
+
+	admins, serr := s.userStore.ListByOrgAndRole(ctx, orgID, models.OrgAdminRole)
+	if serr != nil {
+		return serr
+	}
+	if len(admins) <= 1 {
+		return errors.BadRequest("cannot demote the last OrgAdmin")
+	}
+
+	user, serr := s.userStore.GetByID(ctx, userID)
+	if serr != nil {
+		return serr
+	}
+
+	if user.OrganisationID != orgID {
+		return errors.BadRequest("user does not belong to this organisation")
+	}
+
+	user.Role = ""
+	if _, serr := s.userStore.Update(ctx, userID, user); serr != nil {
+		return serr
+	}
+
+	if err := s.policyMgr.RemoveGroupingPolicy(userID, string(models.OrgAdminRole), orgID); err != nil {
+		s.logger.Errorf("failed to remove OrgAdmin grouping: %s", err.Error())
+		return errors.InternalServerError("failed to remove OrgAdmin grouping")
+	}
+
+	return nil
+}
+
+func (s *organisationService) ListOrgAdmins(ctx context.Context, orgID string) ([]*models.User, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceOrgs, orgID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
+	return s.userStore.ListByOrgAndRole(ctx, orgID, models.OrgAdminRole)
 }

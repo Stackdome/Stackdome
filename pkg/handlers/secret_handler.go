@@ -48,6 +48,23 @@ func (h *secretHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	handleGet(w, r, cfg)
 }
 
+func (h *secretHandler) ListByOrgID(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			orgID := mux.Vars(r)["org_id"]
+			objs, serr := h.secretService.ListSecretsForCurrentUser(r.Context(), orgID)
+			if serr != nil {
+				return nil, serr
+			}
+			return openapi.SecretList{
+				Items: presenters.PresentSecretList(objs),
+				Total: ptr.To(int32(len(objs))),
+			}, nil
+		},
+	}
+	handleList(w, r, cfg)
+}
+
 func (h *secretHandler) ListByTeamID(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
@@ -111,14 +128,7 @@ func (h *secretHandler) Update(w http.ResponseWriter, r *http.Request) {
 		func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
 			id := mux.Vars(r)["id"]
-			orgID := mux.Vars(r)["org_id"]
-			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
-			if err != nil {
-				return nil, errors.Unauthorized("failed to fetch user")
-			}
 			convertedObject := presenters.ConvertSecret(&secret)
-			convertedObject.OrganisationID = orgID
-			convertedObject.UserID = currentUser.ID
 
 			obj, serr := h.secretService.Update(ctx, id, convertedObject)
 			if serr != nil {

@@ -21,5 +21,6 @@ type VolumeStore interface {
 	DeleteWithTx(ctx context.Context, id string) *errors.ServiceError
 	GetByUserID(ctx context.Context, id string) ([]*models.Volume, *errors.ServiceError)
 	GetByVolumeNameAndNamespace(ctx context.Context, volumeName string, namespace string) (*models.Volume, *errors.ServiceError)
+	ListByTeamID(ctx context.Context, teamID string) ([]*models.Volume, *errors.ServiceError)
 	AtomicExecutor
 }

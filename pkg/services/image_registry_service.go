@@ -18,13 +18,13 @@ import (
 type ImageRegistryService interface {
 	Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError)
-	ListByClusterID(ctx context.Context, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
+	ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.ClusterImageRegistryStatus) *errors.ServiceError
 	InjectClusterResourceService(registryClusterService clusterresource.ClusterImageRegistryService)
 	PopulateInClusterRegistryUrlsForStack(ctx context.Context, stack *models.Stack) *errors.ServiceError
-	Delete(ctx context.Context, ID string) *errors.ServiceError
+	Delete(ctx context.Context, orgID, ID string) *errors.ServiceError
 }
 
 type ImageRegistryServiceSpec struct {
@@ -55,24 +55,23 @@ func (s *clusterImageRegistryService) InjectClusterResourceService(registryClust
 }
 
 func (s *clusterImageRegistryService) Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
+	identity := auth.GetIdentityFromCtx(ctx)
+	if identity == nil {
+		return nil, errors.Unauthorized("failed to fetch identity")
+	}
+	if permErr := s.permissions.Check(ctx, identity.OrgID, auth.ResourceImageRegistries, ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	registry, err := s.clusterImageRegistryStore.GetByID(ctx, ID)
 	if err != nil {
 		s.logger.Errorf("failed to get cluster image registry: %v", err)
 		return nil, err
 	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, registry.OrganisationID, auth.ResourceClusters, registry.ClusterID, auth.ActionRead); permErr != nil {
-		return nil, permErr
-	}
 	return registry, nil
 }
 
-func (s *clusterImageRegistryService) ListByClusterID(ctx context.Context, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
-	identity := auth.GetIdentityFromCtx(ctx)
-	orgID := ""
-	if identity != nil {
-		orgID = identity.OrgID
-	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, orgID, auth.ResourceClusters, clusterID, auth.ActionRead); permErr != nil {
+func (s *clusterImageRegistryService) ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceImageRegistries, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
 	registries, err := s.clusterImageRegistryStore.ListByClusterID(ctx, clusterID)
@@ -120,12 +119,8 @@ func (s *clusterImageRegistryService) GetForOrg(ctx context.Context, orgID strin
 }
 
 func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, spec.OrganisationID, auth.ResourceClusters, spec.ClusterID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, spec.OrganisationID, auth.ResourceImageRegistries, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
-	}
-	identity := auth.GetIdentityFromCtx(ctx)
-	if identity != nil && identity.OrgID != spec.OrganisationID && !identity.IsOrgAdmin() {
-		return nil, errors.Forbidden("insufficient permissions")
 	}
 
 	var createdRegistry *models.ClusterImageRegistry
@@ -240,18 +235,15 @@ func (s *clusterImageRegistryService) UpdateStatus(ctx context.Context, ID strin
 	return nil
 }
 
-func (s *clusterImageRegistryService) Delete(ctx context.Context, ID string) *errors.ServiceError {
+func (s *clusterImageRegistryService) Delete(ctx context.Context, orgID, ID string) *errors.ServiceError {
+	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceImageRegistries, ID, auth.ActionDelete); permErr != nil {
+		return permErr
+	}
+
 	registry, err := s.clusterImageRegistryStore.GetByID(ctx, ID)
 	if err != nil {
 		s.logger.Errorf("failed to get cluster image registry for deletion: %v", err)
 		return err
-	}
-	if permErr := auth.CheckServicePermission(s.permissions, ctx, registry.OrganisationID, auth.ResourceClusters, registry.ClusterID, auth.ActionWrite); permErr != nil {
-		return permErr
-	}
-	identity := auth.GetIdentityFromCtx(ctx)
-	if identity != nil && identity.OrgID != registry.OrganisationID && !identity.IsOrgAdmin() {
-		return errors.Forbidden("insufficient permissions")
 	}
 
 	deleteErr := s.clusterImageRegistryStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {

@@ -253,13 +253,10 @@ func (d *developmentEnvironment) initializeResourceAccessPolicyManager(ctx conte
 }
 
 func (d *developmentEnvironment) initializePermissionService(ctx context.Context) error {
-	teamStore := pgstore.NewTeamStore(pgstore.TeamStoreSpec{
+	d.PermissionService = auth.NewPermissionService(auth.PermissionServiceSpec{
+		PolicyManager:  d.ResourceAccessPolicyManager,
 		SessionFactory: d.DBSession,
-	})
-	d.PermissionService = auth.NewPermissionService(auth.PermissionServiceConfig{
-		PolicyManager: d.ResourceAccessPolicyManager,
-		TeamStore:     teamStore,
-		Logger:        d.Logger,
+		Logger:         d.Logger,
 	})
 	return nil
 }
@@ -273,13 +270,6 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create encryption service: %w", err)
 	}
-	secretService := services.NewSecretService(services.SecretServiceSpec{
-		SessionFactory:    d.DBSession,
-		Logger:            d.Logger,
-		EncryptionService: encryptionService,
-		Permissions:       d.PermissionService,
-	})
-
 	stackDomainService := services.NewStackDomainsService(services.StackDomainsServiceSpec{
 		SessionFactory: d.DBSession,
 		Logger:         d.Logger,
@@ -294,6 +284,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OrganisationDomainService: organisationDomainService,
 		StackQueryService:         d.Services.StackService,
 		SessionFactory:            d.DBSession,
+		PolicyManager:             d.ResourceAccessPolicyManager,
 		Permissions:               d.PermissionService,
 		Logger:                    d.Logger,
 	})
@@ -305,6 +296,14 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:         d.Logger,
 	})
 
+	secretService := services.NewSecretService(services.SecretServiceSpec{
+		SessionFactory:    d.DBSession,
+		Logger:            d.Logger,
+		EncryptionService: encryptionService,
+		TeamService:       teamService,
+		Permissions:       d.PermissionService,
+	})
+
 	userService := services.NewUserService(services.UserServiceSpec{
 		SessionFactory:              d.DBSession,
 		Logger:                      d.Logger,
@@ -314,6 +313,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OrganisationService:         organisationService,
 		Permissions:                 d.PermissionService,
 		TeamService:                 teamService,
+		RefreshTokenStore:           d.RefreshTokenStore,
 	})
 
 	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
@@ -375,6 +375,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	objectStoreService := services.NewObjectStoreService(services.ObjectStoreServiceSpec{
 		SessionFactory: d.DBSession,
 		SecretService:  secretService,
+		TeamService:    teamService,
 		ClusterManager: d.ClusterManager,
 		Logger:         d.Logger,
 		Permissions:    d.PermissionService,
@@ -396,6 +397,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SecretService:         secretService,
 		PostgresBackupService: postgresBackupService,
 		ObjectStoreService:    objectStoreService,
+		TeamService:           teamService,
 		ClusterManager:        d.ClusterManager,
 		Logger:                d.Logger,
 		Permissions:           d.PermissionService,
@@ -412,6 +414,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		NamespaceService:       namespaceService,
 		SecretService:          secretService,
 		PostgresAddonService:   postgresAddonService,
+		TeamService:            teamService,
 		Permissions:            d.PermissionService,
 	})
 
@@ -428,6 +431,10 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	d.RefreshTokenStore = pgstore.NewRefreshTokenStore(pgstore.RefreshTokenStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+
+	d.OAuthStateStore = pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
 		SessionFactory: d.DBSession,
 	})
 

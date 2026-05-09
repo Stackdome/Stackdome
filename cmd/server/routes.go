@@ -28,6 +28,13 @@ func (s apiServer) routes() *mux.Router {
 		UserService: services.UserService,
 	})
 
+	refreshHandler := auth.NewRefreshHandler(auth.RefreshHandlerSpec{
+		RefreshTokenStore: s.environment.Environment().RefreshTokenStore,
+		UserGetter:        services.UserService,
+		JWTSecret:         []byte(s.environment.Environment().Config.JwtSecret),
+		JWTClaimsBuilder:  auth.NewJWTClaimsBuilder(),
+	})
+
 	organizationHandler := handlers.NewOrganisationHandler(handlers.OrganisationHandlerSpec{
 		OrganisationService: services.OrganisationService,
 	})
@@ -93,24 +100,29 @@ func (s apiServer) routes() *mux.Router {
 		TeamService:        services.TeamService,
 	})
 
-	authenticationMiddleware := auth.NewAuthMiddleware(services.UserService)
+	// authenticationMiddleware := auth.NewAuthMiddleware(services.UserService)
 
 	apiV1Router := mainRouter.PathPrefix("/api/v1").Subrouter()
 
 	userSignupRouter := apiV1Router.PathPrefix("/user-signup").Subrouter()
-	userSignupRouter.HandleFunc("", userHandler.Create).Methods(http.MethodPost)
+	userSignupRouter.HandleFunc("", userHandler.Signup).Methods(http.MethodPost)
 
 	userRouter := apiV1Router.PathPrefix("/users").Subrouter()
 	organizationsRouter := apiV1Router.PathPrefix("/organizations").Subrouter()
-	organizationsRouter.Use(authenticationMiddleware.AuthenticateUser)
-	organizationsRouter.HandleFunc("", organizationHandler.Create).Methods(http.MethodPost)
-	organizationsRouter.HandleFunc("/default", organizationHandler.GetDefault).Methods(http.MethodGet)
+	// organizationsRouter.Use(authenticationMiddleware.AuthenticateUser)
 	organizationsRouter.HandleFunc("/{id}", organizationHandler.GetByID).Methods(http.MethodGet)
 	organizationsRouter.HandleFunc("/{id}", organizationHandler.Update).Methods(http.MethodPut)
 
+	// Org-scoped listing routes
+	organizationsRouter.HandleFunc("/{org_id}/users", userHandler.ListByOrgID).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/stacks", stackHandler.ListByOrgID).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/secrets", secretHandler.ListByOrgID).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/object-stores", objectStoreHandler.ListByOrgID).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/postgres-addons", postgresAddonHandler.ListByOrgID).Methods(http.MethodGet)
+
 	// Cluster routes (org-scoped)
 	clusterRouter := apiV1Router.PathPrefix("/organizations/{org_id}/clusters").Subrouter()
-	clusterRouter.Use(authenticationMiddleware.AuthenticateUser)
+	// clusterRouter.Use(authenticationMiddleware.AuthenticateUser)
 	clusterRouter.HandleFunc("", clusterHandler.ListClustersForOrg).Methods(http.MethodGet)
 	clusterRouter.HandleFunc("", clusterHandler.AddClusterForOrg).Methods(http.MethodPost)
 	clusterRouter.HandleFunc("/{id}", clusterHandler.GetClusterForOrg).Methods(http.MethodGet)
@@ -123,43 +135,38 @@ func (s apiServer) routes() *mux.Router {
 	clusterRouter.HandleFunc("/{cluster_id}/image_registries/{id}", clusterImageRegistryHandler.DeleteRegistry).Methods(http.MethodDelete)
 
 	authenticatedUserRouter := userRouter.NewRoute().Subrouter()
-	authenticatedUserRouter.Use(authenticationMiddleware.AuthenticateUser)
+	// authenticatedUserRouter.Use(authenticationMiddleware.AuthenticateUser)
 	authenticatedUserRouter.HandleFunc("/current", userHandler.GetCurrentUser).Methods(http.MethodGet)
+	authenticatedUserRouter.HandleFunc("/current/teams", teamHandler.ListCurrentUserTeams).Methods(http.MethodGet)
 	authenticatedUserRouter.HandleFunc("/{id}", userHandler.Get).Methods(http.MethodGet)
 
 	authenticationRouter := apiV1Router.PathPrefix("/auth").Subrouter()
 	authenticationRouter.HandleFunc("/login", userHandler.Login).Methods(http.MethodPost)
 
-	refreshHandler := auth.NewRefreshHandler(auth.RefreshHandlerSpec{
-		RefreshTokenStore: s.environment.Environment().RefreshTokenStore,
-		UserGetter:        services.UserService,
-		JWTSecret:         []byte(s.environment.Environment().Config.JwtSecret),
-		JWTClaimsBuilder:  auth.NewJWTClaimsBuilder(),
-	})
 	authenticationRouter.HandleFunc("/refresh", refreshHandler.HandleRefresh).Methods(http.MethodPost)
 
 	if s.environment.Environment().Config.GitHubOAuth.Enabled() {
-		oauthHandler := auth.NewGitHubOAuthHandler(auth.GitHubOAuthHandlerSpec{
+		githubAuthHandler := auth.NewGitHubOAuthHandler(auth.GitHubOAuthHandlerSpec{
 			ClientID:          s.environment.Environment().Config.GitHubOAuth.ClientID,
 			ClientSecret:      s.environment.Environment().Config.GitHubOAuth.ClientSecret,
 			RedirectURI:       s.environment.Environment().Config.GitHubOAuth.RedirectURI,
-			UserGetter:        services.UserService,
-			UserCreator:       services.UserService,
+			OAuthUserService:  s.environment.Environment().Services.UserService,
+			OAuthStateStore:   s.environment.Environment().OAuthStateStore,
 			RefreshTokenStore: s.environment.Environment().RefreshTokenStore,
 			JWTSecret:         []byte(s.environment.Environment().Config.JwtSecret),
 			JWTClaimsBuilder:  auth.NewJWTClaimsBuilder(),
 		})
-		authenticationRouter.HandleFunc("/github", oauthHandler.HandleInitiate).Methods(http.MethodGet)
-		authenticationRouter.HandleFunc("/github/callback", oauthHandler.HandleCallback).Methods(http.MethodGet)
+		authenticationRouter.HandleFunc("/github", githubAuthHandler.HandleInitiate).Methods(http.MethodGet)
+		authenticationRouter.HandleFunc("/github/callback", githubAuthHandler.HandleCallback).Methods(http.MethodGet)
 	}
 
 	apiTokenHandler := handlers.NewAPITokenHandler(handlers.APITokenHandlerSpec{
 		APITokenService: services.APITokenService,
 	})
 	apiTokenRouter := apiV1Router.PathPrefix("/api-tokens").Subrouter()
-	apiTokenRouter.Use(authenticationMiddleware.AuthenticateUser)
 	apiTokenRouter.HandleFunc("", apiTokenHandler.Create).Methods(http.MethodPost)
 	apiTokenRouter.HandleFunc("", apiTokenHandler.List).Methods(http.MethodGet)
+	apiTokenRouter.HandleFunc("/scopes", apiTokenHandler.ListScopes).Methods(http.MethodGet)
 	apiTokenRouter.HandleFunc("/{id}", apiTokenHandler.GetByID).Methods(http.MethodGet)
 	apiTokenRouter.HandleFunc("/{id}", apiTokenHandler.Revoke).Methods(http.MethodDelete)
 
@@ -178,17 +185,16 @@ func (s apiServer) routes() *mux.Router {
 	teamRouter.HandleFunc("/{team_name}/members/{id}", teamHandler.RemoveMember).Methods(http.MethodDelete)
 
 	// OrgAdmin management routes
-	organizationsRouter.HandleFunc("/{org_id}/admins", teamHandler.PromoteToAdmin).Methods(http.MethodPost)
-	organizationsRouter.HandleFunc("/{org_id}/admins", teamHandler.ListAdmins).Methods(http.MethodGet)
-	organizationsRouter.HandleFunc("/{org_id}/admins/{user_id}", teamHandler.DemoteAdmin).Methods(http.MethodDelete)
+	organizationsRouter.HandleFunc("/{org_id}/admins", organizationHandler.PromoteToAdmin).Methods(http.MethodPost)
+	organizationsRouter.HandleFunc("/{org_id}/admins", organizationHandler.ListAdmins).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/admins/{user_id}", organizationHandler.DemoteAdmin).Methods(http.MethodDelete)
 
 	// Team-scoped resource routes
 	teamResourceRouter := teamRouter.PathPrefix("/{team_name}").Subrouter()
 
 	// Stacks (team-scoped)
 	teamResourceRouter.HandleFunc("/stacks", stackHandler.Create).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/stacks", stackHandler.ListByTeamID).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/current", stackHandler.ListByUser).Methods(http.MethodGet)
+	teamResourceRouter.HandleFunc("/stacks", stackHandler.ListByTeamName).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.GetByID).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Update).Methods(http.MethodPut)
 	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Delete).Methods(http.MethodDelete)
@@ -211,7 +217,6 @@ func (s apiServer) routes() *mux.Router {
 
 	// Volumes (team-scoped)
 	teamResourceRouter.HandleFunc("/volumes", volumeHandler.Create).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/volumes/current", volumeHandler.GetByID).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/volumes/{id}", volumeHandler.GetByID).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/volumes/{id}", volumeHandler.Delete).Methods(http.MethodDelete)
 

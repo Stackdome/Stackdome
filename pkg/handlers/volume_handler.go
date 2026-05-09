@@ -36,11 +36,15 @@ func (h *volumeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			id := mux.Vars(r)["id"]
 			if id == "current" {
+				teamID, serr := resolveTeamID(r, h.teamService)
+				if serr != nil {
+					return nil, serr
+				}
 				currentUser, err := auth.GetCurrentUserFromCtx(ctx)
 				if err != nil {
 					return nil, errors.Unauthorized("failed to fetch current user")
 				}
-				objs, serr := h.volumeService.ListByUserID(ctx, currentUser.ID)
+				objs, serr := h.volumeService.ListByUserID(ctx, teamID, currentUser.ID)
 				if serr != nil {
 					return nil, serr
 				}

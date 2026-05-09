@@ -48,6 +48,8 @@ type Controller interface {
 	Name() string
 }
 
+type ControllerFn func() Controller
+
 // ClusterControl represents a control structure for a single cluster
 type ClusterControl struct {
 	cluster     *models.Cluster

@@ -30,7 +30,8 @@ func (h *clusterImageRegistryHandler) ListRegistriesForCluster(w http.ResponseWr
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
 			clusterID := mux.Vars(r)["cluster_id"]
-			registries, serr := h.clusterImageRegistryService.ListByClusterID(ctx, clusterID)
+			orgID := mux.Vars(r)["org_id"]
+			registries, serr := h.clusterImageRegistryService.ListByClusterID(ctx, orgID, clusterID)
 			if serr != nil {
 				return nil, serr
 			}
@@ -99,7 +100,7 @@ func (h *clusterImageRegistryHandler) DeleteRegistry(w http.ResponseWriter, r *h
 			if registry.OrganisationID != orgID || registry.ClusterID != clusterID {
 				return nil, errors.NotFound("registry '%s' not found under organization '%s' and cluster '%s'", registryID, orgID, clusterID)
 			}
-			serr = h.clusterImageRegistryService.Delete(ctx, registryID)
+			serr = h.clusterImageRegistryService.Delete(ctx, orgID, registryID)
 			if serr != nil {
 				return nil, serr
 			}

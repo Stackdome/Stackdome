@@ -67,6 +67,8 @@ func NewAPIServer(env environment.EnvImpl) Server {
 	})
 
 	// Setup CORS
+	// TODO: Update this to restrict origins in production
+	// From a config file or environment variables.
 	mainHandler = gorillahandlers.CORS(
 		gorillahandlers.AllowedOrigins([]string{"*"}),
 	)(mainHandler)
@@ -101,19 +103,27 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 			"^/api/v1/auth",
 			"^/health",
 		},
-		DefaultAuthHandler: auth.NewJwtAuthnHandler(mainHandler, []byte(env.Environment().Config.JwtSecret)),
+		// Set JWT authentication as the default handler.
+		DefaultAuthHandler: auth.NewJwtAuthnHandler(mainHandler, auth.JWTAuthnHandlerSpec{
+			JWTSecret:  []byte(env.Environment().Config.JwtSecret),
+			UserGetter: env.Environment().Services.UserService,
+		}),
 	})
+
+	// Add JWT cookie authentication
 	authenticationHandler.Add(
-		auth.NewJwtCookieAuthnHandler(mainHandler, []byte(env.Environment().Config.JwtSecret)),
+		auth.NewJwtCookieAuthnHandler(mainHandler, auth.JWTCookieAuthnHandlerSpec{
+			JWTSecret:  []byte(env.Environment().Config.JwtSecret),
+			UserGetter: env.Environment().Services.UserService,
+		}),
 		auth.CanAuthenticateWithCookie,
 	)
 
-	// Wire API token authentication
-	apiTokenValidator := auth.NewAPITokenValidator(
-		&tokenLookupAdapter{svc: env.Environment().Services.APITokenService},
-		env.Environment().Services.UserService,
-	)
-	apiTokenAuthnHandler := auth.NewAPITokenAuthnHandler(mainHandler, apiTokenValidator)
+	// Add API token authentication
+	apiTokenAuthnHandler := auth.NewAPITokenHandler(mainHandler, auth.ApiTokenAuthnHandlerSpec{
+		TokenLookup: env.Environment().Services.APITokenService,
+		UserGetter:  env.Environment().Services.UserService,
+	})
 	authenticationHandler.Add(apiTokenAuthnHandler, auth.CanAuthenticateWithAPIToken)
 
 	return authenticationHandler

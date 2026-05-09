@@ -130,6 +130,12 @@ func (te *testEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 }
 
 func (te *testEnvironment) loadSaneDefaults() {
+	// We dont load from .env file in test environment since we want to rely on environment variables for configuration in CI.
+	// The test bootstrap will use sensible defaults for any config values not set in environment variables, so that tests can run successfully without requiring a .env file.
+	// This also ensures that CI can configure the environment via env vars without needing to manage a .env file.
+	// Load standard environment variables
+	// te.Config.LoadEnvVariables()
+	// te.BootstrapConfig.LoadEnvVariables()
 	if te.Config.JwtSecret == "" {
 		if val, ok := config.EnvTestJWTSecret.Lookup(); ok {
 			te.Config.JwtSecret = val
@@ -208,13 +214,10 @@ func (te *testEnvironment) initializeResourceAccessPolicyManager(ctx context.Con
 }
 
 func (te *testEnvironment) initializePermissionService(ctx context.Context) error {
-	teamStore := pgstore.NewTeamStore(pgstore.TeamStoreSpec{
+	te.PermissionService = auth.NewPermissionService(auth.PermissionServiceSpec{
+		PolicyManager:  te.ResourceAccessPolicyManager,
 		SessionFactory: te.DBSession,
-	})
-	te.PermissionService = auth.NewPermissionService(auth.PermissionServiceConfig{
-		PolicyManager: te.ResourceAccessPolicyManager,
-		TeamStore:     teamStore,
-		Logger:        te.Logger,
+		Logger:         te.Logger,
 	})
 	return nil
 }
@@ -228,13 +231,6 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create encryption service: %w", err)
 	}
-	secretService := services.NewSecretService(services.SecretServiceSpec{
-		SessionFactory:    te.DBSession,
-		Logger:            te.Logger,
-		EncryptionService: encryptionService,
-		Permissions:       te.PermissionService,
-	})
-
 	stackDomainService := services.NewStackDomainsService(services.StackDomainsServiceSpec{
 		SessionFactory: te.DBSession,
 		Logger:         te.Logger,
@@ -249,6 +245,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		OrganisationDomainService: organisationDomainService,
 		StackQueryService:         te.Services.StackService,
 		SessionFactory:            te.DBSession,
+		PolicyManager:             te.ResourceAccessPolicyManager,
 		Logger:                    te.Logger,
 		Permissions:               te.PermissionService,
 	})
@@ -260,6 +257,14 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:         te.Logger,
 	})
 
+	secretService := services.NewSecretService(services.SecretServiceSpec{
+		SessionFactory:    te.DBSession,
+		Logger:            te.Logger,
+		EncryptionService: encryptionService,
+		TeamService:       teamService,
+		Permissions:       te.PermissionService,
+	})
+
 	userService := services.NewUserService(services.UserServiceSpec{
 		SessionFactory:              te.DBSession,
 		Logger:                      te.Logger,
@@ -269,6 +274,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		OrganisationService:         organisationService,
 		Permissions:                 te.PermissionService,
 		TeamService:                 teamService,
+		RefreshTokenStore:           te.RefreshTokenStore,
 	})
 
 	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
@@ -331,6 +337,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	objectStoreService := services.NewObjectStoreService(services.ObjectStoreServiceSpec{
 		SessionFactory: te.DBSession,
 		SecretService:  secretService,
+		TeamService:    teamService,
 		ClusterManager: te.ClusterManager,
 		Logger:         te.Logger,
 		Permissions:    te.PermissionService,
@@ -352,6 +359,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SecretService:         secretService,
 		PostgresBackupService: postgresBackupService,
 		ObjectStoreService:    objectStoreService,
+		TeamService:           teamService,
 		ClusterManager:        te.ClusterManager,
 		Logger:                te.Logger,
 		Permissions:           te.PermissionService,
@@ -368,6 +376,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		NamespaceService:       namespaceService,
 		SecretService:          secretService,
 		PostgresAddonService:   postgresAddonService,
+		TeamService:            teamService,
 		Permissions:            te.PermissionService,
 	})
 
@@ -384,6 +393,10 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	te.RefreshTokenStore = pgstore.NewRefreshTokenStore(pgstore.RefreshTokenStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+
+	te.OAuthStateStore = pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
 		SessionFactory: te.DBSession,
 	})
 

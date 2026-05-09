@@ -22,6 +22,7 @@ type StackStore interface {
 	Delete(ctx context.Context, id string) *errors.ServiceError
 	ListByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError)
 	ListByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError)
+	ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*models.Stack, *errors.ServiceError)
 	ListByUserID(ctx context.Context, userID string) ([]*models.Stack, *errors.ServiceError)
 	AtomicExecutor
 }

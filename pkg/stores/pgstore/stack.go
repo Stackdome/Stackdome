@@ -143,10 +143,36 @@ func (w *stackStore) ListByOrganisationID(ctx context.Context, organisationID st
 func (w *stackStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError) {
 	var stacks []*models.Stack
 	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).
-		Where("team_id = ? AND deletion_timestamp IS NULL", teamID).
+		Where("team_id = ?", teamID).
 		Order("created_at DESC").
 		Find(&stacks).Error; err != nil {
 		return nil, errors.GeneralError("failed to list stacks by team: %s", err.Error())
+	}
+	for _, stack := range stacks {
+		resources, err := w.stackResourceStore.GetByStackID(ctx, stack.ID)
+		if err != nil {
+			return nil, errors.GeneralError("failed to get resources: %v", err)
+		}
+		stack.StackResources = resources
+		stackVolumes, err := w.stackVolumeStore.ListVolumesByStackID(ctx, stack.ID)
+		if err != nil {
+			return nil, errors.GeneralError("failed to get stack volumes: %v", err)
+		}
+		stack.Volumes = stackVolumes
+	}
+	return stacks, nil
+}
+
+func (w *stackStore) ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*models.Stack, *errors.ServiceError) {
+	if len(teamIDs) == 0 {
+		return []*models.Stack{}, nil
+	}
+	var stacks []*models.Stack
+	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).
+		Where("team_id IN ?", teamIDs).
+		Order("created_at DESC").
+		Find(&stacks).Error; err != nil {
+		return nil, errors.GeneralError("failed to list stacks by teams: %s", err.Error())
 	}
 	for _, stack := range stacks {
 		resources, err := w.stackResourceStore.GetByStackID(ctx, stack.ID)

@@ -3,6 +3,8 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
@@ -24,14 +26,12 @@ func NewTeamHandler(spec TeamHandlerSpec) *teamHandler {
 }
 
 func (h *teamHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Name string `json:"name"`
-	}
+	var req openapi.TeamCreateRequest
 	cfg := &handlerConfig{
 		MarshalInto: &req,
 		Action: func() (interface{}, *errors.ServiceError) {
 			orgID := mux.Vars(r)["org_id"]
-			team := &models.Team{Name: req.Name}
+			team := &models.Team{Name: req.GetName()}
 			return h.teamService.CreateTeam(r.Context(), orgID, team)
 		},
 		ErrorHandler: handleError,
@@ -49,6 +49,19 @@ func (h *teamHandler) List(w http.ResponseWriter, r *http.Request) {
 	handleList(w, r, cfg)
 }
 
+func (h *teamHandler) ListCurrentUserTeams(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			identity := auth.GetIdentityFromCtx(r.Context())
+			if identity == nil {
+				return nil, errors.Unauthorized("user identity not found in context")
+			}
+			return h.teamService.ListUserTeams(r.Context(), identity.UserID)
+		},
+	}
+	handleList(w, r, cfg)
+}
+
 func (h *teamHandler) GetByName(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
@@ -61,9 +74,7 @@ func (h *teamHandler) GetByName(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *teamHandler) Update(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Name string `json:"name"`
-	}
+	var req openapi.TeamUpdateRequest
 	cfg := &handlerConfig{
 		MarshalInto: &req,
 		Action: func() (interface{}, *errors.ServiceError) {
@@ -73,7 +84,7 @@ func (h *teamHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if serr != nil {
 				return nil, serr
 			}
-			return h.teamService.UpdateTeam(r.Context(), team.ID, &models.Team{Name: req.Name})
+			return h.teamService.UpdateTeam(r.Context(), team.ID, &models.Team{Name: req.GetName()})
 		},
 		ErrorHandler: handleError,
 	}
@@ -96,10 +107,7 @@ func (h *teamHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *teamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		UserID string `json:"user_id"`
-		Role   string `json:"role"`
-	}
+	var req openapi.AddTeamMemberRequest
 	cfg := &handlerConfig{
 		MarshalInto: &req,
 		Action: func() (interface{}, *errors.ServiceError) {
@@ -109,7 +117,7 @@ func (h *teamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 			if serr != nil {
 				return nil, serr
 			}
-			return h.teamService.AddMember(r.Context(), team.ID, req.UserID, models.Role(req.Role))
+			return h.teamService.AddMember(r.Context(), team.ID, req.GetUserId(), models.TeamRole(req.GetRole()))
 		},
 		ErrorHandler: handleError,
 	}
@@ -132,14 +140,12 @@ func (h *teamHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *teamHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Role string `json:"role"`
-	}
+	var req openapi.UpdateTeamMemberRoleRequest
 	cfg := &handlerConfig{
 		MarshalInto: &req,
 		Action: func() (interface{}, *errors.ServiceError) {
 			membershipID := mux.Vars(r)["id"]
-			return h.teamService.UpdateMemberRole(r.Context(), membershipID, models.Role(req.Role))
+			return h.teamService.UpdateMemberRole(r.Context(), membershipID, models.TeamRole(req.GetRole()))
 		},
 		ErrorHandler: handleError,
 	}
@@ -154,40 +160,4 @@ func (h *teamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	handleDelete(w, r, cfg, http.StatusNoContent)
-}
-
-func (h *teamHandler) PromoteToAdmin(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		UserID string `json:"user_id"`
-	}
-	cfg := &handlerConfig{
-		MarshalInto: &req,
-		Action: func() (interface{}, *errors.ServiceError) {
-			orgID := mux.Vars(r)["org_id"]
-			return nil, h.teamService.PromoteToOrgAdmin(r.Context(), orgID, req.UserID)
-		},
-		ErrorHandler: handleError,
-	}
-	handle(w, r, cfg, http.StatusOK)
-}
-
-func (h *teamHandler) DemoteAdmin(w http.ResponseWriter, r *http.Request) {
-	cfg := &handlerConfig{
-		Action: func() (interface{}, *errors.ServiceError) {
-			orgID := mux.Vars(r)["org_id"]
-			userID := mux.Vars(r)["user_id"]
-			return nil, h.teamService.DemoteOrgAdmin(r.Context(), orgID, userID)
-		},
-	}
-	handleDelete(w, r, cfg, http.StatusNoContent)
-}
-
-func (h *teamHandler) ListAdmins(w http.ResponseWriter, r *http.Request) {
-	cfg := &handlerConfig{
-		Action: func() (interface{}, *errors.ServiceError) {
-			orgID := mux.Vars(r)["org_id"]
-			return h.teamService.ListOrgAdmins(r.Context(), orgID)
-		},
-	}
-	handleList(w, r, cfg)
 }

@@ -116,7 +116,7 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	if dbResourceBuild.Status == nil || dbResourceBuild.Status.LastObservedStatusHash != imageBuild.Status.StatusHash {
 		dbResourceBuild.Status = mapClusterStatusToServerStatus(imageBuild.Status)
-		if serr := r.DBImageBuildService.UpdateStatus(ctx, dbResourceBuild.ID, dbResourceBuild.Status); serr != nil {
+		if serr := r.DBImageBuildService.InternalUpdateStatus(ctx, dbResourceBuild.ID, dbResourceBuild.Status); serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update image build status: %v", serr)
 		}
 		return ctrl.Result{}, nil
@@ -153,7 +153,7 @@ func (r *ImageBuildReconciler) createImageBuildInDB(
 		Status: mapClusterStatusToServerStatus(imageBuildCr.Status),
 	}
 
-	_, serr := r.DBImageBuildService.Create(ctx, dbImageBuild)
+	_, serr := r.DBImageBuildService.InternalCreate(ctx, dbImageBuild)
 	if serr != nil {
 		r.Logger.Errorf("Failed to create image build '%s': %s", imageBuildCr.Name, serr)
 		return serr.AsError()
