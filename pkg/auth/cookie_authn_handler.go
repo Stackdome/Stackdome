@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
@@ -11,17 +10,24 @@ import (
 
 type jwtCookieAuthnHandler struct {
 	next       http.Handler
+	jwtSecret  []byte
+	userGetter UserGetter
+	cookieName string
+}
+
+type JWTCookieAuthnHandlerSpec struct {
 	JWTSecret  []byte
-	CookieName string
+	UserGetter UserGetter
 }
 
 const DefaultAuthCookieName = "auth_token"
 
-func NewJwtCookieAuthnHandler(next http.Handler, JWTsecret []byte) http.Handler {
+func NewJwtCookieAuthnHandler(next http.Handler, spec JWTCookieAuthnHandlerSpec) http.Handler {
 	return &jwtCookieAuthnHandler{
 		next:       next,
-		JWTSecret:  JWTsecret,
-		CookieName: DefaultAuthCookieName,
+		jwtSecret:  spec.JWTSecret,
+		userGetter: spec.UserGetter,
+		cookieName: DefaultAuthCookieName,
 	}
 }
 
@@ -42,7 +48,7 @@ func CanAuthenticateWithCookie(r *http.Request) bool {
 
 func (h *jwtCookieAuthnHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get the JWT token from cookie
-	cookie, err := r.Cookie(h.CookieName)
+	cookie, err := r.Cookie(h.cookieName)
 	if err != nil {
 		if err == http.ErrNoCookie {
 			handleError(w, errors.ErrorUnauthorized, "Authentication cookie missing")
@@ -64,7 +70,7 @@ func (h *jwtCookieAuthnHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 
-		return h.JWTSecret, nil
+		return h.jwtSecret, nil
 	})
 	if err != nil {
 		handleError(w, errors.ErrorUnauthorized, fmt.Sprintf("token parse error: %s", err.Error()))
@@ -73,10 +79,25 @@ func (h *jwtCookieAuthnHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 
 	// Check if the token is valid
 	if token.Valid {
-		ctx := context.WithValue(r.Context(), AuthenticationTokenKey, token)
-
-		// Pass the new context to the next handler
-		h.next.ServeHTTP(w, r.WithContext(ctx))
+		userID, err := getUserIdFromToken(token)
+		if err != nil {
+			handleError(w, errors.ErrorUnauthorized, fmt.Sprintf("Unable to get user ID from JWT token: %s", err))
+			return
+		}
+		user, serr := h.userGetter.InternalGet(r.Context(), userID)
+		if serr != nil {
+			handleError(w, errors.ErrorUnauthorized, "Failed to fetch user")
+			return
+		}
+		ctx := SetUserInContext(r.Context(), user)
+		ctx = SetIdentityInContext(ctx, &Identity{
+			UserID:     user.ID,
+			OrgID:      user.OrganisationID,
+			Role:       string(user.Role),
+			AuthMethod: AuthMethodJWT,
+		})
+		*r = *r.WithContext(ctx)
+		h.next.ServeHTTP(w, r)
 	} else {
 		handleError(w, errors.ErrorUnauthorized, "Invalid token")
 		return

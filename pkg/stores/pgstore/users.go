@@ -70,7 +70,39 @@ func (d dbUserStore) Update(ctx context.Context, id string, user *models.User) (
 	return d.GetByID(ctx, id)
 }
 
-func (d dbUserStore) ListByOrgAndRole(ctx context.Context, orgID string, role models.Role) ([]*models.User, *errors.ServiceError) {
+func (d dbUserStore) ListByOrgID(ctx context.Context, orgID string, params stores.PaginationParams) (*stores.PaginatedResult[*models.User], *errors.ServiceError) {
+	grm := d.sessionFactory.New(ctx)
+
+	var total int64
+	if err := grm.Model(&models.User{}).Where("organisation_id = ?", orgID).Count(&total).Error; err != nil {
+		return nil, errors.GeneralError("failed to count users: %s", err.Error())
+	}
+
+	var users []*models.User
+	if err := grm.Preload(clause.Associations).
+		Where("organisation_id = ?", orgID).
+		Order("created_at ASC").
+		Limit(params.Limit()).
+		Offset(params.Offset()).
+		Find(&users).Error; err != nil {
+		return nil, errors.GeneralError("failed to list users by org: %s", err.Error())
+	}
+
+	totalPages := int(total) / params.Limit()
+	if int(total)%params.Limit() > 0 {
+		totalPages++
+	}
+
+	return &stores.PaginatedResult[*models.User]{
+		Items:      users,
+		Total:      total,
+		Page:       params.Page,
+		PageSize:   params.Limit(),
+		TotalPages: totalPages,
+	}, nil
+}
+
+func (d dbUserStore) ListByOrgAndRole(ctx context.Context, orgID string, role models.UserRole) ([]*models.User, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var users []*models.User
 	if err := grm.Where("organisation_id = ? AND role = ?", orgID, string(role)).Find(&users).Error; err != nil {

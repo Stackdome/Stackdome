@@ -10,17 +10,18 @@ const (
 	CreatedForUserLabel = "user.stackdome.io/id"
 )
 
-type Role string
+// UserRole represents org-level roles stored on the User model.
+// OrgAdmin = full org access. Empty string = permissions derived from team memberships.
+// OrgMemberRole is not stored on User.Role; it is a Casbin-only grouping auto-managed by team membership lifecycle.
+type UserRole string
 
-func (r Role) String() string {
+func (r UserRole) String() string {
 	return string(r)
 }
 
 const (
-	OrgAdminRole  Role = "OrgAdmin"
-	DeveloperRole Role = "Developer"
-	ViewerRole    Role = "Viewer"
-	OrgMemberRole Role = "OrgMember"
+	OrgAdminRole  UserRole = "OrgAdmin"
+	OrgMemberRole UserRole = "OrgMember"
 )
 
 type User struct {
@@ -31,7 +32,7 @@ type User struct {
 	Email          string `gorm:"unique"`
 	Password       string
 	Organisation   *Organisation `gorm:"foreignKey:OrganisationID"`
-	Role           Role
+	Role           UserRole
 	OrganisationID string
 	GithubID       *string `gorm:"column:github_id;uniqueIndex"`
 	AvatarURL      *string `gorm:"column:avatar_url"`

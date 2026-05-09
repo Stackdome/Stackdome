@@ -19,8 +19,7 @@ type AuthnMiddleware interface {
 }
 
 type UserGetter interface {
-	Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
-	GetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError)
+	InternalGet(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
 }
 
 type authenticator interface {
@@ -73,7 +72,7 @@ func (a *jwtAuthenticator) AuthenticaticationHandler(w http.ResponseWriter, r *h
 		handleError(w, errors.ErrorUnauthorized, fmt.Sprintf("Unable to get payload details from JWT token: %s", err))
 		return
 	}
-	user, serr := a.userGetter.Get(ctx, payload.UserID)
+	user, serr := a.userGetter.InternalGet(ctx, payload.UserID)
 	if serr != nil {
 		handleError(w, errors.ErrorUnauthorized, "Failed to fetch user")
 		return

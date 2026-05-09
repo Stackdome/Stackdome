@@ -16,14 +16,27 @@ func PresentUser(in *models.User) openapi.User {
 	return res
 }
 
-func PresentRole(in models.Role) openapi.UserRole {
+func PresentUserWithTeams(in *models.User, memberships []*models.TeamMembership) openapi.User {
+	res := PresentUser(in)
+	teams := make([]openapi.UserTeamMembership, len(memberships))
+	for i, m := range memberships {
+		tm := openapi.UserTeamMembership{}
+		tm.SetTeamId(m.TeamID)
+		tm.SetRole(string(m.Role))
+		if m.Team != nil {
+			tm.SetTeamName(m.Team.Name)
+			tm.SetDefaultTeam(m.Team.DefaultTeam)
+		}
+		teams[i] = tm
+	}
+	res.SetTeams(teams)
+	return res
+}
+
+func PresentRole(in models.UserRole) openapi.UserRole {
 	switch in {
 	case models.OrgAdminRole:
 		return openapi.ORG_ADMIN
-	case models.DeveloperRole:
-		return openapi.DEVELOPER
-	case models.ViewerRole:
-		return openapi.VIEWER
 	case models.OrgMemberRole:
 		return openapi.ORG_MEMBER
 	default:
@@ -36,30 +49,10 @@ func ConvertUser(in *openapi.UserSignupRequest) *models.User {
 		Name:     in.Name,
 		Email:    in.Email,
 		Password: in.GetPassword(),
-		Role:     convertRole(in.GetRole()),
-	}
-	if in.HasOrganisationId() {
-		res.OrganisationID = *in.OrganisationId
-	} else if in.HasOrganisation() {
-		res.Organisation = &models.Organisation{
+		Organisation: &models.Organisation{
 			Name:    in.Organisation.GetName(),
 			Domains: ConvertDomains(in.Organisation.GetDomains()),
-		}
+		},
 	}
 	return res
-}
-
-func convertRole(in openapi.UserRole) models.Role {
-	switch in {
-	case openapi.ORG_ADMIN:
-		return models.OrgAdminRole
-	case openapi.DEVELOPER:
-		return models.DeveloperRole
-	case openapi.VIEWER:
-		return models.ViewerRole
-	case openapi.ORG_MEMBER:
-		return models.OrgMemberRole
-	default:
-		return ""
-	}
 }

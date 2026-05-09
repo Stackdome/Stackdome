@@ -2,6 +2,21 @@ package models
 
 import "time"
 
+const (
+	DefaultTeamName = "default"
+)
+
+type TeamRole string
+
+func (r TeamRole) String() string {
+	return string(r)
+}
+
+const (
+	DeveloperRole TeamRole = "Developer"
+	ViewerRole    TeamRole = "Viewer"
+)
+
 type Team struct {
 	ID             string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 	Name           string `gorm:"not null" json:"name"`
@@ -12,12 +27,11 @@ type Team struct {
 }
 
 type TeamMembership struct {
-	ID        string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
-	TeamID    string `gorm:"not null" json:"team_id"`
-	UserID    string `gorm:"not null" json:"user_id"`
-	Role      Role   `gorm:"not null" json:"role"`
+	ID        string   `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
+	TeamID    string   `gorm:"not null" json:"team_id"`
+	UserID    string   `gorm:"not null" json:"user_id"`
+	Role      TeamRole `gorm:"not null" json:"role"`
 	CreatedAt time.Time
-
-	Team *Team `gorm:"foreignKey:TeamID" json:"team,omitempty"`
-	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Team      *Team `gorm:"foreignKey:TeamID" json:"team,omitempty"`
+	User      *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }

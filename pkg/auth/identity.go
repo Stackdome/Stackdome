@@ -1,6 +1,10 @@
 package auth
 
-import "context"
+import (
+	"context"
+
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+)
 
 type IdentityKey string
 
@@ -25,7 +29,7 @@ type Identity struct {
 }
 
 func (i *Identity) IsOrgAdmin() bool {
-	return i.Role == "OrgAdmin"
+	return i.Role == models.OrgAdminRole.String()
 }
 
 func SetIdentityInContext(ctx context.Context, identity *Identity) context.Context {

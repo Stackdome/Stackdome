@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+const (
+	DefaultObjectStoreRetentionPolicy = "7d"
+)
+
 type ObjectStore struct {
 	ID             string `gorm:"primary_key;default:gen_random_uuid()"`
 	OrganisationID string `gorm:"not null;index"`

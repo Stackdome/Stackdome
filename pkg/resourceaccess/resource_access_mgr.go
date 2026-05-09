@@ -12,12 +12,13 @@ import (
 )
 
 type ResourceAccessPolicyManager interface {
-	AddPolicy(subject, orgID, resource, action string) error
-	RemovePolicy(subject, orgID, resource, action string) error
+	AddPolicy(subject, domain, resource, action string) error
+	RemovePolicy(subject, domain, resource, action string) error
 	RemoveFilteredPolicy(fieldIndex int, fieldValues ...string) error
-	CheckPermission(subject, orgID, resource, action string) (bool, error)
-	AddGroupingPolicy(subject, role, orgID string) error
-	RemoveGroupingPolicy(subject, role, orgID string) error
+	CheckPermission(subject, domain, resource, action string) (bool, error)
+	AddGroupingPolicy(subject, role, domain string) error
+	RemoveGroupingPolicy(subject, role, domain string) error
+	HasGroupingPolicy(subject, role, domain string) (bool, error)
 	RefreshPolicies() error
 }
 
@@ -67,13 +68,13 @@ func NewResourceAccessPolicyManager(cfg CasbinResourceAccessPolicyManagerConfig)
 	}, nil
 }
 
-func (r *casbinResourceAccessPolicyManager) AddPolicy(subject, org, resource, action string) error {
-	_, err := r.enforcer.AddPolicy(subject, org, resource, action)
+func (r *casbinResourceAccessPolicyManager) AddPolicy(subject, domain, resource, action string) error {
+	_, err := r.enforcer.AddPolicy(subject, domain, resource, action)
 	return err
 }
 
-func (r *casbinResourceAccessPolicyManager) RemovePolicy(subject, org, resource, action string) error {
-	_, err := r.enforcer.RemovePolicy(subject, org, resource, action)
+func (r *casbinResourceAccessPolicyManager) RemovePolicy(subject, domain, resource, action string) error {
+	_, err := r.enforcer.RemovePolicy(subject, domain, resource, action)
 	return err
 }
 
@@ -82,20 +83,20 @@ func (r *casbinResourceAccessPolicyManager) RemoveFilteredPolicy(fieldIndex int,
 	return err
 }
 
-func (r *casbinResourceAccessPolicyManager) CheckPermission(subject, org, resource, action string) (bool, error) {
+func (r *casbinResourceAccessPolicyManager) CheckPermission(subject, domain, resource, action string) (bool, error) {
 	if r.debug {
 		r.logger.Infof("=== Access Check ===")
-		r.logger.Infof("Request: subject=%s, org=%s, resource=%s, action=%s",
-			subject, org, resource, action)
+		r.logger.Infof("Request: subject=%s, domain=%s, resource=%s, action=%s",
+			subject, domain, resource, action)
 	}
 
 	// Check role assignment
 	if r.debug {
-		roles := r.enforcer.GetRolesForUserInDomain(subject, org)
+		roles := r.enforcer.GetRolesForUserInDomain(subject, domain)
 		r.logger.Infof("User roles: %v", roles)
 	}
 
-	ok, err := r.enforcer.Enforce(subject, org, resource, action)
+	ok, err := r.enforcer.Enforce(subject, domain, resource, action)
 	if r.debug {
 		r.logger.Infof("Final decision: %v (err: %v)", ok, err)
 	}
@@ -109,12 +110,16 @@ func (r *casbinResourceAccessPolicyManager) RefreshPolicies() error {
 	return nil
 }
 
-func (r *casbinResourceAccessPolicyManager) AddGroupingPolicy(subject, role, orgID string) error {
-	_, err := r.enforcer.AddGroupingPolicy(subject, role, orgID)
+func (r *casbinResourceAccessPolicyManager) AddGroupingPolicy(subject, role, domain string) error {
+	_, err := r.enforcer.AddGroupingPolicy(subject, role, domain)
 	return err
 }
 
-func (r *casbinResourceAccessPolicyManager) RemoveGroupingPolicy(subject, role, orgID string) error {
-	_, err := r.enforcer.RemoveGroupingPolicy(subject, role, orgID)
+func (r *casbinResourceAccessPolicyManager) RemoveGroupingPolicy(subject, role, domain string) error {
+	_, err := r.enforcer.RemoveGroupingPolicy(subject, role, domain)
 	return err
+}
+
+func (r *casbinResourceAccessPolicyManager) HasGroupingPolicy(subject, role, domain string) (bool, error) {
+	return r.enforcer.HasGroupingPolicy(subject, role, domain)
 }

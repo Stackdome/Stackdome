@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/db"
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 )
 
 type PermissionService interface {
-	Check(ctx context.Context, domain, resource, resourceID, action string) error
+	Check(ctx context.Context, domain, resource, resourceID, action string) *errors.ServiceError
 }
-
-var ErrAccessDenied = fmt.Errorf("access denied")
-var ErrUnauthenticated = fmt.Errorf("unauthenticated")
 
 type permissionService struct {
 	policyMgr resourceaccess.ResourceAccessPolicyManager
@@ -23,24 +24,26 @@ type permissionService struct {
 	logger    logger.Logger
 }
 
-type PermissionServiceConfig struct {
-	PolicyManager resourceaccess.ResourceAccessPolicyManager
-	TeamStore     stores.TeamStore
-	Logger        logger.Logger
+type PermissionServiceSpec struct {
+	PolicyManager  resourceaccess.ResourceAccessPolicyManager
+	SessionFactory db.SessionFactory
+	Logger         logger.Logger
 }
 
-func NewPermissionService(cfg PermissionServiceConfig) PermissionService {
+func NewPermissionService(spec PermissionServiceSpec) PermissionService {
 	return &permissionService{
-		policyMgr: cfg.PolicyManager,
-		teamStore: cfg.TeamStore,
-		logger:    cfg.Logger,
+		policyMgr: spec.PolicyManager,
+		teamStore: pgstore.NewTeamStore(pgstore.TeamStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
+		logger: spec.Logger,
 	}
 }
 
-func (p *permissionService) Check(ctx context.Context, domain, resource, resourceID, action string) error {
+func (p *permissionService) Check(ctx context.Context, domain, resource, resourceID, action string) *errors.ServiceError {
 	identity := GetIdentityFromCtx(ctx)
 	if identity == nil {
-		return ErrUnauthenticated
+		return errors.Unauthenticated("no identity found in context")
 	}
 
 	if identity.AuthMethod == AuthMethodAPIToken {
@@ -52,11 +55,11 @@ func (p *permissionService) Check(ctx context.Context, domain, resource, resourc
 			}
 		}
 		if !scopeAllowed {
-			return ErrAccessDenied
+			return errors.Forbidden("insufficient permissions: token scope does not cover %s:%s", resource, action)
 		}
 		if len(identity.ResourceIDs) > 0 && resourceID != "" {
 			if !slices.Contains(identity.ResourceIDs, resourceID) {
-				return ErrAccessDenied
+				return errors.Forbidden("insufficient permissions: token not authorized for resource %s", resourceID)
 			}
 		}
 	}
@@ -69,30 +72,33 @@ func (p *permissionService) Check(ctx context.Context, domain, resource, resourc
 	allowed, err := p.policyMgr.CheckPermission(identity.UserID, domain, casbinResource, action)
 	if err != nil {
 		p.logger.Errorf("permission check failed: %s", err.Error())
-		return ErrAccessDenied
+		return errors.Forbidden("insufficient permissions")
 	}
 	if allowed {
 		return nil
 	}
 
 	// OrgAdmin fallback: OrgAdmin grouping is on orgID, but team resources use teamID as domain.
-	if identity.IsOrgAdmin() && p.teamBelongsToOrg(ctx, domain, identity.OrgID) {
+	if p.isOrgAdminViaPolicy(ctx, identity.UserID, domain) {
 		return nil
 	}
 
-	return ErrAccessDenied
+	return errors.Forbidden("insufficient permissions")
 }
 
-func (p *permissionService) teamBelongsToOrg(ctx context.Context, teamID, orgID string) bool {
-	if teamID == "" || teamID == orgID {
-		return false
-	}
-	if p.teamStore == nil {
+func (p *permissionService) isOrgAdminViaPolicy(ctx context.Context, userID, teamID string) bool {
+	if teamID == "" {
 		return false
 	}
 	team, err := p.teamStore.GetByID(ctx, teamID)
 	if err != nil {
+		p.logger.Errorf("failed to fetch team for OrgAdmin check: %s", err.Error())
 		return false
 	}
-	return team.OrganisationID == orgID
+	has, policyErr := p.policyMgr.HasGroupingPolicy(userID, models.OrgAdminRole.String(), team.OrganisationID)
+	if policyErr != nil {
+		p.logger.Errorf("failed to check OrgAdmin grouping policy: %s", policyErr.Error())
+		return false
+	}
+	return has
 }
