@@ -167,10 +167,11 @@ func BuildFrontend(ctx context.Context) error {
 	if _, err := exec.LookPath("node"); err != nil {
 		return fmt.Errorf("node not found on PATH (Node >=20.12 required, see frontend/package.json engines)")
 	}
-	if err := sh.RunV("pnpm", "--prefix", "frontend", "install", "--frozen-lockfile"); err != nil {
+	pnpmBin := filepath.Join(binDir, "pnpm")
+	if err := sh.RunV(pnpmBin, "--prefix", "frontend", "install", "--frozen-lockfile"); err != nil {
 		return fmt.Errorf("pnpm install failed: %w", err)
 	}
-	if err := sh.RunV("pnpm", "--prefix", "frontend", "exec", "vite", "build"); err != nil {
+	if err := sh.RunV(pnpmBin, "--prefix", "frontend", "exec", "vite", "build"); err != nil {
 		return fmt.Errorf("vite build failed: %w", err)
 	}
 	// Vite's emptyOutDir wipes .gitkeep; restore it so git status stays
