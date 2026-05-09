@@ -19,6 +19,7 @@ import (
 var _ = Describe("Stack E2E", Ordered, func() {
 	var client *openapi.APIClient
 	var orgID string
+	teamName := models.DefaultTeamName
 
 	BeforeAll(func() {
 		testEnv := GetEnvironment()
@@ -36,7 +37,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Creating a stack via API")
 			stack := shared.CreateSimpleStack("test-lifecycle")
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 
 			stackID := created.GetId()
 			stackName := created.GetName()
@@ -46,8 +47,8 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(namespace).NotTo(BeEmpty())
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, stackID)
-				shared.WaitForStackDeleted(client, orgID, stackID, 1*time.Minute)
+				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
 
 			By("Waiting for the Stack CR to appear in the cluster")
@@ -57,7 +58,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			shared.VerifyStackCRLabel(cr, stackID)
 
 			By("Waiting for stack to become Ready via API")
-			readyStack := shared.WaitForStackReady(client, orgID, stackID, 5*time.Minute)
+			readyStack := shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 
 			By("Verifying status has conditions")
 			status, ok := readyStack.GetStatusOk()
@@ -86,23 +87,23 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Creating a stack")
 			stack := shared.CreateSimpleStack("test-delete-e2e")
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()
 			namespace := created.GetNamespace()
 
 			By("Waiting for stack to become Ready")
 			shared.WaitForStackCRExists(ctx, clusterClient, stackName, namespace, 2*time.Minute)
-			shared.WaitForStackReady(client, orgID, stackID, 5*time.Minute)
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 
 			By("Deleting the stack via API")
-			shared.DeleteStack(client, orgID, stackID)
+			shared.DeleteStack(client, orgID, teamName, stackID)
 
 			By("Verifying the CR is deleted from the cluster")
 			shared.WaitForStackCRDeleted(ctx, clusterClient, stackName, namespace, 2*time.Minute)
 
 			By("Verifying the stack is gone from the API")
-			shared.WaitForStackDeleted(client, orgID, stackID, 1*time.Minute)
+			shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 		})
 	})
 
@@ -114,17 +115,17 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Creating a multi-resource stack")
 			stack := shared.CreateMultiResourceStack("test-multi")
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, stackID)
-				shared.WaitForStackDeleted(client, orgID, stackID, 1*time.Minute)
+				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
 
 			By("Waiting for stack to become Ready")
-			shared.WaitForStackReady(client, orgID, stackID, 5*time.Minute)
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 
 			By("Verifying both StackResource CRs are Available")
 			shared.WaitForStackResourceCRAvailable(ctx, clusterClient, shared.MultiResourceBackendName, namespace, 5*time.Minute)
@@ -153,17 +154,17 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Creating a stack with dependencies")
 			stack := shared.CreateStackWithDependencies("test-deps")
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, stackID)
-				shared.WaitForStackDeleted(client, orgID, stackID, 1*time.Minute)
+				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
 
 			By("Waiting for stack to become Ready")
-			shared.WaitForStackReady(client, orgID, stackID, 5*time.Minute)
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 
 			By("Verifying both resources are Available")
 			shared.WaitForStackResourceCRAvailable(ctx, clusterClient, "database", namespace, 5*time.Minute)
@@ -185,17 +186,17 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Creating a stack with env vars and ports")
 			stack := shared.CreateStackWithEnvAndPorts("test-env-ports")
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, stackID)
-				shared.WaitForStackDeleted(client, orgID, stackID, 1*time.Minute)
+				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
 
 			By("Waiting for stack to become Ready")
-			shared.WaitForStackReady(client, orgID, stackID, 5*time.Minute)
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 
 			By("Verifying Deployment has the expected env vars")
 			deploy, err := shared.GetDeploymentForStackResource(ctx, clusterClient, namespace, shared.EnvPortsResourceName)
@@ -236,17 +237,17 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Creating a stack with init container")
 			stack := shared.CreateStackWithInitContainer("test-init")
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, stackID)
-				shared.WaitForStackDeleted(client, orgID, stackID, 1*time.Minute)
+				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
 
 			By("Waiting for stack to become Ready")
-			shared.WaitForStackReady(client, orgID, stackID, 5*time.Minute)
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 
 			By("Verifying Deployment has init container")
 			deploy, err := shared.GetDeploymentForStackResource(ctx, clusterClient, namespace, "app")
@@ -265,19 +266,19 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Creating a stack")
 			stack := shared.CreateSimpleStack("test-update-e2e")
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()
 			namespace := created.GetNamespace()
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, stackID)
-				shared.WaitForStackDeleted(client, orgID, stackID, 1*time.Minute)
+				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
 
 			By("Waiting for stack to become Ready")
 			shared.WaitForStackCRExists(ctx, clusterClient, stackName, namespace, 2*time.Minute)
-			shared.WaitForStackReady(client, orgID, stackID, 5*time.Minute)
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 
 			By("Updating the stack with a new env var")
 			updateStack := shared.CreateSimpleStack("test-update-e2e")
@@ -286,7 +287,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 				*openapi.NewEnvVar("UPDATED", "true"),
 			})
 			updateStack.Spec.StackResources[0].SetExecutionConfig(*exec)
-			shared.UpdateStack(client, orgID, stackID, updateStack)
+			shared.UpdateStack(client, orgID, teamName, stackID, updateStack)
 
 			By("Waiting for the CR to reflect the update")
 			Eventually(func(g Gomega) {
@@ -305,7 +306,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			}, 2*time.Minute, 5*time.Second).Should(Succeed())
 
 			By("Waiting for stack to return to Ready state")
-			shared.WaitForStackReady(client, orgID, stackID, 5*time.Minute)
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 		})
 	})
 
@@ -317,29 +318,29 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Creating a postgres addon with a database")
 			addon := shared.CreatePostgresAddonWithResources("test-stack-pg")
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 			addonID := createdAddon.GetId()
 
 			DeferCleanup(func() {
-				shared.DeletePostgresAddon(client, orgID, addonID)
+				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
 			By("Waiting for the postgres addon to become Ready")
-			shared.WaitForAddonReady(client, orgID, addonID, 10*time.Minute)
+			shared.WaitForAddonReady(client, orgID, teamName, addonID, 10*time.Minute)
 
 			By("Creating a stack that references the postgres addon")
 			stack := shared.CreateStackWithPostgresAddon("test-pg-stack", addonID, "testdb")
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, stackID)
-				shared.WaitForStackDeleted(client, orgID, stackID, 1*time.Minute)
+				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
 
 			By("Waiting for stack to become Ready")
-			shared.WaitForStackReady(client, orgID, stackID, 5*time.Minute)
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 
 			By("Verifying Deployment has all postgres env vars from the mapping")
 			deploy, err := shared.GetDeploymentForStackResource(ctx, clusterClient, namespace, "app")
@@ -375,34 +376,34 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Creating a postgres addon with superuser access enabled")
 			addon := shared.CreatePostgresAddonWithSuperuser("test-stack-pg-su")
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 			addonID := createdAddon.GetId()
 			addonName := createdAddon.GetName()
 			addonNamespace := createdAddon.GetNamespace()
 
 			DeferCleanup(func() {
-				shared.DeletePostgresAddon(client, orgID, addonID)
+				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
 			By("Waiting for the postgres addon to become Ready")
-			shared.WaitForAddonReady(client, orgID, addonID, 10*time.Minute)
+			shared.WaitForAddonReady(client, orgID, teamName, addonID, 10*time.Minute)
 
 			By("Waiting for databases to be applied")
-			shared.WaitForConditionTrue(client, orgID, addonID, string(models.PostgresAddonConditionDatabasesApplied), 2*time.Minute)
+			shared.WaitForConditionTrue(client, orgID, teamName, addonID, string(models.PostgresAddonConditionDatabasesApplied), 2*time.Minute)
 
 			By("Creating a stack that references the addon with superuser mode")
 			stack := shared.CreateStackWithPostgresAddonSuperuser("test-su-stack", addonID)
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, stackID)
-				shared.WaitForStackDeleted(client, orgID, stackID, 1*time.Minute)
+				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
 
 			By("Waiting for stack to become Ready")
-			shared.WaitForStackReady(client, orgID, stackID, 5*time.Minute)
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 
 			By("Verifying Deployment has all postgres env vars from the mapping")
 			deploy, err := shared.GetDeploymentForStackResource(ctx, clusterClient, namespace, "app")
@@ -422,7 +423,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(dbURL).To(HavePrefix("postgresql://"), "DATABASE_URL should be a postgresql:// connection string")
 
 			By("Fetching superuser credentials via API")
-			creds := shared.GetSuperuserCredentials(client, orgID, addonID)
+			creds := shared.GetSuperuserCredentials(client, orgID, teamName, addonID)
 			Expect(creds.GetUsername()).To(Equal("postgres"), "superuser username should be 'postgres'")
 			Expect(creds.GetPassword()).NotTo(BeEmpty())
 
@@ -502,16 +503,16 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Creating a GitCredentials secret with the GitHub token")
 			gitSecret := shared.CreateGitCredentialsSecret(shared.BuildSourceSecretName, githubToken)
-			createdSecret := shared.CreateSecret(client, orgID, gitSecret)
+			createdSecret := shared.CreateSecret(client, orgID, teamName, gitSecret)
 			secretID := createdSecret.GetId()
 
 			DeferCleanup(func() {
-				shared.DeleteSecret(client, orgID, secretID)
+				shared.DeleteSecret(client, orgID, teamName, secretID)
 			})
 
 			By("Creating a stack with build source and exposed port")
 			stack := shared.CreateStackWithBuildSource("test-build-source", shared.BuildSourceRepoURL, secretID)
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()
 			namespace := created.GetNamespace()
@@ -521,10 +522,10 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			DeferCleanup(func() {
 				if CurrentSpecReport().Failed() {
-					shared.DumpBuildSourceDebugInfo(ctx, client, clusterClient, clientset, orgID, stackID, namespace)
+					shared.DumpBuildSourceDebugInfo(ctx, client, clusterClient, clientset, orgID, teamName, stackID, namespace)
 				}
-				shared.DeleteStack(client, orgID, stackID)
-				shared.WaitForStackDeleted(client, orgID, stackID, 2*time.Minute)
+				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
 			})
 
 			By("Waiting for the Stack CR to appear in the cluster")
@@ -541,7 +542,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			shared.VerifyGitCredentialsSecretExists(ctx, clusterClient, namespace, stackID)
 
 			By("Waiting for stack to become Ready")
-			shared.WaitForStackReady(client, orgID, stackID, 10*time.Minute)
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 10*time.Minute)
 
 			By("Verifying StackResource CR is Available")
 			shared.WaitForStackResourceCRAvailable(ctx, clusterClient, shared.BuildSourceResourceName, namespace, 5*time.Minute)
@@ -585,7 +586,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusOK), "expected 200, got %d; body: %s", resp.StatusCode, string(body))
 
 			By("Verifying image build record via API")
-			builds := shared.ListStackBuilds(client, orgID, stackID)
+			builds := shared.ListStackBuilds(client, orgID, teamName, stackID)
 			Expect(builds).NotTo(BeEmpty(), "should have at least one image build record")
 		})
 	})

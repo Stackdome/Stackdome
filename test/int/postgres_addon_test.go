@@ -8,12 +8,14 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/test/int/shared"
 )
 
 var _ = Describe("PostgreSQL Addon", func() {
 	var client *openapi.APIClient
 	var orgID string
+	var teamName = models.DefaultTeamName
 
 	BeforeEach(func() {
 		testEnv := GetEnvironment()
@@ -28,7 +30,7 @@ var _ = Describe("PostgreSQL Addon", func() {
 			By("Creating a minimal postgres addon")
 			addon := shared.CreateMinimalPostgresAddon("test-minimal")
 
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 
 			Expect(createdAddon.GetId()).NotTo(BeEmpty())
 			Expect(createdAddon.GetName()).To(Equal("test-minimal"))
@@ -42,7 +44,7 @@ var _ = Describe("PostgreSQL Addon", func() {
 			By("Creating a postgres addon with CPU and memory resources")
 			addon := shared.CreatePostgresAddonWithResources("test-with-resources")
 
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 
 			Expect(createdAddon.GetId()).NotTo(BeEmpty())
 			Expect(createdAddon.Spec.HasResources()).To(BeTrue())
@@ -66,10 +68,10 @@ var _ = Describe("PostgreSQL Addon", func() {
 		It("should retrieve a postgres addon by ID", func() {
 			By("Creating a postgres addon first")
 			addon := shared.CreateMinimalPostgresAddon("test-get")
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 
 			By("Retrieving the addon by ID")
-			retrievedAddon := shared.GetPostgresAddon(client, orgID, createdAddon.GetId())
+			retrievedAddon := shared.GetPostgresAddon(client, orgID, teamName, createdAddon.GetId())
 
 			shared.ExpectPostgresAddonEqual(createdAddon, retrievedAddon)
 		})
@@ -79,11 +81,11 @@ var _ = Describe("PostgreSQL Addon", func() {
 			addon1 := shared.CreateMinimalPostgresAddon("test-list-1")
 			addon2 := shared.CreateMinimalPostgresAddon("test-list-2")
 
-			shared.CreatePostgresAddon(client, orgID, addon1)
-			shared.CreatePostgresAddon(client, orgID, addon2)
+			shared.CreatePostgresAddon(client, orgID, teamName, addon1)
+			shared.CreatePostgresAddon(client, orgID, teamName, addon2)
 
 			By("Listing all postgres addons")
-			addonList := shared.ListPostgresAddons(client, orgID)
+			addonList := shared.ListPostgresAddons(client, orgID, teamName)
 
 			Expect(len(addonList.GetItems())).To(BeNumerically(">=", 2))
 
@@ -99,12 +101,12 @@ var _ = Describe("PostgreSQL Addon", func() {
 		It("should update a postgres addon", func() {
 			By("Creating a postgres addon first")
 			addon := shared.CreateMinimalPostgresAddon("test-update")
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 
 			By("Updating the addon with more resources and databases")
 			updateAddon := shared.CreatePostgresAddonForUpdate("test-update")
 
-			updatedAddon := shared.UpdatePostgresAddon(client, orgID, createdAddon.GetId(), updateAddon)
+			updatedAddon := shared.UpdatePostgresAddon(client, orgID, teamName, createdAddon.GetId(), updateAddon)
 
 			Expect(updatedAddon.GetId()).To(Equal(createdAddon.GetId()))
 			Expect(updatedAddon.Spec.Instances.GetCount()).To(Equal(int32(3)))
@@ -122,13 +124,13 @@ var _ = Describe("PostgreSQL Addon", func() {
 		It("should delete a postgres addon", func() {
 			By("Creating a postgres addon first")
 			addon := shared.CreateMinimalPostgresAddon("test-delete")
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 
 			By("Deleting the addon")
-			shared.DeletePostgresAddon(client, orgID, createdAddon.GetId())
+			shared.DeletePostgresAddon(client, orgID, teamName, createdAddon.GetId())
 
 			By("Waiting for the addon to be fully deleted")
-			shared.WaitForAddonDeleted(client, orgID, createdAddon.GetId(), 30*time.Second)
+			shared.WaitForAddonDeleted(client, orgID, teamName, createdAddon.GetId(), 30*time.Second)
 		})
 	})
 
@@ -138,7 +140,7 @@ var _ = Describe("PostgreSQL Addon", func() {
 			addon := shared.CreateMinimalPostgresAddon("test-invalid-storage")
 			addon.Spec.Storage.SetSize("invalid-size")
 
-			shared.CreatePostgresAddonExpectError(client, orgID, addon, 400)
+			shared.CreatePostgresAddonExpectError(client, orgID, teamName, addon, 400)
 		})
 
 		It("should reject addon with zero instances", func() {
@@ -146,7 +148,7 @@ var _ = Describe("PostgreSQL Addon", func() {
 			addon := shared.CreateMinimalPostgresAddon("test-zero-instances")
 			addon.Spec.Instances.SetCount(0)
 
-			shared.CreatePostgresAddonExpectError(client, orgID, addon, 400)
+			shared.CreatePostgresAddonExpectError(client, orgID, teamName, addon, 400)
 		})
 
 		It("should reject addon with invalid postgres version", func() {
@@ -154,7 +156,7 @@ var _ = Describe("PostgreSQL Addon", func() {
 			addon := shared.CreateMinimalPostgresAddon("test-invalid-version")
 			addon.Spec.Version.SetMajor(99) // Invalid version
 
-			shared.CreatePostgresAddonExpectError(client, orgID, addon, 400)
+			shared.CreatePostgresAddonExpectError(client, orgID, teamName, addon, 400)
 		})
 	})
 
@@ -163,6 +165,7 @@ var _ = Describe("PostgreSQL Addon", func() {
 var _ = Describe("PostgreSQL Addon Advanced Features", func() {
 	var client *openapi.APIClient
 	var orgID string
+	var teamName = models.DefaultTeamName
 
 	BeforeEach(func() {
 		testEnv := GetEnvironment()
@@ -180,7 +183,7 @@ var _ = Describe("PostgreSQL Addon Advanced Features", func() {
 			By("Creating postgres addon with backup config")
 			addon := shared.CreatePostgresAddonWithBackup("test-backup")
 
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 
 			Expect(createdAddon.Spec.HasBackup()).To(BeTrue())
 		})
@@ -191,7 +194,7 @@ var _ = Describe("PostgreSQL Addon Advanced Features", func() {
 			By("Creating HA postgres addon with multiple instances")
 			addon := shared.CreatePostgresAddonWithHA("test-ha")
 
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 
 			Expect(createdAddon.Spec.Instances.GetCount()).To(Equal(int32(3)))
 			Expect(createdAddon.Spec.Instances.HasPlacement()).To(BeTrue())

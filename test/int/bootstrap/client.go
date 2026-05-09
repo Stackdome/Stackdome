@@ -105,10 +105,9 @@ func (cm *ClientManager) GetClusterID() string {
 func (cm *ClientManager) createTestUser(ctx context.Context) (*UserInfo, error) {
 	// Create user signup request
 	email := fmt.Sprintf("test-%d@example.com", time.Now().Unix())
-	req := openapi.NewUserSignupRequest("Test User", email, "testpassword123")
 	organisation := openapi.NewOrganisation()
 	organisation.SetName("stackdome")
-	req.SetOrganisation(*organisation)
+	req := openapi.NewUserSignupRequest("Test User", email, "testpassword123", *organisation)
 
 	cm.logger.Info("Creating test user: %+v", *req)
 
