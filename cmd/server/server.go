@@ -51,12 +51,8 @@ func NewAPIServer(env environment.EnvImpl) Server {
 	// the jwt payload in the request context.
 	authProtected := setupAuthenticationMiddleWare(mainHandler, env)
 
-	// Auth applies only to /api/* paths. SPA assets, react-router routes,
-	// and /health bypass auth and reach mainRouter directly.
-	//
-	// Upstream removeTrailingSlash strips "/" → "", which leaves the path
-	// empty for the SPA route. Restore "/" here so http.ServeFileFS sees a
-	// valid absolute path.
+	// removeTrailingSlash turns "/" into ""; restore it so http.ServeFileFS
+	// sees a valid absolute path for the SPA root.
 	mainHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			authProtected.ServeHTTP(w, r)

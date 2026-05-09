@@ -1,5 +1,4 @@
-// Package web embeds the built React SPA so the API server ships as a
-// single binary with no external asset directory at runtime.
+// Package web embeds the built React SPA into the api-server binary.
 package web
 
 import (
@@ -21,7 +20,7 @@ var distFS embed.FS
 var fallbackHTML []byte
 
 // Handler serves the embedded SPA. Unknown paths fall back to index.html
-// so react-router's client-side routes survive hard-refresh.
+// so react-router resolves them client-side.
 func Handler() http.Handler {
 	sub, err := fs.Sub(distFS, "dist")
 	if err != nil {
@@ -41,16 +40,13 @@ func Handler() http.Handler {
 			return
 		}
 
-		// URL.Path may be "" or "/" after upstream removeTrailingSlash.
-		// Resolve to a concrete filename inside the embed.
+		// URL.Path is "" or "/" after upstream removeTrailingSlash.
 		path := strings.TrimPrefix(r.URL.Path, "/")
 		if path == "" {
 			path = "index.html"
 		}
 
 		if _, err := fs.Stat(sub, path); err != nil {
-			// SPA fallback for unknown paths: serve index.html so
-			// react-router can pick up the route on the client.
 			w.Header().Set("Cache-Control", "no-cache")
 			http.ServeFileFS(w, r, sub, "index.html")
 			return

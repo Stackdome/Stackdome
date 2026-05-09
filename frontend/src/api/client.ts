@@ -100,9 +100,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Redirect to /sign-in when the server tells us the session is invalid.
-// Skipped on the auth pages themselves so a wrong-password 403 there
-// shows an inline error instead of a refresh loop.
+// Skip on auth pages so a wrong-password 403 shows inline instead of refresh-looping.
 api.interceptors.response.use(
   (response) => response,
   (error) => {

@@ -213,8 +213,7 @@ func (s apiServer) routes() *mux.Router {
 	objectStoreRouter.HandleFunc("/{id}", objectStoreHandler.Update).Methods(http.MethodPut)
 	objectStoreRouter.HandleFunc("/{id}", objectStoreHandler.Delete).Methods(http.MethodDelete)
 
-	// Excludes /api/ and /health so unknown paths there reach
-	// NotFoundHandler (JSON 404) instead of returning index.html.
+	// Exclude /api/ and /health so unknown paths return JSON 404 instead of index.html.
 	mainRouter.PathPrefix("/").
 		MatcherFunc(func(r *http.Request, _ *mux.RouteMatch) bool {
 			p := r.URL.Path
