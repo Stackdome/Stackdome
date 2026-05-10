@@ -33,18 +33,35 @@ export function SecretKeyPicker({
   expectedKeyHint,
   error,
 }: Props) {
-  const [secrets, setSecrets] = useState<Secret[]>([]);
+  const [secrets, setSecrets] = useState<Array<Secret & { id: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     const orgId = getCurrentOrganizationId();
     if (!orgId) return;
+    let cancelled = false;
     setLoading(true);
     getSecrets(orgId)
-      .then((res) => setSecrets((res.items ?? []).filter((s) => s.type === "Generic")))
-      .catch((e) => setFetchError(getErrorMessage(e)))
-      .finally(() => setLoading(false));
+      .then((res) => {
+        if (cancelled) return;
+        setSecrets(
+          (res.items ?? []).filter(
+            (s): s is Secret & { id: string } => !!s.id && s.type === "Generic",
+          ),
+        );
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setFetchError(getErrorMessage(e));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const selectedSecret = useMemo(
@@ -75,7 +92,7 @@ export function SecretKeyPicker({
           </SelectTrigger>
           <SelectContent>
             {secrets.map((s) => (
-              <SelectItem key={s.id} value={s.id ?? ""}>
+              <SelectItem key={s.id} value={s.id}>
                 {s.name}
               </SelectItem>
             ))}
@@ -110,20 +127,19 @@ export function SecretKeyPicker({
         </Select>
       </div>
 
-      {expectedKeyHint && selectedSecret && !availableKeys.includes(expectedKeyHint) && (
-        <p className="text-xs text-warn">
-          Tip: typically named <code className="font-mono">{expectedKeyHint}</code>. The selected secret doesn't have that key.
-        </p>
-      )}
-
-      {keyMissing && (
+      {fetchError ? (
+        <p className="text-xs text-danger">{fetchError}</p>
+      ) : error ? (
+        <p className="text-xs text-danger">{error}</p>
+      ) : keyMissing ? (
         <p className="text-xs text-danger">
           The selected key is no longer present in the chosen secret.
         </p>
-      )}
-
-      {fetchError && <p className="text-xs text-danger">{fetchError}</p>}
-      {error && <p className="text-xs text-danger">{error}</p>}
+      ) : expectedKeyHint && selectedSecret && !availableKeys.includes(expectedKeyHint) ? (
+        <p className="text-xs text-warn">
+          Tip: typically named <code className="font-mono">{expectedKeyHint}</code>. The selected secret doesn't have that key.
+        </p>
+      ) : null}
     </div>
   );
 }
