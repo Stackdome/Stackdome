@@ -3,29 +3,31 @@ package migrations
 import (
 	"fmt"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/gorm"
 )
 
 func createOAuthStatesTable() *gormigrate.Migration {
+	tableName := models.OAuthStateTableName
 	return &gormigrate.Migration{
 		ID: "202605080001_create_oauth_states_table",
 		Migrate: func(tx *gorm.DB) error {
-			if err := tx.Exec(`
-				CREATE TABLE IF NOT EXISTS oauth_states (
+			createSQL := fmt.Sprintf(`
+				CREATE TABLE IF NOT EXISTS %s (
 					id TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
 					state TEXT NOT NULL,
 					provider TEXT NOT NULL,
 					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 				)
-			`).Error; err != nil {
-				return fmt.Errorf("failed to create oauth_states table: %w", err)
+			`, tableName)
+			if err := tx.Exec(createSQL).Error; err != nil {
+				return fmt.Errorf("error creating %s table: %w", tableName, err)
 			}
-
-			if err := tx.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_oauth_states_state ON oauth_states (state)`).Error; err != nil {
-				return fmt.Errorf("failed to create index on oauth_states: %w", err)
+			idx := fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS idx_%s_state ON %s(state)", tableName, tableName)
+			if err := tx.Exec(idx).Error; err != nil {
+				return fmt.Errorf("error creating %s state index: %w", tableName, err)
 			}
-
 			return nil
 		},
 	}

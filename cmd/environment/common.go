@@ -2,7 +2,6 @@ package environment
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/ashishmax31/stackdome-api-server/config"
 	"github.com/golang/glog"

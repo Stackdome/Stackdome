@@ -10,9 +10,10 @@ type OAuthState struct {
 }
 
 const (
-	OAuthProviderGitHub = "github"
+	OAuthProviderGitHub    = "github"
+	OAuthStateTableName    = "oauth_states"
 )
 
 func (OAuthState) TableName() string {
-	return "oauth_states"
+	return OAuthStateTableName
 }
