@@ -7,6 +7,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
+//go:generate mockgen -source=team_store.go -destination=../mocks/mock_team_store.go -package=mocks
 type TeamStore interface {
 	Create(ctx context.Context, team *models.Team) (*models.Team, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.Team, *errors.ServiceError)

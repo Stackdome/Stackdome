@@ -392,7 +392,7 @@ func (s *teamService) RemoveMember(ctx context.Context, membershipID string) *er
 
 	if rmErr := s.policyMgr.RemoveGroupingPolicy(membership.UserID, string(membership.Role), membership.TeamID); rmErr != nil {
 		s.logger.Errorf("failed to remove team role grouping: %s", rmErr.Error())
-		return errors.InternalServerError(rmErr.Error())
+		return errors.InternalServerError("failed to remove team role grouping: %s", rmErr.Error())
 	}
 
 	if err := s.cleanupOrgMemberGrouping(ctx, membership.UserID, team.OrganisationID); err != nil {

@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 )
 
 type PermissionService interface {
@@ -25,18 +23,16 @@ type permissionService struct {
 }
 
 type PermissionServiceSpec struct {
-	PolicyManager  resourceaccess.ResourceAccessPolicyManager
-	SessionFactory db.SessionFactory
-	Logger         logger.Logger
+	PolicyManager resourceaccess.ResourceAccessPolicyManager
+	TeamStore     stores.TeamStore
+	Logger        logger.Logger
 }
 
 func NewPermissionService(spec PermissionServiceSpec) PermissionService {
 	return &permissionService{
 		policyMgr: spec.PolicyManager,
-		teamStore: pgstore.NewTeamStore(pgstore.TeamStoreSpec{
-			SessionFactory: spec.SessionFactory,
-		}),
-		logger: spec.Logger,
+		teamStore: spec.TeamStore,
+		logger:    spec.Logger,
 	}
 }
 
