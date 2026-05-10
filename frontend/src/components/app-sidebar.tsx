@@ -5,6 +5,7 @@ import { StackdomeMark } from "@/components/branded"
 import { NavStacks } from "@/components/nav-stacks"
 import { NavClusters } from "@/components/nav-clusters"
 import { NavSecrets } from "@/components/nav-secrets"
+import { NavObjectStores } from "@/components/nav-object-stores"
 import { NavDomains } from "@/components/nav-domains"
 import { NavAddons } from "@/components/nav-addons"
 import { NavUser } from "@/components/nav-user"
@@ -59,6 +60,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupContent>
             <NavStacks />
             <NavSecrets />
+            <NavObjectStores />
             <NavAddons />
             <NavClusters />
             <NavDomains />
