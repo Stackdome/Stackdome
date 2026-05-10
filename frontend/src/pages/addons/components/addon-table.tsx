@@ -1,4 +1,4 @@
-import { MoreHorizontal, Trash2, Pencil } from "lucide-react";
+import { MoreHorizontal, Trash2, Pencil, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AddonTypeIcon } from "./addon-type-icon";
@@ -92,6 +92,15 @@ export function AddonTable({ addons, onDelete }: AddonTableProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[160px]">
+                    <DropdownMenuItem
+                      onClick={() =>
+                        addon.id && navigate(`/addons/postgres/${addon.id}`)
+                      }
+                      disabled={!addon.id}
+                    >
+                      <Eye className="h-4 w-4" />
+                      View details
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() =>
                         addon.id && navigate(`/addons/postgres/${addon.id}/edit`)

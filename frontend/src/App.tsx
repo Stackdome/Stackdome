@@ -10,6 +10,7 @@ import SecretsPage from "@/pages/secrets"
 import DomainsPage from "@/pages/domains"
 import AddonsPage from "@/pages/addons"
 import PostgresFormPage from "@/pages/addons/components/postgres-create-page"
+import PostgresDetailPage from "@/pages/addons/postgres-detail-page"
 import ObjectStoresPage from "@/pages/object-stores"
 import NotFoundPage from "@/pages/not-found"
 import { StackProvider } from "@/pages/stacks/contexts/stack-context"
@@ -47,6 +48,7 @@ const router = createBrowserRouter(
         <Route path="/addons" element={<AddonsPage />} />
         <Route path="/addons/create/postgres" element={<PostgresFormPage />} />
         <Route path="/addons/postgres/:id/edit" element={<PostgresFormPage />} />
+        <Route path="/addons/postgres/:id" element={<PostgresDetailPage />} />
         <Route path="/domains" element={<DomainsPage />} />
       </Route>
       <Route path="/sign-in" element={<Login />} />
