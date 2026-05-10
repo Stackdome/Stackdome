@@ -1,7 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { PlusCircle, AlertCircle, Loader2, Cloud } from "lucide-react";
 import { useObjectStores } from "./hooks/use-object-stores";
 import { ObjectStoreList } from "./components/object-store-list";
+import { ObjectStoreFormDialog } from "./components/object-store-form-dialog";
+import type { ObjectStore } from "./types";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageHeader, Panel, EmptyState } from "@/components/branded";
@@ -10,6 +12,8 @@ import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 export default function ObjectStoresPage() {
   const { objectStores, loading, error, refetch } = useObjectStores();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingStore, setEditingStore] = useState<ObjectStore | null>(null);
 
   useEffect(() => {
     const path = `/object-stores`;
@@ -47,7 +51,12 @@ export default function ObjectStoresPage() {
           title="Object Stores"
           subtitle="Backup destinations for Postgres add-ons. Supports AWS S3, S3-compatible (e.g. MinIO), Azure, and GCS."
           actions={
-            <Button onClick={() => {}}>
+            <Button
+              onClick={() => {
+                setEditingStore(null);
+                setShowAddDialog(true);
+              }}
+            >
               <PlusCircle className="h-4 w-4" />
               New Object Store
             </Button>
@@ -65,7 +74,13 @@ export default function ObjectStoresPage() {
               title="No Object Stores yet"
               description="Add an S3-compatible bucket, Azure container, or GCS bucket to use as a backup destination."
               action={
-                <Button onClick={() => {}} variant="outline">
+                <Button
+                  onClick={() => {
+                    setEditingStore(null);
+                    setShowAddDialog(true);
+                  }}
+                  variant="outline"
+                >
                   <PlusCircle className="h-4 w-4" />
                   New Object Store
                 </Button>
@@ -74,13 +89,26 @@ export default function ObjectStoresPage() {
           ) : (
             <ObjectStoreList
               objectStores={objectStores}
-              onEdit={() => {}}
+              onEdit={(store) => {
+                setEditingStore(store);
+                setShowAddDialog(true);
+              }}
               onDelete={() => {}}
             />
           )}
         </Panel>
 
-        {/* Form and delete dialogs are wired in Tasks 8 and 9 */}
+        <ObjectStoreFormDialog
+          open={showAddDialog}
+          onOpenChange={(open) => {
+            setShowAddDialog(open);
+            if (!open) setEditingStore(null);
+          }}
+          editing={editingStore}
+          onSaved={() => {
+            refetch();
+          }}
+        />
       </div>
     </TooltipProvider>
   );
