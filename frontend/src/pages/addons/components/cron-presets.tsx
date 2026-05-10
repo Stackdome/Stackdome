@@ -27,6 +27,8 @@ export function CronPresets({ value, onChange, disabled }: Props) {
           size="sm"
           disabled={disabled}
           title={p.help}
+          aria-label={`${p.label} — ${p.help}`}
+          aria-pressed={value === p.expression}
           onClick={() => onChange(p.expression)}
         >
           {p.label}
