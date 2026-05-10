@@ -17,6 +17,7 @@ import (
 
 type ImageRegistryService interface {
 	Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
+	InternalGet(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
@@ -68,6 +69,10 @@ func (s *clusterImageRegistryService) Get(ctx context.Context, ID string) (*mode
 		return nil, err
 	}
 	return registry, nil
+}
+
+func (s *clusterImageRegistryService) InternalGet(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
+	return s.clusterImageRegistryStore.GetByID(ctx, ID)
 }
 
 func (s *clusterImageRegistryService) ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {

@@ -17,6 +17,7 @@ type StackResourceService interface {
 	GetByStackID(ctx context.Context, stackID string) ([]*models.StackResource, *errors.ServiceError)
 	GetByID(ctx context.Context, ID string) (*models.StackResource, *errors.ServiceError)
 	GetByStackIDAndResourceName(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError)
+	InternalGetByStackIDAndResourceName(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, resourceID string, status *models.StackResourceStatus) *errors.ServiceError
 	InternalUpdateExposedPortDomainsWithTx(ctx context.Context, resourceID string, stackResource *models.StackResource) *errors.ServiceError
 }
@@ -92,6 +93,10 @@ func (s *stackResourceService) GetByStackIDAndResourceName(ctx context.Context, 
 	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
+	return s.stackResourceStore.GetByStackIDAndResourceName(ctx, stackID, resourceName)
+}
+
+func (s *stackResourceService) InternalGetByStackIDAndResourceName(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError) {
 	return s.stackResourceStore.GetByStackIDAndResourceName(ctx, stackID, resourceName)
 }
 

@@ -43,6 +43,8 @@ type PostgresAddonService interface {
 	GetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError)
 
 	// Internal operations
+	InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
+	InternalGetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError)
 	InternalDeleteFromDB(ctx context.Context, id string) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError)
 
@@ -268,6 +270,10 @@ func (s *postgresAddonService) GetPostgresAddon(ctx context.Context, id string) 
 	return addon, nil
 }
 
+func (s *postgresAddonService) InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError) {
+	return s.postgresAddonStore.GetByID(ctx, id)
+}
+
 func (s *postgresAddonService) GetPostgresAddonByName(ctx context.Context, organisationID, name string) (*models.PostgresAddon, *errors.ServiceError) {
 	return s.postgresAddonStore.GetByName(ctx, organisationID, name)
 }
@@ -281,16 +287,16 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 		return nil, permErr
 	}
 
-	// Validate update using validator
-	if err := s.validator.ValidateForUpdate(ctx, existingPostgresAddon, postgresAddon); err != nil {
-		return nil, err
-	}
-
 	postgresAddon.ClusterID = existingPostgresAddon.ClusterID
 	postgresAddon.NamespaceID = existingPostgresAddon.NamespaceID
 	postgresAddon.Namespace = existingPostgresAddon.Namespace
 	postgresAddon.OrganisationID = existingPostgresAddon.OrganisationID
 	postgresAddon.TeamID = existingPostgresAddon.TeamID
+
+	// Validate update using validator
+	if err := s.validator.ValidateForUpdate(ctx, existingPostgresAddon, postgresAddon); err != nil {
+		return nil, err
+	}
 
 	// Validate BackupConfig object store if specified
 	if postgresAddon.BackupConfig.ObjectStoreID != "" {
@@ -604,7 +610,18 @@ func (s *postgresAddonService) GetCredentials(ctx context.Context, addonID strin
 	if permErr := s.permissions.Check(ctx, addon.TeamID, auth.ResourceAddonsPostgres, addonID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
+	return s.getCredentialsForAddon(ctx, addon, database, superuser)
+}
 
+func (s *postgresAddonService) InternalGetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError) {
+	addon, err := s.postgresAddonStore.GetByID(ctx, addonID)
+	if err != nil {
+		return nil, err
+	}
+	return s.getCredentialsForAddon(ctx, addon, database, superuser)
+}
+
+func (s *postgresAddonService) getCredentialsForAddon(ctx context.Context, addon *models.PostgresAddon, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError) {
 	ok := models.IsConditionTrue(addon.Status.Conditions, string(models.PostgresAddonConditionReadyOnce))
 	if !ok {
 		return nil, errors.BadRequest("credentials not available until addon has been ready at least once")

@@ -149,9 +149,9 @@ func (u usersService) Signup(ctx context.Context, user *models.User) (*openapi.U
 	if user.Organisation == nil {
 		return nil, errors.BadRequest("organisation is required")
 	}
-	createdOrganisation, err := u.organisationService.InternalCreate(ctx, user.Organisation)
-	if err != nil {
-		u.logger.Errorf("failed to create organisation, %s", err.Error())
+	createdOrganisation, orgErr := u.organisationService.InternalCreate(ctx, user.Organisation)
+	if orgErr != nil {
+		u.logger.Errorf("failed to create organisation, %s", orgErr.Error())
 		return nil, errors.GeneralError("failed to create user")
 	}
 	user.OrganisationID = createdOrganisation.ID

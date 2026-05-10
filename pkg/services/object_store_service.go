@@ -24,6 +24,7 @@ import (
 type ObjectStoreService interface {
 	Create(ctx context.Context, objectStore *models.ObjectStore) (*models.ObjectStore, *errors.ServiceError)
 	GetByID(ctx context.Context, ID string) (*models.ObjectStore, *errors.ServiceError)
+	InternalGetByID(ctx context.Context, ID string) (*models.ObjectStore, *errors.ServiceError)
 	GetByName(ctx context.Context, organisationID, name string) (*models.ObjectStore, *errors.ServiceError)
 	Update(ctx context.Context, id string, objectStore *models.ObjectStore) (*models.ObjectStore, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
@@ -150,6 +151,10 @@ func (s *objectStoreService) GetByID(ctx context.Context, ID string) (*models.Ob
 		return nil, permErr
 	}
 	return objectStore, nil
+}
+
+func (s *objectStoreService) InternalGetByID(ctx context.Context, ID string) (*models.ObjectStore, *errors.ServiceError) {
+	return s.objectStoreStore.GetByID(ctx, ID)
 }
 
 func (s *objectStoreService) GetByName(ctx context.Context, organisationID, name string) (*models.ObjectStore, *errors.ServiceError) {

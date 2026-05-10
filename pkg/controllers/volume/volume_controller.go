@@ -85,7 +85,7 @@ func (r *volumeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, nil
 	}
 
-	dbInstance, serr := r.VolumeService.Get(ctx, volumeID)
+	dbInstance, serr := r.VolumeService.InternalGet(ctx, volumeID)
 	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
 			r.Log.Infof("volume %s in namespace %s not found in DB", clusterInstance.Name, clusterInstance.Namespace)

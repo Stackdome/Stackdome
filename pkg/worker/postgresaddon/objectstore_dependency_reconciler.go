@@ -39,7 +39,7 @@ func (r *objectStoreDependencyReconciler) Reconcile(ctx context.Context, addon *
 		return resultNil, nil
 	}
 
-	objectStore, err := r.objectStoreService.GetByID(ctx, addon.BackupConfig.ObjectStoreID)
+	objectStore, err := r.objectStoreService.InternalGetByID(ctx, addon.BackupConfig.ObjectStoreID)
 	if err != nil {
 		return resultNil, fmt.Errorf("failed to get object store '%s': %w", addon.BackupConfig.ObjectStoreID, err)
 	}

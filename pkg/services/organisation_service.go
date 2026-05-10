@@ -82,7 +82,7 @@ func (s *organisationService) InternalCreate(ctx context.Context, spec *models.O
 		}
 	}
 
-	return s.Get(ctx, org.ID)
+	return s.organisationStore.Get(ctx, org.ID)
 }
 
 func (s *organisationService) Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError) {

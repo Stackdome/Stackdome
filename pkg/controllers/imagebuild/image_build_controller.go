@@ -89,7 +89,7 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	dbStackResouce, err := r.DBResourceService.GetByStackIDAndResourceName(ctx, stackID, imageBuild.Spec.ResourceName)
+	dbStackResouce, err := r.DBResourceService.InternalGetByStackIDAndResourceName(ctx, stackID, imageBuild.Spec.ResourceName)
 	if err != nil {
 		if err.Code == apperrors.ErrorNotFound {
 			// stack might have gotten deleted. We log and ignore this event.
@@ -105,7 +105,7 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	dbResourceBuild, serr := r.DBImageBuildService.GetByID(ctx, imageBuild.Name)
+	dbResourceBuild, serr := r.DBImageBuildService.InternalGetByID(ctx, imageBuild.Name)
 	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
 			r.Logger.Infof("imageBuild %s not found in DB, creating a new build", imageBuild.Name)

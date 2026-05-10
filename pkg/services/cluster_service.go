@@ -22,6 +22,7 @@ type ClusterService interface {
 	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
 	GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
+	InternalGet(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	AddCluster(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError)
 	InternalListAllClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError)
@@ -286,6 +287,10 @@ func (s *clusterService) Get(ctx context.Context, ID string) (*models.Cluster, *
 		return nil, permErr
 	}
 	return cluster, nil
+}
+
+func (s *clusterService) InternalGet(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError) {
+	return s.clusterStore.Get(ctx, ID)
 }
 
 func IsBase64(s string) bool {

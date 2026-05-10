@@ -85,7 +85,7 @@ func (r *addonEnvReconciler) resolveAddonEnvVars(ctx context.Context, stackID st
 		}
 		pg := addonSource.Postgres
 
-		creds, credErr := r.postgresAddonService.GetCredentials(ctx, pg.AddonID, pg.Database, pg.Superuser)
+		creds, credErr := r.postgresAddonService.InternalGetCredentials(ctx, pg.AddonID, pg.Database, pg.Superuser)
 		if credErr != nil {
 			r.logger.Errorf("failed to fetch db: '%s' credentials, got err: %s", pg.Database, credErr.Error())
 			// Check if credentials were resolved in a prior reconciliation.

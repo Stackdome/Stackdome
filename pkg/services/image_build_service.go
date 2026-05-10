@@ -18,6 +18,7 @@ type ImageBuildService interface {
 	ListByResourceName(ctx context.Context, stackID string, resourceName string) ([]*models.ImageBuild, *errors.ServiceError)
 	ListByStackID(ctx context.Context, stackID string) ([]*models.ImageBuild, *errors.ServiceError)
 	GetByID(ctx context.Context, ID string) (*models.ImageBuild, *errors.ServiceError)
+	InternalGetByID(ctx context.Context, ID string) (*models.ImageBuild, *errors.ServiceError)
 }
 
 type ImageBuildServiceSpec struct {
@@ -95,4 +96,8 @@ func (r *imageBuildService) GetByID(ctx context.Context, ID string) (*models.Ima
 		return nil, permErr
 	}
 	return build, nil
+}
+
+func (r *imageBuildService) InternalGetByID(ctx context.Context, ID string) (*models.ImageBuild, *errors.ServiceError) {
+	return r.imageBuildStore.GetByID(ctx, ID)
 }

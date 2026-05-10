@@ -32,6 +32,7 @@ type StackService interface {
 
 type StackQueryService interface {
 	GetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
+	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError)
 	// GetStacksByUserID(ctx context.Context, teamID, orgID, userID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError)
@@ -362,6 +363,10 @@ func (s *stackService) GetStack(ctx context.Context, ID string) (*models.Stack, 
 		return nil, permErr
 	}
 	return stack, nil
+}
+
+func (s *stackService) InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError) {
+	return s.stackStore.GetByID(ctx, ID)
 }
 
 func (s *stackService) GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError) {

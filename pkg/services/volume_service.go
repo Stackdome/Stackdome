@@ -15,6 +15,7 @@ import (
 
 type VolumeService interface {
 	Get(ctx context.Context, ID string) (*models.Volume, *errors.ServiceError)
+	InternalGet(ctx context.Context, ID string) (*models.Volume, *errors.ServiceError)
 	GetByVolumeNameAndNamespace(ctx context.Context, volumeName, namespace string) (*models.Volume, *errors.ServiceError)
 	InternalList(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
@@ -81,6 +82,10 @@ func (s *volumeService) Get(ctx context.Context, ID string) (*models.Volume, *er
 		return nil, permErr
 	}
 	return volume, nil
+}
+
+func (s *volumeService) InternalGet(ctx context.Context, ID string) (*models.Volume, *errors.ServiceError) {
+	return s.volumeStore.GetByID(ctx, ID)
 }
 
 func (s *volumeService) ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError) {

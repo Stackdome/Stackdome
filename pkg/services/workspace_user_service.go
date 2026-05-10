@@ -23,6 +23,7 @@ import (
 
 type WorkspaceUserService interface {
 	GetByID(ctx context.Context, ID string) (*models.WorkspaceUser, *errors.ServiceError)
+	InternalGetByID(ctx context.Context, ID string) (*models.WorkspaceUser, *errors.ServiceError)
 	GetWorkspaceUser(ctx context.Context, userID string) (*models.WorkspaceUser, *errors.ServiceError)
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.WorkspaceUser, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.WorkspaceUser, user *models.User) (*models.WorkspaceUser, *errors.ServiceError)
@@ -79,6 +80,10 @@ func (s *workspaceUserService) GetByID(ctx context.Context, ID string) (*models.
 		return nil, permErr
 	}
 	return request, nil
+}
+
+func (s *workspaceUserService) InternalGetByID(ctx context.Context, ID string) (*models.WorkspaceUser, *errors.ServiceError) {
+	return s.workspaceUserStore.GetByID(ctx, ID)
 }
 
 func (s *workspaceUserService) GetWorkspaceUser(ctx context.Context, userID string) (*models.WorkspaceUser, *errors.ServiceError) {

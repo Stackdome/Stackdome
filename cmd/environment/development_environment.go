@@ -300,6 +300,10 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Permissions:       d.PermissionService,
 	})
 
+	d.RefreshTokenStore = pgstore.NewRefreshTokenStore(pgstore.RefreshTokenStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+
 	userService := services.NewUserService(services.UserServiceSpec{
 		SessionFactory:              d.DBSession,
 		Logger:                      d.Logger,
@@ -424,10 +428,6 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	apiTokenService := services.NewAPITokenService(services.APITokenServiceSpec{
 		SessionFactory: d.DBSession,
 		Logger:         d.Logger,
-	})
-
-	d.RefreshTokenStore = pgstore.NewRefreshTokenStore(pgstore.RefreshTokenStoreSpec{
-		SessionFactory: d.DBSession,
 	})
 
 	d.OAuthStateStore = pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
