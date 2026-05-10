@@ -3,6 +3,7 @@ import { PlusCircle, AlertCircle, Loader2, Cloud } from "lucide-react";
 import { useObjectStores } from "./hooks/use-object-stores";
 import { ObjectStoreList } from "./components/object-store-list";
 import { ObjectStoreFormDialog } from "./components/object-store-form-dialog";
+import { ObjectStoreDeleteDialog } from "./components/object-store-delete-dialog";
 import type { ObjectStore } from "./types";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +15,7 @@ export default function ObjectStoresPage() {
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingStore, setEditingStore] = useState<ObjectStore | null>(null);
+  const [deletingStore, setDeletingStore] = useState<ObjectStore | null>(null);
 
   useEffect(() => {
     const path = `/object-stores`;
@@ -93,7 +95,7 @@ export default function ObjectStoresPage() {
                 setEditingStore(store);
                 setShowAddDialog(true);
               }}
-              onDelete={() => {}}
+              onDelete={(store) => setDeletingStore(store)}
             />
           )}
         </Panel>
@@ -106,6 +108,16 @@ export default function ObjectStoresPage() {
           }}
           editing={editingStore}
           onSaved={() => {
+            refetch();
+          }}
+        />
+
+        <ObjectStoreDeleteDialog
+          store={deletingStore}
+          onOpenChange={(open) => {
+            if (!open) setDeletingStore(null);
+          }}
+          onDeleted={() => {
             refetch();
           }}
         />
