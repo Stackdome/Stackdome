@@ -1120,6 +1120,8 @@ docker compose -f docker-compose.dev.yml up -d
 
 In the Stackdome UI:
 1. Create a Generic Secret named `minio-creds` with two keys: `accessKeyId=minioadmin`, `secretAccessKey=minioadmin`.
-2. Create an Object Store with provider S3, region `us-east-1` (any value — MinIO ignores it), endpoint `http://minio.minio.svc.cluster.local:9000` (or whatever the in-cluster reachable address is for your Kind setup), destination path `s3://stackdome-backups/<addon-name>`, and pick the two keys from the secret above.
+2. Create an Object Store with provider S3, region `us-east-1`, destination path `s3://stackdome-backups/<addon-name>`, and pick the two keys from the secret above. For the endpoint URL:
+   - **From the Stackdome API server running on the host:** `http://localhost:9000`
+   - **From inside the Kind cluster (where CNPG actually runs the backup):** the cluster cannot reach `localhost`. You'll need to either (a) port-forward MinIO into the cluster, or (b) deploy MinIO inside the cluster instead of via this compose file. Pick whichever works for your setup and document it in your local notes.
 
-> Note: if Kind cannot reach the host MinIO container directly, expose MinIO on the kind network or use `host.docker.internal:9000` from inside Kind. Document whichever works on your setup.
+> Note: `us-east-1` is a placeholder — MinIO doesn't enforce it, but the AWS SDK on the client side requires a non-empty region, so don't leave it blank.

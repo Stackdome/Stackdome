@@ -31,7 +31,7 @@ services:
     container_name: stackdome-dev-minio-bootstrap
     depends_on:
       minio:
-        condition: service_started
+        condition: service_healthy
     entrypoint: >
       sh -c '
         until mc alias set local http://minio:9000 minioadmin minioadmin >/dev/null 2>&1; do
