@@ -63,10 +63,20 @@ export function ObjectStoreList({ objectStores, onEdit, onDelete }: ObjectStoreL
                 </StatusPill>
               </TableCell>
               <TableCell className="text-right">
-                <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => onEdit(store)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Edit ${store.name}`}
+                  onClick={() => onEdit(store)}
+                >
                   <Pencil className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => onDelete(store)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Delete ${store.name}`}
+                  onClick={() => onDelete(store)}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </TableCell>
