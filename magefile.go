@@ -99,6 +99,7 @@ const (
 	HelmVersion      = "v3.14.0"
 	KubectlVersion   = "v1.29.0"
 	GoimportsVersion = "latest"
+	PnpmVersion      = "v10.33.2"
 
 	// Stackdome agent Helm chart
 	DefaultStackdomeChartVersion = "0.5.1-alpha"
@@ -153,8 +154,32 @@ func mustGetEnv(key string) string {
 // Core Build Functions (Global Namespace)
 // =============================================================================
 
-// Build builds the API server binary
+// BuildFrontend builds the Vite SPA into pkg/web/dist for //go:embed.
+// Skips `tsc -b` so unrelated type errors don't block the build.
+func BuildFrontend(ctx context.Context) error {
+	fmt.Println("Building frontend (pnpm install + vite build)...")
+	if err := installDep(ctx, "pnpm", PnpmVersion); err != nil {
+		return fmt.Errorf("failed to ensure pnpm: %w", err)
+	}
+	if _, err := exec.LookPath("node"); err != nil {
+		return fmt.Errorf("node not found on PATH (Node >=20.12 required, see frontend/package.json engines)")
+	}
+	pnpmBin := filepath.Join(binDir, "pnpm")
+	if err := sh.RunV(pnpmBin, "--prefix", "frontend", "install", "--frozen-lockfile"); err != nil {
+		return fmt.Errorf("pnpm install failed: %w", err)
+	}
+	if err := sh.RunV(pnpmBin, "--prefix", "frontend", "exec", "vite", "build"); err != nil {
+		return fmt.Errorf("vite build failed: %w", err)
+	}
+	// Vite's emptyOutDir wipes .gitkeep; restore so go:embed has a non-empty target.
+	if err := os.WriteFile("pkg/web/dist/.gitkeep", nil, 0644); err != nil {
+		return fmt.Errorf("restoring .gitkeep failed: %w", err)
+	}
+	return nil
+}
+
 func Build() error {
+	mg.Deps(BuildFrontend)
 	fmt.Println("Building API server...")
 	return sh.Run("go", "build", "-o", "bin/api-server", "./cmd")
 }
@@ -228,6 +253,7 @@ func (Deps) Install(ctx context.Context) error {
 		{"yq", YqVersion},
 		{"helm", HelmVersion},
 		{"kubectl", KubectlVersion},
+		{"pnpm", PnpmVersion},
 	}
 
 	for _, dep := range deps {
@@ -294,6 +320,8 @@ func installDep(ctx context.Context, name, version string) error {
 		return installHelm(ctx, version)
 	case "kubectl":
 		return installKubectl(ctx, version)
+	case "pnpm":
+		return installPnpm(ctx, version)
 	default:
 		return fmt.Errorf("unknown dependency: %s", name)
 	}
@@ -358,6 +386,31 @@ func installHelm(ctx context.Context, version string) error {
 
 	// Cleanup
 	os.RemoveAll(filepath.Join(cacheDir, fmt.Sprintf("%s-%s", goOs, goArch)))
+
+	return nil
+}
+
+func installPnpm(ctx context.Context, version string) error {
+	osName := goOs
+	if osName == "darwin" {
+		osName = "macos"
+	}
+	arch := goArch
+	if arch == "amd64" {
+		arch = "x64"
+	}
+	binaryName := fmt.Sprintf("pnpm-%s-%s", osName, arch)
+	url := fmt.Sprintf("https://github.com/pnpm/pnpm/releases/download/%s/%s",
+		version, binaryName)
+
+	binPath := filepath.Join(binDir, "pnpm")
+	if err := downloadFile(ctx, url, binPath); err != nil {
+		return fmt.Errorf("failed to download pnpm: %w", err)
+	}
+
+	if err := os.Chmod(binPath, 0755); err != nil {
+		return fmt.Errorf("failed to make pnpm executable: %w", err)
+	}
 
 	return nil
 }

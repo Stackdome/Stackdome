@@ -11,6 +11,12 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // outDir feeds //go:embed in pkg/web/web.go.
+  // emptyOutDir is required because it lives outside the frontend source root.
+  build: {
+    outDir: "../pkg/web/dist",
+    emptyOutDir: true,
+  },
   server: {
     proxy: {
       '/api': {
