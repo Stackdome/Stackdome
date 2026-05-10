@@ -113,7 +113,13 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
   }
 
   async function handleSubmit() {
-    const parsed = objectStoreFormSchema.safeParse(values);
+    const valuesForParse: ObjectStoreFormValues = {
+      ...values,
+      s3: values.provider === "s3" ? values.s3 : undefined,
+      azure: values.provider === "azure" ? values.azure : undefined,
+      gcs: values.provider === "gcs" ? values.gcs : undefined,
+    };
+    const parsed = objectStoreFormSchema.safeParse(valuesForParse);
     if (!parsed.success) {
       const errs: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
