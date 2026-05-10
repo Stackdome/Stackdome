@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, useLocation } from "react-router-dom"
-import { Database } from "lucide-react"
+import { Cloud } from "lucide-react"
 
 import {
   SidebarMenu,
@@ -11,14 +11,14 @@ import {
 
 export function NavObjectStores() {
   const location = useLocation();
-  const isActive = location.pathname.startsWith('/object-stores');
+  const isObjectStoresActive = location.pathname.startsWith('/object-stores');
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <SidebarMenuButton tooltip="Object Stores" asChild isActive={isActive}>
+        <SidebarMenuButton tooltip="Object Stores" asChild isActive={isObjectStoresActive}>
           <Link to="/object-stores">
-            <Database />
+            <Cloud />
             <span>Object Stores</span>
           </Link>
         </SidebarMenuButton>
