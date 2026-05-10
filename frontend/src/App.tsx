@@ -10,6 +10,7 @@ import SecretsPage from "@/pages/secrets"
 import DomainsPage from "@/pages/domains"
 import AddonsPage from "@/pages/addons"
 import PostgresFormPage from "@/pages/addons/components/postgres-create-page"
+import NotFoundPage from "@/pages/not-found"
 import { StackProvider } from "@/pages/stacks/contexts/stack-context"
 import { isUserLoggedIn, logoutAndRedirect } from "@/helpers/common"
 import { AppLayout } from "@/components/app-layout"
@@ -49,6 +50,7 @@ const router = createBrowserRouter(
       <Route path="/sign-in" element={<Login />} />
       <Route path="/sign-up" element={<Signup />} />
       <Route path="/logout" element={<Logout />} />
+      <Route path="*" element={<NotFoundPage />} />
     </>
   )
 )
