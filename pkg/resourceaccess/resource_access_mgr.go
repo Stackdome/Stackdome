@@ -2,14 +2,19 @@ package resourceaccess
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/log"
+	"github.com/casbin/casbin/v2/model"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 )
+
+//go:embed casbin_model.conf
+var casbinModelConf string
 
 type ResourceAccessPolicyManager interface {
 	AddPolicy(subject, domain, resource, action string) error
@@ -32,19 +37,20 @@ type CasbinResourceAccessPolicyManagerConfig struct {
 	DBConnectionString     string
 	EnableDebugLog         bool
 	PolicyAutoLoadInterval time.Duration
-	PolicyFilePath         string
 }
 
 func NewResourceAccessPolicyManager(cfg CasbinResourceAccessPolicyManagerConfig) (ResourceAccessPolicyManager, error) {
-	// Now create the adapter
-	// true = use existing database.
+	m, err := model.NewModelFromString(casbinModelConf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load embedded casbin model: %w", err)
+	}
+
 	adapter, err := gormadapter.NewAdapter("postgres", cfg.DBConnectionString, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create casbin adapter: %w", err)
 	}
 
-	// Create enforcer with our model and the gorm adapter
-	enforcer, err := casbin.NewSyncedCachedEnforcer(cfg.PolicyFilePath, adapter)
+	enforcer, err := casbin.NewSyncedCachedEnforcer(m, adapter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create casbin enforcer: %w", err)
 	}

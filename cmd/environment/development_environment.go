@@ -3,7 +3,6 @@ package environment
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/config"
@@ -232,17 +231,11 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 func (d *developmentEnvironment) initializeResourceAccessPolicyManager(ctx context.Context) error {
 	d.Logger.Debugf("Initializing resource access policy manager")
 	debugModeEnabled := d.Logger.GetLevel() == logrus.DebugLevel
-	rootdir, err := findGoModDir()
-	if err != nil {
-		return fmt.Errorf("failed to find root directory for policy file: %w", err)
-	}
-	policyFilePath := filepath.Join(rootdir, "pkg/resourceaccess/casbin_model.conf")
 	resourceAccessPolicyMgr, err := resourceaccess.NewResourceAccessPolicyManager(
 		resourceaccess.CasbinResourceAccessPolicyManagerConfig{
 			DBConnectionString:     d.Config.Database.ConnectionString(),
 			EnableDebugLog:         debugModeEnabled,
 			PolicyAutoLoadInterval: time.Minute,
-			PolicyFilePath:         policyFilePath,
 		},
 	)
 	if err != nil {
@@ -254,9 +247,11 @@ func (d *developmentEnvironment) initializeResourceAccessPolicyManager(ctx conte
 
 func (d *developmentEnvironment) initializePermissionService(ctx context.Context) error {
 	d.PermissionService = auth.NewPermissionService(auth.PermissionServiceSpec{
-		PolicyManager:  d.ResourceAccessPolicyManager,
-		SessionFactory: d.DBSession,
-		Logger:         d.Logger,
+		PolicyManager: d.ResourceAccessPolicyManager,
+		TeamStore: pgstore.NewTeamStore(pgstore.TeamStoreSpec{
+			SessionFactory: d.DBSession,
+		}),
+		Logger: d.Logger,
 	})
 	return nil
 }

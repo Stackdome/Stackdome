@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/config"
@@ -193,17 +192,11 @@ func (te *testEnvironment) initializeResourceAccessPolicyManager(ctx context.Con
 	te.Logger.Debugf("Initializing resource access policy manager for tests")
 	debugModeEnabled := te.Logger.GetLevel() == logrus.DebugLevel
 
-	rootdir, err := findGoModDir()
-	if err != nil {
-		return fmt.Errorf("failed to find root directory for policy file: %w", err)
-	}
-	policyFilePath := filepath.Join(rootdir, "pkg/resourceaccess/casbin_model.conf")
 	resourceAccessPolicyMgr, err := resourceaccess.NewResourceAccessPolicyManager(
 		resourceaccess.CasbinResourceAccessPolicyManagerConfig{
 			DBConnectionString:     te.Config.Database.ConnectionString(),
 			EnableDebugLog:         debugModeEnabled,
 			PolicyAutoLoadInterval: time.Minute,
-			PolicyFilePath:         policyFilePath,
 		},
 	)
 	if err != nil {
@@ -215,9 +208,11 @@ func (te *testEnvironment) initializeResourceAccessPolicyManager(ctx context.Con
 
 func (te *testEnvironment) initializePermissionService(ctx context.Context) error {
 	te.PermissionService = auth.NewPermissionService(auth.PermissionServiceSpec{
-		PolicyManager:  te.ResourceAccessPolicyManager,
-		SessionFactory: te.DBSession,
-		Logger:         te.Logger,
+		PolicyManager: te.ResourceAccessPolicyManager,
+		TeamStore: pgstore.NewTeamStore(pgstore.TeamStoreSpec{
+			SessionFactory: te.DBSession,
+		}),
+		Logger: te.Logger,
 	})
 	return nil
 }
