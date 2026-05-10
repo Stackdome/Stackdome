@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ObjectStoreCreatePayload } from "../types";
 
-const retentionPolicyRegex = /^\d+[dhmw]$/;
+const retentionPolicyRegex = /^[1-9]\d*[dhw]$/;
 
 const secretReferenceSchema = z.object({
   secret_id: z.string().uuid({ message: "Pick a secret" }),
@@ -30,7 +30,7 @@ export const objectStoreFormSchema = z
     destinationPath: z.string().min(1, { message: "Destination path is required" }),
     retentionPolicy: z
       .string()
-      .regex(retentionPolicyRegex, { message: "Use a value like 7d, 24h, 4w" }),
+      .regex(retentionPolicyRegex, { message: "Use a value like 7d, 24h, 4w (no zeros)" }),
     provider: z.enum(["s3", "azure", "gcs"]),
     s3: s3Schema.optional(),
     azure: azureSchema.optional(),
@@ -57,14 +57,14 @@ export function toApiPayload(values: ObjectStoreFormValues): ObjectStoreCreatePa
       region: values.s3.region,
       access_key_id: values.s3.accessKeyId,
       secret_access_key: values.s3.secretAccessKey,
-      ...(values.s3.endpointUrl ? { endpoint_url: values.s3.endpointUrl } : {}),
+      ...(values.s3.endpointUrl.trim() ? { endpoint_url: values.s3.endpointUrl.trim() } : {}),
     };
   }
   if (values.provider === "azure" && values.azure) {
     configuration.azure_credentials = {
       connection_string: values.azure.connectionString,
-      ...(values.azure.storageAccountName
-        ? { storage_account_name: values.azure.storageAccountName }
+      ...(values.azure.storageAccountName.trim()
+        ? { storage_account_name: values.azure.storageAccountName.trim() }
         : {}),
     };
   }
