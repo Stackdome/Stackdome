@@ -2,9 +2,6 @@ package config
 
 import (
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
 )
 
 type SSLMode string
@@ -26,19 +23,16 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 	c.Server.LoadEnvVariables()
 	c.Database.LoadEnvVariables()
 
-	val, found := os.LookupEnv(JWT_SECRET)
-	if found {
-		c.JwtSecret = strings.TrimSpace(val)
+	if val, ok := EnvJWTSecret.Lookup(); ok {
+		c.JwtSecret = val
 	}
 
-	val, found = os.LookupEnv(LOG_LEVEL)
-	if found {
-		c.LogLevel = strings.TrimSpace(val)
+	if val, ok := EnvLogLevel.Lookup(); ok {
+		c.LogLevel = val
 	}
 
-	val, found = os.LookupEnv(ENCRYPTION_KEY)
-	if found {
-		c.EncryptionKey = strings.TrimSpace(val)
+	if val, ok := EnvEncryptionKey.Lookup(); ok {
+		c.EncryptionKey = val
 	}
 }
 
@@ -105,23 +99,19 @@ func (c *ClusterConfig) Validate() error {
 }
 
 func (c *ClusterConfig) LoadEnvVariables() {
-	val, found := os.LookupEnv(DEFAULT_CLUSTER_NAME)
-	if found {
+	if val, ok := EnvDefaultClusterName.Lookup(); ok {
 		c.Name = val
 	}
 
-	val, found = os.LookupEnv(DEFAULT_CLUSTER_API_URL)
-	if found {
+	if val, ok := EnvDefaultClusterAPIURL.Lookup(); ok {
 		c.ClusterURL = val
 	}
 
-	val, found = os.LookupEnv(DEFAULT_CLUSTER_CA_DATA)
-	if found {
+	if val, ok := EnvDefaultClusterCAData.Lookup(); ok {
 		c.ClusterCAData = val
 	}
 
-	val, found = os.LookupEnv(DEFAULT_CLUSTER_TOKEN)
-	if found {
+	if val, ok := EnvDefaultClusterToken.Lookup(); ok {
 		c.Token = val
 	}
 }
@@ -187,7 +177,6 @@ func NewApplicationConfig() *ApplicationConfig {
 	return &ApplicationConfig{
 		Server:   NewServerConfig(),
 		Database: NewDatabaseConfig(),
-		LogLevel: "info",
 	}
 }
 
@@ -204,93 +193,61 @@ func (c *ServerConfig) Validate() error {
 }
 
 func NewServerConfig() *ServerConfig {
-	return &ServerConfig{
-		Hostname:    "",
-		BindAddress: "0.0.0.0:8000",
-	}
+	return &ServerConfig{}
 }
 func (c *ServerConfig) LoadEnvVariables() {
-	val, found := os.LookupEnv(SERVER_HOSTNAME)
-	if found {
+	if val, ok := EnvServerHostname.Lookup(); ok {
 		c.Hostname = val
 	}
 
-	val, found = os.LookupEnv(SERVER_BIND_ADDRESS)
-	if found {
+	if val, ok := EnvServerBindAddress.Lookup(); ok {
 		c.BindAddress = val
 	}
 }
 
 func NewDatabaseConfig() *DatabaseConfig {
 	return &DatabaseConfig{
-		Dialect:            "postgres",
-		SSLMode:            "disable",
-		Debug:              false,
-		MaxOpenConnections: 50,
+		Dialect: "postgres",
 	}
 }
 
 func (c *DatabaseConfig) LoadEnvVariables() {
-	val, found := os.LookupEnv(DB_SSL_MODE)
-	if found {
+	if val, ok := EnvDBSSLMode.Lookup(); ok {
 		if val == string(DBSSLModeDisable) || val == string(DBSSLModeRequire) {
 			c.SSLMode = SSLMode(val)
 		}
 	}
 
-	val, found = os.LookupEnv(DB_MAX_CONNECTIONS)
-	if found {
-		// convert string to int
-		maxConns, err := strconv.Atoi(val)
-		if err == nil {
-			c.MaxOpenConnections = maxConns
-		}
-		// TODO: log error
+	if val, ok := EnvDBMaxConnections.Lookup(); ok {
+		c.MaxOpenConnections = val
 	}
 
-	val, found = os.LookupEnv(DB_HOST)
-	if found {
+	if val, ok := EnvDBHost.Lookup(); ok {
 		c.Host = val
 	}
 
-	val, found = os.LookupEnv(DB_PORT)
-	if found {
-		// convert string to int
-		port, err := strconv.Atoi(val)
-		if err == nil {
-			c.Port = port
-		}
-		// TODO: log error
+	if val, ok := EnvDBPort.Lookup(); ok {
+		c.Port = val
 	}
 
-	val, found = os.LookupEnv(DB_NAME)
-	if found {
+	if val, ok := EnvDBName.Lookup(); ok {
 		c.Name = val
 	}
 
-	val, found = os.LookupEnv(DB_USERNAME)
-	if found {
+	if val, ok := EnvDBUsername.Lookup(); ok {
 		c.Username = val
 	}
 
-	val, found = os.LookupEnv(DB_PASSWORD)
-	if found {
+	if val, ok := EnvDBPassword.Lookup(); ok {
 		c.Password = val
 	}
 
-	val, found = os.LookupEnv(DB_ROOT_CERT_FILE)
-	if found {
+	if val, ok := EnvDBRootCertFile.Lookup(); ok {
 		c.RootCertFile = val
 	}
 
-	val, found = os.LookupEnv(DB_DEBUG_MODE)
-	if found {
-		// convert string to bool
-		debugMode, err := strconv.ParseBool(val)
-		if err == nil {
-			c.Debug = debugMode
-		}
-		// TODO: log error
+	if val, ok := EnvDBDebugMode.Lookup(); ok {
+		c.Debug = val
 	}
 }
 

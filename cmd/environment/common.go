@@ -6,24 +6,23 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/ashishmax31/stackdome-api-server/config"
 	"github.com/golang/glog"
 )
 
 const (
-	EnvironmentStringKey = "STACKDOME_ENV"
-	DEVELOPMENT_ENV      = "DEVELOPMENT"
-	PRODUCTION_ENV       = "PRODUCTION"
-	TESTING_ENV          = "TESTING"
-	EnvironmentDefault   = DEVELOPMENT_ENV
+	DEVELOPMENT_ENV = "DEVELOPMENT"
+	PRODUCTION_ENV  = "PRODUCTION"
+	TESTING_ENV     = "TESTING"
 )
 
 func GetEnvironmentStrFromEnv() string {
-	envStr, specified := os.LookupEnv(EnvironmentStringKey)
-	if !specified || envStr == "" {
-		glog.Infof("Environment variable %q not specified, using default %q", EnvironmentStringKey, EnvironmentDefault)
-		envStr = EnvironmentDefault
+	val, ok := config.EnvStackdomeEnv.Lookup()
+	if !ok || val == "" {
+		glog.Infof("Environment variable %q not specified, using default %q", config.EnvStackdomeEnv.Name, DEVELOPMENT_ENV)
+		return DEVELOPMENT_ENV
 	}
-	return envStr
+	return val
 }
 
 func LoadEnv() EnvImpl {
