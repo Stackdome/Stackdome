@@ -7,13 +7,14 @@ Name | Type | Description | Notes
 **Name** | **string** | User&#39;s name | 
 **Email** | **string** | User&#39;s email address | 
 **Password** | **string** | Users desired password | 
-**Organisation** | [**Organisation**](Organisation.md) |  | 
+**Organisation** | Pointer to [**Organisation**](Organisation.md) |  | [optional] 
+**InviteToken** | Pointer to **string** | Optional invite token for joining an existing organization | [optional] 
 
 ## Methods
 
 ### NewUserSignupRequest
 
-`func NewUserSignupRequest(name string, email string, password string, organisation Organisation, ) *UserSignupRequest`
+`func NewUserSignupRequest(name string, email string, password string, ) *UserSignupRequest`
 
 NewUserSignupRequest instantiates a new UserSignupRequest object
 This constructor will assign default values to properties that have it defined,
@@ -107,6 +108,36 @@ and a boolean to check if the value has been set.
 
 SetOrganisation sets Organisation field to given value.
 
+### HasOrganisation
+
+`func (o *UserSignupRequest) HasOrganisation() bool`
+
+HasOrganisation returns a boolean if a field has been set.
+
+### GetInviteToken
+
+`func (o *UserSignupRequest) GetInviteToken() string`
+
+GetInviteToken returns the InviteToken field if non-nil, zero value otherwise.
+
+### GetInviteTokenOk
+
+`func (o *UserSignupRequest) GetInviteTokenOk() (*string, bool)`
+
+GetInviteTokenOk returns a tuple with the InviteToken field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetInviteToken
+
+`func (o *UserSignupRequest) SetInviteToken(v string)`
+
+SetInviteToken sets InviteToken field to given value.
+
+### HasInviteToken
+
+`func (o *UserSignupRequest) HasInviteToken() bool`
+
+HasInviteToken returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

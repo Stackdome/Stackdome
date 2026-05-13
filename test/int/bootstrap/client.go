@@ -107,7 +107,8 @@ func (cm *ClientManager) createTestUser(ctx context.Context) (*UserInfo, error) 
 	email := fmt.Sprintf("test-%d@example.com", time.Now().Unix())
 	organisation := openapi.NewOrganisation()
 	organisation.SetName("stackdome")
-	req := openapi.NewUserSignupRequest("Test User", email, "testpassword123", *organisation)
+	req := openapi.NewUserSignupRequest("Test User", email, "testpassword123")
+	req.SetOrganisation(*organisation)
 
 	cm.logger.Info("Creating test user: %+v", *req)
 

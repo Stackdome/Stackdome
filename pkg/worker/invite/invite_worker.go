@@ -1,0 +1,122 @@
+package invite
+
+import (
+	"context"
+	"time"
+
+	emailpkg "github.com/ashishmax31/stackdome-api-server/pkg/email"
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/services"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	"github.com/ashishmax31/stackdome-api-server/pkg/worker"
+	"github.com/openshift-online/ocm-sdk-go/leadership"
+)
+
+const InviteWorkerName = "invite-email-worker"
+
+type inviteWorker struct {
+	inviteService  services.OrgInviteService
+	emailService   emailpkg.EmailService
+	leadershipFlag *leadership.Flag
+	worker.BaseWorker
+}
+
+type InviteWorkerSpec struct {
+	InviteService  services.OrgInviteService
+	EmailService   emailpkg.EmailService
+	LeadershipFlag *leadership.Flag
+	Env            string
+}
+
+func NewInviteWorker(spec InviteWorkerSpec) worker.Worker {
+	return &inviteWorker{
+		inviteService:  spec.InviteService,
+		emailService:   spec.EmailService,
+		leadershipFlag: spec.LeadershipFlag,
+		BaseWorker:     worker.NewBaseWorker(InviteWorkerName, spec.Env),
+	}
+}
+
+func (w *inviteWorker) Interval() time.Duration {
+	return 30 * time.Second
+}
+
+func (w *inviteWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
+	if w.leadershipFlag != nil && !w.leadershipFlag.Raised() {
+		w.Logger().Infof("Not the leader, invite email worker will not send emails")
+		return nil, nil
+	}
+
+	params := stores.ListParams{Page: 1, PageSize: stores.MaxPageSize}
+	result, serr := w.inviteService.InternalGetPendingUnsent(ctx, params)
+	if serr != nil {
+		return nil, w.WorkerError.NewError("failed to list pending unsent invites: %v", serr)
+	}
+
+	operands := make([]worker.Operand, len(result.Items))
+	for i, invite := range result.Items {
+		operands[i] = invite
+	}
+	return operands, nil
+}
+
+func (w *inviteWorker) Execute(ctx context.Context, operand worker.Operand) (worker.Result, *errors.ServiceError) {
+	id, ok := operand.(*models.OrgInvite)
+	if !ok {
+		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *models.OrgInvite")
+	}
+
+	invite, serr := w.inviteService.InternalGetByID(ctx, id.ID)
+	if serr != nil {
+		if serr.Is404() {
+			w.Logger().Infof("Invite %s not found, skipping", id.ID)
+			return worker.Result{}, nil
+		}
+		return worker.Result{}, serr
+	}
+
+	if invite.EmailSent || invite.Status != models.InviteStatusPending {
+		return worker.Result{}, nil
+	}
+
+	rawToken, decErr := w.inviteService.InternalDecryptToken(ctx, invite.EncryptedToken)
+	if decErr != nil {
+		w.Logger().Errorf("failed to decrypt token for invite %s: %s", invite.ID, decErr.Error())
+		w.inviteService.InternalMarkEmailError(ctx, invite.ID, "failed to decrypt token")
+		return worker.Result{}, nil
+	}
+
+	orgName := ""
+	if invite.Organisation != nil {
+		orgName = invite.Organisation.Name
+	}
+	teamName := ""
+	if invite.Team != nil {
+		teamName = invite.Team.Name
+	}
+	inviterName := ""
+	if invite.InvitedBy != nil {
+		inviterName = invite.InvitedBy.Name
+	}
+
+	w.Logger().Infof("Sending invite email to %s for org %s", invite.Email, orgName)
+
+	emailErr := w.emailService.SendInviteEmail(ctx, emailpkg.InviteEmailParams{
+		ToEmail:     invite.Email,
+		OrgName:     orgName,
+		TeamName:    teamName,
+		InviterName: inviterName,
+		InviteToken: rawToken,
+		ExpiresAt:   invite.ExpiresAt,
+	})
+	if emailErr != nil {
+		w.Logger().Errorf("failed to send invite email to %s: %s", invite.Email, emailErr.Error())
+		w.inviteService.InternalMarkEmailError(ctx, invite.ID, emailErr.Error())
+		return worker.Result{RequeueAfter: 5 * time.Minute}, nil
+	}
+
+	w.inviteService.InternalMarkEmailSent(ctx, invite.ID)
+	w.Logger().Infof("Invite email sent to %s", invite.Email)
+	return worker.Result{}, nil
+}

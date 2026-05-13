@@ -7,11 +7,13 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
+	emailpkg "github.com/ashishmax31/stackdome-api-server/pkg/email"
 	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
+	"github.com/openshift-online/ocm-sdk-go/leadership"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -35,6 +37,8 @@ type Env struct {
 	PermissionService           auth.PermissionService
 	RefreshTokenStore           stores.RefreshTokenStore
 	OAuthStateStore             stores.OAuthStateStore
+	EmailService                emailpkg.EmailService
+	LeadershipFlag              *leadership.Flag
 	Logger                      applogger.Logger
 }
 
@@ -70,4 +74,5 @@ type Services struct {
 	AddonUsageService           services.AddonUsageService
 	APITokenService             services.APITokenService
 	TeamService                 services.TeamService
+	OrgInviteService            services.OrgInviteService
 }

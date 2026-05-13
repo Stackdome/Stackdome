@@ -99,6 +99,7 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 		PublicPaths: []string{
 			"^/api/v1/user-signup",
 			"^/api/v1/auth",
+			"^/api/v1/invites/[^/]+/info$",
 			"^/health",
 		},
 		// Set JWT authentication as the default handler.

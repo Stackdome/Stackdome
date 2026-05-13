@@ -17,7 +17,6 @@ import (
 // APITokenList struct for APITokenList
 type APITokenList struct {
 	Items []APIToken `json:"items,omitempty"`
-	Total *int32     `json:"total,omitempty"`
 }
 
 // NewAPITokenList instantiates a new APITokenList object
@@ -69,45 +68,10 @@ func (o *APITokenList) SetItems(v []APIToken) {
 	o.Items = v
 }
 
-// GetTotal returns the Total field value if set, zero value otherwise.
-func (o *APITokenList) GetTotal() int32 {
-	if o == nil || o.Total == nil {
-		var ret int32
-		return ret
-	}
-	return *o.Total
-}
-
-// GetTotalOk returns a tuple with the Total field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *APITokenList) GetTotalOk() (*int32, bool) {
-	if o == nil || o.Total == nil {
-		return nil, false
-	}
-	return o.Total, true
-}
-
-// HasTotal returns a boolean if a field has been set.
-func (o *APITokenList) HasTotal() bool {
-	if o != nil && o.Total != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetTotal gets a reference to the given int32 and assigns it to the Total field.
-func (o *APITokenList) SetTotal(v int32) {
-	o.Total = &v
-}
-
 func (o APITokenList) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Items != nil {
 		toSerialize["items"] = o.Items
-	}
-	if o.Total != nil {
-		toSerialize["total"] = o.Total
 	}
 	return json.Marshal(toSerialize)
 }

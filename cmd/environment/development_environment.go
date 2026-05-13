@@ -3,6 +3,7 @@ package environment
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/config"
@@ -15,6 +16,8 @@ import (
 	postgresbackupcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/postgres_backup"
 	stackcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stack"
 	stackresourcecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stackresource"
+	emailpkg "github.com/ashishmax31/stackdome-api-server/pkg/email"
+	inviteworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/invite"
 	postgresaddonworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/postgresaddon"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/stack"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
@@ -121,6 +124,21 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 	})
 	d.WorkerManager.RegisterWorker(pgAddonWorker, &models.PostgresAddon{})
 
+	inviteEmailWorker := inviteworker.NewInviteWorker(inviteworker.InviteWorkerSpec{
+		InviteService:  d.Services.OrgInviteService,
+		EmailService:   d.EmailService,
+		LeadershipFlag: d.LeadershipFlag,
+		Env:            d.Env.Name,
+	})
+	d.WorkerManager.RegisterWorker(inviteEmailWorker, &models.OrgInvite{})
+
+	inviteCleanupWorker := inviteworker.NewInviteCleanupWorker(inviteworker.InviteCleanupWorkerSpec{
+		InviteService:  d.Services.OrgInviteService,
+		LeadershipFlag: d.LeadershipFlag,
+		Env:            d.Env.Name,
+	})
+	d.WorkerManager.RegisterWorker(inviteCleanupWorker, &inviteworker.InviteCleanupBatch{})
+
 	return nil
 }
 
@@ -177,6 +195,7 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 		return fmt.Errorf("failed to create leadership flag: %w", err)
 	}
 
+	d.LeadershipFlag = leadershipFlag
 	d.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
 		LeadershipFlag: leadershipFlag,
 		ControllersToRegister: []clustermanager.Controller{
@@ -430,6 +449,35 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:         d.Logger,
 	})
 
+	var emailSvc emailpkg.EmailService
+	smtpHost := os.Getenv("SMTP_HOST")
+	if smtpHost != "" {
+		emailSvc = emailpkg.NewSMTPEmailService(emailpkg.SMTPConfig{
+			Host:        smtpHost,
+			Port:        os.Getenv("SMTP_PORT"),
+			Username:    os.Getenv("SMTP_USERNAME"),
+			Password:    os.Getenv("SMTP_PASSWORD"),
+			FromAddress: os.Getenv("SMTP_FROM_ADDRESS"),
+			AppBaseURL:  os.Getenv("APP_BASE_URL"),
+		})
+		d.Logger.Infof("SMTP email service configured")
+	} else {
+		emailSvc = emailpkg.NewNoopEmailService(applogger.NewLoggerWithPrefix(ctx, "email-service").SetLevel(d.Logger.GetLevel()))
+		d.Logger.Infof("SMTP not configured, using no-op email service")
+	}
+	d.EmailService = emailSvc
+
+	orgInviteService := services.NewOrgInviteService(services.OrgInviteServiceSpec{
+		SessionFactory:    d.DBSession,
+		TeamService:       teamService,
+		UserService:       userService,
+		EncryptionService: encryptionService,
+		Permissions:       d.PermissionService,
+		Logger:            d.Logger,
+	})
+
+	userService.SetOrgInviteService(orgInviteService)
+
 	d.OAuthStateStore = pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
 		SessionFactory: d.DBSession,
 	})
@@ -458,6 +506,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		AddonUsageService:           addonUsageService,
 		APITokenService:             apiTokenService,
 		TeamService:                 teamService,
+		OrgInviteService:            orgInviteService,
 	}
 
 	return nil
@@ -530,6 +579,7 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 	d.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	d.Services.StackService.InjectBackgroundJobEnqueuer(dep)
 	d.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
+	d.Services.OrgInviteService.InjectBackgroundJobEnqueuer(dep)
 	return nil
 }
 

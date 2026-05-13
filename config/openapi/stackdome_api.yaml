@@ -2346,6 +2346,150 @@ paths:
           description: WorkspaceUser not found
         '500':
           description: Internal server error
+
+  # Invite management routes
+  /api/v1/organizations/{org_id}/invites:
+    post:
+      summary: Create an invite to the organization
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgInviteCreateRequest'
+      responses:
+        '201':
+          description: Invite created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgInviteCreateResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '409':
+          description: Conflict - user exists or duplicate pending invite
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+    get:
+      summary: List invites for an organization
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter invites by status (pending, accepted, revoked, expired)
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgInviteList'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/v1/organizations/{org_id}/invites/{id}:
+    get:
+      summary: Get an invite by ID
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgInvite'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Invite not found
+        '500':
+          description: Internal server error
+    delete:
+      summary: Revoke a pending invite
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Invite revoked successfully
+        '400':
+          description: Can only revoke pending invites
+        '401':
+          description: Unauthorized
+        '404':
+          description: Invite not found
+        '500':
+          description: Internal server error
+
+  /api/v1/organizations/{org_id}/invites/{id}/resend:
+    post:
+      summary: Re-queue invite email for delivery
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Invite email re-queued
+        '400':
+          description: Can only resend pending invites
+        '401':
+          description: Unauthorized
+        '404':
+          description: Invite not found
+        '500':
+          description: Internal server error
+
+  /api/v1/invites/{token}/info:
+    get:
+      summary: Get public invite info (unauthenticated)
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The invite token
+      responses:
+        '200':
+          description: Invite info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgInviteInfo'
+        '404':
+          description: Invite not found
+        '410':
+          description: Invite expired or revoked
+
 components:
   securitySchemes:
     Bearer:
@@ -2517,7 +2661,6 @@ components:
       - name
       - email
       - password
-      - organisation
       properties:
         name:
           type: string
@@ -2531,6 +2674,9 @@ components:
           description: Users desired password
         organisation:
           $ref: '#/components/schemas/Organisation'
+        invite_token:
+          type: string
+          description: Optional invite token for joining an existing organization
     UserRole:
       type: string
       enum:
@@ -4401,5 +4547,122 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/APIToken'
+    InviteStatus:
+      type: string
+      enum:
+        - pending
+        - accepted
+        - revoked
+        - expired
+      x-enum-varnames:
+        - INVITE_PENDING
+        - INVITE_ACCEPTED
+        - INVITE_REVOKED
+        - INVITE_EXPIRED
+    OrgInvite:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        email:
+          type: string
+        organisation_id:
+          type: string
+          readOnly: true
+        team_name:
+          type: string
+        role:
+          type: string
+          enum:
+            - Developer
+            - Viewer
+        status:
+          $ref: '#/components/schemas/InviteStatus'
+        expires_at:
+          type: string
+          format: date-time
+        invited_by:
+          type: string
+        email_sent:
+          type: boolean
+        email_error:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        accepted_at:
+          type: string
+          format: date-time
+    OrgInviteCreateRequest:
+      type: object
+      required:
+        - email
+        - team_name
+        - role
+        - expires_in_days
+      properties:
+        email:
+          type: string
+          format: email
+        team_name:
+          type: string
+        role:
+          type: string
+          enum:
+            - Developer
+            - Viewer
+        expires_in_days:
+          type: integer
+          minimum: 1
+          maximum: 30
+    OrgInviteCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        organisation_id:
+          type: string
+        team_name:
+          type: string
+        role:
+          type: string
+        status:
+          $ref: '#/components/schemas/InviteStatus'
+        expires_at:
+          type: string
+          format: date-time
+        invited_by:
+          type: string
+        email_sent:
+          type: boolean
+        invite_token:
+          type: string
+          description: Raw invite token (shown only once at creation)
+        created_at:
+          type: string
+          format: date-time
+    OrgInviteList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgInvite'
         total:
           type: integer
+    OrgInviteInfo:
+      type: object
+      properties:
+        org_name:
+          type: string
+        team_name:
+          type: string
+        inviter_name:
+          type: string
+        expires_at:
+          type: string
+          format: date-time

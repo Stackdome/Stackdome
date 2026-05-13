@@ -21,20 +21,21 @@ type UserSignupRequest struct {
 	// User's email address
 	Email string `json:"email"`
 	// Users desired password
-	Password     string       `json:"password"`
-	Organisation Organisation `json:"organisation"`
+	Password     string        `json:"password"`
+	Organisation *Organisation `json:"organisation,omitempty"`
+	// Optional invite token for joining an existing organization
+	InviteToken *string `json:"invite_token,omitempty"`
 }
 
 // NewUserSignupRequest instantiates a new UserSignupRequest object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewUserSignupRequest(name string, email string, password string, organisation Organisation) *UserSignupRequest {
+func NewUserSignupRequest(name string, email string, password string) *UserSignupRequest {
 	this := UserSignupRequest{}
 	this.Name = name
 	this.Email = email
 	this.Password = password
-	this.Organisation = organisation
 	return &this
 }
 
@@ -118,28 +119,68 @@ func (o *UserSignupRequest) SetPassword(v string) {
 	o.Password = v
 }
 
-// GetOrganisation returns the Organisation field value
+// GetOrganisation returns the Organisation field value if set, zero value otherwise.
 func (o *UserSignupRequest) GetOrganisation() Organisation {
-	if o == nil {
+	if o == nil || o.Organisation == nil {
 		var ret Organisation
 		return ret
 	}
-
-	return o.Organisation
+	return *o.Organisation
 }
 
-// GetOrganisationOk returns a tuple with the Organisation field value
+// GetOrganisationOk returns a tuple with the Organisation field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *UserSignupRequest) GetOrganisationOk() (*Organisation, bool) {
-	if o == nil {
+	if o == nil || o.Organisation == nil {
 		return nil, false
 	}
-	return &o.Organisation, true
+	return o.Organisation, true
 }
 
-// SetOrganisation sets field value
+// HasOrganisation returns a boolean if a field has been set.
+func (o *UserSignupRequest) HasOrganisation() bool {
+	if o != nil && o.Organisation != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetOrganisation gets a reference to the given Organisation and assigns it to the Organisation field.
 func (o *UserSignupRequest) SetOrganisation(v Organisation) {
-	o.Organisation = v
+	o.Organisation = &v
+}
+
+// GetInviteToken returns the InviteToken field value if set, zero value otherwise.
+func (o *UserSignupRequest) GetInviteToken() string {
+	if o == nil || o.InviteToken == nil {
+		var ret string
+		return ret
+	}
+	return *o.InviteToken
+}
+
+// GetInviteTokenOk returns a tuple with the InviteToken field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *UserSignupRequest) GetInviteTokenOk() (*string, bool) {
+	if o == nil || o.InviteToken == nil {
+		return nil, false
+	}
+	return o.InviteToken, true
+}
+
+// HasInviteToken returns a boolean if a field has been set.
+func (o *UserSignupRequest) HasInviteToken() bool {
+	if o != nil && o.InviteToken != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetInviteToken gets a reference to the given string and assigns it to the InviteToken field.
+func (o *UserSignupRequest) SetInviteToken(v string) {
+	o.InviteToken = &v
 }
 
 func (o UserSignupRequest) MarshalJSON() ([]byte, error) {
@@ -153,8 +194,11 @@ func (o UserSignupRequest) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["password"] = o.Password
 	}
-	if true {
+	if o.Organisation != nil {
 		toSerialize["organisation"] = o.Organisation
+	}
+	if o.InviteToken != nil {
+		toSerialize["invite_token"] = o.InviteToken
 	}
 	return json.Marshal(toSerialize)
 }

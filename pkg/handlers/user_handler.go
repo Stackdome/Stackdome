@@ -61,7 +61,7 @@ func (a usersHandler) ListByOrgID(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
 			orgID := mux.Vars(r)["org_id"]
-			params := parsePaginationParams(r)
+			params := parseListParams(r, nil)
 
 			result, serr := a.userService.ListByOrgID(r.Context(), orgID, params)
 			if serr != nil {
@@ -85,15 +85,20 @@ func (a usersHandler) ListByOrgID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a usersHandler) Signup(w http.ResponseWriter, r *http.Request) {
-	var user openapi.UserSignupRequest
+	var req openapi.UserSignupRequest
 	cfg := &handlerConfig{
-		&user,
-		validation.ValidateUserCreate(&user),
+		&req,
+		validation.ValidateUserCreate(&req),
 		func() (_ interface{}, returnErr *errors.ServiceError) {
 			ctx := r.Context()
-			convertedUser := presenters.ConvertUser(&user)
+			convertedUser := presenters.ConvertUser(&req)
 
-			user, err := a.userService.Signup(ctx, convertedUser)
+			inviteToken := ""
+			if req.InviteToken != nil {
+				inviteToken = *req.InviteToken
+			}
+
+			user, err := a.userService.Signup(ctx, convertedUser, inviteToken)
 			if err != nil {
 				return nil, err
 			}

@@ -19,12 +19,14 @@ import (
 	volumecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/volume"
 	workspaceusercontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceuser"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
+	emailpkg "github.com/ashishmax31/stackdome-api-server/pkg/email"
 	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services/clusterresource"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	inviteworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/invite"
 	postgresaddonworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/postgresaddon"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/stack"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
@@ -392,6 +394,19 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:         te.Logger,
 	})
 
+	te.EmailService = emailpkg.NewNoopEmailService(applogger.NewLoggerWithPrefix(ctx, "test-email-service").SetLevel(te.Logger.GetLevel()))
+
+	orgInviteService := services.NewOrgInviteService(services.OrgInviteServiceSpec{
+		SessionFactory:    te.DBSession,
+		TeamService:       teamService,
+		UserService:       userService,
+		EncryptionService: encryptionService,
+		Permissions:       te.PermissionService,
+		Logger:            te.Logger,
+	})
+
+	userService.SetOrgInviteService(orgInviteService)
+
 	te.OAuthStateStore = pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
 		SessionFactory: te.DBSession,
 	})
@@ -420,6 +435,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		AddonUsageService:           addonUsageService,
 		APITokenService:             apiTokenService,
 		TeamService:                 teamService,
+		OrgInviteService:            orgInviteService,
 	}
 
 	return nil
@@ -438,6 +454,7 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 		return fmt.Errorf("failed to create leadership flag: %w", err)
 	}
 
+	te.LeadershipFlag = leadershipFlag
 	te.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
 		LeadershipFlag: leadershipFlag,
 		ControllersToRegister: []clustermanager.Controller{
@@ -526,6 +543,21 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 	})
 	te.WorkerManager.RegisterWorker(pgAddonWorker, &models.PostgresAddon{})
 
+	inviteEmailWorker := inviteworker.NewInviteWorker(inviteworker.InviteWorkerSpec{
+		InviteService:  te.Services.OrgInviteService,
+		EmailService:   te.EmailService,
+		LeadershipFlag: te.LeadershipFlag,
+		Env:            te.Env.Name,
+	})
+	te.WorkerManager.RegisterWorker(inviteEmailWorker, &models.OrgInvite{})
+
+	inviteCleanupWorker := inviteworker.NewInviteCleanupWorker(inviteworker.InviteCleanupWorkerSpec{
+		InviteService:  te.Services.OrgInviteService,
+		LeadershipFlag: te.LeadershipFlag,
+		Env:            te.Env.Name,
+	})
+	te.WorkerManager.RegisterWorker(inviteCleanupWorker, &inviteworker.InviteCleanupBatch{})
+
 	return nil
 }
 
@@ -596,6 +628,7 @@ func (te *testEnvironment) injectClusterResourceServices(ctx context.Context) er
 	te.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	te.Services.StackService.InjectBackgroundJobEnqueuer(dep)
 	te.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
+	te.Services.OrgInviteService.InjectBackgroundJobEnqueuer(dep)
 	return nil
 }
 

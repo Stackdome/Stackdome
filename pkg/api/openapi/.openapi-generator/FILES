@@ -55,6 +55,7 @@ docs/ImageRepository.md
 docs/ImageSpec.md
 docs/Ingress.md
 docs/InitSpec.md
+docs/InviteStatus.md
 docs/Label.md
 docs/LifecycleConfig.md
 docs/List.md
@@ -66,6 +67,11 @@ docs/ObjectStoreConfiguration.md
 docs/ObjectStoreList.md
 docs/ObjectStoreSpec.md
 docs/ObjectStoreStatus.md
+docs/OrgInvite.md
+docs/OrgInviteCreateRequest.md
+docs/OrgInviteCreateResponse.md
+docs/OrgInviteInfo.md
+docs/OrgInviteList.md
 docs/Organisation.md
 docs/Port.md
 docs/PostgresAddon.md
@@ -199,6 +205,7 @@ model_image_repository.go
 model_image_spec.go
 model_ingress.go
 model_init_spec.go
+model_invite_status.go
 model_label.go
 model_lifecycle_config.go
 model_list.go
@@ -210,6 +217,11 @@ model_object_store_configuration.go
 model_object_store_list.go
 model_object_store_spec.go
 model_object_store_status.go
+model_org_invite.go
+model_org_invite_create_request.go
+model_org_invite_create_response.go
+model_org_invite_info.go
+model_org_invite_list.go
 model_organisation.go
 model_port.go
 model_postgres_addon.go

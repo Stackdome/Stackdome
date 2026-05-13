@@ -59,7 +59,7 @@ func (s *dbTeamMembershipStore) GetByTeamAndUser(ctx context.Context, teamID, us
 func (s *dbTeamMembershipStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.TeamMembership, *errors.ServiceError) {
 	grm := s.sessionFactory.New(ctx)
 	var memberships []*models.TeamMembership
-	if err := grm.Preload("User").Where("team_id = ?", teamID).Find(&memberships).Error; err != nil {
+	if err := grm.Preload("User").Preload("Team").Where("team_id = ?", teamID).Find(&memberships).Error; err != nil {
 		return nil, errors.GeneralError("failed to list team memberships: %s", err.Error())
 	}
 	return memberships, nil
@@ -68,7 +68,7 @@ func (s *dbTeamMembershipStore) ListByTeamID(ctx context.Context, teamID string)
 func (s *dbTeamMembershipStore) ListByUserID(ctx context.Context, userID string) ([]*models.TeamMembership, *errors.ServiceError) {
 	grm := s.sessionFactory.New(ctx)
 	var memberships []*models.TeamMembership
-	if err := grm.Preload("Team").Where("user_id = ?", userID).Find(&memberships).Error; err != nil {
+	if err := grm.Preload("Team").Preload("User").Where("user_id = ?", userID).Find(&memberships).Error; err != nil {
 		return nil, errors.GeneralError("failed to list memberships for user: %s", err.Error())
 	}
 	return memberships, nil
@@ -77,7 +77,7 @@ func (s *dbTeamMembershipStore) ListByUserID(ctx context.Context, userID string)
 func (s *dbTeamMembershipStore) ListByUserIDAndOrgID(ctx context.Context, userID, orgID string) ([]*models.TeamMembership, *errors.ServiceError) {
 	grm := s.sessionFactory.New(ctx)
 	var memberships []*models.TeamMembership
-	if err := grm.Preload("Team").
+	if err := grm.Preload("Team").Preload("User").
 		Joins("JOIN teams ON teams.id = team_memberships.team_id").
 		Where("team_memberships.user_id = ? AND teams.organisation_id = ?", userID, orgID).
 		Find(&memberships).Error; err != nil {
@@ -88,24 +88,26 @@ func (s *dbTeamMembershipStore) ListByUserIDAndOrgID(ctx context.Context, userID
 
 func (s *dbTeamMembershipStore) Update(ctx context.Context, id string, membership *models.TeamMembership) (*models.TeamMembership, *errors.ServiceError) {
 	grm := s.sessionFactory.New(ctx)
-	if err := grm.Model(&models.TeamMembership{}).Where("id = ?", id).Updates(map[string]interface{}{
+	result := grm.Model(&models.TeamMembership{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"role": membership.Role,
-	}).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, errors.NotFound("team membership with id '%s' not found", id)
-		}
-		return nil, errors.GeneralError("failed to update team membership: %s", err.Error())
+	})
+	if result.Error != nil {
+		return nil, errors.GeneralError("failed to update team membership: %s", result.Error.Error())
+	}
+	if result.RowsAffected == 0 {
+		return nil, errors.NotFound("team membership with id '%s' not found", id)
 	}
 	return s.GetByID(ctx, id)
 }
 
 func (s *dbTeamMembershipStore) Delete(ctx context.Context, id string) *errors.ServiceError {
 	grm := s.sessionFactory.New(ctx)
-	if err := grm.Where("id = ?", id).Delete(&models.TeamMembership{}).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return errors.NotFound("team membership with id '%s' not found", id)
-		}
-		return errors.GeneralError("failed to delete team membership: %s", err.Error())
+	result := grm.Where("id = ?", id).Delete(&models.TeamMembership{})
+	if result.Error != nil {
+		return errors.GeneralError("failed to delete team membership: %s", result.Error.Error())
+	}
+	if result.RowsAffected == 0 {
+		return errors.NotFound("team membership with id '%s' not found", id)
 	}
 	return nil
 }
