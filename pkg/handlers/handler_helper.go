@@ -240,16 +240,25 @@ func addStreamHeaders(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func parsePaginationParams(r *http.Request) stores.PaginationParams {
+func parseListParams(r *http.Request, allowedFilters []string) stores.ListParams {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 	if page <= 0 {
 		page = 1
 	}
-	return stores.PaginationParams{
+
+	params := stores.ListParams{
 		Page:     page,
 		PageSize: pageSize,
 	}
+
+	for _, field := range allowedFilters {
+		if val := r.URL.Query().Get(field); val != "" {
+			params.Filters = append(params.Filters, stores.Filter{Field: field, Value: val})
+		}
+	}
+
+	return params
 }
 
 func resolveTeamID(r *http.Request, teamService services.TeamService) (string, *errors.ServiceError) {

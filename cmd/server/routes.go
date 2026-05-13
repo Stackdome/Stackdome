@@ -153,6 +153,8 @@ func (s apiServer) routes() *mux.Router {
 			RefreshTokenStore: s.environment.Environment().RefreshTokenStore,
 			JWTSecret:         []byte(s.environment.Environment().Config.JwtSecret),
 			JWTClaimsBuilder:  auth.NewJWTClaimsBuilder(),
+			OrgInviteService:  s.environment.Environment().Services.OrgInviteService,
+			EncryptionService: s.environment.Environment().Services.EncryptionService,
 			Logger:            logger,
 		})
 		authenticationRouter.HandleFunc("/github", githubAuthHandler.HandleInitiate).Methods(http.MethodGet)
@@ -187,6 +189,19 @@ func (s apiServer) routes() *mux.Router {
 	organizationsRouter.HandleFunc("/{org_id}/admins", organizationHandler.PromoteToAdmin).Methods(http.MethodPost)
 	organizationsRouter.HandleFunc("/{org_id}/admins", organizationHandler.ListAdmins).Methods(http.MethodGet)
 	organizationsRouter.HandleFunc("/{org_id}/admins/{user_id}/demote", organizationHandler.DemoteAdmin).Methods(http.MethodPost)
+
+	// Invite routes
+	inviteHandler := handlers.NewOrgInviteHandler(handlers.OrgInviteHandlerSpec{
+		OrgInviteService: services.OrgInviteService,
+	})
+	inviteRouter := organizationsRouter.PathPrefix("/{org_id}/invites").Subrouter()
+	inviteRouter.HandleFunc("", inviteHandler.Create).Methods(http.MethodPost)
+	inviteRouter.HandleFunc("", inviteHandler.List).Methods(http.MethodGet)
+	inviteRouter.HandleFunc("/{id}", inviteHandler.GetByID).Methods(http.MethodGet)
+	inviteRouter.HandleFunc("/{id}", inviteHandler.Revoke).Methods(http.MethodDelete)
+	inviteRouter.HandleFunc("/{id}/resend", inviteHandler.Resend).Methods(http.MethodPost)
+
+	apiV1Router.HandleFunc("/invites/{token}/info", inviteHandler.GetInviteInfo).Methods(http.MethodGet)
 
 	// Team-scoped resource routes
 	teamResourceRouter := teamRouter.PathPrefix("/{team_name}").Subrouter()

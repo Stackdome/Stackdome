@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"net/mail"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
@@ -23,12 +24,15 @@ import (
 type UserService interface {
 	Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
 	GetUserFromContext(ctx context.Context) (*models.User, []*models.TeamMembership, *errors.ServiceError)
-	ListByOrgID(ctx context.Context, orgID string, params stores.PaginationParams) (*stores.PaginatedResult[*models.User], *errors.ServiceError)
+	ListByOrgID(ctx context.Context, orgID string, params stores.ListParams) (*stores.PaginatedResult[*models.User], *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
 	InternalGetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError)
 	InternalCreateOAuthUser(ctx context.Context, email, name, githubID, avatarURL string) (*models.User, error)
-	Signup(ctx context.Context, user *models.User) (*openapi.UserSignupResponse, *errors.ServiceError)
+	InternalCreateInvitedUser(ctx context.Context, user *models.User, invite *models.OrgInvite) (*models.User, *errors.ServiceError)
+	InternalCreateInvitedOAuthUser(ctx context.Context, email, name, githubID, avatarURL string, invite *models.OrgInvite) (*models.User, error)
+	Signup(ctx context.Context, user *models.User, inviteToken string) (*openapi.UserSignupResponse, *errors.ServiceError)
 	Login(ctx context.Context, loginRequest *openapi.LoginRequest) (*openapi.LoginResponse, *errors.ServiceError)
+	SetOrgInviteService(svc OrgInviteService)
 }
 
 type jwtClaimsBuilder interface {
@@ -70,6 +74,7 @@ type UserServiceSpec struct {
 type usersService struct {
 	userStore               stores.UserStore
 	organisationService     OrganisationService
+	orgInviteService        OrgInviteService
 	logger                  logger.Logger
 	jwtSecretKey            string
 	resourceAccessPolicyMgr resourceaccess.ResourceAccessPolicyManager
@@ -77,6 +82,10 @@ type usersService struct {
 	permissions             auth.PermissionService
 	teamService             TeamService
 	refreshTokenStore       stores.RefreshTokenStore
+}
+
+func (u *usersService) SetOrgInviteService(svc OrgInviteService) {
+	u.orgInviteService = svc
 }
 
 func (u usersService) Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError) {
@@ -91,7 +100,7 @@ func (u usersService) Get(ctx context.Context, ID string) (*models.User, *errors
 	return u.userStore.GetByID(ctx, ID)
 }
 
-func (u usersService) ListByOrgID(ctx context.Context, orgID string, params stores.PaginationParams) (*stores.PaginatedResult[*models.User], *errors.ServiceError) {
+func (u usersService) ListByOrgID(ctx context.Context, orgID string, params stores.ListParams) (*stores.PaginatedResult[*models.User], *errors.ServiceError) {
 	if permErr := u.permissions.Check(ctx, orgID, auth.ResourceUsers, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
@@ -134,17 +143,43 @@ func (u usersService) InternalGetByEmail(ctx context.Context, email string) (*mo
 	return u.userStore.GetByEmail(ctx, email)
 }
 
-func (u usersService) Signup(ctx context.Context, user *models.User) (*openapi.UserSignupResponse, *errors.ServiceError) {
+func (u usersService) Signup(ctx context.Context, user *models.User, inviteToken string) (*openapi.UserSignupResponse, *errors.ServiceError) {
 	u.logger.Infof("Creating user with email: %s", user.Email)
 	if len(user.Password) < 8 {
 		return nil, errors.BadRequest("password must be at least 8 characters")
 	}
+
+	_, addrErr := mail.ParseAddress(user.Email)
+	if addrErr != nil {
+		return nil, errors.BadRequest("invalid email address")
+	}
+
+	_, gerr := u.userStore.GetByEmail(ctx, user.Email)
+	if gerr == nil {
+		return nil, errors.Conflict("user with this email already exists! Please login instead.")
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		u.logger.Errorf("failed to hash password, %s", err.Error())
 		return nil, errors.GeneralError("failed to create user")
 	}
 	user.Password = string(hashedPassword)
+
+	// Invite-based signup
+	if inviteToken != "" {
+		invite, invErr := u.orgInviteService.ValidateAndConsume(ctx, inviteToken, user.Email)
+		if invErr != nil {
+			return nil, invErr
+		}
+
+		createdUser, createErr := u.InternalCreateInvitedUser(ctx, user, invite)
+		if createErr != nil {
+			return nil, createErr
+		}
+
+		return u.buildSignupResponse(ctx, createdUser)
+	}
 
 	if user.Organisation == nil {
 		return nil, errors.BadRequest("organisation is required")
@@ -185,6 +220,11 @@ func (u usersService) Signup(ctx context.Context, user *models.User) (*openapi.U
 	); policyAddErr != nil {
 		u.logger.Errorf("failed to add OrgMember policy for user: %s", policyAddErr.Error())
 	}
+
+	return u.buildSignupResponse(ctx, createdUser)
+}
+
+func (u usersService) buildSignupResponse(ctx context.Context, createdUser *models.User) (*openapi.UserSignupResponse, *errors.ServiceError) {
 	expirationTime := time.Now().UTC().Add(auth.JwtTokenExpiry)
 	claims := u.jwtClaimsBuilder.BuildClaims(createdUser, expirationTime)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -197,16 +237,11 @@ func (u usersService) Signup(ctx context.Context, user *models.User) (*openapi.U
 		u.logger.Errorf("failed to create refresh token: %s", refreshErr.Error())
 		return nil, errors.GeneralError("failed to generate refresh token")
 	}
-
-	// All signup users are org admins, And org admins dont belong to any team.
-	// Hence team membetship is not included in the response.
-	res := openapi.UserSignupResponse{
+	return &openapi.UserSignupResponse{
 		User:         ptr.To(presenters.PresentUser(createdUser)),
 		JwtToken:     &tokenString,
 		RefreshToken: &refreshToken,
-	}
-
-	return &res, nil
+	}, nil
 }
 
 func (u usersService) InternalCreateOAuthUser(ctx context.Context, email, name, githubID, avatarURL string) (*models.User, error) {
@@ -251,6 +286,46 @@ func (u usersService) InternalCreateOAuthUser(ctx context.Context, email, name, 
 		createdUser.OrganisationID,
 	); policyErr != nil {
 		u.logger.Errorf("failed to add OrgMember policy for oauth user: %s", policyErr.Error())
+	}
+
+	return createdUser, nil
+}
+
+func (u usersService) InternalCreateInvitedUser(ctx context.Context, user *models.User, invite *models.OrgInvite) (*models.User, *errors.ServiceError) {
+	user.OrganisationID = invite.OrganisationID
+	user.Role = models.NoRole
+
+	createdUser, serr := u.userStore.Create(ctx, user)
+	if serr != nil {
+		return nil, serr
+	}
+
+	if _, teamErr := u.teamService.InternalAddMember(ctx, invite.TeamID, createdUser.ID, invite.TeamRole); teamErr != nil {
+		u.logger.Errorf("failed to add invited user to team: %s", teamErr.Error())
+		return nil, errors.GeneralError("failed to add user to team")
+	}
+
+	return createdUser, nil
+}
+
+func (u usersService) InternalCreateInvitedOAuthUser(ctx context.Context, email, name, githubID, avatarURL string, invite *models.OrgInvite) (*models.User, error) {
+	user := &models.User{
+		Email:          email,
+		Name:           name,
+		Role:           models.NoRole,
+		OrganisationID: invite.OrganisationID,
+		GithubID:       &githubID,
+		AvatarURL:      &avatarURL,
+	}
+
+	createdUser, serr := u.userStore.Create(ctx, user)
+	if serr != nil {
+		return nil, fmt.Errorf("failed to create invited oauth user: %w", serr)
+	}
+
+	if _, teamErr := u.teamService.InternalAddMember(ctx, invite.TeamID, createdUser.ID, invite.TeamRole); teamErr != nil {
+		u.logger.Errorf("failed to add invited oauth user to team: %s", teamErr.Error())
+		return nil, fmt.Errorf("failed to add user to team: %w", teamErr)
 	}
 
 	return createdUser, nil

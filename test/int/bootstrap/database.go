@@ -137,6 +137,7 @@ func (dm *DatabaseManager) ClearData(ctx context.Context) error {
 	// NOTE: users, organisations, clusters, and cluster_image_registries are NOT cleared
 	// because they are created during bootstrap and should persist across all test specs
 	tables := []string{
+		"org_invites",
 		"postgres_addon_databases",
 		"postgres_backups",
 		"postgres_addons",

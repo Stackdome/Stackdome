@@ -24,6 +24,16 @@ const oauthStateExpiry = 10 * time.Minute
 type oAuthUserService interface {
 	InternalGetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError)
 	InternalCreateOAuthUser(ctx context.Context, email, name, githubID, avatarURL string) (*models.User, error)
+	InternalCreateInvitedOAuthUser(ctx context.Context, email, name, githubID, avatarURL string, invite *models.OrgInvite) (*models.User, error)
+}
+
+type oAuthInviteService interface {
+	ValidateAndConsume(ctx context.Context, rawToken, email string) (*models.OrgInvite, *errors.ServiceError)
+}
+
+type oAuthEncryptionService interface {
+	EncryptData(in []byte) (string, error)
+	DecryptData(in string) ([]byte, error)
 }
 
 type GitHubOAuthHandlerSpec struct {
@@ -35,6 +45,8 @@ type GitHubOAuthHandlerSpec struct {
 	RefreshTokenStore stores.RefreshTokenStore
 	JWTSecret         []byte
 	JWTClaimsBuilder  JWTClaimsBuilder
+	OrgInviteService  oAuthInviteService
+	EncryptionService oAuthEncryptionService
 	Logger            logger.Logger
 }
 
@@ -47,6 +59,8 @@ type gitHubOAuthHandler struct {
 	refreshTokenStore stores.RefreshTokenStore
 	jwtSecret         []byte
 	jwtClaimsBuilder  JWTClaimsBuilder
+	orgInviteService  oAuthInviteService
+	encryptionService oAuthEncryptionService
 	logger            logger.Logger
 }
 
@@ -60,6 +74,8 @@ func NewGitHubOAuthHandler(spec GitHubOAuthHandlerSpec) *gitHubOAuthHandler {
 		refreshTokenStore: spec.RefreshTokenStore,
 		jwtSecret:         spec.JWTSecret,
 		jwtClaimsBuilder:  spec.JWTClaimsBuilder,
+		orgInviteService:  spec.OrgInviteService,
+		encryptionService: spec.EncryptionService,
 		logger:            spec.Logger,
 	}
 }
@@ -86,10 +102,22 @@ func (h *gitHubOAuthHandler) HandleInitiate(w http.ResponseWriter, r *http.Reque
 		h.logger.Errorf("failed to cleanup expired oauth states: %s", err.Error())
 	}
 
+	inviteToken := r.URL.Query().Get("invite_token")
+	encryptedInviteToken := ""
+	if inviteToken != "" {
+		encrypted, encErr := h.encryptionService.EncryptData([]byte(inviteToken))
+		if encErr != nil {
+			handleError(w, errors.ErrorGeneral, "failed to process invite token")
+			return
+		}
+		encryptedInviteToken = encrypted
+	}
+
 	oauthState := &models.OAuthState{
-		State:     state,
-		Provider:  models.OAuthProviderGitHub,
-		CreatedAt: time.Now().UTC(),
+		State:       state,
+		Provider:    models.OAuthProviderGitHub,
+		InviteToken: encryptedInviteToken,
+		CreatedAt:   time.Now().UTC(),
 	}
 	if serr := h.oauthStateStore.Create(r.Context(), oauthState); serr != nil {
 		handleError(w, errors.ErrorGeneral, "failed to store oauth state")
@@ -150,20 +178,27 @@ func (h *gitHubOAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	user, userErr := h.oAuthUserService.InternalGetByEmail(ctx, email)
-	if userErr != nil {
-		name := ghUser.GetName()
-		if name == "" {
-			name = ghUser.GetLogin()
-		}
-		githubID := fmt.Sprintf("%d", ghUser.GetID())
+	name := ghUser.GetName()
+	if name == "" {
+		name = ghUser.GetLogin()
+	}
+	githubID := fmt.Sprintf("%d", ghUser.GetID())
+	avatarURL := ghUser.GetAvatarURL()
 
-		newUser, createErr := h.oAuthUserService.InternalCreateOAuthUser(ctx, email, name, githubID, ghUser.GetAvatarURL())
-		if createErr != nil {
-			handleError(w, errors.ErrorGeneral, "failed to create user")
+	inviteToken := ""
+	if storedState.InviteToken != "" {
+		decrypted, decErr := h.encryptionService.DecryptData(storedState.InviteToken)
+		if decErr != nil {
+			handleError(w, errors.ErrorGeneral, "failed to process invite token")
 			return
 		}
-		user = newUser
+		inviteToken = string(decrypted)
+	}
+
+	user, userErr := h.findOrCreateUser(ctx, email, name, githubID, avatarURL, inviteToken)
+	if userErr != nil {
+		handleError(w, userErr.Code, userErr.Reason)
+		return
 	}
 
 	expirationTime := time.Now().UTC().Add(JwtTokenExpiry)
@@ -185,6 +220,42 @@ func (h *gitHubOAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 	resp.SetToken(tokenString)
 	resp.SetRefreshToken(refreshToken)
 	writeJSONResponse(w, http.StatusOK, resp)
+}
+
+func (h *gitHubOAuthHandler) findOrCreateUser(ctx context.Context, email, name, githubID, avatarURL, inviteToken string) (*models.User, *errors.ServiceError) {
+	if inviteToken != "" {
+		return h.createInvitedUser(ctx, email, name, githubID, avatarURL, inviteToken)
+	}
+
+	// Standard OAuth: login existing user or create new account
+	existing, _ := h.oAuthUserService.InternalGetByEmail(ctx, email)
+	if existing != nil {
+		return existing, nil
+	}
+
+	created, err := h.oAuthUserService.InternalCreateOAuthUser(ctx, email, name, githubID, avatarURL)
+	if err != nil {
+		return nil, errors.InternalServerError("failed to create user")
+	}
+	return created, nil
+}
+
+func (h *gitHubOAuthHandler) createInvitedUser(ctx context.Context, email, name, githubID, avatarURL, inviteToken string) (*models.User, *errors.ServiceError) {
+	existing, _ := h.oAuthUserService.InternalGetByEmail(ctx, email)
+	if existing != nil {
+		return nil, errors.Conflict("user with this email already exists")
+	}
+
+	invite, serr := h.orgInviteService.ValidateAndConsume(ctx, inviteToken, email)
+	if serr != nil {
+		return nil, serr
+	}
+
+	created, err := h.oAuthUserService.InternalCreateInvitedOAuthUser(ctx, email, name, githubID, avatarURL, invite)
+	if err != nil {
+		return nil, errors.InternalServerError("failed to create user")
+	}
+	return created, nil
 }
 
 func (h *gitHubOAuthHandler) fetchPrimaryEmail(ctx context.Context, client *github.Client) (string, error) {

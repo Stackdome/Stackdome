@@ -87,6 +87,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1AuthGithubGet**](docs/DefaultApi.md#apiv1authgithubget) | **Get** /api/v1/auth/github | Initiate GitHub OAuth flow
 *DefaultApi* | [**ApiV1AuthLoginPost**](docs/DefaultApi.md#apiv1authloginpost) | **Post** /api/v1/auth/login | User login
 *DefaultApi* | [**ApiV1AuthRefreshPost**](docs/DefaultApi.md#apiv1authrefreshpost) | **Post** /api/v1/auth/refresh | Refresh JWT token
+*DefaultApi* | [**ApiV1InvitesTokenInfoGet**](docs/DefaultApi.md#apiv1invitestokeninfoget) | **Get** /api/v1/invites/{token}/info | Get public invite info (unauthenticated)
 *DefaultApi* | [**ApiV1OrganizationsIdGet**](docs/DefaultApi.md#apiv1organizationsidget) | **Get** /api/v1/organizations/{id} | Get an organization
 *DefaultApi* | [**ApiV1OrganizationsIdPut**](docs/DefaultApi.md#apiv1organizationsidput) | **Put** /api/v1/organizations/{id} | Update an organization
 *DefaultApi* | [**ApiV1OrganizationsOrgIdAdminsGet**](docs/DefaultApi.md#apiv1organizationsorgidadminsget) | **Get** /api/v1/organizations/{org_id}/admins | List organization admins
@@ -100,6 +101,11 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidclustersiddelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{id} | Delete a cluster
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersidget) | **Get** /api/v1/organizations/{org_id}/clusters/{id} | Get a specific cluster
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersPost**](docs/DefaultApi.md#apiv1organizationsorgidclusterspost) | **Post** /api/v1/organizations/{org_id}/clusters | Add a new cluster
+*DefaultApi* | [**ApiV1OrganizationsOrgIdInvitesGet**](docs/DefaultApi.md#apiv1organizationsorgidinvitesget) | **Get** /api/v1/organizations/{org_id}/invites | List invites for an organization
+*DefaultApi* | [**ApiV1OrganizationsOrgIdInvitesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidinvitesiddelete) | **Delete** /api/v1/organizations/{org_id}/invites/{id} | Revoke a pending invite
+*DefaultApi* | [**ApiV1OrganizationsOrgIdInvitesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidinvitesidget) | **Get** /api/v1/organizations/{org_id}/invites/{id} | Get an invite by ID
+*DefaultApi* | [**ApiV1OrganizationsOrgIdInvitesIdResendPost**](docs/DefaultApi.md#apiv1organizationsorgidinvitesidresendpost) | **Post** /api/v1/organizations/{org_id}/invites/{id}/resend | Re-queue invite email for delivery
+*DefaultApi* | [**ApiV1OrganizationsOrgIdInvitesPost**](docs/DefaultApi.md#apiv1organizationsorgidinvitespost) | **Post** /api/v1/organizations/{org_id}/invites | Create an invite to the organization
 *DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresGet**](docs/DefaultApi.md#apiv1organizationsorgidobjectstoresget) | **Get** /api/v1/organizations/{org_id}/object-stores | List all object stores the user has access to across all teams
 *DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsGet**](docs/DefaultApi.md#apiv1organizationsorgidsecretsget) | **Get** /api/v1/organizations/{org_id}/secrets | List all secrets the user has access to across all teams
 *DefaultApi* | [**ApiV1OrganizationsOrgIdStacksGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksget) | **Get** /api/v1/organizations/{org_id}/stacks | List all stacks the user has access to across all teams
@@ -212,6 +218,7 @@ Class | Method | HTTP request | Description
  - [ImageSpec](docs/ImageSpec.md)
  - [Ingress](docs/Ingress.md)
  - [InitSpec](docs/InitSpec.md)
+ - [InviteStatus](docs/InviteStatus.md)
  - [Label](docs/Label.md)
  - [LifecycleConfig](docs/LifecycleConfig.md)
  - [List](docs/List.md)
@@ -223,6 +230,11 @@ Class | Method | HTTP request | Description
  - [ObjectStoreList](docs/ObjectStoreList.md)
  - [ObjectStoreSpec](docs/ObjectStoreSpec.md)
  - [ObjectStoreStatus](docs/ObjectStoreStatus.md)
+ - [OrgInvite](docs/OrgInvite.md)
+ - [OrgInviteCreateRequest](docs/OrgInviteCreateRequest.md)
+ - [OrgInviteCreateResponse](docs/OrgInviteCreateResponse.md)
+ - [OrgInviteInfo](docs/OrgInviteInfo.md)
+ - [OrgInviteList](docs/OrgInviteList.md)
  - [Organisation](docs/Organisation.md)
  - [Port](docs/Port.md)
  - [PostgresAddon](docs/PostgresAddon.md)

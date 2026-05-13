@@ -49,4 +49,6 @@ var MigrationList = []*gormigrate.Migration{
 	addTeamIDToResources(),
 	updateUserRoles(),
 	createOAuthStatesTable(),
+	createOrgInvitesTable(),
+	addInviteTokenToOAuthStates(),
 }

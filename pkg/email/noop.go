@@ -1,0 +1,24 @@
+package email
+
+import (
+	"context"
+
+	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
+)
+
+type noopEmailService struct {
+	logger logger.Logger
+}
+
+func NewNoopEmailService(logger logger.Logger) EmailService {
+	return &noopEmailService{logger: logger}
+}
+
+func (n *noopEmailService) IsConfigured() bool {
+	return false
+}
+
+func (n *noopEmailService) SendInviteEmail(ctx context.Context, params InviteEmailParams) error {
+	n.logger.Infof("email service not configured - invite for %s (org: %s, team: %s) not sent", params.ToEmail, params.OrgName, params.TeamName)
+	return nil
+}

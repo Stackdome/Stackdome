@@ -3,15 +3,16 @@ package models
 import "time"
 
 type OAuthState struct {
-	ID        string    `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
-	State     string    `gorm:"not null;uniqueIndex" json:"state"`
-	Provider  string    `gorm:"not null" json:"provider"`
-	CreatedAt time.Time `gorm:"not null" json:"createdAt"`
+	ID          string    `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
+	State       string    `gorm:"not null;uniqueIndex" json:"state"`
+	Provider    string    `gorm:"not null" json:"provider"`
+	InviteToken string    `json:"inviteToken,omitempty"`
+	CreatedAt   time.Time `gorm:"not null" json:"createdAt"`
 }
 
 const (
-	OAuthProviderGitHub    = "github"
-	OAuthStateTableName    = "oauth_states"
+	OAuthProviderGitHub = "github"
+	OAuthStateTableName = "oauth_states"
 )
 
 func (OAuthState) TableName() string {

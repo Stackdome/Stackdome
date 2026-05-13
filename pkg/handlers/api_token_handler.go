@@ -55,7 +55,6 @@ func (h *apiTokenHandler) List(w http.ResponseWriter, r *http.Request) {
 			}
 			return openapi.APITokenList{
 				Items: presenters.PresentAPITokenList(tokens),
-				Total: ptr.To(int32(len(tokens))),
 			}, nil
 		},
 	}

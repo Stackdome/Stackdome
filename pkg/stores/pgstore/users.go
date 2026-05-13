@@ -70,27 +70,22 @@ func (d dbUserStore) Update(ctx context.Context, id string, user *models.User) (
 	return d.GetByID(ctx, id)
 }
 
-func (d dbUserStore) ListByOrgID(ctx context.Context, orgID string, params stores.PaginationParams) (*stores.PaginatedResult[*models.User], *errors.ServiceError) {
+func (d dbUserStore) ListByOrgID(ctx context.Context, orgID string, params stores.ListParams) (*stores.PaginatedResult[*models.User], *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 
+	baseQuery := grm.Model(&models.User{}).Where("organisation_id = ?", orgID)
+
 	var total int64
-	if err := grm.Model(&models.User{}).Where("organisation_id = ?", orgID).Count(&total).Error; err != nil {
+	if err := params.ApplyFiltersOnly(baseQuery).Count(&total).Error; err != nil {
 		return nil, errors.GeneralError("failed to count users: %s", err.Error())
 	}
 
-	var users []*models.User
-	if err := grm.Preload(clause.Associations).
-		Where("organisation_id = ?", orgID).
-		Order("created_at ASC").
-		Limit(params.Limit()).
-		Offset(params.Offset()).
-		Find(&users).Error; err != nil {
-		return nil, errors.GeneralError("failed to list users by org: %s", err.Error())
-	}
+	params = params.WithDefaultOrder("created_at ASC")
 
-	totalPages := int(total) / params.Limit()
-	if int(total)%params.Limit() > 0 {
-		totalPages++
+	var users []*models.User
+	query := grm.Preload(clause.Associations).Where("organisation_id = ?", orgID)
+	if err := params.Apply(query).Find(&users).Error; err != nil {
+		return nil, errors.GeneralError("failed to list users by org: %s", err.Error())
 	}
 
 	return &stores.PaginatedResult[*models.User]{
@@ -98,7 +93,7 @@ func (d dbUserStore) ListByOrgID(ctx context.Context, orgID string, params store
 		Total:      total,
 		Page:       params.Page,
 		PageSize:   params.Limit(),
-		TotalPages: totalPages,
+		TotalPages: params.TotalPages(total),
 	}, nil
 }
 

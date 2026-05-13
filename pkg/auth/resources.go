@@ -20,6 +20,7 @@ const (
 	ResourceImageBuilds     = "image-builds"
 	ResourceAddons          = "addons"
 	ResourceDomains         = "domains"
+	ResourceInvites         = "invites"
 )
 
 const (
@@ -54,6 +55,7 @@ var ResourceTypes = []ResourceType{
 	{Name: ResourceAddons, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate, ActionLogs, ActionExec}},
 	{Name: ResourceDomains, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
 	{Name: ResourceTeams, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
+	{Name: ResourceInvites, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
 }
 
 // ValidateScope checks whether a scope string is valid against the resource type registry.

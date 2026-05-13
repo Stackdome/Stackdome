@@ -17,7 +17,10 @@ func ValidateUserCreate(in *openapi.UserSignupRequest) Validate {
 			return nil
 		},
 		func() *errors.ServiceError {
-			if in.Organisation.GetName() == "" {
+			if in.HasInviteToken() {
+				return nil
+			}
+			if in.Organisation == nil || in.Organisation.GetName() == "" {
 				return errors.Validation("organisation name is required")
 			}
 			return nil

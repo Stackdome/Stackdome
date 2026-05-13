@@ -10,10 +10,10 @@ import (
 
 func createTeamMembershipsTable() *gormigrate.Migration {
 	type TeamMembership struct {
-		ID        string `gorm:"primary_key;default:gen_random_uuid()"`
-		TeamID    string `gorm:"not null;uniqueIndex:idx_team_memberships_team_user"`
-		UserID    string `gorm:"not null;uniqueIndex:idx_team_memberships_team_user"`
-		Role      string `gorm:"not null"`
+		ID        string    `gorm:"primary_key;default:gen_random_uuid()"`
+		TeamID    string    `gorm:"not null;uniqueIndex:idx_team_memberships_team_user"`
+		UserID    string    `gorm:"not null;uniqueIndex:idx_team_memberships_team_user"`
+		Role      string    `gorm:"not null"`
 		CreatedAt time.Time `gorm:"not null;default:now()"`
 	}
 	return &gormigrate.Migration{
