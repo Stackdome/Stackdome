@@ -57,6 +57,7 @@ var _ Addon = &PostgresAddon{}
 type PostgresAddon struct {
 	ID             string      `gorm:"primary_key;default:gen_random_uuid()"`
 	OrganisationID string      `gorm:"not null;index"`
+	TeamID         string      `gorm:"index" json:"team_id"`
 	UserID         string      `gorm:"not null;index"`
 	ClusterID      string      `gorm:"not null;index"`
 	Name           string      `gorm:"not null"`

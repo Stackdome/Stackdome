@@ -13,9 +13,13 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-type JWTClaimsBuilder struct{}
+type JWTClaimsBuilder interface {
+	BuildClaims(user *models.User, expirationTime time.Time) jwt.Claims
+}
 
-func (c *JWTClaimsBuilder) BuildClaims(user *models.User, expirationTime time.Time) jwt.Claims {
+type JWTClaimsBuilderImpl struct{}
+
+func (c *JWTClaimsBuilderImpl) BuildClaims(user *models.User, expirationTime time.Time) jwt.Claims {
 	return &Claims{
 		UserID: user.ID,
 		Role:   user.Role.String(),
@@ -26,6 +30,6 @@ func (c *JWTClaimsBuilder) BuildClaims(user *models.User, expirationTime time.Ti
 }
 
 // NewJWTClaimsBuilder returns a new instance of JWTClaimsBuilder.
-func NewJWTClaimsBuilder() *JWTClaimsBuilder {
-	return &JWTClaimsBuilder{}
+func NewJWTClaimsBuilder() *JWTClaimsBuilderImpl {
+	return &JWTClaimsBuilderImpl{}
 }

@@ -735,7 +735,7 @@ func (t Test) IntegrationFocus(ctx context.Context, pattern string) error {
 func (Test) Unit(ctx context.Context) error {
 	fmt.Println("Running unit tests...")
 
-	cmd := exec.CommandContext(ctx, "go", "test", "./pkg/...", "-v", "-race")
+	cmd := exec.CommandContext(ctx, "go", "test", "./pkg/...", "-v", "-race", "-count=1")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Dir = projectRoot

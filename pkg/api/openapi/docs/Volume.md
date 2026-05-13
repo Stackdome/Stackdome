@@ -5,6 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** |  | [optional] [readonly] 
+**TeamId** | Pointer to **string** |  | [optional] [readonly] 
 **Name** | **string** |  | 
 **Labels** | Pointer to [**[]Label**](Label.md) |  | [optional] 
 **Annotations** | Pointer to [**[]Annotation**](Annotation.md) |  | [optional] 
@@ -54,6 +55,31 @@ SetId sets Id field to given value.
 `func (o *Volume) HasId() bool`
 
 HasId returns a boolean if a field has been set.
+
+### GetTeamId
+
+`func (o *Volume) GetTeamId() string`
+
+GetTeamId returns the TeamId field if non-nil, zero value otherwise.
+
+### GetTeamIdOk
+
+`func (o *Volume) GetTeamIdOk() (*string, bool)`
+
+GetTeamIdOk returns a tuple with the TeamId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTeamId
+
+`func (o *Volume) SetTeamId(v string)`
+
+SetTeamId sets TeamId field to given value.
+
+### HasTeamId
+
+`func (o *Volume) HasTeamId() bool`
+
+HasTeamId returns a boolean if a field has been set.
 
 ### GetName
 

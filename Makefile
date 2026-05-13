@@ -20,6 +20,14 @@ frontend:
 	touch pkg/web/dist/.gitkeep
 .PHONY: frontend
 
+MOCKGEN := $(shell go env GOPATH)/bin/mockgen
+mocks: $(MOCKGEN)
+	go generate ./pkg/stores/... ./pkg/logger/...
+.PHONY: mocks
+
+$(MOCKGEN):
+	go install go.uber.org/mock/mockgen@v0.6.0
+
 binary:
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o bin/stackdome-server cmd/main.go
 .PHONY: binary
@@ -39,6 +47,10 @@ image: frontend binary
 	fi
 	$(DOCKER) build -t "$(EXTERNAL_IMAGE_REGISTRY)/$(IMAGE_REPOSITORY):$(IMAGE_TAG)" .
 .PHONY: image
+
+test:
+	mage test:unit
+.PHONY: test
 
 .PHONY: test-integration
 test-integration: SHELL := /usr/bin/env bash

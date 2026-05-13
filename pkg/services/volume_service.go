@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -14,13 +15,14 @@ import (
 
 type VolumeService interface {
 	Get(ctx context.Context, ID string) (*models.Volume, *errors.ServiceError)
+	InternalGet(ctx context.Context, ID string) (*models.Volume, *errors.ServiceError)
 	GetByVolumeNameAndNamespace(ctx context.Context, volumeName, namespace string) (*models.Volume, *errors.ServiceError)
 	InternalList(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateInDbWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateInCluster(ctx context.Context, spec *models.Volume) *errors.ServiceError
-	ListByUserID(ctx context.Context, userID string) ([]*models.Volume, *errors.ServiceError)
+	ListByUserID(ctx context.Context, teamID, userID string) ([]*models.Volume, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.VolumeStatus) *errors.ServiceError
 	UpdateGitRepoSourceRevision(ctx context.Context, ID string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError)
 	UpdateRemoteSourceRevision(ctx context.Context, ID string, revision models.RemoteDirSource) (*models.Volume, *errors.ServiceError)
@@ -38,6 +40,7 @@ type VolumeService interface {
 type VolumeServiceSpec struct {
 	SessionFactory db.SessionFactory
 	Logger         logger.Logger
+	Permissions    auth.PermissionService
 }
 
 func NewVolumeService(spec VolumeServiceSpec) VolumeService {
@@ -51,7 +54,8 @@ func NewVolumeService(spec VolumeServiceSpec) VolumeService {
 		stackVolumeStore: pgstore.NewStackVolumeStore(pgstore.StackVolumeStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		logger: spec.Logger,
+		logger:      spec.Logger,
+		permissions: spec.Permissions,
 	}
 }
 
@@ -61,6 +65,7 @@ type volumeService struct {
 	stackVolumeStore       stores.StackVolumeStore
 	clusterResourceService clusterresource.VolumeClusterResourceService
 	logger                 logger.Logger
+	permissions            auth.PermissionService
 }
 
 func (s *volumeService) InjectClusterResourceService(volumeClusterService clusterresource.VolumeClusterResourceService) {
@@ -73,7 +78,14 @@ func (s *volumeService) Get(ctx context.Context, ID string) (*models.Volume, *er
 		s.logger.Errorf("failed to get volume: %v", err)
 		return nil, err
 	}
+	if permErr := s.permissions.Check(ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	return volume, nil
+}
+
+func (s *volumeService) InternalGet(ctx context.Context, ID string) (*models.Volume, *errors.ServiceError) {
+	return s.volumeStore.GetByID(ctx, ID)
 }
 
 func (s *volumeService) ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError) {
@@ -143,7 +155,10 @@ func (s *volumeService) GetByVolumeNameAndNamespace(ctx context.Context, volumeN
 	return volume, nil
 }
 
-func (s *volumeService) ListByUserID(ctx context.Context, userID string) ([]*models.Volume, *errors.ServiceError) {
+func (s *volumeService) ListByUserID(ctx context.Context, teamID, userID string) ([]*models.Volume, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, teamID, auth.ResourceVolumes, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
 	volumes, err := s.volumeStore.GetByUserID(ctx, userID)
 	if err != nil {
 		s.logger.Errorf("failed to list volumes by user ID: %v", err)
@@ -215,6 +230,10 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 }
 
 func (s *volumeService) Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, spec.TeamID, auth.ResourceVolumes, "", auth.ActionCreate); permErr != nil {
+		return nil, permErr
+	}
+
 	var createdVolume *models.Volume
 	var err *errors.ServiceError
 	createErr := s.volumeStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
@@ -233,6 +252,7 @@ func (s *volumeService) Create(ctx context.Context, spec *models.Volume) (*model
 	if createErr != nil {
 		return nil, createErr
 	}
+
 	return createdVolume, nil
 }
 
@@ -298,6 +318,10 @@ func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 		return err
 	}
 
+	if permErr := s.permissions.Check(ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionDelete); permErr != nil {
+		return permErr
+	}
+
 	volumeMounts, err := s.volumeMountStore.ListBySourceVolumeID(ctx, ID)
 	if err != nil {
 		s.logger.Errorf("failed to list volume mounts for deletion: %v", err)
@@ -324,6 +348,7 @@ func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 		s.logger.Errorf("failed to delete volume: %v", deleteErr)
 		return deleteErr
 	}
+
 	return nil
 }
 

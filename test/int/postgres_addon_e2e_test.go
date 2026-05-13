@@ -15,6 +15,7 @@ import (
 var _ = Describe("PostgresAddon E2E", Ordered, func() {
 	var client *openapi.APIClient
 	var orgID string
+	var teamName = models.DefaultTeamName
 
 	BeforeAll(func() {
 		testEnv := GetEnvironment()
@@ -32,7 +33,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 
 			By("Creating a postgres addon via API")
 			addon := shared.CreateMinimalPostgresAddon("test-cr-verify")
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 
 			addonID := createdAddon.GetId()
 			addonName := createdAddon.GetName()
@@ -52,7 +53,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			shared.VerifyCRLabel(cr, addonID)
 
 			DeferCleanup(func() {
-				shared.DeletePostgresAddon(client, orgID, addonID)
+				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 		})
 	})
@@ -65,7 +66,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 
 			By("Creating a postgres addon with a database")
 			addon := shared.CreatePostgresAddonWithResources("test-lifecycle")
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 			addonID := createdAddon.GetId()
 			addonName := createdAddon.GetName()
 			namespace := createdAddon.GetNamespace()
@@ -74,11 +75,11 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			Expect(namespace).NotTo(BeEmpty())
 
 			DeferCleanup(func() {
-				shared.DeletePostgresAddon(client, orgID, addonID)
+				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
 			By("Waiting for addon to become Ready")
-			readyAddon := shared.WaitForAddonReady(client, orgID, addonID, 10*time.Minute)
+			readyAddon := shared.WaitForAddonReady(client, orgID, teamName, addonID, 10*time.Minute)
 
 			By("Verifying ConnectionInfo is populated")
 			status, ok := readyAddon.GetStatusOk()
@@ -90,10 +91,10 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			Expect(connInfo.GetPort()).To(BeNumerically(">", 0), "Port should be positive")
 
 			By("Verifying conditions include ClusterReady")
-			shared.WaitForConditionTrue(client, orgID, addonID, string(models.PostgresAddonConditionClusterReady), 30*time.Second)
+			shared.WaitForConditionTrue(client, orgID, teamName, addonID, string(models.PostgresAddonConditionClusterReady), 30*time.Second)
 
 			By("Waiting for databases to be applied")
-			shared.WaitForConditionTrue(client, orgID, addonID, string(models.PostgresAddonConditionDatabasesApplied), 2*time.Minute)
+			shared.WaitForConditionTrue(client, orgID, teamName, addonID, string(models.PostgresAddonConditionDatabasesApplied), 2*time.Minute)
 
 			By("Verifying CR exists with correct spec in the cluster")
 			cr, err := shared.GetPostgresClusterCR(ctx, clusterClient, shared.CRNameForAddon(addonName), namespace)
@@ -102,7 +103,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			shared.VerifyCRLabel(cr, addonID)
 
 			By("Fetching JIT credentials for the database")
-			creds := shared.GetCredentials(client, orgID, addonID, "testdb")
+			creds := shared.GetCredentials(client, orgID, teamName, addonID, "testdb")
 			Expect(creds.GetHost()).NotTo(BeEmpty())
 			Expect(creds.GetPort()).To(BeNumerically(">", 0))
 			Expect(creds.GetUsername()).NotTo(BeEmpty())
@@ -135,25 +136,25 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 
 			By("Creating a postgres addon")
 			addon := shared.CreateMinimalPostgresAddon("test-update-prop")
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 			addonID := createdAddon.GetId()
 			addonName := createdAddon.GetName()
 			namespace := createdAddon.GetNamespace()
 
 			DeferCleanup(func() {
-				shared.DeletePostgresAddon(client, orgID, addonID)
+				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
 			By("Waiting for CR to appear")
 			shared.WaitForCRExists(ctx, clusterClient, shared.CRNameForAddon(addonName), namespace, 2*time.Minute)
 
 			By("Waiting for addon to become Ready")
-			shared.WaitForAddonReady(client, orgID, addonID, 10*time.Minute)
+			shared.WaitForAddonReady(client, orgID, teamName, addonID, 10*time.Minute)
 
 			By("Updating addon to 3 instances")
 			updateAddon := shared.CreateMinimalPostgresAddon("test-update-prop")
 			updateAddon.Spec.Instances.SetCount(3)
-			shared.UpdatePostgresAddon(client, orgID, addonID, updateAddon)
+			shared.UpdatePostgresAddon(client, orgID, teamName, addonID, updateAddon)
 
 			By("Waiting for CR to reflect the updated instance count")
 			Eventually(func(g Gomega) {
@@ -163,7 +164,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			}, 2*time.Minute, 5*time.Second).Should(Succeed())
 
 			By("Waiting for addon to return to Ready state")
-			shared.WaitForAddonReady(client, orgID, addonID, 10*time.Minute)
+			shared.WaitForAddonReady(client, orgID, teamName, addonID, 10*time.Minute)
 		})
 	})
 
@@ -175,23 +176,23 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 
 			By("Creating a postgres addon")
 			addon := shared.CreateMinimalPostgresAddon("test-delete-cleanup")
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 			addonID := createdAddon.GetId()
 			addonName := createdAddon.GetName()
 			namespace := createdAddon.GetNamespace()
 
 			By("Waiting for addon to become Ready")
 			shared.WaitForCRExists(ctx, clusterClient, shared.CRNameForAddon(addonName), namespace, 2*time.Minute)
-			shared.WaitForAddonReady(client, orgID, addonID, 10*time.Minute)
+			shared.WaitForAddonReady(client, orgID, teamName, addonID, 10*time.Minute)
 
 			By("Deleting the addon via API")
-			shared.DeletePostgresAddon(client, orgID, addonID)
+			shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 
 			By("Verifying the CR is deleted from the cluster")
 			shared.WaitForCRDeleted(ctx, clusterClient, shared.CRNameForAddon(addonName), namespace, 2*time.Minute)
 
 			By("Verifying the addon is gone from the API")
-			shared.WaitForAddonDeleted(client, orgID, addonID, 30*time.Second)
+			shared.WaitForAddonDeleted(client, orgID, teamName, addonID, 30*time.Second)
 		})
 	})
 
@@ -201,17 +202,17 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			addon := shared.CreateMinimalPostgresAddon("test-failure-report")
 			addon.Spec.Storage.SetStorageClass("nonexistent-storage-class")
 
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 			addonID := createdAddon.GetId()
 
 			DeferCleanup(func() {
-				shared.DeletePostgresAddon(client, orgID, addonID)
+				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
 			By("Waiting for addon status to reflect the failure")
 			Eventually(func(g Gomega) {
 				ctx := context.Background()
-				resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdGet(ctx, orgID, addonID).Execute()
+				resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet(ctx, orgID, teamName, addonID).Execute()
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(httpResp.StatusCode).To(Equal(200))
 
@@ -229,7 +230,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 		It("should trigger a backup and record it via the backup controller", func() {
 			By("Creating an S3 credentials secret")
 			secret := shared.CreateS3CredentialsSecret("minio-creds")
-			createdSecret := shared.CreateSecret(client, orgID, secret)
+			createdSecret := shared.CreateSecret(client, orgID, teamName, secret)
 
 			By("Creating an ObjectStore pointing to MinIO")
 			store := shared.CreateObjectStoreWithS3Endpoint(
@@ -237,7 +238,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 				createdSecret.GetId(),
 				shared.MinIOEndpoint(),
 			)
-			createdStore := shared.CreateObjectStore(client, orgID, store)
+			createdStore := shared.CreateObjectStore(client, orgID, teamName, store)
 
 			By("Creating a postgres addon with backup config referencing the ObjectStore")
 			addon := shared.CreateMinimalPostgresAddon("test-backup-e2e")
@@ -252,27 +253,27 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			backup.SetObjectStoreId(createdStore.GetId())
 			addon.Spec.SetBackup(*backup)
 
-			createdAddon := shared.CreatePostgresAddon(client, orgID, addon)
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 			addonID := createdAddon.GetId()
 
 			DeferCleanup(func() {
-				shared.DeletePostgresAddon(client, orgID, addonID)
+				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
 			By("Waiting for addon to become Ready")
-			shared.WaitForAddonReady(client, orgID, addonID, 10*time.Minute)
+			shared.WaitForAddonReady(client, orgID, teamName, addonID, 10*time.Minute)
 
 			By("Verifying ContinuousWalArchivingSuccess condition becomes True")
-			shared.WaitForConditionTrue(client, orgID, addonID, string(models.PostgresAddonConditionWalArchivingSuccess), 5*time.Minute)
+			shared.WaitForConditionTrue(client, orgID, teamName, addonID, string(models.PostgresAddonConditionWalArchivingSuccess), 5*time.Minute)
 
 			By("Triggering an immediate backup")
-			shared.TriggerBackup(client, orgID, addonID)
+			shared.TriggerBackup(client, orgID, teamName, addonID)
 
 			By("Waiting for backup to complete")
-			shared.WaitForBackupPhase(client, orgID, addonID, "completed", 10*time.Minute)
+			shared.WaitForBackupPhase(client, orgID, teamName, addonID, "completed", 10*time.Minute)
 
 			By("Verifying backup records exist")
-			backups := shared.ListBackups(client, orgID, addonID)
+			backups := shared.ListBackups(client, orgID, teamName, addonID)
 			Expect(len(backups)).To(BeNumerically(">=", 1), "should have at least one backup record")
 		})
 	})

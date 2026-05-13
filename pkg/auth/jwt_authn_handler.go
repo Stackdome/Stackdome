@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,15 +9,27 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-type jwtAuthnHandler struct {
-	next      http.Handler
-	JWTSecret []byte
+type jwtAuthPayload struct {
+	UserID string `json:"userId"`
+	Role   string `json:"role"`
 }
 
-func NewJwtAuthnHandler(next http.Handler, JWTsecret []byte) http.Handler {
+type jwtAuthnHandler struct {
+	next       http.Handler
+	jwtSecret  []byte
+	userGetter UserGetter
+}
+
+type JWTAuthnHandlerSpec struct {
+	JWTSecret  []byte
+	UserGetter UserGetter
+}
+
+func NewJwtAuthnHandler(next http.Handler, spec JWTAuthnHandlerSpec) http.Handler {
 	return &jwtAuthnHandler{
-		next:      next,
-		JWTSecret: JWTsecret,
+		next:       next,
+		jwtSecret:  spec.JWTSecret,
+		userGetter: spec.UserGetter,
 	}
 }
 
@@ -42,8 +53,7 @@ func (h *jwtAuthnHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-
-		return h.JWTSecret, nil
+		return h.jwtSecret, nil
 	})
 
 	if err != nil {
@@ -53,12 +63,39 @@ func (h *jwtAuthnHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the token is valid
 	if token.Valid {
-		ctx := context.WithValue(r.Context(), AuthenticationTokenKey, token)
-
-		// Pass the new context to the next handler
-		h.next.ServeHTTP(w, r.WithContext(ctx))
+		userID, err := getUserIdFromToken(token)
+		if err != nil {
+			handleError(w, errors.ErrorUnauthorized, fmt.Sprintf("Unable to get user ID from JWT token: %s", err))
+			return
+		}
+		user, serr := h.userGetter.InternalGet(r.Context(), userID)
+		if serr != nil {
+			handleError(w, errors.ErrorUnauthorized, "Failed to fetch user")
+			return
+		}
+		ctx := SetUserInContext(r.Context(), user)
+		ctx = SetIdentityInContext(ctx, &Identity{
+			UserID:     user.ID,
+			OrgID:      user.OrganisationID,
+			Role:       string(user.Role),
+			AuthMethod: AuthMethodJWT,
+		})
+		*r = *r.WithContext(ctx)
+		h.next.ServeHTTP(w, r)
 	} else {
 		handleError(w, errors.ErrorUnauthorized, "Invalid token")
 		return
 	}
+}
+
+func getUserIdFromToken(jwtToken *jwt.Token) (string, error) {
+	claims, ok := jwtToken.Claims.(*Claims)
+	if !ok {
+		return "", fmt.Errorf("invalid claims")
+	}
+
+	if claims.UserID == "" {
+		return "", fmt.Errorf("user ID missing in token claims")
+	}
+	return claims.UserID, nil
 }

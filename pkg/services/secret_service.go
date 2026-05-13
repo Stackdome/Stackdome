@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -26,6 +27,8 @@ type SecretService interface {
 	Update(ctx context.Context, id string, secret *models.Secret) (*models.Secret, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	ListByOrganisation(ctx context.Context, organisationID string) ([]*models.Secret, *errors.ServiceError)
+	ListByTeamID(ctx context.Context, teamID string) ([]*models.Secret, *errors.ServiceError)
+	ListSecretsForCurrentUser(ctx context.Context, orgID string) ([]*models.Secret, *errors.ServiceError)
 	ListByUser(ctx context.Context, organisationID, userID string) ([]*models.Secret, *errors.ServiceError)
 	ListByType(ctx context.Context, organisationID, secretType models.SecretType) ([]*models.Secret, *errors.ServiceError)
 	ValidateSecretExists(ctx context.Context, secretID string) (bool, *errors.ServiceError)
@@ -47,7 +50,9 @@ type SecretServiceSpec struct {
 	SessionFactory      db.SessionFactory
 	EncryptionService   EncryptionService
 	ClusterClientGetter ClusterClientGetter
+	TeamService         TeamService
 	Logger              logger.Logger
+	Permissions         auth.PermissionService
 }
 
 type secretService struct {
@@ -56,7 +61,9 @@ type secretService struct {
 	encryptionService   EncryptionService
 	validator           validator.SecretValidator
 	clusterClientGetter ClusterClientGetter
+	teamService         TeamService
 	logger              logger.Logger
+	permissions         auth.PermissionService
 }
 
 func NewSecretService(spec SecretServiceSpec) SecretService {
@@ -70,12 +77,18 @@ func NewSecretService(spec SecretServiceSpec) SecretService {
 		validator:           secret.NewSecretValidator(),
 		encryptionService:   spec.EncryptionService,
 		clusterClientGetter: spec.ClusterClientGetter,
+		teamService:         spec.TeamService,
 		logger:              spec.Logger,
+		permissions:         spec.Permissions,
 	}
 	return s
 }
 
 func (s *secretService) Create(ctx context.Context, secret *models.Secret) (*models.Secret, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, secret.TeamID, auth.ResourceSecrets, "", auth.ActionCreate); permErr != nil {
+		return nil, permErr
+	}
+
 	if err := s.validator.ValidateSecretData(secret); err != nil {
 		return nil, err
 	}
@@ -103,6 +116,9 @@ func (s *secretService) GetByID(ctx context.Context, ID string) (*models.Secret,
 	secret, err := s.secretStore.GetByID(ctx, ID)
 	if err != nil {
 		return nil, err
+	}
+	if permErr := s.permissions.Check(ctx, secret.TeamID, auth.ResourceSecrets, ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
 	}
 	return secret, nil
 }
@@ -161,6 +177,9 @@ func (s *secretService) GetByName(ctx context.Context, organisationID, name stri
 	if err != nil {
 		return nil, err
 	}
+	if permErr := s.permissions.Check(ctx, secret.TeamID, auth.ResourceSecrets, secret.ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	return secret, nil
 }
 
@@ -169,9 +188,13 @@ func (s *secretService) Update(ctx context.Context, id string, secret *models.Se
 	if err != nil {
 		return nil, err
 	}
+	if permErr := s.permissions.Check(ctx, existingSecret.TeamID, auth.ResourceSecrets, id, auth.ActionWrite); permErr != nil {
+		return nil, permErr
+	}
 	secret.ID = existingSecret.ID
 	secret.OrganisationID = existingSecret.OrganisationID
 	secret.UserID = existingSecret.UserID
+	secret.TeamID = existingSecret.TeamID
 	// If data is provided, validate and re-encrypt
 	if secret.Data != nil {
 		if err := s.validator.ValidateSecretData(secret); err != nil {
@@ -201,6 +224,14 @@ func (s *secretService) Update(ctx context.Context, id string, secret *models.Se
 }
 
 func (s *secretService) Delete(ctx context.Context, ID string) *errors.ServiceError {
+	secret, sErr := s.secretStore.GetByID(ctx, ID)
+	if sErr != nil {
+		return sErr
+	}
+	if permErr := s.permissions.Check(ctx, secret.TeamID, auth.ResourceSecrets, ID, auth.ActionDelete); permErr != nil {
+		return permErr
+	}
+
 	usages, err := s.secretUsageStore.GetBySecretID(ctx, ID)
 	if err != nil {
 		return errors.GeneralError("failed to fetch secret usages for secret ID %s: %s", ID, err.Error())
@@ -213,16 +244,52 @@ func (s *secretService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 	if err := s.secretStore.Delete(ctx, ID); err != nil {
 		return err
 	}
+
 	return nil
 }
 
 func (s *secretService) ListByOrganisation(ctx context.Context, organisationID string) ([]*models.Secret, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, organisationID, auth.ResourceSecrets, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
 	secrets, err := s.secretStore.ListByOrganisation(ctx, organisationID)
 	if err != nil {
 		return nil, err
 	}
 
 	return secrets, nil
+}
+
+func (s *secretService) ListByTeamID(ctx context.Context, teamID string) ([]*models.Secret, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, teamID, auth.ResourceSecrets, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
+	return s.secretStore.ListByTeamID(ctx, teamID)
+}
+
+func (s *secretService) ListSecretsForCurrentUser(ctx context.Context, orgID string) ([]*models.Secret, *errors.ServiceError) {
+	identity := auth.GetIdentityFromCtx(ctx)
+	if identity == nil {
+		return nil, errors.Unauthorized("not authenticated")
+	}
+
+	if identity.IsOrgAdmin() {
+		return s.secretStore.ListByOrganisation(ctx, orgID)
+	}
+
+	memberships, serr := s.teamService.InternalListUserTeams(ctx, identity.UserID, orgID)
+	if serr != nil {
+		return nil, serr
+	}
+
+	var allowedTeamIDs []string
+	for _, m := range memberships {
+		if permErr := s.permissions.Check(ctx, m.TeamID, auth.ResourceSecrets, "", auth.ActionList); permErr == nil {
+			allowedTeamIDs = append(allowedTeamIDs, m.TeamID)
+		}
+	}
+
+	return s.secretStore.ListByTeamIDs(ctx, allowedTeamIDs)
 }
 
 func (s *secretService) ListByUser(ctx context.Context, organisationID, userID string) ([]*models.Secret, *errors.ServiceError) {

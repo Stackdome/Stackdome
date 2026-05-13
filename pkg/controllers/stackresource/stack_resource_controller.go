@@ -93,7 +93,7 @@ func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	dbStackResource, serr := w.stackResourceService.GetByStackIDAndResourceName(ctx, stackID, stackResourceCr.Name)
+	dbStackResource, serr := w.stackResourceService.InternalGetByStackIDAndResourceName(ctx, stackID, stackResourceCr.Name)
 	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
 			w.logger.Infof("StackResource %s not found in DB", stackResourceCr.Name)

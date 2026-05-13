@@ -10,7 +10,6 @@ func PresentOrganisation(in *models.Organisation) openapi.Organisation {
 		Id:        &in.ID,
 		Name:      &in.Name,
 		Domains:   PresentDomains(in.Domains),
-		IsDefault: &in.Default,
 		CreatedAt: &in.CreatedAt,
 		UpdatedAt: &in.UpdatedAt,
 	}
@@ -29,9 +28,7 @@ func PresentDomains(in []*models.OrganisationDomain) []openapi.DomainName {
 }
 
 func ConvertOrganisation(in openapi.Organisation) *models.Organisation {
-	res := &models.Organisation{
-		Default: false,
-	}
+	res := &models.Organisation{}
 	if in.HasDomains() {
 		res.Domains = ConvertDomains(in.Domains)
 	}

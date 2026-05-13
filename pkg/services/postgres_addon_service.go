@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -26,6 +27,8 @@ type PostgresAddonService interface {
 	UpdatePostgresAddon(ctx context.Context, id string, postgresAddon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError)
 	DeletePostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
 	ListPostgresAddonsByOrganisation(ctx context.Context, organisationID string) ([]*models.PostgresAddon, *errors.ServiceError)
+	ListPostgresAddonsForCurrentUser(ctx context.Context, orgID string) ([]*models.PostgresAddon, *errors.ServiceError)
+	ListPostgresAddonsByTeamID(ctx context.Context, teamID string) ([]*models.PostgresAddon, *errors.ServiceError)
 	UpdatePostgresAddonStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError
 
 	// Lifecycle operations
@@ -40,6 +43,8 @@ type PostgresAddonService interface {
 	GetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError)
 
 	// Internal operations
+	InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
+	InternalGetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError)
 	InternalDeleteFromDB(ctx context.Context, id string) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError)
 
@@ -57,7 +62,9 @@ type PostgresAddonServiceSpec struct {
 	SecretService         SecretService
 	PostgresBackupService PostgresBackupService
 	ClusterManager        clustermanager.ClusterManager
+	TeamService           TeamService
 	Logger                logger.Logger
+	Permissions           auth.PermissionService
 }
 
 type postgresAddonService struct {
@@ -69,10 +76,12 @@ type postgresAddonService struct {
 	clusterService     ClusterService
 	objectStoreService ObjectStoreService
 	secretService      SecretService
+	teamService        TeamService
 	clusterManager     clustermanager.ClusterManager
 	validator          validator.PostgresAddonValidator
 	logger             logger.Logger
 	sessionFactory     db.SessionFactory
+	permissions        auth.PermissionService
 
 	BackgroundJobEnqueuerDep
 	ClusterResourceServiceDeps
@@ -101,10 +110,12 @@ func NewPostgresAddonService(spec PostgresAddonServiceSpec) PostgresAddonService
 		namespaceService:   spec.NamespaceService,
 		objectStoreService: spec.ObjectStoreService,
 		secretService:      spec.SecretService,
+		teamService:        spec.TeamService,
 		clusterManager:     spec.ClusterManager,
 		validator:          postgresaddon.NewPostgresAddonValidator(),
 		logger:             spec.Logger,
 		sessionFactory:     spec.SessionFactory,
+		permissions:        spec.Permissions,
 	}
 }
 
@@ -113,6 +124,10 @@ func (s *postgresAddonService) InjectClusterManager(clusterManager clustermanage
 }
 
 func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgresAddon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, postgresAddon.TeamID, auth.ResourceAddonsPostgres, "", auth.ActionCreate); permErr != nil {
+		return nil, permErr
+	}
+
 	// Validate input
 	if err := s.validator.ValidateForCreate(ctx, postgresAddon); err != nil {
 		return nil, err
@@ -245,6 +260,17 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 }
 
 func (s *postgresAddonService) GetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError) {
+	addon, err := s.postgresAddonStore.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if permErr := s.permissions.Check(ctx, addon.TeamID, auth.ResourceAddonsPostgres, id, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
+	return addon, nil
+}
+
+func (s *postgresAddonService) InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError) {
 	return s.postgresAddonStore.GetByID(ctx, id)
 }
 
@@ -253,19 +279,24 @@ func (s *postgresAddonService) GetPostgresAddonByName(ctx context.Context, organ
 }
 
 func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id string, postgresAddon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
-	existingPostgresAddon, err := s.GetPostgresAddon(ctx, id)
+	existingPostgresAddon, err := s.postgresAddonStore.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-
-	// Validate update using validator
-	if err := s.validator.ValidateForUpdate(ctx, existingPostgresAddon, postgresAddon); err != nil {
-		return nil, err
+	if permErr := s.permissions.Check(ctx, existingPostgresAddon.TeamID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
+		return nil, permErr
 	}
 
 	postgresAddon.ClusterID = existingPostgresAddon.ClusterID
 	postgresAddon.NamespaceID = existingPostgresAddon.NamespaceID
 	postgresAddon.Namespace = existingPostgresAddon.Namespace
+	postgresAddon.OrganisationID = existingPostgresAddon.OrganisationID
+	postgresAddon.TeamID = existingPostgresAddon.TeamID
+
+	// Validate update using validator
+	if err := s.validator.ValidateForUpdate(ctx, existingPostgresAddon, postgresAddon); err != nil {
+		return nil, err
+	}
 
 	// Validate BackupConfig object store if specified
 	if postgresAddon.BackupConfig.ObjectStoreID != "" {
@@ -375,9 +406,12 @@ func (s *postgresAddonService) extensionsEqual(a, b models.PostgresExtensions) b
 }
 
 func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError) {
-	postgresAddon, err := s.GetPostgresAddon(ctx, id)
+	postgresAddon, err := s.postgresAddonStore.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if permErr := s.permissions.Check(ctx, postgresAddon.TeamID, auth.ResourceAddonsPostgres, id, auth.ActionDelete); permErr != nil {
+		return nil, permErr
 	}
 
 	// Check addon usage before deletion
@@ -408,7 +442,42 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 }
 
 func (s *postgresAddonService) ListPostgresAddonsByOrganisation(ctx context.Context, organisationID string) ([]*models.PostgresAddon, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, organisationID, auth.ResourceAddonsPostgres, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
 	return s.postgresAddonStore.ListByOrganisation(ctx, organisationID)
+}
+
+func (s *postgresAddonService) ListPostgresAddonsForCurrentUser(ctx context.Context, orgID string) ([]*models.PostgresAddon, *errors.ServiceError) {
+	identity := auth.GetIdentityFromCtx(ctx)
+	if identity == nil {
+		return nil, errors.Unauthorized("not authenticated")
+	}
+
+	if identity.IsOrgAdmin() {
+		return s.postgresAddonStore.ListByOrganisation(ctx, orgID)
+	}
+
+	memberships, serr := s.teamService.InternalListUserTeams(ctx, identity.UserID, orgID)
+	if serr != nil {
+		return nil, serr
+	}
+
+	var allowedTeamIDs []string
+	for _, m := range memberships {
+		if permErr := s.permissions.Check(ctx, m.TeamID, auth.ResourceAddonsPostgres, "", auth.ActionList); permErr == nil {
+			allowedTeamIDs = append(allowedTeamIDs, m.TeamID)
+		}
+	}
+
+	return s.postgresAddonStore.ListByTeamIDs(ctx, allowedTeamIDs)
+}
+
+func (s *postgresAddonService) ListPostgresAddonsByTeamID(ctx context.Context, teamID string) ([]*models.PostgresAddon, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, teamID, auth.ResourceAddonsPostgres, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
+	return s.postgresAddonStore.ListByTeamID(ctx, teamID)
 }
 
 func (s *postgresAddonService) UpdatePostgresAddonStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError {
@@ -419,110 +488,6 @@ func (s *postgresAddonService) UpdatePostgresAddonStatus(ctx context.Context, id
 func (s *postgresAddonService) RequestPostgresAddonBackup(ctx context.Context, id string) *errors.ServiceError {
 	now := time.Now().UTC()
 	return s.postgresAddonStore.UpdateBackupRequestedAt(ctx, id, &now)
-}
-
-func (s *postgresAddonService) HibernatePostgresAddon(ctx context.Context, id string, lifecycleConfig models.PostgresLifecycleConfig) *errors.ServiceError {
-	// Get existing addon
-	existingAddon, err := s.GetPostgresAddon(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	// Update lifecycle config
-	existingAddon.LifecycleConfig = lifecycleConfig
-
-	// Persist the lifecycle config change
-	_, err = s.postgresAddonStore.Update(ctx, existingAddon)
-	if err != nil {
-		return err
-	}
-
-	// Enqueue background job for hibernation
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
-		ID: id,
-	}); err != nil {
-		return errors.GeneralError("failed to enqueue hibernation job for PostgreSQL addon '%s': %s", existingAddon.Name, err.Error())
-	}
-
-	return nil
-}
-
-func (s *postgresAddonService) WakePostgresAddon(ctx context.Context, id string, lifecycleConfig models.PostgresLifecycleConfig) *errors.ServiceError {
-	// Get existing addon
-	existingAddon, err := s.GetPostgresAddon(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	// Update lifecycle config
-	existingAddon.LifecycleConfig = lifecycleConfig
-
-	// Persist the lifecycle config change
-	_, err = s.postgresAddonStore.Update(ctx, existingAddon)
-	if err != nil {
-		return err
-	}
-
-	// Enqueue background job for waking
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
-		ID: id,
-	}); err != nil {
-		return errors.GeneralError("failed to enqueue wake job for PostgreSQL addon '%s': %s", existingAddon.Name, err.Error())
-	}
-
-	return nil
-}
-
-func (s *postgresAddonService) FencePostgresAddon(ctx context.Context, id string, lifecycleConfig models.PostgresLifecycleConfig) *errors.ServiceError {
-	// Get existing addon
-	existingAddon, err := s.GetPostgresAddon(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	// Update lifecycle config
-	existingAddon.LifecycleConfig = lifecycleConfig
-
-	// Persist the lifecycle config change
-	_, err = s.postgresAddonStore.Update(ctx, existingAddon)
-	if err != nil {
-		return err
-	}
-
-	// Enqueue background job for fencing
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
-		ID: id,
-	}); err != nil {
-		return errors.GeneralError("failed to enqueue fencing job for PostgreSQL addon '%s': %s", existingAddon.Name, err.Error())
-	}
-
-	return nil
-}
-
-func (s *postgresAddonService) UnfencePostgresAddon(ctx context.Context, id string, lifecycleConfig models.PostgresLifecycleConfig) *errors.ServiceError {
-	// Get existing addon
-	existingAddon, err := s.GetPostgresAddon(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	// Update lifecycle config
-	existingAddon.LifecycleConfig = lifecycleConfig
-
-	// Persist the lifecycle config change
-	_, err = s.postgresAddonStore.Update(ctx, existingAddon)
-	if err != nil {
-		return err
-	}
-
-	// Enqueue background job for unfencing
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
-		ID: id,
-	}); err != nil {
-		return errors.GeneralError("failed to enqueue unfencing job for PostgreSQL addon '%s': %s", existingAddon.Name, err.Error())
-	}
-
-	return nil
 }
 
 // Internal operations
@@ -553,6 +518,14 @@ func (s *postgresAddonService) DatabaseService() PostgresAddonDatabaseService {
 
 // TriggerBackup triggers a backup for the postgres addon
 func (s *postgresAddonService) TriggerBackup(ctx context.Context, id string) *errors.ServiceError {
+	addon, err := s.postgresAddonStore.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if permErr := s.permissions.Check(ctx, addon.TeamID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
+		return permErr
+	}
+
 	// Update the backup requested timestamp
 	now := time.Now()
 	if err := s.postgresAddonStore.UpdateBackupRequestedAt(ctx, id, &now); err != nil {
@@ -570,37 +543,62 @@ func (s *postgresAddonService) TriggerBackup(ctx context.Context, id string) *er
 // TriggerHibernate triggers hibernation for the postgres addon
 func (s *postgresAddonService) TriggerHibernate(ctx context.Context, id string, enabled bool) *errors.ServiceError {
 	// Get the current postgres addon
-	postgresAddon, err := s.GetPostgresAddon(ctx, id)
+	postgresAddon, err := s.postgresAddonStore.GetByID(ctx, id)
 	if err != nil {
 		return err
+	}
+	if permErr := s.permissions.Check(ctx, postgresAddon.TeamID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
+		return permErr
 	}
 
 	// Update lifecycle config
 	postgresAddon.LifecycleConfig.HibernationEnabled = enabled
 
-	// Update the postgres addon
-	_, err = s.UpdatePostgresAddon(ctx, id, postgresAddon)
-	return err
+	_, err = s.postgresAddonStore.Update(ctx, postgresAddon)
+	if err != nil {
+		return err
+	}
+
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{ID: id}); err != nil {
+		return errors.GeneralError("failed to enqueue hibernation job for postgres addon '%s': %s", postgresAddon.Name, err.Error())
+	}
+	return nil
 }
 
 // TriggerFence triggers fencing for the postgres addon
 func (s *postgresAddonService) TriggerFence(ctx context.Context, id string, enabled bool) *errors.ServiceError {
 	// Get the current postgres addon
-	postgresAddon, err := s.GetPostgresAddon(ctx, id)
+	postgresAddon, err := s.postgresAddonStore.GetByID(ctx, id)
 	if err != nil {
 		return err
+	}
+	if permErr := s.permissions.Check(ctx, postgresAddon.TeamID, auth.ResourceAddonsPostgres, id, auth.ActionWrite); permErr != nil {
+		return permErr
 	}
 
 	// Update lifecycle config
 	postgresAddon.LifecycleConfig.FencingEnabled = enabled
 
-	// Update the postgres addon
-	_, err = s.UpdatePostgresAddon(ctx, id, postgresAddon)
-	return err
+	_, err = s.postgresAddonStore.Update(ctx, postgresAddon)
+	if err != nil {
+		return err
+	}
+
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{ID: id}); err != nil {
+		return errors.GeneralError("failed to enqueue fencing job for postgres addon '%s': %s", postgresAddon.Name, err.Error())
+	}
+	return nil
 }
 
 // ListBackups lists all backups for a postgres addon
 func (s *postgresAddonService) ListBackups(ctx context.Context, postgresAddonID string) ([]*models.PostgresBackup, *errors.ServiceError) {
+	addon, err := s.postgresAddonStore.GetByID(ctx, postgresAddonID)
+	if err != nil {
+		return nil, err
+	}
+	if permErr := s.permissions.Check(ctx, addon.TeamID, auth.ResourceAddonsPostgres, postgresAddonID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	return s.backupService.ListByPostgresAddon(ctx, postgresAddonID)
 }
 
@@ -609,7 +607,21 @@ func (s *postgresAddonService) GetCredentials(ctx context.Context, addonID strin
 	if err != nil {
 		return nil, err
 	}
+	if permErr := s.permissions.Check(ctx, addon.TeamID, auth.ResourceAddonsPostgres, addonID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
+	return s.getCredentialsForAddon(ctx, addon, database, superuser)
+}
 
+func (s *postgresAddonService) InternalGetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError) {
+	addon, err := s.postgresAddonStore.GetByID(ctx, addonID)
+	if err != nil {
+		return nil, err
+	}
+	return s.getCredentialsForAddon(ctx, addon, database, superuser)
+}
+
+func (s *postgresAddonService) getCredentialsForAddon(ctx context.Context, addon *models.PostgresAddon, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError) {
 	ok := models.IsConditionTrue(addon.Status.Conditions, string(models.PostgresAddonConditionReadyOnce))
 	if !ok {
 		return nil, errors.BadRequest("credentials not available until addon has been ready at least once")

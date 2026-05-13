@@ -89,7 +89,7 @@ func (w *stackReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 		w.Log.Errorf("Stack %s does not have a workspace id label", stackCr.Name)
 		return ctrl.Result{}, nil
 	}
-	dbStack, serr := w.StackService.GetStack(ctx, stackID)
+	dbStack, serr := w.StackService.InternalGetStack(ctx, stackID)
 	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
 			w.Log.Infof("Stack %s not found in DB", stackCr.Name)

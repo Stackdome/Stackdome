@@ -40,11 +40,11 @@ func WaitForCRExists(ctx context.Context, clusterClient client.Client, name, nam
 }
 
 // WaitForAddonReady polls the API until the addon status is "Ready".
-func WaitForAddonReady(apiClient *openapi.APIClient, orgID, addonID string, timeout time.Duration) *openapi.PostgresAddon {
+func WaitForAddonReady(apiClient *openapi.APIClient, orgID, teamName, addonID string, timeout time.Duration) *openapi.PostgresAddon {
 	var addon *openapi.PostgresAddon
 	Eventually(func(g Gomega) {
 		ctx := context.Background()
-		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdGet(ctx, orgID, addonID).Execute()
+		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet(ctx, orgID, teamName, addonID).Execute()
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(httpResp.StatusCode).To(Equal(200))
 
@@ -60,11 +60,11 @@ func WaitForAddonReady(apiClient *openapi.APIClient, orgID, addonID string, time
 }
 
 // WaitForAddonState polls the API until the addon status matches the expected state.
-func WaitForAddonState(apiClient *openapi.APIClient, orgID, addonID, expectedState string, timeout time.Duration) *openapi.PostgresAddon {
+func WaitForAddonState(apiClient *openapi.APIClient, orgID, teamName, addonID, expectedState string, timeout time.Duration) *openapi.PostgresAddon {
 	var addon *openapi.PostgresAddon
 	Eventually(func(g Gomega) {
 		ctx := context.Background()
-		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdGet(ctx, orgID, addonID).Execute()
+		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet(ctx, orgID, teamName, addonID).Execute()
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(httpResp.StatusCode).To(Equal(200))
 
@@ -80,10 +80,10 @@ func WaitForAddonState(apiClient *openapi.APIClient, orgID, addonID, expectedSta
 }
 
 // WaitForConditionTrue polls the API until a specific condition on the addon is True.
-func WaitForConditionTrue(apiClient *openapi.APIClient, orgID, addonID, conditionType string, timeout time.Duration) {
+func WaitForConditionTrue(apiClient *openapi.APIClient, orgID, teamName, addonID, conditionType string, timeout time.Duration) {
 	Eventually(func(g Gomega) {
 		ctx := context.Background()
-		resp, _, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdGet(ctx, orgID, addonID).Execute()
+		resp, _, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet(ctx, orgID, teamName, addonID).Execute()
 		g.Expect(err).NotTo(HaveOccurred())
 
 		status, ok := resp.GetStatusOk()
@@ -104,10 +104,10 @@ func WaitForConditionTrue(apiClient *openapi.APIClient, orgID, addonID, conditio
 }
 
 // WaitForAddonDeleted polls the API until the addon returns 404.
-func WaitForAddonDeleted(apiClient *openapi.APIClient, orgID, addonID string, timeout time.Duration) {
+func WaitForAddonDeleted(apiClient *openapi.APIClient, orgID, teamName, addonID string, timeout time.Duration) {
 	Eventually(func(g Gomega) {
 		ctx := context.Background()
-		_, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdGet(ctx, orgID, addonID).Execute()
+		_, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet(ctx, orgID, teamName, addonID).Execute()
 		g.Expect(err).To(HaveOccurred())
 		g.Expect(httpResp.StatusCode).To(Equal(404))
 	}, timeout, 5*time.Second).Should(Succeed())
@@ -147,9 +147,9 @@ func VerifyCRLabel(cr *addonsv1alpha1.PostgresCluster, addonID string) {
 }
 
 // GetCredentials fetches JIT credentials for an addon database via the API.
-func GetCredentials(apiClient *openapi.APIClient, orgID, addonID, database string) *openapi.PostgresCredentials {
+func GetCredentials(apiClient *openapi.APIClient, orgID, teamName, addonID, database string) *openapi.PostgresCredentials {
 	ctx := context.Background()
-	resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet(ctx, orgID, addonID, database).Execute()
+	resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdCredentialsDatabaseGet(ctx, orgID, teamName, addonID, database).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to get credentials")
 	Expect(httpResp.StatusCode).To(Equal(200))
 	Expect(resp).NotTo(BeNil())
@@ -172,9 +172,9 @@ func ConnectToPostgres(host string, port int32, username, password, dbName, sslM
 
 // GetSuperuserCredentials fetches JIT superuser credentials for an addon via the API.
 // The database path param is required by the route but ignored by the service in superuser mode.
-func GetSuperuserCredentials(apiClient *openapi.APIClient, orgID, addonID string) *openapi.PostgresCredentials {
+func GetSuperuserCredentials(apiClient *openapi.APIClient, orgID, teamName, addonID string) *openapi.PostgresCredentials {
 	ctx := context.Background()
-	resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdCredentialsDatabaseGet(ctx, orgID, addonID, "postgres").
+	resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdCredentialsDatabaseGet(ctx, orgID, teamName, addonID, "postgres").
 		Superuser(true).
 		Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to get superuser credentials")
@@ -269,20 +269,20 @@ func CRNameForAddon(addonName string) string {
 }
 
 // TriggerBackup triggers an immediate backup for a postgres addon.
-func TriggerBackup(apiClient *openapi.APIClient, orgID, addonID string) {
+func TriggerBackup(apiClient *openapi.APIClient, orgID, teamName, addonID string) {
 	ctx := context.Background()
-	req := openapi.NewApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest()
+	req := openapi.NewApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest()
 	req.SetDescription("e2e test backup")
-	_, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPost(ctx, orgID, addonID).
-		ApiV1OrganizationsOrgIdAddonsPostgresIdActionsBackupPostRequest(*req).Execute()
+	_, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost(ctx, orgID, teamName, addonID).
+		ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest(*req).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to trigger backup")
 	Expect(httpResp.StatusCode).To(Equal(202))
 }
 
 // ListBackups returns all backups for a postgres addon.
-func ListBackups(apiClient *openapi.APIClient, orgID, addonID string) []openapi.PostgresBackup {
+func ListBackups(apiClient *openapi.APIClient, orgID, teamName, addonID string) []openapi.PostgresBackup {
 	ctx := context.Background()
-	resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdBackupsGet(ctx, orgID, addonID).Execute()
+	resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdBackupsGet(ctx, orgID, teamName, addonID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to list backups")
 	Expect(httpResp.StatusCode).To(Equal(200))
 	Expect(resp).NotTo(BeNil())
@@ -290,9 +290,9 @@ func ListBackups(apiClient *openapi.APIClient, orgID, addonID string) []openapi.
 }
 
 // WaitForBackupPhase polls until at least one backup reaches the expected phase.
-func WaitForBackupPhase(apiClient *openapi.APIClient, orgID, addonID, expectedPhase string, timeout time.Duration) {
+func WaitForBackupPhase(apiClient *openapi.APIClient, orgID, teamName, addonID, expectedPhase string, timeout time.Duration) {
 	Eventually(func(g Gomega) {
-		backups := ListBackups(apiClient, orgID, addonID)
+		backups := ListBackups(apiClient, orgID, teamName, addonID)
 		g.Expect(len(backups)).To(BeNumerically(">=", 1), "should have at least one backup")
 
 		found := false
@@ -317,11 +317,11 @@ func WaitForStackCRExists(ctx context.Context, clusterClient client.Client, name
 	return &cr
 }
 
-func WaitForStackReady(apiClient *openapi.APIClient, orgID, stackID string, timeout time.Duration) *openapi.Stack {
+func WaitForStackReady(apiClient *openapi.APIClient, orgID, teamName, stackID string, timeout time.Duration) *openapi.Stack {
 	var stack *openapi.Stack
 	Eventually(func(g Gomega) {
 		ctx := context.Background()
-		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdGet(ctx, orgID, stackID).Execute()
+		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(ctx, orgID, teamName, stackID).Execute()
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(httpResp.StatusCode).To(Equal(200))
 
@@ -336,10 +336,10 @@ func WaitForStackReady(apiClient *openapi.APIClient, orgID, stackID string, time
 	return stack
 }
 
-func WaitForStackDeleted(apiClient *openapi.APIClient, orgID, stackID string, timeout time.Duration) {
+func WaitForStackDeleted(apiClient *openapi.APIClient, orgID, teamName, stackID string, timeout time.Duration) {
 	Eventually(func(g Gomega) {
 		ctx := context.Background()
-		_, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdGet(ctx, orgID, stackID).Execute()
+		_, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(ctx, orgID, teamName, stackID).Execute()
 		g.Expect(err).To(HaveOccurred())
 		g.Expect(httpResp.StatusCode).To(Equal(404))
 	}, timeout, 2*time.Second).Should(Succeed())
@@ -438,9 +438,9 @@ func GetIngressForStackResource(ctx context.Context, clusterClient client.Client
 	return &ingress, nil
 }
 
-func ListStackBuilds(apiClient *openapi.APIClient, orgID, stackID string) []openapi.ImageBuild {
+func ListStackBuilds(apiClient *openapi.APIClient, orgID, teamName, stackID string) []openapi.ImageBuild {
 	ctx := context.Background()
-	resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdBuildsGet(ctx, orgID, stackID).Execute()
+	resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet(ctx, orgID, teamName, stackID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to list stack builds")
 	Expect(httpResp.StatusCode).To(Equal(200))
 	Expect(resp).NotTo(BeNil())
@@ -448,11 +448,11 @@ func ListStackBuilds(apiClient *openapi.APIClient, orgID, stackID string) []open
 }
 
 // DumpBuildSourceDebugInfo prints cluster and API state to help diagnose stuck builds.
-func DumpBuildSourceDebugInfo(ctx context.Context, apiClient *openapi.APIClient, clusterClient client.Client, clientset *kubernetes.Clientset, orgID, stackID, namespace string) {
+func DumpBuildSourceDebugInfo(ctx context.Context, apiClient *openapi.APIClient, clusterClient client.Client, clientset *kubernetes.Clientset, orgID, teamName, stackID, namespace string) {
 	fmt.Println("\n========== BUILD SOURCE DEBUG INFO ==========")
 
 	// Stack status via API
-	resp, _, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksIdGet(ctx, orgID, stackID).Execute()
+	resp, _, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(ctx, orgID, teamName, stackID).Execute()
 	if err != nil {
 		fmt.Printf("[Stack API] error fetching stack: %v\n", err)
 	} else if status, ok := resp.GetStatusOk(); ok {
@@ -463,7 +463,7 @@ func DumpBuildSourceDebugInfo(ctx context.Context, apiClient *openapi.APIClient,
 	}
 
 	// Image builds via API
-	buildsResp, _, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdStacksStackIdBuildsGet(ctx, orgID, stackID).Execute()
+	buildsResp, _, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet(ctx, orgID, teamName, stackID).Execute()
 	if err != nil {
 		fmt.Printf("[Builds API] error: %v\n", err)
 	} else {

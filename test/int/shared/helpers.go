@@ -10,9 +10,9 @@ import (
 )
 
 // PostgreSQL addon CRUD operations for Ginkgo tests
-func CreatePostgresAddon(client *openapi.APIClient, orgID string, addon *openapi.PostgresAddon) *openapi.PostgresAddon {
+func CreatePostgresAddon(client *openapi.APIClient, orgID, teamName string, addon *openapi.PostgresAddon) *openapi.PostgresAddon {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresPost(ctx, orgID).PostgresAddon(*addon).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresPost(ctx, orgID, teamName).PostgresAddon(*addon).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to create postgres addon")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected postgres addon response")
@@ -20,9 +20,9 @@ func CreatePostgresAddon(client *openapi.APIClient, orgID string, addon *openapi
 	return resp
 }
 
-func GetPostgresAddon(client *openapi.APIClient, orgID, addonID string) *openapi.PostgresAddon {
+func GetPostgresAddon(client *openapi.APIClient, orgID, teamName, addonID string) *openapi.PostgresAddon {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdGet(ctx, orgID, addonID).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet(ctx, orgID, teamName, addonID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to get postgres addon")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected postgres addon response")
@@ -30,9 +30,9 @@ func GetPostgresAddon(client *openapi.APIClient, orgID, addonID string) *openapi
 	return resp
 }
 
-func ListPostgresAddons(client *openapi.APIClient, orgID string) *openapi.PostgresAddonList {
+func ListPostgresAddons(client *openapi.APIClient, orgID, teamName string) *openapi.PostgresAddonList {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresGet(ctx, orgID).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresGet(ctx, orgID, teamName).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to list postgres addons")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected postgres addon list response")
@@ -40,9 +40,9 @@ func ListPostgresAddons(client *openapi.APIClient, orgID string) *openapi.Postgr
 	return resp
 }
 
-func UpdatePostgresAddon(client *openapi.APIClient, orgID, addonID string, addon *openapi.PostgresAddon) *openapi.PostgresAddon {
+func UpdatePostgresAddon(client *openapi.APIClient, orgID, teamName, addonID string, addon *openapi.PostgresAddon) *openapi.PostgresAddon {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdPut(ctx, orgID, addonID).PostgresAddon(*addon).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdPut(ctx, orgID, teamName, addonID).PostgresAddon(*addon).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to update postgres addon")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected postgres addon response")
@@ -50,17 +50,17 @@ func UpdatePostgresAddon(client *openapi.APIClient, orgID, addonID string, addon
 	return resp
 }
 
-func DeletePostgresAddon(client *openapi.APIClient, orgID, addonID string) {
+func DeletePostgresAddon(client *openapi.APIClient, orgID, teamName, addonID string) {
 	ctx := context.Background()
-	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdDelete(ctx, orgID, addonID).Execute()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdDelete(ctx, orgID, teamName, addonID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to delete postgres addon")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 }
 
 // Error testing helpers for Ginkgo
-func CreatePostgresAddonExpectError(client *openapi.APIClient, orgID string, addon *openapi.PostgresAddon, expectedStatus int) *openapi.GenericOpenAPIError {
+func CreatePostgresAddonExpectError(client *openapi.APIClient, orgID, teamName string, addon *openapi.PostgresAddon, expectedStatus int) *openapi.GenericOpenAPIError {
 	ctx := context.Background()
-	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresPost(ctx, orgID).PostgresAddon(*addon).Execute()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresPost(ctx, orgID, teamName).PostgresAddon(*addon).Execute()
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
@@ -70,9 +70,9 @@ func CreatePostgresAddonExpectError(client *openapi.APIClient, orgID string, add
 	return apiErr
 }
 
-func UpdatePostgresAddonExpectError(client *openapi.APIClient, orgID, addonID string, addon *openapi.PostgresAddon, expectedStatus int) *openapi.GenericOpenAPIError {
+func UpdatePostgresAddonExpectError(client *openapi.APIClient, orgID, teamName, addonID string, addon *openapi.PostgresAddon, expectedStatus int) *openapi.GenericOpenAPIError {
 	ctx := context.Background()
-	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdPut(ctx, orgID, addonID).PostgresAddon(*addon).Execute()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdPut(ctx, orgID, teamName, addonID).PostgresAddon(*addon).Execute()
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
@@ -82,9 +82,9 @@ func UpdatePostgresAddonExpectError(client *openapi.APIClient, orgID, addonID st
 	return apiErr
 }
 
-func GetPostgresAddonExpectError(client *openapi.APIClient, orgID, addonID string, expectedStatus int) *openapi.GenericOpenAPIError {
+func GetPostgresAddonExpectError(client *openapi.APIClient, orgID, teamName, addonID string, expectedStatus int) *openapi.GenericOpenAPIError {
 	ctx := context.Background()
-	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdAddonsPostgresIdGet(ctx, orgID, addonID).Execute()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdGet(ctx, orgID, teamName, addonID).Execute()
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
@@ -96,9 +96,9 @@ func GetPostgresAddonExpectError(client *openapi.APIClient, orgID, addonID strin
 
 // Secret CRUD operations for Ginkgo tests
 
-func CreateSecret(client *openapi.APIClient, orgID string, secret *openapi.Secret) *openapi.Secret {
+func CreateSecret(client *openapi.APIClient, orgID, teamName string, secret *openapi.Secret) *openapi.Secret {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdSecretsPost(ctx, orgID).Secret(*secret).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsPost(ctx, orgID, teamName).Secret(*secret).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to create secret")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected secret response")
@@ -106,9 +106,9 @@ func CreateSecret(client *openapi.APIClient, orgID string, secret *openapi.Secre
 	return resp
 }
 
-func GetSecret(client *openapi.APIClient, orgID, secretID string) *openapi.Secret {
+func GetSecret(client *openapi.APIClient, orgID, teamName, secretID string) *openapi.Secret {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdSecretsIdGet(ctx, orgID, secretID).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdGet(ctx, orgID, teamName, secretID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to get secret")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected secret response")
@@ -116,18 +116,18 @@ func GetSecret(client *openapi.APIClient, orgID, secretID string) *openapi.Secre
 	return resp
 }
 
-func DeleteSecret(client *openapi.APIClient, orgID, secretID string) {
+func DeleteSecret(client *openapi.APIClient, orgID, teamName, secretID string) {
 	ctx := context.Background()
-	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdSecretsIdDelete(ctx, orgID, secretID).Execute()
+	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdDelete(ctx, orgID, teamName, secretID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to delete secret")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusNoContent), "unexpected status code")
 }
 
 // ObjectStore CRUD operations for Ginkgo tests
 
-func CreateObjectStore(client *openapi.APIClient, orgID string, store *openapi.ObjectStore) *openapi.ObjectStore {
+func CreateObjectStore(client *openapi.APIClient, orgID, teamName string, store *openapi.ObjectStore) *openapi.ObjectStore {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresPost(ctx, orgID).ObjectStore(*store).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresPost(ctx, orgID, teamName).ObjectStore(*store).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to create object store")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected object store response")
@@ -135,9 +135,9 @@ func CreateObjectStore(client *openapi.APIClient, orgID string, store *openapi.O
 	return resp
 }
 
-func GetObjectStore(client *openapi.APIClient, orgID, storeID string) *openapi.ObjectStore {
+func GetObjectStore(client *openapi.APIClient, orgID, teamName, storeID string) *openapi.ObjectStore {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdGet(ctx, orgID, storeID).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdGet(ctx, orgID, teamName, storeID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to get object store")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected object store response")
@@ -145,9 +145,9 @@ func GetObjectStore(client *openapi.APIClient, orgID, storeID string) *openapi.O
 	return resp
 }
 
-func ListObjectStores(client *openapi.APIClient, orgID string) *openapi.ObjectStoreList {
+func ListObjectStores(client *openapi.APIClient, orgID, teamName string) *openapi.ObjectStoreList {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresGet(ctx, orgID).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresGet(ctx, orgID, teamName).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to list object stores")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected object store list response")
@@ -155,9 +155,9 @@ func ListObjectStores(client *openapi.APIClient, orgID string) *openapi.ObjectSt
 	return resp
 }
 
-func UpdateObjectStore(client *openapi.APIClient, orgID, storeID string, store *openapi.ObjectStore) *openapi.ObjectStore {
+func UpdateObjectStore(client *openapi.APIClient, orgID, teamName, storeID string, store *openapi.ObjectStore) *openapi.ObjectStore {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdPut(ctx, orgID, storeID).ObjectStore(*store).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdPut(ctx, orgID, teamName, storeID).ObjectStore(*store).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to update object store")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected object store response")
@@ -165,18 +165,18 @@ func UpdateObjectStore(client *openapi.APIClient, orgID, storeID string, store *
 	return resp
 }
 
-func DeleteObjectStore(client *openapi.APIClient, orgID, storeID string) {
+func DeleteObjectStore(client *openapi.APIClient, orgID, teamName, storeID string) {
 	ctx := context.Background()
-	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdDelete(ctx, orgID, storeID).Execute()
+	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdDelete(ctx, orgID, teamName, storeID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to delete object store")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusNoContent), "unexpected status code")
 }
 
 // Error testing helpers for ObjectStore
 
-func CreateObjectStoreExpectError(client *openapi.APIClient, orgID string, store *openapi.ObjectStore, expectedStatus int) *openapi.GenericOpenAPIError {
+func CreateObjectStoreExpectError(client *openapi.APIClient, orgID, teamName string, store *openapi.ObjectStore, expectedStatus int) *openapi.GenericOpenAPIError {
 	ctx := context.Background()
-	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresPost(ctx, orgID).ObjectStore(*store).Execute()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresPost(ctx, orgID, teamName).ObjectStore(*store).Execute()
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
@@ -186,9 +186,9 @@ func CreateObjectStoreExpectError(client *openapi.APIClient, orgID string, store
 	return apiErr
 }
 
-func GetObjectStoreExpectError(client *openapi.APIClient, orgID, storeID string, expectedStatus int) *openapi.GenericOpenAPIError {
+func GetObjectStoreExpectError(client *openapi.APIClient, orgID, teamName, storeID string, expectedStatus int) *openapi.GenericOpenAPIError {
 	ctx := context.Background()
-	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdGet(ctx, orgID, storeID).Execute()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdGet(ctx, orgID, teamName, storeID).Execute()
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
@@ -198,9 +198,9 @@ func GetObjectStoreExpectError(client *openapi.APIClient, orgID, storeID string,
 	return apiErr
 }
 
-func UpdateObjectStoreExpectError(client *openapi.APIClient, orgID, storeID string, store *openapi.ObjectStore, expectedStatus int) *openapi.GenericOpenAPIError {
+func UpdateObjectStoreExpectError(client *openapi.APIClient, orgID, teamName, storeID string, store *openapi.ObjectStore, expectedStatus int) *openapi.GenericOpenAPIError {
 	ctx := context.Background()
-	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdObjectStoresIdPut(ctx, orgID, storeID).ObjectStore(*store).Execute()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameObjectStoresIdPut(ctx, orgID, teamName, storeID).ObjectStore(*store).Execute()
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
@@ -269,9 +269,9 @@ func ExpectPostgresAddonEqual(expected, actual *openapi.PostgresAddon) {
 
 // Stack CRUD operations for Ginkgo tests
 
-func CreateStack(client *openapi.APIClient, orgID string, stack *openapi.Stack) *openapi.Stack {
+func CreateStack(client *openapi.APIClient, orgID, teamName string, stack *openapi.Stack) *openapi.Stack {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksPost(ctx, orgID).Stack(*stack).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost(ctx, orgID, teamName).Stack(*stack).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to create stack")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected stack response")
@@ -279,9 +279,9 @@ func CreateStack(client *openapi.APIClient, orgID string, stack *openapi.Stack) 
 	return resp
 }
 
-func GetStack(client *openapi.APIClient, orgID, stackID string) *openapi.Stack {
+func GetStack(client *openapi.APIClient, orgID, teamName, stackID string) *openapi.Stack {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksIdGet(ctx, orgID, stackID).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(ctx, orgID, teamName, stackID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to get stack")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected stack response")
@@ -289,9 +289,9 @@ func GetStack(client *openapi.APIClient, orgID, stackID string) *openapi.Stack {
 	return resp
 }
 
-func ListStacks(client *openapi.APIClient, orgID string) *openapi.StackList {
+func ListStacks(client *openapi.APIClient, orgID, teamName string) *openapi.StackList {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksGet(ctx, orgID).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet(ctx, orgID, teamName).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to list stacks")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected stack list response")
@@ -299,19 +299,9 @@ func ListStacks(client *openapi.APIClient, orgID string) *openapi.StackList {
 	return resp
 }
 
-func ListStacksByCurrentUser(client *openapi.APIClient, orgID string) *openapi.StackList {
+func UpdateStack(client *openapi.APIClient, orgID, teamName, stackID string, stack *openapi.Stack) *openapi.Stack {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksCurrentGet(ctx, orgID).Execute()
-	Expect(err).NotTo(HaveOccurred(), "failed to list stacks for current user")
-	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
-	Expect(resp).NotTo(BeNil(), "expected stack list response")
-
-	return resp
-}
-
-func UpdateStack(client *openapi.APIClient, orgID, stackID string, stack *openapi.Stack) *openapi.Stack {
-	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksIdPut(ctx, orgID, stackID).Stack(*stack).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut(ctx, orgID, teamName, stackID).Stack(*stack).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to update stack")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected stack response")
@@ -319,9 +309,9 @@ func UpdateStack(client *openapi.APIClient, orgID, stackID string, stack *openap
 	return resp
 }
 
-func DeleteStack(client *openapi.APIClient, orgID, stackID string) *openapi.Stack {
+func DeleteStack(client *openapi.APIClient, orgID, teamName, stackID string) *openapi.Stack {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksIdDelete(ctx, orgID, stackID).Execute()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete(ctx, orgID, teamName, stackID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to delete stack")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusAccepted), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected stack response")
@@ -329,9 +319,9 @@ func DeleteStack(client *openapi.APIClient, orgID, stackID string) *openapi.Stac
 	return resp
 }
 
-func CreateStackExpectError(client *openapi.APIClient, orgID string, stack *openapi.Stack, expectedStatus int) *openapi.GenericOpenAPIError {
+func CreateStackExpectError(client *openapi.APIClient, orgID, teamName string, stack *openapi.Stack, expectedStatus int) *openapi.GenericOpenAPIError {
 	ctx := context.Background()
-	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksPost(ctx, orgID).Stack(*stack).Execute()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost(ctx, orgID, teamName).Stack(*stack).Execute()
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
@@ -341,9 +331,9 @@ func CreateStackExpectError(client *openapi.APIClient, orgID string, stack *open
 	return apiErr
 }
 
-func UpdateStackExpectError(client *openapi.APIClient, orgID, stackID string, stack *openapi.Stack, expectedStatus int) *openapi.GenericOpenAPIError {
+func UpdateStackExpectError(client *openapi.APIClient, orgID, teamName, stackID string, stack *openapi.Stack, expectedStatus int) *openapi.GenericOpenAPIError {
 	ctx := context.Background()
-	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdStacksIdPut(ctx, orgID, stackID).Stack(*stack).Execute()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut(ctx, orgID, teamName, stackID).Stack(*stack).Execute()
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 

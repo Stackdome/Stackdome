@@ -23,6 +23,7 @@ func GetLoggerFromContext(ctx context.Context) Logger {
 	return NewLogger()
 }
 
+//go:generate mockgen -source=logger.go -destination=../mocks/mock_logger.go -package=mocks
 type Logger interface {
 	SetLevel(level logrus.Level) Logger
 

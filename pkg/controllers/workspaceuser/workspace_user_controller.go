@@ -85,7 +85,7 @@ func (r *WorkspaceUserReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// TODO: When to garbage collect the workspace user in cluster if it is not found in db?
-	workspaceuser, serr := r.WorkspaceUserService.GetByID(ctx, workspaceUserID)
+	workspaceuser, serr := r.WorkspaceUserService.InternalGetByID(ctx, workspaceUserID)
 	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
 			return ctrl.Result{Requeue: true}, nil
@@ -93,7 +93,7 @@ func (r *WorkspaceUserReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to get workspace user from db: %v", serr)
 	}
 
-	cluster, serr := r.ClusterService.Get(ctx, workspaceuser.ClusterID)
+	cluster, serr := r.ClusterService.InternalGet(ctx, workspaceuser.ClusterID)
 	if serr != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get cluster from db: %v", serr)
 	}

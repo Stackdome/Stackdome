@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -21,6 +22,7 @@ type ClusterService interface {
 	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
 	GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
+	InternalGet(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	AddCluster(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError)
 	InternalListAllClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError)
@@ -32,6 +34,7 @@ type clusterService struct {
 	logger               logger.Logger
 	clusterManager       clustermanager.ClusterManager
 	imageRegistryService ImageRegistryService
+	permissions          auth.PermissionService
 }
 
 func NewClusterService(spec ClusterServiceSpec) ClusterService {
@@ -42,6 +45,7 @@ func NewClusterService(spec ClusterServiceSpec) ClusterService {
 		clusterManager:       spec.ClusterManager,
 		logger:               spec.Logger,
 		imageRegistryService: spec.ImageRegistryService,
+		permissions:          spec.Permissions,
 	}
 }
 
@@ -49,6 +53,7 @@ type ClusterServiceSpec struct {
 	SessionFactory       db.SessionFactory
 	ClusterManager       clustermanager.ClusterManager
 	ImageRegistryService ImageRegistryService
+	Permissions          auth.PermissionService
 	Logger               logger.Logger
 }
 
@@ -68,6 +73,9 @@ func (s *clusterService) InternalListAllClusters(ctx context.Context) ([]*models
 }
 
 func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, "", auth.ActionCreate); permErr != nil {
+		return nil, permErr
+	}
 	// Check if the cluster already exists for the org
 	existingCluster, err := s.clusterStore.GetClusterForOrg(ctx, cluster.OrganisationID)
 	if err != nil && err.Code != errors.ErrorNotFound {
@@ -129,6 +137,9 @@ func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceE
 		s.logger.Errorf("failed to get cluster: %v", err)
 		return err
 	}
+	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionDelete); permErr != nil {
+		return permErr
+	}
 	// // Unregister the cluster from the cluster manager
 	// cerr := s.clusterManager.UnregisterCluster(cluster.ID)
 	// if cerr != nil {
@@ -144,7 +155,7 @@ func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceE
 				return errors.GeneralError("image registry is nil")
 			}
 			s.logger.Infof("Deleting image registry %s", registry.ID)
-			err := s.imageRegistryService.Delete(ctx, registry.ID)
+			err := s.imageRegistryService.Delete(ctx, cluster.OrganisationID, registry.ID)
 			if err != nil {
 				s.logger.Errorf("failed to delete image registry: %v", err)
 				return err
@@ -246,6 +257,9 @@ func (s *clusterService) PersistManagerState(ctx context.Context, clusterID stri
 }
 
 func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceClusters, "", auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	cluster, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
 	if err != nil {
 		s.logger.Errorf("failed to get cluster for org: %v", err)
@@ -269,7 +283,14 @@ func (s *clusterService) Get(ctx context.Context, ID string) (*models.Cluster, *
 		s.logger.Errorf("failed to get cluster: %v", err)
 		return nil, err
 	}
+	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	return cluster, nil
+}
+
+func (s *clusterService) InternalGet(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError) {
+	return s.clusterStore.Get(ctx, ID)
 }
 
 func IsBase64(s string) bool {

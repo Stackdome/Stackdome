@@ -6,6 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** |  | [optional] [readonly] 
 **OrganisationId** | Pointer to **string** |  | [optional] [readonly] 
+**TeamId** | Pointer to **string** |  | [optional] [readonly] 
 **UserId** | Pointer to **string** |  | [optional] [readonly] 
 **ClusterId** | Pointer to **string** |  | [optional] [readonly] 
 **Name** | **string** | Unique name for this PostgreSQL cluster | 
@@ -86,6 +87,31 @@ SetOrganisationId sets OrganisationId field to given value.
 `func (o *PostgresAddon) HasOrganisationId() bool`
 
 HasOrganisationId returns a boolean if a field has been set.
+
+### GetTeamId
+
+`func (o *PostgresAddon) GetTeamId() string`
+
+GetTeamId returns the TeamId field if non-nil, zero value otherwise.
+
+### GetTeamIdOk
+
+`func (o *PostgresAddon) GetTeamIdOk() (*string, bool)`
+
+GetTeamIdOk returns a tuple with the TeamId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTeamId
+
+`func (o *PostgresAddon) SetTeamId(v string)`
+
+SetTeamId sets TeamId field to given value.
+
+### HasTeamId
+
+`func (o *PostgresAddon) HasTeamId() bool`
+
+HasTeamId returns a boolean if a field has been set.
 
 ### GetUserId
 

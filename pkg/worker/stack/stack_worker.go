@@ -92,7 +92,7 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *models.Stack")
 	}
 
-	stack, err := w.stackService.GetStack(ctx, stackID.ID)
+	stack, err := w.stackService.InternalGetStack(ctx, stackID.ID)
 	if err != nil {
 		if err.Is404() {
 			w.Logger().Infof("Stack %s not found, skipping reconciliation", stackID.ID)

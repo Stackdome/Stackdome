@@ -6,6 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** |  | [optional] [readonly] 
 **OrganisationId** | Pointer to **string** |  | [optional] [readonly] 
+**TeamId** | Pointer to **string** |  | [optional] [readonly] 
 **UserId** | Pointer to **string** |  | [optional] [readonly] 
 **Name** | **string** |  | 
 **Namespace** | Pointer to **string** |  | [optional] [readonly] 
@@ -85,6 +86,31 @@ SetOrganisationId sets OrganisationId field to given value.
 `func (o *Stack) HasOrganisationId() bool`
 
 HasOrganisationId returns a boolean if a field has been set.
+
+### GetTeamId
+
+`func (o *Stack) GetTeamId() string`
+
+GetTeamId returns the TeamId field if non-nil, zero value otherwise.
+
+### GetTeamIdOk
+
+`func (o *Stack) GetTeamIdOk() (*string, bool)`
+
+GetTeamIdOk returns a tuple with the TeamId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTeamId
+
+`func (o *Stack) SetTeamId(v string)`
+
+SetTeamId sets TeamId field to given value.
+
+### HasTeamId
+
+`func (o *Stack) HasTeamId() bool`
+
+HasTeamId returns a boolean if a field has been set.
 
 ### GetUserId
 

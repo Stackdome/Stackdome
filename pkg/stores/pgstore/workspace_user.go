@@ -129,6 +129,19 @@ func (w *workspaceUserStore) ListByOrgID(ctx context.Context, orgID string) ([]*
 	return res, nil
 }
 
+func (w *workspaceUserStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.WorkspaceUser, *errors.ServiceError) {
+	var workspaceUsers []*models.WorkspaceUser
+	if err := w.sessionFactory.New(ctx).
+		Model(&models.WorkspaceUser{}).
+		Preload(clause.Associations).
+		Where("team_id = ?", teamID).
+		Order("created_at DESC").
+		Find(&workspaceUsers).Error; err != nil {
+		return nil, errors.GeneralError("failed to list workspace users by team: %s", err.Error())
+	}
+	return workspaceUsers, nil
+}
+
 func (w *workspaceUserStore) Update(ctx context.Context, id string, spec *models.WorkspaceUser) (*models.WorkspaceUser, *errors.ServiceError) {
 	existingObj, err := w.GetByID(ctx, id)
 	if err != nil {

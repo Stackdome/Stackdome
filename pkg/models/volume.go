@@ -25,6 +25,7 @@ const (
 type Volume struct {
 	ID             string           `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 	OrganisationID string           `gorm:"not null" json:"organisation_id"`
+	TeamID         string           `gorm:"index" json:"team_id"`
 	UserID         string           `gorm:"not null" json:"user_id"`
 	Name           string           `gorm:"not null; <-:create" json:"name"`
 	NamespaceID    string           `gorm:"not null" json:"namespace_id"`

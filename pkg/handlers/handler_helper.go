@@ -7,11 +7,15 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"strconv"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/handlers/validation"
 	"github.com/ashishmax31/stackdome-api-server/pkg/interfaces"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	"github.com/ashishmax31/stackdome-api-server/pkg/services"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	"github.com/gorilla/mux"
 )
 
 type handlerConfig struct {
@@ -234,4 +238,29 @@ func addStreamHeaders(w http.ResponseWriter) {
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.WriteHeader(http.StatusOK)
+}
+
+func parsePaginationParams(r *http.Request) stores.PaginationParams {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if page <= 0 {
+		page = 1
+	}
+	return stores.PaginationParams{
+		Page:     page,
+		PageSize: pageSize,
+	}
+}
+
+func resolveTeamID(r *http.Request, teamService services.TeamService) (string, *errors.ServiceError) {
+	orgID := mux.Vars(r)["org_id"]
+	teamName := mux.Vars(r)["team_name"]
+	if teamName == "" {
+		return "", errors.BadRequest("team_name is required")
+	}
+	team, serr := teamService.GetTeamByOrgAndName(r.Context(), orgID, teamName)
+	if serr != nil {
+		return "", serr
+	}
+	return team.ID, nil
 }

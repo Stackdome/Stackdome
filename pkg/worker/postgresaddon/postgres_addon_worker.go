@@ -57,7 +57,7 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *models.PostgresAddon")
 	}
 
-	addon, err := w.postgresAddonService.GetPostgresAddon(ctx, addonRef.ID)
+	addon, err := w.postgresAddonService.InternalGetPostgresAddon(ctx, addonRef.ID)
 	if err != nil {
 		if err.Is404() {
 			w.Logger().Infof("PostgresAddon %s not found, skipping", addonRef.ID)

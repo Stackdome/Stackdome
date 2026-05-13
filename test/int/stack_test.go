@@ -7,12 +7,14 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/test/int/shared"
 )
 
 var _ = Describe("Stack", func() {
 	var client *openapi.APIClient
 	var orgID string
+	teamName := models.DefaultTeamName
 
 	BeforeEach(func() {
 		testEnv := GetEnvironment()
@@ -24,7 +26,7 @@ var _ = Describe("Stack", func() {
 	Context("CRUD Operations", func() {
 		It("should create a minimal stack", func() {
 			stack := shared.CreateSimpleStack("test-create")
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 
 			Expect(created.GetId()).NotTo(BeEmpty(), "stack should have an ID")
 			Expect(created.GetName()).To(Equal("test-create"))
@@ -37,9 +39,9 @@ var _ = Describe("Stack", func() {
 
 		It("should get a stack by ID", func() {
 			stack := shared.CreateSimpleStack("test-get")
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 
-			fetched := shared.GetStack(client, orgID, created.GetId())
+			fetched := shared.GetStack(client, orgID, teamName, created.GetId())
 
 			Expect(fetched.GetId()).To(Equal(created.GetId()))
 			Expect(fetched.GetName()).To(Equal("test-get"))
@@ -51,33 +53,16 @@ var _ = Describe("Stack", func() {
 		It("should list stacks by organization", func() {
 			stack1 := shared.CreateSimpleStack("test-list-1")
 			stack2 := shared.CreateSimpleStack("test-list-2")
-			shared.CreateStack(client, orgID, stack1)
-			shared.CreateStack(client, orgID, stack2)
+			shared.CreateStack(client, orgID, teamName, stack1)
+			shared.CreateStack(client, orgID, teamName, stack2)
 
-			list := shared.ListStacks(client, orgID)
+			list := shared.ListStacks(client, orgID, teamName)
 			Expect(len(list.GetItems())).To(BeNumerically(">=", 2))
-		})
-
-		It("should list stacks by current user", func() {
-			stack := shared.CreateSimpleStack("test-list-user")
-			shared.CreateStack(client, orgID, stack)
-
-			list := shared.ListStacksByCurrentUser(client, orgID)
-			Expect(len(list.GetItems())).To(BeNumerically(">=", 1))
-
-			found := false
-			for _, s := range list.GetItems() {
-				if s.GetName() == "test-list-user" {
-					found = true
-					break
-				}
-			}
-			Expect(found).To(BeTrue(), "should find the created stack in current user's list")
 		})
 
 		It("should update a stack", func() {
 			stack := shared.CreateSimpleStack("test-update")
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 
 			updateStack := shared.CreateSimpleStack("test-update")
 			exec := openapi.NewExecutionConfig()
@@ -90,7 +75,7 @@ var _ = Describe("Stack", func() {
 				*openapi.NewPort(443, false),
 			})
 
-			updated := shared.UpdateStack(client, orgID, created.GetId(), updateStack)
+			updated := shared.UpdateStack(client, orgID, teamName, created.GetId(), updateStack)
 
 			Expect(updated.GetId()).To(Equal(created.GetId()))
 			Expect(updated.Spec.StackResources[0].ExecutionConfig).NotTo(BeNil())
@@ -100,9 +85,9 @@ var _ = Describe("Stack", func() {
 
 		It("should delete a stack", func() {
 			stack := shared.CreateSimpleStack("test-delete")
-			created := shared.CreateStack(client, orgID, stack)
+			created := shared.CreateStack(client, orgID, teamName, stack)
 
-			deleted := shared.DeleteStack(client, orgID, created.GetId())
+			deleted := shared.DeleteStack(client, orgID, teamName, created.GetId())
 
 			status, ok := deleted.GetStatusOk()
 			Expect(ok).To(BeTrue())
@@ -119,14 +104,14 @@ var _ = Describe("Stack", func() {
 			spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
 			stack := openapi.NewStack("", *spec)
 
-			shared.CreateStackExpectError(client, orgID, stack, http.StatusBadRequest)
+			shared.CreateStackExpectError(client, orgID, teamName, stack, http.StatusBadRequest)
 		})
 
 		It("should reject a stack with no resources", func() {
 			spec := openapi.NewStackSpec([]openapi.StackResource{})
 			stack := openapi.NewStack("test-no-resources", *spec)
 
-			shared.CreateStackExpectError(client, orgID, stack, http.StatusBadRequest)
+			shared.CreateStackExpectError(client, orgID, teamName, stack, http.StatusBadRequest)
 		})
 
 		It("should reject a resource with neither build nor image spec", func() {
@@ -134,7 +119,7 @@ var _ = Describe("Stack", func() {
 			spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
 			stack := openapi.NewStack("test-no-image", *spec)
 
-			shared.CreateStackExpectError(client, orgID, stack, http.StatusBadRequest)
+			shared.CreateStackExpectError(client, orgID, teamName, stack, http.StatusBadRequest)
 		})
 
 		It("should reject duplicate resource names", func() {
@@ -146,15 +131,15 @@ var _ = Describe("Stack", func() {
 			spec := openapi.NewStackSpec([]openapi.StackResource{*resource1, *resource2})
 			stack := openapi.NewStack("test-dup-resources", *spec)
 
-			shared.CreateStackExpectError(client, orgID, stack, http.StatusBadRequest)
+			shared.CreateStackExpectError(client, orgID, teamName, stack, http.StatusBadRequest)
 		})
 
 		It("should reject duplicate stack names", func() {
 			stack := shared.CreateSimpleStack("test-dup-name")
-			shared.CreateStack(client, orgID, stack)
+			shared.CreateStack(client, orgID, teamName, stack)
 
 			duplicate := shared.CreateSimpleStack("test-dup-name")
-			shared.CreateStackExpectError(client, orgID, duplicate, http.StatusConflict)
+			shared.CreateStackExpectError(client, orgID, teamName, duplicate, http.StatusConflict)
 		})
 	})
 })

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/config"
@@ -20,7 +19,6 @@ import (
 	volumecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/volume"
 	workspaceusercontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceuser"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
@@ -92,12 +90,12 @@ func (te *testEnvironment) Init(ctx context.Context) error {
 		te.loadEnvAndConfigs,
 		te.setupLogger,
 		te.initializeResourceAccessPolicyManager,
+		te.initializePermissionService,
 		te.loadServices,
 		te.initializeClusterManager,
 		te.initializeWorkerManager,
 		te.injectClusterResourceServices,
 		te.initializeBaseResourceAccessPolicies,
-		te.ensureDefaultPlatformAdminUser,
 		te.startManagers,
 	}
 
@@ -131,6 +129,12 @@ func (te *testEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 }
 
 func (te *testEnvironment) loadSaneDefaults() {
+	// We dont load from .env file in test environment since we want to rely on environment variables for configuration in CI.
+	// The test bootstrap will use sensible defaults for any config values not set in environment variables, so that tests can run successfully without requiring a .env file.
+	// This also ensures that CI can configure the environment via env vars without needing to manage a .env file.
+	// Load standard environment variables
+	// te.Config.LoadEnvVariables()
+	// te.BootstrapConfig.LoadEnvVariables()
 	if te.Config.JwtSecret == "" {
 		if val, ok := config.EnvTestJWTSecret.Lookup(); ok {
 			te.Config.JwtSecret = val
@@ -188,23 +192,28 @@ func (te *testEnvironment) initializeResourceAccessPolicyManager(ctx context.Con
 	te.Logger.Debugf("Initializing resource access policy manager for tests")
 	debugModeEnabled := te.Logger.GetLevel() == logrus.DebugLevel
 
-	rootdir, err := findGoModDir()
-	if err != nil {
-		return fmt.Errorf("failed to find root directory for policy file: %w", err)
-	}
-	policyFilePath := filepath.Join(rootdir, "pkg/resourceaccess/casbin_model.conf")
 	resourceAccessPolicyMgr, err := resourceaccess.NewResourceAccessPolicyManager(
 		resourceaccess.CasbinResourceAccessPolicyManagerConfig{
 			DBConnectionString:     te.Config.Database.ConnectionString(),
 			EnableDebugLog:         debugModeEnabled,
 			PolicyAutoLoadInterval: time.Minute,
-			PolicyFilePath:         policyFilePath,
 		},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create policy manager: %w", err)
 	}
 	te.ResourceAccessPolicyManager = resourceAccessPolicyMgr
+	return nil
+}
+
+func (te *testEnvironment) initializePermissionService(ctx context.Context) error {
+	te.PermissionService = auth.NewPermissionService(auth.PermissionServiceSpec{
+		PolicyManager: te.ResourceAccessPolicyManager,
+		TeamStore: pgstore.NewTeamStore(pgstore.TeamStoreSpec{
+			SessionFactory: te.DBSession,
+		}),
+		Logger: te.Logger,
+	})
 	return nil
 }
 
@@ -217,12 +226,6 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create encryption service: %w", err)
 	}
-	secretService := services.NewSecretService(services.SecretServiceSpec{
-		SessionFactory:    te.DBSession,
-		Logger:            te.Logger,
-		EncryptionService: encryptionService,
-	})
-
 	stackDomainService := services.NewStackDomainsService(services.StackDomainsServiceSpec{
 		SessionFactory: te.DBSession,
 		Logger:         te.Logger,
@@ -233,11 +236,33 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:         te.Logger,
 	})
 
+	teamService := services.NewTeamService(services.TeamServiceSpec{
+		SessionFactory: te.DBSession,
+		PolicyManager:  te.ResourceAccessPolicyManager,
+		Permissions:    te.PermissionService,
+		Logger:         te.Logger,
+	})
+
 	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
 		OrganisationDomainService: organisationDomainService,
 		StackQueryService:         te.Services.StackService,
 		SessionFactory:            te.DBSession,
+		TeamService:               teamService,
+		PolicyManager:             te.ResourceAccessPolicyManager,
 		Logger:                    te.Logger,
+		Permissions:               te.PermissionService,
+	})
+
+	secretService := services.NewSecretService(services.SecretServiceSpec{
+		SessionFactory:    te.DBSession,
+		Logger:            te.Logger,
+		EncryptionService: encryptionService,
+		TeamService:       teamService,
+		Permissions:       te.PermissionService,
+	})
+
+	te.RefreshTokenStore = pgstore.NewRefreshTokenStore(pgstore.RefreshTokenStoreSpec{
+		SessionFactory: te.DBSession,
 	})
 
 	userService := services.NewUserService(services.UserServiceSpec{
@@ -247,11 +272,15 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		ResourceAccessPolicyManager: te.ResourceAccessPolicyManager,
 		JWTClaimsBuilder:            auth.NewJWTClaimsBuilder(),
 		OrganisationService:         organisationService,
+		Permissions:                 te.PermissionService,
+		TeamService:                 teamService,
+		RefreshTokenStore:           te.RefreshTokenStore,
 	})
 
 	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
 		SessionFactory: te.DBSession,
 		Logger:         te.Logger,
+		Permissions:    te.PermissionService,
 	})
 
 	clusterService := services.NewClusterService(services.ClusterServiceSpec{
@@ -259,6 +288,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		ImageRegistryService: imageRegistryService,
 		SessionFactory:       te.DBSession,
 		Logger:               te.Logger,
+		Permissions:          te.PermissionService,
 	})
 
 	workspaceUserService := services.NewWorkspaceUserService(services.WorkspaceUserServiceSpec{
@@ -266,23 +296,31 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:         te.Logger,
 		ClusterService: clusterService,
 		UserService:    userService,
+		Permissions:    te.PermissionService,
 	})
 
 	volumeService := services.NewVolumeService(services.VolumeServiceSpec{
 		SessionFactory: te.DBSession,
 		Logger:         te.Logger,
+		Permissions:    te.PermissionService,
 	})
+
+	stackStore := pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: te.DBSession})
 
 	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
 		SessionFactory:       te.DBSession,
 		Logger:               te.Logger,
 		WorkspaceUserService: workspaceUserService,
+		Permissions:          te.PermissionService,
+		StackStore:           stackStore,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
 		StackResourceService: stackResourceService,
 		SessionFactory:       te.DBSession,
 		Logger:               te.Logger,
+		Permissions:          te.PermissionService,
+		StackStore:           stackStore,
 	})
 
 	namespaceService := services.NewNamespaceService(services.NamespaceServiceSpec{
@@ -299,8 +337,10 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	objectStoreService := services.NewObjectStoreService(services.ObjectStoreServiceSpec{
 		SessionFactory: te.DBSession,
 		SecretService:  secretService,
+		TeamService:    teamService,
 		ClusterManager: te.ClusterManager,
 		Logger:         te.Logger,
+		Permissions:    te.PermissionService,
 	})
 
 	postgresBackupService := services.NewPostgresBackupService(services.PostgresBackupServiceSpec{
@@ -319,8 +359,10 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SecretService:         secretService,
 		PostgresBackupService: postgresBackupService,
 		ObjectStoreService:    objectStoreService,
+		TeamService:           teamService,
 		ClusterManager:        te.ClusterManager,
 		Logger:                te.Logger,
+		Permissions:           te.PermissionService,
 	})
 
 	stackService := services.NewStackService(services.StackServiceSpec{
@@ -334,6 +376,8 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		NamespaceService:       namespaceService,
 		SecretService:          secretService,
 		PostgresAddonService:   postgresAddonService,
+		TeamService:            teamService,
+		Permissions:            te.PermissionService,
 	})
 
 	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
@@ -341,6 +385,15 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		StackResourceService: stackResourceService,
 		StackService:         stackService,
 		Logger:               te.Logger,
+	})
+
+	apiTokenService := services.NewAPITokenService(services.APITokenServiceSpec{
+		SessionFactory: te.DBSession,
+		Logger:         te.Logger,
+	})
+
+	te.OAuthStateStore = pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
+		SessionFactory: te.DBSession,
 	})
 
 	te.Services = Services{
@@ -365,6 +418,8 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		PostgresAddonService:        postgresAddonService,
 		PostgresBackupService:       postgresBackupService,
 		AddonUsageService:           addonUsageService,
+		APITokenService:             apiTokenService,
+		TeamService:                 teamService,
 	}
 
 	return nil
@@ -546,69 +601,10 @@ func (te *testEnvironment) injectClusterResourceServices(ctx context.Context) er
 
 func (te *testEnvironment) initializeBaseResourceAccessPolicies(ctx context.Context) error {
 	te.Logger.Debugf("Initializing base resource access policies for test environment")
-
-	policies := []struct {
-		subject         string
-		domain          string
-		resource        string
-		action          string
-		resourceOwnerID string
-	}{
-		{models.UserRole.String(), "*", "/*", "*", "self"},
-		{models.OrganisationAdminRole.String(), "*", "/*", "*", "*"},
-		{models.PlatformAdminRole.String(), "*", "/*", "*", "*"},
-	}
-
-	for _, policy := range policies {
-		if err := te.ResourceAccessPolicyManager.AddPolicy(
-			policy.subject,
-			policy.domain,
-			policy.resource,
-			policy.action,
-			policy.resourceOwnerID,
-		); err != nil {
-			return fmt.Errorf("failed to add %s policy: %w", policy.subject, err)
-		}
+	if err := auth.LoadDefaultPolicies(te.ResourceAccessPolicyManager.AddPolicy); err != nil {
+		return fmt.Errorf("failed to load default policies: %w", err)
 	}
 	te.Logger.Debugf("Base resource access policies initialized for test environment")
-	return nil
-}
-
-func (te *testEnvironment) ensureDefaultPlatformAdminUser(ctx context.Context) error {
-	te.Logger.Debugf("Ensuring default platform admin user exists in test environment")
-
-	defaultOrg, err := pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
-		SessionFactory: te.DBSession,
-	}).GetDefaultOrg(ctx)
-	if err != nil {
-		return err
-	}
-
-	_, err = te.Services.UserService.GetDefaultUser(ctx)
-	if err != nil {
-		if err.Code == errors.ErrorNotFound {
-			defaultUserInfo := te.BootstrapConfig.DefaultUser
-			if validateErr := defaultUserInfo.Validate(); validateErr != nil {
-				return fmt.Errorf("invalid default user config: %w", validateErr)
-			}
-
-			defaultUser := &models.User{
-				Email:          defaultUserInfo.Email,
-				Role:           models.PlatformAdminRole,
-				Name:           defaultUserInfo.Name,
-				Password:       defaultUserInfo.Password,
-				OrganisationID: defaultOrg.ID,
-				DefaultUser:    true,
-			}
-
-			if _, createErr := te.Services.UserService.Create(ctx, defaultUser); createErr != nil {
-				return fmt.Errorf("failed to create default user: %v", createErr)
-			}
-			te.Logger.Infof("Created default platform admin user for test environment")
-			return nil
-		}
-		return fmt.Errorf("error checking for default user: %v", err)
-	}
 	return nil
 }
 

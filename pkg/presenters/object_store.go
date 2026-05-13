@@ -43,6 +43,7 @@ func PresentObjectStore(in *models.ObjectStore) openapi.ObjectStore {
 
 	res.SetId(in.ID)
 	res.SetOrganisationId(in.OrganisationID)
+	res.SetTeamId(in.TeamID)
 	res.SetName(in.Name)
 	res.SetCreatedAt(in.CreatedAt)
 	res.SetUpdatedAt(in.UpdatedAt)

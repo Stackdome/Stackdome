@@ -2,9 +2,11 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -20,8 +22,12 @@ import (
 
 type UserService interface {
 	Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
-	GetDefaultUser(ctx context.Context) (*models.User, *errors.ServiceError)
-	Create(ctx context.Context, user *models.User) (*openapi.UserSignupResponse, *errors.ServiceError)
+	GetUserFromContext(ctx context.Context) (*models.User, []*models.TeamMembership, *errors.ServiceError)
+	ListByOrgID(ctx context.Context, orgID string, params stores.PaginationParams) (*stores.PaginatedResult[*models.User], *errors.ServiceError)
+	InternalGet(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
+	InternalGetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError)
+	InternalCreateOAuthUser(ctx context.Context, email, name, githubID, avatarURL string) (*models.User, error)
+	Signup(ctx context.Context, user *models.User) (*openapi.UserSignupResponse, *errors.ServiceError)
 	Login(ctx context.Context, loginRequest *openapi.LoginRequest) (*openapi.LoginResponse, *errors.ServiceError)
 }
 
@@ -43,6 +49,9 @@ func NewUserService(spec UserServiceSpec) UserService {
 		resourceAccessPolicyMgr: spec.ResourceAccessPolicyManager,
 		jwtClaimsBuilder:        spec.JWTClaimsBuilder,
 		organisationService:     spec.OrganisationService,
+		permissions:             spec.Permissions,
+		teamService:             spec.TeamService,
+		refreshTokenStore:       spec.RefreshTokenStore,
 	}
 }
 
@@ -53,6 +62,9 @@ type UserServiceSpec struct {
 	ResourceAccessPolicyManager resourceaccess.ResourceAccessPolicyManager
 	JWTClaimsBuilder            jwtClaimsBuilder
 	OrganisationService         OrganisationService
+	Permissions                 auth.PermissionService
+	TeamService                 TeamService
+	RefreshTokenStore           stores.RefreshTokenStore
 }
 
 type usersService struct {
@@ -62,17 +74,67 @@ type usersService struct {
 	jwtSecretKey            string
 	resourceAccessPolicyMgr resourceaccess.ResourceAccessPolicyManager
 	jwtClaimsBuilder        jwtClaimsBuilder
+	permissions             auth.PermissionService
+	teamService             TeamService
+	refreshTokenStore       stores.RefreshTokenStore
 }
 
 func (u usersService) Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError) {
+	identity := auth.GetIdentityFromCtx(ctx)
+	if identity == nil {
+		return nil, errors.Unauthorized("failed to fetch user")
+	}
+
+	if permErr := u.permissions.Check(ctx, identity.OrgID, auth.ResourceUsers, ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	return u.userStore.GetByID(ctx, ID)
 }
 
-func (u usersService) GetDefaultUser(ctx context.Context) (*models.User, *errors.ServiceError) {
-	return u.userStore.GetDefaultUser(ctx)
+func (u usersService) ListByOrgID(ctx context.Context, orgID string, params stores.PaginationParams) (*stores.PaginatedResult[*models.User], *errors.ServiceError) {
+	if permErr := u.permissions.Check(ctx, orgID, auth.ResourceUsers, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
+	return u.userStore.ListByOrgID(ctx, orgID, params)
 }
 
-func (u usersService) Create(ctx context.Context, user *models.User) (*openapi.UserSignupResponse, *errors.ServiceError) {
+func (u usersService) InternalGet(ctx context.Context, ID string) (*models.User, *errors.ServiceError) {
+	return u.userStore.GetByID(ctx, ID)
+}
+
+func (u usersService) GetUserFromContext(ctx context.Context) (*models.User, []*models.TeamMembership, *errors.ServiceError) {
+	identity := auth.GetIdentityFromCtx(ctx)
+	if identity == nil || identity.UserID == "" {
+		return nil, nil, errors.Unauthorized("failed to fetch user")
+	}
+	user, serr := u.userStore.GetByID(ctx, identity.UserID)
+	if serr != nil {
+		return nil, nil, serr
+	}
+	memberships, membErr := u.teamService.InternalListUserTeams(ctx, user.ID, user.OrganisationID)
+	if membErr != nil {
+		u.logger.Errorf("failed to list user teams: %s", membErr.Error())
+	}
+	return user, memberships, nil
+}
+
+func (u usersService) GetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError) {
+	identity := auth.GetIdentityFromCtx(ctx)
+	if identity == nil {
+		return nil, errors.Unauthorized("failed to fetch user")
+	}
+
+	if permErr := u.permissions.Check(ctx, identity.OrgID, auth.ResourceUsers, "", auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
+	return u.userStore.GetByEmail(ctx, email)
+}
+
+func (u usersService) InternalGetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError) {
+	return u.userStore.GetByEmail(ctx, email)
+}
+
+func (u usersService) Signup(ctx context.Context, user *models.User) (*openapi.UserSignupResponse, *errors.ServiceError) {
 	u.logger.Infof("Creating user with email: %s", user.Email)
 	if len(user.Password) < 8 {
 		return nil, errors.BadRequest("password must be at least 8 characters")
@@ -83,51 +145,115 @@ func (u usersService) Create(ctx context.Context, user *models.User) (*openapi.U
 		return nil, errors.GeneralError("failed to create user")
 	}
 	user.Password = string(hashedPassword)
-	if len(user.Role) == 0 {
-		user.Role = models.UserRole
+
+	if user.Organisation == nil {
+		return nil, errors.BadRequest("organisation is required")
+	}
+	createdOrganisation, orgErr := u.organisationService.InternalCreate(ctx, user.Organisation)
+	if orgErr != nil {
+		u.logger.Errorf("failed to create organisation, %s", orgErr.Error())
+		return nil, errors.GeneralError("failed to create user")
+	}
+	user.OrganisationID = createdOrganisation.ID
+	user.Role = models.OrgAdminRole
+
+	if _, teamErr := u.teamService.InternalCreateDefaultTeam(ctx, createdOrganisation.ID); teamErr != nil {
+		u.logger.Errorf("failed to create default team: %s", teamErr.Error())
+		return nil, errors.GeneralError("failed to create default team")
 	}
 
-	if user.OrganisationID == "" {
-		if user.Organisation == nil {
-			return nil, errors.BadRequest("organisation is required")
-		}
-		// We create an organisation for the user if organisation ID is not provided.
-		createdOrganisation, err := u.organisationService.Create(ctx, user.Organisation)
-		if err != nil {
-			u.logger.Errorf("failed to create organisation, %s", err.Error())
-			return nil, errors.GeneralError("failed to create user")
-		}
-		user.OrganisationID = createdOrganisation.ID
-		// That mean this user is the organisation admin.
-		user.Role = models.OrganisationAdminRole
-	}
 	createdUser, serr := u.userStore.Create(ctx, user)
 	if serr != nil {
 		return nil, serr
 	}
 
-	// TODO: Wrap user creation in a transaction so that we can rollback if policyAddErr is not nil.
 	if policyAddErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
 		createdUser.ID,
-		createdUser.Role.String(),
+		string(models.OrgAdminRole),
 		createdUser.OrganisationID,
 	); policyAddErr != nil {
-		u.logger.Errorf("failed to add policy for user: %s", policyAddErr.Error())
+		u.logger.Errorf("failed to add OrgAdmin policy for user: %s", policyAddErr.Error())
 		return nil, errors.GeneralError("failed to create user")
 	}
-	expirationTime := time.Now().UTC().Add(10 * 24 * time.Hour)
+
+	// Org admin is also an org member, so they get both policies.
+	// This is needed because another orgadmin can demote the user from OrgAdmin.
+	if policyAddErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
+		createdUser.ID,
+		string(models.OrgMemberRole),
+		createdUser.OrganisationID,
+	); policyAddErr != nil {
+		u.logger.Errorf("failed to add OrgMember policy for user: %s", policyAddErr.Error())
+	}
+	expirationTime := time.Now().UTC().Add(auth.JwtTokenExpiry)
 	claims := u.jwtClaimsBuilder.BuildClaims(createdUser, expirationTime)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, tokenErr := token.SignedString([]byte(u.jwtSecretKey))
 	if tokenErr != nil {
 		return nil, errors.GeneralError("failed to generate token: %s", tokenErr.Error())
 	}
+	refreshToken, refreshErr := auth.CreateRefreshToken(ctx, u.refreshTokenStore, createdUser.ID)
+	if refreshErr != nil {
+		u.logger.Errorf("failed to create refresh token: %s", refreshErr.Error())
+		return nil, errors.GeneralError("failed to generate refresh token")
+	}
+
+	// All signup users are org admins, And org admins dont belong to any team.
+	// Hence team membetship is not included in the response.
 	res := openapi.UserSignupResponse{
-		User:     ptr.To(presenters.PresentUser(createdUser)),
-		JwtToken: &tokenString,
+		User:         ptr.To(presenters.PresentUser(createdUser)),
+		JwtToken:     &tokenString,
+		RefreshToken: &refreshToken,
 	}
 
 	return &res, nil
+}
+
+func (u usersService) InternalCreateOAuthUser(ctx context.Context, email, name, githubID, avatarURL string) (*models.User, error) {
+	org := &models.Organisation{Name: models.UserOrgNameFromOauth(name)}
+	createdOrg, serr := u.organisationService.InternalCreate(ctx, org)
+	if serr != nil {
+		return nil, fmt.Errorf("failed to create organisation for oauth user: %w", serr)
+	}
+
+	if u.teamService != nil {
+		if _, teamErr := u.teamService.InternalCreateDefaultTeam(ctx, createdOrg.ID); teamErr != nil {
+			return nil, fmt.Errorf("failed to create default team for oauth user: %w", teamErr)
+		}
+	}
+
+	user := &models.User{
+		Email:          email,
+		Name:           name,
+		Role:           models.OrgAdminRole,
+		OrganisationID: createdOrg.ID,
+		GithubID:       &githubID,
+		AvatarURL:      &avatarURL,
+	}
+
+	createdUser, serr := u.userStore.Create(ctx, user)
+	if serr != nil {
+		return nil, fmt.Errorf("failed to create oauth user: %w", serr)
+	}
+
+	if policyErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
+		createdUser.ID,
+		string(models.OrgAdminRole),
+		createdUser.OrganisationID,
+	); policyErr != nil {
+		u.logger.Errorf("failed to add OrgAdmin policy for oauth user: %s", policyErr.Error())
+		return nil, fmt.Errorf("failed to add access policy: %w", policyErr)
+	}
+
+	if policyErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
+		createdUser.ID,
+		string(models.OrgMemberRole),
+		createdUser.OrganisationID,
+	); policyErr != nil {
+		u.logger.Errorf("failed to add OrgMember policy for oauth user: %s", policyErr.Error())
+	}
+
+	return createdUser, nil
 }
 
 func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequest) (*openapi.LoginResponse, *errors.ServiceError) {
@@ -143,7 +269,7 @@ func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequ
 		u.logger.Errorf("failed to login: %s", err.Error())
 		return nil, errors.GeneralError("failed to login")
 	}
-	expirationTime := time.Now().UTC().Add(10 * 24 * time.Hour)
+	expirationTime := time.Now().UTC().Add(auth.JwtTokenExpiry)
 	claims := u.jwtClaimsBuilder.BuildClaims(userInDB, expirationTime)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, tokenErr := token.SignedString([]byte(u.jwtSecretKey))
@@ -151,8 +277,21 @@ func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequ
 		return nil, errors.GeneralError("failed to generate token: %s", tokenErr.Error())
 	}
 
+	refreshToken, refreshErr := auth.CreateRefreshToken(ctx, u.refreshTokenStore, userInDB.ID)
+	if refreshErr != nil {
+		u.logger.Errorf("failed to create refresh token: %s", refreshErr.Error())
+		return nil, errors.GeneralError("failed to generate refresh token")
+	}
+
+	memberships, membErr := u.teamService.InternalListUserTeams(ctx, userInDB.ID, userInDB.OrganisationID)
+	if membErr != nil {
+		u.logger.Errorf("failed to list user teams: %s", membErr.Error())
+		return nil, errors.GeneralError("failed to list user teams")
+	}
+
 	res := openapi.NewLoginResponse()
 	res.SetToken(tokenString)
-	res.SetUser(presenters.PresentUser(userInDB))
+	res.SetRefreshToken(refreshToken)
+	res.SetUser(presenters.PresentUserWithTeams(userInDB, memberships))
 	return res, nil
 }

@@ -82,7 +82,7 @@ func (r *clusterImageRegistryReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, nil
 	}
 
-	dbImageRegistry, serr := r.DBImageRegistryService.Get(ctx, registryID)
+	dbImageRegistry, serr := r.DBImageRegistryService.InternalGet(ctx, registryID)
 	if serr != nil {
 		r.Logger.Error(ctx, "failed to get cluster image registry from DB: %v", serr)
 		return ctrl.Result{}, fmt.Errorf("failed to get cluster image registry from DB: %v", serr)

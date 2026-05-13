@@ -32,7 +32,7 @@ type subReconciler interface {
 type stackService interface {
 	UpdateStackCrRevision(ctx context.Context, ID string, crRevision string) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError)
-	GetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
+	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.StackStatus) *errors.ServiceError
 	InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError
 }
@@ -56,8 +56,8 @@ type volumeService interface {
 }
 
 type postgresAddonService interface {
-	GetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
-	GetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError)
+	InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
+	InternalGetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError)
 }
 
 type addonUsageService interface {

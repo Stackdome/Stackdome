@@ -19,6 +19,7 @@ import (
 type ObjectStore struct {
 	Id             *string `json:"id,omitempty"`
 	OrganisationId *string `json:"organisation_id,omitempty"`
+	TeamId         *string `json:"team_id,omitempty"`
 	// Unique name for this object store configuration
 	Name      string             `json:"name"`
 	Spec      ObjectStoreSpec    `json:"spec"`
@@ -108,6 +109,38 @@ func (o *ObjectStore) HasOrganisationId() bool {
 // SetOrganisationId gets a reference to the given string and assigns it to the OrganisationId field.
 func (o *ObjectStore) SetOrganisationId(v string) {
 	o.OrganisationId = &v
+}
+
+// GetTeamId returns the TeamId field value if set, zero value otherwise.
+func (o *ObjectStore) GetTeamId() string {
+	if o == nil || o.TeamId == nil {
+		var ret string
+		return ret
+	}
+	return *o.TeamId
+}
+
+// GetTeamIdOk returns a tuple with the TeamId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ObjectStore) GetTeamIdOk() (*string, bool) {
+	if o == nil || o.TeamId == nil {
+		return nil, false
+	}
+	return o.TeamId, true
+}
+
+// HasTeamId returns a boolean if a field has been set.
+func (o *ObjectStore) HasTeamId() bool {
+	if o != nil && o.TeamId != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetTeamId gets a reference to the given string and assigns it to the TeamId field.
+func (o *ObjectStore) SetTeamId(v string) {
+	o.TeamId = &v
 }
 
 // GetName returns the Name field value
@@ -261,6 +294,9 @@ func (o ObjectStore) MarshalJSON() ([]byte, error) {
 	}
 	if o.OrganisationId != nil {
 		toSerialize["organisation_id"] = o.OrganisationId
+	}
+	if o.TeamId != nil {
+		toSerialize["team_id"] = o.TeamId
 	}
 	if true {
 		toSerialize["name"] = o.Name

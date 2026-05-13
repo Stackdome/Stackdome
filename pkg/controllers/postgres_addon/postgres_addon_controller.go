@@ -85,7 +85,7 @@ func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	dbInstance, serr := r.PostgresAddonService.GetPostgresAddon(ctx, postgresAddonID)
+	dbInstance, serr := r.PostgresAddonService.InternalGetPostgresAddon(ctx, postgresAddonID)
 	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
 			r.Log.Infof("postgres addon %s in namespace %s not found in DB", clusterInstance.Name, clusterInstance.Namespace)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/url"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -16,18 +17,20 @@ import (
 
 type ImageRegistryService interface {
 	Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
+	InternalGet(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError)
-	ListByClusterID(ctx context.Context, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
+	ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.ClusterImageRegistryStatus) *errors.ServiceError
 	InjectClusterResourceService(registryClusterService clusterresource.ClusterImageRegistryService)
 	PopulateInClusterRegistryUrlsForStack(ctx context.Context, stack *models.Stack) *errors.ServiceError
-	Delete(ctx context.Context, ID string) *errors.ServiceError
+	Delete(ctx context.Context, orgID, ID string) *errors.ServiceError
 }
 
 type ImageRegistryServiceSpec struct {
 	SessionFactory db.SessionFactory
+	Permissions    auth.PermissionService
 	Logger         logger.Logger
 }
 
@@ -36,13 +39,15 @@ func NewClusterImageRegistryService(spec ImageRegistryServiceSpec) ImageRegistry
 		clusterImageRegistryStore: pgstore.NewClusterImageRegistryStore(pgstore.ClusterImageRegistryStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		logger: spec.Logger,
+		logger:      spec.Logger,
+		permissions: spec.Permissions,
 	}
 }
 
 type clusterImageRegistryService struct {
 	clusterImageRegistryStore stores.ClusterImageRegistryStore
 	clusterResourceService    clusterresource.ClusterImageRegistryService
+	permissions               auth.PermissionService
 	logger                    logger.Logger
 }
 
@@ -51,6 +56,13 @@ func (s *clusterImageRegistryService) InjectClusterResourceService(registryClust
 }
 
 func (s *clusterImageRegistryService) Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
+	identity := auth.GetIdentityFromCtx(ctx)
+	if identity == nil {
+		return nil, errors.Unauthorized("failed to fetch identity")
+	}
+	if permErr := s.permissions.Check(ctx, identity.OrgID, auth.ResourceImageRegistries, ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	registry, err := s.clusterImageRegistryStore.GetByID(ctx, ID)
 	if err != nil {
 		s.logger.Errorf("failed to get cluster image registry: %v", err)
@@ -59,7 +71,14 @@ func (s *clusterImageRegistryService) Get(ctx context.Context, ID string) (*mode
 	return registry, nil
 }
 
-func (s *clusterImageRegistryService) ListByClusterID(ctx context.Context, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
+func (s *clusterImageRegistryService) InternalGet(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
+	return s.clusterImageRegistryStore.GetByID(ctx, ID)
+}
+
+func (s *clusterImageRegistryService) ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceImageRegistries, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
 	registries, err := s.clusterImageRegistryStore.ListByClusterID(ctx, clusterID)
 	if err != nil {
 		s.logger.Errorf("failed to list cluster image registries: %v", err)
@@ -105,6 +124,10 @@ func (s *clusterImageRegistryService) GetForOrg(ctx context.Context, orgID strin
 }
 
 func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, spec.OrganisationID, auth.ResourceImageRegistries, "", auth.ActionCreate); permErr != nil {
+		return nil, permErr
+	}
+
 	var createdRegistry *models.ClusterImageRegistry
 	var err *errors.ServiceError
 
@@ -217,7 +240,11 @@ func (s *clusterImageRegistryService) UpdateStatus(ctx context.Context, ID strin
 	return nil
 }
 
-func (s *clusterImageRegistryService) Delete(ctx context.Context, ID string) *errors.ServiceError {
+func (s *clusterImageRegistryService) Delete(ctx context.Context, orgID, ID string) *errors.ServiceError {
+	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceImageRegistries, ID, auth.ActionDelete); permErr != nil {
+		return permErr
+	}
+
 	registry, err := s.clusterImageRegistryStore.GetByID(ctx, ID)
 	if err != nil {
 		s.logger.Errorf("failed to get cluster image registry for deletion: %v", err)

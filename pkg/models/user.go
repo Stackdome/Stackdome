@@ -10,16 +10,19 @@ const (
 	CreatedForUserLabel = "user.stackdome.io/id"
 )
 
-type Role string
+// UserRole represents org-level roles stored on the User model.
+// OrgAdmin = full org access. Empty string = permissions derived from team memberships.
+// OrgMemberRole is not stored on User.Role; it is a Casbin-only grouping auto-managed by team membership lifecycle.
+type UserRole string
 
-func (r Role) String() string {
+func (r UserRole) String() string {
 	return string(r)
 }
 
 const (
-	UserRole              Role = "User"
-	OrganisationAdminRole Role = "OrganisationAdmin"
-	PlatformAdminRole     Role = "PlatformAdmin"
+	NoRole        UserRole = ""
+	OrgAdminRole  UserRole = "OrgAdmin"
+	OrgMemberRole UserRole = "OrgMember"
 )
 
 type User struct {
@@ -30,68 +33,32 @@ type User struct {
 	Email          string `gorm:"unique"`
 	Password       string
 	Organisation   *Organisation `gorm:"foreignKey:OrganisationID"`
-	Role           Role
+	Role           UserRole
 	OrganisationID string
-	DefaultUser    bool
+	GithubID       *string `gorm:"column:github_id;uniqueIndex"`
+	AvatarURL      *string `gorm:"column:avatar_url"`
+}
+
+func (u *User) IsOrgAdmin() bool {
+	return u.Role == OrgAdminRole
 }
 
 func (u *User) ClusterAccessRules() []rbacv1.PolicyRule {
-	switch u.Role {
-	case UserRole:
-		return []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods", "pods/log"},
-				Verbs:     []string{"get", "list"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods/exec", "pods/portforward"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"services"},
-				Verbs:     []string{"get"},
-			},
-		}
-	case OrganisationAdminRole:
-		return []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods", "pods/log"},
-				Verbs:     []string{"get", "list"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods/exec", "pods/portforward"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"services"},
-				Verbs:     []string{"get"},
-			},
-		}
-	case PlatformAdminRole:
-		return []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods", "pods/log"},
-				Verbs:     []string{"get", "list"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods/exec", "pods/portforward"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"services"},
-				Verbs:     []string{"get"},
-			},
-		}
-	default:
-		return []rbacv1.PolicyRule{}
+	return []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods", "pods/log"},
+			Verbs:     []string{"get", "list"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods/exec", "pods/portforward"},
+			Verbs:     []string{"create"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"services"},
+			Verbs:     []string{"get"},
+		},
 	}
 }

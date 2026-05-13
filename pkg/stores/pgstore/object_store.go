@@ -154,6 +154,19 @@ func (s *objectStoreStore) ListByOrganisation(ctx context.Context, organisationI
 	return objectStores, nil
 }
 
+func (s *objectStoreStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.ObjectStore, *errors.ServiceError) {
+	var objectStores []*models.ObjectStore
+
+	if err := s.sessionFactory.New(ctx).
+		Where("team_id = ?", teamID).
+		Order("created_at DESC").
+		Find(&objectStores).Error; err != nil {
+		return nil, errors.GeneralError("failed to list object stores by team: %s", err.Error())
+	}
+
+	return objectStores, nil
+}
+
 func (s *objectStoreStore) ValidateObjectStoreExists(ctx context.Context, objectStoreID string) (bool, *errors.ServiceError) {
 	var count int64
 	if err := s.sessionFactory.New(ctx).Model(&models.ObjectStore{}).
@@ -162,6 +175,20 @@ func (s *objectStoreStore) ValidateObjectStoreExists(ctx context.Context, object
 		return false, errors.GeneralError("failed to validate object store existence: %s", err.Error())
 	}
 	return count > 0, nil
+}
+
+func (s *objectStoreStore) ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*models.ObjectStore, *errors.ServiceError) {
+	if len(teamIDs) == 0 {
+		return []*models.ObjectStore{}, nil
+	}
+	var objectStores []*models.ObjectStore
+	if err := s.sessionFactory.New(ctx).
+		Where("team_id IN ?", teamIDs).
+		Order("created_at DESC").
+		Find(&objectStores).Error; err != nil {
+		return nil, errors.GeneralError("failed to list object stores by teams: %s", err.Error())
+	}
+	return objectStores, nil
 }
 
 func (s *objectStoreStore) ValidateObjectStoreNameUnique(ctx context.Context, organisationID, name, excludeID string) (bool, *errors.ServiceError) {

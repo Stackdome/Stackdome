@@ -12,11 +12,12 @@ const (
 )
 
 type ApplicationConfig struct {
-	Server        *ServerConfig   `json:"server"`
-	Database      *DatabaseConfig `json:"database"`
-	JwtSecret     string          `json:"jwt_secret"`
-	EncryptionKey string          `json:"encryption_key"`
-	LogLevel      string          `json:"log_level"`
+	Server        *ServerConfig      `json:"server"`
+	Database      *DatabaseConfig    `json:"database"`
+	JwtSecret     string             `json:"jwt_secret"`
+	EncryptionKey string             `json:"encryption_key"`
+	LogLevel      string             `json:"log_level"`
+	GitHubOAuth   *GitHubOAuthConfig `json:"github_oauth"`
 }
 
 func (c *ApplicationConfig) LoadEnvVariables() {
@@ -34,6 +35,8 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 	if val, ok := EnvEncryptionKey.Lookup(); ok {
 		c.EncryptionKey = val
 	}
+
+	c.GitHubOAuth.LoadEnvVariables()
 }
 
 func (c *ApplicationConfig) Validate() error {
@@ -175,8 +178,38 @@ type DBConnectionConfig struct {
 
 func NewApplicationConfig() *ApplicationConfig {
 	return &ApplicationConfig{
-		Server:   NewServerConfig(),
-		Database: NewDatabaseConfig(),
+		Server:      NewServerConfig(),
+		Database:    NewDatabaseConfig(),
+		LogLevel:    "info",
+		GitHubOAuth: NewGitHubOAuthConfig(),
+	}
+}
+
+func NewGitHubOAuthConfig() *GitHubOAuthConfig {
+	return &GitHubOAuthConfig{}
+}
+
+type GitHubOAuthConfig struct {
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	RedirectURI  string `json:"redirect_uri"`
+}
+
+func (c *GitHubOAuthConfig) Enabled() bool {
+	return c.ClientID != "" && c.ClientSecret != ""
+}
+
+func (c *GitHubOAuthConfig) LoadEnvVariables() {
+	if val, ok := EnvGitHubClientID.Lookup(); ok {
+		c.ClientID = val
+	}
+
+	if val, ok := EnvGitHubClientSecret.Lookup(); ok {
+		c.ClientSecret = val
+	}
+
+	if val, ok := EnvGitHubRedirectURI.Lookup(); ok {
+		c.RedirectURI = val
 	}
 }
 

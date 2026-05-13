@@ -14,6 +14,7 @@ type WorkspaceUserStore interface {
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.WorkspaceUser, *errors.ServiceError)
 	GetByUserID(ctx context.Context, userID string) (*models.WorkspaceUser, *errors.ServiceError)
 	ListByOrgID(ctx context.Context, userID string) ([]*models.WorkspaceUser, *errors.ServiceError)
+	ListByTeamID(ctx context.Context, teamID string) ([]*models.WorkspaceUser, *errors.ServiceError)
 	Update(ctx context.Context, id string, spec *models.WorkspaceUser) (*models.WorkspaceUser, *errors.ServiceError)
 	UpdateWithTx(ctx context.Context, id string, spec *models.WorkspaceUser) (*models.WorkspaceUser, *errors.ServiceError)
 	PatchStatus(ctx context.Context, id string, spec *models.WorkspaceUserStatus) (*models.WorkspaceUser, *errors.ServiceError)

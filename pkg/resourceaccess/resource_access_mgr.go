@@ -2,20 +2,28 @@ package resourceaccess
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/log"
+	"github.com/casbin/casbin/v2/model"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 )
 
+//go:embed casbin_model.conf
+var casbinModelConf string
+
 type ResourceAccessPolicyManager interface {
-	AddPolicy(subject, orgID, resource, action, resourceOwnerID string) error
-	RemovePolicy(subject, orgID, resource, action, resourceOwnerID string) error
-	CheckPermission(subject, orgID, resource, action, resourceOwnerID string) (bool, error)
-	AddGroupingPolicy(subject, role, orgID string) error
+	AddPolicy(subject, domain, resource, action string) error
+	RemovePolicy(subject, domain, resource, action string) error
+	RemoveFilteredPolicy(fieldIndex int, fieldValues ...string) error
+	CheckPermission(subject, domain, resource, action string) (bool, error)
+	AddGroupingPolicy(subject, role, domain string) error
+	RemoveGroupingPolicy(subject, role, domain string) error
+	HasGroupingPolicy(subject, role, domain string) (bool, error)
 	RefreshPolicies() error
 }
 
@@ -29,19 +37,20 @@ type CasbinResourceAccessPolicyManagerConfig struct {
 	DBConnectionString     string
 	EnableDebugLog         bool
 	PolicyAutoLoadInterval time.Duration
-	PolicyFilePath         string
 }
 
 func NewResourceAccessPolicyManager(cfg CasbinResourceAccessPolicyManagerConfig) (ResourceAccessPolicyManager, error) {
-	// Now create the adapter
-	// true = use existing database.
+	m, err := model.NewModelFromString(casbinModelConf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load embedded casbin model: %w", err)
+	}
+
 	adapter, err := gormadapter.NewAdapter("postgres", cfg.DBConnectionString, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create casbin adapter: %w", err)
 	}
 
-	// Create enforcer with our model and the gorm adapter
-	enforcer, err := casbin.NewSyncedCachedEnforcer(cfg.PolicyFilePath, adapter)
+	enforcer, err := casbin.NewSyncedCachedEnforcer(m, adapter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create casbin enforcer: %w", err)
 	}
@@ -65,30 +74,35 @@ func NewResourceAccessPolicyManager(cfg CasbinResourceAccessPolicyManagerConfig)
 	}, nil
 }
 
-func (r *casbinResourceAccessPolicyManager) AddPolicy(subject, org, resource, action, resourceOwnerID string) error {
-	_, err := r.enforcer.AddPolicy(subject, org, resource, action, resourceOwnerID)
+func (r *casbinResourceAccessPolicyManager) AddPolicy(subject, domain, resource, action string) error {
+	_, err := r.enforcer.AddPolicy(subject, domain, resource, action)
 	return err
 }
 
-func (r *casbinResourceAccessPolicyManager) RemovePolicy(subject, org, resource, action, resourceOwnerID string) error {
-	_, err := r.enforcer.RemovePolicy(subject, org, resource, action, resourceOwnerID)
+func (r *casbinResourceAccessPolicyManager) RemovePolicy(subject, domain, resource, action string) error {
+	_, err := r.enforcer.RemovePolicy(subject, domain, resource, action)
 	return err
 }
 
-func (r *casbinResourceAccessPolicyManager) CheckPermission(subject, org, resource, action, resourceOwnerID string) (bool, error) {
+func (r *casbinResourceAccessPolicyManager) RemoveFilteredPolicy(fieldIndex int, fieldValues ...string) error {
+	_, err := r.enforcer.RemoveFilteredPolicy(fieldIndex, fieldValues...)
+	return err
+}
+
+func (r *casbinResourceAccessPolicyManager) CheckPermission(subject, domain, resource, action string) (bool, error) {
 	if r.debug {
 		r.logger.Infof("=== Access Check ===")
-		r.logger.Infof("Request: subject=%s, org=%s, resource=%s, action=%s, owner=%s",
-			subject, org, resource, action, resourceOwnerID)
+		r.logger.Infof("Request: subject=%s, domain=%s, resource=%s, action=%s",
+			subject, domain, resource, action)
 	}
 
 	// Check role assignment
 	if r.debug {
-		roles := r.enforcer.GetRolesForUserInDomain(subject, org)
+		roles := r.enforcer.GetRolesForUserInDomain(subject, domain)
 		r.logger.Infof("User roles: %v", roles)
 	}
 
-	ok, err := r.enforcer.Enforce(subject, org, resource, action, resourceOwnerID)
+	ok, err := r.enforcer.Enforce(subject, domain, resource, action)
 	if r.debug {
 		r.logger.Infof("Final decision: %v (err: %v)", ok, err)
 	}
@@ -102,7 +116,16 @@ func (r *casbinResourceAccessPolicyManager) RefreshPolicies() error {
 	return nil
 }
 
-func (r *casbinResourceAccessPolicyManager) AddGroupingPolicy(subject, role, orgID string) error {
-	_, err := r.enforcer.AddGroupingPolicy(subject, role, orgID)
+func (r *casbinResourceAccessPolicyManager) AddGroupingPolicy(subject, role, domain string) error {
+	_, err := r.enforcer.AddGroupingPolicy(subject, role, domain)
 	return err
+}
+
+func (r *casbinResourceAccessPolicyManager) RemoveGroupingPolicy(subject, role, domain string) error {
+	_, err := r.enforcer.RemoveGroupingPolicy(subject, role, domain)
+	return err
+}
+
+func (r *casbinResourceAccessPolicyManager) HasGroupingPolicy(subject, role, domain string) (bool, error) {
+	return r.enforcer.HasGroupingPolicy(subject, role, domain)
 }

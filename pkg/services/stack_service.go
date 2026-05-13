@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -31,9 +32,12 @@ type StackService interface {
 
 type StackQueryService interface {
 	GetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
+	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError)
-	GetStacksByUserID(ctx context.Context, userID string) ([]*models.Stack, *errors.ServiceError)
+	// GetStacksByUserID(ctx context.Context, teamID, orgID, userID string) ([]*models.Stack, *errors.ServiceError)
+	GetStacksByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError)
+	ListStacksForCurrentUser(ctx context.Context, orgID string) ([]*models.Stack, *errors.ServiceError)
 }
 
 type StackServiceSpec struct {
@@ -46,6 +50,8 @@ type StackServiceSpec struct {
 	NamespaceService       NamespaceService
 	SecretService          SecretService
 	PostgresAddonService   PostgresAddonService
+	TeamService            TeamService
+	Permissions            auth.PermissionService
 	Logger                 logger.Logger
 }
 
@@ -64,6 +70,8 @@ type stackService struct {
 	secretService          SecretService
 	clusterRegistryService ImageRegistryService
 	defaultingService      DefaultingService[*models.Stack]
+	teamService            TeamService
+	permissions            auth.PermissionService
 	ClusterResourceServiceDeps
 	BackgroundJobEnqueuerDep
 }
@@ -101,10 +109,15 @@ func NewStackService(spec StackServiceSpec) StackService {
 			SecretService: spec.SecretService,
 		}),
 		defaultingService: NewStackDefaultingService(),
+		teamService:       spec.TeamService,
+		permissions:       spec.Permissions,
 	}
 }
 
 func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, spec.TeamID, auth.ResourceStacks, "", auth.ActionCreate); permErr != nil {
+		return nil, permErr
+	}
 	existingStack, _ := s.GetStackByName(ctx, spec.Name, spec.UserID)
 	if existingStack != nil {
 		return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
@@ -230,10 +243,13 @@ func (s *stackService) createStackAndDepsInDbWithTx(ctx context.Context, spec *m
 }
 
 func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
-	// Get existing stack
+	// Get existing stack (includes read permission check)
 	existingStack, err := s.GetStack(ctx, ID)
 	if err != nil {
 		return nil, err
+	}
+	if permErr := s.permissions.Check(ctx, existingStack.TeamID, auth.ResourceStacks, ID, auth.ActionWrite); permErr != nil {
+		return nil, permErr
 	}
 
 	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
@@ -242,6 +258,9 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 	// set namespace
 	spec.Namespace = existingStack.Namespace
 	spec.ClusterID = existingStack.ClusterID
+	spec.OrganisationID = existingStack.OrganisationID
+	spec.TeamID = existingStack.TeamID
+	spec.UserID = existingStack.UserID
 
 	// Set default values and populate fields
 	spec, derr := s.defaultingService.PopulateDefaultValues(spec)
@@ -340,7 +359,14 @@ func (s *stackService) GetStack(ctx context.Context, ID string) (*models.Stack, 
 	if err != nil {
 		return nil, err
 	}
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	return stack, nil
+}
+
+func (s *stackService) InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError) {
+	return s.stackStore.GetByID(ctx, ID)
 }
 
 func (s *stackService) GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError) {
@@ -348,16 +374,22 @@ func (s *stackService) GetStackByName(ctx context.Context, name string, userID s
 	if err != nil {
 		return nil, err
 	}
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stack.ID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
 	return stack, nil
 }
 
-func (s *stackService) GetStacksByUserID(ctx context.Context, userID string) ([]*models.Stack, *errors.ServiceError) {
-	stacks, err := s.stackStore.ListByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	return stacks, nil
-}
+// func (s *stackService) GetStacksByUserID(ctx context.Context, teamID, orgID, userID string) ([]*models.Stack, *errors.ServiceError) {
+// 	if permErr := s.permissions.Check(ctx, teamID, auth.ResourceStacks, "", auth.ActionList); permErr != nil {
+// 		return nil, permErr
+// 	}
+// 	stacks, err := s.stackStore.ListByUserID(ctx, userID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return stacks, nil
+// }
 
 func (s *stackService) InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError) {
 	stacks, err := s.stackStore.InternalList(ctx, query, args...)
@@ -367,18 +399,57 @@ func (s *stackService) InternalList(ctx context.Context, query string, args ...a
 	return stacks, nil
 }
 
-func (s *stackService) GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError) {
-	stacks, err := s.stackStore.ListByOrganisationID(ctx, organisationID)
+func (s *stackService) GetStacksByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, teamID, auth.ResourceStacks, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
+	stacks, err := s.stackStore.ListByTeamID(ctx, teamID)
 	if err != nil {
 		return nil, err
 	}
 	return stacks, nil
 }
 
+func (s *stackService) GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, organisationID, auth.ResourceStacks, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
+	return s.stackStore.ListByOrganisationID(ctx, organisationID)
+}
+
+func (s *stackService) ListStacksForCurrentUser(ctx context.Context, orgID string) ([]*models.Stack, *errors.ServiceError) {
+	identity := auth.GetIdentityFromCtx(ctx)
+	if identity == nil {
+		return nil, errors.Unauthorized("not authenticated")
+	}
+
+	if identity.IsOrgAdmin() {
+		return s.stackStore.ListByOrganisationID(ctx, orgID)
+	}
+
+	memberships, serr := s.teamService.InternalListUserTeams(ctx, identity.UserID, orgID)
+	if serr != nil {
+		return nil, serr
+	}
+
+	var allowedTeamIDs []string
+	for _, m := range memberships {
+		if permErr := s.permissions.Check(ctx, m.TeamID, auth.ResourceStacks, "", auth.ActionList); permErr == nil {
+			allowedTeamIDs = append(allowedTeamIDs, m.TeamID)
+		}
+	}
+
+	return s.stackStore.ListByTeamIDs(ctx, allowedTeamIDs)
+}
+
 func (s *stackService) DeleteStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError) {
+	// GetStack includes read permission check
 	stack, err := s.GetStack(ctx, ID)
 	if err != nil {
 		return nil, err
+	}
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, ID, auth.ActionDelete); permErr != nil {
+		return nil, permErr
 	}
 	if stack.Status.State == models.StackDeleting {
 		return stack, nil

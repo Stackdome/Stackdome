@@ -5,6 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Token** | Pointer to **string** | Access token for authenticated requests | [optional] 
+**RefreshToken** | Pointer to **string** | Refresh token for obtaining new access tokens | [optional] 
 **User** | Pointer to [**User**](User.md) |  | [optional] 
 **ExpiresIn** | Pointer to **int32** | Token expiration time in seconds | [optional] 
 
@@ -51,6 +52,31 @@ SetToken sets Token field to given value.
 `func (o *LoginResponse) HasToken() bool`
 
 HasToken returns a boolean if a field has been set.
+
+### GetRefreshToken
+
+`func (o *LoginResponse) GetRefreshToken() string`
+
+GetRefreshToken returns the RefreshToken field if non-nil, zero value otherwise.
+
+### GetRefreshTokenOk
+
+`func (o *LoginResponse) GetRefreshTokenOk() (*string, bool)`
+
+GetRefreshTokenOk returns a tuple with the RefreshToken field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetRefreshToken
+
+`func (o *LoginResponse) SetRefreshToken(v string)`
+
+SetRefreshToken sets RefreshToken field to given value.
+
+### HasRefreshToken
+
+`func (o *LoginResponse) HasRefreshToken() bool`
+
+HasRefreshToken returns a boolean if a field has been set.
 
 ### GetUser
 

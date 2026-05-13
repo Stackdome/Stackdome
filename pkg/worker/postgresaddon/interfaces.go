@@ -8,14 +8,14 @@ import (
 )
 
 type postgresAddonService interface {
-	GetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
+	InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
 	UpdatePostgresAddonStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError)
 	InternalDeleteFromDB(ctx context.Context, id string) *errors.ServiceError
 }
 
 type objectStoreService interface {
-	GetByID(ctx context.Context, ID string) (*models.ObjectStore, *errors.ServiceError)
+	InternalGetByID(ctx context.Context, ID string) (*models.ObjectStore, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, id string, status models.ObjectStoreStatus) *errors.ServiceError
 }
 

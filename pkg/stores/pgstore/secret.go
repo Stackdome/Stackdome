@@ -175,6 +175,33 @@ func (s *secretStore) ListByOrganisation(ctx context.Context, organisationID str
 	return secrets, nil
 }
 
+func (s *secretStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.Secret, *errors.ServiceError) {
+	var secrets []*models.Secret
+
+	if err := s.sessionFactory.New(ctx).
+		Where("team_id = ?", teamID).
+		Order("created_at DESC").
+		Find(&secrets).Error; err != nil {
+		return nil, errors.GeneralError("failed to list secrets by team: %s", err.Error())
+	}
+
+	return secrets, nil
+}
+
+func (s *secretStore) ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*models.Secret, *errors.ServiceError) {
+	if len(teamIDs) == 0 {
+		return []*models.Secret{}, nil
+	}
+	var secrets []*models.Secret
+	if err := s.sessionFactory.New(ctx).
+		Where("team_id IN ?", teamIDs).
+		Order("created_at DESC").
+		Find(&secrets).Error; err != nil {
+		return nil, errors.GeneralError("failed to list secrets by teams: %s", err.Error())
+	}
+	return secrets, nil
+}
+
 func (s *secretStore) ListByUser(ctx context.Context, organisationID, userID string) ([]*models.Secret, *errors.ServiceError) {
 	var secrets []*models.Secret
 

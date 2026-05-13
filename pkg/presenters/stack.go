@@ -18,6 +18,7 @@ func PresentStack(s *models.Stack) openapi.Stack {
 	return openapi.Stack{
 		Id:             &s.ID,
 		OrganisationId: &s.OrganisationID,
+		TeamId:         &s.TeamID,
 		UserId:         &s.UserID,
 		Name:           s.Name,
 		Namespace:      &s.Namespace,
