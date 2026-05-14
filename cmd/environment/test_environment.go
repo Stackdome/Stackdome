@@ -471,48 +471,64 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 	te.LeadershipFlag = leadershipFlag
 	te.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
 		LeadershipFlag: leadershipFlag,
-		ControllersToRegister: []clustermanager.Controller{
-			volumecontroller.NewVolumeReconciler(volumecontroller.VolumeReconcilerSpec{
-				Log:            applogger.NewLoggerWithPrefix(ctx, "test-volume-controller").SetLevel(te.Logger.GetLevel()),
-				StorageService: te.Services.StackStorageService,
-				VolumeService:  te.Services.VolumeService,
-				Env:            te.Env.Name,
-			}),
-			workspaceusercontroller.NewWorkspaceUserReconciler(workspaceusercontroller.WorkspaceUserReconcilerSpec{
-				Log:                  applogger.NewLoggerWithPrefix(ctx, "test-workspace-user-controller").SetLevel(te.Logger.GetLevel()),
-				WorkspaceUserService: te.Services.WorkspaceUserService,
-				ClusterService:       te.Services.ClusterService,
-				Env:                  te.Env.Name,
-			}),
-			stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
-				Log:          applogger.NewLoggerWithPrefix(ctx, "test-stack-controller").SetLevel(te.Logger.GetLevel()),
-				StackService: te.Services.StackService,
-				Env:          te.Env.Name,
-			}),
-			stackresourcecontroller.NewStackResourceReconciler(stackresourcecontroller.StackResourceReconcilerSpec{
-				Log:                  applogger.NewLoggerWithPrefix(ctx, "test-stack-resource-controller").SetLevel(te.Logger.GetLevel()),
-				StackService:         te.Services.StackService,
-				StackResourceService: te.Services.StackResourceService,
-				Env:                  te.Env.Name,
-			}),
-			imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
-				Log:                 applogger.NewLoggerWithPrefix(ctx, "test-image-build-controller").SetLevel(te.Logger.GetLevel()),
-				DBImageBuildService: te.Services.ImageBuildService,
-				DBResourceService:   te.Services.StackResourceService,
-			}),
-			clusterimageregistry.NewClusterImageRegistryReconciler(clusterimageregistry.ClusterImageRegistryReconcilerSpec{
-				Logger:                 applogger.NewLoggerWithPrefix(ctx, "test-cluster-image-registry-controller").SetLevel(te.Logger.GetLevel()),
-				DBImageRegistryService: te.Services.ClusterImageRegistryService,
-			}),
-			postgresaddoncontroller.NewPostgresAddonReconciler(postgresaddoncontroller.PostgresAddonReconcilerSpec{
-				Log:                  applogger.NewLoggerWithPrefix(ctx, "test-postgres-addon-controller").SetLevel(te.Logger.GetLevel()),
-				PostgresAddonService: te.Services.PostgresAddonService,
-				Env:                  te.Env.Name,
-			}),
-			postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
-				Log:                   applogger.NewLoggerWithPrefix(ctx, "test-postgres-backup-controller").SetLevel(te.Logger.GetLevel()),
-				PostgresBackupService: te.Services.PostgresBackupService,
-			}),
+		ControllersToRegister: []clustermanager.ControllerFn{
+			func() clustermanager.Controller {
+				return volumecontroller.NewVolumeReconciler(volumecontroller.VolumeReconcilerSpec{
+					Log:            applogger.NewLoggerWithPrefix(ctx, "test-volume-controller").SetLevel(te.Logger.GetLevel()),
+					StorageService: te.Services.StackStorageService,
+					VolumeService:  te.Services.VolumeService,
+					Env:            te.Env.Name,
+				})
+			},
+			func() clustermanager.Controller {
+				return workspaceusercontroller.NewWorkspaceUserReconciler(workspaceusercontroller.WorkspaceUserReconcilerSpec{
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "test-workspace-user-controller").SetLevel(te.Logger.GetLevel()),
+					WorkspaceUserService: te.Services.WorkspaceUserService,
+					ClusterService:       te.Services.ClusterService,
+					Env:                  te.Env.Name,
+				})
+			},
+			func() clustermanager.Controller {
+				return stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
+					Log:          applogger.NewLoggerWithPrefix(ctx, "test-stack-controller").SetLevel(te.Logger.GetLevel()),
+					StackService: te.Services.StackService,
+					Env:          te.Env.Name,
+				})
+			},
+			func() clustermanager.Controller {
+				return stackresourcecontroller.NewStackResourceReconciler(stackresourcecontroller.StackResourceReconcilerSpec{
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "test-stack-resource-controller").SetLevel(te.Logger.GetLevel()),
+					StackService:         te.Services.StackService,
+					StackResourceService: te.Services.StackResourceService,
+					Env:                  te.Env.Name,
+				})
+			},
+			func() clustermanager.Controller {
+				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
+					Log:                 applogger.NewLoggerWithPrefix(ctx, "test-image-build-controller").SetLevel(te.Logger.GetLevel()),
+					DBImageBuildService: te.Services.ImageBuildService,
+					DBResourceService:   te.Services.StackResourceService,
+				})
+			},
+			func() clustermanager.Controller {
+				return clusterimageregistry.NewClusterImageRegistryReconciler(clusterimageregistry.ClusterImageRegistryReconcilerSpec{
+					Logger:                 applogger.NewLoggerWithPrefix(ctx, "test-cluster-image-registry-controller").SetLevel(te.Logger.GetLevel()),
+					DBImageRegistryService: te.Services.ClusterImageRegistryService,
+				})
+			},
+			func() clustermanager.Controller {
+				return postgresaddoncontroller.NewPostgresAddonReconciler(postgresaddoncontroller.PostgresAddonReconcilerSpec{
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "test-postgres-addon-controller").SetLevel(te.Logger.GetLevel()),
+					PostgresAddonService: te.Services.PostgresAddonService,
+					Env:                  te.Env.Name,
+				})
+			},
+			func() clustermanager.Controller {
+				return postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
+					Log:                   applogger.NewLoggerWithPrefix(ctx, "test-postgres-backup-controller").SetLevel(te.Logger.GetLevel()),
+					PostgresBackupService: te.Services.PostgresBackupService,
+				})
+			},
 		},
 	})
 	te.Services.ClusterService.InjectClusterManager(te.ClusterManager)

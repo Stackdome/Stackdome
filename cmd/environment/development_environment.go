@@ -198,48 +198,64 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 	d.LeadershipFlag = leadershipFlag
 	d.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
 		LeadershipFlag: leadershipFlag,
-		ControllersToRegister: []clustermanager.Controller{
-			volumecontroller.NewVolumeReconciler(volumecontroller.VolumeReconcilerSpec{
-				Log:            applogger.NewLoggerWithPrefix(ctx, "volume-controller").SetLevel(d.Logger.GetLevel()),
-				StorageService: d.Services.StackStorageService,
-				VolumeService:  d.Services.VolumeService,
-				Env:            d.Env.Name,
-			}),
-			workspaceusercontroller.NewWorkspaceUserReconciler(workspaceusercontroller.WorkspaceUserReconcilerSpec{
-				Log:                  applogger.NewLoggerWithPrefix(ctx, "workspace-user-controller").SetLevel(d.Logger.GetLevel()),
-				WorkspaceUserService: d.Services.WorkspaceUserService,
-				ClusterService:       d.Services.ClusterService,
-				Env:                  d.Env.Name,
-			}),
-			stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
-				Log:          applogger.NewLoggerWithPrefix(ctx, "stack-controller").SetLevel(d.Logger.GetLevel()),
-				StackService: d.Services.StackService,
-				Env:          d.Env.Name,
-			}),
-			stackresourcecontroller.NewStackResourceReconciler(stackresourcecontroller.StackResourceReconcilerSpec{
-				Log:                  applogger.NewLoggerWithPrefix(ctx, "stack-resource-controller").SetLevel(d.Logger.GetLevel()),
-				StackService:         d.Services.StackService,
-				StackResourceService: d.Services.StackResourceService,
-				Env:                  d.Env.Name,
-			}),
-			imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
-				Log:                 applogger.NewLoggerWithPrefix(ctx, "image-build-controller").SetLevel(d.Logger.GetLevel()),
-				DBImageBuildService: d.Services.ImageBuildService,
-				DBResourceService:   d.Services.StackResourceService,
-			}),
-			clusterimageregistry.NewClusterImageRegistryReconciler(clusterimageregistry.ClusterImageRegistryReconcilerSpec{
-				Logger:                 applogger.NewLoggerWithPrefix(ctx, "cluster-image-registry-controller").SetLevel(d.Logger.GetLevel()),
-				DBImageRegistryService: d.Services.ClusterImageRegistryService,
-			}),
-			postgresaddoncontroller.NewPostgresAddonReconciler(postgresaddoncontroller.PostgresAddonReconcilerSpec{
-				Log:                  applogger.NewLoggerWithPrefix(ctx, "postgres-addon-controller").SetLevel(d.Logger.GetLevel()),
-				PostgresAddonService: d.Services.PostgresAddonService,
-				Env:                  d.Env.Name,
-			}),
-			postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
-				Log:                   applogger.NewLoggerWithPrefix(ctx, "postgres-backup-controller").SetLevel(d.Logger.GetLevel()),
-				PostgresBackupService: d.Services.PostgresBackupService,
-			}),
+		ControllersToRegister: []clustermanager.ControllerFn{
+			func() clustermanager.Controller {
+				return volumecontroller.NewVolumeReconciler(volumecontroller.VolumeReconcilerSpec{
+					Log:            applogger.NewLoggerWithPrefix(ctx, "volume-controller").SetLevel(d.Logger.GetLevel()),
+					StorageService: d.Services.StackStorageService,
+					VolumeService:  d.Services.VolumeService,
+					Env:            d.Env.Name,
+				})
+			},
+			func() clustermanager.Controller {
+				return workspaceusercontroller.NewWorkspaceUserReconciler(workspaceusercontroller.WorkspaceUserReconcilerSpec{
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "workspace-user-controller").SetLevel(d.Logger.GetLevel()),
+					WorkspaceUserService: d.Services.WorkspaceUserService,
+					ClusterService:       d.Services.ClusterService,
+					Env:                  d.Env.Name,
+				})
+			},
+			func() clustermanager.Controller {
+				return stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
+					Log:          applogger.NewLoggerWithPrefix(ctx, "stack-controller").SetLevel(d.Logger.GetLevel()),
+					StackService: d.Services.StackService,
+					Env:          d.Env.Name,
+				})
+			},
+			func() clustermanager.Controller {
+				return stackresourcecontroller.NewStackResourceReconciler(stackresourcecontroller.StackResourceReconcilerSpec{
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "stack-resource-controller").SetLevel(d.Logger.GetLevel()),
+					StackService:         d.Services.StackService,
+					StackResourceService: d.Services.StackResourceService,
+					Env:                  d.Env.Name,
+				})
+			},
+			func() clustermanager.Controller {
+				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
+					Log:                 applogger.NewLoggerWithPrefix(ctx, "image-build-controller").SetLevel(d.Logger.GetLevel()),
+					DBImageBuildService: d.Services.ImageBuildService,
+					DBResourceService:   d.Services.StackResourceService,
+				})
+			},
+			func() clustermanager.Controller {
+				return clusterimageregistry.NewClusterImageRegistryReconciler(clusterimageregistry.ClusterImageRegistryReconcilerSpec{
+					Logger:                 applogger.NewLoggerWithPrefix(ctx, "cluster-image-registry-controller").SetLevel(d.Logger.GetLevel()),
+					DBImageRegistryService: d.Services.ClusterImageRegistryService,
+				})
+			},
+			func() clustermanager.Controller {
+				return postgresaddoncontroller.NewPostgresAddonReconciler(postgresaddoncontroller.PostgresAddonReconcilerSpec{
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "postgres-addon-controller").SetLevel(d.Logger.GetLevel()),
+					PostgresAddonService: d.Services.PostgresAddonService,
+					Env:                  d.Env.Name,
+				})
+			},
+			func() clustermanager.Controller {
+				return postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
+					Log:                   applogger.NewLoggerWithPrefix(ctx, "postgres-backup-controller").SetLevel(d.Logger.GetLevel()),
+					PostgresBackupService: d.Services.PostgresBackupService,
+				})
+			},
 		},
 	})
 	d.Services.ClusterService.InjectClusterManager(d.ClusterManager)
