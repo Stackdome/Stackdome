@@ -35,6 +35,7 @@ type clusterService struct {
 	clusterManager       clustermanager.ClusterManager
 	imageRegistryService ImageRegistryService
 	permissions          auth.PermissionService
+	encryptionService    EncryptionService
 }
 
 func NewClusterService(spec ClusterServiceSpec) ClusterService {
@@ -46,6 +47,7 @@ func NewClusterService(spec ClusterServiceSpec) ClusterService {
 		logger:               spec.Logger,
 		imageRegistryService: spec.ImageRegistryService,
 		permissions:          spec.Permissions,
+		encryptionService:    spec.EncryptionService,
 	}
 }
 
@@ -54,6 +56,7 @@ type ClusterServiceSpec struct {
 	ClusterManager       clustermanager.ClusterManager
 	ImageRegistryService ImageRegistryService
 	Permissions          auth.PermissionService
+	EncryptionService    EncryptionService
 	Logger               logger.Logger
 }
 
@@ -68,6 +71,12 @@ func (s *clusterService) InternalListAllClusters(ctx context.Context) ([]*models
 	if err != nil {
 		s.logger.Errorf("failed to list all clusters: %v", err)
 		return nil, err
+	}
+	for _, cluster := range clusters {
+		if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
+			s.logger.Errorf("failed to decrypt cluster credentials for cluster %s: %v", cluster.ID, decErr)
+			return nil, decErr
+		}
 	}
 	return clusters, nil
 }
@@ -97,14 +106,17 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 		return nil, err
 	}
 
+	if encErr := s.encryptClusterCredentials(cluster); encErr != nil {
+		s.logger.Errorf("failed to encrypt cluster credentials: %v", encErr)
+		return nil, encErr
+	}
+
 	cerr := s.clusterStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		// Create the cluster in the database
 		createdCluster, createdErr = s.clusterStore.CreateWithTx(ctx, cluster)
 		if createdErr != nil {
 			return createdErr
 		}
 
-		// Register the cluster with the cluster manager
 		merr := s.clusterManager.RegisterCluster(createdCluster)
 		if merr != nil {
 			return errors.GeneralError("failed to register cluster with manager")
@@ -131,7 +143,6 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 }
 
 func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceError {
-	// Get the cluster from the database
 	cluster, err := s.clusterStore.Get(ctx, ID)
 	if err != nil {
 		s.logger.Errorf("failed to get cluster: %v", err)
@@ -265,6 +276,10 @@ func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*m
 		s.logger.Errorf("failed to get cluster for org: %v", err)
 		return nil, err
 	}
+	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
+		s.logger.Errorf("failed to decrypt cluster credentials: %v", decErr)
+		return nil, decErr
+	}
 	return cluster, nil
 }
 
@@ -273,6 +288,10 @@ func (s *clusterService) GetDefaultCluster(ctx context.Context) (*models.Cluster
 	if err != nil {
 		s.logger.Errorf("failed to get default cluster: %v", err)
 		return nil, err
+	}
+	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
+		s.logger.Errorf("failed to decrypt cluster credentials: %v", decErr)
+		return nil, decErr
 	}
 	return cluster, nil
 }
@@ -286,11 +305,50 @@ func (s *clusterService) Get(ctx context.Context, ID string) (*models.Cluster, *
 	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
+	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
+		s.logger.Errorf("failed to decrypt cluster credentials: %v", decErr)
+		return nil, decErr
+	}
 	return cluster, nil
 }
 
 func (s *clusterService) InternalGet(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError) {
-	return s.clusterStore.Get(ctx, ID)
+	cluster, err := s.clusterStore.Get(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
+		return nil, decErr
+	}
+	return cluster, nil
+}
+
+func (s *clusterService) encryptClusterCredentials(cluster *models.Cluster) *errors.ServiceError {
+	encryptedToken, err := s.encryptionService.EncryptData([]byte(cluster.Token))
+	if err != nil {
+		return errors.GeneralError("failed to encrypt cluster token: %v", err)
+	}
+	encryptedCAData, err := s.encryptionService.EncryptData([]byte(cluster.ClusterCAData))
+	if err != nil {
+		return errors.GeneralError("failed to encrypt cluster CA data: %v", err)
+	}
+	cluster.EncryptedToken = encryptedToken
+	cluster.EncryptedClusterCAData = encryptedCAData
+	return nil
+}
+
+func (s *clusterService) decryptClusterCredentials(cluster *models.Cluster) *errors.ServiceError {
+	token, err := s.encryptionService.DecryptData(cluster.EncryptedToken)
+	if err != nil {
+		return errors.GeneralError("failed to decrypt cluster token: %v", err)
+	}
+	caData, err := s.encryptionService.DecryptData(cluster.EncryptedClusterCAData)
+	if err != nil {
+		return errors.GeneralError("failed to decrypt cluster CA data: %v", err)
+	}
+	cluster.Token = string(token)
+	cluster.ClusterCAData = string(caData)
+	return nil
 }
 
 func IsBase64(s string) bool {

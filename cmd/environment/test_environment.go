@@ -228,6 +228,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create encryption service: %w", err)
 	}
+	te.EncryptionService = encryptionService
 	stackDomainService := services.NewStackDomainsService(services.StackDomainsServiceSpec{
 		SessionFactory: te.DBSession,
 		Logger:         te.Logger,
@@ -291,6 +292,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SessionFactory:       te.DBSession,
 		Logger:               te.Logger,
 		Permissions:          te.PermissionService,
+		EncryptionService:    encryptionService,
 	})
 
 	workspaceUserService := services.NewWorkspaceUserService(services.WorkspaceUserServiceSpec{
@@ -470,7 +472,8 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 
 	te.LeadershipFlag = leadershipFlag
 	te.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
-		LeadershipFlag: leadershipFlag,
+		LeadershipFlag:      leadershipFlag,
+		CredentialDecryptor: te.EncryptionService,
 		ControllersToRegister: []clustermanager.ControllerFn{
 			func() clustermanager.Controller {
 				return volumecontroller.NewVolumeReconciler(volumecontroller.VolumeReconcilerSpec{

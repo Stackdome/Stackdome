@@ -39,6 +39,7 @@ type Env struct {
 	OAuthStateStore             stores.OAuthStateStore
 	EmailService                emailpkg.EmailService
 	LeadershipFlag              *leadership.Flag
+	EncryptionService           services.EncryptionService
 	Logger                      applogger.Logger
 }
 
