@@ -66,7 +66,7 @@ type ClusterManagerImpl struct {
 	supervisor            *suture.Supervisor
 	leadershipFlag        *leadership.Flag
 	registeredClusters    map[string]*ClusterControl
-	controllersToRegister []Controller
+	controllersToRegister []ControllerFn
 	supervisorCancelFn    context.CancelFunc
 	supervisorErr         error
 	isRunning             bool
@@ -127,7 +127,7 @@ func (cc *ClusterControl) String() string {
 // ClusterManagerConfig holds configuration for creating a new ClusterManager
 type ClusterManagerConfig struct {
 	LeadershipFlag        *leadership.Flag
-	ControllersToRegister []Controller
+	ControllersToRegister []ControllerFn
 }
 
 // NewClusterManager creates a new ClusterManager instance
@@ -164,12 +164,17 @@ func (cm *ClusterManagerImpl) RegisterCluster(cluster *models.Cluster) error {
 		return fmt.Errorf("failed to create client for cluster %s: %w", cluster.ID, err)
 	}
 
+	controllers := make([]Controller, len(cm.controllersToRegister))
+	for i, fn := range cm.controllersToRegister {
+		controllers[i] = fn()
+	}
+
 	clusterCtrl := &ClusterControl{
 		cluster:     cluster,
 		clusterID:   cluster.ID,
 		client:      client,
 		restConfig:  restConfig,
-		controllers: cm.controllersToRegister,
+		controllers: controllers,
 	}
 
 	serviceID := cm.supervisor.Add(clusterCtrl)
