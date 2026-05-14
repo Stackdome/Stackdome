@@ -1,7 +1,20 @@
+/**
+ * Domain schemas — derived from generated zod-schemas.ts (single source of truth via OpenAPI).
+ * The hand-written `domainSchema` adds UI-only validation (regex, length, transform) on top
+ * of the transport-level `DomainName` shape, and is structurally compatible via `satisfies`.
+ */
 import { z } from 'zod';
-import type { components } from '@/api/types/openapi';
+import { schemas } from '@/api/zod-schemas';
 
-export type DomainName = components["schemas"]["DomainName"];
+/**
+ * Wire-format type for the Domain resource (transport shape from OpenAPI).
+ */
+export type DomainName = z.infer<typeof schemas.DomainName>;
+
+/**
+ * Re-export of the generated Zod schema for consumers that want the raw API shape.
+ */
+export const ApiDomainNameSchema = schemas.DomainName;
 
 /**
  * Domain validation regex pattern from backend
@@ -18,7 +31,9 @@ export type DomainName = components["schemas"]["DomainName"];
 const DOMAIN_REGEX = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i;
 
 /**
- * Zod schema for domain validation that matches the OpenAPI DomainName schema
+ * Hand-written UI-shape schema with regex / transform / length rules.
+ * `satisfies z.ZodType<DomainName>` keeps it structurally compatible with the
+ * generated transport schema.
  */
 export const domainSchema = z.object({
   id: z.string().optional(),
