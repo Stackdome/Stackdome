@@ -12,6 +12,7 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "generate:openapi-types": "openapi-typescript ../config/openapi/stackdome_api.yaml -o src/api/types/openapi.d.ts",
+    "generate:openapi-zod": "openapi-zod-client ../config/openapi/stackdome_api.yaml -o src/api/zod-schemas.ts --export-schemas",
     "generate:compose-types": "tsx scripts/generate-compose-types.ts",
     "update:compose-schema": "curl -o schemas/compose-spec.json https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json",
     "check:compose-conversion": "tsx scripts/check-compose-conversion.ts"
@@ -69,6 +70,7 @@
     "jsdom": "^25.0.1",
     "json-schema-to-typescript": "^15.0.2",
     "openapi-typescript": "^7.8.0",
+    "openapi-zod-client": "^1.18.3",
     "tsx": "^4.19.2",
     "tw-animate-css": "^1.2.9",
     "typescript": "~5.8.3",
