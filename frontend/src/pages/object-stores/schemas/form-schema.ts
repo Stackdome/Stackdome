@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { schemas } from "@/api/zod-schemas";
 import type { ObjectStoreCreatePayload } from "../types";
 
 const retentionPolicyRegex = /^[1-9]\d*[dhw]$/;
 
-const secretReferenceSchema = z.object({
+const secretReferenceSchema = schemas.SecretReference.extend({
   secret_id: z.string().uuid({ message: "Pick a secret" }),
   key: z.string().min(1, { message: "Pick a key from the secret" }),
 });
