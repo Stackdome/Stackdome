@@ -30,6 +30,10 @@ import (
 	usersv1alpha1 "stackdome.io/cluster-agent/api/users/v1alpha1"
 )
 
+type CredentialDecryptor interface {
+	DecryptData(in string) ([]byte, error)
+}
+
 // ClusterManager defines the interface for managing clusters
 type ClusterManager interface {
 	RegisterCluster(cluster *models.Cluster) error
@@ -67,6 +71,7 @@ type ClusterManagerImpl struct {
 	leadershipFlag        *leadership.Flag
 	registeredClusters    map[string]*ClusterControl
 	controllersToRegister []ControllerFn
+	credentialDecryptor   CredentialDecryptor
 	supervisorCancelFn    context.CancelFunc
 	supervisorErr         error
 	isRunning             bool
@@ -128,6 +133,7 @@ func (cc *ClusterControl) String() string {
 type ClusterManagerConfig struct {
 	LeadershipFlag        *leadership.Flag
 	ControllersToRegister []ControllerFn
+	CredentialDecryptor   CredentialDecryptor
 }
 
 // NewClusterManager creates a new ClusterManager instance
@@ -135,6 +141,7 @@ func NewClusterManager(config ClusterManagerConfig) ClusterManager {
 	return &ClusterManagerImpl{
 		leadershipFlag:        config.LeadershipFlag,
 		controllersToRegister: config.ControllersToRegister,
+		credentialDecryptor:   config.CredentialDecryptor,
 		registeredClusters:    make(map[string]*ClusterControl),
 		supervisor:            suture.NewSimple("cluster-manager"),
 	}
@@ -147,6 +154,10 @@ func (cm *ClusterManagerImpl) RegisterCluster(cluster *models.Cluster) error {
 
 	if _, exists := cm.registeredClusters[cluster.ID]; exists {
 		return nil
+	}
+
+	if err := cm.decryptClusterCredentials(cluster); err != nil {
+		return fmt.Errorf("failed to decrypt credentials for cluster %s: %w", cluster.ID, err)
 	}
 
 	restConfig, err := createRestConfig(cluster)
@@ -180,6 +191,26 @@ func (cm *ClusterManagerImpl) RegisterCluster(cluster *models.Cluster) error {
 	serviceID := cm.supervisor.Add(clusterCtrl)
 	clusterCtrl.serviceID = serviceID
 	cm.registeredClusters[cluster.ID] = clusterCtrl
+	return nil
+}
+
+func (cm *ClusterManagerImpl) decryptClusterCredentials(cluster *models.Cluster) error {
+	if cluster.Token != "" && cluster.ClusterCAData != "" {
+		return nil
+	}
+	if cluster.EncryptedToken == "" || cluster.EncryptedClusterCAData == "" {
+		return fmt.Errorf("cluster %s has no encrypted credentials", cluster.ID)
+	}
+	token, err := cm.credentialDecryptor.DecryptData(cluster.EncryptedToken)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt token: %w", err)
+	}
+	caData, err := cm.credentialDecryptor.DecryptData(cluster.EncryptedClusterCAData)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt CA data: %w", err)
+	}
+	cluster.Token = string(token)
+	cluster.ClusterCAData = string(caData)
 	return nil
 }
 
