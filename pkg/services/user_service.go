@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"net/mail"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
@@ -18,7 +17,6 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
-	"k8s.io/utils/ptr"
 )
 
 type UserService interface {
@@ -27,12 +25,11 @@ type UserService interface {
 	ListByOrgID(ctx context.Context, orgID string, params stores.ListParams) (*stores.PaginatedResult[*models.User], *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
 	InternalGetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError)
+	InternalCreate(ctx context.Context, user *models.User) (*models.User, *errors.ServiceError)
 	InternalCreateOAuthUser(ctx context.Context, email, name, githubID, avatarURL string) (*models.User, error)
 	InternalCreateInvitedUser(ctx context.Context, user *models.User, invite *models.OrgInvite) (*models.User, *errors.ServiceError)
 	InternalCreateInvitedOAuthUser(ctx context.Context, email, name, githubID, avatarURL string, invite *models.OrgInvite) (*models.User, error)
-	Signup(ctx context.Context, user *models.User, inviteToken string) (*openapi.UserSignupResponse, *errors.ServiceError)
 	Login(ctx context.Context, loginRequest *openapi.LoginRequest) (*openapi.LoginResponse, *errors.ServiceError)
-	SetOrgInviteService(svc OrgInviteService)
 }
 
 type jwtClaimsBuilder interface {
@@ -74,7 +71,6 @@ type UserServiceSpec struct {
 type usersService struct {
 	userStore               stores.UserStore
 	organisationService     OrganisationService
-	orgInviteService        OrgInviteService
 	logger                  logger.Logger
 	jwtSecretKey            string
 	resourceAccessPolicyMgr resourceaccess.ResourceAccessPolicyManager
@@ -82,10 +78,6 @@ type usersService struct {
 	permissions             auth.PermissionService
 	teamService             TeamService
 	refreshTokenStore       stores.RefreshTokenStore
-}
-
-func (u *usersService) SetOrgInviteService(svc OrgInviteService) {
-	u.orgInviteService = svc
 }
 
 func (u usersService) Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError) {
@@ -143,105 +135,8 @@ func (u usersService) InternalGetByEmail(ctx context.Context, email string) (*mo
 	return u.userStore.GetByEmail(ctx, email)
 }
 
-func (u usersService) Signup(ctx context.Context, user *models.User, inviteToken string) (*openapi.UserSignupResponse, *errors.ServiceError) {
-	u.logger.Infof("Creating user with email: %s", user.Email)
-	if len(user.Password) < 8 {
-		return nil, errors.BadRequest("password must be at least 8 characters")
-	}
-
-	_, addrErr := mail.ParseAddress(user.Email)
-	if addrErr != nil {
-		return nil, errors.BadRequest("invalid email address")
-	}
-
-	_, gerr := u.userStore.GetByEmail(ctx, user.Email)
-	if gerr == nil {
-		return nil, errors.Conflict("user with this email already exists! Please login instead.")
-	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		u.logger.Errorf("failed to hash password, %s", err.Error())
-		return nil, errors.GeneralError("failed to create user")
-	}
-	user.Password = string(hashedPassword)
-
-	// Invite-based signup
-	if inviteToken != "" {
-		invite, invErr := u.orgInviteService.ValidateAndConsume(ctx, inviteToken, user.Email)
-		if invErr != nil {
-			return nil, invErr
-		}
-
-		createdUser, createErr := u.InternalCreateInvitedUser(ctx, user, invite)
-		if createErr != nil {
-			return nil, createErr
-		}
-
-		return u.buildSignupResponse(ctx, createdUser)
-	}
-
-	if user.Organisation == nil {
-		return nil, errors.BadRequest("organisation is required")
-	}
-	createdOrganisation, orgErr := u.organisationService.InternalCreate(ctx, user.Organisation)
-	if orgErr != nil {
-		u.logger.Errorf("failed to create organisation, %s", orgErr.Error())
-		return nil, errors.GeneralError("failed to create user")
-	}
-	user.OrganisationID = createdOrganisation.ID
-	user.Role = models.OrgAdminRole
-
-	if _, teamErr := u.teamService.InternalCreateDefaultTeam(ctx, createdOrganisation.ID); teamErr != nil {
-		u.logger.Errorf("failed to create default team: %s", teamErr.Error())
-		return nil, errors.GeneralError("failed to create default team")
-	}
-
-	createdUser, serr := u.userStore.Create(ctx, user)
-	if serr != nil {
-		return nil, serr
-	}
-
-	if policyAddErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
-		createdUser.ID,
-		string(models.OrgAdminRole),
-		createdUser.OrganisationID,
-	); policyAddErr != nil {
-		u.logger.Errorf("failed to add OrgAdmin policy for user: %s", policyAddErr.Error())
-		return nil, errors.GeneralError("failed to create user")
-	}
-
-	// Org admin is also an org member, so they get both policies.
-	// This is needed because another orgadmin can demote the user from OrgAdmin.
-	if policyAddErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
-		createdUser.ID,
-		string(models.OrgMemberRole),
-		createdUser.OrganisationID,
-	); policyAddErr != nil {
-		u.logger.Errorf("failed to add OrgMember policy for user: %s", policyAddErr.Error())
-	}
-
-	return u.buildSignupResponse(ctx, createdUser)
-}
-
-func (u usersService) buildSignupResponse(ctx context.Context, createdUser *models.User) (*openapi.UserSignupResponse, *errors.ServiceError) {
-	expirationTime := time.Now().UTC().Add(auth.JwtTokenExpiry)
-	claims := u.jwtClaimsBuilder.BuildClaims(createdUser, expirationTime)
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, tokenErr := token.SignedString([]byte(u.jwtSecretKey))
-	if tokenErr != nil {
-		return nil, errors.GeneralError("failed to generate token: %s", tokenErr.Error())
-	}
-	refreshToken, refreshErr := auth.CreateRefreshToken(ctx, u.refreshTokenStore, createdUser.ID)
-	if refreshErr != nil {
-		u.logger.Errorf("failed to create refresh token: %s", refreshErr.Error())
-		return nil, errors.GeneralError("failed to generate refresh token")
-	}
-	return &openapi.UserSignupResponse{
-		User:         ptr.To(presenters.PresentUser(createdUser)),
-		JwtToken:     &tokenString,
-		RefreshToken: &refreshToken,
-	}, nil
+func (u usersService) InternalCreate(ctx context.Context, user *models.User) (*models.User, *errors.ServiceError) {
+	return u.userStore.Create(ctx, user)
 }
 
 func (u usersService) InternalCreateOAuthUser(ctx context.Context, email, name, githubID, avatarURL string) (*models.User, error) {

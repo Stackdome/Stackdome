@@ -13,6 +13,7 @@ import (
 
 type orgInviteStore struct {
 	sessionFactory db.SessionFactory
+	atomicExecutor
 }
 
 type OrgInviteStoreSpec struct {
@@ -20,7 +21,10 @@ type OrgInviteStoreSpec struct {
 }
 
 func NewOrgInviteStore(spec OrgInviteStoreSpec) stores.OrgInviteStore {
-	return &orgInviteStore{sessionFactory: spec.SessionFactory}
+	return &orgInviteStore{
+		sessionFactory: spec.SessionFactory,
+		atomicExecutor: atomicExecutor{sessionFactory: spec.SessionFactory},
+	}
 }
 
 func (s *orgInviteStore) Create(ctx context.Context, invite *models.OrgInvite) (*models.OrgInvite, *errors.ServiceError) {

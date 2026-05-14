@@ -25,7 +25,8 @@ func (s apiServer) routes() *mux.Router {
 	logger := s.environment.Environment().Logger
 
 	userHandler := handlers.NewUserServiceHandler(handlers.UserServiceHandlerSpec{
-		UserService: services.UserService,
+		UserService:   services.UserService,
+		SignupService: services.SignupService,
 	})
 
 	refreshHandler := auth.NewRefreshHandler(auth.RefreshHandlerSpec{

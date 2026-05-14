@@ -396,8 +396,11 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 
 	te.EmailService = emailpkg.NewNoopEmailService(applogger.NewLoggerWithPrefix(ctx, "test-email-service").SetLevel(te.Logger.GetLevel()))
 
+	orgInviteStore := pgstore.NewOrgInviteStore(pgstore.OrgInviteStoreSpec{
+		SessionFactory: te.DBSession,
+	})
 	orgInviteService := services.NewOrgInviteService(services.OrgInviteServiceSpec{
-		SessionFactory:    te.DBSession,
+		InviteStore:       orgInviteStore,
 		TeamService:       teamService,
 		UserService:       userService,
 		EncryptionService: encryptionService,
@@ -405,7 +408,17 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:            te.Logger,
 	})
 
-	userService.SetOrgInviteService(orgInviteService)
+	signupService := services.NewSignupService(services.SignupServiceSpec{
+		UserService:         userService,
+		OrgInviteService:    orgInviteService,
+		OrganisationService: organisationService,
+		TeamService:         teamService,
+		PolicyManager:       te.ResourceAccessPolicyManager,
+		RefreshTokenStore:   te.RefreshTokenStore,
+		JWTSecretKey:        te.Config.JwtSecret,
+		JWTClaimsBuilder:    auth.NewJWTClaimsBuilder(),
+		Logger:              te.Logger,
+	})
 
 	te.OAuthStateStore = pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
 		SessionFactory: te.DBSession,
@@ -436,6 +449,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		APITokenService:             apiTokenService,
 		TeamService:                 teamService,
 		OrgInviteService:            orgInviteService,
+		SignupService:               signupService,
 	}
 
 	return nil

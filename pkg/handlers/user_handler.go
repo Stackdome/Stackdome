@@ -14,16 +14,19 @@ import (
 
 func NewUserServiceHandler(spec UserServiceHandlerSpec) *usersHandler {
 	return &usersHandler{
-		userService: spec.UserService,
+		userService:   spec.UserService,
+		signupService: spec.SignupService,
 	}
 }
 
 type UserServiceHandlerSpec struct {
-	UserService services.UserService
+	UserService   services.UserService
+	SignupService services.SignupService
 }
 
 type usersHandler struct {
-	userService services.UserService
+	userService   services.UserService
+	signupService services.SignupService
 }
 
 func (a usersHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +101,7 @@ func (a usersHandler) Signup(w http.ResponseWriter, r *http.Request) {
 				inviteToken = *req.InviteToken
 			}
 
-			user, err := a.userService.Signup(ctx, convertedUser, inviteToken)
+			user, err := a.signupService.Signup(ctx, convertedUser, inviteToken)
 			if err != nil {
 				return nil, err
 			}

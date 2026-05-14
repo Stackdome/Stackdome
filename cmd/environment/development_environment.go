@@ -467,8 +467,11 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	}
 	d.EmailService = emailSvc
 
+	orgInviteStore := pgstore.NewOrgInviteStore(pgstore.OrgInviteStoreSpec{
+		SessionFactory: d.DBSession,
+	})
 	orgInviteService := services.NewOrgInviteService(services.OrgInviteServiceSpec{
-		SessionFactory:    d.DBSession,
+		InviteStore:       orgInviteStore,
 		TeamService:       teamService,
 		UserService:       userService,
 		EncryptionService: encryptionService,
@@ -476,7 +479,17 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:            d.Logger,
 	})
 
-	userService.SetOrgInviteService(orgInviteService)
+	signupService := services.NewSignupService(services.SignupServiceSpec{
+		UserService:         userService,
+		OrgInviteService:    orgInviteService,
+		OrganisationService: organisationService,
+		TeamService:         teamService,
+		PolicyManager:       d.ResourceAccessPolicyManager,
+		RefreshTokenStore:   d.RefreshTokenStore,
+		JWTSecretKey:        d.Config.JwtSecret,
+		JWTClaimsBuilder:    auth.NewJWTClaimsBuilder(),
+		Logger:              d.Logger,
+	})
 
 	d.OAuthStateStore = pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
 		SessionFactory: d.DBSession,
@@ -507,6 +520,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		APITokenService:             apiTokenService,
 		TeamService:                 teamService,
 		OrgInviteService:            orgInviteService,
+		SignupService:               signupService,
 	}
 
 	return nil
