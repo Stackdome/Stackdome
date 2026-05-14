@@ -1,7 +1,13 @@
 import { z } from "zod";
-import { schemas } from "@/api/zod-schemas";
+import type { components } from "@/api/types/openapi";
 
-type ApiPostgresBackupConfig = z.infer<typeof schemas.PostgresBackupConfig>;
+// Anchor the converter return type against the openapi-typescript-generated type
+// instead of the zod-schemas one. `openapi-zod-client` makes everything
+// `.partial().passthrough()`, which over-loosens required fields; the strict
+// shape from openapi.d.ts matches what `PostgresAddonCreateInput["spec"]["backup"]`
+// expects at the API boundary. The runtime form validation still goes through
+// `backupConfigSchema` below — only the converter's output type is anchored here.
+type ApiPostgresBackupConfig = NonNullable<components["schemas"]["PostgresBackupConfig"]>;
 
 // 6-field Quartz cron (seconds minutes hours day-of-month month day-of-week).
 // Each field is non-whitespace; we leave deep semantic validation to the backend.
