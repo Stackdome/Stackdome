@@ -1,5 +1,7 @@
 import { z } from "zod";
-import type { PostgresBackupConfig } from "@/api/postgres-backups";
+import { schemas } from "@/api/zod-schemas";
+
+type ApiPostgresBackupConfig = z.infer<typeof schemas.PostgresBackupConfig>;
 
 // 6-field Quartz cron (seconds minutes hours day-of-month month day-of-week).
 // Each field is non-whitespace; we leave deep semantic validation to the backend.
@@ -26,11 +28,11 @@ export const backupConfigSchema = z
 
 export type BackupConfigFormValues = z.infer<typeof backupConfigSchema>;
 
-export function toApiBackupConfig(values: BackupConfigFormValues): PostgresBackupConfig {
+export function toApiBackupConfig(values: BackupConfigFormValues): ApiPostgresBackupConfig {
   return {
     enabled: values.enabled,
     schedule: values.schedule,
     wal_archiving: values.walArchiving,
     ...(values.objectStoreId ? { object_store_id: values.objectStoreId } : {}),
-  };
+  } satisfies ApiPostgresBackupConfig;
 }
