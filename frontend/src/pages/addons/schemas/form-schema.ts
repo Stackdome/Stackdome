@@ -1,7 +1,16 @@
 import { z } from "zod";
+import { schemas } from "@/api/zod-schemas";
 import type { PlanId } from "../lib/plan-presets";
 
 const NAME_PATTERN = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+
+// Variant B: extend the generated PostgresDatabase shape with form-level
+// validation (required name, required extensions array). If the backend
+// adds/removes an extension literal, TS will flag this site.
+const DatabaseFormItemSchema = schemas.PostgresDatabase.extend({
+  name: z.string().min(1, "Required"),
+  extensions: z.array(z.literal("vector")),
+});
 
 export const PostgresAddonFormSchema = z.object({
   name: z
@@ -25,12 +34,7 @@ export const PostgresAddonFormSchema = z.object({
   autoMinorUpgrade: z.boolean(),
   autoMajorUpgrade: z.boolean(),
   superuserAccess: z.boolean(),
-  databases: z.array(
-    z.object({
-      name: z.string().min(1, "Required"),
-      extensions: z.array(z.literal("vector")),
-    }),
-  ),
+  databases: z.array(DatabaseFormItemSchema),
   initialization: z.discriminatedUnion("type", [
     z.object({ type: z.literal("new") }),
     z.object({
