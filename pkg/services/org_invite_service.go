@@ -10,12 +10,10 @@ import (
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 )
 
 const (
@@ -40,10 +38,11 @@ type OrgInviteService interface {
 	InternalDecryptToken(ctx context.Context, encryptedToken string) (string, *errors.ServiceError)
 	InternalListExpiredOrPastDue(ctx context.Context, now time.Time, params stores.ListParams) (*stores.PaginatedResult[*models.OrgInvite], *errors.ServiceError)
 	InternalMarkExpiredAndDelete(ctx context.Context, invites []*models.OrgInvite) *errors.ServiceError
+	InternalWithTransaction(ctx context.Context, fn func(ctx context.Context) *errors.ServiceError) *errors.ServiceError
 }
 
 type OrgInviteServiceSpec struct {
-	SessionFactory    db.SessionFactory
+	InviteStore       stores.OrgInviteStore
 	TeamService       TeamService
 	UserService       UserService
 	EncryptionService EncryptionService
@@ -63,9 +62,7 @@ type orgInviteService struct {
 
 func NewOrgInviteService(spec OrgInviteServiceSpec) OrgInviteService {
 	return &orgInviteService{
-		inviteStore: pgstore.NewOrgInviteStore(pgstore.OrgInviteStoreSpec{
-			SessionFactory: spec.SessionFactory,
-		}),
+		inviteStore:       spec.InviteStore,
 		teamService:       spec.TeamService,
 		userService:       spec.UserService,
 		encryptionService: spec.EncryptionService,
@@ -316,4 +313,8 @@ func (s *orgInviteService) findByToken(ctx context.Context, rawToken string) (*m
 	tokenHash := hex.EncodeToString(hash[:])
 
 	return s.inviteStore.GetByTokenHash(ctx, tokenHash)
+}
+
+func (s *orgInviteService) InternalWithTransaction(ctx context.Context, fn func(ctx context.Context) *errors.ServiceError) *errors.ServiceError {
+	return s.inviteStore.WithTransaction(ctx, fn)
 }

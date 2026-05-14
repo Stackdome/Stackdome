@@ -10,6 +10,7 @@ import (
 
 //go:generate mockgen -source=org_invite_store.go -destination=../mocks/mock_org_invite_store.go -package=mocks
 type OrgInviteStore interface {
+	AtomicExecutor
 	Create(ctx context.Context, invite *models.OrgInvite) (*models.OrgInvite, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.OrgInvite, *errors.ServiceError)
 	GetByTokenHash(ctx context.Context, tokenHash string) (*models.OrgInvite, *errors.ServiceError)

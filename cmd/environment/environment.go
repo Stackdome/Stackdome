@@ -75,4 +75,5 @@ type Services struct {
 	APITokenService             services.APITokenService
 	TeamService                 services.TeamService
 	OrgInviteService            services.OrgInviteService
+	SignupService               services.SignupService
 }
