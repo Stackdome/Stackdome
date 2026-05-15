@@ -488,7 +488,7 @@ export default function PostgresFormPage() {
             </div>
         </Panel>
 
-        <Panel title="Backups">
+        <Panel>
           <Collapsible defaultOpen={isEdit && values.backup.enabled}>
             <CollapsibleTrigger asChild>
               <button
@@ -517,7 +517,7 @@ export default function PostgresFormPage() {
           </Collapsible>
         </Panel>
 
-        <Panel title="Advanced">
+        <Panel>
           <Collapsible defaultOpen={isEdit && Boolean(values.advancedJson)}>
             <div className="flex items-center justify-between gap-3">
               <CollapsibleTrigger asChild>
