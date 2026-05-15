@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -70,8 +71,24 @@ export function BackupConfigFields({
 
   const noStores = !storesLoading && objectStores.length === 0;
   const disabled = !values.enabled;
-  const parts = parseCron(values.schedule);
+  const parsed = parseCron(values.schedule);
   const description = describeCron(values.schedule);
+
+  // `frequency` is a UI mode that must survive even when the resulting cron
+  // happens to match a builder shape (otherwise "Custom" snaps back). It only
+  // re-syncs from the schedule on *external* changes (e.g. edit hydration),
+  // tracked via the last value this component emitted.
+  const lastEmitted = useRef<string | null>(null);
+  const [mode, setMode] = useState<Frequency>(() => parsed.frequency);
+
+  useEffect(() => {
+    if (values.schedule !== lastEmitted.current) {
+      setMode(parseCron(values.schedule).frequency);
+      lastEmitted.current = values.schedule;
+    }
+  }, [values.schedule]);
+
+  const parts: ScheduleParts = { ...parsed, frequency: mode };
 
   const clamp = (raw: string, min: number, max: number) => {
     const n = Number(raw);
@@ -79,8 +96,20 @@ export function BackupConfigFields({
     return Math.min(max, Math.max(min, Math.trunc(n)));
   };
 
-  const applyParts = (next: ScheduleParts) =>
-    onChange({ ...values, schedule: buildCron(next) });
+  const emit = (schedule: string) => {
+    lastEmitted.current = schedule;
+    onChange({ ...values, schedule });
+  };
+
+  const applyParts = (next: ScheduleParts) => {
+    setMode(next.frequency);
+    if (next.frequency === "custom") {
+      // Switching into Custom keeps the current expression for editing.
+      emit(parsed.custom);
+    } else {
+      emit(buildCron(next));
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
@@ -269,14 +298,10 @@ export function BackupConfigFields({
             <Input
               id="bk-schedule"
               className="font-mono"
-              value={parts.custom}
+              value={values.schedule}
               disabled={disabled}
-              onChange={(e) =>
-                onChange({ ...values, schedule: e.target.value })
-              }
-              onBlur={(e) =>
-                onChange({ ...values, schedule: normalizeCron(e.target.value) })
-              }
+              onChange={(e) => emit(e.target.value)}
+              onBlur={(e) => emit(normalizeCron(e.target.value))}
               placeholder="0 0 3 * * *  (sec min hour dom mon dow)"
             />
           )}
