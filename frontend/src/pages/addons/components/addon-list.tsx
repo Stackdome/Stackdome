@@ -123,9 +123,7 @@ export function AddonList({ addons }: { addons: PostgresAddon[] }) {
               className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors group"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted/30">
-                  <AddonTypeIcon type="postgres" size={18} />
-                </span>
+                <AddonTypeIcon type="postgres" size={20} className="shrink-0" />
                 <span className="font-medium group-hover:text-brand transition-colors break-words">
                   {a.name}
                 </span>
