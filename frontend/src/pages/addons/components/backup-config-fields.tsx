@@ -9,9 +9,44 @@ import {
 } from "@/components/ui/select";
 import { FieldShell } from "@/components/branded";
 import { Link } from "react-router-dom";
-import { CronPresets } from "./cron-presets";
+import cronstrue from "cronstrue";
+import {
+  buildCron,
+  parseCron,
+  normalizeCron,
+  type Frequency,
+  type ScheduleParts,
+} from "../lib/cron-builder";
 import type { BackupConfigFormValues } from "../schemas/backup-config-schema";
 import type { ObjectStore } from "@/api/object-stores";
+
+const FREQUENCIES: { value: Frequency; label: string }[] = [
+  { value: "hourly", label: "Hourly" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "custom", label: "Custom (cron)" },
+];
+
+const WEEKDAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+function describeCron(expr: string): string | null {
+  try {
+    return cronstrue.toString(expr, { use24HourTimeFormat: true });
+  } catch {
+    return null;
+  }
+}
 
 type Props = {
   values: BackupConfigFormValues;
@@ -34,6 +69,18 @@ export function BackupConfigFields({
   ) => onChange({ ...values, [k]: val });
 
   const noStores = !storesLoading && objectStores.length === 0;
+  const disabled = !values.enabled;
+  const parts = parseCron(values.schedule);
+  const description = describeCron(values.schedule);
+
+  const clamp = (raw: string, min: number, max: number) => {
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return min;
+    return Math.min(max, Math.max(min, Math.trunc(n)));
+  };
+
+  const applyParts = (next: ScheduleParts) =>
+    onChange({ ...values, schedule: buildCron(next) });
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
@@ -109,24 +156,130 @@ export function BackupConfigFields({
       </FieldShell>
 
       <FieldShell
-        label="Schedule (6-field Quartz cron)"
-        htmlFor="bk-schedule"
+        label="Schedule"
+        htmlFor="bk-frequency"
         error={errors.schedule}
+        hint={
+          description ? (
+            <span>
+              {description} <span className="text-muted-foreground/70">(UTC)</span>
+            </span>
+          ) : undefined
+        }
       >
-        <Input
-          id="bk-schedule"
-          className="font-mono"
-          value={values.schedule}
-          disabled={!values.enabled}
-          onChange={(e) => set("schedule", e.target.value)}
-          placeholder="0 0 3 * * *"
-        />
-        <div className="mt-2">
-          <CronPresets
-            value={values.schedule}
-            disabled={!values.enabled}
-            onChange={(expr) => set("schedule", expr)}
-          />
+        <div className="flex flex-col gap-2">
+          <Select
+            value={parts.frequency}
+            onValueChange={(v) => applyParts({ ...parts, frequency: v as Frequency })}
+            disabled={disabled}
+          >
+            <SelectTrigger id="bk-frequency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FREQUENCIES.map((f) => (
+                <SelectItem key={f.value} value={f.value}>
+                  {f.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {parts.frequency === "hourly" && (
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              at minute
+              <Input
+                type="number"
+                min={0}
+                max={59}
+                className="w-20 font-mono"
+                value={parts.minute}
+                disabled={disabled}
+                onChange={(e) =>
+                  applyParts({ ...parts, minute: clamp(e.target.value, 0, 59) })
+                }
+              />
+            </label>
+          )}
+
+          {(parts.frequency === "daily" ||
+            parts.frequency === "weekly" ||
+            parts.frequency === "monthly") && (
+            <div className="flex flex-wrap items-center gap-2">
+              {parts.frequency === "weekly" && (
+                <Select
+                  value={String(parts.dayOfWeek)}
+                  onValueChange={(v) =>
+                    applyParts({ ...parts, dayOfWeek: Number(v) })
+                  }
+                  disabled={disabled}
+                >
+                  <SelectTrigger className="w-36">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WEEKDAYS.map((d, i) => (
+                      <SelectItem key={d} value={String(i)}>
+                        {d}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {parts.frequency === "monthly" && (
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  day
+                  <Input
+                    type="number"
+                    min={1}
+                    max={31}
+                    className="w-20 font-mono"
+                    value={parts.dayOfMonth}
+                    disabled={disabled}
+                    onChange={(e) =>
+                      applyParts({
+                        ...parts,
+                        dayOfMonth: clamp(e.target.value, 1, 31),
+                      })
+                    }
+                  />
+                </label>
+              )}
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                at
+                <Input
+                  type="time"
+                  className="w-32 font-mono"
+                  value={`${pad(parts.hour)}:${pad(parts.minute)}`}
+                  disabled={disabled}
+                  onChange={(e) => {
+                    const [h, m] = e.target.value.split(":");
+                    applyParts({
+                      ...parts,
+                      hour: clamp(h, 0, 23),
+                      minute: clamp(m, 0, 59),
+                    });
+                  }}
+                />
+              </label>
+            </div>
+          )}
+
+          {parts.frequency === "custom" && (
+            <Input
+              id="bk-schedule"
+              className="font-mono"
+              value={parts.custom}
+              disabled={disabled}
+              onChange={(e) =>
+                onChange({ ...values, schedule: e.target.value })
+              }
+              onBlur={(e) =>
+                onChange({ ...values, schedule: normalizeCron(e.target.value) })
+              }
+              placeholder="0 0 3 * * *  (sec min hour dom mon dow)"
+            />
+          )}
         </div>
       </FieldShell>
     </div>
