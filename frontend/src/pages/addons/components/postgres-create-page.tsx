@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, ExternalLink, AlertCircle, ChevronDown, Rocket } from "lucide-react";
+import { Loader2, ExternalLink, AlertCircle, ChevronDown } from "lucide-react";
 import { ZodError } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,9 @@ import {
   buildCreateInput,
   JsonAreaParseError,
 } from "../lib/payload";
+import StickyActionBar from "@/pages/stacks/components/shared/sticky-action-bar";
+import { useObjectStores } from "@/pages/object-stores/hooks/use-object-stores";
+import { BackupConfigFields } from "./backup-config-fields";
 
 // Mirrors backend: pkg/worker/postgresaddon/image_catalog_reconciler.go (CloudNativePG images)
 // and config/openapi/stackdome_api.yaml (PostgresVersion.major: 13..17).
@@ -72,6 +75,7 @@ export default function PostgresFormPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [originalValues, setOriginalValues] = useState<PostgresAddonFormValues | null>(null);
   const [confirmAdvancedOpen, setConfirmAdvancedOpen] = useState(false);
+  const { objectStores, loading: storesLoading } = useObjectStores();
 
   // Static labels + non-clickable registrations (don't depend on values.name).
   useEffect(() => {
@@ -271,10 +275,6 @@ export default function PostgresFormPage() {
     );
   }
 
-  const submitLabel = isEdit
-    ? submitting ? "Saving..." : "Save changes"
-    : submitting ? "Creating..." : "Create addon";
-
   return (
     <div className="p-6">
       <header className="mb-6">
@@ -288,15 +288,6 @@ export default function PostgresFormPage() {
                 ? "Update configuration for this Postgres addon."
                 : "Provision a managed PostgreSQL database for your stacks."}
             </p>
-          </div>
-          <div className="flex gap-3">
-            <Button variant="ghost" onClick={handleCancel} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-              {submitLabel}
-            </Button>
           </div>
         </div>
         <Separator className="mt-4" />
@@ -572,6 +563,35 @@ export default function PostgresFormPage() {
               </CollapsibleContent>
             </Collapsible>
         </Panel>
+
+        <Panel title="Backups">
+          <Collapsible defaultOpen={isEdit && values.backup.enabled}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="group flex items-center gap-2 text-sm font-semibold text-foreground"
+              >
+                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                Scheduled backups
+                <span className="font-mono text-[10.5px] uppercase tracking-[1px] text-muted-foreground">
+                  {values.backup.enabled ? "on" : "off"}
+                </span>
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4">
+              <BackupConfigFields
+                values={values.backup}
+                errors={{
+                  objectStoreId: errors["backup.objectStoreId"],
+                  schedule: errors["backup.schedule"],
+                }}
+                objectStores={objectStores}
+                storesLoading={storesLoading}
+                onChange={(next) => update("backup", next)}
+              />
+            </CollapsibleContent>
+          </Collapsible>
+        </Panel>
       </div>
 
       <Dialog
@@ -602,6 +622,18 @@ export default function PostgresFormPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <StickyActionBar
+        leadLabel={isEdit ? "Edit addon" : "New addon"}
+        segments={[]}
+        primary={{
+          label: isEdit ? "Save changes" : "Create addon",
+          loadingLabel: isEdit ? "Saving…" : "Creating…",
+          isLoading: submitting,
+          onClick: handleSubmit,
+        }}
+        secondary={{ label: "Cancel", onClick: handleCancel }}
+      />
     </div>
   );
 }
