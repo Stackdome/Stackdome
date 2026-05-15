@@ -52,20 +52,6 @@ export function BackupConfigFields({
       </FieldShell>
 
       <FieldShell
-        label="WAL archiving"
-        htmlFor="bk-wal"
-        hint="Continuously ships WAL segments. Required for point-in-time recovery."
-      >
-        <div className="flex items-center h-10">
-          <Switch
-            id="bk-wal"
-            checked={values.walArchiving}
-            onCheckedChange={(c) => set("walArchiving", c)}
-          />
-        </div>
-      </FieldShell>
-
-      <FieldShell
         label="Object Store"
         htmlFor="bk-objstore"
         error={errors.objectStoreId}
@@ -106,6 +92,20 @@ export function BackupConfigFields({
               ))}
           </SelectContent>
         </Select>
+      </FieldShell>
+
+      <FieldShell
+        label="WAL archiving"
+        htmlFor="bk-wal"
+        hint="Continuously ships WAL segments. Required for point-in-time recovery."
+      >
+        <div className="flex items-center h-10">
+          <Switch
+            id="bk-wal"
+            checked={values.walArchiving}
+            onCheckedChange={(c) => set("walArchiving", c)}
+          />
+        </div>
       </FieldShell>
 
       <FieldShell
