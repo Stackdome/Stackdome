@@ -2,6 +2,7 @@ import type { PostgresAddon, PostgresAddonCreateInput, PostgresAddonSpec } from 
 import type { PostgresAddonFormValues } from "../schemas/form-schema";
 import { DEFAULT_ADVANCED_JSON } from "../schemas/form-schema";
 import { PLAN_PRESETS, resourcesForPlan, type PlanId } from "./plan-presets";
+import { toApiBackupConfig } from "../schemas/backup-config-schema";
 
 type Json = Record<string, unknown>;
 
@@ -93,6 +94,10 @@ function buildFormSpec(values: PostgresAddonFormValues): PostgresAddonSpec {
           restore_from_backup: { backup_id: values.initialization.backupId },
         },
   };
+
+  if (values.backup.enabled) {
+    spec.backup = toApiBackupConfig(values.backup);
+  }
 
   if (values.databases.length > 0) {
     spec.databases = values.databases.map((db) => ({
@@ -207,10 +212,6 @@ function buildAdvancedJson(addon: PostgresAddon): string {
     obj.storage = { storage_class: storageClass };
   }
 
-  if (addon.spec.backup) {
-    obj.backup = addon.spec.backup;
-  }
-
   if (addon.spec.initialization && addon.spec.initialization.type !== "new") {
     obj.initialization = addon.spec.initialization;
   }
@@ -259,6 +260,12 @@ export function addonToFormValues(addon: PostgresAddon): PostgresAddonFormValues
           backupId: init.restore_from_backup?.backup_id ?? "",
         }
         : { type: "new" },
+    backup: {
+      enabled: addon.spec.backup?.enabled ?? false,
+      objectStoreId: addon.spec.backup?.object_store_id ?? "",
+      schedule: addon.spec.backup?.schedule || "0 0 3 * * *",
+      walArchiving: addon.spec.backup?.wal_archiving ?? false,
+    },
     advancedJson: buildAdvancedJson(addon),
   };
 }
