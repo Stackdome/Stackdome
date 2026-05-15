@@ -8,7 +8,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { StatusPill, variantFromState } from "@/components/branded";
 import type { ObjectStore } from "../types";
 
 interface ObjectStoreListProps {
@@ -45,7 +44,6 @@ export function ObjectStoreList({ objectStores, onEdit, onDelete }: ObjectStoreL
             <TableHead className="font-semibold">Endpoint / Region</TableHead>
             <TableHead className="font-semibold">Destination path</TableHead>
             <TableHead className="font-semibold">Retention</TableHead>
-            <TableHead className="font-semibold">Status</TableHead>
             <TableHead className="w-[120px] text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -57,11 +55,6 @@ export function ObjectStoreList({ objectStores, onEdit, onDelete }: ObjectStoreL
               <TableCell className="font-mono text-xs">{endpointLabel(store)}</TableCell>
               <TableCell className="font-mono text-xs">{store.spec.destination_path}</TableCell>
               <TableCell>{store.spec.retention_policy}</TableCell>
-              <TableCell>
-                <StatusPill variant={variantFromState(store.status?.state)}>
-                  {store.status?.state ?? "Unknown"}
-                </StatusPill>
-              </TableCell>
               <TableCell className="text-right">
                 <Button
                   variant="ghost"
