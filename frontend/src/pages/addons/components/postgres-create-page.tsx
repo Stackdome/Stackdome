@@ -486,66 +486,73 @@ export default function PostgresFormPage() {
                 </div>
               </FieldShell>
             </div>
-        </Panel>
 
-        <Panel>
-          <Collapsible defaultOpen={isEdit && values.backup.enabled}>
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                className="group flex items-center gap-2 text-sm font-semibold text-foreground"
-              >
-                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                Scheduled backups
-                <span className="font-mono text-[10.5px] uppercase tracking-[1px] text-muted-foreground">
-                  {values.backup.enabled ? "on" : "off"}
-                </span>
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4">
-              <BackupConfigFields
-                values={values.backup}
-                errors={{
-                  objectStoreId: errors["backup.objectStoreId"],
-                  schedule: errors["backup.schedule"],
-                }}
-                objectStores={objectStores}
-                storesLoading={storesLoading}
-                onChange={(next) => update("backup", next)}
-              />
-            </CollapsibleContent>
-          </Collapsible>
-        </Panel>
-
-        <Panel>
-          <Collapsible defaultOpen={isEdit && Boolean(values.advancedJson)}>
-            <div className="flex items-center justify-between gap-3">
+            <Collapsible
+              defaultOpen={isEdit && values.backup.enabled}
+              className="mt-8 -mx-5 border-t border-border"
+            >
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="group flex items-center gap-2 text-sm font-semibold text-foreground focus:outline-none"
+                  className="group flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-semibold text-foreground hover:bg-muted/30 focus:outline-none transition-colors"
                 >
                   <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                  Advanced configuration
-                  {isEdit && advancedDirty && (
-                    <span className="font-mono text-[10.5px] uppercase tracking-[1px] font-bold text-brand bg-brand-bg px-1.5 py-0.5 rounded">
-                      Modified
-                    </span>
-                  )}
+                  Backups
+                  <span className="font-mono text-[10.5px] uppercase tracking-[1px] text-muted-foreground">
+                    {values.backup.enabled ? "on" : "off"}
+                  </span>
                 </button>
               </CollapsibleTrigger>
-              <a
-                href={ADVANCED_DOCS_URL}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="text-[12.5px] text-brand hover:text-brand-press hover:underline inline-flex items-center gap-1 whitespace-nowrap"
-              >
-                Read the documentation
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            </div>
-            <CollapsibleContent className="pt-4">
-              <div className="space-y-2">
+              <CollapsibleContent>
+                <div className="px-5 pb-5 pt-1">
+                  <BackupConfigFields
+                    values={values.backup}
+                    errors={{
+                      objectStoreId: errors["backup.objectStoreId"],
+                      schedule: errors["backup.schedule"],
+                    }}
+                    objectStores={objectStores}
+                    storesLoading={storesLoading}
+                    onChange={(next) => update("backup", next)}
+                  />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible
+              defaultOpen={isEdit && Boolean(values.advancedJson)}
+              className="-mx-5 -mb-4 border-t border-border"
+            >
+              <div className="flex items-center gap-3 hover:bg-muted/30 transition-colors">
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex-1 text-left group focus:outline-none px-5 py-3"
+                  >
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-foreground">Advanced</span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                      {isEdit && advancedDirty && (
+                        <span className="font-mono text-[10.5px] uppercase tracking-[1px] font-bold text-brand bg-brand-bg px-1.5 py-0.5 rounded">
+                          Modified
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                </CollapsibleTrigger>
+                <a
+                  href={ADVANCED_DOCS_URL}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-[12.5px] text-brand hover:text-brand-press hover:underline inline-flex items-center gap-1 whitespace-nowrap pr-5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Read the documentation
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </div>
+              <CollapsibleContent>
+                <div className="px-5 pb-5 pt-3 space-y-2">
                 {isEdit && advancedDirty && (
                   <div className="flex items-center justify-between text-xs text-muted-foreground max-w-3xl">
                     <span className="inline-flex items-center gap-1.5">
