@@ -69,9 +69,33 @@ function fromObjectStore(store: ObjectStore): ObjectStoreFormValues | null {
       gcs: empty.gcs,
     };
   }
-  // Phase 1 ships S3 only in the UI. Editing an Azure/GCS store would otherwise
-  // silently overwrite the existing config with S3 — return null so the caller
-  // can render an "unsupported" banner instead.
+  if (cfg.azure_credentials) {
+    return {
+      name: store.name,
+      destinationPath: store.spec.destination_path,
+      retentionPolicy: store.spec.retention_policy ?? "7d",
+      provider: "azure",
+      s3: empty.s3,
+      azure: {
+        storageAccountName: cfg.azure_credentials.storage_account_name ?? "",
+        connectionString: cfg.azure_credentials.connection_string,
+      },
+      gcs: empty.gcs,
+    };
+  }
+  if (cfg.gcs_credentials) {
+    return {
+      name: store.name,
+      destinationPath: store.spec.destination_path,
+      retentionPolicy: store.spec.retention_policy ?? "7d",
+      provider: "gcs",
+      s3: empty.s3,
+      azure: empty.azure,
+      gcs: {
+        serviceAccountCredentials: cfg.gcs_credentials.service_account_credentials,
+      },
+    };
+  }
   return null;
 }
 
@@ -244,12 +268,8 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
             >
               <TabsList>
                 <TabsTrigger value="s3">S3 / S3-compatible</TabsTrigger>
-                <TabsTrigger value="azure" disabled>
-                  Azure (later)
-                </TabsTrigger>
-                <TabsTrigger value="gcs" disabled>
-                  GCS (later)
-                </TabsTrigger>
+                <TabsTrigger value="azure">Azure</TabsTrigger>
+                <TabsTrigger value="gcs">GCS</TabsTrigger>
               </TabsList>
 
               <TabsContent value="s3" className="flex flex-col gap-4">
@@ -320,6 +340,75 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                   expectedKeyHint="secretAccessKey"
                   error={
                     errors["s3.secretAccessKey.secret_id"] || errors["s3.secretAccessKey.key"]
+                  }
+                />
+              </TabsContent>
+
+              <TabsContent value="azure" className="flex flex-col gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="os-azure-account">
+                    Storage account name (optional)
+                  </Label>
+                  <Input
+                    id="os-azure-account"
+                    value={values.azure?.storageAccountName ?? ""}
+                    onChange={(e) => {
+                      clearError("azure.storageAccountName");
+                      setValues((v) => ({
+                        ...v,
+                        azure: {
+                          ...(v.azure ?? empty.azure!),
+                          storageAccountName: e.target.value,
+                        },
+                      }));
+                    }}
+                    placeholder="mystorageaccount"
+                    className="font-mono"
+                  />
+                </div>
+
+                <SecretKeyPicker
+                  label={<>Connection string <span className="text-danger">*</span></>}
+                  helpText="A Generic secret and the key inside it that holds the Azure connection string."
+                  value={values.azure?.connectionString ?? { secret_id: "", key: "" }}
+                  onChange={(next) => {
+                    clearError("azure.connectionString.secret_id");
+                    clearError("azure.connectionString.key");
+                    setValues((v) => ({
+                      ...v,
+                      azure: { ...(v.azure ?? empty.azure!), connectionString: next },
+                    }));
+                  }}
+                  expectedKeyHint="connectionString"
+                  error={
+                    errors["azure.connectionString.secret_id"] ||
+                    errors["azure.connectionString.key"]
+                  }
+                />
+              </TabsContent>
+
+              <TabsContent value="gcs" className="flex flex-col gap-4">
+                <SecretKeyPicker
+                  label={<>Service account credentials <span className="text-danger">*</span></>}
+                  helpText="A Generic secret and the key inside it that holds the GCS service account JSON."
+                  value={
+                    values.gcs?.serviceAccountCredentials ?? { secret_id: "", key: "" }
+                  }
+                  onChange={(next) => {
+                    clearError("gcs.serviceAccountCredentials.secret_id");
+                    clearError("gcs.serviceAccountCredentials.key");
+                    setValues((v) => ({
+                      ...v,
+                      gcs: {
+                        ...(v.gcs ?? empty.gcs!),
+                        serviceAccountCredentials: next,
+                      },
+                    }));
+                  }}
+                  expectedKeyHint="serviceAccountKey"
+                  error={
+                    errors["gcs.serviceAccountCredentials.secret_id"] ||
+                    errors["gcs.serviceAccountCredentials.key"]
                   }
                 />
               </TabsContent>
