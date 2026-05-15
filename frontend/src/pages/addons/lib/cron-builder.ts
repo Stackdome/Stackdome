@@ -36,6 +36,24 @@ export function normalizeCron(raw: string): string {
   return expr;
 }
 
+/**
+ * True when `raw` is a usable cron arity: an `@macro`, or exactly 6
+ * whitespace-separated fields once a 5-field crontab is upgraded. Catches the
+ * common "missed a space" mistake before it reaches cronstrue/the backend.
+ */
+// One comma-list entry: *, ?, number, range, 3-letter name — optional /step.
+const CRON_ATOM = String.raw`(\*|\?|\d+(-\d+)?|[A-Za-z]{3}(-[A-Za-z]{3})?)(\/\d+)?`;
+const CRON_FIELD = new RegExp(`^${CRON_ATOM}(,${CRON_ATOM})*$`);
+
+export function isValidCronArity(raw: string): boolean {
+  const expr = normalizeCron(raw);
+  if (!expr) return false;
+  if (expr.startsWith("@")) return true;
+  const fields = expr.split(" ");
+  if (fields.length !== 6) return false;
+  return fields.every((f) => CRON_FIELD.test(f));
+}
+
 export function buildCron(p: ScheduleParts): string {
   const { minute, hour, dayOfWeek, dayOfMonth } = p;
   switch (p.frequency) {

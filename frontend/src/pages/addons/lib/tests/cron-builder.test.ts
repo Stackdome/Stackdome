@@ -1,6 +1,23 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
-import { buildCron, parseCron, normalizeCron } from "../cron-builder";
+import { buildCron, parseCron, normalizeCron, isValidCronArity } from "../cron-builder";
+
+describe("isValidCronArity", () => {
+  it("accepts 6-field and 5-field (upgraded) expressions", () => {
+    expect(isValidCronArity("0 0 3 * * *")).toBe(true);
+    expect(isValidCronArity("0 3 * * *")).toBe(true);
+  });
+  it("accepts @macros", () => {
+    expect(isValidCronArity("@daily")).toBe(true);
+  });
+  it("rejects a missed-space expression", () => {
+    expect(isValidCronArity("0 0 3 1 *1")).toBe(false);
+  });
+  it("rejects empty and too-many fields", () => {
+    expect(isValidCronArity("")).toBe(false);
+    expect(isValidCronArity("0 0 3 1 1 1 1")).toBe(false);
+  });
+});
 
 describe("normalizeCron", () => {
   it("trims and collapses whitespace", () => {

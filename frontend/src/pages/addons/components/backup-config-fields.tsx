@@ -15,6 +15,7 @@ import {
   buildCron,
   parseCron,
   normalizeCron,
+  isValidCronArity,
   type Frequency,
   type ScheduleParts,
 } from "../lib/cron-builder";
@@ -72,7 +73,13 @@ export function BackupConfigFields({
   const noStores = !storesLoading && objectStores.length === 0;
   const disabled = !values.enabled;
   const parsed = parseCron(values.schedule);
-  const description = describeCron(values.schedule);
+  const scheduleArityOk = isValidCronArity(values.schedule);
+  const description = scheduleArityOk ? describeCron(values.schedule) : null;
+  const scheduleError =
+    errors.schedule ||
+    (values.schedule.trim() && !scheduleArityOk
+      ? "Use 6 space-separated fields: sec min hour day-of-month month day-of-week (or @daily)."
+      : undefined);
 
   // `frequency` is a UI mode that must survive even when the resulting cron
   // happens to match a builder shape (otherwise "Custom" snaps back). It only
@@ -187,7 +194,7 @@ export function BackupConfigFields({
       <FieldShell
         label="Schedule"
         htmlFor="bk-frequency"
-        error={errors.schedule}
+        error={scheduleError}
         hint={
           description ? (
             <span>
