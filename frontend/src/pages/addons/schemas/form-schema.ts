@@ -4,6 +4,18 @@ import type { PlanId } from "../lib/plan-presets";
 
 const NAME_PATTERN = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
 
+// 6-field Quartz cron (sec min hour dom mon dow). Deep semantics left to backend.
+const QUARTZ_CRON = /^\S+\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+$/;
+
+const BackupFormSchema = z.object({
+  enabled: z.boolean(),
+  objectStoreId: z.string(),
+  schedule: z
+    .string()
+    .regex(QUARTZ_CRON, "Use a 6-field Quartz cron (sec min hour dom mon dow)"),
+  walArchiving: z.boolean(),
+});
+
 // Variant B: extend the generated PostgresDatabase shape with form-level
 // validation (required name, required extensions array). If the backend
 // adds/removes an extension literal, TS will flag this site.
@@ -12,7 +24,7 @@ const DatabaseFormItemSchema = schemas.PostgresDatabase.extend({
   extensions: z.array(z.literal("vector")),
 });
 
-export const PostgresAddonFormSchema = z.object({
+const PostgresAddonFormBase = z.object({
   name: z
     .string()
     .min(1, "Required")
@@ -43,6 +55,17 @@ export const PostgresAddonFormSchema = z.object({
     }),
   ]),
   advancedJson: z.string(),
+  backup: BackupFormSchema,
+});
+
+export const PostgresAddonFormSchema = PostgresAddonFormBase.superRefine((val, ctx) => {
+  if (val.backup.enabled && !val.backup.objectStoreId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["backup", "objectStoreId"],
+      message: "Pick an Object Store to enable scheduled backups",
+    });
+  }
 });
 
 export type PostgresAddonFormValues = z.infer<typeof PostgresAddonFormSchema>;
@@ -63,5 +86,11 @@ export function defaultFormValues(clusterId: string): PostgresAddonFormValues {
     databases: [],
     initialization: { type: "new" },
     advancedJson: DEFAULT_ADVANCED_JSON,
+    backup: {
+      enabled: false,
+      objectStoreId: "",
+      schedule: "0 0 3 * * *",
+      walArchiving: false,
+    },
   };
 }
