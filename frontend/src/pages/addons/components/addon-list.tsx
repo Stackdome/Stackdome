@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import type { PostgresAddon } from "@/api/addons";
 import { StatusPill } from "./status-pill";
+import { AddonTypeIcon } from "./addon-type-icon";
 import {
   filterAndSortAddons,
   countByBucket,
@@ -121,7 +122,10 @@ export function AddonList({ addons }: { addons: PostgresAddon[] }) {
               to={`/addons/postgres/${a.id}`}
               className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors group"
             >
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted/30">
+                  <AddonTypeIcon type="postgres" size={18} />
+                </span>
                 <span className="font-medium group-hover:text-brand transition-colors break-words">
                   {a.name}
                 </span>
