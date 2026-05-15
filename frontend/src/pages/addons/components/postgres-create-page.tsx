@@ -486,82 +486,6 @@ export default function PostgresFormPage() {
                 </div>
               </FieldShell>
             </div>
-
-            <Collapsible
-              defaultOpen={isEdit && Boolean(values.advancedJson)}
-              className="mt-8 -mx-5 -mb-4 border-t border-border"
-            >
-              <div className="flex items-center gap-3 hover:bg-muted/30 transition-colors">
-                <CollapsibleTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex-1 text-left group focus:outline-none px-5 py-3"
-                  >
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-foreground">Advanced</span>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                      {isEdit && advancedDirty && (
-                        <span className="font-mono text-[10.5px] uppercase tracking-[1px] font-bold text-brand bg-brand-bg px-1.5 py-0.5 rounded">
-                          Modified
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                </CollapsibleTrigger>
-                <a
-                  href={ADVANCED_DOCS_URL}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="text-[12.5px] text-brand hover:text-brand-press hover:underline inline-flex items-center gap-1 whitespace-nowrap pr-5"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Read the documentation
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </div>
-              <CollapsibleContent>
-                <div className="px-5 pb-5 pt-3 space-y-2">
-                  {isEdit && advancedDirty && (
-                    <div className="flex items-center justify-between text-xs text-muted-foreground max-w-3xl">
-                      <span className="inline-flex items-center gap-1.5">
-                        {advancedCleared && (
-                          <>
-                            <AlertCircle className="h-3.5 w-3.5 text-brand" />
-                            <span>
-                              These advanced fields will be removed on save.
-                            </span>
-                          </>
-                        )}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleResetAdvanced}
-                        className="text-brand hover:text-brand-press hover:underline font-medium"
-                      >
-                        Reset to current
-                      </button>
-                    </div>
-                  )}
-                  <Textarea
-                    id="advanced-json"
-                    rows={12}
-                    value={values.advancedJson}
-                    onChange={(e) => update("advancedJson", e.target.value)}
-                    placeholder={'{\n  "configuration": {\n    "parameters": { "max_connections": "200" }\n  }\n}'}
-                    className={cn(
-                      "font-mono text-xs [field-sizing:fixed] max-w-3xl",
-                      errors.advancedJson ? "border-danger" : "",
-                    )}
-                    spellCheck={false}
-                  />
-                  {errors.advancedJson && (
-                    <p className="text-[11.5px] text-danger mt-2 whitespace-pre-wrap">
-                      {errors.advancedJson}
-                    </p>
-                  )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
         </Panel>
 
         <Panel title="Backups">
@@ -589,6 +513,78 @@ export default function PostgresFormPage() {
                 storesLoading={storesLoading}
                 onChange={(next) => update("backup", next)}
               />
+            </CollapsibleContent>
+          </Collapsible>
+        </Panel>
+
+        <Panel title="Advanced">
+          <Collapsible defaultOpen={isEdit && Boolean(values.advancedJson)}>
+            <div className="flex items-center justify-between gap-3">
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="group flex items-center gap-2 text-sm font-semibold text-foreground focus:outline-none"
+                >
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                  Advanced configuration
+                  {isEdit && advancedDirty && (
+                    <span className="font-mono text-[10.5px] uppercase tracking-[1px] font-bold text-brand bg-brand-bg px-1.5 py-0.5 rounded">
+                      Modified
+                    </span>
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <a
+                href={ADVANCED_DOCS_URL}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-[12.5px] text-brand hover:text-brand-press hover:underline inline-flex items-center gap-1 whitespace-nowrap"
+              >
+                Read the documentation
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+            <CollapsibleContent className="pt-4">
+              <div className="space-y-2">
+                {isEdit && advancedDirty && (
+                  <div className="flex items-center justify-between text-xs text-muted-foreground max-w-3xl">
+                    <span className="inline-flex items-center gap-1.5">
+                      {advancedCleared && (
+                        <>
+                          <AlertCircle className="h-3.5 w-3.5 text-brand" />
+                          <span>
+                            These advanced fields will be removed on save.
+                          </span>
+                        </>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleResetAdvanced}
+                      className="text-brand hover:text-brand-press hover:underline font-medium"
+                    >
+                      Reset to current
+                    </button>
+                  </div>
+                )}
+                <Textarea
+                  id="advanced-json"
+                  rows={12}
+                  value={values.advancedJson}
+                  onChange={(e) => update("advancedJson", e.target.value)}
+                  placeholder={'{\n  "configuration": {\n    "parameters": { "max_connections": "200" }\n  }\n}'}
+                  className={cn(
+                    "font-mono text-xs [field-sizing:fixed] max-w-3xl",
+                    errors.advancedJson ? "border-danger" : "",
+                  )}
+                  spellCheck={false}
+                />
+                {errors.advancedJson && (
+                  <p className="text-[11.5px] text-danger mt-2 whitespace-pre-wrap">
+                    {errors.advancedJson}
+                  </p>
+                )}
+              </div>
             </CollapsibleContent>
           </Collapsible>
         </Panel>
