@@ -196,7 +196,7 @@ export function BackupConfigFields({
         htmlFor="bk-frequency"
         error={scheduleError}
         hint={
-          description ? (
+          mode === "custom" && description ? (
             <span>
               {description} <span className="text-muted-foreground/70">(UTC)</span>
             </span>
