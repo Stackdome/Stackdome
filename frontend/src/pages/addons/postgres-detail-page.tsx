@@ -204,42 +204,42 @@ export default function PostgresDetailPage() {
                 <dd>{b?.wal_archiving ? "On" : "Off"}</dd>
               </div>
             </dl>
-            <div className="flex items-center justify-between border-t border-border pt-4">
-              <span className="text-sm text-muted-foreground">
-                {backups.length} recent run{backups.length === 1 ? "" : "s"}
-              </span>
-              <Button
-                onClick={handleTrigger}
-                disabled={triggering || !hasDestination}
-                title={
-                  !hasDestination
-                    ? "Configure an Object Store via Edit first"
-                    : undefined
-                }
-              >
-                {triggering ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            {b?.enabled && (
+              <>
+                <div className="flex items-center justify-between border-t border-border pt-4">
+                  <span className="text-sm text-muted-foreground">
+                    {backups.length} recent run{backups.length === 1 ? "" : "s"}
+                  </span>
+                  <Button
+                    onClick={handleTrigger}
+                    disabled={triggering || !hasDestination}
+                    title={
+                      !hasDestination
+                        ? "Configure an Object Store via Edit first"
+                        : undefined
+                    }
+                  >
+                    {triggering ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <PlayCircle className="mr-2 h-4 w-4" />
+                    )}
+                    Run backup now
+                  </Button>
+                </div>
+                {backupsError ? (
+                  <div className="text-sm text-danger">{backupsError}</div>
+                ) : backupsLoading && backups.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Loading…</div>
+                ) : backups.length === 0 ? (
+                  <EmptyState
+                    title="No backups yet"
+                    description="Click Run backup now to create your first backup."
+                  />
                 ) : (
-                  <PlayCircle className="mr-2 h-4 w-4" />
+                  <BackupsList backups={backups} />
                 )}
-                Run backup now
-              </Button>
-            </div>
-            {backupsError ? (
-              <div className="text-sm text-danger">{backupsError}</div>
-            ) : backupsLoading && backups.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Loading…</div>
-            ) : backups.length === 0 ? (
-              <EmptyState
-                title="No backups yet"
-                description={
-                  hasDestination
-                    ? "Click Run backup now to create your first backup."
-                    : "Configure an Object Store via Edit, then run a backup."
-                }
-              />
-            ) : (
-              <BackupsList backups={backups} />
+              </>
             )}
           </div>
         </Panel>
