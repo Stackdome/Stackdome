@@ -488,7 +488,7 @@ export default function PostgresFormPage() {
             </div>
 
             <Collapsible
-              defaultOpen={isEdit && values.backup.enabled}
+              defaultOpen={values.backup.enabled}
               className="mt-8 -mx-5 border-t border-border"
             >
               <CollapsibleTrigger asChild>
@@ -520,7 +520,7 @@ export default function PostgresFormPage() {
             </Collapsible>
 
             <Collapsible
-              defaultOpen={isEdit && Boolean(values.advancedJson)}
+              defaultOpen={false}
               className="-mx-5 -mb-4 border-t border-border"
             >
               <div className="flex items-center gap-3 hover:bg-muted/30 transition-colors">
