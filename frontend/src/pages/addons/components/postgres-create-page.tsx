@@ -529,9 +529,9 @@ export default function PostgresFormPage() {
                     type="button"
                     className="flex-1 text-left group focus:outline-none px-5 py-3"
                   >
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-foreground">Advanced</span>
+                    <div className="flex items-center gap-2 flex-wrap">
                       <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                      <span className="text-sm font-semibold text-foreground">Advanced</span>
                       {isEdit && advancedDirty && (
                         <span className="font-mono text-[10.5px] uppercase tracking-[1px] font-bold text-brand bg-brand-bg px-1.5 py-0.5 rounded">
                           Modified
