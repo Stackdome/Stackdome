@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -12,7 +12,7 @@ import { getSecrets, type Secret } from "@/api/secrets";
 import { getErrorMessage } from "@/api/client";
 
 type Props = {
-  label: string;
+  label: ReactNode;
   helpText?: string;
   value: { secret_id: string; key: string };
   onChange: (next: { secret_id: string; key: string }) => void;

@@ -183,7 +183,9 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
         ) : (
           <div className="flex flex-col gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="os-name">Name</Label>
+              <Label htmlFor="os-name">
+                Name <span className="text-danger">*</span>
+              </Label>
               <Input
                 id="os-name"
                 value={values.name}
@@ -198,7 +200,9 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="os-destination">Destination path</Label>
+              <Label htmlFor="os-destination">
+                Destination path <span className="text-danger">*</span>
+              </Label>
               <Input
                 id="os-destination"
                 value={values.destinationPath}
@@ -215,7 +219,9 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="os-retention">Retention</Label>
+              <Label htmlFor="os-retention">
+                Retention <span className="text-danger">*</span>
+              </Label>
               <Input
                 id="os-retention"
                 value={values.retentionPolicy}
@@ -249,7 +255,9 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
               <TabsContent value="s3" className="flex flex-col gap-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
-                    <Label htmlFor="os-region">Region</Label>
+                    <Label htmlFor="os-region">
+                      Region <span className="text-danger">*</span>
+                    </Label>
                     <Input
                       id="os-region"
                       value={values.s3?.region ?? ""}
@@ -282,7 +290,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 </div>
 
                 <SecretKeyPicker
-                  label="Access Key ID"
+                  label={<>Access Key ID <span className="text-danger">*</span></>}
                   helpText="A Generic secret and the key inside it that holds the access key id."
                   value={values.s3?.accessKeyId ?? { secret_id: "", key: "" }}
                   onChange={(next) => {
@@ -298,7 +306,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 />
 
                 <SecretKeyPicker
-                  label="Secret Access Key"
+                  label={<>Secret Access Key <span className="text-danger">*</span></>}
                   helpText="A Generic secret and the key inside it that holds the secret access key."
                   value={values.s3?.secretAccessKey ?? { secret_id: "", key: "" }}
                   onChange={(next) => {
