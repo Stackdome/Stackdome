@@ -76,7 +76,12 @@ export function BackupConfigFields({
         {noStores && (
           <p className="text-xs text-muted-foreground">
             No Object Stores yet.{" "}
-            <Link to="/object-stores" className="text-brand hover:underline">
+            <Link
+              to="/object-stores"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-brand hover:underline"
+            >
               Create one
             </Link>{" "}
             to enable backups.
