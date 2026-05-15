@@ -29,7 +29,13 @@ function stateVariant(state?: string): StatusVariant {
   }
 }
 
-export function PostgresDetailHeader({ addon }: { addon: PostgresAddon }) {
+export function PostgresDetailHeader({
+  addon,
+  onDelete,
+}: {
+  addon: PostgresAddon;
+  onDelete: () => void;
+}) {
   const state = addon.status?.state;
   return (
     <div className="flex flex-col gap-3">
@@ -44,9 +50,14 @@ export function PostgresDetailHeader({ addon }: { addon: PostgresAddon }) {
         title={addon.name}
         subtitle={addon.status?.message || "Managed PostgreSQL cluster"}
         actions={
-          <Link to={`/addons/postgres/${addon.id}/edit`}>
-            <Button variant="outline">Edit configuration</Button>
-          </Link>
+          <div className="flex gap-3">
+            <Link to={`/addons/postgres/${addon.id}/edit`}>
+              <Button variant="outline">Edit configuration</Button>
+            </Link>
+            <Button variant="outline" className="text-danger" onClick={onDelete}>
+              Delete
+            </Button>
+          </div>
         }
       />
       {state && (
