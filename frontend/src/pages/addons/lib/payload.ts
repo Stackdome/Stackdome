@@ -261,7 +261,9 @@ export function addonToFormValues(addon: PostgresAddon): PostgresAddonFormValues
         }
         : { type: "new" },
     backup: {
-      enabled: addon.spec.backup?.enabled ?? false,
+      // Backend stores spec.backup only when backups are enabled and drops the
+      // `enabled` flag from responses, so presence of the object means enabled.
+      enabled: addon.spec.backup ? addon.spec.backup.enabled ?? true : false,
       objectStoreId: addon.spec.backup?.object_store_id ?? "",
       schedule: addon.spec.backup?.schedule || "0 0 3 * * *",
       walArchiving: addon.spec.backup?.wal_archiving ?? false,

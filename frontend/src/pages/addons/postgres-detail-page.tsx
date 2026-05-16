@@ -85,6 +85,9 @@ export default function PostgresDetailPage() {
   if (!addon) return null;
 
   const b = addon.spec?.backup;
+  // Backend stores spec.backup only when enabled and omits the `enabled` flag
+  // from responses, so presence of the object means backups are enabled.
+  const backupEnabled = !!b && (b.enabled ?? true);
   const hasDestination = !!b?.object_store_id;
   const storeName = b?.object_store_id
     ? objectStores.find((s) => s.id === b.object_store_id)?.name ?? b.object_store_id
@@ -189,7 +192,7 @@ export default function PostgresDetailPage() {
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm max-w-3xl">
               <div>
                 <dt className="text-muted-foreground">Scheduled backups</dt>
-                <dd>{b?.enabled ? "On" : "Off"}</dd>
+                <dd>{backupEnabled ? "On" : "Off"}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Object Store</dt>
@@ -204,7 +207,7 @@ export default function PostgresDetailPage() {
                 <dd>{b?.wal_archiving ? "On" : "Off"}</dd>
               </div>
             </dl>
-            {b?.enabled && (
+            {backupEnabled && (
               <>
                 <div className="flex items-center justify-between border-t border-border pt-4">
                   <span className="text-sm text-muted-foreground">

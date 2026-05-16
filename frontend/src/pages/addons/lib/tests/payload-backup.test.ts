@@ -52,4 +52,42 @@ describe("payload backup mapping", () => {
     // And it must NOT leak into the advanced JSON area.
     expect(v.advancedJson.includes("backup")).toBe(false);
   });
+
+  it("treats a present spec.backup with no `enabled` key as enabled (backend contract)", () => {
+    const addon = {
+      id: "a1",
+      name: "db1",
+      spec: {
+        version: { major: 16 },
+        instances: { count: 1 },
+        storage: { size: "20Gi", storage_class: "standard" },
+        resources: {},
+        configuration: {},
+        initialization: { type: "new" },
+        backup: { object_store_id: "store-1", schedule: "0 10 * * * *", wal_archiving: true },
+      },
+    } as unknown as PostgresAddon;
+    expect(addonToFormValues(addon).backup).toEqual({
+      enabled: true,
+      objectStoreId: "store-1",
+      schedule: "0 10 * * * *",
+      walArchiving: true,
+    });
+  });
+
+  it("treats a missing spec.backup as disabled", () => {
+    const addon = {
+      id: "a1",
+      name: "db1",
+      spec: {
+        version: { major: 16 },
+        instances: { count: 1 },
+        storage: { size: "20Gi", storage_class: "standard" },
+        resources: {},
+        configuration: {},
+        initialization: { type: "new" },
+      },
+    } as unknown as PostgresAddon;
+    expect(addonToFormValues(addon).backup.enabled).toBe(false);
+  });
 });

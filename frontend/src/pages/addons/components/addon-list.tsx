@@ -134,7 +134,7 @@ export function AddonList({ addons }: { addons: PostgresAddon[] }) {
                 <span className="font-mono">PG {a.spec.version.major}</span>
                 <span className="font-mono">{a.spec.storage.size ?? "—"}</span>
                 <span>
-                  {a.spec?.backup?.enabled ? "backups on" : "backups off"}
+                  {a.spec?.backup ? "backups on" : "backups off"}
                 </span>
                 <span>
                   {a.created_at
