@@ -5,6 +5,10 @@ export type StatusVariant = "ready" | "pending" | "error" | "info" | "neutral";
 interface StatusPillProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: StatusVariant;
   withDot?: boolean;
+  // Force the dot heartbeat on/off, overriding the variant default. Use `false`
+  // for historical/snapshot data (e.g. past backup runs) where the row is not a
+  // live, transitioning resource and motion would falsely imply activity.
+  pulse?: boolean;
 }
 
 // Token-driven palette: each variant maps to design-system semantic tokens.
@@ -50,11 +54,13 @@ export function variantFromState(state?: string | null): StatusVariant {
 export function StatusPill({
   variant = "neutral",
   withDot = true,
+  pulse,
   className,
   children,
   ...props
 }: StatusPillProps) {
   const s = styles[variant];
+  const animate = pulse ?? s.pulse;
   return (
     <span
       className={cn(
@@ -68,7 +74,7 @@ export function StatusPill({
     >
       {withDot && (
         <span
-          className={cn("inline-block h-[7px] w-[7px] rounded-full", s.dot, s.pulse && "animate-pulse")}
+          className={cn("inline-block h-[7px] w-[7px] rounded-full", s.dot, animate && "animate-pulse")}
         />
       )}
       {children}

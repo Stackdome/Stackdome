@@ -76,7 +76,9 @@ export function BackupsList({ backups }: { backups: PostgresBackup[] }) {
             <TableCell className="capitalize">{displayType(b)}</TableCell>
             <TableCell>
               <div className="flex items-center gap-2">
-                <StatusPill variant={phaseVariant(b.phase)}>{b.phase ?? "—"}</StatusPill>
+                <StatusPill variant={phaseVariant(b.phase)} pulse={false}>
+                  {b.phase ?? "—"}
+                </StatusPill>
                 {b.phase === "failed" && b.error && (
                   <Tooltip>
                     <TooltipTrigger asChild>
