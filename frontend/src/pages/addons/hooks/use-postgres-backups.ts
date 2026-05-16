@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage, isNotFoundError } from "@/api/client";
 import {
@@ -10,12 +10,14 @@ import {
 const POLL_INTERVAL_MS = 5000;
 const DEFAULT_PAGE_SIZE = 10;
 
+// The backups list endpoint ignores limit/offset and omits `total`: it always
+// returns every run in `items`. So we fetch the full list and paginate on the
+// client. Switch back to server paging if/when the API honours limit/offset.
 export function usePostgresBackups(
   addonId: string | undefined,
   pageSize = DEFAULT_PAGE_SIZE,
 ) {
-  const [backups, setBackups] = useState<PostgresBackup[]>([]);
-  const [total, setTotal] = useState(0);
+  const [allBackups, setAllBackups] = useState<PostgresBackup[]>([]);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,32 +30,26 @@ export function usePostgresBackups(
     setLoading(true);
     setError(null);
     try {
-      const data = await listPostgresBackups(orgId, addonId, {
-        limit: pageSize,
-        offset: page * pageSize,
-      });
+      const data = await listPostgresBackups(orgId, addonId);
       if (cancelRef.current.cancelled) return;
-      setBackups(data.items || []);
-      setTotal(data.total ?? 0);
+      setAllBackups(data.items || []);
     } catch (e: unknown) {
       if (cancelRef.current.cancelled) return;
       if (isNotFoundError(e)) {
-        setBackups([]);
-        setTotal(0);
+        setAllBackups([]);
       } else {
         setError(getErrorMessage(e));
       }
     } finally {
       if (!cancelRef.current.cancelled) setLoading(false);
     }
-  }, [orgId, addonId, page, pageSize]);
+  }, [orgId, addonId]);
 
   // Reset to the first page whenever the addon changes.
   useEffect(() => {
     setPage(0);
   }, [addonId]);
 
-  // Fetch on page/addon change + reset cancellation.
   useEffect(() => {
     cancelRef.current = { cancelled: false };
     void fetchBackups();
@@ -62,10 +58,9 @@ export function usePostgresBackups(
     };
   }, [fetchBackups]);
 
-  // Poll while any backup on the current page is non-terminal. Newest runs are
-  // on page 1, so this still catches in-progress backups in practice.
+  // Poll while any run is non-terminal (in-progress backup somewhere in the list).
   useEffect(() => {
-    const hasNonTerminal = backups.some((b) => !isTerminalPhase(b.phase));
+    const hasNonTerminal = allBackups.some((b) => !isTerminalPhase(b.phase));
     if (!hasNonTerminal) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -83,14 +78,26 @@ export function usePostgresBackups(
         intervalRef.current = null;
       }
     };
-  }, [backups, fetchBackups]);
+  }, [allBackups, fetchBackups]);
 
+  const total = allBackups.length;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  // Clamp the page if the list shrank (e.g. runs aged out between polls).
+  const safePage = Math.min(page, pageCount - 1);
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
+
+  const backups = useMemo(
+    () => allBackups.slice(safePage * pageSize, safePage * pageSize + pageSize),
+    [allBackups, safePage, pageSize],
+  );
 
   return {
     backups,
     total,
-    page,
+    page: safePage,
     pageSize,
     pageCount,
     setPage,
