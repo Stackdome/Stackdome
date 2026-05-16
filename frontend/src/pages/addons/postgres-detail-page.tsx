@@ -172,20 +172,6 @@ export default function PostgresDetailPage() {
       <div className="flex flex-col gap-6 p-6">
         <PostgresDetailHeader addon={addon} onDelete={() => setDeleteOpen(true)} />
 
-        <Panel title="Addon Information">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
-            <ReadField label="Name">
-              <span className="font-mono">{addon.name}</span>
-            </ReadField>
-            <ReadField label="Type">Postgres</ReadField>
-            <ReadField label="Created">
-              {addon.created_at
-                ? new Date(addon.created_at).toLocaleString()
-                : "—"}
-            </ReadField>
-          </div>
-        </Panel>
-
         <Panel title="Configuration">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
             <ReadField label="Version">PG {addon.spec.version.major}</ReadField>

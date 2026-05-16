@@ -60,11 +60,16 @@ export function PostgresDetailHeader({
           </div>
         }
       />
-      {state && (
-        <div className="flex items-center gap-2 text-sm">
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        {state && (
           <StatusPill variant={stateVariant(state)}>{state}</StatusPill>
-        </div>
-      )}
+        )}
+        {addon.created_at && (
+          <span>
+            Created {new Date(addon.created_at).toLocaleString()}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
