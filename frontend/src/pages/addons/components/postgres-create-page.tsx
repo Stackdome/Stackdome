@@ -207,7 +207,10 @@ export default function PostgresFormPage() {
         });
       }
       setConfirmAdvancedOpen(false);
-      navigate("/addons", { replace: true });
+      navigate(
+        isEdit && editId ? `/addons/postgres/${editId}` : "/addons",
+        { replace: true },
+      );
     } catch (e) {
       if (e instanceof JsonAreaParseError) {
         setErrors((errs) => ({ ...errs, advancedJson: e.message }));

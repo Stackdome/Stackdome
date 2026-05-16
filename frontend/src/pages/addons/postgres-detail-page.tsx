@@ -57,7 +57,8 @@ export default function PostgresDetailPage() {
   const [addon, setAddon] = useState<PostgresAddon | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { setCustomLabel, setPathLoading } = useBreadcrumb();
+  const { setCustomLabel, setPathLoading, registerNonClickablePath } =
+    useBreadcrumb();
   const { objectStores } = useObjectStores();
   const {
     backups,
@@ -100,6 +101,12 @@ export default function PostgresDetailPage() {
     setCustomLabel(path, addon?.name ?? "Postgres add-on");
     setPathLoading(path, loading);
   }, [id, addon?.name, loading, setCustomLabel, setPathLoading]);
+
+  // /addons/postgres has no route — keep that crumb as plain text.
+  useEffect(
+    () => registerNonClickablePath("/addons/postgres"),
+    [registerNonClickablePath],
+  );
 
   if (loading && !addon) {
     return (
