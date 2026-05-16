@@ -2,6 +2,11 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, StatusPill, type StatusVariant } from "@/components/branded";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { AddonTypeIcon } from "./addon-type-icon";
 import type { PostgresAddon } from "@/api/addons";
 
@@ -38,6 +43,10 @@ export function PostgresDetailHeader({
   onDelete: () => void;
 }) {
   const state = addon.status?.state;
+  const statusMessage = addon.status?.message;
+  const statusPill = state ? (
+    <StatusPill variant={stateVariant(state)}>{state}</StatusPill>
+  ) : undefined;
   return (
     <div className="flex flex-col gap-3">
       <Link
@@ -55,9 +64,18 @@ export function PostgresDetailHeader({
           </span>
         }
         status={
-          state ? (
-            <StatusPill variant={stateVariant(state)}>{state}</StatusPill>
-          ) : undefined
+          statusPill && statusMessage ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-help">{statusPill}</span>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-sm text-xs">
+                {statusMessage}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            statusPill
+          )
         }
         subtitle={
           addon.created_at
