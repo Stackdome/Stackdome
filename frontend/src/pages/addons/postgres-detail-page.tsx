@@ -236,10 +236,7 @@ export default function PostgresDetailPage() {
             </dl>
             {backupEnabled && (
               <>
-                <div className="flex items-center justify-between border-t border-border pt-4">
-                  <span className="text-sm text-muted-foreground">
-                    {backupsTotal} backup run{backupsTotal === 1 ? "" : "s"}
-                  </span>
+                <div className="flex items-center justify-end border-t border-border pt-4">
                   <Button
                     onClick={handleTrigger}
                     disabled={triggering || !hasDestination}
