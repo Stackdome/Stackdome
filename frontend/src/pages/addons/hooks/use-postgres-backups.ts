@@ -8,9 +8,15 @@ import {
 } from "@/api/postgres-backups";
 
 const POLL_INTERVAL_MS = 5000;
+const DEFAULT_PAGE_SIZE = 10;
 
-export function usePostgresBackups(addonId: string | undefined) {
+export function usePostgresBackups(
+  addonId: string | undefined,
+  pageSize = DEFAULT_PAGE_SIZE,
+) {
   const [backups, setBackups] = useState<PostgresBackup[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const orgId = getCurrentOrganizationId();
@@ -22,22 +28,32 @@ export function usePostgresBackups(addonId: string | undefined) {
     setLoading(true);
     setError(null);
     try {
-      const data = await listPostgresBackups(orgId, addonId);
+      const data = await listPostgresBackups(orgId, addonId, {
+        limit: pageSize,
+        offset: page * pageSize,
+      });
       if (cancelRef.current.cancelled) return;
       setBackups(data.items || []);
+      setTotal(data.total ?? 0);
     } catch (e: unknown) {
       if (cancelRef.current.cancelled) return;
       if (isNotFoundError(e)) {
         setBackups([]);
+        setTotal(0);
       } else {
         setError(getErrorMessage(e));
       }
     } finally {
       if (!cancelRef.current.cancelled) setLoading(false);
     }
-  }, [orgId, addonId]);
+  }, [orgId, addonId, page, pageSize]);
 
-  // Initial fetch + reset cancellation on addon change
+  // Reset to the first page whenever the addon changes.
+  useEffect(() => {
+    setPage(0);
+  }, [addonId]);
+
+  // Fetch on page/addon change + reset cancellation.
   useEffect(() => {
     cancelRef.current = { cancelled: false };
     void fetchBackups();
@@ -46,7 +62,8 @@ export function usePostgresBackups(addonId: string | undefined) {
     };
   }, [fetchBackups]);
 
-  // Poll while any backup is non-terminal
+  // Poll while any backup on the current page is non-terminal. Newest runs are
+  // on page 1, so this still catches in-progress backups in practice.
   useEffect(() => {
     const hasNonTerminal = backups.some((b) => !isTerminalPhase(b.phase));
     if (!hasNonTerminal) {
@@ -68,5 +85,17 @@ export function usePostgresBackups(addonId: string | undefined) {
     };
   }, [backups, fetchBackups]);
 
-  return { backups, loading, error, refetch: fetchBackups };
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  return {
+    backups,
+    total,
+    page,
+    pageSize,
+    pageCount,
+    setPage,
+    loading,
+    error,
+    refetch: fetchBackups,
+  };
 }

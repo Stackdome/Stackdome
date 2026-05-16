@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, PlayCircle } from "lucide-react";
+import { Loader2, PlayCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import cronstrue from "cronstrue";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -32,6 +32,11 @@ export default function PostgresDetailPage() {
   const { objectStores } = useObjectStores();
   const {
     backups,
+    total: backupsTotal,
+    page: backupsPage,
+    pageCount: backupsPageCount,
+    pageSize: backupsPageSize,
+    setPage: setBackupsPage,
     loading: backupsLoading,
     error: backupsError,
     refetch: refetchBackups,
@@ -233,7 +238,7 @@ export default function PostgresDetailPage() {
               <>
                 <div className="flex items-center justify-between border-t border-border pt-4">
                   <span className="text-sm text-muted-foreground">
-                    {backups.length} recent run{backups.length === 1 ? "" : "s"}
+                    {backupsTotal} backup run{backupsTotal === 1 ? "" : "s"}
                   </span>
                   <Button
                     onClick={handleTrigger}
@@ -262,7 +267,47 @@ export default function PostgresDetailPage() {
                     description="Click Run backup now to create your first backup."
                   />
                 ) : (
-                  <BackupsList backups={backups} />
+                  <>
+                    <BackupsList backups={backups} />
+                    {backupsPageCount > 1 && (
+                      <div className="flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground">
+                        <span className="tabular-nums">
+                          {backupsPage * backupsPageSize + 1}–
+                          {Math.min(
+                            (backupsPage + 1) * backupsPageSize,
+                            backupsTotal,
+                          )}{" "}
+                          of {backupsTotal}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBackupsPage(backupsPage - 1)}
+                            disabled={backupsPage === 0 || backupsLoading}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                            Prev
+                          </Button>
+                          <span className="tabular-nums">
+                            Page {backupsPage + 1} of {backupsPageCount}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBackupsPage(backupsPage + 1)}
+                            disabled={
+                              backupsPage + 1 >= backupsPageCount ||
+                              backupsLoading
+                            }
+                          >
+                            Next
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}

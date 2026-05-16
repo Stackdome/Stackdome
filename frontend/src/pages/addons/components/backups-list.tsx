@@ -46,6 +46,16 @@ function fmt(ts?: string): string {
   return new Date(ts).toLocaleString();
 }
 
+// The API derives type from the CNPG Backup's owner reference, which can be
+// absent for ScheduledBackup-spawned runs (reported as "manual"). CNPG names
+// those runs "<cluster>-scheduled-backup-<ts>", so fall back to the name to
+// distinguish them without a server round-trip.
+function displayType(b: PostgresBackup): string {
+  if (b.type && b.type.toLowerCase() !== "manual") return b.type;
+  if (b.name && /-scheduled-backup-/.test(b.name)) return "Scheduled";
+  return b.type ?? "—";
+}
+
 export function BackupsList({ backups }: { backups: PostgresBackup[] }) {
   return (
     <Table>
@@ -63,7 +73,7 @@ export function BackupsList({ backups }: { backups: PostgresBackup[] }) {
         {backups.map((b) => (
           <TableRow key={b.id}>
             <TableCell className="font-medium">{b.name ?? b.id?.slice(0, 8)}</TableCell>
-            <TableCell className="capitalize">{b.type ?? "—"}</TableCell>
+            <TableCell className="capitalize">{displayType(b)}</TableCell>
             <TableCell>
               <div className="flex items-center gap-2">
                 <StatusPill variant={phaseVariant(b.phase)}>{b.phase ?? "—"}</StatusPill>
