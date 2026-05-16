@@ -62,9 +62,13 @@ export function PostgresDetailHeader({
         actions={
           <div className="flex gap-3">
             <Link to={`/addons/postgres/${addon.id}/edit`}>
-              <Button variant="outline">Edit configuration</Button>
+              <Button variant="outline">Edit</Button>
             </Link>
-            <Button variant="outline" className="text-danger" onClick={onDelete}>
+            <Button
+              variant="outline"
+              className="text-danger hover:border-danger hover:bg-danger/10 hover:text-danger"
+              onClick={onDelete}
+            >
               Delete
             </Button>
           </div>
