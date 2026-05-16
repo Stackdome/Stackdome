@@ -281,15 +281,14 @@ export default function PostgresDetailPage() {
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground max-w-3xl border-t border-border pt-4">
-                    No backup destination configured. Use{" "}
+                    No backup destination. Set an object store via{" "}
                     <Link
                       to={`/addons/postgres/${addon.id}/edit`}
                       className="text-brand hover:underline"
                     >
                       Edit configuration
-                    </Link>{" "}
-                    to set an object store — required for scheduled and manual
-                    backups. Previous backup runs remain listed below.
+                    </Link>
+                    . Prior runs listed below.
                   </p>
                 )}
 
