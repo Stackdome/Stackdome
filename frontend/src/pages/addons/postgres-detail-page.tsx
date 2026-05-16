@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, PlayCircle } from "lucide-react";
+import cronstrue from "cronstrue";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Panel, EmptyState } from "@/components/branded";
@@ -83,6 +84,15 @@ export default function PostgresDetailPage() {
   }
 
   if (!addon) return null;
+
+  function describeSchedule(expr?: string): string | null {
+    if (!expr) return null;
+    try {
+      return cronstrue.toString(expr, { use24HourTimeFormat: true });
+    } catch {
+      return null;
+    }
+  }
 
   const b = addon.spec?.backup;
   // Backend stores spec.backup only when enabled and omits the `enabled` flag
@@ -200,7 +210,19 @@ export default function PostgresDetailPage() {
               </div>
               <div>
                 <dt className="text-muted-foreground">Schedule</dt>
-                <dd className="font-mono">{b?.schedule || "—"}</dd>
+                <dd>
+                  {b?.schedule ? (
+                    <>
+                      {describeSchedule(b.schedule) ?? b.schedule}{" "}
+                      <span className="text-muted-foreground/70">(UTC)</span>
+                      <span className="block font-mono text-xs text-muted-foreground">
+                        {b.schedule}
+                      </span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">WAL archiving</dt>
