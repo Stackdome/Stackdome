@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, PlayCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import cronstrue from "cronstrue";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Panel, EmptyState } from "@/components/branded";
+import { Panel, EmptyState, FieldShell } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage, isErrorStatus } from "@/api/client";
@@ -20,6 +20,22 @@ import { PostgresDetailHeader } from "./components/postgres-detail-header";
 import { BackupsList } from "./components/backups-list";
 import { DeleteAddonDialog } from "./components/delete-addon-dialog";
 import { usePostgresBackups } from "./hooks/use-postgres-backups";
+
+// Read-only mirror of the edit form's FieldShell row, so the view page shares
+// the create/edit label/value rhythm (visual parity, no inputs).
+function ReadField({
+  label,
+  children,
+}: {
+  label: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <FieldShell label={label}>
+      <div className="text-sm text-foreground">{children}</div>
+    </FieldShell>
+  );
+}
 
 export default function PostgresDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -157,83 +173,62 @@ export default function PostgresDetailPage() {
         <PostgresDetailHeader addon={addon} onDelete={() => setDeleteOpen(true)} />
 
         <Panel title="Addon Information">
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm max-w-3xl">
-            <div>
-              <dt className="text-muted-foreground">Name</dt>
-              <dd className="font-mono">{addon.name}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Type</dt>
-              <dd>Postgres</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Created</dt>
-              <dd>
-                {addon.created_at
-                  ? new Date(addon.created_at).toLocaleString()
-                  : "—"}
-              </dd>
-            </div>
-          </dl>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
+            <ReadField label="Name">
+              <span className="font-mono">{addon.name}</span>
+            </ReadField>
+            <ReadField label="Type">Postgres</ReadField>
+            <ReadField label="Created">
+              {addon.created_at
+                ? new Date(addon.created_at).toLocaleString()
+                : "—"}
+            </ReadField>
+          </div>
         </Panel>
 
         <Panel title="Configuration">
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm max-w-3xl">
-            <div>
-              <dt className="text-muted-foreground">Version</dt>
-              <dd>PG {addon.spec.version.major}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Storage</dt>
-              <dd className="font-mono">{addon.spec.storage.size ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Instances</dt>
-              <dd>{addon.spec.instances.count}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Superuser access</dt>
-              <dd>
-                {addon.spec.configuration?.enable_superuser_access
-                  ? "On"
-                  : "Off"}
-              </dd>
-            </div>
-          </dl>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
+            <ReadField label="Version">PG {addon.spec.version.major}</ReadField>
+            <ReadField label="Storage">
+              <span className="font-mono">
+                {addon.spec.storage.size ?? "—"}
+              </span>
+            </ReadField>
+            <ReadField label="Instances">
+              {addon.spec.instances.count}
+            </ReadField>
+            <ReadField label="Superuser access">
+              {addon.spec.configuration?.enable_superuser_access
+                ? "On"
+                : "Off"}
+            </ReadField>
+          </div>
         </Panel>
 
         <Panel title="Backups">
           <div className="flex flex-col gap-5">
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm max-w-3xl">
-              <div>
-                <dt className="text-muted-foreground">Scheduled backups</dt>
-                <dd>{backupEnabled ? "On" : "Off"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Object Store</dt>
-                <dd>{storeName}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Schedule</dt>
-                <dd>
-                  {b?.schedule ? (
-                    <>
-                      {describeSchedule(b.schedule) ?? b.schedule}{" "}
-                      <span className="text-muted-foreground/70">(UTC)</span>
-                      <span className="block font-mono text-xs text-muted-foreground">
-                        {b.schedule}
-                      </span>
-                    </>
-                  ) : (
-                    "—"
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">WAL archiving</dt>
-                <dd>{b?.wal_archiving ? "On" : "Off"}</dd>
-              </div>
-            </dl>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
+              <ReadField label="Scheduled backups">
+                {backupEnabled ? "On" : "Off"}
+              </ReadField>
+              <ReadField label="Object Store">{storeName}</ReadField>
+              <ReadField label="Schedule">
+                {b?.schedule ? (
+                  <>
+                    {describeSchedule(b.schedule) ?? b.schedule}{" "}
+                    <span className="text-muted-foreground/70">(UTC)</span>
+                    <span className="block font-mono text-xs text-muted-foreground">
+                      {b.schedule}
+                    </span>
+                  </>
+                ) : (
+                  "—"
+                )}
+              </ReadField>
+              <ReadField label="WAL archiving">
+                {b?.wal_archiving ? "On" : "Off"}
+              </ReadField>
+            </div>
             {backupEnabled && (
               <>
                 <div className="flex items-center justify-end border-t border-border pt-4">
