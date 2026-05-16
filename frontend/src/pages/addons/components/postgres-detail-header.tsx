@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, StatusPill, type StatusVariant } from "@/components/branded";
+import { AddonTypeIcon } from "./addon-type-icon";
 import type { PostgresAddon } from "@/api/addons";
 
 // Map the backend's PostgresAddon status state to the StatusPill variant.
@@ -47,7 +48,12 @@ export function PostgresDetailHeader({
       </Link>
       <PageHeader
         eyebrow="Postgres add-on"
-        title={addon.name}
+        title={
+          <span className="flex items-center gap-2.5">
+            <AddonTypeIcon type="postgres" size={26} className="shrink-0" />
+            {addon.name}
+          </span>
+        }
         subtitle={
           addon.created_at
             ? `Created ${new Date(addon.created_at).toLocaleDateString()}`
