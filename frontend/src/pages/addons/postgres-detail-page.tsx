@@ -110,8 +110,9 @@ export default function PostgresDetailPage() {
 
   if (loading && !addon) {
     return (
-      <div className="flex items-center justify-center p-12 text-sm text-muted-foreground">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+      <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="mt-2 text-muted-foreground">Loading addon...</p>
       </div>
     );
   }

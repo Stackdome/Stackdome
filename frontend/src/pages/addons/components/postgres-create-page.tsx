@@ -82,11 +82,10 @@ export default function PostgresFormPage() {
     if (isEdit && editId) {
       setCustomLabel("/addons/postgres", "Postgres");
       setCustomLabel(`/addons/postgres/${editId}/edit`, "Edit");
-      const disposers = [
-        registerNonClickablePath("/addons/postgres"),
-        registerNonClickablePath(`/addons/postgres/${editId}`),
-      ];
-      return () => disposers.forEach((d) => d());
+      // /addons/postgres has no route → plain text. The :id crumb stays
+      // clickable so "test" links back to the addon view page.
+      const dispose = registerNonClickablePath("/addons/postgres");
+      return () => dispose();
     }
     setCustomLabel("/addons/create", "Create");
     setCustomLabel("/addons/create/postgres", "Postgres");
@@ -95,12 +94,18 @@ export default function PostgresFormPage() {
     return () => dispose();
   }, [setCustomLabel, setPathLoading, registerNonClickablePath, isEdit, editId]);
 
-  // Dynamic label that follows the typed name in edit mode.
+  // Dynamic label that follows the typed name in edit mode. While the
+  // addon is still loading, show a neutral ellipsis instead of falling
+  // back to "Postgres" (which duplicated the parent crumb). The Edit
+  // crumb itself is static — it isn't what's loading — so we never put
+  // loading dots on it.
   useEffect(() => {
     if (!isEdit || !editId) return;
-    setCustomLabel(`/addons/postgres/${editId}`, values.name || "Postgres");
-    setPathLoading(`/addons/postgres/${editId}/edit`, loadingAddon);
-  }, [setCustomLabel, setPathLoading, isEdit, editId, values.name, loadingAddon]);
+    setCustomLabel(
+      `/addons/postgres/${editId}`,
+      loadingAddon ? "…" : values.name || "Postgres",
+    );
+  }, [setCustomLabel, isEdit, editId, values.name, loadingAddon]);
 
   // Hydrate form from existing addon when editing
   useEffect(() => {
