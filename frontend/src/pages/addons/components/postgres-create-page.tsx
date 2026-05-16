@@ -276,7 +276,7 @@ export default function PostgresFormPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="mx-auto max-w-4xl p-6">
       <header className="mb-6">
         <div className="flex justify-between items-center">
           <div>
@@ -373,9 +373,9 @@ export default function PostgresFormPage() {
             </RadioGroup>
 
             {showCustomCompute && (
-              <div className="pl-3 border-l border-border mt-4 max-w-2xl space-y-3">
+              <div className="mt-4 max-w-3xl space-y-3">
                 <h4 className="text-[12.5px] font-medium text-muted-foreground">Custom resources</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <FieldShell label="CPU request" htmlFor="cpu-req">
                     <Input
                       id="cpu-req"
