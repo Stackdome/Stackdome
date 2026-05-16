@@ -129,16 +129,19 @@ export default function PostgresDetailPage() {
   }
 
   const planId = detectPlan(addon.spec.resources);
-  const planLabel =
-    PLAN_PRESETS.find((p) => p.id === planId)?.label ?? planId;
+  const planPreset = PLAN_PRESETS.find((p) => p.id === planId);
+  const planLabel = planPreset?.label ?? planId;
   const res = addon.spec.resources;
-  const customResources =
-    planId === "custom" && res
-      ? [res.cpu?.request, res.cpu?.limit, res.memory?.request, res.memory?.limit]
+  const resourcesLine =
+    planId === "custom"
+      ? res &&
+        [res.cpu?.request, res.cpu?.limit, res.memory?.request, res.memory?.limit]
           .some(Boolean)
         ? `CPU ${res.cpu?.request ?? "—"}/${res.cpu?.limit ?? "—"} · Mem ${res.memory?.request ?? "—"}/${res.memory?.limit ?? "—"}`
         : null
-      : null;
+      : planPreset
+        ? `${planPreset.cpu} · ${planPreset.memory}`
+        : null;
 
   const b = addon.spec?.backup;
   // Backend stores spec.backup only when enabled and omits the `enabled` flag
@@ -202,9 +205,9 @@ export default function PostgresDetailPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
               <ReadField label="Plan">
                 {planLabel}
-                {customResources && (
+                {resourcesLine && (
                   <span className="block font-mono text-xs text-muted-foreground">
-                    {customResources}
+                    {resourcesLine}
                   </span>
                 )}
               </ReadField>
