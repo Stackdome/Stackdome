@@ -154,7 +154,7 @@ function splitAdvanced(advanced: Json): SplitAdvanced {
   return { spec, topLevel };
 }
 
-function detectPlan(resources?: PostgresAddonSpec["resources"]): PlanId {
+export function detectPlan(resources?: PostgresAddonSpec["resources"]): PlanId {
   const cpuReq = resources?.cpu?.request;
   const cpuLim = resources?.cpu?.limit;
   const memReq = resources?.memory?.request;

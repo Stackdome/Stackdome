@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Loader2, PlayCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import cronstrue from "cronstrue";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import {
 import { triggerPostgresBackup } from "@/api/postgres-backups";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useObjectStores } from "@/pages/object-stores/hooks/use-object-stores";
+import { detectPlan } from "./lib/payload";
+import { PLAN_PRESETS } from "./lib/plan-presets";
 import { PostgresDetailHeader } from "./components/postgres-detail-header";
 import { BackupsList } from "./components/backups-list";
 import { DeleteAddonDialog } from "./components/delete-addon-dialog";
@@ -115,6 +117,18 @@ export default function PostgresDetailPage() {
     }
   }
 
+  const planId = detectPlan(addon.spec.resources);
+  const planLabel =
+    PLAN_PRESETS.find((p) => p.id === planId)?.label ?? planId;
+  const res = addon.spec.resources;
+  const customResources =
+    planId === "custom" && res
+      ? [res.cpu?.request, res.cpu?.limit, res.memory?.request, res.memory?.limit]
+          .some(Boolean)
+        ? `CPU ${res.cpu?.request ?? "—"}/${res.cpu?.limit ?? "—"} · Mem ${res.memory?.request ?? "—"}/${res.memory?.limit ?? "—"}`
+        : null
+      : null;
+
   const b = addon.spec?.backup;
   // Backend stores spec.backup only when enabled and omits the `enabled` flag
   // from responses, so presence of the object means backups are enabled.
@@ -173,122 +187,147 @@ export default function PostgresDetailPage() {
         <PostgresDetailHeader addon={addon} onDelete={() => setDeleteOpen(true)} />
 
         <Panel title="Configuration">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
-            <ReadField label="Version">PG {addon.spec.version.major}</ReadField>
-            <ReadField label="Storage">
-              <span className="font-mono">
-                {addon.spec.storage.size ?? "—"}
-              </span>
-            </ReadField>
-            <ReadField label="Instances">
-              {addon.spec.instances.count}
-            </ReadField>
-            <ReadField label="Superuser access">
-              {addon.spec.configuration?.enable_superuser_access
-                ? "On"
-                : "Off"}
-            </ReadField>
-          </div>
-        </Panel>
-
-        <Panel title="Backups">
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
-              <ReadField label="Scheduled backups">
-                {backupEnabled ? "On" : "Off"}
-              </ReadField>
-              <ReadField label="Object Store">{storeName}</ReadField>
-              <ReadField label="Schedule">
-                {b?.schedule ? (
-                  <>
-                    {describeSchedule(b.schedule) ?? b.schedule}{" "}
-                    <span className="text-muted-foreground/70">(UTC)</span>
-                    <span className="block font-mono text-xs text-muted-foreground">
-                      {b.schedule}
-                    </span>
-                  </>
-                ) : (
-                  "—"
+              <ReadField label="Plan">
+                {planLabel}
+                {customResources && (
+                  <span className="block font-mono text-xs text-muted-foreground">
+                    {customResources}
+                  </span>
                 )}
               </ReadField>
-              <ReadField label="WAL archiving">
-                {b?.wal_archiving ? "On" : "Off"}
+              <ReadField label="Version">
+                PG {addon.spec.version.major}
+              </ReadField>
+              <ReadField label="Storage">
+                <span className="font-mono">
+                  {addon.spec.storage.size ?? "—"}
+                </span>
+              </ReadField>
+              <ReadField label="Instances">
+                {addon.spec.instances.count}
+              </ReadField>
+              <ReadField label="Superuser access">
+                {addon.spec.configuration?.enable_superuser_access
+                  ? "On"
+                  : "Off"}
               </ReadField>
             </div>
-            {backupEnabled && (
-              <>
-                <div className="flex items-center justify-end border-t border-border pt-4">
-                  <Button
-                    onClick={handleTrigger}
-                    disabled={triggering || !hasDestination}
-                    title={
-                      !hasDestination
-                        ? "Configure an Object Store via Edit first"
-                        : undefined
-                    }
-                  >
-                    {triggering ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <PlayCircle className="mr-2 h-4 w-4" />
-                    )}
-                    Run backup now
-                  </Button>
-                </div>
-                {backupsError ? (
-                  <div className="text-sm text-danger">{backupsError}</div>
-                ) : backupsLoading && backups.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">Loading…</div>
-                ) : backups.length === 0 ? (
-                  <EmptyState
-                    title="No backups yet"
-                    description="Click Run backup now to create your first backup."
-                  />
-                ) : (
-                  <>
-                    <BackupsList backups={backups} />
-                    {backupsPageCount > 1 && (
-                      <div className="flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground">
-                        <span className="tabular-nums">
-                          {backupsPage * backupsPageSize + 1}–
-                          {Math.min(
-                            (backupsPage + 1) * backupsPageSize,
-                            backupsTotal,
-                          )}{" "}
-                          of {backupsTotal}
+
+            <div className="border-t border-border pt-5">
+              <h3 className="text-sm font-semibold text-foreground mb-3">
+                Backups
+              </h3>
+              <div className="flex flex-col gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
+                  <ReadField label="Scheduled backups">
+                    {backupEnabled ? "On" : "Off"}
+                  </ReadField>
+                  <ReadField label="Object Store">{storeName}</ReadField>
+                  <ReadField label="Schedule">
+                    {b?.schedule ? (
+                      <>
+                        {describeSchedule(b.schedule) ?? b.schedule}{" "}
+                        <span className="text-muted-foreground/70">(UTC)</span>
+                        <span className="block font-mono text-xs text-muted-foreground">
+                          {b.schedule}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setBackupsPage(backupsPage - 1)}
-                            disabled={backupsPage === 0 || backupsLoading}
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                            Prev
-                          </Button>
-                          <span className="tabular-nums">
-                            Page {backupsPage + 1} of {backupsPageCount}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setBackupsPage(backupsPage + 1)}
-                            disabled={
-                              backupsPage + 1 >= backupsPageCount ||
-                              backupsLoading
-                            }
-                          >
-                            Next
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </ReadField>
+                  <ReadField label="WAL archiving">
+                    {b?.wal_archiving ? "On" : "Off"}
+                  </ReadField>
+                </div>
+
+                {hasDestination ? (
+                  <>
+                    <div className="flex items-center justify-end border-t border-border pt-4">
+                      <Button
+                        onClick={handleTrigger}
+                        disabled={triggering}
+                      >
+                        {triggering ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <PlayCircle className="mr-2 h-4 w-4" />
+                        )}
+                        Run backup now
+                      </Button>
+                    </div>
+                    {backupsError ? (
+                      <div className="text-sm text-danger">{backupsError}</div>
+                    ) : backupsLoading && backups.length === 0 ? (
+                      <div className="text-sm text-muted-foreground">
+                        Loading…
                       </div>
+                    ) : backups.length === 0 ? (
+                      <EmptyState
+                        title="No backups yet"
+                        description="Click Run backup now to create your first backup."
+                      />
+                    ) : (
+                      <>
+                        <BackupsList backups={backups} />
+                        {backupsPageCount > 1 && (
+                          <div className="flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground">
+                            <span className="tabular-nums">
+                              {backupsPage * backupsPageSize + 1}–
+                              {Math.min(
+                                (backupsPage + 1) * backupsPageSize,
+                                backupsTotal,
+                              )}{" "}
+                              of {backupsTotal}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setBackupsPage(backupsPage - 1)}
+                                disabled={backupsPage === 0 || backupsLoading}
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                                Prev
+                              </Button>
+                              <span className="tabular-nums">
+                                Page {backupsPage + 1} of {backupsPageCount}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setBackupsPage(backupsPage + 1)}
+                                disabled={
+                                  backupsPage + 1 >= backupsPageCount ||
+                                  backupsLoading
+                                }
+                              >
+                                Next
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </>
+                ) : (
+                  <p className="text-sm text-muted-foreground max-w-3xl border-t border-border pt-4">
+                    No backup destination configured. Use{" "}
+                    <Link
+                      to={`/addons/postgres/${addon.id}/edit`}
+                      className="text-brand hover:underline"
+                    >
+                      Edit configuration
+                    </Link>{" "}
+                    to set an object store — required for scheduled and manual
+                    backups.
+                  </p>
                 )}
-              </>
-            )}
+              </div>
+            </div>
           </div>
         </Panel>
 
