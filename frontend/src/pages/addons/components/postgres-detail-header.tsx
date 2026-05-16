@@ -54,6 +54,11 @@ export function PostgresDetailHeader({
             {addon.name}
           </span>
         }
+        status={
+          state ? (
+            <StatusPill variant={stateVariant(state)}>{state}</StatusPill>
+          ) : undefined
+        }
         subtitle={
           addon.created_at
             ? `Created ${new Date(addon.created_at).toLocaleDateString()}`
@@ -74,11 +79,6 @@ export function PostgresDetailHeader({
           </div>
         }
       />
-      {state && (
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <StatusPill variant={stateVariant(state)}>{state}</StatusPill>
-        </div>
-      )}
     </div>
   );
 }
