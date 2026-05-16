@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Loader2,
   PlayCircle,
@@ -268,7 +268,7 @@ export default function PostgresDetailPage() {
                   </ReadField>
                 </div>
 
-                {hasDestination ? (
+                {hasDestination && (
                   <div className="flex items-center justify-end border-t border-border pt-4">
                     <Button onClick={handleTrigger} disabled={triggering}>
                       {triggering ? (
@@ -279,17 +279,6 @@ export default function PostgresDetailPage() {
                       Run backup now
                     </Button>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground max-w-3xl border-t border-border pt-4">
-                    No backup destination. Set an object store via{" "}
-                    <Link
-                      to={`/addons/postgres/${addon.id}/edit`}
-                      className="text-brand hover:underline"
-                    >
-                      Edit configuration
-                    </Link>
-                    . Prior runs listed below.
-                  </p>
                 )}
 
                 {backupsError ? (
