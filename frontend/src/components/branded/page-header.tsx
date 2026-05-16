@@ -7,12 +7,14 @@ interface PageHeaderProps {
   status?: React.ReactNode;
   subtitle?: React.ReactNode;
   actions?: React.ReactNode;
+  /** Vertical alignment of the actions block. Default "start" (top). */
+  actionsAlign?: "start" | "center";
   className?: string;
 }
 
-export function PageHeader({ eyebrow, title, status, subtitle, actions, className }: PageHeaderProps) {
+export function PageHeader({ eyebrow, title, status, subtitle, actions, actionsAlign = "start", className }: PageHeaderProps) {
   return (
-    <div className={cn("flex items-start justify-between gap-6 pb-6 border-b border-border", className)}>
+    <div className={cn("flex justify-between gap-6 pb-6 border-b border-border", actionsAlign === "center" ? "items-center" : "items-start", className)}>
       <div className="min-w-0 flex-1">
         {eyebrow && <EyebrowLabel className="mb-2 block">{eyebrow}</EyebrowLabel>}
         <div className="flex items-center gap-3">

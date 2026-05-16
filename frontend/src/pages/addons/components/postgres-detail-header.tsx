@@ -43,7 +43,24 @@ export function PostgresDetailHeader({
   onDelete: () => void;
 }) {
   const state = addon.status?.state;
-  const statusMessage = addon.status?.message;
+  // Only surface a status tooltip when the addon is in a non-healthy
+  // state. When Ready, stale/non-blocking conditions (e.g. an old
+  // LastBackupFailed) would otherwise show as an alarming tooltip.
+  const problemCondition =
+    state && state !== "Ready"
+      ? addon.status?.conditions?.find(
+          (c) => c.status && c.status !== "True" && (c.message || c.reason),
+        )
+      : undefined;
+  const statusMessage =
+    state && state !== "Ready"
+      ? addon.status?.message ||
+        (problemCondition
+          ? [problemCondition.reason, problemCondition.message]
+              .filter(Boolean)
+              .join(": ")
+          : undefined)
+      : undefined;
   const statusPill = state ? (
     <StatusPill variant={stateVariant(state)}>{state}</StatusPill>
   ) : undefined;
@@ -56,6 +73,7 @@ export function PostgresDetailHeader({
         <ArrowLeft className="h-3 w-3" /> All addons
       </Link>
       <PageHeader
+        actionsAlign="center"
         eyebrow="Postgres add-on"
         title={
           <span className="flex items-center gap-2.5">
