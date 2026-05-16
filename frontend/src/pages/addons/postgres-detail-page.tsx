@@ -269,75 +269,16 @@ export default function PostgresDetailPage() {
                 </div>
 
                 {hasDestination ? (
-                  <>
-                    <div className="flex items-center justify-end border-t border-border pt-4">
-                      <Button
-                        onClick={handleTrigger}
-                        disabled={triggering}
-                      >
-                        {triggering ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <PlayCircle className="mr-2 h-4 w-4" />
-                        )}
-                        Run backup now
-                      </Button>
-                    </div>
-                    {backupsError ? (
-                      <div className="text-sm text-danger">{backupsError}</div>
-                    ) : backupsLoading && backups.length === 0 ? (
-                      <div className="text-sm text-muted-foreground">
-                        Loading…
-                      </div>
-                    ) : backups.length === 0 ? (
-                      <EmptyState
-                        title="No backups yet"
-                        description="Click Run backup now to create your first backup."
-                      />
-                    ) : (
-                      <>
-                        <BackupsList backups={backups} />
-                        {backupsPageCount > 1 && (
-                          <div className="flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground">
-                            <span className="tabular-nums">
-                              {backupsPage * backupsPageSize + 1}–
-                              {Math.min(
-                                (backupsPage + 1) * backupsPageSize,
-                                backupsTotal,
-                              )}{" "}
-                              of {backupsTotal}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setBackupsPage(backupsPage - 1)}
-                                disabled={backupsPage === 0 || backupsLoading}
-                              >
-                                <ChevronLeft className="h-4 w-4" />
-                                Prev
-                              </Button>
-                              <span className="tabular-nums">
-                                Page {backupsPage + 1} of {backupsPageCount}
-                              </span>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setBackupsPage(backupsPage + 1)}
-                                disabled={
-                                  backupsPage + 1 >= backupsPageCount ||
-                                  backupsLoading
-                                }
-                              >
-                                Next
-                                <ChevronRight className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </>
+                  <div className="flex items-center justify-end border-t border-border pt-4">
+                    <Button onClick={handleTrigger} disabled={triggering}>
+                      {triggering ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <PlayCircle className="h-4 w-4" />
+                      )}
+                      Run backup now
+                    </Button>
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground max-w-3xl border-t border-border pt-4">
                     No backup destination configured. Use{" "}
@@ -348,8 +289,63 @@ export default function PostgresDetailPage() {
                       Edit configuration
                     </Link>{" "}
                     to set an object store — required for scheduled and manual
-                    backups.
+                    backups. Previous backup runs remain listed below.
                   </p>
+                )}
+
+                {backupsError ? (
+                  <div className="text-sm text-danger">{backupsError}</div>
+                ) : backupsLoading && backups.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Loading…</div>
+                ) : backups.length === 0 ? (
+                  hasDestination ? (
+                    <EmptyState
+                      title="No backups yet"
+                      description="Click Run backup now to create your first backup."
+                    />
+                  ) : null
+                ) : (
+                  <>
+                    <BackupsList backups={backups} />
+                    {backupsPageCount > 1 && (
+                      <div className="flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground">
+                        <span className="tabular-nums">
+                          {backupsPage * backupsPageSize + 1}–
+                          {Math.min(
+                            (backupsPage + 1) * backupsPageSize,
+                            backupsTotal,
+                          )}{" "}
+                          of {backupsTotal}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBackupsPage(backupsPage - 1)}
+                            disabled={backupsPage === 0 || backupsLoading}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                            Prev
+                          </Button>
+                          <span className="tabular-nums">
+                            Page {backupsPage + 1} of {backupsPageCount}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBackupsPage(backupsPage + 1)}
+                            disabled={
+                              backupsPage + 1 >= backupsPageCount ||
+                              backupsLoading
+                            }
+                          >
+                            Next
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
