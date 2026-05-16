@@ -48,7 +48,11 @@ export function PostgresDetailHeader({
       <PageHeader
         eyebrow="Postgres add-on"
         title={addon.name}
-        subtitle={addon.status?.message || "Managed PostgreSQL cluster"}
+        subtitle={
+          addon.created_at
+            ? `Created ${new Date(addon.created_at).toLocaleDateString()}`
+            : "Managed PostgreSQL cluster"
+        }
         actions={
           <div className="flex gap-3">
             <Link to={`/addons/postgres/${addon.id}/edit`}>
@@ -60,16 +64,11 @@ export function PostgresDetailHeader({
           </div>
         }
       />
-      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-        {state && (
+      {state && (
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <StatusPill variant={stateVariant(state)}>{state}</StatusPill>
-        )}
-        {addon.created_at && (
-          <span>
-            Created {new Date(addon.created_at).toLocaleString()}
-          </span>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
