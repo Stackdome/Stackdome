@@ -1,5 +1,4 @@
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -175,26 +174,33 @@ export function RestoreInitFields({
             <>
               <FieldShell
                 label="Recover to"
-                hint="Off restores to the latest archived WAL."
+                hint="Latest restores to the most recent archived WAL."
               >
-                <div className="flex items-center gap-3 h-9">
-                  <Switch
-                    id="restore-pit"
-                    checked={storeArm.recoveryTargetTime != null}
-                    onCheckedChange={(on) =>
-                      updateStore({
-                        recoveryTargetTime: on
+                <Select
+                  value={
+                    storeArm.recoveryTargetTime != null
+                      ? "specific"
+                      : "latest"
+                  }
+                  onValueChange={(v) =>
+                    updateStore({
+                      recoveryTargetTime:
+                        v === "specific"
                           ? new Date().toISOString().slice(0, 19) + "Z"
                           : undefined,
-                      })
-                    }
-                  />
-                  <span className="text-sm text-foreground">
-                    {storeArm.recoveryTargetTime != null
-                      ? "Specific time (UTC)"
-                      : "Latest"}
-                  </span>
-                </div>
+                    })
+                  }
+                >
+                  <SelectTrigger id="restore-pit" className="max-w-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="latest">Latest</SelectItem>
+                    <SelectItem value="specific">
+                      Specific time (UTC)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </FieldShell>
 
               {storeArm.recoveryTargetTime != null && (
