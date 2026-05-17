@@ -269,6 +269,10 @@ export function addonToFormValues(addon: PostgresAddon): PostgresAddonFormValues
         ? {
           type: "restore_from_backup",
           backupId: init.restore_from_backup?.backup_id ?? "",
+          // Create-only UI fields; never rendered on edit. Present to
+          // satisfy the typed arm.
+          sourceAddonId: "",
+          objectStoreId: undefined,
         }
         : init?.type === "restore_from_object_store"
           ? {

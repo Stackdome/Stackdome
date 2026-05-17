@@ -305,7 +305,7 @@ describe("addonToFormValues", () => {
         },
       },
     }));
-    expect(v.initialization).toEqual({ type: "restore_from_backup", backupId: "bk-99" });
+    expect(v.initialization).toEqual({ type: "restore_from_backup", backupId: "bk-99", sourceAddonId: "", objectStoreId: undefined });
   });
 
   it("dumps placement / parameters / labels into advancedJson", () => {
