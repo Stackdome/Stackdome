@@ -34,3 +34,25 @@ describe("initialization: restore_from_object_store", () => {
     expect(PostgresAddonFormSchema.safeParse(base).success).toBe(true);
   });
 });
+
+describe("initialization: restore_from_backup", () => {
+  it("accepts backup restore with backupId + sourceAddonId", () => {
+    const v = { ...base, initialization: { type: "restore_from_backup", backupId: "b1", sourceAddonId: "src", objectStoreId: "os1" } };
+    expect(PostgresAddonFormSchema.safeParse(v).success).toBe(true);
+  });
+
+  it("rejects backup restore missing backupId", () => {
+    const v = { ...base, initialization: { type: "restore_from_backup", backupId: "", sourceAddonId: "src" } };
+    expect(PostgresAddonFormSchema.safeParse(v).success).toBe(false);
+  });
+
+  it("rejects backup restore missing sourceAddonId", () => {
+    const v = { ...base, initialization: { type: "restore_from_backup", backupId: "b1", sourceAddonId: "" } };
+    expect(PostgresAddonFormSchema.safeParse(v).success).toBe(false);
+  });
+
+  it("accepts backup restore without objectStoreId (optional)", () => {
+    const v = { ...base, initialization: { type: "restore_from_backup", backupId: "b1", sourceAddonId: "src" } };
+    expect(PostgresAddonFormSchema.safeParse(v).success).toBe(true);
+  });
+});

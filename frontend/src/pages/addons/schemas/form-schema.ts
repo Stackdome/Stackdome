@@ -52,6 +52,9 @@ const PostgresAddonFormBase = z.object({
     z.object({
       type: z.literal("restore_from_backup"),
       backupId: z.string().min(1, "Pick a backup"),
+      // UI context for the source picker; backend only consumes backupId.
+      sourceAddonId: z.string().min(1, "Pick a source addon"),
+      objectStoreId: z.string().optional(),
     }),
     z.object({
       type: z.literal("restore_from_object_store"),
