@@ -125,3 +125,29 @@ describe("payload restore_from_backup mapping", () => {
     });
   });
 });
+
+describe("buildCreateInput edit omits initialization", () => {
+  it("create (default) keeps initialization", () => {
+    const input = buildCreateInput({ ...base });
+    expect(input.spec.initialization).toEqual({ type: "new" });
+  });
+
+  it("create with restore keeps initialization", () => {
+    const input = buildCreateInput({
+      ...base,
+      initialization: { type: "restore_from_object_store", sourceAddonId: "s", objectStoreId: "o" },
+    });
+    expect(input.spec.initialization).toEqual({
+      type: "restore_from_object_store",
+      restore_from_object_store: { object_store_id: "o", source_postgres_addon_id: "s" },
+    });
+  });
+
+  it("edit strips initialization entirely", () => {
+    const input = buildCreateInput(
+      { ...base, initialization: { type: "restore_from_object_store", sourceAddonId: "s", objectStoreId: "o" } },
+      { isEdit: true },
+    );
+    expect(input.spec.initialization).toBeUndefined();
+  });
+});

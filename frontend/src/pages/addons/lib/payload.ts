@@ -294,7 +294,10 @@ export function addonToFormValues(addon: PostgresAddon): PostgresAddonFormValues
   };
 }
 
-export function buildCreateInput(values: PostgresAddonFormValues): PostgresAddonCreateInput {
+export function buildCreateInput(
+  values: PostgresAddonFormValues,
+  opts: { isEdit?: boolean } = {},
+): PostgresAddonCreateInput {
   const formSpec = buildFormSpec(values);
   const { spec: advancedSpec, topLevel } = splitAdvanced(parseAdvancedJson(values.advancedJson));
 
@@ -317,6 +320,14 @@ export function buildCreateInput(values: PostgresAddonFormValues): PostgresAddon
   // cluster_id is readonly on the API — backend auto-picks the org's cluster.
   // Once the backend accepts it on create, restore: cluster_id: values.clusterId.
   void values.clusterId;
+
+  // initialization (new / restore_from_backup / restore_from_object_store)
+  // is applied only at cluster creation — it is immutable afterwards. On
+  // edit we must not re-send it (the backend rejects it on update and the
+  // form can't supply the original restore source anyway).
+  if (opts.isEdit) {
+    delete mergedSpec.initialization;
+  }
 
   return {
     name: values.name,

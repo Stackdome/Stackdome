@@ -127,7 +127,14 @@ export default function PostgresFormPage() {
       .getPostgresAddon(orgId, editId)
       .then((addon) => {
         if (cancelled) return;
-        const hydrated = addonToFormValues(addon);
+        // Initialization is create-only and hidden on edit; the backend
+        // doesn't return the original restore source, so normalize to
+        // "new" to keep schema validation green. It is also stripped from
+        // the edit payload in buildCreateInput.
+        const hydrated = {
+          ...addonToFormValues(addon),
+          initialization: { type: "new" as const },
+        };
         setValues(hydrated);
         setOriginalValues(hydrated);
         setLoadError(null);
@@ -202,7 +209,7 @@ export default function PostgresFormPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const input = buildCreateInput(values);
+      const input = buildCreateInput(values, { isEdit });
       if (isEdit && editId) {
         await addonsApi.updatePostgresAddon(orgId, editId, input);
         toast({
