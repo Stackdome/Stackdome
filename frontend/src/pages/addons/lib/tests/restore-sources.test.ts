@@ -12,20 +12,20 @@ function addon(p: Partial<PostgresAddon> & { id: string }): PostgresAddon {
 }
 
 describe("eligibleRestoreSources", () => {
-  it("keeps only addons with an object store AND wal archiving", () => {
+  it("keeps any addon with an object store (WAL on OR off)", () => {
     const list = [
       addon({ id: "a", spec: { backup: { object_store_id: "os1", wal_archiving: true } } as PostgresAddon["spec"] }),
       addon({ id: "b", spec: { backup: { object_store_id: "os2", wal_archiving: false } } as PostgresAddon["spec"] }),
       addon({ id: "c", spec: { backup: { wal_archiving: true } } as PostgresAddon["spec"] }),
       addon({ id: "d", spec: {} as PostgresAddon["spec"] }),
     ];
-    expect(eligibleRestoreSources(list).map((a) => a.id)).toEqual(["a"]);
+    expect(eligibleRestoreSources(list).map((a) => a.id)).toEqual(["a", "b"]);
   });
 
   it("excludes a given addon id (cannot restore from self)", () => {
     const list = [
-      addon({ id: "self", spec: { backup: { object_store_id: "os1", wal_archiving: true } } as PostgresAddon["spec"] }),
-      addon({ id: "other", spec: { backup: { object_store_id: "os2", wal_archiving: true } } as PostgresAddon["spec"] }),
+      addon({ id: "self", spec: { backup: { object_store_id: "os1" } } as PostgresAddon["spec"] }),
+      addon({ id: "other", spec: { backup: { object_store_id: "os2" } } as PostgresAddon["spec"] }),
     ];
     expect(eligibleRestoreSources(list, "self").map((a) => a.id)).toEqual(["other"]);
   });

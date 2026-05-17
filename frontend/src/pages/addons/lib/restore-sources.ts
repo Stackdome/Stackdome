@@ -1,8 +1,11 @@
 import type { PostgresAddon } from "@/api/addons";
 
 /**
- * Addons that can be a PITR source: backups land in an object store and WAL
- * archiving was on (continuous WAL is required for point-in-time recovery).
+ * Addons that can be a restore source: backups land in an object store.
+ * WAL archiving is NOT required here — without it, only discrete completed
+ * backups are restorable (restore_from_backup); with it, point-in-time is
+ * additionally available (restore_from_object_store). The caller decides
+ * which mode based on the chosen source's wal_archiving.
  * Optionally exclude one id (e.g. the addon being created, if relevant).
  */
 export function eligibleRestoreSources(
@@ -11,7 +14,6 @@ export function eligibleRestoreSources(
 ): PostgresAddon[] {
   return addons.filter((a) => {
     if (excludeId && a.id === excludeId) return false;
-    const b = a.spec?.backup;
-    return Boolean(b?.object_store_id) && b?.wal_archiving === true;
+    return Boolean(a.spec?.backup?.object_store_id);
   });
 }
