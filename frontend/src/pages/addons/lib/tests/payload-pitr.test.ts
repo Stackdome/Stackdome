@@ -1,9 +1,25 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
-import { buildCreateInput } from "../payload";
+import { buildCreateInput, addonToFormValues } from "../payload";
 import { defaultFormValues } from "../../schemas/form-schema";
+import type { PostgresAddon } from "@/api/addons";
 
 const base = { ...defaultFormValues("cluster-1"), name: "db1" };
+
+const minimalAddon = (overrides?: Partial<PostgresAddon>): PostgresAddon => ({
+  name: "my-pg",
+  cluster_id: "cluster-1",
+  spec: {
+    version: {
+      major: 17,
+      enable_auto_minor_upgrade: true,
+      enable_auto_major_upgrade: false,
+    },
+    instances: { count: 1 },
+    storage: { size: "10Gi", storage_class: "standard" },
+  },
+  ...overrides,
+});
 
 describe("payload PITR mapping", () => {
   it("latest restore → no recovery_target_time", () => {
@@ -35,5 +51,47 @@ describe("payload PITR mapping", () => {
   it("new initialization unchanged", () => {
     const input = buildCreateInput({ ...base });
     expect(input.spec.initialization).toEqual({ type: "new" });
+  });
+});
+
+describe("addonToFormValues PITR hydration", () => {
+  it("hydrates restore_from_object_store without recovery_target_time", () => {
+    const v = addonToFormValues(minimalAddon({
+      spec: {
+        ...minimalAddon().spec,
+        initialization: {
+          type: "restore_from_object_store",
+          restore_from_object_store: { object_store_id: "os1", source_postgres_addon_id: "src" },
+        },
+      },
+    }));
+    expect(v.initialization).toEqual({
+      type: "restore_from_object_store",
+      sourceAddonId: "src",
+      objectStoreId: "os1",
+      recoveryTargetTime: undefined,
+    });
+  });
+
+  it("hydrates restore_from_object_store with recovery_target_time", () => {
+    const v = addonToFormValues(minimalAddon({
+      spec: {
+        ...minimalAddon().spec,
+        initialization: {
+          type: "restore_from_object_store",
+          restore_from_object_store: {
+            object_store_id: "os1",
+            source_postgres_addon_id: "src",
+            recovery_target_time: "2026-05-17T03:00:00Z",
+          },
+        },
+      },
+    }));
+    expect(v.initialization).toEqual({
+      type: "restore_from_object_store",
+      sourceAddonId: "src",
+      objectStoreId: "os1",
+      recoveryTargetTime: "2026-05-17T03:00:00Z",
+    });
   });
 });
