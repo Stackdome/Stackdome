@@ -12,3 +12,13 @@ local_dev_env.yaml
 # Vite output. .gitkeep tracked so //go:embed succeeds before first build.
 pkg/web/dist/*
 !pkg/web/dist/.gitkeep
+
+# Local secrets
+.env
+.env.local
+.env.*.local
+
+# Local dev artifacts (Playwright session output, ad-hoc screenshots)
+.playwright-mcp/
+*.png
+!frontend/**/*.png

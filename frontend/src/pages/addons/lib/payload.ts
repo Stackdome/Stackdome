@@ -2,6 +2,7 @@ import type { PostgresAddon, PostgresAddonCreateInput, PostgresAddonSpec } from 
 import type { PostgresAddonFormValues } from "../schemas/form-schema";
 import { DEFAULT_ADVANCED_JSON } from "../schemas/form-schema";
 import { PLAN_PRESETS, resourcesForPlan, type PlanId } from "./plan-presets";
+import { toApiBackupConfig } from "../schemas/backup-config-schema";
 
 type Json = Record<string, unknown>;
 
@@ -86,13 +87,28 @@ function buildFormSpec(values: PostgresAddonFormValues): PostgresAddonSpec {
     resources: presetResources ?? customResources,
     configuration: { enable_superuser_access: values.superuserAccess },
     initialization:
-      values.initialization.type === "new"
-        ? { type: "new" }
-        : {
+      values.initialization.type === "restore_from_backup"
+        ? {
           type: "restore_from_backup",
           restore_from_backup: { backup_id: values.initialization.backupId },
-        },
+        }
+        : values.initialization.type === "restore_from_object_store"
+          ? {
+            type: "restore_from_object_store",
+            restore_from_object_store: {
+              object_store_id: values.initialization.objectStoreId,
+              source_postgres_addon_id: values.initialization.sourceAddonId,
+              ...(values.initialization.recoveryTargetTime
+                ? { recovery_target_time: values.initialization.recoveryTargetTime }
+                : {}),
+            },
+          }
+          : { type: "new" },
   };
+
+  if (values.backup.enabled) {
+    spec.backup = toApiBackupConfig(values.backup);
+  }
 
   if (values.databases.length > 0) {
     spec.databases = values.databases.map((db) => ({
@@ -149,7 +165,7 @@ function splitAdvanced(advanced: Json): SplitAdvanced {
   return { spec, topLevel };
 }
 
-function detectPlan(resources?: PostgresAddonSpec["resources"]): PlanId {
+export function detectPlan(resources?: PostgresAddonSpec["resources"]): PlanId {
   const cpuReq = resources?.cpu?.request;
   const cpuLim = resources?.cpu?.limit;
   const memReq = resources?.memory?.request;
@@ -207,10 +223,6 @@ function buildAdvancedJson(addon: PostgresAddon): string {
     obj.storage = { storage_class: storageClass };
   }
 
-  if (addon.spec.backup) {
-    obj.backup = addon.spec.backup;
-  }
-
   if (addon.spec.initialization && addon.spec.initialization.type !== "new") {
     obj.initialization = addon.spec.initialization;
   }
@@ -257,13 +269,35 @@ export function addonToFormValues(addon: PostgresAddon): PostgresAddonFormValues
         ? {
           type: "restore_from_backup",
           backupId: init.restore_from_backup?.backup_id ?? "",
+          // Create-only UI fields; never rendered on edit. Present to
+          // satisfy the typed arm.
+          sourceAddonId: "",
+          objectStoreId: undefined,
         }
-        : { type: "new" },
+        : init?.type === "restore_from_object_store"
+          ? {
+            type: "restore_from_object_store",
+            sourceAddonId: init.restore_from_object_store?.source_postgres_addon_id ?? "",
+            objectStoreId: init.restore_from_object_store?.object_store_id ?? "",
+            recoveryTargetTime: init.restore_from_object_store?.recovery_target_time,
+          }
+          : { type: "new" },
+    backup: {
+      // Backend stores spec.backup only when backups are enabled and drops the
+      // `enabled` flag from responses, so presence of the object means enabled.
+      enabled: addon.spec.backup ? addon.spec.backup.enabled ?? true : false,
+      objectStoreId: addon.spec.backup?.object_store_id ?? "",
+      schedule: addon.spec.backup?.schedule || "0 0 3 * * *",
+      walArchiving: addon.spec.backup?.wal_archiving ?? false,
+    },
     advancedJson: buildAdvancedJson(addon),
   };
 }
 
-export function buildCreateInput(values: PostgresAddonFormValues): PostgresAddonCreateInput {
+export function buildCreateInput(
+  values: PostgresAddonFormValues,
+  opts: { isEdit?: boolean } = {},
+): PostgresAddonCreateInput {
   const formSpec = buildFormSpec(values);
   const { spec: advancedSpec, topLevel } = splitAdvanced(parseAdvancedJson(values.advancedJson));
 
@@ -286,6 +320,14 @@ export function buildCreateInput(values: PostgresAddonFormValues): PostgresAddon
   // cluster_id is readonly on the API — backend auto-picks the org's cluster.
   // Once the backend accepts it on create, restore: cluster_id: values.clusterId.
   void values.clusterId;
+
+  // initialization (new / restore_from_backup / restore_from_object_store)
+  // is applied only at cluster creation — it is immutable afterwards. On
+  // edit we must not re-send it (the backend rejects it on update and the
+  // form can't supply the original restore source anyway).
+  if (opts.isEdit) {
+    delete mergedSpec.initialization;
+  }
 
   return {
     name: values.name,

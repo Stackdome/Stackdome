@@ -4,24 +4,15 @@ import { PlusCircle, Loader2, AlertCircle, Puzzle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageHeader, Panel, EmptyState } from "@/components/branded";
-import { useToast } from "@/components/ui/use-toast";
-import { getCurrentOrganizationId } from "@/helpers/common";
-import { getErrorMessage, isErrorStatus } from "@/api/client";
-import { deletePostgresAddon, type PostgresAddon } from "@/api/addons";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { usePostgresAddons } from "./hooks/use-postgres-addons";
-import { AddonTable } from "./components/addon-table";
+import { AddonList } from "./components/addon-list";
 import { AddonTypePickerDialog, type AddonType } from "./components/addon-type-picker-dialog";
-import { DeleteAddonDialog } from "./components/delete-addon-dialog";
 
 export default function AddonsPage() {
   const navigate = useNavigate();
   const { addons, loading, error, refetch } = usePostgresAddons();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [deletingAddon, setDeletingAddon] = useState<PostgresAddon | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const { toast } = useToast();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
 
   useEffect(() => {
@@ -33,36 +24,6 @@ export default function AddonsPage() {
     setPickerOpen(false);
     if (type === "postgres") {
       navigate("/addons/create/postgres");
-    }
-  }
-
-  async function handleDeleteConfirm() {
-    if (!deletingAddon?.id) return;
-    const orgId = getCurrentOrganizationId();
-    if (!orgId) return;
-
-    setDeleteLoading(true);
-    setDeleteError(null);
-    try {
-      await deletePostgresAddon(orgId, deletingAddon.id);
-      toast({
-        title: "Addon deleted",
-        description: `"${deletingAddon.name}" is being torn down.`,
-        variant: "destructive",
-      });
-      setDeletingAddon(null);
-      refetch();
-    } catch (e) {
-      console.error("Failed to delete addon:", e);
-      if (isErrorStatus(e, 409)) {
-        setDeleteError(
-          `${getErrorMessage(e)}\n\nRemove the stack references first, then try again.`,
-        );
-      } else {
-        setDeleteError(getErrorMessage(e));
-      }
-    } finally {
-      setDeleteLoading(false);
     }
   }
 
@@ -101,12 +62,8 @@ export default function AddonsPage() {
           }
         />
 
-        <Panel
-          title="All Addons"
-          count={addons.length}
-          bodyClassName={addons.length === 0 ? "p-5" : "p-0"}
-        >
-          {addons.length === 0 ? (
+        {addons.length === 0 ? (
+          <Panel title="All Addons" bodyClassName="p-5">
             <EmptyState
               icon={<Puzzle className="h-8 w-8" />}
               title="No addons yet"
@@ -118,29 +75,15 @@ export default function AddonsPage() {
                 </Button>
               }
             />
-          ) : (
-            <AddonTable addons={addons} onDelete={(a) => setDeletingAddon(a)} />
-          )}
-        </Panel>
+          </Panel>
+        ) : (
+          <AddonList addons={addons} />
+        )}
 
         <AddonTypePickerDialog
           open={pickerOpen}
           onOpenChange={setPickerOpen}
           onSelect={handlePickType}
-        />
-
-        <DeleteAddonDialog
-          open={!!deletingAddon}
-          addonName={deletingAddon?.name}
-          loading={deleteLoading}
-          error={deleteError}
-          onConfirm={handleDeleteConfirm}
-          onCancel={() => {
-            if (!deleteLoading) {
-              setDeletingAddon(null);
-              setDeleteError(null);
-            }
-          }}
         />
       </div>
     </TooltipProvider>
