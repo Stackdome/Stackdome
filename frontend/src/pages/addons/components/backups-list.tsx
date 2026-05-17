@@ -1,4 +1,3 @@
-import { AlertCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -76,20 +75,29 @@ export function BackupsList({ backups }: { backups: PostgresBackup[] }) {
             <TableCell className="capitalize">{displayType(b)}</TableCell>
             <TableCell>
               <div className="flex items-center gap-2">
-                <StatusPill variant={phaseVariant(b.phase)} pulse={false}>
-                  {b.phase ?? "—"}
-                </StatusPill>
-                {b.phase === "failed" && b.error && (
+                {b.phase === "failed" && b.error ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button type="button" aria-label={`Error for ${b.name ?? "backup"}`}>
-                        <AlertCircle className="h-4 w-4 text-danger" />
-                      </button>
+                      <span
+                        className="cursor-help"
+                        aria-label={`Error for ${b.name ?? "backup"}`}
+                      >
+                        <StatusPill
+                          variant={phaseVariant(b.phase)}
+                          pulse={false}
+                        >
+                          {b.phase ?? "—"}
+                        </StatusPill>
+                      </span>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-sm font-mono text-xs">
                       {b.error}
                     </TooltipContent>
                   </Tooltip>
+                ) : (
+                  <StatusPill variant={phaseVariant(b.phase)} pulse={false}>
+                    {b.phase ?? "—"}
+                  </StatusPill>
                 )}
               </div>
             </TableCell>
