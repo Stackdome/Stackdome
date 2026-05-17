@@ -53,6 +53,17 @@ const PostgresAddonFormBase = z.object({
       type: z.literal("restore_from_backup"),
       backupId: z.string().min(1, "Pick a backup"),
     }),
+    z.object({
+      type: z.literal("restore_from_object_store"),
+      sourceAddonId: z.string().min(1, "Pick a source addon"),
+      objectStoreId: z.string().min(1, "Object store could not be resolved"),
+      // ISO-8601; absent = restore to latest. datetime-local input is
+      // serialised to `${value}:00Z` before it lands here.
+      recoveryTargetTime: z
+        .string()
+        .datetime({ offset: true })
+        .optional(),
+    }),
   ]),
   advancedJson: z.string(),
   backup: BackupFormSchema,
