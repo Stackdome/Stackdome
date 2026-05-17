@@ -87,12 +87,23 @@ function buildFormSpec(values: PostgresAddonFormValues): PostgresAddonSpec {
     resources: presetResources ?? customResources,
     configuration: { enable_superuser_access: values.superuserAccess },
     initialization:
-      values.initialization.type === "new"
-        ? { type: "new" }
-        : {
+      values.initialization.type === "restore_from_backup"
+        ? {
           type: "restore_from_backup",
           restore_from_backup: { backup_id: values.initialization.backupId },
-        },
+        }
+        : values.initialization.type === "restore_from_object_store"
+          ? {
+            type: "restore_from_object_store",
+            restore_from_object_store: {
+              object_store_id: values.initialization.objectStoreId,
+              source_postgres_addon_id: values.initialization.sourceAddonId,
+              ...(values.initialization.recoveryTargetTime
+                ? { recovery_target_time: values.initialization.recoveryTargetTime }
+                : {}),
+            },
+          }
+          : { type: "new" },
   };
 
   if (values.backup.enabled) {
@@ -259,7 +270,14 @@ export function addonToFormValues(addon: PostgresAddon): PostgresAddonFormValues
           type: "restore_from_backup",
           backupId: init.restore_from_backup?.backup_id ?? "",
         }
-        : { type: "new" },
+        : init?.type === "restore_from_object_store"
+          ? {
+            type: "restore_from_object_store",
+            sourceAddonId: init.restore_from_object_store?.source_postgres_addon_id ?? "",
+            objectStoreId: init.restore_from_object_store?.object_store_id ?? "",
+            recoveryTargetTime: init.restore_from_object_store?.recovery_target_time,
+          }
+          : { type: "new" },
     backup: {
       // Backend stores spec.backup only when backups are enabled and drops the
       // `enabled` flag from responses, so presence of the object means enabled.
