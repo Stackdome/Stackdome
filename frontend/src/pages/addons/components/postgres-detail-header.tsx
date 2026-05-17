@@ -49,16 +49,16 @@ export function PostgresDetailHeader({
   const problemCondition =
     state && state !== "Ready"
       ? addon.status?.conditions?.find(
-          (c) => c.status && c.status !== "True" && (c.message || c.reason),
-        )
+        (c) => c.status && c.status !== "True" && (c.message || c.reason),
+      )
       : undefined;
   const statusMessage =
     state && state !== "Ready"
       ? addon.status?.message ||
         (problemCondition
           ? [problemCondition.reason, problemCondition.message]
-              .filter(Boolean)
-              .join(": ")
+            .filter(Boolean)
+            .join(": ")
           : undefined)
       : undefined;
   const statusPill = state ? (
