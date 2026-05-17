@@ -48,7 +48,10 @@ import {
 } from "../lib/payload";
 import StickyActionBar from "@/pages/stacks/components/shared/sticky-action-bar";
 import { useObjectStores } from "@/pages/object-stores/hooks/use-object-stores";
+import { usePostgresAddons } from "../hooks/use-postgres-addons";
+import { eligibleRestoreSources } from "../lib/restore-sources";
 import { BackupConfigFields } from "./backup-config-fields";
+import { RestoreInitFields } from "./restore-init-fields";
 
 // Mirrors backend: pkg/worker/postgresaddon/image_catalog_reconciler.go (CloudNativePG images)
 // and config/openapi/stackdome_api.yaml (PostgresVersion.major: 13..17).
@@ -76,6 +79,8 @@ export default function PostgresFormPage() {
   const [originalValues, setOriginalValues] = useState<PostgresAddonFormValues | null>(null);
   const [confirmAdvancedOpen, setConfirmAdvancedOpen] = useState(false);
   const { objectStores, loading: storesLoading } = useObjectStores();
+  const { addons: allAddons } = usePostgresAddons();
+  const restoreSources = eligibleRestoreSources(allAddons, editId);
 
   // Static labels + non-clickable registrations (don't depend on values.name).
   useEffect(() => {
@@ -335,232 +340,241 @@ export default function PostgresFormPage() {
         </Panel>
 
         <Panel title="Configuration">
-            <h3 className="text-sm font-semibold text-foreground mb-3">Plan</h3>
-            <RadioGroup
-              value={values.plan}
-              onValueChange={(v) => update("plan", v as PlanId)}
-              className="rounded-md border border-border overflow-hidden max-w-3xl gap-0"
-            >
-              <table className="w-full text-sm">
-                <thead className="bg-muted/30">
-                  <tr>
-                    <th className="text-left px-4 py-2.5 font-medium text-[12.5px] text-muted-foreground">Plan</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-[12.5px] text-muted-foreground">CPU</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-[12.5px] text-muted-foreground">Memory</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {PLAN_PRESETS.map((preset) => {
-                    const selected = values.plan === preset.id;
-                    const radioId = `plan-${preset.id}`;
-                    return (
-                      <tr
-                        key={preset.id}
-                        className={cn(
-                          "border-t border-border cursor-pointer transition-colors",
-                          selected ? "bg-brand-bg" : "hover:bg-muted/30",
-                        )}
-                        style={selected ? { boxShadow: "inset 3px 0 0 var(--brand)" } : undefined}
-                        onClick={() => update("plan", preset.id as PlanId)}
-                      >
-                        <td className="px-4 py-2.5">
-                          <label htmlFor={radioId} className="flex items-center gap-2 cursor-pointer">
-                            <RadioGroupItem id={radioId} value={preset.id} />
-                            <span className={selected ? "font-medium text-foreground" : "text-foreground"}>
-                              {preset.label}
-                            </span>
-                          </label>
-                        </td>
-                        <td className="px-4 py-2.5 font-mono text-[12.5px] text-muted-foreground">{preset.cpu}</td>
-                        <td className="px-4 py-2.5 font-mono text-[12.5px] text-muted-foreground">{preset.memory}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </RadioGroup>
+          {!isEdit && (
+            <RestoreInitFields
+              init={values.initialization}
+              restoreSources={restoreSources}
+              objectStores={objectStores}
+              errors={errors}
+              onChange={(next) => update("initialization", next)}
+            />
+          )}
+          <h3 className="text-sm font-semibold text-foreground mb-3">Plan</h3>
+          <RadioGroup
+            value={values.plan}
+            onValueChange={(v) => update("plan", v as PlanId)}
+            className="rounded-md border border-border overflow-hidden max-w-3xl gap-0"
+          >
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30">
+                <tr>
+                  <th className="text-left px-4 py-2.5 font-medium text-[12.5px] text-muted-foreground">Plan</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-[12.5px] text-muted-foreground">CPU</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-[12.5px] text-muted-foreground">Memory</th>
+                </tr>
+              </thead>
+              <tbody>
+                {PLAN_PRESETS.map((preset) => {
+                  const selected = values.plan === preset.id;
+                  const radioId = `plan-${preset.id}`;
+                  return (
+                    <tr
+                      key={preset.id}
+                      className={cn(
+                        "border-t border-border cursor-pointer transition-colors",
+                        selected ? "bg-brand-bg" : "hover:bg-muted/30",
+                      )}
+                      style={selected ? { boxShadow: "inset 3px 0 0 var(--brand)" } : undefined}
+                      onClick={() => update("plan", preset.id as PlanId)}
+                    >
+                      <td className="px-4 py-2.5">
+                        <label htmlFor={radioId} className="flex items-center gap-2 cursor-pointer">
+                          <RadioGroupItem id={radioId} value={preset.id} />
+                          <span className={selected ? "font-medium text-foreground" : "text-foreground"}>
+                            {preset.label}
+                          </span>
+                        </label>
+                      </td>
+                      <td className="px-4 py-2.5 font-mono text-[12.5px] text-muted-foreground">{preset.cpu}</td>
+                      <td className="px-4 py-2.5 font-mono text-[12.5px] text-muted-foreground">{preset.memory}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </RadioGroup>
 
-            {showCustomCompute && (
-              <div className="mt-4 max-w-3xl space-y-3">
-                <h4 className="text-[12.5px] font-medium text-muted-foreground">Custom resources</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <FieldShell label="CPU request" htmlFor="cpu-req">
-                    <Input
-                      id="cpu-req"
-                      placeholder="250m"
-                      value={values.customCpuRequest ?? ""}
-                      onChange={(e) => update("customCpuRequest", e.target.value)}
-                      className="font-mono"
-                    />
-                  </FieldShell>
-                  <FieldShell label="CPU limit" htmlFor="cpu-lim">
-                    <Input
-                      id="cpu-lim"
-                      placeholder="500m"
-                      value={values.customCpuLimit ?? ""}
-                      onChange={(e) => update("customCpuLimit", e.target.value)}
-                      className="font-mono"
-                    />
-                  </FieldShell>
-                  <FieldShell label="Memory request" htmlFor="mem-req">
-                    <Input
-                      id="mem-req"
-                      placeholder="512Mi"
-                      value={values.customMemoryRequest ?? ""}
-                      onChange={(e) => update("customMemoryRequest", e.target.value)}
-                      className="font-mono"
-                    />
-                  </FieldShell>
-                  <FieldShell label="Memory limit" htmlFor="mem-lim">
-                    <Input
-                      id="mem-lim"
-                      placeholder="1Gi"
-                      value={values.customMemoryLimit ?? ""}
-                      onChange={(e) => update("customMemoryLimit", e.target.value)}
-                      className="font-mono"
-                    />
-                  </FieldShell>
-                </div>
-                {errors.customCpuRequest && (
-                  <p className="text-[11.5px] text-danger">{errors.customCpuRequest}</p>
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-6 max-w-3xl">
-              <FieldShell
-                label="Storage size"
-                htmlFor="storage-size"
-                hint="Allocated disk in GB."
-                error={errors.storageGB}
-              >
-                <div className="flex items-center gap-2">
+          {showCustomCompute && (
+            <div className="mt-4 max-w-3xl space-y-3">
+              <h4 className="text-[12.5px] font-medium text-muted-foreground">Custom resources</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <FieldShell label="CPU request" htmlFor="cpu-req">
                   <Input
-                    id="storage-size"
-                    type="number"
-                    min={1}
-                    value={values.storageGB}
-                    onChange={(e) => update("storageGB", Number(e.target.value) || 0)}
-                    className={cn("font-mono w-32", errors.storageGB ? "border-danger" : "")}
-                    aria-invalid={!!errors.storageGB}
+                    id="cpu-req"
+                    placeholder="250m"
+                    value={values.customCpuRequest ?? ""}
+                    onChange={(e) => update("customCpuRequest", e.target.value)}
+                    className="font-mono"
                   />
-                  <span className="font-mono text-[12.5px] text-muted-foreground">GB</span>
-                </div>
-              </FieldShell>
-
-              <FieldShell label="Version" htmlFor="pg-version">
-                <Select
-                  value={String(values.versionMajor)}
-                  onValueChange={(v) => update("versionMajor", Number(v))}
-                >
-                  <SelectTrigger id="pg-version" className="font-mono">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {POSTGRES_VERSIONS.map((v) => (
-                      <SelectItem key={v} value={String(v)}>
-                        PG {v} {v === 17 ? "(default)" : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FieldShell>
-
-              <FieldShell
-                label="High availability"
-                htmlFor="ha-toggle"
-                hint="Replicated across 2 instances."
-              >
-                <div className="flex items-center h-10">
-                  <Switch
-                    id="ha-toggle"
-                    checked={values.highAvailability}
-                    onCheckedChange={(c) => update("highAvailability", c)}
+                </FieldShell>
+                <FieldShell label="CPU limit" htmlFor="cpu-lim">
+                  <Input
+                    id="cpu-lim"
+                    placeholder="500m"
+                    value={values.customCpuLimit ?? ""}
+                    onChange={(e) => update("customCpuLimit", e.target.value)}
+                    className="font-mono"
                   />
-                </div>
-              </FieldShell>
-
-              <FieldShell
-                label="Generate superuser credentials"
-                htmlFor="superuser-toggle"
-                hint="By default the database only exposes a limited app user. Enable to also generate a privileged secret for migrations and admin tasks."
-              >
-                <div className="flex items-center h-10">
-                  <Switch
-                    id="superuser-toggle"
-                    checked={values.superuserAccess}
-                    onCheckedChange={(c) => update("superuserAccess", c)}
+                </FieldShell>
+                <FieldShell label="Memory request" htmlFor="mem-req">
+                  <Input
+                    id="mem-req"
+                    placeholder="512Mi"
+                    value={values.customMemoryRequest ?? ""}
+                    onChange={(e) => update("customMemoryRequest", e.target.value)}
+                    className="font-mono"
                   />
-                </div>
-              </FieldShell>
+                </FieldShell>
+                <FieldShell label="Memory limit" htmlFor="mem-lim">
+                  <Input
+                    id="mem-lim"
+                    placeholder="1Gi"
+                    value={values.customMemoryLimit ?? ""}
+                    onChange={(e) => update("customMemoryLimit", e.target.value)}
+                    className="font-mono"
+                  />
+                </FieldShell>
+              </div>
+              {errors.customCpuRequest && (
+                <p className="text-[11.5px] text-danger">{errors.customCpuRequest}</p>
+              )}
             </div>
+          )}
 
-            <Collapsible
-              defaultOpen={values.backup.enabled}
-              className="mt-8 -mx-5 border-t border-border"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-6 max-w-3xl">
+            <FieldShell
+              label="Storage size"
+              htmlFor="storage-size"
+              hint="Allocated disk in GB."
+              error={errors.storageGB}
             >
+              <div className="flex items-center gap-2">
+                <Input
+                  id="storage-size"
+                  type="number"
+                  min={1}
+                  value={values.storageGB}
+                  onChange={(e) => update("storageGB", Number(e.target.value) || 0)}
+                  className={cn("font-mono w-32", errors.storageGB ? "border-danger" : "")}
+                  aria-invalid={!!errors.storageGB}
+                />
+                <span className="font-mono text-[12.5px] text-muted-foreground">GB</span>
+              </div>
+            </FieldShell>
+
+            <FieldShell label="Version" htmlFor="pg-version">
+              <Select
+                value={String(values.versionMajor)}
+                onValueChange={(v) => update("versionMajor", Number(v))}
+              >
+                <SelectTrigger id="pg-version" className="font-mono">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {POSTGRES_VERSIONS.map((v) => (
+                    <SelectItem key={v} value={String(v)}>
+                        PG {v} {v === 17 ? "(default)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldShell>
+
+            <FieldShell
+              label="High availability"
+              htmlFor="ha-toggle"
+              hint="Replicated across 2 instances."
+            >
+              <div className="flex items-center h-10">
+                <Switch
+                  id="ha-toggle"
+                  checked={values.highAvailability}
+                  onCheckedChange={(c) => update("highAvailability", c)}
+                />
+              </div>
+            </FieldShell>
+
+            <FieldShell
+              label="Generate superuser credentials"
+              htmlFor="superuser-toggle"
+              hint="By default the database only exposes a limited app user. Enable to also generate a privileged secret for migrations and admin tasks."
+            >
+              <div className="flex items-center h-10">
+                <Switch
+                  id="superuser-toggle"
+                  checked={values.superuserAccess}
+                  onCheckedChange={(c) => update("superuserAccess", c)}
+                />
+              </div>
+            </FieldShell>
+          </div>
+
+          <Collapsible
+            defaultOpen={values.backup.enabled}
+            className="mt-8 -mx-5 border-t border-border"
+          >
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="group flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-semibold text-foreground hover:bg-muted/30 focus:outline-none transition-colors"
+              >
+                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                  Backups
+                <span className="font-mono text-[10.5px] uppercase tracking-[1px] text-muted-foreground">
+                  {values.backup.enabled ? "on" : "off"}
+                </span>
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-5 pb-5 pt-1">
+                <BackupConfigFields
+                  values={values.backup}
+                  errors={{
+                    objectStoreId: errors["backup.objectStoreId"],
+                    schedule: errors["backup.schedule"],
+                  }}
+                  objectStores={objectStores}
+                  storesLoading={storesLoading}
+                  onChange={(next) => update("backup", next)}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Collapsible
+            defaultOpen={false}
+            className="-mx-5 -mb-4 border-t border-border"
+          >
+            <div className="flex items-center gap-3 hover:bg-muted/30 transition-colors">
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="group flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-semibold text-foreground hover:bg-muted/30 focus:outline-none transition-colors"
+                  className="flex-1 text-left group focus:outline-none px-5 py-3"
                 >
-                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                  Backups
-                  <span className="font-mono text-[10.5px] uppercase tracking-[1px] text-muted-foreground">
-                    {values.backup.enabled ? "on" : "off"}
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                    <span className="text-sm font-semibold text-foreground">Advanced</span>
+                    {isEdit && advancedDirty && (
+                      <span className="font-mono text-[10.5px] uppercase tracking-[1px] font-bold text-brand bg-brand-bg px-1.5 py-0.5 rounded">
+                          Modified
+                      </span>
+                    )}
+                  </div>
                 </button>
               </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-5 pb-5 pt-1">
-                  <BackupConfigFields
-                    values={values.backup}
-                    errors={{
-                      objectStoreId: errors["backup.objectStoreId"],
-                      schedule: errors["backup.schedule"],
-                    }}
-                    objectStores={objectStores}
-                    storesLoading={storesLoading}
-                    onChange={(next) => update("backup", next)}
-                  />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Collapsible
-              defaultOpen={false}
-              className="-mx-5 -mb-4 border-t border-border"
-            >
-              <div className="flex items-center gap-3 hover:bg-muted/30 transition-colors">
-                <CollapsibleTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex-1 text-left group focus:outline-none px-5 py-3"
-                  >
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                      <span className="text-sm font-semibold text-foreground">Advanced</span>
-                      {isEdit && advancedDirty && (
-                        <span className="font-mono text-[10.5px] uppercase tracking-[1px] font-bold text-brand bg-brand-bg px-1.5 py-0.5 rounded">
-                          Modified
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                </CollapsibleTrigger>
-                <a
-                  href={ADVANCED_DOCS_URL}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="text-[12.5px] text-brand hover:text-brand-press hover:underline inline-flex items-center gap-1 whitespace-nowrap pr-5"
-                  onClick={(e) => e.stopPropagation()}
-                >
+              <a
+                href={ADVANCED_DOCS_URL}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-[12.5px] text-brand hover:text-brand-press hover:underline inline-flex items-center gap-1 whitespace-nowrap pr-5"
+                onClick={(e) => e.stopPropagation()}
+              >
                   Read the documentation
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </div>
-              <CollapsibleContent>
-                <div className="px-5 pb-5 pt-3 space-y-2">
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+            <CollapsibleContent>
+              <div className="px-5 pb-5 pt-3 space-y-2">
                 {isEdit && advancedDirty && (
                   <div className="flex items-center justify-between text-xs text-muted-foreground max-w-3xl">
                     <span className="inline-flex items-center gap-1.5">
