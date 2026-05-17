@@ -1,6 +1,5 @@
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -53,45 +52,42 @@ export function RestoreInitFields({
     });
 
   return (
-    <div className="mb-6 border-b border-border pb-6">
-      <h3 className="text-sm font-semibold text-foreground mb-3">
-        Initialization
-      </h3>
-      <RadioGroup
-        value={
-          init.type === "restore_from_object_store" ? "restore" : "new"
-        }
-        onValueChange={(v) =>
-          onChange(
-            v === "restore"
-              ? {
-                type: "restore_from_object_store",
-                sourceAddonId: "",
-                objectStoreId: "",
-              }
-              : { type: "new" },
-          )
-        }
-        className="flex flex-col gap-2 max-w-3xl"
+    <>
+      <FieldShell
+        label="Create"
+        htmlFor="init-mode"
+        hint="Start empty, or restore an existing database to a point in time."
       >
-        <label
-          htmlFor="init-new"
-          className="flex items-center gap-2 cursor-pointer text-sm text-foreground"
+        <Select
+          value={
+            init.type === "restore_from_object_store" ? "restore" : "new"
+          }
+          onValueChange={(v) =>
+            onChange(
+              v === "restore"
+                ? {
+                  type: "restore_from_object_store",
+                  sourceAddonId: "",
+                  objectStoreId: "",
+                }
+                : { type: "new" },
+            )
+          }
         >
-          <RadioGroupItem id="init-new" value="new" />
-          New empty database
-        </label>
-        <label
-          htmlFor="init-restore"
-          className="flex items-center gap-2 cursor-pointer text-sm text-foreground"
-        >
-          <RadioGroupItem id="init-restore" value="restore" />
-          Restore from point in time
-        </label>
-      </RadioGroup>
+          <SelectTrigger id="init-mode" className="max-w-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="new">New empty database</SelectItem>
+            <SelectItem value="restore">
+              Restore from point in time
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </FieldShell>
 
       {restoreSel && (
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
           <FieldShell
             label="Source addon"
             htmlFor="restore-source"
@@ -184,6 +180,6 @@ export function RestoreInitFields({
           )}
         </div>
       )}
-    </div>
+    </>
   );
 }

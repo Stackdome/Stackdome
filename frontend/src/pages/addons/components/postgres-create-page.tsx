@@ -313,7 +313,7 @@ export default function PostgresFormPage() {
       )}
 
       <div className="flex flex-col gap-6">
-        <Panel title="Addon Information">
+        <Panel title="General">
           <div className="grid gap-5 max-w-3xl">
             <FieldShell
               label="Name"
@@ -336,19 +336,19 @@ export default function PostgresFormPage() {
                 aria-invalid={!!errors.name}
               />
             </FieldShell>
+            {!isEdit && (
+              <RestoreInitFields
+                init={values.initialization}
+                restoreSources={restoreSources}
+                objectStores={objectStores}
+                errors={errors}
+                onChange={(next) => update("initialization", next)}
+              />
+            )}
           </div>
         </Panel>
 
         <Panel title="Configuration">
-          {!isEdit && (
-            <RestoreInitFields
-              init={values.initialization}
-              restoreSources={restoreSources}
-              objectStores={objectStores}
-              errors={errors}
-              onChange={(next) => update("initialization", next)}
-            />
-          )}
           <h3 className="text-sm font-semibold text-foreground mb-3">Plan</h3>
           <RadioGroup
             value={values.plan}
