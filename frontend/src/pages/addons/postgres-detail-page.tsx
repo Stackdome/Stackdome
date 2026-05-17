@@ -1,20 +1,9 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  Loader2,
-  PlayCircle,
-  ChevronLeft,
-  ChevronRight,
-  Info,
-} from "lucide-react";
+import { Loader2, PlayCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import cronstrue from "cronstrue";
 import { Button } from "@/components/ui/button";
-import {
-  TooltipProvider,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Panel, EmptyState, FieldShell } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
 import { getCurrentOrganizationId } from "@/helpers/common";
@@ -249,23 +238,17 @@ export default function PostgresDetailPage() {
                   <ReadField label="Object Store">{storeName}</ReadField>
                   <ReadField label="Schedule">
                     {b?.schedule ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        {describeSchedule(b.schedule) ?? b.schedule}
-                        <span className="text-muted-foreground/70">· UTC</span>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              aria-label="Show cron expression"
-                              className="text-muted-foreground hover:text-foreground"
-                            >
-                              <Info className="h-3.5 w-3.5" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent className="font-mono text-xs">
-                            {b.schedule}
-                          </TooltipContent>
-                        </Tooltip>
+                      <span className="flex flex-col gap-0.5">
+                        <span>
+                          {describeSchedule(b.schedule) ?? b.schedule}
+                          <span className="text-muted-foreground/70">
+                            {" "}
+                            · UTC
+                          </span>
+                        </span>
+                        <code className="select-all font-mono text-xs text-muted-foreground/70">
+                          {b.schedule}
+                        </code>
                       </span>
                     ) : (
                       "—"
