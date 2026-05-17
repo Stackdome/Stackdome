@@ -1105,23 +1105,3 @@ pkill -f stackdome-server
 - **Community**: Join discussions on GitHub Discussions
 
 **Bootstrap complete!** You now have a fully functional Stackdome platform ready to deploy applications across Kubernetes clusters.
-
-## Backups (with MinIO)
-
-To work on the Postgres backup feature locally, run a MinIO container as the S3-compatible destination:
-
-```bash
-docker compose -f docker-compose.dev.yml up -d
-```
-
-- API: http://localhost:9000
-- Console: http://localhost:9001 (login: `minioadmin` / `minioadmin`)
-- Pre-created bucket: `stackdome-backups`
-
-In the Stackdome UI:
-1. Create a Generic Secret named `minio-creds` with two keys: `accessKeyId=minioadmin`, `secretAccessKey=minioadmin`.
-2. Create an Object Store with provider S3, region `us-east-1`, destination path `s3://stackdome-backups/<addon-name>`, and pick the two keys from the secret above. For the endpoint URL:
-   - **From the Stackdome API server running on the host:** `http://localhost:9000`
-   - **From inside the Kind cluster (where CNPG actually runs the backup):** the cluster cannot reach `localhost`. You'll need to either (a) port-forward MinIO into the cluster, or (b) deploy MinIO inside the cluster instead of via this compose file. Pick whichever works for your setup and document it in your local notes.
-
-> Note: `us-east-1` is a placeholder — MinIO doesn't enforce it, but the AWS SDK on the client side requires a non-empty region, so don't leave it blank.
