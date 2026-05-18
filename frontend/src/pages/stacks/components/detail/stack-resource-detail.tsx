@@ -46,9 +46,9 @@ export default function StackResourceDetail({
   const statusVariant = variantFromState(statusObj.state);
   const statusDotColor =
     statusVariant === "ready" ? "bg-success"
-    : statusVariant === "error" ? "bg-danger"
-    : statusVariant === "pending" ? "bg-warn"
-    : "bg-muted-foreground";
+      : statusVariant === "error" ? "bg-danger"
+        : statusVariant === "pending" ? "bg-warn"
+          : "bg-muted-foreground";
 
   const ensureAbsoluteUrl = (url: string): string => {
     if (!url) return url;

@@ -3,7 +3,11 @@ import {
   convertApiResourceToFormResource,
   convertFormStackToApiStack,
 } from "../form-schema";
+import type { FormStackData } from "../form-schema";
 import type { StackResource } from "@/api/stacks";
+
+type ApiResourceArg = Parameters<typeof convertApiResourceToFormResource>[0];
+type Loose = Record<string, unknown>;
 
 const TOOLJET_ADDON_ID = "57fa98c8-27ca-47a8-9761-15504d60d349";
 
@@ -24,12 +28,12 @@ const baseResource = (extras: Partial<StackResource["execution_config"]> = {}) =
 describe("env round-trip", () => {
   it("loads a stack literal env var as a 'stack' row", () => {
     const r = baseResource({ environment_variables: [{ name: "PORT", value: "80" }] });
-    const form = convertApiResourceToFormResource(r as any);
+    const form = convertApiResourceToFormResource(r as unknown as ApiResourceArg);
     expect(form.execution_config?.environment_variables).toHaveLength(1);
     const row = form.execution_config!.environment_variables![0];
     expect(row.from).toBe("stack");
     expect(row.name).toBe("PORT");
-    expect((row as any).value).toBe("80");
+    expect((row as Loose).value).toBe("80");
   });
 
   it("loads a secret-backed env var as a 'secret' row", () => {
@@ -38,11 +42,11 @@ describe("env round-trip", () => {
         { name: "STRIPE", secret_ref: { secret_id: "sec-1" }, key: "live" },
       ],
     });
-    const form = convertApiResourceToFormResource(r as any);
+    const form = convertApiResourceToFormResource(r as unknown as ApiResourceArg);
     const row = form.execution_config!.environment_variables![0];
     expect(row.from).toBe("secret");
-    expect((row as any).secretId).toBe("sec-1");
-    expect((row as any).secretKey).toBe("live");
+    expect((row as Loose).secretId).toBe("sec-1");
+    expect((row as Loose).secretKey).toBe("live");
   });
 
   it("fans out one env_from_addons entry into one row per credField", () => {
@@ -62,7 +66,7 @@ describe("env round-trip", () => {
         },
       ],
     });
-    const form = convertApiResourceToFormResource(r as any);
+    const form = convertApiResourceToFormResource(r as unknown as ApiResourceArg);
     const addonRows = form.execution_config!.environment_variables!.filter(
       (r) => r.from === "addon",
     );
@@ -71,10 +75,10 @@ describe("env round-trip", () => {
       ["PG_HOST", "PG_PORT", "PG_USER"].sort(),
     );
     addonRows.forEach((r) => {
-      expect((r as any).addonId).toBe(TOOLJET_ADDON_ID);
-      expect((r as any).database).toBe("tooljet");
-      expect((r as any).superuser).toBe(false);
-      expect((r as any).addonType).toBe("postgres");
+      expect((r as Loose).addonId).toBe(TOOLJET_ADDON_ID);
+      expect((r as Loose).database).toBe("tooljet");
+      expect((r as Loose).superuser).toBe(false);
+      expect((r as Loose).addonType).toBe("postgres");
     });
   });
 
@@ -98,7 +102,7 @@ describe("env round-trip", () => {
         volumes: [],
       },
     };
-    const api = convertFormStackToApiStack(formStack as any);
+    const api = convertFormStackToApiStack(formStack as unknown as FormStackData);
     const ec = api.spec.stack_resources[0].execution_config!;
     expect(ec.env_from_addons).toHaveLength(1);
     expect(ec.env_from_addons![0].postgres!.addon_id).toBe(TOOLJET_ADDON_ID);
@@ -130,7 +134,7 @@ describe("env round-trip", () => {
         volumes: [],
       },
     };
-    const api = convertFormStackToApiStack(formStack as any);
+    const api = convertFormStackToApiStack(formStack as unknown as FormStackData);
     const entries = api.spec.stack_resources[0].execution_config!.env_from_addons!;
     expect(entries).toHaveLength(2);
     const dbs = entries.map((e) => e.postgres!.database).sort();
@@ -156,7 +160,7 @@ describe("env round-trip", () => {
         volumes: [],
       },
     };
-    const api = convertFormStackToApiStack(formStack as any);
+    const api = convertFormStackToApiStack(formStack as unknown as FormStackData);
     const pg = api.spec.stack_resources[0].execution_config!.env_from_addons![0].postgres!;
     expect(pg.superuser).toBe(true);
     expect(pg.database).toBeUndefined();
@@ -179,7 +183,7 @@ describe("env round-trip", () => {
         },
       ],
     });
-    const form = convertApiResourceToFormResource(r as any);
+    const form = convertApiResourceToFormResource(r as unknown as ApiResourceArg);
     const rows = form.execution_config!.environment_variables!;
     expect(rows.map((r) => r.from).sort()).toEqual(["addon", "secret", "stack"]);
   });
@@ -214,7 +218,7 @@ describe("env round-trip", () => {
         volumes: [],
       },
     };
-    const api = convertFormStackToApiStack(formStack as any);
+    const api = convertFormStackToApiStack(formStack as unknown as FormStackData);
     const entries = api.spec.stack_resources[0].execution_config!.env_from_addons!;
     expect(entries).toHaveLength(1);
     expect(entries[0].postgres!.addon_id).toBe("deleted-addon-id");
@@ -240,7 +244,7 @@ describe("env round-trip", () => {
         volumes: [],
       },
     };
-    const api = convertFormStackToApiStack(formStack as any);
+    const api = convertFormStackToApiStack(formStack as unknown as FormStackData);
     const ec = api.spec.stack_resources[0].execution_config!;
     expect(ec.env_from_addons ?? []).toHaveLength(0);
   });

@@ -87,8 +87,8 @@ export function EnvRow({
         isOrphanAddon
           ? "border-l-4 border-l-warn/60 pl-2 bg-warn/5"
           : isDirty
-          ? "border-l-4 border-l-brand bg-brand-bg"
-          : ""
+            ? "border-l-4 border-l-brand bg-brand-bg"
+            : ""
       }`}
       data-testid={`env-row-${resourceIndex}-${index}`}
       onBlur={onBlur}

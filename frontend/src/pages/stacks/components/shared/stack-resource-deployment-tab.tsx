@@ -35,7 +35,7 @@ export interface DeploymentDraft {
 
 export function pickDeploymentDraft(resource: Resource): DeploymentDraft {
   const ec = resource.execution_config;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const stripped = ec ? (() => { const { environment_variables, ...rest } = ec; return rest; })() : undefined;
   return {
     init_spec: resource.init_spec,

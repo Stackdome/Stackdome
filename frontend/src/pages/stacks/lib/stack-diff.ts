@@ -179,15 +179,15 @@ function diffOneResource(
   const dirty = isResourceDirty(d, b);
   const entry: ResourceDiffEntry = dirty
     ? {
-        dirty: true,
-        stats: {
-          rowsChanged: countEnvRowsChanged(d, b),
-          fieldsChanged: countChangedFields(
+      dirty: true,
+      stats: {
+        rowsChanged: countEnvRowsChanged(d, b),
+        fieldsChanged: countChangedFields(
             d as Record<string, unknown> | undefined,
             b as Record<string, unknown> | undefined,
-          ),
-        },
-      }
+        ),
+      },
+    }
     : { dirty: false };
   if (d && typeof d === "object") resourceDiffCache.set(d, entry);
   return entry;
@@ -204,14 +204,14 @@ function diffOneVolume(
   const dirty = isVolumeDirty(d, b);
   const entry: VolumeDiffEntry = dirty
     ? {
-        dirty: true,
-        stats: {
-          fieldsChanged: countChangedFields(
+      dirty: true,
+      stats: {
+        fieldsChanged: countChangedFields(
             d as Record<string, unknown> | undefined,
             b as Record<string, unknown> | undefined,
-          ),
-        },
-      }
+        ),
+      },
+    }
     : { dirty: false };
   if (d && typeof d === "object") volumeDiffCache.set(d, entry);
   return entry;

@@ -484,73 +484,73 @@ export default function StackCreatePage() {
 
       <div className="flex flex-col gap-8">
         <Panel title="Stack Information">
-            <div className="grid gap-6 max-w-5xl">
-              <div>
-                <UILabel htmlFor="stack-name" className="text-sm font-medium flex items-center gap-1 mb-2">
+          <div className="grid gap-6 max-w-5xl">
+            <div>
+              <UILabel htmlFor="stack-name" className="text-sm font-medium flex items-center gap-1 mb-2">
                   Stack Name <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span>
-                </UILabel>
-                <Input
-                  id="stack-name"
-                  value={formData.name || ""}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  className={`max-w-md ${formErrors.name ? "border-danger" : ""}`}
-                  placeholder="my-application-stack"
-                  required
-                  aria-invalid={!!formErrors.name}
-                />
-                <FieldError>{formErrors.name}</FieldError>
-              </div>
-
-              <div>
-                <UILabel htmlFor="stack-labels" className="text-sm font-medium flex items-center gap-1 mb-2">
-                  Labels
-                </UILabel>
-                <div className="flex items-center">
-                  <Input
-                    id="stack-labels"
-                    value={currentLabelInput}
-                    onChange={handleLabelInputChange}
-                    onKeyDown={handleAddLabel}
-                    className={`max-w-md ${formErrors.labels ? "border-danger" : ""}`}
-                    placeholder="e.g., dev, prod, mytag (press Enter to add)"
-                    aria-invalid={!!formErrors.labels}
-                  />
-                </div>
-                <FieldError className="whitespace-pre-line">{formErrors.labels}</FieldError>
-                {(formData.labels || []).map((_label, idx) => {
-                  const keyError = formErrors[`labels.${idx}.key`];
-                  const valueError = formErrors[`labels.${idx}.value`];
-                  const itemError = formErrors[`labels.${idx}`];
-                  return (
-                    <Fragment key={`label-err-${idx}`}>
-                      <FieldError>{itemError && `Label ${idx + 1}: ${itemError}`}</FieldError>
-                      <FieldError>{keyError && `Label ${idx + 1} Key: ${keyError}`}</FieldError>
-                      <FieldError>{valueError && `Label ${idx + 1} Value: ${valueError}`}</FieldError>
-                    </Fragment>
-                  );
-                })}
-                {(formData.labels && formData.labels.length > 0) && (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {(formData.labels).map((label, idx) => (
-                      <Badge
-                        key={idx}
-                        variant="secondary"
-                        className="flex items-center gap-1 px-2.5 py-1"
-                      >
-                        <span>{label.value}</span>
-                        <button
-                          onClick={() => removeLabel(idx)}
-                          className="ml-1 rounded-full hover:bg-secondary-foreground/20 h-4 w-4 flex items-center justify-center"
-                          type="button"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
+              </UILabel>
+              <Input
+                id="stack-name"
+                value={formData.name || ""}
+                onChange={(e) => handleChange("name", e.target.value)}
+                className={`max-w-md ${formErrors.name ? "border-danger" : ""}`}
+                placeholder="my-application-stack"
+                required
+                aria-invalid={!!formErrors.name}
+              />
+              <FieldError>{formErrors.name}</FieldError>
             </div>
+
+            <div>
+              <UILabel htmlFor="stack-labels" className="text-sm font-medium flex items-center gap-1 mb-2">
+                  Labels
+              </UILabel>
+              <div className="flex items-center">
+                <Input
+                  id="stack-labels"
+                  value={currentLabelInput}
+                  onChange={handleLabelInputChange}
+                  onKeyDown={handleAddLabel}
+                  className={`max-w-md ${formErrors.labels ? "border-danger" : ""}`}
+                  placeholder="e.g., dev, prod, mytag (press Enter to add)"
+                  aria-invalid={!!formErrors.labels}
+                />
+              </div>
+              <FieldError className="whitespace-pre-line">{formErrors.labels}</FieldError>
+              {(formData.labels || []).map((_label, idx) => {
+                const keyError = formErrors[`labels.${idx}.key`];
+                const valueError = formErrors[`labels.${idx}.value`];
+                const itemError = formErrors[`labels.${idx}`];
+                return (
+                  <Fragment key={`label-err-${idx}`}>
+                    <FieldError>{itemError && `Label ${idx + 1}: ${itemError}`}</FieldError>
+                    <FieldError>{keyError && `Label ${idx + 1} Key: ${keyError}`}</FieldError>
+                    <FieldError>{valueError && `Label ${idx + 1} Value: ${valueError}`}</FieldError>
+                  </Fragment>
+                );
+              })}
+              {(formData.labels && formData.labels.length > 0) && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {(formData.labels).map((label, idx) => (
+                    <Badge
+                      key={idx}
+                      variant="secondary"
+                      className="flex items-center gap-1 px-2.5 py-1"
+                    >
+                      <span>{label.value}</span>
+                      <button
+                        onClick={() => removeLabel(idx)}
+                        className="ml-1 rounded-full hover:bg-secondary-foreground/20 h-4 w-4 flex items-center justify-center"
+                        type="button"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </Panel>
         <Panel
           title="Stack Resources"
@@ -558,23 +558,23 @@ export default function StackCreatePage() {
           bodyClassName="p-0"
           invalid={!!formErrors["spec.stack_resources"]}
         >
-            <StackResourcesForm
-              resources={formData.spec?.stack_resources || []}
-              onResourcesChange={handleResourcesChange}
-              errors={resourcesErrors}
-              emptyError={formErrors["spec.stack_resources"]}
-              volumes={formData.spec?.volumes || []}
-              availableAddonIds={(() => {
-                const ids = new Set(linkedAddonIds);
-                for (const r of formData.spec?.stack_resources || []) {
-                  const envs = (r?.execution_config?.environment_variables || []) as Array<{ from?: string; addonId?: string }>;
-                  for (const e of envs) {
-                    if (e.from === "addon" && e.addonId) ids.add(e.addonId);
-                  }
+          <StackResourcesForm
+            resources={formData.spec?.stack_resources || []}
+            onResourcesChange={handleResourcesChange}
+            errors={resourcesErrors}
+            emptyError={formErrors["spec.stack_resources"]}
+            volumes={formData.spec?.volumes || []}
+            availableAddonIds={(() => {
+              const ids = new Set(linkedAddonIds);
+              for (const r of formData.spec?.stack_resources || []) {
+                const envs = (r?.execution_config?.environment_variables || []) as Array<{ from?: string; addonId?: string }>;
+                for (const e of envs) {
+                  if (e.from === "addon" && e.addonId) ids.add(e.addonId);
                 }
-                return ids;
-              })()}
-            />
+              }
+              return ids;
+            })()}
+          />
         </Panel>
 
         <Panel
@@ -582,11 +582,11 @@ export default function StackCreatePage() {
           count={formData.spec?.volumes?.length ?? 0}
           bodyClassName="p-0"
         >
-            <StackVolumesForm
-              volumes={formData.spec?.volumes || []}
-              onVolumesChange={handleVolumesChange}
-              errors={volumesErrors}
-            />
+          <StackVolumesForm
+            volumes={formData.spec?.volumes || []}
+            onVolumesChange={handleVolumesChange}
+            errors={volumesErrors}
+          />
         </Panel>
 
         <AddonsInStackPanel

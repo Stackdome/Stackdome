@@ -1,6 +1,6 @@
 import { load } from "js-yaml";
 
-type StackCompose = Record<string, any>;
+type StackCompose = Record<string, unknown>;
 
 // Sample stack configuration for demo purposes
 const SAMPLE_STACK = `
@@ -103,23 +103,23 @@ volumes:
 
 export function parseYaml(yamlContent: string): StackCompose {
   try {
-    const parsed = load(yamlContent) as Record<string, any>;
-    
+    const parsed = load(yamlContent) as Record<string, unknown>;
+
     // Basic validation
     if (typeof parsed !== 'object' || parsed === null) {
       throw new Error("Invalid YAML: Expected an object");
     }
-    
+
     // Convert the parsed YAML to our StackCompose type
     const stackCompose: StackCompose = { ...parsed };
-    
+
     // Remove any non-object properties except for 'volumes'
     Object.keys(stackCompose).forEach(key => {
       if (key !== 'volumes' && (typeof stackCompose[key] !== 'object' || stackCompose[key] === null)) {
         delete stackCompose[key];
       }
     });
-    
+
     return stackCompose;
   } catch (error) {
     console.error("Failed to parse YAML:", error);
