@@ -45,4 +45,14 @@ describe("useCurrentUser", () => {
     const { result } = renderHook(() => useCurrentUser(), { wrapper });
     await waitFor(() => expect(result.current.isOrgAdmin).toBe(true));
   });
+
+  it("retains the stored user when the refresh API call fails", async () => {
+    vi.mocked(getStoredUser).mockReturnValue({ id: "u4", role: "OrgAdmin", organisation_id: "org-1" } as never);
+    vi.mocked(fetchCurrentUser).mockRejectedValue(new Error("network down"));
+    const { result } = renderHook(() => useCurrentUser(), { wrapper });
+    expect(result.current.isOrgAdmin).toBe(true);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.isOrgAdmin).toBe(true);
+    expect(result.current.organisationId).toBe("org-1");
+  });
 });

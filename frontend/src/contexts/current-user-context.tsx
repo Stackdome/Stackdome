@@ -33,12 +33,12 @@ export function CurrentUserProvider({ children }: { children: React.ReactNode })
     void refresh();
   }, [refresh]);
 
-  const value: CurrentUserValue = {
+  const value = React.useMemo<CurrentUserValue>(() => ({
     user,
     isOrgAdmin: user?.role === "OrgAdmin",
     organisationId: user?.organisation_id ?? null,
     loading,
     refresh,
-  };
+  }), [user, loading, refresh]);
   return <CurrentUserContext.Provider value={value}>{children}</CurrentUserContext.Provider>;
 }
