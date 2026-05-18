@@ -41,4 +41,13 @@ describe("InviteDialog state machine", () => {
     await waitFor(() => expect(screen.getByText(/couldn.t send the email/i)).toBeTruthy());
     expect(screen.getByText(/tok_def/)).toBeTruthy();
   });
+
+  it("on API failure shows the server error and keeps the form", async () => {
+    create.mockRejectedValueOnce(new Error("boom"));
+    render(<InviteDialog open onOpenChange={() => {}} onCreated={() => {}} />);
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "a@b.io" } });
+    fireEvent.click(screen.getByRole("button", { name: /send invite/i }));
+    await waitFor(() => expect(screen.getByText(/boom/i)).toBeTruthy());
+    expect(screen.getByRole("button", { name: /send invite/i })).toBeTruthy();
+  });
 });

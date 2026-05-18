@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Copy, Check, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -18,10 +17,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { FieldShell } from "@/components/branded";
 import { inviteSchema } from "../schemas/invite-schema";
 import { useInvites } from "../hooks/use-invites";
 import { useTeamOptions } from "../hooks/use-team-options";
-import type { ZodError } from "zod";
+import { getErrorMessage } from "@/api/client";
 
 type Phase = "form" | "submitting" | "success-sent" | "success-failed";
 
@@ -32,10 +32,11 @@ interface InviteDialogProps {
 }
 
 export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProps) {
-  const { create, submitting, serverError } = useInvites();
+  const { create, submitting } = useInvites();
   const { teams } = useTeamOptions();
 
-  const defaultTeam = teams.find((t) => t.default_team)?.name ?? teams[0]?.name ?? "";
+  // FIX 4: memoize default-team lookup
+  const defaultTeam = useMemo(() => teams.find((t) => t.default_team)?.name ?? teams[0]?.name ?? "", [teams]);
 
   const [phase, setPhase] = useState<Phase>("form");
   const [email, setEmail] = useState("");
@@ -46,6 +47,16 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
   const [resultToken, setResultToken] = useState("");
   const [copied, setCopied] = useState(false);
   const [localServerError, setLocalServerError] = useState<string | null>(null);
+
+  // FIX 2: ref to track copy timeout for cleanup
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // FIX 2: cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   const resolvedTeam = teamName || defaultTeam;
 
@@ -59,6 +70,11 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
     setResultToken("");
     setCopied(false);
     setLocalServerError(null);
+    // FIX 2: clear pending copy timeout on reset
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = null;
+    }
   }
 
   function handleOpenChange(val: boolean) {
@@ -78,8 +94,8 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
     });
 
     if (!parsed.success) {
-      const zodErr = parsed.error as ZodError;
-      for (const issue of zodErr.issues) {
+      // FIX 5: remove redundant `as ZodError` cast
+      for (const issue of parsed.error.issues) {
         if (issue.path[0] === "email") setEmailError(issue.message);
         if (issue.path[0] === "team_name") setTeamError(issue.message);
       }
@@ -92,8 +108,9 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
       setResultToken(res.token ?? "");
       setPhase(res.invite.email_sent ? "success-sent" : "success-failed");
       onCreated();
-    } catch {
-      setLocalServerError(serverError ?? "Something went wrong");
+    } catch (e) {
+      // FIX 1: read message from the thrown error directly (not stale hook state)
+      setLocalServerError(getErrorMessage(e));
       setPhase("form");
     }
   }
@@ -101,7 +118,12 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
   function handleCopy() {
     void navigator.clipboard.writeText(resultToken);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // FIX 2: clear any existing timeout before setting a new one
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => {
+      setCopied(false);
+      copyTimeoutRef.current = null;
+    }, 2000);
   }
 
   const isSubmitting = phase === "submitting" || submitting;
@@ -122,9 +144,8 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
             )}
 
             <div className="space-y-4">
-              {/* Email field */}
-              <div className="space-y-1.5">
-                <Label htmlFor="invite-email">Email</Label>
+              {/* FIX 3: Email field wrapped in FieldShell */}
+              <FieldShell label="Email" htmlFor="invite-email" error={emailError}>
                 <Input
                   id="invite-email"
                   type="email"
@@ -137,14 +158,10 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                   className={emailError ? "border-danger" : ""}
                   aria-label="Email"
                 />
-                {emailError && (
-                  <p className="text-sm text-danger">{emailError}</p>
-                )}
-              </div>
+              </FieldShell>
 
-              {/* Team field */}
-              <div className="space-y-1.5">
-                <Label htmlFor="invite-team">Team</Label>
+              {/* FIX 3: Team field wrapped in FieldShell */}
+              <FieldShell label="Team" htmlFor="invite-team" error={teamError}>
                 <Select
                   value={resolvedTeam}
                   onValueChange={(v) => {
@@ -163,14 +180,10 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                     ))}
                   </SelectContent>
                 </Select>
-                {teamError && (
-                  <p className="text-sm text-danger">{teamError}</p>
-                )}
-              </div>
+              </FieldShell>
 
-              {/* Role field */}
-              <div className="space-y-2">
-                <Label>Role</Label>
+              {/* FIX 3: Role field wrapped in FieldShell */}
+              <FieldShell label="Role">
                 <RadioGroup
                   value={role}
                   onValueChange={(v) => setRole(v as "Developer" | "Viewer")}
@@ -192,7 +205,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                     </label>
                   ))}
                 </RadioGroup>
-              </div>
+              </FieldShell>
             </div>
 
             <DialogFooter>
