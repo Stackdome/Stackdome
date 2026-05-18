@@ -72,8 +72,16 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
   }
 
   async function handleCopyId() {
-    await navigator.clipboard.writeText(row.id);
-    toast({ title: "Copied", description: "User ID copied to clipboard." });
+    try {
+      await navigator.clipboard.writeText(row.id);
+      toast({ title: "Copied", description: "User ID copied to clipboard." });
+    } catch (err) {
+      toast({
+        title: "Couldn't copy ID",
+        description: err instanceof Error ? err.message : "Clipboard access was denied.",
+        variant: "destructive",
+      });
+    }
   }
 
   return (
