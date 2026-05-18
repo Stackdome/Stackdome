@@ -136,9 +136,9 @@ function StackResourceItemImpl({
   const statusVariant = variantFromState(statusObj.state);
   const statusDotColor =
     statusVariant === "ready" ? "bg-success"
-    : statusVariant === "error" ? "bg-danger"
-    : statusVariant === "pending" ? "bg-warn"
-    : "bg-muted-foreground";
+      : statusVariant === "error" ? "bg-danger"
+        : statusVariant === "pending" ? "bg-warn"
+          : "bg-muted-foreground";
 
   // Per-tab projections. Done in useMemo so the projected object's identity
   // only changes when the tab's own fields change — which is what lets
