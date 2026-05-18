@@ -18,6 +18,11 @@ import { isUserLoggedIn, logoutAndRedirect } from "@/helpers/common"
 import { AppLayout } from "@/components/app-layout"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/contexts/theme-provider"
+import { CurrentUserProvider } from "@/contexts/current-user-context"
+import { RequireAdmin } from "@/components/require-admin"
+import UsersPage from "@/pages/users"
+import TeamsPage from "@/pages/teams"
+import TeamDetailPage from "@/pages/teams/team-detail"
 
 const Logout = () => {
   logoutAndRedirect("/sign-in");
@@ -50,6 +55,11 @@ const router = createBrowserRouter(
         <Route path="/addons/postgres/:id/edit" element={<PostgresFormPage />} />
         <Route path="/addons/postgres/:id" element={<PostgresDetailPage />} />
         <Route path="/domains" element={<DomainsPage />} />
+        <Route element={<RequireAdmin />}>
+          <Route path="/settings/users" element={<UsersPage />} />
+          <Route path="/settings/teams" element={<TeamsPage />} />
+          <Route path="/settings/teams/:teamName" element={<TeamDetailPage />} />
+        </Route>
       </Route>
       <Route path="/sign-in" element={<Login />} />
       <Route path="/sign-up" element={<Signup />} />
@@ -63,7 +73,9 @@ function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="stackdome-ui-theme">
       <StackProvider>
-        <RouterProvider router={router} />
+        <CurrentUserProvider>
+          <RouterProvider router={router} />
+        </CurrentUserProvider>
         <Toaster />
       </StackProvider>
     </ThemeProvider>
