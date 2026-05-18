@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { Users } from "lucide-react";
 import { useTeams } from "./hooks/use-teams";
 import { CreateTeamDialog } from "./components/create-team-dialog";
+import { DeleteTeamDialog } from "./components/delete-team-dialog";
 import { TeamRowMenu } from "./components/team-row-menu";
 import { PageHeader, EmptyState, StackdomeMark } from "@/components/branded";
 import { Button } from "@/components/ui/button";
@@ -18,11 +19,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
+import type { Team } from "@/api/teams";
 
 export default function TeamsPage() {
-  const { teams, loading, error, refetch, create, onlyDefault } = useTeams();
+  const { teams, loading, error, refetch, create, remove, onlyDefault } = useTeams();
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Team | null>(null);
 
   async function handleCreate(name: string) {
     const result = await create(name);
@@ -125,7 +128,7 @@ export default function TeamsPage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="p-2 text-right">
-                      <TeamRowMenu team={team} />
+                      <TeamRowMenu team={team} onDelete={(t) => setDeleteTarget(t)} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -152,6 +155,30 @@ export default function TeamsPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreate={handleCreate}
+      />
+
+      <DeleteTeamDialog
+        open={!!deleteTarget}
+        teamName={deleteTarget?.name ?? ""}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          const name = deleteTarget.name;
+          const result = await remove(name);
+          if (result.ok) {
+            toast({
+              title: "Team deleted",
+              description: `"${name}" has been deleted.`,
+            });
+            setDeleteTarget(null);
+          } else {
+            toast({
+              title: "Failed to delete team",
+              description: result.error,
+              variant: "destructive",
+            });
+          }
+        }}
       />
     </div>
   );
