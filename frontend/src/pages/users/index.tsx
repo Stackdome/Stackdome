@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -104,6 +105,7 @@ export default function UsersPage() {
         eyebrow="Settings"
         title="Users"
         actions={
+          // TODO(Task 13): wire invite dialog
           <Button onClick={() => {}}>
             Invite user
           </Button>
@@ -154,7 +156,7 @@ export default function UsersPage() {
             <TableBody>
               {Array.from({ length: 8 }).map((_, i) => (
                 <TableRow key={i} className="hover:bg-transparent">
-                  <td className="p-2">
+                  <TableCell className="p-2">
                     <div className="flex items-center gap-3">
                       <Skeleton className="size-7 rounded-full shrink-0" />
                       <div className="space-y-1.5">
@@ -162,11 +164,11 @@ export default function UsersPage() {
                         <Skeleton className="h-2.5 w-36" />
                       </div>
                     </div>
-                  </td>
-                  <td className="p-2"><Skeleton className="h-5 w-20" /></td>
-                  <td className="p-2"><Skeleton className="h-5 w-40" /></td>
-                  <td className="p-2"><Skeleton className="h-3 w-16" /></td>
-                  <td className="p-2" />
+                  </TableCell>
+                  <TableCell className="p-2"><Skeleton className="h-5 w-20" /></TableCell>
+                  <TableCell className="p-2"><Skeleton className="h-5 w-40" /></TableCell>
+                  <TableCell className="p-2"><Skeleton className="h-3 w-16" /></TableCell>
+                  <TableCell className="p-2" />
                 </TableRow>
               ))}
             </TableBody>
@@ -189,6 +191,7 @@ export default function UsersPage() {
           title="No users yet"
           description="Invite your first teammate to get started."
           action={
+            // TODO(Task 13): wire invite dialog
             <Button variant="outline" onClick={() => {}}>
               Invite user
             </Button>

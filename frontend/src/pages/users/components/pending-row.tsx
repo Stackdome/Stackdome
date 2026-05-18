@@ -47,10 +47,11 @@ export function PendingRow({ row, actions }: PendingRowProps) {
           <span className="font-mono text-[11px] text-muted-foreground">—</span>
         )}
       </TableCell>
+      {/* Shared "Last active" column — intentionally repurposed for invite expiry per approved design */}
       <TableCell className="py-3">
         {row.expires_at ? (
           <span className="font-mono text-[11px] text-warn">
-            expires {new Date(row.expires_at).toLocaleDateString()}
+            Expires {new Date(row.expires_at).toLocaleDateString()}
           </span>
         ) : (
           <span className="font-mono text-[11px] text-muted-foreground">—</span>

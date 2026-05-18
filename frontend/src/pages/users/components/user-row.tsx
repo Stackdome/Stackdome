@@ -44,7 +44,7 @@ export function UserRow({ row, actions }: UserRowProps) {
       <TableCell className="py-3">
         <div className="flex flex-wrap gap-1">
           {row.teams.length > 0
-            ? row.teams.map((t, i) => <TeamChip key={t.team_id ?? i} t={t} />)
+            ? row.teams.map((t, i) => <TeamChip key={t.team_id ?? i} membership={t} />)
             : <span className="text-muted-foreground text-xs">—</span>
           }
         </div>
