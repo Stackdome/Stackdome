@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,9 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
   const [phase, setPhase] = useState<Phase>("form");
   const { signup } = useSignup();
   const navigate = useNavigate();
+  const navTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => () => { if (navTimerRef.current) clearTimeout(navTimerRef.current); }, []);
 
   const expiresFormatted = (() => {
     if (!info.expires_at) return "";
@@ -73,7 +76,7 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
           setAuthSession(response.jwt_token, response.user);
         }
         setPhase("accepted");
-        setTimeout(() => navigate("/"), 1200);
+        navTimerRef.current = setTimeout(() => navigate("/"), 1200);
       },
       (err: unknown) => {
         if (isErrorStatus(err, 409)) {
