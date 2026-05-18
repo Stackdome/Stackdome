@@ -1,6 +1,8 @@
 package shared
 
 import (
+	"fmt"
+
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 )
 
@@ -51,6 +53,7 @@ var PostgresEnvMapping = map[string]string{
 const (
 	CrashResourceName = "crash-app"
 	CrashImage        = "busybox:1.36"
+	CrashMessage      = "application crashed with fatal error"
 )
 
 // Build from source fixture values
@@ -314,7 +317,7 @@ func CreateCrashingStack(name string) *openapi.Stack {
 	imageSpec := openapi.NewImageSpec(CrashImage)
 	resource.SetImageSpec(*imageSpec)
 	exec := openapi.NewExecutionConfig()
-	exec.SetCommand([]string{"sh", "-c", "exit 1"})
+	exec.SetCommand([]string{"sh", "-c", fmt.Sprintf("echo '%s'; exit 1", CrashMessage)})
 	resource.SetExecutionConfig(*exec)
 
 	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})

@@ -493,11 +493,10 @@ var _ = Describe("Stack E2E", Ordered, func() {
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
 
-			By("Waiting for the resource to enter Failed state")
-			shared.WaitForStackResourceFailed(client, orgID, teamName, stackID, shared.CrashResourceName, 3*time.Minute)
-
 			By("Waiting for last_failure to be populated on the resource")
-			lastFailure := shared.WaitForStackResourceLastFailure(client, orgID, teamName, stackID, shared.CrashResourceName, 2*time.Minute)
+			// Crashing containers stay in Pending phase (not Failed) — we poll for last_failure directly.
+			// Allow enough time for: image validation + deployment creation + crash + cluster-agent capture + DB sync.
+			lastFailure := shared.WaitForStackResourceLastFailure(client, orgID, teamName, stackID, shared.CrashResourceName, 5*time.Minute)
 
 			By("Verifying last_failure has the correct type and container details")
 			Expect(lastFailure.Type).NotTo(BeNil())
@@ -507,6 +506,10 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(lastFailure.Container.FailureType).NotTo(BeNil())
 			Expect(*lastFailure.Container.FailureType).To(BeElementOf("exit_error", "crash_loop"),
 				"failure_type should be exit_error or crash_loop depending on restart count")
+
+			Expect(lastFailure.Container.Message).NotTo(BeNil(), "message should contain container logs before exit")
+			Expect(*lastFailure.Container.Message).To(ContainSubstring(shared.CrashMessage),
+				"message should contain the output printed before the container exited")
 
 			Expect(lastFailure.Build).To(BeNil(), "build failure should not be set for a runtime crash")
 		})
