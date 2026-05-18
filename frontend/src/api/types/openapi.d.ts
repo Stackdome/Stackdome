@@ -150,10 +150,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get a the current authenticated user
-         * @description Get a the current authenticated user
-         */
+        /** Get the current authenticated user */
         get: {
             parameters: {
                 query?: never;
@@ -189,6 +186,58 @@ export interface paths {
                     content: {
                         "application/json": components["schemas"]["Error"];
                     };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/current/teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List teams for the current authenticated user */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Teams listed successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeamList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
                 /** @description Internal server error */
                 500: {
@@ -270,7 +319,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/default": {
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh JWT token
+         * @description Exchange a refresh token for a new access token
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RefreshTokenRequest"];
+                };
+            };
+            responses: {
+                /** @description Token refreshed successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RefreshTokenResponse"];
+                    };
+                };
+                /** @description Invalid or expired refresh token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/github": {
         parameters: {
             query?: never;
             header?: never;
@@ -278,8 +388,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get the default organization
-         * @description Get the default organization
+         * Initiate GitHub OAuth flow
+         * @description Redirects the user to GitHub for OAuth authorization
          */
         get: {
             parameters: {
@@ -290,26 +400,64 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Default organization fetched successfully */
+                /** @description Redirect to GitHub OAuth authorization page */
+                302: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/github/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GitHub OAuth callback
+         * @description Handles the callback from GitHub after OAuth authorization
+         */
+        get: {
+            parameters: {
+                query: {
+                    code: string;
+                    state: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OAuth login successful */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Organisation"];
+                        "application/json": components["schemas"]["LoginResponse"];
                     };
                 };
-                /** @description Auth token is invalid */
+                /** @description OAuth authorization failed */
                 401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Unauthorized to perform operation */
-                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -336,7 +484,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{id}": {
+    "/api/v1/api-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all API tokens for the current user */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description API tokens listed successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["APITokenList"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create a new API token */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["APITokenCreateRequest"];
+                };
+            };
+            responses: {
+                /** @description API token created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["APITokenCreateResponse"];
+                    };
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/api-tokens/scopes": {
         parameters: {
             query?: never;
             header?: never;
@@ -344,9 +561,130 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get an organization
-         * @description Get an organization
+         * List all available API token scopes
+         * @description Returns the list of resources and their allowed actions that can be used when creating API tokens
          */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Scopes listed successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ScopeList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/api-tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an API token by ID */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description API token fetched successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["APIToken"];
+                    };
+                };
+                /** @description API token not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Revoke an API token */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description API token revoked successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description API token not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an organization */
         get: {
             parameters: {
                 query?: never;
@@ -397,10 +735,7 @@ export interface paths {
                 };
             };
         };
-        /**
-         * Update an organization
-         * @description Update an organization
-         */
+        /** Update an organization */
         put: {
             parameters: {
                 query?: never;
@@ -462,337 +797,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations": {
+    "/api/v1/organizations/{org_id}/users": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        /**
-         * Create a new organization
-         * @description Create a new organization
-         */
-        post: {
+        /** List all users in an organization */
+        get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Page number */
+                    page?: number;
+                    /** @description Number of items per page */
+                    page_size?: number;
+                };
                 header?: never;
-                path?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
                 cookie?: never;
             };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["Organisation"];
-                };
-            };
+            requestBody?: never;
             responses: {
-                /** @description Organization created successfully */
-                201: {
+                /** @description Successful operation */
+                200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Organisation"];
+                        "application/json": components["schemas"]["UserList"];
                     };
                 };
-                /** @description Auth token is invalid */
+                /** @description Unauthorized */
                 401: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
+                    content?: never;
                 };
-                /** @description Unauthorized to perform operation */
+                /** @description Forbidden */
                 403: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
+                    content?: never;
                 };
                 /** @description Internal server error */
                 500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workspace-users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Create a new workspace user object. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["WorkspaceUser"];
-                };
-            };
-            responses: {
-                /** @description WorkspaceUser object added successfully */
-                201: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["WorkspaceUser"];
+                        "application/json": components["schemas"]["Error"];
                     };
-                };
-                /** @description Invalid request payload */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workspace-users/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a workspace user object by ID */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description WorkspaceUser details */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["WorkspaceUser"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description WorkspaceUser object not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        /** Update a WorkspaceUser */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["WorkspaceUser"];
-                };
-            };
-            responses: {
-                /** @description WorkspaceUser updated successfully */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["WorkspaceUser"];
-                    };
-                };
-                /** @description Invalid request payload */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description WorkspaceUser not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        post?: never;
-        /** Delete a WorkspaceUser */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description WorkspaceUser deleted successfully */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description WorkspaceUser not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workspace-users/current": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get the workspace user object for the current user */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description WorkspaceUser details */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["WorkspaceUser"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description WorkspaceUser object not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
                 };
             };
         };
@@ -804,7 +864,181 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{id}/clusters": {
+    "/api/v1/organizations/{org_id}/secrets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all secrets the user has access to across all teams
+         * @description Returns secrets from all teams the user belongs to. OrgAdmins see all secrets in the org.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SecretList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/object-stores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all object stores the user has access to across all teams
+         * @description Returns object stores from all teams the user belongs to. OrgAdmins see all object stores in the org.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ObjectStoreList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/stacks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all stacks the user has access to across all teams
+         * @description Returns stacks from all teams the user belongs to. OrgAdmins see all stacks in the org.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StackList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/clusters": {
         parameters: {
             query?: never;
             header?: never;
@@ -817,8 +1051,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    /** @description The id of record */
-                    id: components["parameters"]["id"];
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
                 };
                 cookie?: never;
             };
@@ -863,8 +1097,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    /** @description The id of record */
-                    id: components["parameters"]["id"];
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
                 };
                 cookie?: never;
             };
@@ -926,14 +1160,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a specific cluster object */
+        /** Get a specific cluster */
         get: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    org_id: string;
-                    id: string;
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
                 };
                 cookie?: never;
             };
@@ -978,78 +1214,18 @@ export interface paths {
                 };
             };
         };
-        /** Update a cluster object */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    org_id: string;
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["Cluster"];
-                };
-            };
-            responses: {
-                /** @description Cluster updated successfully */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Cluster"];
-                    };
-                };
-                /** @description Invalid request payload */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Cluster not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
+        put?: never;
         post?: never;
-        /** Delete a cluster object */
+        /** Delete a cluster */
         delete: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    org_id: string;
-                    id: string;
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
                 };
                 cookie?: never;
             };
@@ -1097,297 +1273,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/secrets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List all secrets for an organization */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    org_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Successful operation */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SecretList"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        /** Create a new secret */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    org_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["Secret"];
-                };
-            };
-            responses: {
-                /** @description Secret created successfully */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Secret"];
-                    };
-                };
-                /** @description Invalid request payload */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/organizations/{org_id}/secrets/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a specific secret object */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    org_id: string;
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Successful operation */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Secret"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Secret not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        /** Update a secret object */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    org_id: string;
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["Secret"];
-                };
-            };
-            responses: {
-                /** @description Secret updated successfully */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Secret"];
-                    };
-                };
-                /** @description Invalid request payload */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Secret not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        post?: never;
-        /** Delete a secret object */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    org_id: string;
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Secret deleted successfully */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Secret not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries": {
         parameters: {
             query?: never;
@@ -1401,8 +1286,10 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    org_id: string;
-                    cluster_id: string;
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The ID of the cluster */
+                    cluster_id: components["parameters"]["cluster_id"];
                 };
                 cookie?: never;
             };
@@ -1414,10 +1301,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            items?: components["schemas"]["ClusterImageRegistry"][];
-                            total?: number;
-                        };
+                        "application/json": components["schemas"]["ClusterImageRegistryList"];
                     };
                 };
                 /** @description Unauthorized */
@@ -1450,8 +1334,10 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    org_id: string;
-                    cluster_id: string;
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The ID of the cluster */
+                    cluster_id: components["parameters"]["cluster_id"];
                 };
                 cookie?: never;
             };
@@ -1513,15 +1399,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a specific image registry object */
+        /** Get a specific image registry */
         get: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    org_id: string;
-                    cluster_id: string;
-                    id: string;
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The ID of the cluster */
+                    cluster_id: components["parameters"]["cluster_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
                 };
                 cookie?: never;
             };
@@ -1568,15 +1457,18 @@ export interface paths {
         };
         put?: never;
         post?: never;
-        /** Delete an image registry object */
+        /** Delete an image registry */
         delete: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    org_id: string;
-                    cluster_id: string;
-                    id: string;
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The ID of the cluster */
+                    cluster_id: components["parameters"]["cluster_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
                 };
                 cookie?: never;
             };
@@ -1624,21 +1516,21 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{id}/remote-sync-servers": {
+    "/api/v1/organizations/{org_id}/teams": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List all RemoteSyncServer objects for an organization */
+        /** List all teams in an organization */
         get: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    /** @description The id of record */
-                    id: components["parameters"]["id"];
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
                 };
                 cookie?: never;
             };
@@ -1650,21 +1542,11 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            items?: components["schemas"]["RemoteSyncServer"][];
-                            total?: number;
-                        };
+                        "application/json": components["schemas"]["TeamList"];
                     };
                 };
                 /** @description Unauthorized */
                 401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1675,363 +1557,14 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
                 };
             };
         };
         put?: never;
-        /** Create a new remote sync server */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description The id of record */
-                    id: components["parameters"]["id"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["RemoteSyncServer"];
-                };
-            };
-            responses: {
-                /** @description RemoteSyncServer created successfully */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["RemoteSyncServer"];
-                    };
-                };
-                /** @description Invalid request payload */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/organizations/{org_id}/remote-sync-servers/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a specific RemoteSyncServer object */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    org_id: string;
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Successful operation */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["RemoteSyncServer"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description RemoteSyncServer not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        /** Update a RemoteSyncServer object */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    org_id: string;
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["RemoteSyncServer"];
-                };
-            };
-            responses: {
-                /** @description RemoteSyncServer updated successfully */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["RemoteSyncServer"];
-                    };
-                };
-                /** @description Invalid request payload */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description RemoteSyncServer not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        post?: never;
-        /** Delete a RemoteSyncServer object */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    org_id: string;
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description RemoteSyncServer deleted successfully */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description RemoteSyncServer not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/organizations/{org_id}/remote-sync-servers/current": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get RemoteSyncServer for the current user */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    org_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Successful operation */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["RemoteSyncServer"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/organizations/{org_id}/volumes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List all volumes in an organization. */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    org_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Successful operation */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["VolumeList"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        /** Create a new volume */
+        /** Create a new team */
         post: {
             parameters: {
                 query?: never;
@@ -2044,25 +1577,27 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["Volume"];
+                    "application/json": components["schemas"]["TeamCreateRequest"];
                 };
             };
             responses: {
-                /** @description Volume created successfully */
+                /** @description Team created successfully */
                 201: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Volume"];
+                        "application/json": components["schemas"]["Team"];
                     };
                 };
-                /** @description Invalid request payload */
+                /** @description Invalid request data */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
                 };
                 /** @description Unauthorized */
                 401: {
@@ -2083,7 +1618,9 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
                 };
             };
         };
@@ -2093,21 +1630,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/volumes/{id}": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get a specific volume */
+        /** Get a specific team by name */
         get: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    org_id: string;
-                    id: string;
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                 };
                 cookie?: never;
             };
@@ -2119,7 +1658,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Volume"];
+                        "application/json": components["schemas"]["Team"];
                     };
                 };
                 /** @description Unauthorized */
@@ -2129,8 +1668,8 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Forbidden */
-                403: {
+                /** @description Team not found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2141,42 +1680,48 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
                 };
             };
         };
-        /** Update a volume */
+        /** Update a team */
         put: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    org_id: string;
-                    id: string;
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                 };
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["Volume"];
+                    "application/json": components["schemas"]["TeamUpdateRequest"];
                 };
             };
             responses: {
-                /** @description Volume updated successfully */
+                /** @description Team updated successfully */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Volume"];
+                        "application/json": components["schemas"]["Team"];
                     };
                 };
-                /** @description Invalid request payload */
+                /** @description Invalid request data */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
                 };
                 /** @description Unauthorized */
                 401: {
@@ -2185,8 +1730,8 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Forbidden */
-                403: {
+                /** @description Team not found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2197,25 +1742,29 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
                 };
             };
         };
         post?: never;
-        /** Delete a volume */
+        /** Delete a team */
         delete: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    org_id: string;
-                    id: string;
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                 };
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Volume deleted successfully */
+                /** @description Team deleted successfully */
                 204: {
                     headers: {
                         [name: string]: unknown;
@@ -2229,14 +1778,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Volume not found */
+                /** @description Team not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -2248,7 +1790,9 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
                 };
             };
         };
@@ -2257,20 +1801,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/volumes/current": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/members": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List of volumes for the current user */
+        /** List members of a team */
         get: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    org_id: string;
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                 };
                 cookie?: never;
             };
@@ -2282,7 +1829,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["VolumeList"];
+                        "application/json": components["schemas"]["TeamMembershipList"];
                     };
                 };
                 /** @description Unauthorized */
@@ -2292,8 +1839,8 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Forbidden */
-                403: {
+                /** @description Team not found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2301,6 +1848,242 @@ export interface paths {
                 };
                 /** @description Internal server error */
                 500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Add a member to a team */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AddTeamMemberRequest"];
+                };
+            };
+            responses: {
+                /** @description Member added successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeamMembership"];
+                    };
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Team not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/members/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a team member's role */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateTeamMemberRoleRequest"];
+                };
+            };
+            responses: {
+                /** @description Member role updated successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeamMembership"];
+                    };
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Membership not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Remove a member from a team */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Member removed successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Membership not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List available team membership roles
+         * @description Returns the list of roles that can be assigned to team members.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List of available team roles */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeamRoleList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2316,14 +2099,209 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/stacks": {
+    "/api/v1/organizations/{org_id}/admins": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List all Stacks for an organization */
+        /** List organization admins */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Promote a user to organization admin */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PromoteAdminRequest"];
+                };
+            };
+            responses: {
+                /** @description User promoted to admin successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/admins/{user_id}/demote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Demote an organization admin
+         * @description Demotes an OrgAdmin and places them in the specified team with the given role (defaults to Viewer).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The ID of the user */
+                    user_id: components["parameters"]["user_id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DemoteAdminRequest"];
+                };
+            };
+            responses: {
+                /** @description Admin demoted successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description User not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all stacks for a team */
         get: {
             parameters: {
                 query?: {
@@ -2334,6 +2312,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                 };
                 cookie?: never;
             };
@@ -2375,6 +2355,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                 };
                 cookie?: never;
             };
@@ -2435,14 +2417,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/stacks/{id}": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get a specific Stack */
+        /** Get a specific stack */
         get: {
             parameters: {
                 query?: never;
@@ -2450,6 +2432,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -2484,7 +2468,7 @@ export interface paths {
                 };
             };
         };
-        /** Update a Stack */
+        /** Update a stack */
         put: {
             parameters: {
                 query?: never;
@@ -2492,6 +2476,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -2540,7 +2526,7 @@ export interface paths {
             };
         };
         post?: never;
-        /** Delete a Stack */
+        /** Delete a stack */
         delete: {
             parameters: {
                 query?: never;
@@ -2548,6 +2534,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -2587,14 +2575,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/stacks/{id}/logs": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/logs": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get logs for a Stack */
+        /** Get logs for a stack */
         get: {
             parameters: {
                 query?: {
@@ -2606,6 +2594,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -2648,7 +2638,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/stacks/{id}/metrics": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/metrics": {
         parameters: {
             query?: never;
             header?: never;
@@ -2656,7 +2646,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get metrics for a Stack
+         * Get metrics for a stack
          * @description Returns metrics for a stack. If `stream=true` is passed, the server responds using Server-Sent Events (SSE).
          *
          */
@@ -2669,6 +2659,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -2714,14 +2706,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/stacks/current": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List all stacks of the current user */
+        /** List all stack resources under a stack */
         get: {
             parameters: {
                 query?: never;
@@ -2729,63 +2721,10 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Successful operation */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["StackList"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/organizations/{org_id}/stacks/{stack_id}/resources": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List all StackResources under a Stack */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description The ID of the organization */
-                    org_id: components["parameters"]["org_id"];
-                    /** @description The ID of the stack */
-                    stack_id: components["parameters"]["stack_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
                 };
                 cookie?: never;
             };
@@ -2826,14 +2765,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get a specific StackResource */
+        /** Get a specific stack resource by name */
         get: {
             parameters: {
                 query?: never;
@@ -2841,10 +2780,12 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The ID of the stack */
-                    stack_id: components["parameters"]["stack_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
+                    /** @description The name of the stack resource */
+                    resource_name: components["parameters"]["resource_name"];
                 };
                 cookie?: never;
             };
@@ -2877,63 +2818,7 @@ export interface paths {
                 };
             };
         };
-        /** Update a StackResource */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description The ID of the organization */
-                    org_id: components["parameters"]["org_id"];
-                    /** @description The ID of the stack */
-                    stack_id: components["parameters"]["stack_id"];
-                    /** @description The id of record */
-                    id: components["parameters"]["id"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["StackResource"];
-                };
-            };
-            responses: {
-                /** @description StackResource updated successfully */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["StackResource"];
-                    };
-                };
-                /** @description Invalid request data */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -2941,14 +2826,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/logs": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get logs for a StackResource */
+        /** Get logs for a stack resource */
         get: {
             parameters: {
                 query?: {
@@ -2960,9 +2845,12 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The ID of the stack */
-                    stack_id: components["parameters"]["stack_id"];
-                    resource_name: string;
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    /** @description The name of the stack resource */
+                    resource_name: components["parameters"]["resource_name"];
                 };
                 cookie?: never;
             };
@@ -3003,7 +2891,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{resource_name}/metrics": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/metrics": {
         parameters: {
             query?: never;
             header?: never;
@@ -3011,8 +2899,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get metrics for a StackResource
-         * @description Returns metrics for a StackResource. If `stream=true` is passed, the server responds using Server-Sent Events (SSE).
+         * Get metrics for a stack resource
+         * @description Returns metrics for a stack resource. If `stream=true` is passed, the server responds using Server-Sent Events (SSE).
          *
          */
         get: {
@@ -3025,9 +2913,12 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The ID of the stack */
-                    stack_id: components["parameters"]["stack_id"];
-                    resource_name: string;
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    /** @description The name of the stack resource */
+                    resource_name: components["parameters"]["resource_name"];
                 };
                 cookie?: never;
             };
@@ -3071,14 +2962,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/stacks/{stack_id}/resources/{id}/builds": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/builds": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List all builds for a StackResource */
+        /** List all builds for a stack resource */
         get: {
             parameters: {
                 query?: never;
@@ -3086,8 +2977,69 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The ID of the stack */
-                    stack_id: components["parameters"]["stack_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    /** @description The name of the stack resource */
+                    resource_name: components["parameters"]["resource_name"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImageBuildList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all builds under a stack */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3130,64 +3082,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/stacks/{stack_id}/builds": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List all builds under a stack */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description The ID of the organization */
-                    org_id: components["parameters"]["org_id"];
-                    /** @description The ID of the stack */
-                    stack_id: components["parameters"]["stack_id"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Successful operation */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ImageBuildList"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/organizations/{org_id}/stacks/{stack_id}/builds/{build_id}": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds/{build_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -3202,9 +3097,12 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The ID of the stack */
-                    stack_id: components["parameters"]["stack_id"];
-                    build_id: string;
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    /** @description The ID of the build */
+                    build_id: components["parameters"]["build_id"];
                 };
                 cookie?: never;
             };
@@ -3252,14 +3150,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/object-stores": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/secrets": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List all ObjectStores for an organization */
+        /** List all secrets for a team */
         get: {
             parameters: {
                 query?: never;
@@ -3267,6 +3165,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                 };
                 cookie?: never;
             };
@@ -3278,64 +3178,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ObjectStoreList"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /**
-         * Add a new ObjectStore for backup storage
-         * @description Add a new ObjectStore configuration for storing PostgreSQL backups and WAL files
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description The ID of the organization */
-                    org_id: components["parameters"]["org_id"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["ObjectStore"];
-                };
-            };
-            responses: {
-                /** @description ObjectStore created successfully */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ObjectStore"];
-                    };
-                };
-                /** @description Invalid request data */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
+                        "application/json": components["schemas"]["SecretList"];
                     };
                 };
                 /** @description Unauthorized */
@@ -3352,23 +3195,71 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description ObjectStore already exists */
-                409: {
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Create a new secret */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Secret"];
+                };
+            };
+            responses: {
+                /** @description Secret created successfully */
+                201: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Error"];
+                        "application/json": components["schemas"]["Secret"];
                     };
+                };
+                /** @description Invalid request payload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
                 /** @description Internal server error */
                 500: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
+                    content?: never;
                 };
             };
         };
@@ -3378,14 +3269,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/object-stores/{id}": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/secrets/{id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get a specific ObjectStore */
+        /** Get a specific secret */
         get: {
             parameters: {
                 query?: never;
@@ -3393,6 +3284,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3406,7 +3299,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ObjectStore"];
+                        "application/json": components["schemas"]["Secret"];
                     };
                 };
                 /** @description Unauthorized */
@@ -3416,7 +3309,14 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description ObjectStore not found */
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Secret not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -3428,13 +3328,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
+                    content?: never;
                 };
             };
         };
-        /** Update an ObjectStore */
+        /** Update a secret */
         put: {
             parameters: {
                 query?: never;
@@ -3442,6 +3340,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3449,27 +3349,25 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["ObjectStore"];
+                    "application/json": components["schemas"]["Secret"];
                 };
             };
             responses: {
-                /** @description ObjectStore updated successfully */
+                /** @description Secret updated successfully */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ObjectStore"];
+                        "application/json": components["schemas"]["Secret"];
                     };
                 };
-                /** @description Invalid request data */
+                /** @description Invalid request payload */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
+                    content?: never;
                 };
                 /** @description Unauthorized */
                 401: {
@@ -3478,7 +3376,14 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description ObjectStore not found */
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Secret not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -3490,14 +3395,12 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
+                    content?: never;
                 };
             };
         };
         post?: never;
-        /** Delete an ObjectStore */
+        /** Delete a secret */
         delete: {
             parameters: {
                 query?: never;
@@ -3505,6 +3408,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3512,7 +3417,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description ObjectStore deleted successfully */
+                /** @description Secret deleted successfully */
                 204: {
                     headers: {
                         [name: string]: unknown;
@@ -3526,30 +3431,26 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description ObjectStore not found */
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Secret not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content?: never;
                 };
-                /** @description ObjectStore is in use by PostgresAddons */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
                 /** @description Internal server error */
                 500: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
+                    content?: never;
                 };
             };
         };
@@ -3558,14 +3459,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/addons/postgres": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/volumes": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List all PostgresAddons for under an organization */
+        get?: never;
+        put?: never;
+        /** Create a new volume */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Volume"];
+                };
+            };
+            responses: {
+                /** @description Volume created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volume"];
+                    };
+                };
+                /** @description Invalid request payload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a specific volume */
         get: {
             parameters: {
                 query?: never;
@@ -3573,6 +3547,125 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volume"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Delete a volume */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Volume deleted successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Volume not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all PostgresAddons for a team */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                 };
                 cookie?: never;
             };
@@ -3624,6 +3717,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                 };
                 cookie?: never;
             };
@@ -3691,7 +3786,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/addons/postgres/{id}": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -3706,6 +3801,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3762,6 +3859,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3832,6 +3931,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3885,7 +3986,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/addons/postgres/{id}/actions/backup": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/backup": {
         parameters: {
             query?: never;
             header?: never;
@@ -3902,6 +4003,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3975,7 +4078,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/addons/postgres/{id}/actions/fence": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/fence": {
         parameters: {
             query?: never;
             header?: never;
@@ -3992,6 +4095,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -4058,7 +4163,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/addons/postgres/{id}/actions/hibernate": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/hibernate": {
         parameters: {
             query?: never;
             header?: never;
@@ -4075,6 +4180,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -4139,7 +4246,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/addons/postgres/{id}/backups": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/backups": {
         parameters: {
             query?: never;
             header?: never;
@@ -4157,6 +4264,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -4206,7 +4315,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/addons/postgres/{id}/credentials/{database}": {
+    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/credentials/{database}": {
         parameters: {
             query?: never;
             header?: never;
@@ -4224,6 +4333,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                     /** @description The name of the database */
@@ -4288,6 +4399,967 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/object-stores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all ObjectStores for a team */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ObjectStoreList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Add a new ObjectStore for backup storage
+         * @description Add a new ObjectStore configuration for storing PostgreSQL backups and WAL files
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ObjectStore"];
+                };
+            };
+            responses: {
+                /** @description ObjectStore created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ObjectStore"];
+                    };
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ObjectStore already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/object-stores/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a specific ObjectStore */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ObjectStore"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ObjectStore not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update an ObjectStore */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ObjectStore"];
+                };
+            };
+            responses: {
+                /** @description ObjectStore updated successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ObjectStore"];
+                    };
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ObjectStore not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete an ObjectStore */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description ObjectStore deleted successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ObjectStore not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ObjectStore is in use by PostgresAddons */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/workspace-users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a new workspace user */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["WorkspaceUser"];
+                };
+            };
+            responses: {
+                /** @description WorkspaceUser created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkspaceUser"];
+                    };
+                };
+                /** @description Invalid request payload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the workspace user for the current user */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description WorkspaceUser details */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkspaceUser"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description WorkspaceUser not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a workspace user by ID */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description WorkspaceUser details */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkspaceUser"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description WorkspaceUser not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        /** Update a workspace user */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["WorkspaceUser"];
+                };
+            };
+            responses: {
+                /** @description WorkspaceUser updated successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkspaceUser"];
+                    };
+                };
+                /** @description Invalid request payload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description WorkspaceUser not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        /** Delete a workspace user */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description WorkspaceUser deleted successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description WorkspaceUser not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List invites for an organization */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Filter invites by status (pending, accepted, revoked, expired) */
+                    status?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgInviteList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Create an invite to the organization */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OrgInviteCreateRequest"];
+                };
+            };
+            responses: {
+                /** @description Invite created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgInviteCreateResponse"];
+                    };
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflict - user exists or duplicate pending invite */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/invites/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an invite by ID */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgInvite"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invite not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Revoke a pending invite */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Invite revoked successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Can only revoke pending invites */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invite not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/invites/{id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-queue invite email for delivery */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Invite email re-queued */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Can only resend pending invites */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invite not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invites/{token}/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get public invite info (unauthenticated) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The invite token */
+                    token: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Invite info */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgInviteInfo"];
+                    };
+                };
+                /** @description Invite not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invite expired or revoked */
+                410: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4311,6 +5383,8 @@ export interface components {
             user?: components["schemas"]["User"];
             /** @description JWT token for the authenticated user */
             jwt_token?: string;
+            /** @description Refresh token for obtaining new access tokens */
+            refresh_token?: string;
         };
         User: {
             /** @description User's ID */
@@ -4329,12 +5403,30 @@ export interface components {
             role?: components["schemas"]["UserRole"];
             /** @description OrganisationID */
             organisation_id?: string;
+            /** @description Teams the user belongs to (included in login/signup/current-user responses) */
+            teams?: components["schemas"]["UserTeamMembership"][];
+        };
+        UserTeamMembership: {
+            team_id?: string;
+            team_name?: string;
+            /** @enum {string} */
+            role?: "Developer" | "Viewer";
+            default_team?: boolean;
+        };
+        UserList: {
+            items?: components["schemas"]["User"][];
+            /** @description Total number of records */
+            total?: number;
+            /** @description Current page number */
+            page?: number;
+            /** @description Number of items per page */
+            page_size?: number;
+            /** @description Total number of pages */
+            total_pages?: number;
         };
         UserSignupRequest: {
             /** @description User's name */
             name: string;
-            /** @description User's username */
-            username?: string;
             /**
              * Format: email
              * @description User's email address
@@ -4342,13 +5434,22 @@ export interface components {
             email: string;
             /** @description Users desired password */
             password: string;
-            Role?: components["schemas"]["UserRole"];
             organisation?: components["schemas"]["Organisation"];
-            /** @description OrganisationID */
-            organisation_id?: string;
+            /** @description Optional invite token for joining an existing organization */
+            invite_token?: string;
         };
         /** @enum {string} */
-        UserRole: "OrganisationAdmin" | "PlatformAdmin" | "User";
+        UserRole: "OrgAdmin" | "OrgMember";
+        RefreshTokenRequest: {
+            /** @description The refresh token to exchange for a new access token */
+            refreshToken: string;
+        };
+        RefreshTokenResponse: {
+            /** @description New access token */
+            token?: string;
+            /** @description New refresh token (old one is revoked) */
+            refreshToken?: string;
+        };
         LoginRequest: {
             /** @description User's email */
             email: string;
@@ -4361,15 +5462,84 @@ export interface components {
         LoginResponse: {
             /** @description Access token for authenticated requests */
             token?: string;
+            /** @description Refresh token for obtaining new access tokens */
+            refresh_token?: string;
             user?: components["schemas"]["User"];
             /** @description Token expiration time in seconds */
             expires_in?: number;
+        };
+        Team: {
+            readonly id?: string;
+            name: string;
+            readonly organisation_id?: string;
+            readonly default_team?: boolean;
+            /** Format: date-time */
+            readonly created_at?: string;
+            /** Format: date-time */
+            readonly updated_at?: string;
+        };
+        TeamList: {
+            items?: components["schemas"]["Team"][];
+            total?: number;
+        };
+        TeamMembership: {
+            readonly id?: string;
+            team_id: string;
+            user_id: string;
+            /** @enum {string} */
+            role: "Developer" | "Viewer";
+            team?: components["schemas"]["Team"];
+            user?: components["schemas"]["User"];
+            /** Format: date-time */
+            readonly created_at?: string;
+        };
+        TeamMembershipList: {
+            items?: components["schemas"]["TeamMembership"][];
+            total?: number;
+        };
+        TeamCreateRequest: {
+            /** @description Team name */
+            name: string;
+        };
+        TeamUpdateRequest: {
+            /** @description Updated team name */
+            name: string;
+        };
+        AddTeamMemberRequest: {
+            /** @description The ID of the user to add */
+            user_id: string;
+            role: components["schemas"]["TeamRole"];
+        };
+        UpdateTeamMemberRoleRequest: {
+            role: components["schemas"]["TeamRole"];
+        };
+        /**
+         * @description A role that can be assigned to a team member
+         * @enum {string}
+         */
+        TeamRole: "Developer" | "Viewer";
+        TeamRoleList: {
+            roles?: components["schemas"]["TeamRole"][];
+        };
+        DemoteAdminRequest: {
+            /** @description The name of the team to place the demoted user in */
+            team_name: string;
+            /**
+             * @description The team role to assign (defaults to Viewer)
+             * @default Viewer
+             */
+            role: components["schemas"]["TeamRole"];
+        };
+        PromoteAdminRequest: {
+            /** @description The ID of the user to promote to admin */
+            user_id: string;
         };
         WorkspaceUser: {
             /** Format: uuid */
             id?: string;
             user_id?: string;
             org_id?: string;
+            team_id?: string;
             workspaces: string[];
             readonly version?: number;
             status?: components["schemas"]["WorkspaceUserStatus"];
@@ -4408,32 +5578,9 @@ export interface components {
             cluster_sa_token: string;
             cluster_image_registry?: components["schemas"]["ClusterImageRegistry"];
         };
-        RemoteSyncServer: {
-            readonly id?: string;
-            readonly organisation_id?: string;
-            name: string;
-            readonly namespace?: string;
-            labels?: components["schemas"]["Label"][];
-            annotations?: components["schemas"]["Annotation"][];
-            spec: components["schemas"]["RemoteSyncServerSpec"];
-            readonly status?: components["schemas"]["RemoteSyncServerStatus"];
-            /** Format: date-time */
-            readonly created_at?: string;
-            /** Format: date-time */
-            readonly updated_at?: string;
-        };
-        RemoteSyncServerList: {
-            items?: components["schemas"]["RemoteSyncServer"][];
-            total?: number;
-        };
-        RemoteSyncServerSpec: {
-            volumeName?: string;
-            ssh_public_key?: string;
-        };
-        /** @enum {string} */
-        RemoteSyncServerState: "RemoteSyncServerPending" | "RemoteSyncServerCreating" | "RemoteSyncServerCreated" | "RemoteSyncServerReady" | "RemoteSyncServerFailed";
         Volume: {
             readonly id?: string;
+            readonly team_id?: string;
             name: string;
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
@@ -4486,12 +5633,6 @@ export interface components {
             source_path: string;
             destination_path: string;
         };
-        RemoteSyncServerStatus: {
-            observed_version?: number;
-            conditions?: components["schemas"]["Condition"][];
-            state?: components["schemas"]["RemoteSyncServerState"];
-            serviceName?: string;
-        };
         VolumeStatus: {
             conditions?: components["schemas"]["Condition"][];
             phase?: string;
@@ -4507,6 +5648,7 @@ export interface components {
         Stack: {
             readonly id?: string;
             readonly organisation_id?: string;
+            readonly team_id?: string;
             readonly user_id?: string;
             name: string;
             readonly namespace?: string;
@@ -4604,6 +5746,7 @@ export interface components {
             name: string;
             description?: string;
             readonly organisation_id?: string;
+            readonly team_id?: string;
             type: components["schemas"]["SecretType"];
             data: components["schemas"]["SecretData"][];
             /** Format: date-time */
@@ -4782,6 +5925,7 @@ export interface components {
         ObjectStore: {
             readonly id?: string;
             readonly organisation_id?: string;
+            readonly team_id?: string;
             /** @description Unique name for this object store configuration */
             name: string;
             spec: components["schemas"]["ObjectStoreSpec"];
@@ -4851,6 +5995,7 @@ export interface components {
         PostgresAddon: {
             readonly id?: string;
             readonly organisation_id?: string;
+            readonly team_id?: string;
             readonly user_id?: string;
             readonly cluster_id?: string;
             /** @description Unique name for this PostgreSQL cluster */
@@ -5130,6 +6275,116 @@ export interface components {
                 [key: string]: string;
             };
         };
+        ScopeResource: {
+            /** @description The resource name (e.g., stacks, secrets, addons/postgres) */
+            resource?: string;
+            /** @description The allowed actions for this resource (e.g., read, write, delete) */
+            actions?: string[];
+        };
+        ScopeList: {
+            /** @description The wildcard scope that grants full access (same permissions as the user) */
+            full_access_scope?: string;
+            items?: components["schemas"]["ScopeResource"][];
+            total?: number;
+        };
+        APITokenCreateRequest: {
+            /** @description Display name for the token */
+            name: string;
+            /** @description Permission scopes for the token */
+            scopes: string[];
+            /** @description Optional list of resource IDs to restrict the token to */
+            resource_ids?: string[];
+            /**
+             * Format: date-time
+             * @description Optional expiration time in RFC3339 format
+             */
+            expires_at?: string;
+        };
+        APITokenCreateResponse: {
+            /** @description The raw API token (only returned on creation) */
+            token?: string;
+            id?: string;
+            name?: string;
+            /** @description Prefix of the token for identification */
+            token_prefix?: string;
+            /** Format: date-time */
+            expires_at?: string;
+        };
+        APIToken: {
+            id?: string;
+            name?: string;
+            user_id?: string;
+            token_prefix?: string;
+            scopes?: string[];
+            resource_ids?: string[];
+            org_id?: string;
+            /** Format: date-time */
+            expires_at?: string;
+            /** Format: date-time */
+            last_used_at?: string;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            revoked_at?: string;
+        };
+        APITokenList: {
+            items?: components["schemas"]["APIToken"][];
+        };
+        /** @enum {string} */
+        InviteStatus: "pending" | "accepted" | "revoked" | "expired";
+        OrgInvite: {
+            readonly id?: string;
+            email?: string;
+            readonly organisation_id?: string;
+            team_name?: string;
+            /** @enum {string} */
+            role?: "Developer" | "Viewer";
+            status?: components["schemas"]["InviteStatus"];
+            /** Format: date-time */
+            expires_at?: string;
+            invited_by?: string;
+            email_sent?: boolean;
+            email_error?: string;
+            /** Format: date-time */
+            readonly created_at?: string;
+            /** Format: date-time */
+            accepted_at?: string;
+        };
+        OrgInviteCreateRequest: {
+            /** Format: email */
+            email: string;
+            team_name: string;
+            /** @enum {string} */
+            role: "Developer" | "Viewer";
+            expires_in_days: number;
+        };
+        OrgInviteCreateResponse: {
+            id?: string;
+            email?: string;
+            organisation_id?: string;
+            team_name?: string;
+            role?: string;
+            status?: components["schemas"]["InviteStatus"];
+            /** Format: date-time */
+            expires_at?: string;
+            invited_by?: string;
+            email_sent?: boolean;
+            /** @description Raw invite token (shown only once at creation) */
+            invite_token?: string;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        OrgInviteList: {
+            items?: components["schemas"]["OrgInvite"][];
+            total?: number;
+        };
+        OrgInviteInfo: {
+            org_name?: string;
+            team_name?: string;
+            inviter_name?: string;
+            /** Format: date-time */
+            expires_at?: string;
+        };
     };
     responses: never;
     parameters: {
@@ -5139,8 +6394,14 @@ export interface components {
         org_id: string;
         /** @description The ID of the cluster */
         cluster_id: string;
-        /** @description The ID of the stack */
-        stack_id: string;
+        /** @description The name of the team */
+        team_name: string;
+        /** @description The ID of the user */
+        user_id: string;
+        /** @description The name of the stack resource */
+        resource_name: string;
+        /** @description The ID of the build */
+        build_id: string;
         /** @description The name of the database */
         database: string;
     };
