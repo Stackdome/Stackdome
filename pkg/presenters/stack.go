@@ -302,6 +302,7 @@ func presentResourceStatus(status *models.StackResourceStatus) *openapi.StackRes
 		State:            ptr.To(string(status.State)),
 		ObservedRevision: &status.ObservedCrRevision,
 		Conditions:       presentConditions(status.Conditions),
+		LastFailure:      presentStackResourceFailure(status.LastFailure),
 	}
 }
 

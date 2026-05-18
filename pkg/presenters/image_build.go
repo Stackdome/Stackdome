@@ -3,6 +3,7 @@ package presenters
 import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"k8s.io/utils/ptr"
 )
 
 func PresentImageBuildList(in []*models.ImageBuild) []openapi.ImageBuild {
@@ -39,9 +40,23 @@ func presentImageBuildStatus(status *models.ImageBuildStatus) *openapi.ImageBuil
 		return nil
 	}
 	return &openapi.ImageBuildStatus{
-		State:               &status.State,
-		Conditions:          presentConditions(status.Conditions),
-		ImageUrl:            &status.ImageURL,
-		BuildSourceRevision: &status.BuildSourceRevision,
+		State:                  &status.State,
+		Conditions:             presentConditions(status.Conditions),
+		ImageUrl:               &status.ImageURL,
+		BuildSourceRevision:    &status.BuildSourceRevision,
+		LastBuildFailureDetail: presentBuildFailureDetail(status.LastBuildFailureDetail),
+	}
+}
+
+func presentBuildFailureDetail(d *models.BuildFailureDetail) *openapi.BuildFailureDetail {
+	if d == nil {
+		return nil
+	}
+	return &openapi.BuildFailureDetail{
+		FailureType:  ptr.To(d.FailureType),
+		Reason:       ptr.To(d.Reason),
+		Message:      ptr.To(d.Message),
+		RestartCount: ptr.To(d.RestartCount),
+		ExitCode:     d.ExitCode,
 	}
 }

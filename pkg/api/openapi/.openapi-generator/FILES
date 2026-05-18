@@ -22,6 +22,7 @@ docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostReq
 docs/AzureCredentials.md
 docs/BuildArtifact.md
 docs/BuildArtifactSyncInfo.md
+docs/BuildFailureDetail.md
 docs/BuildSourceContext.md
 docs/BuildSourceContextGitRepo.md
 docs/BuildSourceContextVolume.md
@@ -35,6 +36,7 @@ docs/ClusterImageRegistryState.md
 docs/ClusterImageRegistryStatus.md
 docs/ClusterList.md
 docs/Condition.md
+docs/ContainerFailureDetail.md
 docs/DefaultApi.md
 docs/DemoteAdminRequest.md
 docs/DomainName.md
@@ -121,6 +123,7 @@ docs/Stack.md
 docs/StackList.md
 docs/StackResource.md
 docs/StackResourceBuildSpec.md
+docs/StackResourceFailure.md
 docs/StackResourceList.md
 docs/StackResourceStatus.md
 docs/StackSpec.md
@@ -173,6 +176,7 @@ model_api_token_list.go
 model_azure_credentials.go
 model_build_artifact.go
 model_build_artifact_sync_info.go
+model_build_failure_detail.go
 model_build_source_context.go
 model_build_source_context_git_repo.go
 model_build_source_context_volume.go
@@ -186,6 +190,7 @@ model_cluster_image_registry_state.go
 model_cluster_image_registry_status.go
 model_cluster_list.go
 model_condition.go
+model_container_failure_detail.go
 model_demote_admin_request.go
 model_domain_name.go
 model_env_var.go
@@ -271,6 +276,7 @@ model_stack.go
 model_stack_list.go
 model_stack_resource.go
 model_stack_resource_build_spec.go
+model_stack_resource_failure.go
 model_stack_resource_list.go
 model_stack_resource_status.go
 model_stack_spec.go

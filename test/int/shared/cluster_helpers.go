@@ -438,6 +438,71 @@ func GetIngressForStackResource(ctx context.Context, clusterClient client.Client
 	return &ingress, nil
 }
 
+// WaitForStackResourceFailed polls the API until the named resource reaches Failed state.
+func WaitForStackResourceFailed(apiClient *openapi.APIClient, orgID, teamName, stackID, resourceName string, timeout time.Duration) *openapi.StackResource {
+	var resource *openapi.StackResource
+	Eventually(func(g Gomega) {
+		ctx := context.Background()
+		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet(ctx, orgID, teamName, stackID, resourceName).Execute()
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(httpResp.StatusCode).To(Equal(200))
+
+		status, ok := resp.GetStatusOk()
+		g.Expect(ok).To(BeTrue(), "resource should have status")
+
+		state, stateOk := status.GetStateOk()
+		g.Expect(stateOk).To(BeTrue(), "status should have state")
+		g.Expect(*state).To(Equal("Failed"), "resource should be Failed, got: %s", *state)
+		resource = resp
+	}, timeout, 5*time.Second).Should(Succeed())
+	return resource
+}
+
+// WaitForStackResourceLastFailure polls the API until last_failure is populated on the named resource.
+func WaitForStackResourceLastFailure(apiClient *openapi.APIClient, orgID, teamName, stackID, resourceName string, timeout time.Duration) *openapi.StackResourceFailure {
+	var lastFailure *openapi.StackResourceFailure
+	Eventually(func(g Gomega) {
+		ctx := context.Background()
+		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet(ctx, orgID, teamName, stackID, resourceName).Execute()
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(httpResp.StatusCode).To(Equal(200))
+
+		status, ok := resp.GetStatusOk()
+		g.Expect(ok).To(BeTrue())
+
+		failure, failureOk := status.GetLastFailureOk()
+		g.Expect(failureOk).To(BeTrue(), "last_failure should be set on resource status")
+		g.Expect(failure).NotTo(BeNil(), "last_failure should not be nil")
+		lastFailure = failure
+	}, timeout, 5*time.Second).Should(Succeed())
+	return lastFailure
+}
+
+// WaitForBuildLastFailureDetail polls the API until last_build_failure_detail is populated on
+// the named resource's most recent image build.
+func WaitForBuildLastFailureDetail(apiClient *openapi.APIClient, orgID, teamName, stackID, resourceName string, timeout time.Duration) *openapi.BuildFailureDetail {
+	var detail *openapi.BuildFailureDetail
+	Eventually(func(g Gomega) {
+		ctx := context.Background()
+		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGet(ctx, orgID, teamName, stackID, resourceName).Execute()
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(httpResp.StatusCode).To(Equal(200))
+
+		items := resp.GetItems()
+		g.Expect(items).NotTo(BeEmpty(), "should have at least one image build")
+
+		build := items[len(items)-1]
+		status, ok := build.GetStatusOk()
+		g.Expect(ok).To(BeTrue())
+
+		d, dOk := status.GetLastBuildFailureDetailOk()
+		g.Expect(dOk).To(BeTrue(), "last_build_failure_detail should be set")
+		g.Expect(d).NotTo(BeNil())
+		detail = d
+	}, timeout, 5*time.Second).Should(Succeed())
+	return detail
+}
+
 func ListStackBuilds(apiClient *openapi.APIClient, orgID, teamName, stackID string) []openapi.ImageBuild {
 	ctx := context.Background()
 	resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet(ctx, orgID, teamName, stackID).Execute()

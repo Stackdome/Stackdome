@@ -5068,6 +5068,26 @@ components:
                 secret_id: secret_id
             status:
               last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+              last_failure:
+                container:
+                  reason: reason
+                  restart_count: 5
+                  failure_type: crash_loop
+                  exit_code: 5
+                  message: message
+                build:
+                  reason: reason
+                  restart_count: 2
+                  failure_type: crash_loop
+                  exit_code: 7
+                  message: message
+                init_container:
+                  reason: reason
+                  restart_count: 5
+                  failure_type: crash_loop
+                  exit_code: 5
+                  message: message
+                type: runtime_crash
               internal_service_name: internal_service_name
               state: state
               conditions:
@@ -5205,6 +5225,26 @@ components:
                 secret_id: secret_id
             status:
               last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+              last_failure:
+                container:
+                  reason: reason
+                  restart_count: 5
+                  failure_type: crash_loop
+                  exit_code: 5
+                  message: message
+                build:
+                  reason: reason
+                  restart_count: 2
+                  failure_type: crash_loop
+                  exit_code: 7
+                  message: message
+                init_container:
+                  reason: reason
+                  restart_count: 5
+                  failure_type: crash_loop
+                  exit_code: 5
+                  message: message
+                type: runtime_crash
               internal_service_name: internal_service_name
               state: state
               conditions:
@@ -5427,7 +5467,7 @@ components:
       type: object
     StackList:
       example:
-        total: 5
+        total: 9
         items:
         - annotations:
           - value: value
@@ -5554,6 +5594,26 @@ components:
                   secret_id: secret_id
               status:
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+                last_failure:
+                  container:
+                    reason: reason
+                    restart_count: 5
+                    failure_type: crash_loop
+                    exit_code: 5
+                    message: message
+                  build:
+                    reason: reason
+                    restart_count: 2
+                    failure_type: crash_loop
+                    exit_code: 7
+                    message: message
+                  init_container:
+                    reason: reason
+                    restart_count: 5
+                    failure_type: crash_loop
+                    exit_code: 5
+                    message: message
+                  type: runtime_crash
                 internal_service_name: internal_service_name
                 state: state
                 conditions:
@@ -5691,6 +5751,26 @@ components:
                   secret_id: secret_id
               status:
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+                last_failure:
+                  container:
+                    reason: reason
+                    restart_count: 5
+                    failure_type: crash_loop
+                    exit_code: 5
+                    message: message
+                  build:
+                    reason: reason
+                    restart_count: 2
+                    failure_type: crash_loop
+                    exit_code: 7
+                    message: message
+                  init_container:
+                    reason: reason
+                    restart_count: 5
+                    failure_type: crash_loop
+                    exit_code: 5
+                    message: message
+                  type: runtime_crash
                 internal_service_name: internal_service_name
                 state: state
                 conditions:
@@ -5991,6 +6071,26 @@ components:
                   secret_id: secret_id
               status:
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+                last_failure:
+                  container:
+                    reason: reason
+                    restart_count: 5
+                    failure_type: crash_loop
+                    exit_code: 5
+                    message: message
+                  build:
+                    reason: reason
+                    restart_count: 2
+                    failure_type: crash_loop
+                    exit_code: 7
+                    message: message
+                  init_container:
+                    reason: reason
+                    restart_count: 5
+                    failure_type: crash_loop
+                    exit_code: 5
+                    message: message
+                  type: runtime_crash
                 internal_service_name: internal_service_name
                 state: state
                 conditions:
@@ -6128,6 +6228,26 @@ components:
                   secret_id: secret_id
               status:
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+                last_failure:
+                  container:
+                    reason: reason
+                    restart_count: 5
+                    failure_type: crash_loop
+                    exit_code: 5
+                    message: message
+                  build:
+                    reason: reason
+                    restart_count: 2
+                    failure_type: crash_loop
+                    exit_code: 7
+                    message: message
+                  init_container:
+                    reason: reason
+                    restart_count: 5
+                    failure_type: crash_loop
+                    exit_code: 5
+                    message: message
+                  type: runtime_crash
                 internal_service_name: internal_service_name
                 state: state
                 conditions:
@@ -6430,6 +6550,26 @@ components:
               secret_id: secret_id
           status:
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+            last_failure:
+              container:
+                reason: reason
+                restart_count: 5
+                failure_type: crash_loop
+                exit_code: 5
+                message: message
+              build:
+                reason: reason
+                restart_count: 2
+                failure_type: crash_loop
+                exit_code: 7
+                message: message
+              init_container:
+                reason: reason
+                restart_count: 5
+                failure_type: crash_loop
+                exit_code: 5
+                message: message
+              type: runtime_crash
             internal_service_name: internal_service_name
             state: state
             conditions:
@@ -6567,6 +6707,26 @@ components:
               secret_id: secret_id
           status:
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+            last_failure:
+              container:
+                reason: reason
+                restart_count: 5
+                failure_type: crash_loop
+                exit_code: 5
+                message: message
+              build:
+                reason: reason
+                restart_count: 2
+                failure_type: crash_loop
+                exit_code: 7
+                message: message
+              init_container:
+                reason: reason
+                restart_count: 5
+                failure_type: crash_loop
+                exit_code: 5
+                message: message
+              type: runtime_crash
             internal_service_name: internal_service_name
             state: state
             conditions:
@@ -6873,6 +7033,26 @@ components:
             secret_id: secret_id
         status:
           last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+          last_failure:
+            container:
+              reason: reason
+              restart_count: 5
+              failure_type: crash_loop
+              exit_code: 5
+              message: message
+            build:
+              reason: reason
+              restart_count: 2
+              failure_type: crash_loop
+              exit_code: 7
+              message: message
+            init_container:
+              reason: reason
+              restart_count: 5
+              failure_type: crash_loop
+              exit_code: 5
+              message: message
+            type: runtime_crash
           internal_service_name: internal_service_name
           state: state
           conditions:
@@ -7063,6 +7243,26 @@ components:
               secret_id: secret_id
           status:
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+            last_failure:
+              container:
+                reason: reason
+                restart_count: 5
+                failure_type: crash_loop
+                exit_code: 5
+                message: message
+              build:
+                reason: reason
+                restart_count: 2
+                failure_type: crash_loop
+                exit_code: 7
+                message: message
+              init_container:
+                reason: reason
+                restart_count: 5
+                failure_type: crash_loop
+                exit_code: 5
+                message: message
+              type: runtime_crash
             internal_service_name: internal_service_name
             state: state
             conditions:
@@ -7200,6 +7400,26 @@ components:
               secret_id: secret_id
           status:
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+            last_failure:
+              container:
+                reason: reason
+                restart_count: 5
+                failure_type: crash_loop
+                exit_code: 5
+                message: message
+              build:
+                reason: reason
+                restart_count: 2
+                failure_type: crash_loop
+                exit_code: 7
+                message: message
+              init_container:
+                reason: reason
+                restart_count: 5
+                failure_type: crash_loop
+                exit_code: 5
+                message: message
+              type: runtime_crash
             internal_service_name: internal_service_name
             state: state
             conditions:
@@ -7260,6 +7480,12 @@ components:
           build_source_revision: build_source_revision
           image_url: image_url
           state: state
+          last_build_failure_detail:
+            reason: reason
+            restart_count: 2
+            failure_type: crash_loop
+            exit_code: 7
+            message: message
           conditions:
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -7374,6 +7600,12 @@ components:
             build_source_revision: build_source_revision
             image_url: image_url
             state: state
+            last_build_failure_detail:
+              reason: reason
+              restart_count: 2
+              failure_type: crash_loop
+              exit_code: 7
+              message: message
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -7416,6 +7648,12 @@ components:
             build_source_revision: build_source_revision
             image_url: image_url
             state: state
+            last_build_failure_detail:
+              reason: reason
+              restart_count: 2
+              failure_type: crash_loop
+              exit_code: 7
+              message: message
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -7442,6 +7680,12 @@ components:
         build_source_revision: build_source_revision
         image_url: image_url
         state: state
+        last_build_failure_detail:
+          reason: reason
+          restart_count: 2
+          failure_type: crash_loop
+          exit_code: 7
+          message: message
         conditions:
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -7466,6 +7710,8 @@ components:
           type: string
         build_source_revision:
           type: string
+        last_build_failure_detail:
+          $ref: '#/components/schemas/BuildFailureDetail'
       type: object
     Secret:
       additionalProperties: false
@@ -7749,6 +7995,26 @@ components:
     StackResourceStatus:
       example:
         last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+        last_failure:
+          container:
+            reason: reason
+            restart_count: 5
+            failure_type: crash_loop
+            exit_code: 5
+            message: message
+          build:
+            reason: reason
+            restart_count: 2
+            failure_type: crash_loop
+            exit_code: 7
+            message: message
+          init_container:
+            reason: reason
+            restart_count: 5
+            failure_type: crash_loop
+            exit_code: 5
+            message: message
+          type: runtime_crash
         internal_service_name: internal_service_name
         state: state
         conditions:
@@ -7788,6 +8054,96 @@ components:
           items:
             $ref: '#/components/schemas/Condition'
           type: array
+        last_failure:
+          $ref: '#/components/schemas/StackResourceFailure'
+      type: object
+    ContainerFailureDetail:
+      example:
+        reason: reason
+        restart_count: 5
+        failure_type: crash_loop
+        exit_code: 5
+        message: message
+      properties:
+        failure_type:
+          enum:
+          - crash_loop
+          - out_of_memory
+          - image_pull_failed
+          - create_container_error
+          - exit_error
+          type: string
+        reason:
+          type: string
+        message:
+          type: string
+        restart_count:
+          format: int32
+          type: integer
+        exit_code:
+          format: int32
+          type: integer
+      type: object
+    BuildFailureDetail:
+      example:
+        reason: reason
+        restart_count: 2
+        failure_type: crash_loop
+        exit_code: 7
+        message: message
+      properties:
+        failure_type:
+          enum:
+          - crash_loop
+          - out_of_memory
+          - image_pull_failed
+          - create_container_error
+          - exit_error
+          type: string
+        reason:
+          type: string
+        message:
+          type: string
+        restart_count:
+          format: int32
+          type: integer
+        exit_code:
+          format: int32
+          type: integer
+      type: object
+    StackResourceFailure:
+      example:
+        container:
+          reason: reason
+          restart_count: 5
+          failure_type: crash_loop
+          exit_code: 5
+          message: message
+        build:
+          reason: reason
+          restart_count: 2
+          failure_type: crash_loop
+          exit_code: 7
+          message: message
+        init_container:
+          reason: reason
+          restart_count: 5
+          failure_type: crash_loop
+          exit_code: 5
+          message: message
+        type: runtime_crash
+      properties:
+        type:
+          enum:
+          - runtime_crash
+          - build_failure
+          type: string
+        container:
+          $ref: '#/components/schemas/ContainerFailureDetail'
+        init_container:
+          $ref: '#/components/schemas/ContainerFailureDetail'
+        build:
+          $ref: '#/components/schemas/BuildFailureDetail'
       type: object
     Ingress:
       example:

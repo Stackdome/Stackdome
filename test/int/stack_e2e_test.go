@@ -481,6 +481,37 @@ var _ = Describe("Stack E2E", Ordered, func() {
 		})
 	})
 
+	Context("Crash Detection", func() {
+		It("should populate last_failure when a container crashes", func() {
+			By("Creating a stack whose container immediately exits with error")
+			stack := shared.CreateCrashingStack("test-crash-detection")
+			created := shared.CreateStack(client, orgID, teamName, stack)
+			stackID := created.GetId()
+
+			DeferCleanup(func() {
+				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
+			})
+
+			By("Waiting for the resource to enter Failed state")
+			shared.WaitForStackResourceFailed(client, orgID, teamName, stackID, shared.CrashResourceName, 3*time.Minute)
+
+			By("Waiting for last_failure to be populated on the resource")
+			lastFailure := shared.WaitForStackResourceLastFailure(client, orgID, teamName, stackID, shared.CrashResourceName, 2*time.Minute)
+
+			By("Verifying last_failure has the correct type and container details")
+			Expect(lastFailure.Type).NotTo(BeNil())
+			Expect(*lastFailure.Type).To(Equal("runtime_crash"))
+
+			Expect(lastFailure.Container).NotTo(BeNil(), "container failure detail should be set")
+			Expect(lastFailure.Container.FailureType).NotTo(BeNil())
+			Expect(*lastFailure.Container.FailureType).To(BeElementOf("exit_error", "crash_loop"),
+				"failure_type should be exit_error or crash_loop depending on restart count")
+
+			Expect(lastFailure.Build).To(BeNil(), "build failure should not be set for a runtime crash")
+		})
+	})
+
 	Context("Build from Source with Private Repo", func() {
 		var githubToken string
 
@@ -588,6 +619,53 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			By("Verifying image build record via API")
 			builds := shared.ListStackBuilds(client, orgID, teamName, stackID)
 			Expect(builds).NotTo(BeEmpty(), "should have at least one image build record")
+		})
+
+		It("should populate last_build_failure_detail when a build fails", func() {
+			testEnv := GetEnvironment()
+			clusterClient := testEnv.Cluster.GetClient()
+			ctx := context.Background()
+
+			By("Creating a GitCredentials secret with the GitHub token")
+			gitSecret := shared.CreateGitCredentialsSecret("test-build-fail-creds", githubToken)
+			createdSecret := shared.CreateSecret(client, orgID, teamName, gitSecret)
+			secretID := createdSecret.GetId()
+
+			DeferCleanup(func() {
+				shared.DeleteSecret(client, orgID, teamName, secretID)
+			})
+
+			By("Creating a stack with a build source pointing to a branch with a broken Dockerfile")
+			stack := shared.CreateStackWithBrokenBuildSource("test-build-fail", shared.BuildSourceRepoURL, secretID)
+			created := shared.CreateStack(client, orgID, teamName, stack)
+			stackID := created.GetId()
+			stackName := created.GetName()
+			namespace := created.GetNamespace()
+
+			DeferCleanup(func() {
+				if CurrentSpecReport().Failed() {
+					kubeClient, _ := testEnv.Cluster.GetKubeClient()
+					shared.DumpBuildSourceDebugInfo(ctx, client, clusterClient, kubeClient, orgID, teamName, stackID, namespace)
+				}
+				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
+			})
+
+			By("Waiting for the Stack CR to appear in the cluster")
+			shared.WaitForStackCRExists(ctx, clusterClient, stackName, namespace, 2*time.Minute)
+
+			By("Waiting for last_build_failure_detail to be populated on the image build")
+			detail := shared.WaitForBuildLastFailureDetail(client, orgID, teamName, stackID, shared.BrokenBuildResourceName, 5*time.Minute)
+
+			By("Verifying last_build_failure_detail has failure info")
+			Expect(detail.FailureType).NotTo(BeNil())
+			Expect(*detail.FailureType).To(BeElementOf("exit_error", "image_pull_failed"))
+
+			By("Verifying last_failure on the stack resource reflects the build failure")
+			lastFailure := shared.WaitForStackResourceLastFailure(client, orgID, teamName, stackID, shared.BrokenBuildResourceName, 2*time.Minute)
+			Expect(lastFailure.Type).NotTo(BeNil())
+			Expect(*lastFailure.Type).To(Equal("build_failure"))
+			Expect(lastFailure.Build).NotTo(BeNil())
 		})
 	})
 })
