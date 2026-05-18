@@ -11,7 +11,6 @@ export interface ActiveRow {
   email: string;
   role: User["role"];
   teams: NonNullable<User["teams"]>;
-  last_active_at?: string;
   user: User;
 }
 export interface PendingRow {
@@ -19,7 +18,7 @@ export interface PendingRow {
   id: string;
   email: string;
   team_name?: string;
-  role?: string;
+  role?: OrgInvite["role"];
   invited_by?: string;
   expires_at?: string;
   email_sent?: boolean;
@@ -46,7 +45,6 @@ export function useUsers() {
         email: u.email ?? "",
         role: u.role,
         teams: u.teams ?? [],
-        last_active_at: undefined,
         user: u,
       }));
       let pending: PendingRow[] = [];
@@ -63,7 +61,8 @@ export function useUsers() {
           email_sent: i.email_sent,
           invite: i,
         }));
-      } catch {
+      } catch (e) {
+        console.warn("Failed to fetch pending invites (non-fatal):", e);
         pending = [];
       }
       setRows([...pending, ...active]);
