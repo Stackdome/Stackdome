@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Users, UserX } from "lucide-react";
 import { useUsers } from "./hooks/use-users";
+import { InviteDialog } from "./components/invite-dialog";
 import type { UserRowModel } from "./hooks/use-users";
 import { UserRow } from "./components/user-row";
 import { PendingRow } from "./components/pending-row";
@@ -88,6 +89,7 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [roleTab, setRoleTab] = useState<RoleTab>("all");
   const [team, setTeam] = useState("all");
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const allTeams = extractTeams(rows);
   const filtered = filterRows(rows, search, roleTab, team);
@@ -105,8 +107,7 @@ export default function UsersPage() {
         eyebrow="Settings"
         title="Users"
         actions={
-          // TODO(Task 13): wire invite dialog
-          <Button onClick={() => {}}>
+          <Button onClick={() => setInviteOpen(true)}>
             Invite user
           </Button>
         }
@@ -191,8 +192,7 @@ export default function UsersPage() {
           title="No users yet"
           description="Invite your first teammate to get started."
           action={
-            // TODO(Task 13): wire invite dialog
-            <Button variant="outline" onClick={() => {}}>
+            <Button variant="outline" onClick={() => setInviteOpen(true)}>
               Invite user
             </Button>
           }
@@ -231,6 +231,12 @@ export default function UsersPage() {
           </Table>
         </div>
       )}
+
+      <InviteDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        onCreated={refetch}
+      />
     </div>
   );
 }
