@@ -15,7 +15,7 @@ import { InviteAcceptForm } from "../invite-accept-form";
 
 const info = { org_name: "Acme", team_name: "engineering", inviter_name: "Jane", expires_at: "2026-05-19T00:00:00Z" };
 
-beforeEach(() => signup.mockReset());
+beforeEach(() => { signup.mockReset(); });
 afterEach(() => cleanup());
 
 function renderForm() {
