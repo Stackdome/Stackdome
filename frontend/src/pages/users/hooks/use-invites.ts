@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { flushSync } from "react-dom";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { createInvite, resendInvite, revokeInvite, type OrgInviteCreateResponse } from "@/api/invites";
@@ -22,7 +21,7 @@ export function useInvites() {
       setResult(invite.email_sent ? "sent" : "failed");
       return { invite, token: invite.invite_token };
     } catch (e: unknown) {
-      flushSync(() => setServerError(getErrorMessage(e)));
+      setServerError(getErrorMessage(e));
       throw e;
     } finally {
       setSubmitting(false);

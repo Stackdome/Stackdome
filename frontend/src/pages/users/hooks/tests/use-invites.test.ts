@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, cleanup } from "@testing-library/react";
+import { renderHook, act, cleanup, waitFor } from "@testing-library/react";
 
 vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: vi.fn(() => "org-1") }));
 vi.mock("@/api/invites", () => ({
@@ -37,10 +37,10 @@ describe("useInvites", () => {
   it("create() failure sets serverError and rethrows", async () => {
     vi.mocked(createInvite).mockRejectedValue(new Error("x"));
     const { result } = renderHook(() => useInvites());
-    await expect(
-      act(async () => { await result.current.create({ email: "a@b.io", team_name: "engineering", role: "Developer" }); }),
-    ).rejects.toBeTruthy();
-    expect(result.current.serverError).toBe("server fail");
+    await act(async () => {
+      await expect(result.current.create({ email: "a@b.io", team_name: "engineering", role: "Developer" })).rejects.toBeTruthy();
+    });
+    await waitFor(() => expect(result.current.serverError).toBe("server fail"));
   });
 
   it("resend and revoke call the API with org id", async () => {
