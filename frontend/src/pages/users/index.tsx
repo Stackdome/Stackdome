@@ -5,6 +5,8 @@ import { InviteDialog } from "./components/invite-dialog";
 import type { UserRowModel } from "./hooks/use-users";
 import { UserRow } from "./components/user-row";
 import { PendingRow } from "./components/pending-row";
+import { UserRowMenu } from "./components/user-row-menu";
+import { PendingRowMenu } from "./components/pending-row-menu";
 import { PageHeader, EmptyState } from "@/components/branded";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -222,9 +224,17 @@ export default function UsersPage() {
             <TableBody>
               {filtered.map((row) =>
                 row.kind === "pending" ? (
-                  <PendingRow key={row.id} row={row} />
+                  <PendingRow
+                    key={row.id}
+                    row={row}
+                    actions={<PendingRowMenu row={row} onChanged={refetch} />}
+                  />
                 ) : (
-                  <UserRow key={row.id} row={row} />
+                  <UserRow
+                    key={row.id}
+                    row={row}
+                    actions={<UserRowMenu row={row} onChanged={refetch} />}
+                  />
                 ),
               )}
             </TableBody>
