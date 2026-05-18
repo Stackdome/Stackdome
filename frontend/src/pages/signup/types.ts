@@ -13,3 +13,10 @@ export const signupSchema = z.object({
 });
 
 export type SignupFormData = z.infer<typeof signupSchema>;
+
+export const inviteAcceptSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Email is invalid'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+export type InviteAcceptFormData = z.infer<typeof inviteAcceptSchema>;

@@ -11,11 +11,14 @@ export function useSignup() {
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<UserSignupResponse | null>(null);
 
-  const signup = async (data: UserSignupRequest) => {
+  const signup = async (data: UserSignupRequest, inviteToken?: string) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await userApi.signupUser(data);
+      const payload: UserSignupRequest = inviteToken
+        ? { name: data.name, email: data.email, password: data.password, invite_token: inviteToken }
+        : data;
+      const result = await userApi.signupUser(payload);
       setUser(result);
       return result;
     } catch (err: unknown) {
