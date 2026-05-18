@@ -32,6 +32,16 @@ binary:
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o bin/stackdome-server cmd/main.go
 .PHONY: binary
 
+# Compiles only committed git files — catches missing `git add` before pushing
+git-build:
+	@echo "Compiling from committed files only..."
+	@BUILDDIR=$$(mktemp -d "$$HOME/.stackdome-git-build-XXXXXX") && \
+	trap "rm -rf $$BUILDDIR" EXIT && \
+	git archive HEAD | tar -x -C $$BUILDDIR && \
+	cd $$BUILDDIR && GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o $$BUILDDIR/stackdome-server ./cmd/main.go && \
+	echo "OK: all committed files compile successfully"
+.PHONY: git-build
+
 all: frontend binary
 .PHONY: all
 
