@@ -8,8 +8,10 @@ import { NavSecrets } from "@/components/nav-secrets"
 import { NavObjectStores } from "@/components/nav-object-stores"
 import { NavDomains } from "@/components/nav-domains"
 import { NavAddons } from "@/components/nav-addons"
+import { NavSettings } from "@/components/nav-settings"
 import { NavUser } from "@/components/nav-user"
 import { getCurrentUser } from "@/helpers/common"
+import { useCurrentUser } from "@/hooks/use-current-user"
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +28,7 @@ import {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const user = getCurrentUser();
+  const { isOrgAdmin } = useCurrentUser();
 
   // Create required user data for NavUser component
   const userData = {
@@ -66,6 +69,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <NavDomains />
           </SidebarGroupContent>
         </SidebarGroup>
+        {isOrgAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground/70">Settings</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavSettings />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>
