@@ -1,6 +1,8 @@
 package shared
 
 import (
+	"fmt"
+
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 )
 
@@ -47,6 +49,13 @@ var PostgresEnvMapping = map[string]string{
 	"connectionString": "DATABASE_URL",
 }
 
+// Crash detection fixture values
+const (
+	CrashResourceName = "crash-app"
+	CrashImage        = "busybox:1.36"
+	CrashMessage      = "application crashed with fatal error"
+)
+
 // Build from source fixture values
 const (
 	BuildSourceRepoURL      = "https://github.com/ashishmax31/test-private-repo.git"
@@ -56,6 +65,12 @@ const (
 	BuildSourcePort         = 3000
 	BuildSourceResourceName = "todo-app"
 	BuildSourceSecretName   = "test-git-creds"
+
+	// BrokenBuildResourceName is the resource name for the broken-build fixture.
+	// It points to a branch that contains a Dockerfile with an invalid command so the build fails.
+	BrokenBuildResourceName     = "broken-app"
+	BrokenBuildSourceBranch     = "broken-dockerfile"
+	BrokenBuildSourceDockerfile = "Dockerfile"
 )
 
 // PostgreSQL addon factory functions using OpenAPI models
@@ -295,6 +310,20 @@ func CreateObjectStoreWithRetention(name string, secretID string, retention stri
 
 // Stack factory functions using OpenAPI models
 
+// CreateCrashingStack creates a stack whose sole resource immediately exits with a non-zero
+// code, triggering CrashLoopBackOff so the cluster-agent populates LastFailureDetails.
+func CreateCrashingStack(name string) *openapi.Stack {
+	resource := openapi.NewStackResource(CrashResourceName)
+	imageSpec := openapi.NewImageSpec(CrashImage)
+	resource.SetImageSpec(*imageSpec)
+	exec := openapi.NewExecutionConfig()
+	exec.SetCommand([]string{"sh", "-c", fmt.Sprintf("echo '%s'; exit 1", CrashMessage)})
+	resource.SetExecutionConfig(*exec)
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	return openapi.NewStack(name, *spec)
+}
+
 func CreateSimpleStack(name string) *openapi.Stack {
 	resource := openapi.NewStackResource("web")
 	imageSpec := openapi.NewImageSpec("nginx:1.25-alpine")
@@ -431,6 +460,43 @@ func CreateStackWithPostgresAddonSuperuser(name string, addonID string) *openapi
 	exec := openapi.NewExecutionConfig()
 	exec.SetEnvFromAddons([]openapi.AddonEnvSource{*addonEnvSource})
 	resource.SetExecutionConfig(*exec)
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	return openapi.NewStack(name, *spec)
+}
+
+// CreateStackWithBrokenBuildSource creates a stack pointing at a branch with a broken
+// Dockerfile so the kaniko build fails, triggering last_build_failure_detail.
+func CreateStackWithBrokenBuildSource(name string, repoURL string, secretID string) *openapi.Stack {
+	resource := openapi.NewStackResource(BrokenBuildResourceName)
+
+	gitRepo := openapi.NewBuildSourceContextGitRepo(repoURL)
+	gitSecret := openapi.NewSecretRef(secretID)
+	gitRepo.SetGitSecret(*gitSecret)
+
+	sourceContext := openapi.NewBuildSourceContext()
+	sourceContext.SetGitRepo(*gitRepo)
+
+	branchRevision := openapi.GitRepoRevisionBranch{
+		Name: openapi.PtrString(BrokenBuildSourceBranch),
+	}
+	gitRepoRevision := openapi.NewGitRepoRevision()
+	gitRepoRevision.SetBranch(branchRevision)
+
+	sourceRevision := openapi.NewBuildSourceRevision()
+	sourceRevision.SetGitRepoRevision(*gitRepoRevision)
+
+	imageRepo := openapi.NewImageRepository()
+	imageRepo.SetUseInternalRegistry(true)
+
+	buildSpec := openapi.NewStackResourceBuildSpec(
+		*sourceContext,
+		BuildSourceContextPath,
+		BrokenBuildSourceDockerfile,
+		*sourceRevision,
+		*imageRepo,
+	)
+	resource.SetBuildSpec(*buildSpec)
 
 	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
 	return openapi.NewStack(name, *spec)

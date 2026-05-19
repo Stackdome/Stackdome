@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
+	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
 
 const (
@@ -118,6 +119,9 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		dbResourceBuild.Status = mapClusterStatusToServerStatus(imageBuild.Status)
 		if serr := r.DBImageBuildService.InternalUpdateStatus(ctx, dbResourceBuild.ID, dbResourceBuild.Status); serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update image build status: %v", serr)
+		}
+		if err := r.propagateBuildFailureToStackResource(ctx, dbStackResouce, imageBuild.Status); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to propagate build failure to stack resource: %v", err)
 		}
 		return ctrl.Result{}, nil
 	}
@@ -233,5 +237,56 @@ func mapClusterStatusToServerStatus(clusterStatus buildsv1alpha1.ImageBuildStatu
 		ImageURL:               clusterStatus.ImageUrl,
 		BuildSourceRevision:    clusterStatus.BuildSourceRevision,
 		LastObservedStatusHash: clusterStatus.StatusHash,
+		LastBuildFailureDetail: controllers.MapBuildFailureDetail(clusterStatus.LastBuildFailureDetail),
 	}
+}
+
+func buildStackResourceFailureFromBuild(d *corev1alpha1.LastFailureDetail) *models.StackResourceFailure {
+	if d == nil {
+		return nil
+	}
+	return &models.StackResourceFailure{
+		Type:  models.FailureTypeBuildFailure,
+		Build: controllers.MapBuildFailureDetail(d),
+	}
+}
+
+// computeStackResourceStatusAfterBuild returns the updated status and true if an
+// update is needed, or nil/false if nothing should be written to the DB.
+func computeStackResourceStatusAfterBuild(
+	current models.StackResourceStatus,
+	clusterBuildStatus buildsv1alpha1.ImageBuildStatus,
+) (*models.StackResourceStatus, bool) {
+	updated := current
+	switch {
+	case clusterBuildStatus.LastBuildFailureDetail != nil:
+		updated.LastFailure = buildStackResourceFailureFromBuild(clusterBuildStatus.LastBuildFailureDetail)
+	case clusterBuildStatus.Phase == buildsv1alpha1.BuildPhaseSuccess:
+		if current.LastFailure != nil && current.LastFailure.Type == models.FailureTypeBuildFailure {
+			updated.LastFailure = nil
+		} else {
+			return nil, false
+		}
+	default:
+		return nil, false
+	}
+	return &updated, true
+}
+
+func (r *ImageBuildReconciler) propagateBuildFailureToStackResource(
+	ctx context.Context,
+	dbStackResource *models.StackResource,
+	clusterBuildStatus buildsv1alpha1.ImageBuildStatus,
+) error {
+	if dbStackResource.Status == nil {
+		return nil
+	}
+	newStatus, changed := computeStackResourceStatusAfterBuild(*dbStackResource.Status, clusterBuildStatus)
+	if !changed {
+		return nil
+	}
+	if serr := r.DBResourceService.UpdateStatus(ctx, dbStackResource.ID, newStatus); serr != nil {
+		return serr.AsError()
+	}
+	return nil
 }

@@ -45,6 +45,32 @@ func presentStackResourceStatus(status *models.StackResourceStatus) *openapi.Sta
 		PublicIngress:                 presentIngress(status.PublicIngresses),
 		InternalServiceName:           status.InternalServiceName,
 		LastRestartRequestProcessedAt: status.LastRestartRequestProcessedAt,
+		LastFailure:                   presentStackResourceFailure(status.LastFailure),
+	}
+}
+
+func presentStackResourceFailure(f *models.StackResourceFailure) *openapi.StackResourceFailure {
+	if f == nil {
+		return nil
+	}
+	return &openapi.StackResourceFailure{
+		Type:          ptr.To(string(f.Type)),
+		Container:     presentContainerFailureDetail(f.Container),
+		InitContainer: presentContainerFailureDetail(f.InitContainer),
+		Build:         presentBuildFailureDetail(f.Build),
+	}
+}
+
+func presentContainerFailureDetail(d *models.ContainerFailureDetail) *openapi.ContainerFailureDetail {
+	if d == nil {
+		return nil
+	}
+	return &openapi.ContainerFailureDetail{
+		FailureType:  ptr.To(d.FailureType),
+		Reason:       ptr.To(d.Reason),
+		Message:      ptr.To(d.Message),
+		RestartCount: ptr.To(d.RestartCount),
+		ExitCode:     d.ExitCode,
 	}
 }
 

@@ -110,12 +110,21 @@ type GitBuildSource struct {
 }
 
 type ImageBuildStatus struct {
-	Conditions             []Condition `json:"conditions"`
-	State                  string      `json:"state"`
-	BuildSourceHash        string      `json:"build_source_hash"`
-	ImageURL               string      `json:"image_url"`
-	BuildSourceRevision    string      `json:"build_source_revision"`
-	LastObservedStatusHash string      `json:"last_observed_status_hash,omitempty"`
+	Conditions             []Condition         `json:"conditions"`
+	State                  string              `json:"state"`
+	BuildSourceHash        string              `json:"build_source_hash"`
+	ImageURL               string              `json:"image_url"`
+	BuildSourceRevision    string              `json:"build_source_revision"`
+	LastObservedStatusHash string              `json:"last_observed_status_hash,omitempty"`
+	LastBuildFailureDetail *BuildFailureDetail `json:"last_build_failure_detail,omitempty"`
+}
+
+type BuildFailureDetail struct {
+	FailureType  string `json:"failure_type"`
+	Reason       string `json:"reason,omitempty"`
+	Message      string `json:"message,omitempty"`
+	RestartCount int32  `json:"restart_count"`
+	ExitCode     *int32 `json:"exit_code,omitempty"`
 }
 
 // Unmarhsal and marshal JSONB column types

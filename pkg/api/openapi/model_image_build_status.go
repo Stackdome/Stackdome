@@ -16,10 +16,11 @@ import (
 
 // ImageBuildStatus struct for ImageBuildStatus
 type ImageBuildStatus struct {
-	State               *string     `json:"state,omitempty"`
-	Conditions          []Condition `json:"conditions,omitempty"`
-	ImageUrl            *string     `json:"image_url,omitempty"`
-	BuildSourceRevision *string     `json:"build_source_revision,omitempty"`
+	State                  *string             `json:"state,omitempty"`
+	Conditions             []Condition         `json:"conditions,omitempty"`
+	ImageUrl               *string             `json:"image_url,omitempty"`
+	BuildSourceRevision    *string             `json:"build_source_revision,omitempty"`
+	LastBuildFailureDetail *BuildFailureDetail `json:"last_build_failure_detail,omitempty"`
 }
 
 // NewImageBuildStatus instantiates a new ImageBuildStatus object
@@ -167,6 +168,38 @@ func (o *ImageBuildStatus) SetBuildSourceRevision(v string) {
 	o.BuildSourceRevision = &v
 }
 
+// GetLastBuildFailureDetail returns the LastBuildFailureDetail field value if set, zero value otherwise.
+func (o *ImageBuildStatus) GetLastBuildFailureDetail() BuildFailureDetail {
+	if o == nil || o.LastBuildFailureDetail == nil {
+		var ret BuildFailureDetail
+		return ret
+	}
+	return *o.LastBuildFailureDetail
+}
+
+// GetLastBuildFailureDetailOk returns a tuple with the LastBuildFailureDetail field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *ImageBuildStatus) GetLastBuildFailureDetailOk() (*BuildFailureDetail, bool) {
+	if o == nil || o.LastBuildFailureDetail == nil {
+		return nil, false
+	}
+	return o.LastBuildFailureDetail, true
+}
+
+// HasLastBuildFailureDetail returns a boolean if a field has been set.
+func (o *ImageBuildStatus) HasLastBuildFailureDetail() bool {
+	if o != nil && o.LastBuildFailureDetail != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLastBuildFailureDetail gets a reference to the given BuildFailureDetail and assigns it to the LastBuildFailureDetail field.
+func (o *ImageBuildStatus) SetLastBuildFailureDetail(v BuildFailureDetail) {
+	o.LastBuildFailureDetail = &v
+}
+
 func (o ImageBuildStatus) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.State != nil {
@@ -180,6 +213,9 @@ func (o ImageBuildStatus) MarshalJSON() ([]byte, error) {
 	}
 	if o.BuildSourceRevision != nil {
 		toSerialize["build_source_revision"] = o.BuildSourceRevision
+	}
+	if o.LastBuildFailureDetail != nil {
+		toSerialize["last_build_failure_detail"] = o.LastBuildFailureDetail
 	}
 	return json.Marshal(toSerialize)
 }

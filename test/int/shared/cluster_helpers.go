@@ -384,6 +384,81 @@ func WaitForStackCRDeleted(ctx context.Context, clusterClient client.Client, nam
 	}, timeout, 2*time.Second).Should(Succeed())
 }
 
+// DumpCrashDetectionDebugInfo prints the raw StackResource CR status, Deployment conditions,
+// and pod container statuses to help debug crash detection failures.
+func DumpCrashDetectionDebugInfo(ctx context.Context, clusterClient client.Client, namespace, resourceName string) {
+	fmt.Printf("\n========== CRASH DETECTION DEBUG INFO (namespace=%s resource=%s) ==========\n", namespace, resourceName)
+
+	var sr corev1alpha1.StackResource
+	if err := clusterClient.Get(ctx, client.ObjectKey{Name: resourceName, Namespace: namespace}, &sr); err != nil {
+		fmt.Printf("[StackResource CR] error fetching: %v\n", err)
+	} else {
+		fmt.Printf("[StackResource CR] phase=%s statusHash=%s lastFailureRevision=%q\n",
+			sr.Status.Phase, sr.Status.StatusHash, sr.Status.LastFailureRevision)
+		fmt.Printf("[StackResource CR] lastFailureDetails count=%d\n", len(sr.Status.LastFailureDetails))
+		for i, d := range sr.Status.LastFailureDetails {
+			fmt.Printf("  [%d] container=%s restarts=%d reason=%q exitCode=%v message=%q\n",
+				i, d.ContainerName, d.RestartCount, d.LastTerminationReason, d.LastTerminationExitCode, d.LastTerminationMessage)
+		}
+		fmt.Printf("[StackResource CR] conditions:\n")
+		for _, c := range sr.Status.Conditions {
+			fmt.Printf("  type=%s status=%s reason=%s message=%q\n", c.Type, c.Status, c.Reason, c.Message)
+		}
+	}
+
+	var deploy appsv1.Deployment
+	if err := clusterClient.Get(ctx, client.ObjectKey{Name: resourceName, Namespace: namespace}, &deploy); err != nil {
+		fmt.Printf("[Deployment] error fetching: %v\n", err)
+	} else {
+		fmt.Printf("[Deployment] revision=%s availableReplicas=%d readyReplicas=%d\n",
+			deploy.Annotations["deployment.kubernetes.io/revision"],
+			deploy.Status.AvailableReplicas, deploy.Status.ReadyReplicas)
+		for _, c := range deploy.Status.Conditions {
+			fmt.Printf("  condition type=%s status=%s reason=%s message=%q\n", c.Type, c.Status, c.Reason, c.Message)
+		}
+	}
+
+	var podList corev1.PodList
+	if err := clusterClient.List(ctx, &podList, client.InNamespace(namespace), client.MatchingLabels(map[string]string{"resource": resourceName})); err != nil {
+		fmt.Printf("[Pods] error listing: %v\n", err)
+	} else {
+		fmt.Printf("[Pods] found %d pods\n", len(podList.Items))
+		for _, pod := range podList.Items {
+			fmt.Printf("  pod=%s phase=%s\n", pod.Name, pod.Status.Phase)
+			allStatuses := append(pod.Status.InitContainerStatuses, pod.Status.ContainerStatuses...)
+			for _, cs := range allStatuses {
+				state := "unknown"
+				switch {
+				case cs.State.Running != nil:
+					state = "running"
+				case cs.State.Waiting != nil:
+					state = fmt.Sprintf("waiting reason=%s", cs.State.Waiting.Reason)
+				case cs.State.Terminated != nil:
+					state = fmt.Sprintf("terminated exitCode=%d reason=%s", cs.State.Terminated.ExitCode, cs.State.Terminated.Reason)
+				}
+				fmt.Printf("    container=%s restarts=%d state=%s\n", cs.Name, cs.RestartCount, state)
+				if cs.LastTerminationState.Terminated != nil {
+					t := cs.LastTerminationState.Terminated
+					fmt.Printf("      lastTermination exitCode=%d reason=%s\n", t.ExitCode, t.Reason)
+				}
+			}
+		}
+	}
+
+	var rsList appsv1.ReplicaSetList
+	if err := clusterClient.List(ctx, &rsList, client.InNamespace(namespace), client.MatchingLabels(map[string]string{"resource": resourceName})); err != nil {
+		fmt.Printf("[ReplicaSets] error listing: %v\n", err)
+	} else {
+		fmt.Printf("[ReplicaSets] found %d replicasets\n", len(rsList.Items))
+		for _, rs := range rsList.Items {
+			fmt.Printf("  rs=%s revision=%s replicas=%d\n",
+				rs.Name, rs.Annotations["deployment.kubernetes.io/revision"], rs.Status.Replicas)
+		}
+	}
+
+	fmt.Println("========== END CRASH DETECTION DEBUG INFO ==========")
+}
+
 func GetDeploymentForStackResource(ctx context.Context, clusterClient client.Client, namespace, name string) (*appsv1.Deployment, error) {
 	var deploy appsv1.Deployment
 	if err := clusterClient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &deploy); err != nil {
@@ -436,6 +511,71 @@ func GetIngressForStackResource(ctx context.Context, clusterClient client.Client
 		return nil, err
 	}
 	return &ingress, nil
+}
+
+// WaitForStackResourceFailed polls the API until the named resource reaches Failed state.
+func WaitForStackResourceFailed(apiClient *openapi.APIClient, orgID, teamName, stackID, resourceName string, timeout time.Duration) *openapi.StackResource {
+	var resource *openapi.StackResource
+	Eventually(func(g Gomega) {
+		ctx := context.Background()
+		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet(ctx, orgID, teamName, stackID, resourceName).Execute()
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(httpResp.StatusCode).To(Equal(200))
+
+		status, ok := resp.GetStatusOk()
+		g.Expect(ok).To(BeTrue(), "resource should have status")
+
+		state, stateOk := status.GetStateOk()
+		g.Expect(stateOk).To(BeTrue(), "status should have state")
+		g.Expect(*state).To(Equal("Failed"), "resource should be Failed, got: %s", *state)
+		resource = resp
+	}, timeout, 5*time.Second).Should(Succeed())
+	return resource
+}
+
+// WaitForStackResourceLastFailure polls the API until last_failure is populated on the named resource.
+func WaitForStackResourceLastFailure(apiClient *openapi.APIClient, orgID, teamName, stackID, resourceName string, timeout time.Duration) *openapi.StackResourceFailure {
+	var lastFailure *openapi.StackResourceFailure
+	Eventually(func(g Gomega) {
+		ctx := context.Background()
+		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet(ctx, orgID, teamName, stackID, resourceName).Execute()
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(httpResp.StatusCode).To(Equal(200))
+
+		status, ok := resp.GetStatusOk()
+		g.Expect(ok).To(BeTrue())
+
+		failure, failureOk := status.GetLastFailureOk()
+		g.Expect(failureOk).To(BeTrue(), "last_failure should be set on resource status")
+		g.Expect(failure).NotTo(BeNil(), "last_failure should not be nil")
+		lastFailure = failure
+	}, timeout, 5*time.Second).Should(Succeed())
+	return lastFailure
+}
+
+// WaitForBuildLastFailureDetail polls the API until last_build_failure_detail is populated on
+// the named resource's most recent image build.
+func WaitForBuildLastFailureDetail(apiClient *openapi.APIClient, orgID, teamName, stackID, resourceName string, timeout time.Duration) *openapi.BuildFailureDetail {
+	var detail *openapi.BuildFailureDetail
+	Eventually(func(g Gomega) {
+		ctx := context.Background()
+		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGet(ctx, orgID, teamName, stackID, resourceName).Execute()
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(httpResp.StatusCode).To(Equal(200))
+
+		items := resp.GetItems()
+		g.Expect(items).NotTo(BeEmpty(), "should have at least one image build")
+
+		build := items[len(items)-1]
+		status, ok := build.GetStatusOk()
+		g.Expect(ok).To(BeTrue())
+
+		d, dOk := status.GetLastBuildFailureDetailOk()
+		g.Expect(dOk).To(BeTrue(), "last_build_failure_detail should be set")
+		g.Expect(d).NotTo(BeNil())
+		detail = d
+	}, timeout, 5*time.Second).Should(Succeed())
+	return detail
 }
 
 func ListStackBuilds(apiClient *openapi.APIClient, orgID, teamName, stackID string) []openapi.ImageBuild {

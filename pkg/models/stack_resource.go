@@ -76,19 +76,42 @@ type Dependencies []string
 type Ports []Port
 
 type StackResourceStatus struct {
-	State                         StackResourceState `json:"state"`
-	Message                       string             `json:"message"`
-	ObservedCrRevision            string             `json:"observed_cr_revision"`
-	Conditions                    []Condition        `json:"conditions"`
-	PublicIngresses               []Ingress          `json:"public_ingresses"`
-	InternalServiceName           *string            `json:"internal_service_name,omitempty"`
-	LastObservedStatusHash        string             `json:"last_observed_status_hash,omitempty"`
-	LastRestartRequestProcessedAt *time.Time         `json:"last_restart_request_processed_at,omitempty"`
+	State                         StackResourceState    `json:"state"`
+	Message                       string                `json:"message"`
+	ObservedCrRevision            string                `json:"observed_cr_revision"`
+	Conditions                    []Condition           `json:"conditions"`
+	PublicIngresses               []Ingress             `json:"public_ingresses"`
+	InternalServiceName           *string               `json:"internal_service_name,omitempty"`
+	LastObservedStatusHash        string                `json:"last_observed_status_hash,omitempty"`
+	LastRestartRequestProcessedAt *time.Time            `json:"last_restart_request_processed_at,omitempty"`
+	LastFailure                   *StackResourceFailure `json:"last_failure,omitempty"`
 }
 
 type Ingress struct {
 	URL        string `json:"url"`
 	TargetPort int    `json:"target_port"`
+}
+
+type StackResourceFailureType string
+
+const (
+	FailureTypeRuntimeCrash StackResourceFailureType = "runtime_crash"
+	FailureTypeBuildFailure StackResourceFailureType = "build_failure"
+)
+
+type ContainerFailureDetail struct {
+	FailureType  string `json:"failure_type"`
+	Reason       string `json:"reason,omitempty"`
+	Message      string `json:"message,omitempty"`
+	RestartCount int32  `json:"restart_count"`
+	ExitCode     *int32 `json:"exit_code,omitempty"`
+}
+
+type StackResourceFailure struct {
+	Type          StackResourceFailureType `json:"type"`
+	Container     *ContainerFailureDetail  `json:"container,omitempty"`
+	InitContainer *ContainerFailureDetail  `json:"init_container,omitempty"`
+	Build         *BuildFailureDetail      `json:"build,omitempty"`
 }
 
 type Port struct {

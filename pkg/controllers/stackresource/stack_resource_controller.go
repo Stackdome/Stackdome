@@ -120,6 +120,7 @@ func mapClusterStatusToServerStatus(clusterInstance *corev1alpha1.StackResource)
 		PublicIngresses:        mapToPublicIngresses(clusterInstance.Status.ExternalAddress),
 		ObservedCrRevision:     clusterInstance.Status.ObservedStackdomeServerObjectRevision,
 		InternalServiceName:    clusterInstance.Status.InternalAddress,
+		LastFailure:            controllers.MapLastFailureDetails(clusterInstance.Name, clusterInstance.Status.LastFailureDetails),
 	}
 	if clusterInstance.Status.LastRestartRequestProcessedAt != nil {
 		res.LastRestartRequestProcessedAt = ptr.To(clusterInstance.Status.LastRestartRequestProcessedAt.UTC())

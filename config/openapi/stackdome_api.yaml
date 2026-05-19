@@ -3380,6 +3380,8 @@ components:
           type: string
         build_source_revision:
           type: string
+        last_build_failure_detail:
+          $ref: '#/components/schemas/BuildFailureDetail'
     Secret:
       type: object
       additionalProperties: false
@@ -3527,6 +3529,64 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Condition'
+        last_failure:
+          $ref: '#/components/schemas/StackResourceFailure'
+    ContainerFailureDetail:
+      type: object
+      properties:
+        failure_type:
+          type: string
+          enum:
+            - crash_loop
+            - out_of_memory
+            - image_pull_failed
+            - create_container_error
+            - exit_error
+        reason:
+          type: string
+        message:
+          type: string
+        restart_count:
+          type: integer
+          format: int32
+        exit_code:
+          type: integer
+          format: int32
+    BuildFailureDetail:
+      type: object
+      properties:
+        failure_type:
+          type: string
+          enum:
+            - crash_loop
+            - out_of_memory
+            - image_pull_failed
+            - create_container_error
+            - exit_error
+        reason:
+          type: string
+        message:
+          type: string
+        restart_count:
+          type: integer
+          format: int32
+        exit_code:
+          type: integer
+          format: int32
+    StackResourceFailure:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - runtime_crash
+            - build_failure
+        container:
+          $ref: '#/components/schemas/ContainerFailureDetail'
+        init_container:
+          $ref: '#/components/schemas/ContainerFailureDetail'
+        build:
+          $ref: '#/components/schemas/BuildFailureDetail'
     Ingress:
       type: object
       properties:

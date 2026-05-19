@@ -54,7 +54,9 @@ test:
 
 .PHONY: test-integration
 test-integration: SHELL := /usr/bin/env bash
-test-integration: ## Run integration tests (requires Docker for Kind cluster)
+test-integration: ## Run integration tests. Optional: FOCUS="My Test Name" to run a specific spec.
 	@go test -c -o test/int/integration.test ./test/int
-	@cd test/int && set -o pipefail && ./integration.test -test.v -ginkgo.v -test.timeout 30m -test.count 1 2>&1 | tee last-run.log; \
+	@cd test/int && set -o pipefail && ./integration.test -test.v -ginkgo.v -test.timeout 30m -test.count 1 \
+		$(if $(FOCUS),-ginkgo.focus="$(FOCUS)") \
+		2>&1 | tee last-run.log; \
 		EXIT_CODE=$$?; rm -f integration.test; exit $$EXIT_CODE

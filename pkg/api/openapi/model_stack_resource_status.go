@@ -17,12 +17,13 @@ import (
 
 // StackResourceStatus struct for StackResourceStatus
 type StackResourceStatus struct {
-	PublicIngress                 []Ingress   `json:"public_ingress,omitempty"`
-	InternalServiceName           *string     `json:"internal_service_name,omitempty"`
-	LastRestartRequestProcessedAt *time.Time  `json:"last_restart_request_processed_at,omitempty"`
-	State                         *string     `json:"state,omitempty"`
-	ObservedRevision              *string     `json:"observed_revision,omitempty"`
-	Conditions                    []Condition `json:"conditions,omitempty"`
+	PublicIngress                 []Ingress             `json:"public_ingress,omitempty"`
+	InternalServiceName           *string               `json:"internal_service_name,omitempty"`
+	LastRestartRequestProcessedAt *time.Time            `json:"last_restart_request_processed_at,omitempty"`
+	State                         *string               `json:"state,omitempty"`
+	ObservedRevision              *string               `json:"observed_revision,omitempty"`
+	Conditions                    []Condition           `json:"conditions,omitempty"`
+	LastFailure                   *StackResourceFailure `json:"last_failure,omitempty"`
 }
 
 // NewStackResourceStatus instantiates a new StackResourceStatus object
@@ -234,6 +235,38 @@ func (o *StackResourceStatus) SetConditions(v []Condition) {
 	o.Conditions = v
 }
 
+// GetLastFailure returns the LastFailure field value if set, zero value otherwise.
+func (o *StackResourceStatus) GetLastFailure() StackResourceFailure {
+	if o == nil || o.LastFailure == nil {
+		var ret StackResourceFailure
+		return ret
+	}
+	return *o.LastFailure
+}
+
+// GetLastFailureOk returns a tuple with the LastFailure field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackResourceStatus) GetLastFailureOk() (*StackResourceFailure, bool) {
+	if o == nil || o.LastFailure == nil {
+		return nil, false
+	}
+	return o.LastFailure, true
+}
+
+// HasLastFailure returns a boolean if a field has been set.
+func (o *StackResourceStatus) HasLastFailure() bool {
+	if o != nil && o.LastFailure != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLastFailure gets a reference to the given StackResourceFailure and assigns it to the LastFailure field.
+func (o *StackResourceStatus) SetLastFailure(v StackResourceFailure) {
+	o.LastFailure = &v
+}
+
 func (o StackResourceStatus) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.PublicIngress != nil {
@@ -253,6 +286,9 @@ func (o StackResourceStatus) MarshalJSON() ([]byte, error) {
 	}
 	if o.Conditions != nil {
 		toSerialize["conditions"] = o.Conditions
+	}
+	if o.LastFailure != nil {
+		toSerialize["last_failure"] = o.LastFailure
 	}
 	return json.Marshal(toSerialize)
 }
