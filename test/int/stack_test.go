@@ -71,8 +71,8 @@ var _ = Describe("Stack", func() {
 			})
 			updateStack.Spec.StackResources[0].SetExecutionConfig(*exec)
 			updateStack.Spec.StackResources[0].SetPorts([]openapi.Port{
-				*openapi.NewPort(80, false),
-				*openapi.NewPort(443, false),
+				*openapi.NewPort("http", 80, false),
+				*openapi.NewPort("https", 443, false),
 			})
 
 			updated := shared.UpdateStack(client, orgID, teamName, created.GetId(), updateStack)

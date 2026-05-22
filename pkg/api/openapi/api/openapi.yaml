@@ -5020,10 +5020,12 @@ components:
             - number: 0
               protocol: protocol
               exposed_to_public: true
+              name: name
               subdomain_prefix: subdomain_prefix
             - number: 0
               protocol: protocol
               exposed_to_public: true
+              name: name
               subdomain_prefix: subdomain_prefix
             labels:
             - value: value
@@ -5177,10 +5179,12 @@ components:
             - number: 0
               protocol: protocol
               exposed_to_public: true
+              name: name
               subdomain_prefix: subdomain_prefix
             - number: 0
               protocol: protocol
               exposed_to_public: true
+              name: name
               subdomain_prefix: subdomain_prefix
             labels:
             - value: value
@@ -5391,6 +5395,73 @@ components:
                 message: message
                 observed_generation: 1
                 status: status
+          connections:
+          - mappings:
+            - value:
+                output: output
+                template: template
+                values:
+                  key:
+                    output: output
+              target:
+                path: path
+                name: name
+                type: env
+            - value:
+                output: output
+                template: template
+                values:
+                  key:
+                    output: output
+              target:
+                path: path
+                name: name
+                type: env
+            kind: env
+            from:
+              name: name
+              id: id
+              type: stack_resource
+            id: id
+            to:
+              name: name
+              id: id
+              type: stack_resource
+            config:
+              key: ""
+          - mappings:
+            - value:
+                output: output
+                template: template
+                values:
+                  key:
+                    output: output
+              target:
+                path: path
+                name: name
+                type: env
+            - value:
+                output: output
+                template: template
+                values:
+                  key:
+                    output: output
+              target:
+                path: path
+                name: name
+                type: env
+            kind: env
+            from:
+              name: name
+              id: id
+              type: stack_resource
+            id: id
+            to:
+              name: name
+              id: id
+              type: stack_resource
+            config:
+              key: ""
         labels:
         - value: value
           key: key
@@ -5546,10 +5617,12 @@ components:
               - number: 0
                 protocol: protocol
                 exposed_to_public: true
+                name: name
                 subdomain_prefix: subdomain_prefix
               - number: 0
                 protocol: protocol
                 exposed_to_public: true
+                name: name
                 subdomain_prefix: subdomain_prefix
               labels:
               - value: value
@@ -5703,10 +5776,12 @@ components:
               - number: 0
                 protocol: protocol
                 exposed_to_public: true
+                name: name
                 subdomain_prefix: subdomain_prefix
               - number: 0
                 protocol: protocol
                 exposed_to_public: true
+                name: name
                 subdomain_prefix: subdomain_prefix
               labels:
               - value: value
@@ -5917,6 +5992,73 @@ components:
                   message: message
                   observed_generation: 1
                   status: status
+            connections:
+            - mappings:
+              - value:
+                  output: output
+                  template: template
+                  values:
+                    key:
+                      output: output
+                target:
+                  path: path
+                  name: name
+                  type: env
+              - value:
+                  output: output
+                  template: template
+                  values:
+                    key:
+                      output: output
+                target:
+                  path: path
+                  name: name
+                  type: env
+              kind: env
+              from:
+                name: name
+                id: id
+                type: stack_resource
+              id: id
+              to:
+                name: name
+                id: id
+                type: stack_resource
+              config:
+                key: ""
+            - mappings:
+              - value:
+                  output: output
+                  template: template
+                  values:
+                    key:
+                      output: output
+                target:
+                  path: path
+                  name: name
+                  type: env
+              - value:
+                  output: output
+                  template: template
+                  values:
+                    key:
+                      output: output
+                target:
+                  path: path
+                  name: name
+                  type: env
+              kind: env
+              from:
+                name: name
+                id: id
+                type: stack_resource
+              id: id
+              to:
+                name: name
+                id: id
+                type: stack_resource
+              config:
+                key: ""
           labels:
           - value: value
             key: key
@@ -6023,10 +6165,12 @@ components:
               - number: 0
                 protocol: protocol
                 exposed_to_public: true
+                name: name
                 subdomain_prefix: subdomain_prefix
               - number: 0
                 protocol: protocol
                 exposed_to_public: true
+                name: name
                 subdomain_prefix: subdomain_prefix
               labels:
               - value: value
@@ -6180,10 +6324,12 @@ components:
               - number: 0
                 protocol: protocol
                 exposed_to_public: true
+                name: name
                 subdomain_prefix: subdomain_prefix
               - number: 0
                 protocol: protocol
                 exposed_to_public: true
+                name: name
                 subdomain_prefix: subdomain_prefix
               labels:
               - value: value
@@ -6394,6 +6540,73 @@ components:
                   message: message
                   observed_generation: 1
                   status: status
+            connections:
+            - mappings:
+              - value:
+                  output: output
+                  template: template
+                  values:
+                    key:
+                      output: output
+                target:
+                  path: path
+                  name: name
+                  type: env
+              - value:
+                  output: output
+                  template: template
+                  values:
+                    key:
+                      output: output
+                target:
+                  path: path
+                  name: name
+                  type: env
+              kind: env
+              from:
+                name: name
+                id: id
+                type: stack_resource
+              id: id
+              to:
+                name: name
+                id: id
+                type: stack_resource
+              config:
+                key: ""
+            - mappings:
+              - value:
+                  output: output
+                  template: template
+                  values:
+                    key:
+                      output: output
+                target:
+                  path: path
+                  name: name
+                  type: env
+              - value:
+                  output: output
+                  template: template
+                  values:
+                    key:
+                      output: output
+                target:
+                  path: path
+                  name: name
+                  type: env
+              kind: env
+              from:
+                name: name
+                id: id
+                type: stack_resource
+              id: id
+              to:
+                name: name
+                id: id
+                type: stack_resource
+              config:
+                key: ""
           labels:
           - value: value
             key: key
@@ -6502,10 +6715,12 @@ components:
           - number: 0
             protocol: protocol
             exposed_to_public: true
+            name: name
             subdomain_prefix: subdomain_prefix
           - number: 0
             protocol: protocol
             exposed_to_public: true
+            name: name
             subdomain_prefix: subdomain_prefix
           labels:
           - value: value
@@ -6659,10 +6874,12 @@ components:
           - number: 0
             protocol: protocol
             exposed_to_public: true
+            name: name
             subdomain_prefix: subdomain_prefix
           - number: 0
             protocol: protocol
             exposed_to_public: true
+            name: name
             subdomain_prefix: subdomain_prefix
           labels:
           - value: value
@@ -6873,6 +7090,73 @@ components:
               message: message
               observed_generation: 1
               status: status
+        connections:
+        - mappings:
+          - value:
+              output: output
+              template: template
+              values:
+                key:
+                  output: output
+            target:
+              path: path
+              name: name
+              type: env
+          - value:
+              output: output
+              template: template
+              values:
+                key:
+                  output: output
+            target:
+              path: path
+              name: name
+              type: env
+          kind: env
+          from:
+            name: name
+            id: id
+            type: stack_resource
+          id: id
+          to:
+            name: name
+            id: id
+            type: stack_resource
+          config:
+            key: ""
+        - mappings:
+          - value:
+              output: output
+              template: template
+              values:
+                key:
+                  output: output
+            target:
+              path: path
+              name: name
+              type: env
+          - value:
+              output: output
+              template: template
+              values:
+                key:
+                  output: output
+            target:
+              path: path
+              name: name
+              type: env
+          kind: env
+          from:
+            name: name
+            id: id
+            type: stack_resource
+          id: id
+          to:
+            name: name
+            id: id
+            type: stack_resource
+          config:
+            key: ""
       properties:
         stack_resources:
           items:
@@ -6881,6 +7165,10 @@ components:
         volumes:
           items:
             $ref: '#/components/schemas/Volume'
+          type: array
+        connections:
+          items:
+            $ref: '#/components/schemas/StackConnection'
           type: array
       required:
       - stack_resources
@@ -6985,10 +7273,12 @@ components:
         - number: 0
           protocol: protocol
           exposed_to_public: true
+          name: name
           subdomain_prefix: subdomain_prefix
         - number: 0
           protocol: protocol
           exposed_to_public: true
+          name: name
           subdomain_prefix: subdomain_prefix
         labels:
         - value: value
@@ -7195,10 +7485,12 @@ components:
           - number: 0
             protocol: protocol
             exposed_to_public: true
+            name: name
             subdomain_prefix: subdomain_prefix
           - number: 0
             protocol: protocol
             exposed_to_public: true
+            name: name
             subdomain_prefix: subdomain_prefix
           labels:
           - value: value
@@ -7352,10 +7644,12 @@ components:
           - number: 0
             protocol: protocol
             exposed_to_public: true
+            name: name
             subdomain_prefix: subdomain_prefix
           - number: 0
             protocol: protocol
             exposed_to_public: true
+            name: name
             subdomain_prefix: subdomain_prefix
           labels:
           - value: value
@@ -7448,6 +7742,194 @@ components:
           type: array
         total:
           type: integer
+      type: object
+    StackConnection:
+      description: A user-authored topology edge between two nodes in a stack.
+      example:
+        mappings:
+        - value:
+            output: output
+            template: template
+            values:
+              key:
+                output: output
+          target:
+            path: path
+            name: name
+            type: env
+        - value:
+            output: output
+            template: template
+            values:
+              key:
+                output: output
+          target:
+            path: path
+            name: name
+            type: env
+        kind: env
+        from:
+          name: name
+          id: id
+          type: stack_resource
+        id: id
+        to:
+          name: name
+          id: id
+          type: stack_resource
+        config:
+          key: ""
+      properties:
+        id:
+          description: Stable connection identifier. Generated when omitted.
+          type: string
+        kind:
+          description: "The relationship type. `env` injects values into environment\
+            \ variables, `secret_mount` mounts secret values as files, `volume_mount`\
+            \ mounts a volume into a resource, and `build_artifact_source` seeds a\
+            \ volume from build output.\n"
+          enum:
+          - env
+          - secret_mount
+          - volume_mount
+          - build_artifact_source
+          type: string
+        from:
+          $ref: '#/components/schemas/TopologyNodeRef'
+        to:
+          $ref: '#/components/schemas/TopologyNodeRef'
+        mappings:
+          description: "Target/value mappings for kinds that move values, such as\
+            \ `env` and `secret_mount`.\n"
+          items:
+            $ref: '#/components/schemas/ConnectionMapping'
+          type: array
+        config:
+          additionalProperties: true
+          description: "Kind-specific connection configuration. Expected keys depend\
+            \ on `kind`. Examples: for `env` from `addon/postgres`, use fields such\
+            \ as `database` and `credential_scope`; for `volume_mount`, use `mount_path`,\
+            \ `sub_path`, and `read_only`; for `build_artifact_source`, use `source_path`\
+            \ and `destination_path`.\n"
+          type: object
+      required:
+      - from
+      - kind
+      - to
+      type: object
+    TopologyNodeRef:
+      description: Identifies a topology node within the stack graph.
+      example:
+        name: name
+        id: id
+        type: stack_resource
+      properties:
+        type:
+          description: The node category.
+          enum:
+          - stack_resource
+          - addon/postgres
+          - secret
+          - volume
+          - object_store
+          type: string
+        id:
+          description: Stable ID for persisted resources such as addons or secrets.
+          type: string
+        name:
+          description: Name-scoped reference for stack-local resources such as StackResources
+            or Volumes.
+          type: string
+      required:
+      - type
+      type: object
+    ConnectionMapping:
+      description: Maps one produced value into one target location on the consumer.
+      example:
+        value:
+          output: output
+          template: template
+          values:
+            key:
+              output: output
+        target:
+          path: path
+          name: name
+          type: env
+      properties:
+        target:
+          $ref: '#/components/schemas/ConnectionTarget'
+        value:
+          $ref: '#/components/schemas/ValueRef'
+      required:
+      - target
+      - value
+      type: object
+    ConnectionTarget:
+      description: The destination field that receives a mapped value.
+      example:
+        path: path
+        name: name
+        type: env
+      properties:
+        type:
+          description: env writes an environment variable and file writes a mounted
+            file path.
+          enum:
+          - env
+          - file
+          type: string
+        name:
+          description: Environment variable name when type is env.
+          type: string
+        path:
+          description: Absolute file path when type is file.
+          type: string
+      required:
+      - type
+      type: object
+    StackConnectionConfig:
+      additionalProperties: true
+      description: "Kind-specific connection configuration. Expected keys depend on\
+        \ `kind`. Examples: for `env` from `addon/postgres`, use fields such as `database`\
+        \ and `credential_scope`; for `volume_mount`, use `mount_path`, `sub_path`,\
+        \ and `read_only`; for `build_artifact_source`, use `source_path` and `destination_path`.\n"
+      type: object
+    ValueRef:
+      description: "Describes how to read a value from the connection's `from` node.\
+        \ This is only used inside `StackConnection.mappings[]`.\n"
+      example:
+        output: output
+        template: template
+        values:
+          key:
+            output: output
+      properties:
+        output:
+          description: "Output accessor on the connection's `from` node, such as `url`\
+            \ or `public.http.url`."
+          type: string
+        template:
+          description: Template used when one target value must be composed from multiple
+            outputs.
+          type: string
+        values:
+          additionalProperties:
+            $ref: '#/components/schemas/OutputValueRef'
+          description: "Named template inputs, each resolving one output from the\
+            \ connection's `from` node."
+          type: object
+      type: object
+    OutputValueRef:
+      description: References one output on the connection's `from` node.
+      example:
+        output: output
+      properties:
+        output:
+          description: Output accessor on the connection's `from` node.
+          type: string
+      required:
+      - output
       type: object
     ImageBuild:
       example:
@@ -8190,8 +8672,11 @@ components:
         number: 0
         protocol: protocol
         exposed_to_public: true
+        name: name
         subdomain_prefix: subdomain_prefix
       properties:
+        name:
+          type: string
         number:
           type: integer
         protocol:
@@ -8202,6 +8687,7 @@ components:
           type: string
       required:
       - exposed_to_public
+      - name
       - number
       type: object
     LifecycleConfig:

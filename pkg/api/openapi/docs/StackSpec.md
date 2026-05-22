@@ -6,6 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **StackResources** | [**[]StackResource**](StackResource.md) |  | 
 **Volumes** | Pointer to [**[]Volume**](Volume.md) |  | [optional] 
+**Connections** | Pointer to [**[]StackConnection**](StackConnection.md) |  | [optional] 
 
 ## Methods
 
@@ -70,6 +71,31 @@ SetVolumes sets Volumes field to given value.
 `func (o *StackSpec) HasVolumes() bool`
 
 HasVolumes returns a boolean if a field has been set.
+
+### GetConnections
+
+`func (o *StackSpec) GetConnections() []StackConnection`
+
+GetConnections returns the Connections field if non-nil, zero value otherwise.
+
+### GetConnectionsOk
+
+`func (o *StackSpec) GetConnectionsOk() (*[]StackConnection, bool)`
+
+GetConnectionsOk returns a tuple with the Connections field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetConnections
+
+`func (o *StackSpec) SetConnections(v []StackConnection)`
+
+SetConnections sets Connections field to given value.
+
+### HasConnections
+
+`func (o *StackSpec) HasConnections() bool`
+
+HasConnections returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

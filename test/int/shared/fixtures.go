@@ -329,7 +329,7 @@ func CreateSimpleStack(name string) *openapi.Stack {
 	imageSpec := openapi.NewImageSpec("nginx:1.25-alpine")
 	resource.SetImageSpec(*imageSpec)
 	resource.SetPorts([]openapi.Port{
-		*openapi.NewPort(80, false),
+		*openapi.NewPort("http", 80, false),
 	})
 
 	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
@@ -341,7 +341,7 @@ func CreateMultiResourceStack(name string) *openapi.Stack {
 	backendImage := openapi.NewImageSpec(TestImage)
 	backend.SetImageSpec(*backendImage)
 	backend.SetPorts([]openapi.Port{
-		*openapi.NewPort(MultiResourceBackendPort, false),
+		*openapi.NewPort("http", MultiResourceBackendPort, false),
 	})
 	backendExec := openapi.NewExecutionConfig()
 	backendExec.SetEnvironmentVariables([]openapi.EnvVar{
@@ -353,7 +353,7 @@ func CreateMultiResourceStack(name string) *openapi.Stack {
 	frontendImage := openapi.NewImageSpec(TestImage)
 	frontend.SetImageSpec(*frontendImage)
 	frontend.SetPorts([]openapi.Port{
-		*openapi.NewPort(MultiResourceFrontendPort, false),
+		*openapi.NewPort("http", MultiResourceFrontendPort, false),
 	})
 	frontendExec := openapi.NewExecutionConfig()
 	frontendExec.SetEnvironmentVariables([]openapi.EnvVar{
@@ -370,14 +370,14 @@ func CreateStackWithDependencies(name string) *openapi.Stack {
 	imageA := openapi.NewImageSpec("nginx:1.25-alpine")
 	resourceA.SetImageSpec(*imageA)
 	resourceA.SetPorts([]openapi.Port{
-		*openapi.NewPort(5432, false),
+		*openapi.NewPort("postgres", 5432, false),
 	})
 
 	resourceB := openapi.NewStackResource("app")
 	imageB := openapi.NewImageSpec("nginx:1.25-alpine")
 	resourceB.SetImageSpec(*imageB)
 	resourceB.SetPorts([]openapi.Port{
-		*openapi.NewPort(8080, false),
+		*openapi.NewPort("http", 8080, false),
 	})
 	resourceB.SetDependsOn([]string{"database"})
 
@@ -390,8 +390,8 @@ func CreateStackWithEnvAndPorts(name string) *openapi.Stack {
 	image := openapi.NewImageSpec(TestImage)
 	resource.SetImageSpec(*image)
 	resource.SetPorts([]openapi.Port{
-		*openapi.NewPort(EnvPortsPort1, false),
-		*openapi.NewPort(EnvPortsPort2, false),
+		*openapi.NewPort("http", EnvPortsPort1, false),
+		*openapi.NewPort("metrics", EnvPortsPort2, false),
 	})
 	exec := openapi.NewExecutionConfig()
 	exec.SetEnvironmentVariables([]openapi.EnvVar{
@@ -410,7 +410,7 @@ func CreateStackWithInitContainer(name string) *openapi.Stack {
 	image := openapi.NewImageSpec(TestImage)
 	resource.SetImageSpec(*image)
 	resource.SetPorts([]openapi.Port{
-		*openapi.NewPort(80, false),
+		*openapi.NewPort("http", 80, false),
 	})
 
 	initSpec := openapi.NewInitSpec()
@@ -428,7 +428,7 @@ func CreateStackWithPostgresAddon(name string, addonID string, database string) 
 	image := openapi.NewImageSpec("nginx:1.25-alpine")
 	resource.SetImageSpec(*image)
 	resource.SetPorts([]openapi.Port{
-		*openapi.NewPort(8080, false),
+		*openapi.NewPort("http", 8080, false),
 	})
 
 	pgEnvSource := openapi.NewPostgresAddonEnvSource(addonID, PostgresEnvMapping)
@@ -449,7 +449,7 @@ func CreateStackWithPostgresAddonSuperuser(name string, addonID string) *openapi
 	image := openapi.NewImageSpec("nginx:1.25-alpine")
 	resource.SetImageSpec(*image)
 	resource.SetPorts([]openapi.Port{
-		*openapi.NewPort(8080, false),
+		*openapi.NewPort("http", 8080, false),
 	})
 
 	pgEnvSource := openapi.NewPostgresAddonEnvSource(addonID, PostgresEnvMapping)
@@ -539,7 +539,7 @@ func CreateStackWithBuildSource(name string, repoURL string, secretID string) *o
 
 	// Port 3000 exposed to public
 	resource.SetPorts([]openapi.Port{
-		*openapi.NewPort(int32(BuildSourcePort), true),
+		*openapi.NewPort("http", int32(BuildSourcePort), true),
 	})
 
 	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})

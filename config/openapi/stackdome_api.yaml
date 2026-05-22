@@ -3215,6 +3215,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Volume'
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/StackConnection'
 
     StackStatus:
       type: object
@@ -3291,6 +3295,134 @@ components:
             $ref: '#/components/schemas/StackResource'
         total:
           type: integer
+
+    StackConnection:
+      type: object
+      description: A user-authored topology edge between two nodes in a stack.
+      required:
+        - kind
+        - from
+        - to
+      properties:
+        id:
+          type: string
+          description: Stable connection identifier. Generated when omitted.
+        kind:
+          type: string
+          description: >
+            The relationship type. `env` injects values into environment variables,
+            `secret_mount` mounts secret values as files, `volume_mount` mounts a
+            volume into a resource, and `build_artifact_source` seeds a volume
+            from build output.
+          enum:
+            - env
+            - secret_mount
+            - volume_mount
+            - build_artifact_source
+        from:
+          $ref: '#/components/schemas/TopologyNodeRef'
+        to:
+          $ref: '#/components/schemas/TopologyNodeRef'
+        mappings:
+          type: array
+          description: >
+            Target/value mappings for kinds that move values, such as `env` and
+            `secret_mount`.
+          items:
+            $ref: '#/components/schemas/ConnectionMapping'
+        config:
+          $ref: '#/components/schemas/StackConnectionConfig'
+
+    TopologyNodeRef:
+      type: object
+      description: Identifies a topology node within the stack graph.
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: The node category.
+          enum:
+            - stack_resource
+            - addon/postgres
+            - secret
+            - volume
+            - object_store
+        id:
+          type: string
+          description: Stable ID for persisted resources such as addons or secrets.
+        name:
+          type: string
+          description: Name-scoped reference for stack-local resources such as StackResources or Volumes.
+
+    ConnectionMapping:
+      type: object
+      description: Maps one produced value into one target location on the consumer.
+      required:
+        - target
+        - value
+      properties:
+        target:
+          $ref: '#/components/schemas/ConnectionTarget'
+        value:
+          $ref: '#/components/schemas/ValueRef'
+
+    ConnectionTarget:
+      type: object
+      description: The destination field that receives a mapped value.
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: env writes an environment variable and file writes a mounted file path.
+          enum:
+            - env
+            - file
+        name:
+          type: string
+          description: Environment variable name when type is env.
+        path:
+          type: string
+          description: Absolute file path when type is file.
+
+    StackConnectionConfig:
+      type: object
+      description: >
+        Kind-specific connection configuration. Expected keys depend on `kind`.
+        Examples: for `env` from `addon/postgres`, use fields such as `database`
+        and `credential_scope`; for `volume_mount`, use `mount_path`, `sub_path`,
+        and `read_only`; for `build_artifact_source`, use `source_path` and
+        `destination_path`.
+      additionalProperties: true
+
+    ValueRef:
+      type: object
+      description: >
+        Describes how to read a value from the connection's `from` node. This is
+        only used inside `StackConnection.mappings[]`.
+      properties:
+        output:
+          type: string
+          description: Output accessor on the connection's `from` node, such as `url` or `public.http.url`.
+        template:
+          type: string
+          description: Template used when one target value must be composed from multiple outputs.
+        values:
+          type: object
+          description: Named template inputs, each resolving one output from the connection's `from` node.
+          additionalProperties:
+            $ref: '#/components/schemas/OutputValueRef'
+
+    OutputValueRef:
+      type: object
+      description: References one output on the connection's `from` node.
+      required:
+        - output
+      properties:
+        output:
+          type: string
+          description: Output accessor on the connection's `from` node.
 
     ImageBuild:
       type: object
@@ -3623,9 +3755,12 @@ components:
     Port:
       type: object
       required:
+        - name
         - number
         - exposed_to_public
       properties:
+        name:
+          type: string
         number:
           type: integer
         protocol:

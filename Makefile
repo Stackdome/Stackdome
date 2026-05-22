@@ -22,7 +22,7 @@ frontend:
 
 MOCKGEN := $(shell go env GOPATH)/bin/mockgen
 mocks: $(MOCKGEN)
-	go generate ./pkg/stores/... ./pkg/logger/...
+	go generate ./pkg/stores/... ./pkg/logger/... ./pkg/validator/...
 .PHONY: mocks
 
 $(MOCKGEN):

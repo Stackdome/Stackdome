@@ -96,3 +96,26 @@ func TestPresentStackResource_noFailure(t *testing.T) {
 		t.Errorf("expected LastFailure to be nil")
 	}
 }
+
+func TestPresentStackResource_includesPortName(t *testing.T) {
+	resource := &models.StackResource{
+		Name: "web",
+		Ports: models.Ports{
+			{
+				Name:            "http",
+				Number:          8080,
+				Protocol:        "http",
+				ExposedToPublic: true,
+			},
+		},
+	}
+
+	out := presenters.PresentStackResource(resource)
+
+	if len(out.Ports) != 1 {
+		t.Fatalf("expected one port, got %d", len(out.Ports))
+	}
+	if out.Ports[0].Name != "http" {
+		t.Fatalf("expected port name http, got %q", out.Ports[0].Name)
+	}
+}

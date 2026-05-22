@@ -115,6 +115,7 @@ type StackResourceFailure struct {
 }
 
 type Port struct {
+	Name                     string `json:"name"`
 	Number                   int    `json:"number"`
 	Protocol                 string `json:"protocol"`
 	ExposedToPublic          bool   `json:"exposed_to_public"`
