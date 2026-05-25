@@ -53,6 +53,7 @@ func PresentSecret(in *models.Secret) openapi.Secret {
 	res.SetDescription(in.Description)
 	res.SetOrganisationId(in.OrganisationID)
 	res.SetTeamId(in.TeamID)
+	res.SetOutputs(presentOutputDescriptors(in.EnsureDeclaredOutputs()))
 	res.SetCreatedAt(in.CreatedAt)
 	res.SetUpdatedAt(in.UpdatedAt)
 	return res

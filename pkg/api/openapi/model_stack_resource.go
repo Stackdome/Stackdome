@@ -30,6 +30,7 @@ type StackResource struct {
 	DependsOn       []string                `json:"depends_on,omitempty"`
 	LifecycleConfig *LifecycleConfig        `json:"lifecycle_config,omitempty"`
 	Ports           []Port                  `json:"ports,omitempty"`
+	Outputs         []OutputDescriptor      `json:"outputs,omitempty"`
 	Stateful        *bool                   `json:"stateful,omitempty"`
 	Status          *StackResourceStatus    `json:"status,omitempty"`
 }
@@ -492,6 +493,38 @@ func (o *StackResource) SetPorts(v []Port) {
 	o.Ports = v
 }
 
+// GetOutputs returns the Outputs field value if set, zero value otherwise.
+func (o *StackResource) GetOutputs() []OutputDescriptor {
+	if o == nil || o.Outputs == nil {
+		var ret []OutputDescriptor
+		return ret
+	}
+	return o.Outputs
+}
+
+// GetOutputsOk returns a tuple with the Outputs field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackResource) GetOutputsOk() ([]OutputDescriptor, bool) {
+	if o == nil || o.Outputs == nil {
+		return nil, false
+	}
+	return o.Outputs, true
+}
+
+// HasOutputs returns a boolean if a field has been set.
+func (o *StackResource) HasOutputs() bool {
+	if o != nil && o.Outputs != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetOutputs gets a reference to the given []OutputDescriptor and assigns it to the Outputs field.
+func (o *StackResource) SetOutputs(v []OutputDescriptor) {
+	o.Outputs = v
+}
+
 // GetStateful returns the Stateful field value if set, zero value otherwise.
 func (o *StackResource) GetStateful() bool {
 	if o == nil || o.Stateful == nil {
@@ -599,6 +632,9 @@ func (o StackResource) MarshalJSON() ([]byte, error) {
 	}
 	if o.Ports != nil {
 		toSerialize["ports"] = o.Ports
+	}
+	if o.Outputs != nil {
+		toSerialize["outputs"] = o.Outputs
 	}
 	if o.Stateful != nil {
 		toSerialize["stateful"] = o.Stateful

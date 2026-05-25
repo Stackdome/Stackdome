@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **TeamId** | Pointer to **string** |  | [optional] [readonly] 
 **Type** | [**SecretType**](SecretType.md) |  | 
 **Data** | [**[]SecretData**](SecretData.md) |  | 
+**Outputs** | Pointer to [**[]OutputDescriptor**](OutputDescriptor.md) |  | [optional] [readonly] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] [readonly] 
 **UpdatedAt** | Pointer to **time.Time** |  | [optional] [readonly] 
 
@@ -192,6 +193,31 @@ and a boolean to check if the value has been set.
 
 SetData sets Data field to given value.
 
+
+### GetOutputs
+
+`func (o *Secret) GetOutputs() []OutputDescriptor`
+
+GetOutputs returns the Outputs field if non-nil, zero value otherwise.
+
+### GetOutputsOk
+
+`func (o *Secret) GetOutputsOk() (*[]OutputDescriptor, bool)`
+
+GetOutputsOk returns a tuple with the Outputs field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetOutputs
+
+`func (o *Secret) SetOutputs(v []OutputDescriptor)`
+
+SetOutputs sets Outputs field to given value.
+
+### HasOutputs
+
+`func (o *Secret) HasOutputs() bool`
+
+HasOutputs returns a boolean if a field has been set.
 
 ### GetCreatedAt
 

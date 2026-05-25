@@ -284,7 +284,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			updateStack := shared.CreateSimpleStack("test-update-e2e")
 			exec := openapi.NewExecutionConfig()
 			exec.SetEnvironmentVariables([]openapi.EnvVar{
-				*openapi.NewEnvVar("UPDATED", "true"),
+				func() openapi.EnvVar { v := openapi.NewEnvVar("UPDATED"); v.SetValue("true"); return *v }(),
 			})
 			updateStack.Spec.StackResources[0].SetExecutionConfig(*exec)
 			shared.UpdateStack(client, orgID, teamName, stackID, updateStack)

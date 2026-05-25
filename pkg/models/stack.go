@@ -133,6 +133,11 @@ func (ws *Stack) SecretsInUse() []string {
 			}
 		}
 	}
+	for _, connection := range ws.Connections {
+		if connection.From.Type == TopologyNodeTypeSecret && connection.From.Id != "" {
+			res = append(res, connection.From.Id)
+		}
+	}
 	return lo.Uniq(res)
 }
 

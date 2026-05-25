@@ -58,29 +58,9 @@ func presentStackStatus(status *models.StackStatus) *openapi.StackStatus {
 func presentStackResources(resources []*models.StackResource) []openapi.StackResource {
 	result := make([]openapi.StackResource, len(resources))
 	for i, r := range resources {
-		result[i] = presentStackResource(r)
+		result[i] = PresentStackResource(r)
 	}
 	return result
-}
-
-func presentStackResource(r *models.StackResource) openapi.StackResource {
-	return openapi.StackResource{
-		Id:              &r.ID,
-		StackId:         &r.StackID,
-		Name:            r.Name,
-		Labels:          presentLabels(r.Labels),
-		Annotations:     presentAnnotations(r.Annotations),
-		BuildSpec:       presentBuildConfig(r.BuildConfig),
-		ImageSpec:       presentImageConfig(r.ImageConfig),
-		InitSpec:        presentInitConfig(r.Init),
-		ExecutionConfig: presentExecutionConfig(r.ExecutionConfig),
-		VolumeMounts:    presentVolumeMounts(r.VolumeMounts),
-		DependsOn:       presentDependencies(r.DependsOn),
-		LifecycleConfig: presentLifecycleConfig(r.LifecycleConfig),
-		Ports:           presentPorts(r.Ports),
-		Stateful:        &r.StateFul,
-		Status:          presentStackResourceStatus(r.Status),
-	}
 }
 
 func presentBuildConfig(config *models.BuildConfigSpec) *openapi.StackResourceBuildSpec {
@@ -202,9 +182,12 @@ func presentExecutionConfig(config *models.ExecutionConfig) *openapi.ExecutionCo
 func presentEnvVars(envVars []models.EnvVar) []openapi.EnvVar {
 	result := make([]openapi.EnvVar, len(envVars))
 	for i, env := range envVars {
-		result[i] = openapi.EnvVar{
-			Name:  env.Name,
-			Value: env.Value,
+		result[i] = openapi.EnvVar{Name: env.Name}
+		if env.Value != "" {
+			result[i].SetValue(env.Value)
+		}
+		if env.SelfOutput != "" {
+			result[i].SetSelfOutput(env.SelfOutput)
 		}
 	}
 	return result
@@ -579,8 +562,9 @@ func convertEnvVars(envVars []openapi.EnvVar) []models.EnvVar {
 	result := make([]models.EnvVar, len(envVars))
 	for i, env := range envVars {
 		result[i] = models.EnvVar{
-			Name:  env.Name,
-			Value: env.Value,
+			Name:       env.Name,
+			Value:      env.GetValue(),
+			SelfOutput: env.GetSelfOutput(),
 		}
 	}
 	return result

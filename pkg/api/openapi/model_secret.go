@@ -17,15 +17,16 @@ import (
 
 // Secret struct for Secret
 type Secret struct {
-	Id             *string      `json:"id,omitempty"`
-	Name           string       `json:"name"`
-	Description    *string      `json:"description,omitempty"`
-	OrganisationId *string      `json:"organisation_id,omitempty"`
-	TeamId         *string      `json:"team_id,omitempty"`
-	Type           SecretType   `json:"type"`
-	Data           []SecretData `json:"data"`
-	CreatedAt      *time.Time   `json:"created_at,omitempty"`
-	UpdatedAt      *time.Time   `json:"updated_at,omitempty"`
+	Id             *string            `json:"id,omitempty"`
+	Name           string             `json:"name"`
+	Description    *string            `json:"description,omitempty"`
+	OrganisationId *string            `json:"organisation_id,omitempty"`
+	TeamId         *string            `json:"team_id,omitempty"`
+	Type           SecretType         `json:"type"`
+	Data           []SecretData       `json:"data"`
+	Outputs        []OutputDescriptor `json:"outputs,omitempty"`
+	CreatedAt      *time.Time         `json:"created_at,omitempty"`
+	UpdatedAt      *time.Time         `json:"updated_at,omitempty"`
 }
 
 // NewSecret instantiates a new Secret object
@@ -248,6 +249,38 @@ func (o *Secret) SetData(v []SecretData) {
 	o.Data = v
 }
 
+// GetOutputs returns the Outputs field value if set, zero value otherwise.
+func (o *Secret) GetOutputs() []OutputDescriptor {
+	if o == nil || o.Outputs == nil {
+		var ret []OutputDescriptor
+		return ret
+	}
+	return o.Outputs
+}
+
+// GetOutputsOk returns a tuple with the Outputs field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Secret) GetOutputsOk() ([]OutputDescriptor, bool) {
+	if o == nil || o.Outputs == nil {
+		return nil, false
+	}
+	return o.Outputs, true
+}
+
+// HasOutputs returns a boolean if a field has been set.
+func (o *Secret) HasOutputs() bool {
+	if o != nil && o.Outputs != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetOutputs gets a reference to the given []OutputDescriptor and assigns it to the Outputs field.
+func (o *Secret) SetOutputs(v []OutputDescriptor) {
+	o.Outputs = v
+}
+
 // GetCreatedAt returns the CreatedAt field value if set, zero value otherwise.
 func (o *Secret) GetCreatedAt() time.Time {
 	if o == nil || o.CreatedAt == nil {
@@ -334,6 +367,9 @@ func (o Secret) MarshalJSON() ([]byte, error) {
 	}
 	if true {
 		toSerialize["data"] = o.Data
+	}
+	if o.Outputs != nil {
+		toSerialize["outputs"] = o.Outputs
 	}
 	if o.CreatedAt != nil {
 		toSerialize["created_at"] = o.CreatedAt

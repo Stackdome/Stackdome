@@ -4952,7 +4952,14 @@ components:
         team_id: team_id
         spec:
           stack_resources:
-          - depends_on:
+          - outputs:
+            - name: name
+              sensitive: true
+              type: string
+            - name: name
+              sensitive: true
+              type: string
+            depends_on:
             - depends_on
             - depends_on
             annotations:
@@ -4977,8 +4984,10 @@ components:
               - args
               environment_variables:
               - name: name
+                self_output: self_output
                 value: value
               - name: name
+                self_output: self_output
                 value: value
               env_from_addons:
               - postgres:
@@ -5111,7 +5120,14 @@ components:
                 url: url
               - target_port: 6
                 url: url
-          - depends_on:
+          - outputs:
+            - name: name
+              sensitive: true
+              type: string
+            - name: name
+              sensitive: true
+              type: string
+            depends_on:
             - depends_on
             - depends_on
             annotations:
@@ -5136,8 +5152,10 @@ components:
               - args
               environment_variables:
               - name: name
+                self_output: self_output
                 value: value
               - name: name
+                self_output: self_output
                 value: value
               env_from_addons:
               - postgres:
@@ -5549,7 +5567,14 @@ components:
           team_id: team_id
           spec:
             stack_resources:
-            - depends_on:
+            - outputs:
+              - name: name
+                sensitive: true
+                type: string
+              - name: name
+                sensitive: true
+                type: string
+              depends_on:
               - depends_on
               - depends_on
               annotations:
@@ -5574,8 +5599,10 @@ components:
                 - args
                 environment_variables:
                 - name: name
+                  self_output: self_output
                   value: value
                 - name: name
+                  self_output: self_output
                   value: value
                 env_from_addons:
                 - postgres:
@@ -5708,7 +5735,14 @@ components:
                   url: url
                 - target_port: 6
                   url: url
-            - depends_on:
+            - outputs:
+              - name: name
+                sensitive: true
+                type: string
+              - name: name
+                sensitive: true
+                type: string
+              depends_on:
               - depends_on
               - depends_on
               annotations:
@@ -5733,8 +5767,10 @@ components:
                 - args
                 environment_variables:
                 - name: name
+                  self_output: self_output
                   value: value
                 - name: name
+                  self_output: self_output
                   value: value
                 env_from_addons:
                 - postgres:
@@ -6097,7 +6133,14 @@ components:
           team_id: team_id
           spec:
             stack_resources:
-            - depends_on:
+            - outputs:
+              - name: name
+                sensitive: true
+                type: string
+              - name: name
+                sensitive: true
+                type: string
+              depends_on:
               - depends_on
               - depends_on
               annotations:
@@ -6122,8 +6165,10 @@ components:
                 - args
                 environment_variables:
                 - name: name
+                  self_output: self_output
                   value: value
                 - name: name
+                  self_output: self_output
                   value: value
                 env_from_addons:
                 - postgres:
@@ -6256,7 +6301,14 @@ components:
                   url: url
                 - target_port: 6
                   url: url
-            - depends_on:
+            - outputs:
+              - name: name
+                sensitive: true
+                type: string
+              - name: name
+                sensitive: true
+                type: string
+              depends_on:
               - depends_on
               - depends_on
               annotations:
@@ -6281,8 +6333,10 @@ components:
                 - args
                 environment_variables:
                 - name: name
+                  self_output: self_output
                   value: value
                 - name: name
+                  self_output: self_output
                   value: value
                 env_from_addons:
                 - postgres:
@@ -6647,7 +6701,14 @@ components:
     StackSpec:
       example:
         stack_resources:
-        - depends_on:
+        - outputs:
+          - name: name
+            sensitive: true
+            type: string
+          - name: name
+            sensitive: true
+            type: string
+          depends_on:
           - depends_on
           - depends_on
           annotations:
@@ -6672,8 +6733,10 @@ components:
             - args
             environment_variables:
             - name: name
+              self_output: self_output
               value: value
             - name: name
+              self_output: self_output
               value: value
             env_from_addons:
             - postgres:
@@ -6806,7 +6869,14 @@ components:
               url: url
             - target_port: 6
               url: url
-        - depends_on:
+        - outputs:
+          - name: name
+            sensitive: true
+            type: string
+          - name: name
+            sensitive: true
+            type: string
+          depends_on:
           - depends_on
           - depends_on
           annotations:
@@ -6831,8 +6901,10 @@ components:
             - args
             environment_variables:
             - name: name
+              self_output: self_output
               value: value
             - name: name
+              self_output: self_output
               value: value
             env_from_addons:
             - postgres:
@@ -7205,6 +7277,13 @@ components:
       type: object
     StackResource:
       example:
+        outputs:
+        - name: name
+          sensitive: true
+          type: string
+        - name: name
+          sensitive: true
+          type: string
         depends_on:
         - depends_on
         - depends_on
@@ -7230,8 +7309,10 @@ components:
           - args
           environment_variables:
           - name: name
+            self_output: self_output
             value: value
           - name: name
+            self_output: self_output
             value: value
           env_from_addons:
           - postgres:
@@ -7406,6 +7487,11 @@ components:
           items:
             $ref: '#/components/schemas/Port'
           type: array
+        outputs:
+          items:
+            $ref: '#/components/schemas/OutputDescriptor'
+          readOnly: true
+          type: array
         stateful:
           type: boolean
         status:
@@ -7417,7 +7503,14 @@ components:
       example:
         total: 0
         items:
-        - depends_on:
+        - outputs:
+          - name: name
+            sensitive: true
+            type: string
+          - name: name
+            sensitive: true
+            type: string
+          depends_on:
           - depends_on
           - depends_on
           annotations:
@@ -7442,8 +7535,10 @@ components:
             - args
             environment_variables:
             - name: name
+              self_output: self_output
               value: value
             - name: name
+              self_output: self_output
               value: value
             env_from_addons:
             - postgres:
@@ -7576,7 +7671,14 @@ components:
               url: url
             - target_port: 6
               url: url
-        - depends_on:
+        - outputs:
+          - name: name
+            sensitive: true
+            type: string
+          - name: name
+            sensitive: true
+            type: string
+          depends_on:
           - depends_on
           - depends_on
           annotations:
@@ -7601,8 +7703,10 @@ components:
             - args
             environment_variables:
             - name: name
+              self_output: self_output
               value: value
             - name: name
+              self_output: self_output
               value: value
             env_from_addons:
             - postgres:
@@ -7742,6 +7846,33 @@ components:
           type: array
         total:
           type: integer
+      type: object
+    OutputDescriptor:
+      description: Declared output metadata for a topology node. Values are not returned
+        here.
+      example:
+        name: name
+        sensitive: true
+        type: string
+      properties:
+        name:
+          description: "Stable output accessor name, for example `host` or `public.http.url`."
+          type: string
+        type:
+          description: Scalar value type exposed by this output.
+          enum:
+          - string
+          - integer
+          - boolean
+          type: string
+        sensitive:
+          description: True when the output value is sensitive and should never be
+            returned in normal metadata APIs.
+          type: boolean
+      required:
+      - name
+      - sensitive
+      - type
       type: object
     StackConnection:
       description: A user-authored topology edge between two nodes in a stack.
@@ -8198,6 +8329,13 @@ components:
     Secret:
       additionalProperties: false
       example:
+        outputs:
+        - name: name
+          sensitive: true
+          type: string
+        - name: name
+          sensitive: true
+          type: string
         organisation_id: organisation_id
         data:
         - value: value
@@ -8231,6 +8369,11 @@ components:
           items:
             $ref: '#/components/schemas/SecretData'
           type: array
+        outputs:
+          items:
+            $ref: '#/components/schemas/OutputDescriptor'
+          readOnly: true
+          type: array
         created_at:
           format: date-time
           readOnly: true
@@ -8248,7 +8391,14 @@ components:
       example:
         total: 0
         items:
-        - organisation_id: organisation_id
+        - outputs:
+          - name: name
+            sensitive: true
+            type: string
+          - name: name
+            sensitive: true
+            type: string
+          organisation_id: organisation_id
           data:
           - value: value
             key: key
@@ -8261,7 +8411,14 @@ components:
           id: id
           team_id: team_id
           type: null
-        - organisation_id: organisation_id
+        - outputs:
+          - name: name
+            sensitive: true
+            type: string
+          - name: name
+            sensitive: true
+            type: string
+          organisation_id: organisation_id
           data:
           - value: value
             key: key
@@ -8844,8 +9001,10 @@ components:
         - args
         environment_variables:
         - name: name
+          self_output: self_output
           value: value
         - name: name
+          self_output: self_output
           value: value
         env_from_addons:
         - postgres:
@@ -8918,15 +9077,20 @@ components:
       additionalProperties: false
       example:
         name: name
+        self_output: self_output
         value: value
       properties:
         name:
           type: string
         value:
+          description: Literal environment variable value.
+          type: string
+        self_output:
+          description: "Read this environment variable from one of the resource's\
+            \ own declared outputs, for example public.http.url."
           type: string
       required:
       - name
-      - value
       type: object
     Condition:
       additionalProperties: false
@@ -9315,6 +9479,13 @@ components:
       type: object
     PostgresAddon:
       example:
+        outputs:
+        - name: name
+          sensitive: true
+          type: string
+        - name: name
+          sensitive: true
+          type: string
         annotations:
         - value: value
           key: key
@@ -9472,6 +9643,11 @@ components:
         revision:
           readOnly: true
           type: string
+        outputs:
+          items:
+            $ref: '#/components/schemas/OutputDescriptor'
+          readOnly: true
+          type: array
         spec:
           $ref: '#/components/schemas/PostgresAddonSpec'
         status:
@@ -9492,7 +9668,14 @@ components:
       example:
         total: 7
         items:
-        - annotations:
+        - outputs:
+          - name: name
+            sensitive: true
+            type: string
+          - name: name
+            sensitive: true
+            type: string
+          annotations:
           - value: value
             key: key
           - value: value
@@ -9616,7 +9799,14 @@ components:
               version: version
             observed_revision: observed_revision
             observed_generation: 5
-        - annotations:
+        - outputs:
+          - name: name
+            sensitive: true
+            type: string
+          - name: name
+            sensitive: true
+            type: string
+          annotations:
           - value: value
             key: key
           - value: value

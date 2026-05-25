@@ -105,3 +105,52 @@ func TestConvertStackIncludesConnections(t *testing.T) {
 		t.Fatalf("expected connection config database app, got %#v", out.Connections[0].Config["database"])
 	}
 }
+
+func TestPresentAndConvertStackPreservesEnvVarSelfOutput(t *testing.T) {
+	stack := &models.Stack{
+		Name: "demo",
+		StackResources: []*models.StackResource{
+			{
+				Name:        "web",
+				ImageConfig: &models.ImageConfigSpec{Image: "nginx:latest"},
+				Ports:       models.Ports{{Name: "http", Number: 8080, Protocol: "http", ExposedToPublic: true}},
+				ExecutionConfig: &models.ExecutionConfig{
+					Env: []models.EnvVar{
+						{Name: "PUBLIC_URL", SelfOutput: "public.http.url"},
+					},
+				},
+			},
+		},
+	}
+
+	presented := presenters.PresentStack(stack)
+	if len(presented.Spec.StackResources) != 1 || len(presented.Spec.StackResources[0].GetExecutionConfig().EnvironmentVariables) != 1 {
+		t.Fatalf("expected one presented env var")
+	}
+	presentedEnv := presented.Spec.StackResources[0].GetExecutionConfig().EnvironmentVariables[0]
+	if presentedEnv.GetSelfOutput() != "public.http.url" {
+		t.Fatalf("expected presented self_output, got %q", presentedEnv.GetSelfOutput())
+	}
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{
+		{
+			Name:      "web",
+			ImageSpec: &openapi.ImageSpec{Image: "nginx:latest"},
+			Ports: []openapi.Port{
+				{Name: "http", Number: 8080, Protocol: openapi.PtrString("http"), ExposedToPublic: true},
+			},
+			ExecutionConfig: &openapi.ExecutionConfig{
+				EnvironmentVariables: []openapi.EnvVar{
+					{
+						Name:       "PUBLIC_URL",
+						SelfOutput: openapi.PtrString("public.http.url"),
+					},
+				},
+			},
+		},
+	})
+	converted := presenters.ConvertStack(openapi.NewStack("demo", *spec))
+	if converted.StackResources[0].ExecutionConfig.Env[0].SelfOutput != "public.http.url" {
+		t.Fatalf("expected converted self_output, got %q", converted.StackResources[0].ExecutionConfig.Env[0].SelfOutput)
+	}
+}

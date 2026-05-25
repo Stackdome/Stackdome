@@ -75,6 +75,7 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 			}),
 			NewAddonEnvReconciler(AddonEnvReconcilerSpec{
 				PostgresAddonService: spec.PostgresAddonService,
+				SecretService:        spec.SecretService,
 				AddonUsageService:    spec.AddonUsageService,
 			}),
 			NewStackReconciler(StackReconcilerSpec{

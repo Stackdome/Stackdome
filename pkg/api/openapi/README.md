@@ -240,6 +240,7 @@ Class | Method | HTTP request | Description
  - [OrgInviteInfo](docs/OrgInviteInfo.md)
  - [OrgInviteList](docs/OrgInviteList.md)
  - [Organisation](docs/Organisation.md)
+ - [OutputDescriptor](docs/OutputDescriptor.md)
  - [OutputValueRef](docs/OutputValueRef.md)
  - [Port](docs/Port.md)
  - [PostgresAddon](docs/PostgresAddon.md)

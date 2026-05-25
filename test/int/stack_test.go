@@ -67,7 +67,7 @@ var _ = Describe("Stack", func() {
 			updateStack := shared.CreateSimpleStack("test-update")
 			exec := openapi.NewExecutionConfig()
 			exec.SetEnvironmentVariables([]openapi.EnvVar{
-				*openapi.NewEnvVar("NEW_VAR", "new-value"),
+				func() openapi.EnvVar { v := openapi.NewEnvVar("NEW_VAR"); v.SetValue("new-value"); return *v }(),
 			})
 			updateStack.Spec.StackResources[0].SetExecutionConfig(*exec)
 			updateStack.Spec.StackResources[0].SetPorts([]openapi.Port{

@@ -345,7 +345,11 @@ func CreateMultiResourceStack(name string) *openapi.Stack {
 	})
 	backendExec := openapi.NewExecutionConfig()
 	backendExec.SetEnvironmentVariables([]openapi.EnvVar{
-		*openapi.NewEnvVar("APP_ROLE", MultiResourceBackendName),
+		func() openapi.EnvVar {
+			v := openapi.NewEnvVar("APP_ROLE")
+			v.SetValue(MultiResourceBackendName)
+			return *v
+		}(),
 	})
 	backend.SetExecutionConfig(*backendExec)
 
@@ -357,7 +361,11 @@ func CreateMultiResourceStack(name string) *openapi.Stack {
 	})
 	frontendExec := openapi.NewExecutionConfig()
 	frontendExec.SetEnvironmentVariables([]openapi.EnvVar{
-		*openapi.NewEnvVar("BACKEND_URL", "{{ STACKDOME_BACKEND_INTERNAL }}"),
+		func() openapi.EnvVar {
+			v := openapi.NewEnvVar("BACKEND_URL")
+			v.SetValue("{{ STACKDOME_BACKEND_INTERNAL }}")
+			return *v
+		}(),
 	})
 	frontend.SetExecutionConfig(*frontendExec)
 
@@ -395,9 +403,21 @@ func CreateStackWithEnvAndPorts(name string) *openapi.Stack {
 	})
 	exec := openapi.NewExecutionConfig()
 	exec.SetEnvironmentVariables([]openapi.EnvVar{
-		*openapi.NewEnvVar(EnvPortsAppEnvKey, EnvPortsAppEnvVal),
-		*openapi.NewEnvVar(EnvPortsAppPortKey, EnvPortsAppPortVal),
-		*openapi.NewEnvVar(EnvPortsLogLevelKey, EnvPortsLogLevelVal),
+		func() openapi.EnvVar {
+			v := openapi.NewEnvVar(EnvPortsAppEnvKey)
+			v.SetValue(EnvPortsAppEnvVal)
+			return *v
+		}(),
+		func() openapi.EnvVar {
+			v := openapi.NewEnvVar(EnvPortsAppPortKey)
+			v.SetValue(EnvPortsAppPortVal)
+			return *v
+		}(),
+		func() openapi.EnvVar {
+			v := openapi.NewEnvVar(EnvPortsLogLevelKey)
+			v.SetValue(EnvPortsLogLevelVal)
+			return *v
+		}(),
 	})
 	resource.SetExecutionConfig(*exec)
 

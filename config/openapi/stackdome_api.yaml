@@ -3278,6 +3278,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Port'
+        outputs:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/OutputDescriptor'
         stateful:
           type: boolean
         status:
@@ -3295,6 +3300,28 @@ components:
             $ref: '#/components/schemas/StackResource'
         total:
           type: integer
+
+    OutputDescriptor:
+      type: object
+      description: Declared output metadata for a topology node. Values are not returned here.
+      required:
+        - name
+        - type
+        - sensitive
+      properties:
+        name:
+          type: string
+          description: Stable output accessor name, for example `host` or `public.http.url`.
+        type:
+          type: string
+          description: Scalar value type exposed by this output.
+          enum:
+            - string
+            - integer
+            - boolean
+        sensitive:
+          type: boolean
+          description: True when the output value is sensitive and should never be returned in normal metadata APIs.
 
     StackConnection:
       type: object
@@ -3541,6 +3568,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SecretData'
+        outputs:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/OutputDescriptor'
         created_at:
           type: string
           format: date-time
@@ -3921,12 +3953,15 @@ components:
       additionalProperties: false
       required:
         - name
-        - value
       properties:
         name:
           type: string
         value:
           type: string
+          description: Literal environment variable value.
+        self_output:
+          type: string
+          description: Read this environment variable from one of the resource's own declared outputs, for example public.http.url.
 
 
     Condition:
@@ -4196,6 +4231,11 @@ components:
         revision:
           type: string
           readOnly: true
+        outputs:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/OutputDescriptor'
         spec:
           $ref: '#/components/schemas/PostgresAddonSpec'
         status:

@@ -314,13 +314,24 @@ func (v *stackValidator) validateStackEnvVars(spec *models.Stack) *errors.Servic
 			continue
 		}
 		currentEnvVars := currentResource.ExecutionConfig.Env
+		allowedSelfOutputs := make(map[string]struct{}, len(currentResource.EnsureDeclaredOutputs()))
+		for _, output := range currentResource.EnsureDeclaredOutputs() {
+			allowedSelfOutputs[output.Name] = struct{}{}
+		}
 		keys := make(map[string]struct{})
 		for _, envVar := range currentEnvVars {
 			if len(envVar.Name) == 0 {
 				return errors.BadRequest("stack resource '%s' has empty env var name", currentResource.Name)
 			}
-			if len(envVar.Value) == 0 {
-				return errors.BadRequest("stack resource '%s' has empty env var value", currentResource.Name)
+			hasValue := len(envVar.Value) > 0
+			hasSelfOutput := len(envVar.SelfOutput) > 0
+			if hasValue == hasSelfOutput {
+				return errors.BadRequest("stack resource '%s' env var '%s' must set exactly one of value or self_output", currentResource.Name, envVar.Name)
+			}
+			if hasSelfOutput {
+				if _, ok := allowedSelfOutputs[envVar.SelfOutput]; !ok {
+					return errors.BadRequest("stack resource '%s' env var '%s' references unsupported self_output '%s'", currentResource.Name, envVar.Name, envVar.SelfOutput)
+				}
 			}
 			if _, exists := keys[envVar.Name]; exists {
 				return errors.BadRequest("stack resource '%s' has duplicate env var name '%s'", currentResource.Name, envVar.Name)
@@ -418,23 +429,118 @@ func (v *stackValidator) validateConnections(ctx context.Context, existing *mode
 			return err
 		}
 
-		switch connection.From.Type {
-		case models.TopologyNodeTypePostgresAddon:
-			if err := v.validatePostgresConnectionConfig(ctx, label, connection); err != nil {
-				return err
-			}
-		case models.TopologyNodeTypeVolume:
-			if err := validateVolumeConnectionConfig(volumeMap, label, connection); err != nil {
-				return err
-			}
-		default:
-			if len(connection.Config) > 0 {
-				return errors.BadRequest("connection '%s' does not support config for from.type '%s'", label, connection.From.Type)
-			}
+		sourceOutputs, err := v.validateConnectionSource(ctx, resourceMap, volumeMap, label, connection)
+		if err != nil {
+			return err
+		}
+		if err := validateConnectionMappings(label, connection, sourceOutputs); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+func (v *stackValidator) validateConnectionSource(
+	ctx context.Context,
+	resourceMap map[string]*models.StackResource,
+	volumeMap map[string]*models.Volume,
+	label string,
+	connection models.StackConnection,
+) ([]models.OutputDescriptor, *errors.ServiceError) {
+	switch connection.From.Type {
+	case models.TopologyNodeTypeStackResource:
+		if connection.From.Name == "" {
+			return nil, errors.BadRequest("connection '%s' is missing from.name for stack_resource source", label)
+		}
+		resource, ok := resourceMap[connection.From.Name]
+		if !ok {
+			return nil, errors.BadRequest("connection '%s' references unknown stack resource '%s'", label, connection.From.Name)
+		}
+		if len(connection.Config) > 0 {
+			return nil, errors.BadRequest("connection '%s' does not support config for from.type '%s'", label, connection.From.Type)
+		}
+		return resource.EnsureDeclaredOutputs(), nil
+	case models.TopologyNodeTypePostgresAddon:
+		addon, err := v.validatePostgresConnectionConfig(ctx, label, connection)
+		if err != nil {
+			return nil, err
+		}
+		return addon.EnsureDeclaredOutputs(), nil
+	case models.TopologyNodeTypeSecret:
+		if connection.From.Id == "" {
+			return nil, errors.BadRequest("connection '%s' is missing from.id for secret source", label)
+		}
+		if len(connection.Config) > 0 {
+			return nil, errors.BadRequest("connection '%s' does not support config for from.type '%s'", label, connection.From.Type)
+		}
+		secret, serviceErr := v.secretService.InternalGetByID(ctx, connection.From.Id)
+		if serviceErr != nil {
+			return nil, errors.BadRequest("connection '%s' references non-existent secret '%s'", label, connection.From.Id)
+		}
+		return secret.EnsureDeclaredOutputs(), nil
+	case models.TopologyNodeTypeVolume:
+		if err := validateVolumeConnectionConfig(volumeMap, label, connection); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	default:
+		if len(connection.Config) > 0 {
+			return nil, errors.BadRequest("connection '%s' does not support config for from.type '%s'", label, connection.From.Type)
+		}
+		return nil, nil
+	}
+}
+
+func validateConnectionMappings(label string, connection models.StackConnection, sourceOutputs []models.OutputDescriptor) *errors.ServiceError {
+	if connection.Kind != models.ConnectionKindEnv {
+		return nil
+	}
+
+	allowedOutputs := make(map[string]struct{}, len(sourceOutputs))
+	for _, output := range sourceOutputs {
+		allowedOutputs[output.Name] = struct{}{}
+	}
+
+	for _, mapping := range connection.Mappings {
+		if mapping.Target.Type != models.ConnectionTargetTypeEnv {
+			return errors.BadRequest("connection '%s' env mappings only support target type '%s'", label, models.ConnectionTargetTypeEnv)
+		}
+		if mapping.Target.Name == "" {
+			return errors.BadRequest("connection '%s' has env mapping with empty target name", label)
+		}
+		if err := validateValueRef(label, connection.From, mapping.Value, allowedOutputs); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateValueRef(label string, source models.TopologyNodeRef, valueRef models.ValueRef, allowedOutputs map[string]struct{}) *errors.ServiceError {
+	if valueRef.Output != "" {
+		if _, ok := allowedOutputs[valueRef.Output]; !ok {
+			return errors.BadRequest("connection '%s' references unsupported output '%s' for source '%s'", label, valueRef.Output, topologyNodeRefLabel(source))
+		}
+	}
+
+	for _, ref := range valueRef.Values {
+		if _, ok := allowedOutputs[ref.Output]; !ok {
+			return errors.BadRequest("connection '%s' references unsupported output '%s' for source '%s'", label, ref.Output, topologyNodeRefLabel(source))
+		}
+	}
+
+	return nil
+}
+
+func topologyNodeRefLabel(ref models.TopologyNodeRef) string {
+	if ref.Name != "" {
+		return fmt.Sprintf("%s:%s", ref.Type, ref.Name)
+	}
+	if ref.Id != "" {
+		return fmt.Sprintf("%s:%s", ref.Type, ref.Id)
+	}
+	return string(ref.Type)
 }
 
 func connectionVolumeMap(existing *models.Stack, spec *models.Stack) map[string]*models.Volume {
@@ -462,12 +568,12 @@ func validateConnectionTargetResource(resourceMap map[string]*models.StackResour
 	return nil
 }
 
-func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, label string, connection models.StackConnection) *errors.ServiceError {
+func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, label string, connection models.StackConnection) (*models.PostgresAddon, *errors.ServiceError) {
 	if connection.Kind != models.ConnectionKindEnv {
-		return errors.BadRequest("connection '%s' with from.type '%s' only supports kind '%s'", label, connection.From.Type, models.ConnectionKindEnv)
+		return nil, errors.BadRequest("connection '%s' with from.type '%s' only supports kind '%s'", label, connection.From.Type, models.ConnectionKindEnv)
 	}
 	if connection.From.Id == "" {
-		return errors.BadRequest("connection '%s' is missing from.id for postgres addon source", label)
+		return nil, errors.BadRequest("connection '%s' is missing from.id for postgres addon source", label)
 	}
 
 	if err := validateConfigKeys(connection.Config, map[string]struct{}{
@@ -475,24 +581,24 @@ func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, l
 		"credential_scope": {},
 		"superuser":        {},
 	}, label, "postgres"); err != nil {
-		return err
+		return nil, err
 	}
 
 	database, _, err := getOptionalStringConfig(connection.Config, "database", label)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	credentialScope, hasCredentialScope, err := getOptionalStringConfig(connection.Config, "credential_scope", label)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	superuser, hasSuperuser, err := getOptionalBoolConfig(connection.Config, "superuser", label)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if hasCredentialScope && hasSuperuser {
-		return errors.BadRequest("connection '%s' cannot set both config.credential_scope and config.superuser", label)
+		return nil, errors.BadRequest("connection '%s' cannot set both config.credential_scope and config.superuser", label)
 	}
 
 	scope := "owner"
@@ -501,7 +607,7 @@ func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, l
 		case "owner", "superuser":
 			scope = credentialScope
 		default:
-			return errors.BadRequest("connection '%s' has unsupported postgres credential scope '%s'", label, credentialScope)
+			return nil, errors.BadRequest("connection '%s' has unsupported postgres credential scope '%s'", label, credentialScope)
 		}
 	} else if hasSuperuser && superuser {
 		scope = "superuser"
@@ -509,24 +615,24 @@ func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, l
 
 	addon, serviceErr := v.postgresAddonService.GetPostgresAddon(ctx, connection.From.Id)
 	if serviceErr != nil {
-		return errors.BadRequest("connection '%s' references non-existent postgres addon '%s'", label, connection.From.Id)
+		return nil, errors.BadRequest("connection '%s' references non-existent postgres addon '%s'", label, connection.From.Id)
 	}
 
 	if scope == "superuser" {
 		if !addon.Configuration.EnableSuperuserAccess {
-			return errors.BadRequest("connection '%s' requests superuser access but addon '%s' does not have superuser access enabled", label, connection.From.Id)
+			return nil, errors.BadRequest("connection '%s' requests superuser access but addon '%s' does not have superuser access enabled", label, connection.From.Id)
 		}
-		return nil
+		return addon, nil
 	}
 
 	if database == "" {
-		return errors.BadRequest("connection '%s' requires config.database when postgres credential scope is owner", label)
+		return nil, errors.BadRequest("connection '%s' requires config.database when postgres credential scope is owner", label)
 	}
 	if !addon.HasDatabase(database) {
-		return errors.BadRequest("connection '%s' references non-existent database '%s' in postgres addon '%s'", label, database, connection.From.Id)
+		return nil, errors.BadRequest("connection '%s' references non-existent database '%s' in postgres addon '%s'", label, database, connection.From.Id)
 	}
 
-	return nil
+	return addon, nil
 }
 
 func validateVolumeConnectionConfig(volumeMap map[string]*models.Volume, label string, connection models.StackConnection) *errors.ServiceError {

@@ -17,14 +17,15 @@ type StackResource struct {
 	Annotations Annotations `gorm:"type:jsonb"`
 	// Tracks the version of the object in the database.
 	Version         int
-	BuildConfig     *BuildConfigSpec `gorm:"type:jsonb"`
-	ImageConfig     *ImageConfigSpec `gorm:"type:jsonb"`
-	Init            *InitConfig      `gorm:"type:jsonb"`
-	ExecutionConfig *ExecutionConfig `gorm:"type:jsonb"`
-	VolumeMounts    []*VolumeMount   `gorm:"foreignKey:StackResourceID"`
-	DependsOn       Dependencies     `gorm:"type:jsonb"`
-	LifecycleConfig *LifecycleConfig `gorm:"type:jsonb"`
-	Ports           Ports            `gorm:"type:jsonb"`
+	BuildConfig     *BuildConfigSpec   `gorm:"type:jsonb"`
+	ImageConfig     *ImageConfigSpec   `gorm:"type:jsonb"`
+	Init            *InitConfig        `gorm:"type:jsonb"`
+	ExecutionConfig *ExecutionConfig   `gorm:"type:jsonb"`
+	VolumeMounts    []*VolumeMount     `gorm:"foreignKey:StackResourceID"`
+	DependsOn       Dependencies       `gorm:"type:jsonb"`
+	LifecycleConfig *LifecycleConfig   `gorm:"type:jsonb"`
+	Ports           Ports              `gorm:"type:jsonb"`
+	Outputs         []OutputDescriptor `gorm:"-" json:"outputs,omitempty"`
 	StateFul        bool
 	Status          *StackResourceStatus `gorm:"type:jsonb"`
 	CreatedAt       time.Time
@@ -171,8 +172,9 @@ var PostgresAddonEnvFields = []string{
 }
 
 type EnvVar struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
+	Name       string `json:"name"`
+	Value      string `json:"value,omitempty"`
+	SelfOutput string `json:"self_output,omitempty"`
 }
 
 // EnvSecretReference maps a secret key to an environment variable

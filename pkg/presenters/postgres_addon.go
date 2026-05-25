@@ -44,6 +44,7 @@ func PresentPostgresAddon(in *models.PostgresAddon) openapi.PostgresAddon {
 	res.SetLabels(presentLabels(in.Labels))
 	res.SetAnnotations(presentAnnotations(in.Annotations))
 	res.SetRevision(in.Revision)
+	res.SetOutputs(presentOutputDescriptors(in.EnsureDeclaredOutputs()))
 	res.SetCreatedAt(in.CreatedAt)
 	res.SetUpdatedAt(in.UpdatedAt)
 

@@ -59,6 +59,39 @@ func TestValidateForCreateRejectsDuplicatePortNumbers(t *testing.T) {
 	}
 }
 
+func TestValidateForCreateAllowsSelfOutputEnvVar(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.StackResources[0].ExecutionConfig = &models.ExecutionConfig{
+		Env: []models.EnvVar{
+			{Name: "INTERNAL_URL", SelfOutput: "url.http"},
+		},
+	}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err != nil {
+		t.Fatalf("expected self_output env var to validate, got %v", err)
+	}
+}
+
+func TestValidateForCreateRejectsEnvVarWithBothValueAndSelfOutput(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.StackResources[0].ExecutionConfig = &models.ExecutionConfig{
+		Env: []models.EnvVar{
+			{Name: "PUBLIC_URL", Value: "https://example.com", SelfOutput: "url.http"},
+		},
+	}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatalf("expected env var with both value and self_output to be rejected")
+	}
+	if got, want := err.Error(), "error: stack resource 'web' env var 'PUBLIC_URL' must set exactly one of value or self_output"; got != want {
+		t.Fatalf("unexpected error: got %q want %q", got, want)
+	}
+}
+
 func TestValidateForCreateAllowsPostgresConnectionConfig(t *testing.T) {
 	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
 	spec := stackWithConnections(models.StackConnection{
@@ -259,6 +292,109 @@ func TestValidateForCreateRejectsVolumeMountConnectionWithInvalidReadOnlyType(t 
 	}
 }
 
+func TestValidateForCreateAllowsStackResourceEnvConnectionUsingDeclaredOutput(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithConnections(models.StackConnection{
+		Id:   "internal-api",
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeStackResource,
+			Name: "web",
+		},
+		To: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeStackResource,
+			Name: "web",
+		},
+		Mappings: []models.ConnectionMapping{
+			{
+				Target: models.ConnectionTarget{
+					Type: models.ConnectionTargetTypeEnv,
+					Name: "SELF_URL",
+				},
+				Value: models.ValueRef{
+					Output: "url.http",
+				},
+			},
+		},
+	})
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err != nil {
+		t.Fatalf("expected stack resource connection output to validate, got %v", err)
+	}
+}
+
+func TestValidateForCreateRejectsUnknownStackResourceConnectionOutput(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithConnections(models.StackConnection{
+		Id:   "internal-api",
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeStackResource,
+			Name: "web",
+		},
+		To: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeStackResource,
+			Name: "web",
+		},
+		Mappings: []models.ConnectionMapping{
+			{
+				Target: models.ConnectionTarget{
+					Type: models.ConnectionTargetTypeEnv,
+					Name: "SELF_URL",
+				},
+				Value: models.ValueRef{
+					Output: "url.grpc",
+				},
+			},
+		},
+	})
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatalf("expected unknown stack resource output to be rejected")
+	}
+	if got, want := err.Error(), "error: connection 'internal-api' references unsupported output 'url.grpc' for source 'stack_resource:web'"; got != want {
+		t.Fatalf("unexpected error: got %q want %q", got, want)
+	}
+}
+
+func TestValidateForCreateAllowsSecretConnectionUsingBracketAccessor(t *testing.T) {
+	v, secrets := newValidatorWithMockedSecretService(t)
+	spec := stackWithConnections(models.StackConnection{
+		Id:   "tls-cert",
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeSecret,
+			Id:   "sec-1",
+		},
+		To: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeStackResource,
+			Name: "web",
+		},
+		Mappings: []models.ConnectionMapping{
+			{
+				Target: models.ConnectionTarget{
+					Type: models.ConnectionTargetTypeEnv,
+					Name: "TLS_CERT",
+				},
+				Value: models.ValueRef{
+					Output: "key['tls.crt']",
+				},
+			},
+		},
+	})
+	secrets.EXPECT().InternalGetByID(gomock.Any(), "sec-1").Return(&models.Secret{
+		ID:   "sec-1",
+		Keys: []string{"tls.crt"},
+	}, nil)
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err != nil {
+		t.Fatalf("expected secret connection output to validate, got %v", err)
+	}
+}
+
 func TestValidateForUpdateAllowsVolumeMountConnectionUsingExistingDBVolume(t *testing.T) {
 	v := NewStackValidator(StackValidatorSpec{})
 	existing := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
@@ -321,4 +457,15 @@ func newValidatorWithMockedPostgresAddonService(t *testing.T) (validator.StackVa
 	return NewStackValidator(StackValidatorSpec{
 		PostgresAddonService: postgresAddons,
 	}), postgresAddons
+}
+
+func newValidatorWithMockedSecretService(t *testing.T) (validator.StackValidator, *mocks.MocksecretService) {
+	t.Helper()
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	secrets := mocks.NewMocksecretService(ctrl)
+	return NewStackValidator(StackValidatorSpec{
+		SecretService: secrets,
+	}), secrets
 }
