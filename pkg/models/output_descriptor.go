@@ -89,7 +89,7 @@ func (r *StackResource) ToOutputMap() map[string]string {
 
 		publicURL := publicURLsByPort[port.Number]
 		if publicURL == "" && port.ExposedFqdn != "" {
-			publicURL = "https://" + port.ExposedFqdn
+			publicURL = "http://" + port.ExposedFqdn
 		}
 		if publicURL != "" {
 			outputs["public."+port.Name+".url"] = publicURL
