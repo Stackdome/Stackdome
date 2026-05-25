@@ -69,6 +69,9 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 				ResourceUsageService: spec.ResourceUsageService,
 				Logger:               logger.NewLoggerWithPrefix(context.Background(), "stack-secret-reconciler"),
 			}),
+			NewConnectionReconciler(ConnectionReconcilerSpec{
+				VolumeService: spec.VolumeService,
+			}),
 			NewVolumeReconciler(VolumeReconcilerSpec{
 				ClusterManager:  spec.ClusterManager,
 				VolumeService:   spec.VolumeService,

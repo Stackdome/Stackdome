@@ -33,9 +33,15 @@ func NewVolumeReconciler(spec VolumeReconcilerSpec) *volumeReconciler {
 	}
 }
 func (r *volumeReconciler) Reconcile(ctx context.Context, stack *models.Stack) (subReconcilerResult, error) {
-	volumes, serr := r.volumeService.ListVolumesUsedByStack(ctx, stack.ID)
-	if serr != nil {
-		return resultNil, fmt.Errorf("failed to list volumes for stack '%s': %w", stack.ID, serr)
+	var volumes []*models.Volume
+	if len(stack.Volumes) > 0 {
+		volumes = stack.Volumes
+	} else {
+		loaded, serr := r.volumeService.ListVolumesUsedByStack(ctx, stack.ID)
+		if serr != nil {
+			return resultNil, fmt.Errorf("failed to list volumes for stack '%s': %w", stack.ID, serr)
+		}
+		volumes = loaded
 	}
 
 	clusterClient, cerr := r.clusterManager.GetClient(stack.ClusterID)

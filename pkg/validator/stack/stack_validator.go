@@ -385,6 +385,9 @@ func (v *stackValidator) validateConnectionSource(
 		if !ok {
 			return nil, errors.BadRequest("connection '%s' references unknown stack resource '%s'", label, connection.From.Name)
 		}
+		if connection.Kind == models.ConnectionKindBuildArtifactSource {
+			return nil, validateBuildArtifactSourceConfig(volumeMap, label, connection)
+		}
 		if len(connection.Config) > 0 {
 			return nil, errors.BadRequest("connection '%s' does not support config for from.type '%s'", label, connection.From.Type)
 		}
@@ -484,14 +487,44 @@ func connectionVolumeMap(existing *models.Stack, spec *models.Stack) map[string]
 }
 
 func validateConnectionTargetResource(resourceMap map[string]*models.StackResource, label string, ref models.TopologyNodeRef) *errors.ServiceError {
-	if ref.Type != models.TopologyNodeTypeStackResource {
-		return nil
+	switch ref.Type {
+	case models.TopologyNodeTypeStackResource:
+		if ref.Name == "" {
+			return errors.BadRequest("connection '%s' is missing to.name for stack_resource target", label)
+		}
+		if _, ok := resourceMap[ref.Name]; !ok {
+			return errors.BadRequest("connection '%s' references unknown stack resource '%s'", label, ref.Name)
+		}
+	case models.TopologyNodeTypeVolume:
+		if ref.Name == "" {
+			return errors.BadRequest("connection '%s' is missing to.name for volume target", label)
+		}
 	}
-	if ref.Name == "" {
-		return errors.BadRequest("connection '%s' is missing to.name for stack_resource target", label)
+	return nil
+}
+
+func validateBuildArtifactSourceConfig(volumeMap map[string]*models.Volume, label string, connection models.StackConnection) *errors.ServiceError {
+	if connection.To.Type != models.TopologyNodeTypeVolume {
+		return errors.BadRequest("connection '%s' with kind '%s' requires to.type '%s'", label, connection.Kind, models.TopologyNodeTypeVolume)
 	}
-	if _, ok := resourceMap[ref.Name]; !ok {
-		return errors.BadRequest("connection '%s' references unknown stack resource '%s'", label, ref.Name)
+	if _, ok := volumeMap[connection.To.Name]; !ok {
+		return errors.BadRequest("connection '%s' references unknown volume '%s'", label, connection.To.Name)
+	}
+	if err := validateConfigKeys(connection.Config, map[string]struct{}{
+		"source_path":      {},
+		"destination_path": {},
+	}, label, "build_artifact_source"); err != nil {
+		return err
+	}
+	sourcePath, _, err := getOptionalStringConfig(connection.Config, "source_path", label)
+	if err != nil {
+		return err
+	}
+	if sourcePath == "" {
+		return errors.BadRequest("connection '%s' requires config.source_path for build artifact sources", label)
+	}
+	if _, _, err := getOptionalStringConfig(connection.Config, "destination_path", label); err != nil {
+		return err
 	}
 	return nil
 }

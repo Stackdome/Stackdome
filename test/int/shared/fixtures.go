@@ -359,17 +359,20 @@ func CreateMultiResourceStack(name string) *openapi.Stack {
 	frontend.SetPorts([]openapi.Port{
 		*openapi.NewPort("http", MultiResourceFrontendPort, false),
 	})
-	frontendExec := openapi.NewExecutionConfig()
-	frontendExec.SetEnvironmentVariables([]openapi.EnvVar{
-		func() openapi.EnvVar {
-			v := openapi.NewEnvVar("BACKEND_URL")
-			v.SetValue("{{ STACKDOME_BACKEND_INTERNAL }}")
-			return *v
-		}(),
-	})
-	frontend.SetExecutionConfig(*frontendExec)
+
+	from := openapi.NewTopologyNodeRef("stack_resource")
+	from.SetName(MultiResourceBackendName)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(MultiResourceFrontendName)
+	conn := openapi.NewStackConnection("env", *from, *to)
+	target := openapi.NewConnectionTarget("env")
+	target.SetName("BACKEND_URL")
+	value := openapi.NewValueRef()
+	value.SetOutput("host")
+	conn.SetMappings([]openapi.ConnectionMapping{*openapi.NewConnectionMapping(*target, *value)})
 
 	spec := openapi.NewStackSpec([]openapi.StackResource{*backend, *frontend})
+	spec.SetConnections([]openapi.StackConnection{*conn})
 	return openapi.NewStack(name, *spec)
 }
 

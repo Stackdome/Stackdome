@@ -459,6 +459,108 @@ func newValidatorWithMockedPostgresAddonService(t *testing.T) (validator.StackVa
 	}), postgresAddons
 }
 
+func TestValidateForCreateAllowsBuildArtifactSourceConnection(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.StackResources = append(spec.StackResources, &models.StackResource{
+		Name: "builder",
+		BuildConfig: &models.BuildConfigSpec{
+			SourceContext: models.BuildContextSource{
+				Volume: &models.VolumeBuildSource{SourceVolumeName: "src"},
+			},
+			SourceRevision: models.BuildSourceRevision{
+				Volume: &models.VolumeRevision{CurrentVolumeHash: "abc"},
+			},
+			BuildImageRepository: models.BuildImageRepository{UseInClusterRegistry: true},
+		},
+	})
+	spec.Volumes = []*models.Volume{{Name: "src"}, {Name: "assets"}}
+	spec.Connections = models.StackConnections{
+		{
+			Id:   "build-assets",
+			Kind: models.ConnectionKindBuildArtifactSource,
+			From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "builder"},
+			To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "assets"},
+			Config: map[string]interface{}{
+				"source_path":      "/app/public",
+				"destination_path": "/",
+			},
+		},
+	}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err != nil {
+		t.Fatalf("expected build_artifact_source connection to validate, got %v", err)
+	}
+}
+
+func TestValidateForCreateRejectsBuildArtifactSourceWithoutSourcePath(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.StackResources[0].BuildConfig = &models.BuildConfigSpec{}
+	spec.Volumes = []*models.Volume{{Name: "assets"}}
+	spec.Connections = models.StackConnections{
+		{
+			Id:   "build-assets",
+			Kind: models.ConnectionKindBuildArtifactSource,
+			From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+			To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "assets"},
+			Config: map[string]interface{}{
+				"destination_path": "/",
+			},
+		},
+	}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected build_artifact_source without source_path to be rejected")
+	}
+}
+
+func TestValidateForCreateRejectsBuildArtifactSourceTargetingNonVolume(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.StackResources[0].BuildConfig = &models.BuildConfigSpec{}
+	spec.Connections = models.StackConnections{
+		{
+			Id:   "build-assets",
+			Kind: models.ConnectionKindBuildArtifactSource,
+			From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+			To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+			Config: map[string]interface{}{
+				"source_path": "/app/public",
+			},
+		},
+	}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected build_artifact_source targeting non-volume to be rejected")
+	}
+}
+
+func TestValidateForCreateRejectsBuildArtifactSourceWithUnknownVolume(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.StackResources[0].BuildConfig = &models.BuildConfigSpec{}
+	spec.Connections = models.StackConnections{
+		{
+			Id:   "build-assets",
+			Kind: models.ConnectionKindBuildArtifactSource,
+			From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+			To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "nonexistent"},
+			Config: map[string]interface{}{
+				"source_path": "/app/public",
+			},
+		},
+	}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected build_artifact_source with unknown volume to be rejected")
+	}
+}
+
 func newValidatorWithMockedSecretService(t *testing.T) (validator.StackValidator, *mocks.MocksecretService) {
 	t.Helper()
 	ctrl := gomock.NewController(t)

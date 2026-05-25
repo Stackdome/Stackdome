@@ -108,7 +108,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 	})
 
 	Context("Multi-Resource Stack", func() {
-		It("should deploy multiple resources and interpolate env vars", func() {
+		It("should deploy multiple resources and resolve connection env vars", func() {
 			testEnv := GetEnvironment()
 			clusterClient := testEnv.Cluster.GetClient()
 			ctx := context.Background()
@@ -136,7 +136,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(backendDeploy).NotTo(BeNil())
 
-			By("Verifying frontend Deployment has interpolated BACKEND_URL env var")
+			By("Verifying frontend Deployment has connection-resolved BACKEND_URL env var")
 			frontendDeploy, err := shared.GetDeploymentForStackResource(ctx, clusterClient, namespace, shared.MultiResourceFrontendName)
 			Expect(err).NotTo(HaveOccurred())
 
