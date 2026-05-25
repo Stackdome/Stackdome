@@ -16,9 +16,10 @@ type StackStoreSpec struct {
 }
 
 type stackStore struct {
-	sessionFactory     db.SessionFactory
-	stackResourceStore stores.StackResourceStore
-	stackVolumeStore   stores.StackVolumeStore
+	sessionFactory       db.SessionFactory
+	stackResourceStore   stores.StackResourceStore
+	stackVolumeStore     stores.StackVolumeStore
+	stackConnectionStore stores.StackConnectionStore
 	atomicExecutor
 }
 
@@ -29,6 +30,9 @@ func NewStackStore(spec *StackStoreSpec) stores.StackStore {
 			SessionFactory: spec.SessionFactory,
 		}),
 		stackVolumeStore: NewStackVolumeStore(StackVolumeStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
+		stackConnectionStore: NewStackConnectionStore(StackConnectionStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
 		atomicExecutor: atomicExecutor{sessionFactory: spec.SessionFactory},
@@ -49,6 +53,10 @@ func (w *stackStore) Create(ctx context.Context, spec *models.Stack) (*models.St
 			tx.Rollback()
 			return nil, errors.GeneralError("failed to create stack: errored creating stack resource '%s': %v", resource.Name, err)
 		}
+	}
+	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(ctx, spec.ID, spec.Connections); err != nil {
+		tx.Rollback()
+		return nil, errors.GeneralError("failed to create stack connections: %v", err)
 	}
 	tx.Commit()
 	return w.GetByID(ctx, spec.ID)
@@ -78,6 +86,11 @@ func (w *stackStore) InternalList(ctx context.Context, query string, args ...any
 			return nil, errors.GeneralError("failed to get stack volumes: %v", err)
 		}
 		stack.Volumes = stackVolumes
+		stackConnections, err := w.stackConnectionStore.ListByStackID(ctx, stack.ID)
+		if err != nil {
+			return nil, errors.GeneralError("failed to get stack connections: %v", err)
+		}
+		stack.Connections = stackConnections
 	}
 	return stacks, nil
 }
@@ -96,6 +109,9 @@ func (w *stackStore) CreateWithTx(ctx context.Context, spec *models.Stack) (*mod
 		if _, err := w.stackResourceStore.CreateWithTx(ctx, resource, spec); err != nil {
 			return nil, errors.GeneralError("failed to create stack: create stack resource: %v", err)
 		}
+	}
+	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(ctx, spec.ID, spec.Connections); err != nil {
+		return nil, errors.GeneralError("failed to create stack connections: %v", err)
 	}
 	return w.GetByID(ctx, spec.ID)
 }
@@ -116,6 +132,11 @@ func (w *stackStore) ListByUserID(ctx context.Context, userID string) ([]*models
 			return nil, errors.GeneralError("failed to get stack volumes: %v", err)
 		}
 		stack.Volumes = stackVolumes
+		stackConnections, err := w.stackConnectionStore.ListByStackID(ctx, stack.ID)
+		if err != nil {
+			return nil, errors.GeneralError("failed to get stack connections: %v", err)
+		}
+		stack.Connections = stackConnections
 	}
 	return stacks, nil
 }
@@ -136,6 +157,11 @@ func (w *stackStore) ListByOrganisationID(ctx context.Context, organisationID st
 			return nil, errors.GeneralError("failed to get stack volumes: %v", err)
 		}
 		stack.Volumes = stackVolumes
+		stackConnections, err := w.stackConnectionStore.ListByStackID(ctx, stack.ID)
+		if err != nil {
+			return nil, errors.GeneralError("failed to get stack connections: %v", err)
+		}
+		stack.Connections = stackConnections
 	}
 	return stacks, nil
 }
@@ -159,6 +185,11 @@ func (w *stackStore) ListByTeamID(ctx context.Context, teamID string) ([]*models
 			return nil, errors.GeneralError("failed to get stack volumes: %v", err)
 		}
 		stack.Volumes = stackVolumes
+		stackConnections, err := w.stackConnectionStore.ListByStackID(ctx, stack.ID)
+		if err != nil {
+			return nil, errors.GeneralError("failed to get stack connections: %v", err)
+		}
+		stack.Connections = stackConnections
 	}
 	return stacks, nil
 }
@@ -185,6 +216,11 @@ func (w *stackStore) ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*mo
 			return nil, errors.GeneralError("failed to get stack volumes: %v", err)
 		}
 		stack.Volumes = stackVolumes
+		stackConnections, err := w.stackConnectionStore.ListByStackID(ctx, stack.ID)
+		if err != nil {
+			return nil, errors.GeneralError("failed to get stack connections: %v", err)
+		}
+		stack.Connections = stackConnections
 	}
 	return stacks, nil
 }
@@ -208,6 +244,11 @@ func (w *stackStore) GetByID(ctx context.Context, id string) (*models.Stack, *er
 		return nil, errors.GeneralError("failed to get stack volumes: %v", err)
 	}
 	stack.Volumes = stackVolumes
+	stackConnections, err := w.stackConnectionStore.ListByStackID(ctx, id)
+	if err != nil {
+		return nil, errors.GeneralError("failed to get stack connections: %v", err)
+	}
+	stack.Connections = stackConnections
 	return &stack, nil
 }
 
@@ -229,6 +270,11 @@ func (w *stackStore) GetByName(ctx context.Context, name string, userID string) 
 		return nil, errors.GeneralError("failed to get stack volumes: %v", err)
 	}
 	stack.Volumes = stackVolumes
+	stackConnections, err := w.stackConnectionStore.ListByStackID(ctx, stack.ID)
+	if err != nil {
+		return nil, errors.GeneralError("failed to get stack connections: %v", err)
+	}
+	stack.Connections = stackConnections
 	return &stack, nil
 }
 
@@ -272,6 +318,10 @@ func (w *stackStore) Update(ctx context.Context, id string, spec *models.Stack) 
 				return nil, errors.GeneralError("failed to update stack. error deleting stack resource '%s': %v", resource.Name, err)
 			}
 		}
+	}
+	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(txCtx, id, spec.Connections); err != nil {
+		tx.Rollback()
+		return nil, errors.GeneralError("failed to update stack connections: %v", err)
 	}
 	tx.Commit()
 	return w.GetByID(ctx, id)
@@ -327,6 +377,9 @@ func (w *stackStore) UpdateWithTx(ctx context.Context, id string, spec *models.S
 			}
 		}
 	}
+	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(ctx, id, spec.Connections); err != nil {
+		return nil, errors.GeneralError("failed to update stack connections: %v", err)
+	}
 	return w.GetByID(ctx, id)
 }
 
@@ -335,6 +388,22 @@ func (w *stackStore) UpdateStatus(ctx context.Context, id string, status *models
 		return errors.GeneralError("failed to update stack status: %s", err.Error())
 	}
 	return nil
+}
+
+func (w *stackStore) CreateConnectionWithTx(ctx context.Context, id string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
+	return w.stackConnectionStore.CreateWithTx(ctx, id, connection)
+}
+
+func (w *stackStore) UpdateConnectionWithTx(ctx context.Context, id string, connectionID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
+	return w.stackConnectionStore.UpdateWithTx(ctx, id, connectionID, connection)
+}
+
+func (w *stackStore) DeleteConnectionWithTx(ctx context.Context, id string, connectionID string) *errors.ServiceError {
+	return w.stackConnectionStore.DeleteWithTx(ctx, id, connectionID)
+}
+
+func (w *stackStore) UpdateConnectionsWithTx(ctx context.Context, id string, connections models.StackConnections) *errors.ServiceError {
+	return w.stackConnectionStore.ReplaceByStackIDWithTx(ctx, id, connections)
 }
 
 func (w *stackStore) DeleteWithTx(ctx context.Context, id string) *errors.ServiceError {

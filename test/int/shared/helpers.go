@@ -289,6 +289,56 @@ func GetStack(client *openapi.APIClient, orgID, teamName, stackID string) *opena
 	return resp
 }
 
+func GetStackTopology(client *openapi.APIClient, orgID, teamName, stackID string) *openapi.StackTopology {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet(ctx, orgID, teamName, stackID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to get stack topology")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack topology response")
+
+	return resp
+}
+
+func ListStackConnections(client *openapi.APIClient, orgID, teamName, stackID string) []openapi.StackConnection {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet(ctx, orgID, teamName, stackID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to list stack connections")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+
+	return resp
+}
+
+func CreateStackConnection(client *openapi.APIClient, orgID, teamName, stackID string, connection *openapi.StackConnection) *openapi.StackConnection {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost(ctx, orgID, teamName, stackID).
+		StackConnection(*connection).
+		Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to create stack connection")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack connection response")
+
+	return resp
+}
+
+func UpdateStackConnection(client *openapi.APIClient, orgID, teamName, stackID, connectionID string, connection *openapi.StackConnection) *openapi.StackConnection {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut(ctx, orgID, teamName, stackID, connectionID).
+		StackConnection(*connection).
+		Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to update stack connection")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack connection response")
+
+	return resp
+}
+
+func DeleteStackConnection(client *openapi.APIClient, orgID, teamName, stackID, connectionID string) {
+	ctx := context.Background()
+	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete(ctx, orgID, teamName, stackID, connectionID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to delete stack connection")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusNoContent), "unexpected status code")
+}
+
 func ListStacks(client *openapi.APIClient, orgID, teamName string) *openapi.StackList {
 	ctx := context.Background()
 	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet(ctx, orgID, teamName).Execute()

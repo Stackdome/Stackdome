@@ -67,6 +67,10 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks | List all stacks for a team
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds/{build_id} | Get a specific build under a stack
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds | List all builds under a stack
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections/{connection_id} | Delete stack connection
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections/{connection_id} | Update stack connection
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections | List stack connections
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections | Create stack connection
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id} | Delete a stack
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id} | Get a specific stack
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/logs | Get logs for a stack
@@ -77,6 +81,7 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Get a specific stack resource by name
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs | Get logs for a stack resource
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/metrics | Get metrics for a stack resource
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/topology | Get stack topology
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks | Create a new stack
 [**ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id} | Delete a volume
 [**ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id} | Get a specific volume
@@ -4572,6 +4577,310 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete
+
+> ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete(ctx, orgId, teamName, id, connectionId).Execute()
+
+Delete stack connection
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    connectionId := "connectionId_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete(context.Background(), orgId, teamName, id, connectionId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+**connectionId** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut
+
+> StackConnection ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut(ctx, orgId, teamName, id, connectionId).StackConnection(stackConnection).Execute()
+
+Update stack connection
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    connectionId := "connectionId_example" // string | 
+    stackConnection := *openapiclient.NewStackConnection("Kind_example", *openapiclient.NewTopologyNodeRef("Type_example"), *openapiclient.NewTopologyNodeRef("Type_example")) // StackConnection | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut(context.Background(), orgId, teamName, id, connectionId).StackConnection(stackConnection).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut`: StackConnection
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+**connectionId** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+ **stackConnection** | [**StackConnection**](StackConnection.md) |  | 
+
+### Return type
+
+[**StackConnection**](StackConnection.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet
+
+> []StackConnection ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet(ctx, orgId, teamName, id).Execute()
+
+List stack connections
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet(context.Background(), orgId, teamName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet`: []StackConnection
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**[]StackConnection**](StackConnection.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost
+
+> StackConnection ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost(ctx, orgId, teamName, id).StackConnection(stackConnection).Execute()
+
+Create stack connection
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    stackConnection := *openapiclient.NewStackConnection("Kind_example", *openapiclient.NewTopologyNodeRef("Type_example"), *openapiclient.NewTopologyNodeRef("Type_example")) // StackConnection | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost(context.Background(), orgId, teamName, id).StackConnection(stackConnection).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost`: StackConnection
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **stackConnection** | [**StackConnection**](StackConnection.md) |  | 
+
+### Return type
+
+[**StackConnection**](StackConnection.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete
 
 > Stack ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete(ctx, orgId, teamName, id).Execute()
@@ -5340,6 +5649,80 @@ Name | Type | Description  | Notes
 
 - **Content-Type**: Not defined
 - **Accept**: application/json, text/event-stream
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet
+
+> StackTopology ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet(ctx, orgId, teamName, id).Execute()
+
+Get stack topology
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet(context.Background(), orgId, teamName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet`: StackTopology
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**StackTopology**](StackTopology.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)

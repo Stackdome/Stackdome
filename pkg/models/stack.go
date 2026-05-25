@@ -38,7 +38,7 @@ type Stack struct {
 	Labels            Labels      `gorm:"type:jsonb"`
 	Annotations       Annotations `gorm:"type:jsonb"`
 	CrRevision        string
-	Connections       StackConnections `gorm:"type:jsonb"`
+	Connections       StackConnections `gorm:"-"`
 	StackResources    []*StackResource `gorm:"foreignKey:StackID"`
 	Volumes           []*Volume        `gorm:"-"`
 	Status            *StackStatus     `gorm:"type:jsonb"`

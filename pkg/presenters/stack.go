@@ -32,6 +32,17 @@ func PresentStack(s *models.Stack) openapi.Stack {
 	}
 }
 
+func PresentStackConnections(connections models.StackConnections) []openapi.StackConnection {
+	return presentConnections(connections)
+}
+
+func PresentStackConnection(connection *models.StackConnection) openapi.StackConnection {
+	if connection == nil {
+		return openapi.StackConnection{}
+	}
+	return presentConnections(models.StackConnections{*connection})[0]
+}
+
 func presentStackSpec(w *models.Stack) openapi.StackSpec {
 	return openapi.StackSpec{
 		StackResources: presentStackResources(w.StackResources),
@@ -301,6 +312,17 @@ func ConvertStack(w *openapi.Stack) *models.Stack {
 		StackResources: convertStackResources(w.Spec.StackResources),
 		Volumes:        convertVolumes(w.Spec.Volumes),
 	}
+}
+
+func ConvertStackConnection(connection *openapi.StackConnection) *models.StackConnection {
+	if connection == nil {
+		return nil
+	}
+	converted := convertConnections([]openapi.StackConnection{*connection})
+	if len(converted) == 0 {
+		return nil
+	}
+	return &converted[0]
 }
 
 func presentConnections(connections models.StackConnections) []openapi.StackConnection {

@@ -133,6 +133,7 @@ docs/StackResourceList.md
 docs/StackResourceStatus.md
 docs/StackSpec.md
 docs/StackStatus.md
+docs/StackTopology.md
 docs/Team.md
 docs/TeamCreateRequest.md
 docs/TeamList.md
@@ -141,6 +142,8 @@ docs/TeamMembershipList.md
 docs/TeamRole.md
 docs/TeamRoleList.md
 docs/TeamUpdateRequest.md
+docs/TopologyEdge.md
+docs/TopologyNode.md
 docs/TopologyNodeRef.md
 docs/UpdateTeamMemberRoleRequest.md
 docs/User.md
@@ -293,6 +296,7 @@ model_stack_resource_list.go
 model_stack_resource_status.go
 model_stack_spec.go
 model_stack_status.go
+model_stack_topology.go
 model_team.go
 model_team_create_request.go
 model_team_list.go
@@ -301,6 +305,8 @@ model_team_membership_list.go
 model_team_role.go
 model_team_role_list.go
 model_team_update_request.go
+model_topology_edge.go
+model_topology_node.go
 model_topology_node_ref.go
 model_update_team_member_role_request.go
 model_user.go

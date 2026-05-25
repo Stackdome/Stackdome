@@ -7481,6 +7481,530 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGe
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDeleteRequest struct {
+	ctx          context.Context
+	ApiService   *DefaultApiService
+	orgId        string
+	teamName     string
+	id           string
+	connectionId string
+}
+
+func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDeleteRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDeleteExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete Delete stack connection
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param teamName The name of the team
+	@param id The id of record
+	@param connectionId
+	@return ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDeleteRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete(ctx context.Context, orgId string, teamName string, id string, connectionId string) ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDeleteRequest {
+	return ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDeleteRequest{
+		ApiService:   a,
+		ctx:          ctx,
+		orgId:        orgId,
+		teamName:     teamName,
+		id:           id,
+		connectionId: connectionId,
+	}
+}
+
+// Execute executes the request
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDeleteExecute(r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDeleteRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections/{connection_id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"connection_id"+"}", url.PathEscape(parameterToString(r.connectionId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutRequest struct {
+	ctx             context.Context
+	ApiService      *DefaultApiService
+	orgId           string
+	teamName        string
+	id              string
+	connectionId    string
+	stackConnection *StackConnection
+}
+
+func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutRequest) StackConnection(stackConnection StackConnection) ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutRequest {
+	r.stackConnection = &stackConnection
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutRequest) Execute() (*StackConnection, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut Update stack connection
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param teamName The name of the team
+	@param id The id of record
+	@param connectionId
+	@return ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut(ctx context.Context, orgId string, teamName string, id string, connectionId string) ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutRequest {
+	return ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutRequest{
+		ApiService:   a,
+		ctx:          ctx,
+		orgId:        orgId,
+		teamName:     teamName,
+		id:           id,
+		connectionId: connectionId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return StackConnection
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutExecute(r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutRequest) (*StackConnection, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPut
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *StackConnection
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections/{connection_id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"connection_id"+"}", url.PathEscape(parameterToString(r.connectionId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.stackConnection == nil {
+		return localVarReturnValue, nil, reportError("stackConnection is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.stackConnection
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	teamName   string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetRequest) Execute() ([]StackConnection, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet List stack connections
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param teamName The name of the team
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet(ctx context.Context, orgId string, teamName string, id string) ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetRequest {
+	return ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		teamName:   teamName,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return []StackConnection
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetExecute(r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetRequest) ([]StackConnection, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue []StackConnection
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPostRequest struct {
+	ctx             context.Context
+	ApiService      *DefaultApiService
+	orgId           string
+	teamName        string
+	id              string
+	stackConnection *StackConnection
+}
+
+func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPostRequest) StackConnection(stackConnection StackConnection) ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPostRequest {
+	r.stackConnection = &stackConnection
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPostRequest) Execute() (*StackConnection, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost Create stack connection
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param teamName The name of the team
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost(ctx context.Context, orgId string, teamName string, id string) ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPostRequest {
+	return ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		teamName:   teamName,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return StackConnection
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPostExecute(r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPostRequest) (*StackConnection, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *StackConnection
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.stackConnection == nil {
+		return localVarReturnValue, nil, reportError("stackConnection is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.stackConnection
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 409 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDeleteRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
@@ -8733,6 +9257,125 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResource
 
 	// to determine the Accept header
 	localVarHTTPHeaderAccepts := []string{"application/json", "text/event-stream"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	teamName   string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGetRequest) Execute() (*StackTopology, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet Get stack topology
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param teamName The name of the team
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet(ctx context.Context, orgId string, teamName string, id string) ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGetRequest {
+	return ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		teamName:   teamName,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return StackTopology
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGetExecute(r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGetRequest) (*StackTopology, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *StackTopology
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/topology"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
 
 	// set Accept header
 	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)

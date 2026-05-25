@@ -52,4 +52,5 @@ var MigrationList = []*gormigrate.Migration{
 	createOrgInvitesTable(),
 	addInviteTokenToOAuthStates(),
 	encryptClusterCredentials(),
+	createStackConnectionsTable(),
 }
