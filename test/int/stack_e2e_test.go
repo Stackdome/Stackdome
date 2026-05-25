@@ -362,7 +362,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			pgUser, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["username"])
 			Expect(pgUser).NotTo(BeEmpty(), "PG_USER should be a valid database username")
 
-			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["connectionString"])
+			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["url"])
 			Expect(dbURL).To(HavePrefix("postgresql://"), "DATABASE_URL should be a postgresql:// connection string")
 			Expect(dbURL).To(ContainSubstring("testdb"), "DATABASE_URL should reference the requested database")
 		})
@@ -419,7 +419,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			pgUser, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["username"])
 			Expect(pgUser).To(Equal("postgres"), "superuser username should be 'postgres'")
 
-			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["connectionString"])
+			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["url"])
 			Expect(dbURL).To(HavePrefix("postgresql://"), "DATABASE_URL should be a postgresql:// connection string")
 
 			By("Fetching superuser credentials via API")

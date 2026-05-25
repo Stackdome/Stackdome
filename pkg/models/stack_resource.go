@@ -56,13 +56,6 @@ func (s *StackResource) HasGitCredentials() bool {
 	return false
 }
 
-func (s *StackResource) HasEnvVarsFromSecret() bool {
-	if s.ExecutionConfig != nil && len(s.ExecutionConfig.EnvVarsFromSecrets) > 0 {
-		return true
-	}
-	return false
-}
-
 type StackResourceState string
 
 const (
@@ -148,40 +141,15 @@ type InitConfig struct {
 }
 
 type ExecutionConfig struct {
-	Command            []string             `json:"command,omitempty"`
-	Args               []string             `json:"args,omitempty"`
-	Env                []EnvVar             `json:"env,omitempty"`
-	EnvVarsFromSecrets []EnvSecretReference `json:"env_vars_from_secrets,omitempty"`
-	EnvFromAddons      []AddonEnvSource     `json:"env_from_addons,omitempty"`
-}
-
-type AddonEnvSource struct {
-	Postgres *PostgresAddonEnvSource `json:"postgres,omitempty"`
-}
-
-type PostgresAddonEnvSource struct {
-	AddonID    string            `json:"addon_id"`
-	Database   string            `json:"database,omitempty"`
-	Superuser  bool              `json:"superuser,omitempty"`
-	EnvMapping map[string]string `json:"env_mapping"`
-}
-
-var PostgresAddonEnvFields = []string{
-	"host", "port", "username", "password",
-	"database", "sslmode", "connectionString", "caCertificate",
+	Command []string `json:"command,omitempty"`
+	Args    []string `json:"args,omitempty"`
+	Env     []EnvVar `json:"env,omitempty"`
 }
 
 type EnvVar struct {
 	Name       string `json:"name"`
 	Value      string `json:"value,omitempty"`
 	SelfOutput string `json:"self_output,omitempty"`
-}
-
-// EnvSecretReference maps a secret key to an environment variable
-type EnvSecretReference struct {
-	SecretID  string `json:"secret_id"`  // Id of the secret
-	SecretKey string `json:"secret_key"` // Key within the secret
-	EnvName   string `json:"env_name"`   // Target environment variable name
 }
 
 func (v *StackResource) VolumeMountMap() map[string]*VolumeMount {

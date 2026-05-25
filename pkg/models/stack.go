@@ -125,13 +125,6 @@ func (ws *Stack) SecretsInUse() []string {
 			}
 		}
 
-		if resource.HasEnvVarsFromSecret() {
-			if resource.ExecutionConfig != nil && len(resource.ExecutionConfig.EnvVarsFromSecrets) > 0 {
-				for _, secretRef := range resource.ExecutionConfig.EnvVarsFromSecrets {
-					res = append(res, secretRef.SecretID)
-				}
-			}
-		}
 	}
 	for _, connection := range ws.Connections {
 		if connection.From.Type == TopologyNodeTypeSecret && connection.From.Id != "" {

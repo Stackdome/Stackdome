@@ -186,7 +186,6 @@ func presentExecutionConfig(config *models.ExecutionConfig) *openapi.ExecutionCo
 		Command:              config.Command,
 		Args:                 config.Args,
 		EnvironmentVariables: presentEnvVars(config.Env),
-		EnvFromAddons:        presentEnvFromAddons(config.EnvFromAddons),
 	}
 }
 
@@ -199,31 +198,6 @@ func presentEnvVars(envVars []models.EnvVar) []openapi.EnvVar {
 		}
 		if env.SelfOutput != "" {
 			result[i].SetSelfOutput(env.SelfOutput)
-		}
-	}
-	return result
-}
-
-func presentEnvFromAddons(sources []models.AddonEnvSource) []openapi.AddonEnvSource {
-	if sources == nil {
-		return nil
-	}
-	result := make([]openapi.AddonEnvSource, len(sources))
-	for i, s := range sources {
-		if s.Postgres != nil {
-			pgSource := &openapi.PostgresAddonEnvSource{
-				AddonId:    s.Postgres.AddonID,
-				EnvMapping: s.Postgres.EnvMapping,
-			}
-			if s.Postgres.Database != "" {
-				pgSource.SetDatabase(s.Postgres.Database)
-			}
-			if s.Postgres.Superuser {
-				pgSource.SetSuperuser(true)
-			}
-			result[i] = openapi.AddonEnvSource{
-				Postgres: pgSource,
-			}
 		}
 	}
 	return result
@@ -536,48 +510,10 @@ func convertExecutionConfig(config *openapi.ExecutionConfig) *models.ExecutionCo
 		return nil
 	}
 	return &models.ExecutionConfig{
-		Command:            config.Command,
-		Args:               config.Args,
-		Env:                convertEnvVars(config.EnvironmentVariables),
-		EnvVarsFromSecrets: convertEnvVarsFromSecret(config.EnvironmentVariablesFromSecret),
-		EnvFromAddons:      convertEnvFromAddons(config.EnvFromAddons),
+		Command: config.Command,
+		Args:    config.Args,
+		Env:     convertEnvVars(config.EnvironmentVariables),
 	}
-}
-
-func convertEnvVarsFromSecret(envVars []openapi.EnvVarFromSecret) []models.EnvSecretReference {
-	if envVars == nil {
-		return nil
-	}
-	result := make([]models.EnvSecretReference, len(envVars))
-	for i, env := range envVars {
-		result[i] = models.EnvSecretReference{
-			SecretID:  env.SecretRef.SecretId,
-			SecretKey: env.Key,
-			EnvName:   env.Name,
-		}
-	}
-	return result
-
-}
-
-func convertEnvFromAddons(sources []openapi.AddonEnvSource) []models.AddonEnvSource {
-	if sources == nil {
-		return nil
-	}
-	result := make([]models.AddonEnvSource, len(sources))
-	for i, s := range sources {
-		if s.Postgres != nil {
-			result[i] = models.AddonEnvSource{
-				Postgres: &models.PostgresAddonEnvSource{
-					AddonID:    s.Postgres.AddonId,
-					Database:   s.Postgres.GetDatabase(),
-					Superuser:  s.Postgres.GetSuperuser(),
-					EnvMapping: s.Postgres.EnvMapping,
-				},
-			}
-		}
-	}
-	return result
 }
 
 func convertEnvVars(envVars []openapi.EnvVar) []models.EnvVar {

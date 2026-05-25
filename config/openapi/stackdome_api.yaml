@@ -4153,29 +4153,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EnvVar'
-        environment_variables_from_secret:
-          type: array
-          items:
-            $ref: '#/components/schemas/EnvVarFromSecret'
-        env_from_addons:
-          type: array
-          items:
-            $ref: '#/components/schemas/AddonEnvSource'
-    EnvVarFromSecret:
-      type: object
-      additionalProperties: false
-      required:
-        - name
-        - secret_ref
-        - key
-      properties:
-        name:
-          type: string
-        secret_ref:
-          $ref: '#/components/schemas/SecretRef'
-        key:
-          type: string
-          description: The key in the secret to use for this environment variable
     EnvVar:
       type: object
       additionalProperties: false
@@ -4883,31 +4860,6 @@ components:
           type: string
         caCertificate:
           type: string
-    AddonEnvSource:
-      type: object
-      properties:
-        postgres:
-          $ref: '#/components/schemas/PostgresAddonEnvSource'
-    PostgresAddonEnvSource:
-      type: object
-      required:
-        - addon_id
-        - env_mapping
-      properties:
-        addon_id:
-          type: string
-        database:
-          type: string
-          description: Target database name. Required when superuser is false. Defaults to 'postgres' when superuser is true and omitted.
-        superuser:
-          type: boolean
-          default: false
-          description: When true, use superuser credentials. The addon must have enableSuperuserAccess enabled.
-        env_mapping:
-          type: object
-          additionalProperties:
-            type: string
-          description: Maps addon credential fields to environment variable names. Valid fields are host, port, username, password, database, sslmode, connectionString, caCertificate.
     ScopeResource:
       type: object
       properties:

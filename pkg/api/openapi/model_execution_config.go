@@ -16,11 +16,9 @@ import (
 
 // ExecutionConfig struct for ExecutionConfig
 type ExecutionConfig struct {
-	Command                        []string           `json:"command,omitempty"`
-	Args                           []string           `json:"args,omitempty"`
-	EnvironmentVariables           []EnvVar           `json:"environment_variables,omitempty"`
-	EnvironmentVariablesFromSecret []EnvVarFromSecret `json:"environment_variables_from_secret,omitempty"`
-	EnvFromAddons                  []AddonEnvSource   `json:"env_from_addons,omitempty"`
+	Command              []string `json:"command,omitempty"`
+	Args                 []string `json:"args,omitempty"`
+	EnvironmentVariables []EnvVar `json:"environment_variables,omitempty"`
 }
 
 // NewExecutionConfig instantiates a new ExecutionConfig object
@@ -136,70 +134,6 @@ func (o *ExecutionConfig) SetEnvironmentVariables(v []EnvVar) {
 	o.EnvironmentVariables = v
 }
 
-// GetEnvironmentVariablesFromSecret returns the EnvironmentVariablesFromSecret field value if set, zero value otherwise.
-func (o *ExecutionConfig) GetEnvironmentVariablesFromSecret() []EnvVarFromSecret {
-	if o == nil || o.EnvironmentVariablesFromSecret == nil {
-		var ret []EnvVarFromSecret
-		return ret
-	}
-	return o.EnvironmentVariablesFromSecret
-}
-
-// GetEnvironmentVariablesFromSecretOk returns a tuple with the EnvironmentVariablesFromSecret field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ExecutionConfig) GetEnvironmentVariablesFromSecretOk() ([]EnvVarFromSecret, bool) {
-	if o == nil || o.EnvironmentVariablesFromSecret == nil {
-		return nil, false
-	}
-	return o.EnvironmentVariablesFromSecret, true
-}
-
-// HasEnvironmentVariablesFromSecret returns a boolean if a field has been set.
-func (o *ExecutionConfig) HasEnvironmentVariablesFromSecret() bool {
-	if o != nil && o.EnvironmentVariablesFromSecret != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetEnvironmentVariablesFromSecret gets a reference to the given []EnvVarFromSecret and assigns it to the EnvironmentVariablesFromSecret field.
-func (o *ExecutionConfig) SetEnvironmentVariablesFromSecret(v []EnvVarFromSecret) {
-	o.EnvironmentVariablesFromSecret = v
-}
-
-// GetEnvFromAddons returns the EnvFromAddons field value if set, zero value otherwise.
-func (o *ExecutionConfig) GetEnvFromAddons() []AddonEnvSource {
-	if o == nil || o.EnvFromAddons == nil {
-		var ret []AddonEnvSource
-		return ret
-	}
-	return o.EnvFromAddons
-}
-
-// GetEnvFromAddonsOk returns a tuple with the EnvFromAddons field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ExecutionConfig) GetEnvFromAddonsOk() ([]AddonEnvSource, bool) {
-	if o == nil || o.EnvFromAddons == nil {
-		return nil, false
-	}
-	return o.EnvFromAddons, true
-}
-
-// HasEnvFromAddons returns a boolean if a field has been set.
-func (o *ExecutionConfig) HasEnvFromAddons() bool {
-	if o != nil && o.EnvFromAddons != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetEnvFromAddons gets a reference to the given []AddonEnvSource and assigns it to the EnvFromAddons field.
-func (o *ExecutionConfig) SetEnvFromAddons(v []AddonEnvSource) {
-	o.EnvFromAddons = v
-}
-
 func (o ExecutionConfig) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Command != nil {
@@ -210,12 +144,6 @@ func (o ExecutionConfig) MarshalJSON() ([]byte, error) {
 	}
 	if o.EnvironmentVariables != nil {
 		toSerialize["environment_variables"] = o.EnvironmentVariables
-	}
-	if o.EnvironmentVariablesFromSecret != nil {
-		toSerialize["environment_variables_from_secret"] = o.EnvironmentVariablesFromSecret
-	}
-	if o.EnvFromAddons != nil {
-		toSerialize["env_from_addons"] = o.EnvFromAddons
 	}
 	return json.Marshal(toSerialize)
 }

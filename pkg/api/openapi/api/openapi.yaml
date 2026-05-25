@@ -5264,31 +5264,9 @@ components:
               - name: name
                 self_output: self_output
                 value: value
-              env_from_addons:
-              - postgres:
-                  database: database
-                  env_mapping:
-                    key: env_mapping
-                  superuser: false
-                  addon_id: addon_id
-              - postgres:
-                  database: database
-                  env_mapping:
-                    key: env_mapping
-                  superuser: false
-                  addon_id: addon_id
               command:
               - command
               - command
-              environment_variables_from_secret:
-              - secret_ref:
-                  secret_id: secret_id
-                name: name
-                key: key
-              - secret_ref:
-                  secret_id: secret_id
-                name: name
-                key: key
             volume_mounts:
             - stack_resource_id: stack_resource_id
               source_volume_name: source_volume_name
@@ -5432,31 +5410,9 @@ components:
               - name: name
                 self_output: self_output
                 value: value
-              env_from_addons:
-              - postgres:
-                  database: database
-                  env_mapping:
-                    key: env_mapping
-                  superuser: false
-                  addon_id: addon_id
-              - postgres:
-                  database: database
-                  env_mapping:
-                    key: env_mapping
-                  superuser: false
-                  addon_id: addon_id
               command:
               - command
               - command
-              environment_variables_from_secret:
-              - secret_ref:
-                  secret_id: secret_id
-                name: name
-                key: key
-              - secret_ref:
-                  secret_id: secret_id
-                name: name
-                key: key
             volume_mounts:
             - stack_resource_id: stack_resource_id
               source_volume_name: source_volume_name
@@ -5879,31 +5835,9 @@ components:
                 - name: name
                   self_output: self_output
                   value: value
-                env_from_addons:
-                - postgres:
-                    database: database
-                    env_mapping:
-                      key: env_mapping
-                    superuser: false
-                    addon_id: addon_id
-                - postgres:
-                    database: database
-                    env_mapping:
-                      key: env_mapping
-                    superuser: false
-                    addon_id: addon_id
                 command:
                 - command
                 - command
-                environment_variables_from_secret:
-                - secret_ref:
-                    secret_id: secret_id
-                  name: name
-                  key: key
-                - secret_ref:
-                    secret_id: secret_id
-                  name: name
-                  key: key
               volume_mounts:
               - stack_resource_id: stack_resource_id
                 source_volume_name: source_volume_name
@@ -6047,31 +5981,9 @@ components:
                 - name: name
                   self_output: self_output
                   value: value
-                env_from_addons:
-                - postgres:
-                    database: database
-                    env_mapping:
-                      key: env_mapping
-                    superuser: false
-                    addon_id: addon_id
-                - postgres:
-                    database: database
-                    env_mapping:
-                      key: env_mapping
-                    superuser: false
-                    addon_id: addon_id
                 command:
                 - command
                 - command
-                environment_variables_from_secret:
-                - secret_ref:
-                    secret_id: secret_id
-                  name: name
-                  key: key
-                - secret_ref:
-                    secret_id: secret_id
-                  name: name
-                  key: key
               volume_mounts:
               - stack_resource_id: stack_resource_id
                 source_volume_name: source_volume_name
@@ -6445,31 +6357,9 @@ components:
                 - name: name
                   self_output: self_output
                   value: value
-                env_from_addons:
-                - postgres:
-                    database: database
-                    env_mapping:
-                      key: env_mapping
-                    superuser: false
-                    addon_id: addon_id
-                - postgres:
-                    database: database
-                    env_mapping:
-                      key: env_mapping
-                    superuser: false
-                    addon_id: addon_id
                 command:
                 - command
                 - command
-                environment_variables_from_secret:
-                - secret_ref:
-                    secret_id: secret_id
-                  name: name
-                  key: key
-                - secret_ref:
-                    secret_id: secret_id
-                  name: name
-                  key: key
               volume_mounts:
               - stack_resource_id: stack_resource_id
                 source_volume_name: source_volume_name
@@ -6613,31 +6503,9 @@ components:
                 - name: name
                   self_output: self_output
                   value: value
-                env_from_addons:
-                - postgres:
-                    database: database
-                    env_mapping:
-                      key: env_mapping
-                    superuser: false
-                    addon_id: addon_id
-                - postgres:
-                    database: database
-                    env_mapping:
-                      key: env_mapping
-                    superuser: false
-                    addon_id: addon_id
                 command:
                 - command
                 - command
-                environment_variables_from_secret:
-                - secret_ref:
-                    secret_id: secret_id
-                  name: name
-                  key: key
-                - secret_ref:
-                    secret_id: secret_id
-                  name: name
-                  key: key
               volume_mounts:
               - stack_resource_id: stack_resource_id
                 source_volume_name: source_volume_name
@@ -7013,31 +6881,9 @@ components:
             - name: name
               self_output: self_output
               value: value
-            env_from_addons:
-            - postgres:
-                database: database
-                env_mapping:
-                  key: env_mapping
-                superuser: false
-                addon_id: addon_id
-            - postgres:
-                database: database
-                env_mapping:
-                  key: env_mapping
-                superuser: false
-                addon_id: addon_id
             command:
             - command
             - command
-            environment_variables_from_secret:
-            - secret_ref:
-                secret_id: secret_id
-              name: name
-              key: key
-            - secret_ref:
-                secret_id: secret_id
-              name: name
-              key: key
           volume_mounts:
           - stack_resource_id: stack_resource_id
             source_volume_name: source_volume_name
@@ -7181,31 +7027,9 @@ components:
             - name: name
               self_output: self_output
               value: value
-            env_from_addons:
-            - postgres:
-                database: database
-                env_mapping:
-                  key: env_mapping
-                superuser: false
-                addon_id: addon_id
-            - postgres:
-                database: database
-                env_mapping:
-                  key: env_mapping
-                superuser: false
-                addon_id: addon_id
             command:
             - command
             - command
-            environment_variables_from_secret:
-            - secret_ref:
-                secret_id: secret_id
-              name: name
-              key: key
-            - secret_ref:
-                secret_id: secret_id
-              name: name
-              key: key
           volume_mounts:
           - stack_resource_id: stack_resource_id
             source_volume_name: source_volume_name
@@ -7589,31 +7413,9 @@ components:
           - name: name
             self_output: self_output
             value: value
-          env_from_addons:
-          - postgres:
-              database: database
-              env_mapping:
-                key: env_mapping
-              superuser: false
-              addon_id: addon_id
-          - postgres:
-              database: database
-              env_mapping:
-                key: env_mapping
-              superuser: false
-              addon_id: addon_id
           command:
           - command
           - command
-          environment_variables_from_secret:
-          - secret_ref:
-              secret_id: secret_id
-            name: name
-            key: key
-          - secret_ref:
-              secret_id: secret_id
-            name: name
-            key: key
         volume_mounts:
         - stack_resource_id: stack_resource_id
           source_volume_name: source_volume_name
@@ -7815,31 +7617,9 @@ components:
             - name: name
               self_output: self_output
               value: value
-            env_from_addons:
-            - postgres:
-                database: database
-                env_mapping:
-                  key: env_mapping
-                superuser: false
-                addon_id: addon_id
-            - postgres:
-                database: database
-                env_mapping:
-                  key: env_mapping
-                superuser: false
-                addon_id: addon_id
             command:
             - command
             - command
-            environment_variables_from_secret:
-            - secret_ref:
-                secret_id: secret_id
-              name: name
-              key: key
-            - secret_ref:
-                secret_id: secret_id
-              name: name
-              key: key
           volume_mounts:
           - stack_resource_id: stack_resource_id
             source_volume_name: source_volume_name
@@ -7983,31 +7763,9 @@ components:
             - name: name
               self_output: self_output
               value: value
-            env_from_addons:
-            - postgres:
-                database: database
-                env_mapping:
-                  key: env_mapping
-                superuser: false
-                addon_id: addon_id
-            - postgres:
-                database: database
-                env_mapping:
-                  key: env_mapping
-                superuser: false
-                addon_id: addon_id
             command:
             - command
             - command
-            environment_variables_from_secret:
-            - secret_ref:
-                secret_id: secret_id
-              name: name
-              key: key
-            - secret_ref:
-                secret_id: secret_id
-              name: name
-              key: key
           volume_mounts:
           - stack_resource_id: stack_resource_id
             source_volume_name: source_volume_name
@@ -9495,31 +9253,9 @@ components:
         - name: name
           self_output: self_output
           value: value
-        env_from_addons:
-        - postgres:
-            database: database
-            env_mapping:
-              key: env_mapping
-            superuser: false
-            addon_id: addon_id
-        - postgres:
-            database: database
-            env_mapping:
-              key: env_mapping
-            superuser: false
-            addon_id: addon_id
         command:
         - command
         - command
-        environment_variables_from_secret:
-        - secret_ref:
-            secret_id: secret_id
-          name: name
-          key: key
-        - secret_ref:
-            secret_id: secret_id
-          name: name
-          key: key
       properties:
         command:
           items:
@@ -9533,34 +9269,6 @@ components:
           items:
             $ref: '#/components/schemas/EnvVar'
           type: array
-        environment_variables_from_secret:
-          items:
-            $ref: '#/components/schemas/EnvVarFromSecret'
-          type: array
-        env_from_addons:
-          items:
-            $ref: '#/components/schemas/AddonEnvSource'
-          type: array
-      type: object
-    EnvVarFromSecret:
-      additionalProperties: false
-      example:
-        secret_ref:
-          secret_id: secret_id
-        name: name
-        key: key
-      properties:
-        name:
-          type: string
-        secret_ref:
-          $ref: '#/components/schemas/SecretRef'
-        key:
-          description: The key in the secret to use for this environment variable
-          type: string
-      required:
-      - key
-      - name
-      - secret_ref
       type: object
     EnvVar:
       additionalProperties: false
@@ -10931,48 +10639,6 @@ components:
           type: string
         caCertificate:
           type: string
-      type: object
-    AddonEnvSource:
-      example:
-        postgres:
-          database: database
-          env_mapping:
-            key: env_mapping
-          superuser: false
-          addon_id: addon_id
-      properties:
-        postgres:
-          $ref: '#/components/schemas/PostgresAddonEnvSource'
-      type: object
-    PostgresAddonEnvSource:
-      example:
-        database: database
-        env_mapping:
-          key: env_mapping
-        superuser: false
-        addon_id: addon_id
-      properties:
-        addon_id:
-          type: string
-        database:
-          description: Target database name. Required when superuser is false. Defaults
-            to 'postgres' when superuser is true and omitted.
-          type: string
-        superuser:
-          default: false
-          description: "When true, use superuser credentials. The addon must have\
-            \ enableSuperuserAccess enabled."
-          type: boolean
-        env_mapping:
-          additionalProperties:
-            type: string
-          description: "Maps addon credential fields to environment variable names.\
-            \ Valid fields are host, port, username, password, database, sslmode,\
-            \ connectionString, caCertificate."
-          type: object
-      required:
-      - addon_id
-      - env_mapping
       type: object
     ScopeResource:
       example:

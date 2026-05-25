@@ -39,14 +39,14 @@ const (
 	EnvPortsPort2        = 9090
 )
 
-// Postgres addon env mapping keys used in CreateStackWithPostgresAddon
+// PostgresEnvMapping maps output accessor names to env var names for postgres connections.
 var PostgresEnvMapping = map[string]string{
-	"host":             "PG_HOST",
-	"port":             "PG_PORT",
-	"username":         "PG_USER",
-	"password":         "PG_PASSWORD",
-	"database":         "PG_DATABASE",
-	"connectionString": "DATABASE_URL",
+	"host":     "PG_HOST",
+	"port":     "PG_PORT",
+	"username": "PG_USER",
+	"password": "PG_PASSWORD",
+	"database": "PG_DATABASE",
+	"url":      "DATABASE_URL",
 }
 
 // Crash detection fixture values
@@ -451,16 +451,10 @@ func CreateStackWithPostgresAddon(name string, addonID string, database string) 
 		*openapi.NewPort("http", 8080, false),
 	})
 
-	pgEnvSource := openapi.NewPostgresAddonEnvSource(addonID, PostgresEnvMapping)
-	pgEnvSource.SetDatabase(database)
-	addonEnvSource := openapi.NewAddonEnvSource()
-	addonEnvSource.SetPostgres(*pgEnvSource)
-
-	exec := openapi.NewExecutionConfig()
-	exec.SetEnvFromAddons([]openapi.AddonEnvSource{*addonEnvSource})
-	resource.SetExecutionConfig(*exec)
-
 	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	spec.SetConnections([]openapi.StackConnection{
+		postgresEnvConnection(addonID, "app", database, false),
+	})
 	return openapi.NewStack(name, *spec)
 }
 
@@ -472,17 +466,41 @@ func CreateStackWithPostgresAddonSuperuser(name string, addonID string) *openapi
 		*openapi.NewPort("http", 8080, false),
 	})
 
-	pgEnvSource := openapi.NewPostgresAddonEnvSource(addonID, PostgresEnvMapping)
-	pgEnvSource.SetSuperuser(true)
-	addonEnvSource := openapi.NewAddonEnvSource()
-	addonEnvSource.SetPostgres(*pgEnvSource)
-
-	exec := openapi.NewExecutionConfig()
-	exec.SetEnvFromAddons([]openapi.AddonEnvSource{*addonEnvSource})
-	resource.SetExecutionConfig(*exec)
-
 	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	spec.SetConnections([]openapi.StackConnection{
+		postgresEnvConnection(addonID, "app", "", true),
+	})
 	return openapi.NewStack(name, *spec)
+}
+
+func postgresEnvConnection(addonID, targetResource, database string, superuser bool) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef("addon/postgres")
+	from.SetId(addonID)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(targetResource)
+	conn := openapi.NewStackConnection("env", *from, *to)
+
+	config := map[string]interface{}{}
+	if database != "" {
+		config["database"] = database
+	}
+	if superuser {
+		config["credential_scope"] = "superuser"
+	}
+	if len(config) > 0 {
+		conn.SetConfig(config)
+	}
+
+	var mappings []openapi.ConnectionMapping
+	for output, envName := range PostgresEnvMapping {
+		target := openapi.NewConnectionTarget("env")
+		target.SetName(envName)
+		value := openapi.NewValueRef()
+		value.SetOutput(output)
+		mappings = append(mappings, *openapi.NewConnectionMapping(*target, *value))
+	}
+	conn.SetMappings(mappings)
+	return *conn
 }
 
 // CreateStackWithBrokenBuildSource creates a stack pointing at a branch with a broken

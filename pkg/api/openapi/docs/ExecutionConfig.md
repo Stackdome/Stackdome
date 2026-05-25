@@ -7,8 +7,6 @@ Name | Type | Description | Notes
 **Command** | Pointer to **[]string** |  | [optional] 
 **Args** | Pointer to **[]string** |  | [optional] 
 **EnvironmentVariables** | Pointer to [**[]EnvVar**](EnvVar.md) |  | [optional] 
-**EnvironmentVariablesFromSecret** | Pointer to [**[]EnvVarFromSecret**](EnvVarFromSecret.md) |  | [optional] 
-**EnvFromAddons** | Pointer to [**[]AddonEnvSource**](AddonEnvSource.md) |  | [optional] 
 
 ## Methods
 
@@ -103,56 +101,6 @@ SetEnvironmentVariables sets EnvironmentVariables field to given value.
 `func (o *ExecutionConfig) HasEnvironmentVariables() bool`
 
 HasEnvironmentVariables returns a boolean if a field has been set.
-
-### GetEnvironmentVariablesFromSecret
-
-`func (o *ExecutionConfig) GetEnvironmentVariablesFromSecret() []EnvVarFromSecret`
-
-GetEnvironmentVariablesFromSecret returns the EnvironmentVariablesFromSecret field if non-nil, zero value otherwise.
-
-### GetEnvironmentVariablesFromSecretOk
-
-`func (o *ExecutionConfig) GetEnvironmentVariablesFromSecretOk() (*[]EnvVarFromSecret, bool)`
-
-GetEnvironmentVariablesFromSecretOk returns a tuple with the EnvironmentVariablesFromSecret field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetEnvironmentVariablesFromSecret
-
-`func (o *ExecutionConfig) SetEnvironmentVariablesFromSecret(v []EnvVarFromSecret)`
-
-SetEnvironmentVariablesFromSecret sets EnvironmentVariablesFromSecret field to given value.
-
-### HasEnvironmentVariablesFromSecret
-
-`func (o *ExecutionConfig) HasEnvironmentVariablesFromSecret() bool`
-
-HasEnvironmentVariablesFromSecret returns a boolean if a field has been set.
-
-### GetEnvFromAddons
-
-`func (o *ExecutionConfig) GetEnvFromAddons() []AddonEnvSource`
-
-GetEnvFromAddons returns the EnvFromAddons field if non-nil, zero value otherwise.
-
-### GetEnvFromAddonsOk
-
-`func (o *ExecutionConfig) GetEnvFromAddonsOk() (*[]AddonEnvSource, bool)`
-
-GetEnvFromAddonsOk returns a tuple with the EnvFromAddons field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetEnvFromAddons
-
-`func (o *ExecutionConfig) SetEnvFromAddons(v []AddonEnvSource)`
-
-SetEnvFromAddons sets EnvFromAddons field to given value.
-
-### HasEnvFromAddons
-
-`func (o *ExecutionConfig) HasEnvFromAddons() bool`
-
-HasEnvFromAddons returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

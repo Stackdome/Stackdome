@@ -76,9 +76,6 @@ func (v *stackValidator) ValidateForCreate(ctx context.Context, spec *models.Sta
 	if err := v.validateBuildSourceVolumes(spec); err != nil {
 		return err
 	}
-	if err := v.validateEnvFromAddons(ctx, spec); err != nil {
-		return err
-	}
 	if err := v.validateConnections(ctx, nil, spec); err != nil {
 		return err
 	}
@@ -117,9 +114,6 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 		return err
 	}
 	if err := v.validateBuildSourceVolumes(spec); err != nil {
-		return err
-	}
-	if err := v.validateEnvFromAddons(ctx, spec); err != nil {
 		return err
 	}
 	if err := v.validateConnections(ctx, existing, spec); err != nil {
@@ -310,7 +304,7 @@ func (v *stackValidator) validateVolumeMounts(spec *models.Stack) *errors.Servic
 func (v *stackValidator) validateStackEnvVars(spec *models.Stack) *errors.ServiceError {
 	for i := range spec.StackResources {
 		currentResource := spec.StackResources[i]
-		if currentResource.ExecutionConfig == nil || (currentResource.ExecutionConfig.Env == nil && currentResource.ExecutionConfig.EnvVarsFromSecrets == nil) {
+		if currentResource.ExecutionConfig == nil || currentResource.ExecutionConfig.Env == nil {
 			continue
 		}
 		currentEnvVars := currentResource.ExecutionConfig.Env
@@ -339,78 +333,12 @@ func (v *stackValidator) validateStackEnvVars(spec *models.Stack) *errors.Servic
 			keys[envVar.Name] = struct{}{}
 		}
 
-		keys = make(map[string]struct{})
-		currentEnvVarsFromSecrets := currentResource.ExecutionConfig.EnvVarsFromSecrets
-		for _, envVarFromSecret := range currentEnvVarsFromSecrets {
-			if err := v.validateEnvVarFromSecret(currentResource, envVarFromSecret); err != nil {
-				return err
-			}
-			if _, exists := keys[envVarFromSecret.EnvName]; exists {
-				return errors.BadRequest("stack resource '%s' has duplicate env var from secret name '%s'", currentResource.Name, envVarFromSecret.EnvName)
-			}
-			keys[envVarFromSecret.EnvName] = struct{}{}
-		}
 	}
 
 	if err := v.interpolationValidator.ValidateStackInterpolations(spec); err != nil {
 		return errors.BadRequest("stack resource '%s' has invalid interpolation: %s", spec.Name, err.Error())
 	}
 
-	return nil
-}
-
-func (v *stackValidator) validateEnvFromAddons(ctx context.Context, spec *models.Stack) *errors.ServiceError {
-	validFields := make(map[string]struct{}, len(models.PostgresAddonEnvFields))
-	for _, f := range models.PostgresAddonEnvFields {
-		validFields[f] = struct{}{}
-	}
-
-	for i := range spec.StackResources {
-		resource := spec.StackResources[i]
-		if resource.ExecutionConfig == nil || len(resource.ExecutionConfig.EnvFromAddons) == 0 {
-			continue
-		}
-		for _, addonEnv := range resource.ExecutionConfig.EnvFromAddons {
-			if addonEnv.Postgres == nil {
-				continue
-			}
-			pgSource := addonEnv.Postgres
-
-			if pgSource.AddonID == "" {
-				return errors.BadRequest("stack resource '%s' has empty postgres addon ID in env_from_addons", resource.Name)
-			}
-			if !pgSource.Superuser && pgSource.Database == "" {
-				return errors.BadRequest("stack resource '%s' has empty database name in env_from_addons for addon '%s'", resource.Name, pgSource.AddonID)
-			}
-			if len(pgSource.EnvMapping) == 0 {
-				return errors.BadRequest("stack resource '%s' has empty env_mapping in env_from_addons for addon '%s'", resource.Name, pgSource.AddonID)
-			}
-
-			for field, envName := range pgSource.EnvMapping {
-				if _, ok := validFields[field]; !ok {
-					return errors.BadRequest("stack resource '%s' has invalid field '%s' in env_mapping for addon '%s'", resource.Name, field, pgSource.AddonID)
-				}
-				if envName == "" {
-					return errors.BadRequest("stack resource '%s' has empty env var name for field '%s' in env_mapping for addon '%s'", resource.Name, field, pgSource.AddonID)
-				}
-			}
-
-			addon, err := v.postgresAddonService.GetPostgresAddon(ctx, pgSource.AddonID)
-			if err != nil {
-				return errors.BadRequest("stack resource '%s' references non-existent postgres addon '%s'", resource.Name, pgSource.AddonID)
-			}
-
-			if pgSource.Superuser {
-				if !addon.Configuration.EnableSuperuserAccess {
-					return errors.BadRequest("stack resource '%s' requests superuser access but addon '%s' does not have superuser access enabled", resource.Name, pgSource.AddonID)
-				}
-			} else {
-				if !addon.HasDatabase(pgSource.Database) {
-					return errors.BadRequest("stack resource '%s' references non-existent database '%s' in postgres addon '%s'", resource.Name, pgSource.Database, pgSource.AddonID)
-				}
-			}
-		}
-	}
 	return nil
 }
 
@@ -710,35 +638,6 @@ func connectionLabel(connection models.StackConnection, index int) string {
 		return connection.Id
 	}
 	return fmt.Sprintf("#%d", index)
-}
-
-func (v *stackValidator) validateEnvVarFromSecret(currentResource *models.StackResource, envVarFromSecret models.EnvSecretReference) *errors.ServiceError {
-	if len(envVarFromSecret.SecretID) == 0 {
-		return errors.BadRequest("stack resource '%s' has empty secret ID in env var from secret", currentResource.Name)
-	}
-	if len(envVarFromSecret.SecretKey) == 0 {
-		return errors.BadRequest("stack resource '%s' has empty secret key in env var from secret", currentResource.Name)
-	}
-	if len(envVarFromSecret.EnvName) == 0 {
-		return errors.BadRequest("stack resource '%s' has empty environment variable name in env var from secret", currentResource.Name)
-	}
-
-	// Validate that the secret exists
-	secretExists, err := v.secretService.ValidateSecretExists(context.Background(), envVarFromSecret.SecretID)
-	if err != nil {
-		return errors.GeneralError("failed to validate secret existence for stack resource '%s': %s", currentResource.Name, err.Error())
-	}
-	if !secretExists {
-		return errors.BadRequest("stack resource '%s' references non-existent secret '%s'", currentResource.Name, envVarFromSecret.SecretID)
-	}
-	hasKeys, _, err := v.secretService.ValidateSecretHasKeys(context.Background(), envVarFromSecret.SecretID, []string{envVarFromSecret.SecretKey})
-	if err != nil {
-		return errors.GeneralError("failed to validate secret keys in environment variables for stack resource '%s': %s", currentResource.Name, err.Error())
-	}
-	if !hasKeys {
-		return errors.BadRequest("stack resource '%s' references secret '%s' but is missing required key '%s'", currentResource.Name, envVarFromSecret.SecretID, envVarFromSecret.SecretKey)
-	}
-	return nil
 }
 
 func (v *stackValidator) validateDomainExistence(ctx context.Context, spec *models.Stack) *errors.ServiceError {

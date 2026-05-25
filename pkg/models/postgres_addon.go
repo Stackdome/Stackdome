@@ -292,37 +292,8 @@ type PostgresCredentials struct {
 	CACertificate    string `json:"caCertificate,omitempty"`
 }
 
-// ToFieldMap returns credential values keyed by PostgresAddonEnvFields names.
-func (c *PostgresCredentials) ToFieldMap() map[string]string {
-	m := make(map[string]string, len(PostgresAddonEnvFields))
-	for _, field := range PostgresAddonEnvFields {
-		switch field {
-		case "host":
-			m[field] = c.Host
-		case "port":
-			m[field] = strconv.Itoa(int(c.Port))
-		case "username":
-			m[field] = c.Username
-		case "password":
-			m[field] = c.Password
-		case "database":
-			m[field] = c.Database
-		case "sslmode":
-			m[field] = c.SSLMode
-		case "connectionString":
-			m[field] = c.ConnectionString
-		case "caCertificate":
-			m[field] = c.CACertificate
-		}
-	}
-	return m
-}
-
-// ToOutputMap returns credential values keyed by the public output accessor names
-// used by stack connections, while preserving legacy aliases needed for current
-// env_from_addons compatibility.
 func (c *PostgresCredentials) ToOutputMap() map[string]string {
-	m := map[string]string{
+	return map[string]string{
 		"host":           c.Host,
 		"port":           strconv.Itoa(int(c.Port)),
 		"username":       c.Username,
@@ -331,11 +302,7 @@ func (c *PostgresCredentials) ToOutputMap() map[string]string {
 		"sslmode":        c.SSLMode,
 		"url":            c.ConnectionString,
 		"ca_certificate": c.CACertificate,
-		// Legacy aliases used by env_from_addons.
-		"connectionString": c.ConnectionString,
-		"caCertificate":    c.CACertificate,
 	}
-	return m
 }
 
 // Implement driver.Valuer and sql.Scanner for custom types

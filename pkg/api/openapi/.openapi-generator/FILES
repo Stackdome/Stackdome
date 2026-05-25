@@ -11,7 +11,6 @@ docs/APITokenCreateRequest.md
 docs/APITokenCreateResponse.md
 docs/APITokenList.md
 docs/AddTeamMemberRequest.md
-docs/AddonEnvSource.md
 docs/Annotation.md
 docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response.md
 docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest.md
@@ -43,7 +42,6 @@ docs/DefaultApi.md
 docs/DemoteAdminRequest.md
 docs/DomainName.md
 docs/EnvVar.md
-docs/EnvVarFromSecret.md
 docs/Error.md
 docs/ErrorAllOf.md
 docs/ErrorList.md
@@ -81,7 +79,6 @@ docs/OutputDescriptor.md
 docs/OutputValueRef.md
 docs/Port.md
 docs/PostgresAddon.md
-docs/PostgresAddonEnvSource.md
 docs/PostgresAddonList.md
 docs/PostgresAddonSpec.md
 docs/PostgresAddonStatus.md
@@ -177,7 +174,6 @@ model__api_v1_organizations__org_id__teams__team_name__addons_postgres__id__acti
 model__api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_hibernate_post_200_response.go
 model__api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_hibernate_post_request.go
 model_add_team_member_request.go
-model_addon_env_source.go
 model_annotation.go
 model_api_token.go
 model_api_token_create_request.go
@@ -206,7 +202,6 @@ model_container_failure_detail.go
 model_demote_admin_request.go
 model_domain_name.go
 model_env_var.go
-model_env_var_from_secret.go
 model_error.go
 model_error_all_of.go
 model_error_list.go
@@ -244,7 +239,6 @@ model_output_descriptor.go
 model_output_value_ref.go
 model_port.go
 model_postgres_addon.go
-model_postgres_addon_env_source.go
 model_postgres_addon_list.go
 model_postgres_addon_spec.go
 model_postgres_addon_status.go
