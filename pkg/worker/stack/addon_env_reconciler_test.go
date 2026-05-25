@@ -213,7 +213,7 @@ func TestAddonEnvReconcilerResolvesStackResourceEnvConnections(t *testing.T) {
 				Status: &models.StackResourceStatus{
 					InternalServiceName: stringPtr("api.default.svc.cluster.local"),
 					PublicIngresses: []models.Ingress{
-						{TargetPort: 8080, URL: "https://api.example.com"},
+						{TargetPort: 8080, URL: "http://api.example.com"},
 					},
 				},
 			},
@@ -262,7 +262,7 @@ func TestAddonEnvReconcilerResolvesStackResourceEnvConnections(t *testing.T) {
 	if env[1].Name != "API_URL" || env[1].Value != "http://api.default.svc.cluster.local:8080" {
 		t.Fatalf("unexpected API_URL env var: %#v", env[1])
 	}
-	if env[2].Name != "API_PUBLIC_URL" || env[2].Value != "https://api.example.com" {
+	if env[2].Name != "API_PUBLIC_URL" || env[2].Value != "http://api.example.com" {
 		t.Fatalf("unexpected API_PUBLIC_URL env var: %#v", env[2])
 	}
 }
@@ -332,7 +332,7 @@ func TestAddonEnvReconcilerResolvesSelfOutputEnvVars(t *testing.T) {
 				Status: &models.StackResourceStatus{
 					InternalServiceName: stringPtr("web.default.svc.cluster.local"),
 					PublicIngresses: []models.Ingress{
-						{TargetPort: 3000, URL: "https://app.example.com"},
+						{TargetPort: 3000, URL: "http://app.example.com"},
 					},
 				},
 				ExecutionConfig: &models.ExecutionConfig{
@@ -351,7 +351,7 @@ func TestAddonEnvReconcilerResolvesSelfOutputEnvVars(t *testing.T) {
 	}
 
 	env := stack.StackResources[0].ExecutionConfig.Env
-	if env[0].Name != "PUBLIC_URL" || env[0].Value != "https://app.example.com" {
+	if env[0].Name != "PUBLIC_URL" || env[0].Value != "http://app.example.com" {
 		t.Fatalf("unexpected PUBLIC_URL env var: %#v", env[0])
 	}
 	if env[1].Name != "INTERNAL_URL" || env[1].Value != "http://web.default.svc.cluster.local:3000" {
