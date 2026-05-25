@@ -55,8 +55,9 @@ type PostgresAddonService interface {
 }
 
 type PostgresAddonServiceSpec struct {
-	SessionFactory        db.SessionFactory
-	ObjectStoreService    ObjectStoreService
+	SessionFactory         db.SessionFactory
+	ConnectionUsageChecker connectionUsageChecker
+	ObjectStoreService     ObjectStoreService
 	ClusterService        ClusterService
 	NamespaceService      NamespaceService
 	SecretService         SecretService
@@ -67,10 +68,14 @@ type PostgresAddonServiceSpec struct {
 	Permissions           auth.PermissionService
 }
 
+type connectionUsageChecker interface {
+	IsResourceReferencedAsSource(ctx context.Context, resourceType, resourceID string) (bool, error)
+}
+
 type postgresAddonService struct {
-	postgresAddonStore stores.PostgresAddonStore
-	addonUsageStore    stores.AddonUsageStore
-	databaseService    PostgresAddonDatabaseService
+	postgresAddonStore     stores.PostgresAddonStore
+	connectionUsageChecker connectionUsageChecker
+	databaseService        PostgresAddonDatabaseService
 	backupService      PostgresBackupService
 	namespaceService   NamespaceService
 	clusterService     ClusterService
@@ -97,13 +102,9 @@ func NewPostgresAddonService(spec PostgresAddonServiceSpec) PostgresAddonService
 		Logger:         spec.Logger,
 	})
 
-	addonUsageStore := pgstore.NewAddonUsageStore(pgstore.AddonUsageStoreSpec{
-		SessionFactory: spec.SessionFactory,
-	})
-
 	return &postgresAddonService{
-		postgresAddonStore: postgresAddonStore,
-		addonUsageStore:    addonUsageStore,
+		postgresAddonStore:     postgresAddonStore,
+		connectionUsageChecker: spec.ConnectionUsageChecker,
 		databaseService:    databaseService,
 		backupService:      spec.PostgresBackupService,
 		clusterService:     spec.ClusterService,
@@ -414,8 +415,7 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 		return nil, permErr
 	}
 
-	// Check addon usage before deletion
-	inUse, usageErr := s.addonUsageStore.IsAddonInUse(ctx, models.AddonTypePostgres, id)
+	inUse, usageErr := s.connectionUsageChecker.IsResourceReferencedAsSource(ctx, string(models.TopologyNodeTypePostgresAddon), id)
 	if usageErr != nil {
 		return nil, errors.GeneralError("failed to check addon usage: %v", usageErr)
 	}

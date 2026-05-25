@@ -27,6 +27,6 @@ type secretService interface {
 	InternalGetByID(ctx context.Context, id string) (*models.Secret, *errors.ServiceError)
 }
 
-type addonUsageStore interface {
-	IsAddonInUse(ctx context.Context, addonType models.AddonType, addonID string) (bool, error)
+type connectionUsageChecker interface {
+	IsResourceReferencedAsSource(ctx context.Context, resourceType, resourceID string) (bool, error)
 }

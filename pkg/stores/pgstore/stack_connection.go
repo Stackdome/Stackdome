@@ -121,6 +121,17 @@ func (s *stackConnectionStore) ReplaceByStackIDWithTx(ctx context.Context, stack
 	return nil
 }
 
+func (s *stackConnectionStore) IsResourceReferencedAsSource(ctx context.Context, resourceType, resourceID string) (bool, error) {
+	var count int64
+	if err := s.sessionFactory.New(ctx).
+		Model(&models.StackConnectionRecord{}).
+		Where("from_ref->>'type' = ? AND from_ref->>'id' = ?", resourceType, resourceID).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (s *stackConnectionStore) db(ctx context.Context) *gorm.DB {
 	if tx := db.TxFromContext(ctx); tx != nil {
 		return tx

@@ -23,7 +23,6 @@ func TestAddonEnvReconcilerResolvesPostgresEnvConnections(t *testing.T) {
 				},
 			},
 		},
-		AddonUsageService: newFakeAddonUsageService(),
 	})
 
 	stack := &models.Stack{
@@ -101,7 +100,6 @@ func TestAddonEnvReconcilerSupportsTemplateConnectionValues(t *testing.T) {
 				},
 			},
 		},
-		AddonUsageService: newFakeAddonUsageService(),
 	})
 
 	stack := &models.Stack{
@@ -152,12 +150,10 @@ func TestAddonEnvReconcilerSupportsTemplateConnectionValues(t *testing.T) {
 }
 
 func TestAddonEnvReconcilerRequeuesWhenConnectionCredentialsAreUnavailable(t *testing.T) {
-	usages := newFakeAddonUsageService()
 	reconciler := NewAddonEnvReconciler(AddonEnvReconcilerSpec{
 		PostgresAddonService: fakeWorkerPostgresAddonService{
 			err: serrors.BadRequest("not ready"),
 		},
-		AddonUsageService: usages,
 	})
 
 	stack := &models.Stack{
@@ -197,9 +193,7 @@ func TestAddonEnvReconcilerRequeuesWhenConnectionCredentialsAreUnavailable(t *te
 }
 
 func TestAddonEnvReconcilerResolvesStackResourceEnvConnections(t *testing.T) {
-	reconciler := NewAddonEnvReconciler(AddonEnvReconcilerSpec{
-		AddonUsageService: newFakeAddonUsageService(),
-	})
+	reconciler := NewAddonEnvReconciler(AddonEnvReconcilerSpec{})
 
 	stack := &models.Stack{
 		ID: "stack-1",
@@ -275,8 +269,7 @@ func TestAddonEnvReconcilerResolvesStackResourceEnvConnections(t *testing.T) {
 
 func TestAddonEnvReconcilerResolvesSecretEnvConnections(t *testing.T) {
 	reconciler := NewAddonEnvReconciler(AddonEnvReconcilerSpec{
-		SecretService:     fakeWorkerSecretService{secrets: map[string]*models.Secret{"sec-1": {ID: "sec-1", Data: map[string]string{"tls.crt": "cert-data"}}}},
-		AddonUsageService: newFakeAddonUsageService(),
+		SecretService: fakeWorkerSecretService{secrets: map[string]*models.Secret{"sec-1": {ID: "sec-1", Data: map[string]string{"tls.crt": "cert-data"}}}},
 	})
 
 	stack := &models.Stack{
@@ -319,9 +312,7 @@ func TestAddonEnvReconcilerResolvesSecretEnvConnections(t *testing.T) {
 }
 
 func TestAddonEnvReconcilerResolvesSelfOutputEnvVars(t *testing.T) {
-	reconciler := NewAddonEnvReconciler(AddonEnvReconcilerSpec{
-		AddonUsageService: newFakeAddonUsageService(),
-	})
+	reconciler := NewAddonEnvReconciler(AddonEnvReconcilerSpec{})
 
 	stack := &models.Stack{
 		ID: "stack-1",
@@ -386,62 +377,6 @@ func (f fakeWorkerPostgresAddonService) InternalGetCredentials(_ context.Context
 		return nil, serrors.NotFound("postgres addon credentials not found")
 	}
 	return creds, nil
-}
-
-type fakeAddonUsageService struct {
-	usages []*models.AddonUsage
-}
-
-func newFakeAddonUsageService() *fakeAddonUsageService {
-	return &fakeAddonUsageService{}
-}
-
-func (f *fakeAddonUsageService) Create(_ context.Context, usage *models.AddonUsage) error {
-	f.usages = append(f.usages, usage)
-	return nil
-}
-
-func (f *fakeAddonUsageService) Delete(_ context.Context, addonType models.AddonType, addonID, stackID, resourceID string) error {
-	filtered := make([]*models.AddonUsage, 0, len(f.usages))
-	for _, usage := range f.usages {
-		if usage.AddonType == addonType && usage.AddonID == addonID && usage.StackID == stackID && usage.StackResourceID == resourceID {
-			continue
-		}
-		filtered = append(filtered, usage)
-	}
-	f.usages = filtered
-	return nil
-}
-
-func (f *fakeAddonUsageService) GetByStackID(_ context.Context, stackID string) ([]*models.AddonUsage, error) {
-	filtered := make([]*models.AddonUsage, 0, len(f.usages))
-	for _, usage := range f.usages {
-		if usage.StackID == stackID {
-			filtered = append(filtered, usage)
-		}
-	}
-	return filtered, nil
-}
-
-func (f *fakeAddonUsageService) ExistsByStackResourceAndAddon(_ context.Context, stackID, resourceID, addonID string) (bool, error) {
-	for _, usage := range f.usages {
-		if usage.StackID == stackID && usage.StackResourceID == resourceID && usage.AddonID == addonID {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (f *fakeAddonUsageService) DeleteByStackID(_ context.Context, stackID string) error {
-	filtered := make([]*models.AddonUsage, 0, len(f.usages))
-	for _, usage := range f.usages {
-		if usage.StackID == stackID {
-			continue
-		}
-		filtered = append(filtered, usage)
-	}
-	f.usages = filtered
-	return nil
 }
 
 type fakeWorkerSecretService struct {

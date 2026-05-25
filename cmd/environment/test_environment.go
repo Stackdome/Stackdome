@@ -257,11 +257,13 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	secretService := services.NewSecretService(services.SecretServiceSpec{
-		SessionFactory:    te.DBSession,
-		Logger:            te.Logger,
-		EncryptionService: encryptionService,
-		TeamService:       teamService,
-		Permissions:       te.PermissionService,
+		SessionFactory:         te.DBSession,
+		Logger:                 te.Logger,
+		EncryptionService:      encryptionService,
+		TeamService:            teamService,
+		Permissions:            te.PermissionService,
+		ConnectionUsageChecker: pgstore.NewStackConnectionStore(pgstore.StackConnectionStoreSpec{SessionFactory: te.DBSession}),
+		ResourceUsageService:   services.NewResourceUsageService(services.ResourceUsageServiceSpec{SessionFactory: te.DBSession}),
 	})
 
 	te.RefreshTokenStore = pgstore.NewRefreshTokenStore(pgstore.RefreshTokenStoreSpec{
@@ -352,14 +354,11 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:         te.Logger,
 	})
 
-	addonUsageService := services.NewAddonUsageService(services.AddonUsageServiceSpec{
-		SessionFactory: te.DBSession,
-	})
-
 	postgresAddonService := services.NewPostgresAddonService(services.PostgresAddonServiceSpec{
-		SessionFactory:        te.DBSession,
-		NamespaceService:      namespaceService,
-		ClusterService:        clusterService,
+		SessionFactory:         te.DBSession,
+		ConnectionUsageChecker: pgstore.NewStackConnectionStore(pgstore.StackConnectionStoreSpec{SessionFactory: te.DBSession}),
+		NamespaceService:       namespaceService,
+		ClusterService:         clusterService,
 		SecretService:         secretService,
 		PostgresBackupService: postgresBackupService,
 		ObjectStoreService:    objectStoreService,
@@ -447,7 +446,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		ObjectStoreService:          objectStoreService,
 		PostgresAddonService:        postgresAddonService,
 		PostgresBackupService:       postgresBackupService,
-		AddonUsageService:           addonUsageService,
+		ResourceUsageService:        services.NewResourceUsageService(services.ResourceUsageServiceSpec{SessionFactory: te.DBSession}),
 		APITokenService:             apiTokenService,
 		TeamService:                 teamService,
 		OrgInviteService:            orgInviteService,
@@ -552,7 +551,7 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 		VolumeService:        te.Services.VolumeService,
 		NamespaceService:     te.Services.NamespaceService,
 		PostgresAddonService: te.Services.PostgresAddonService,
-		AddonUsageService:    te.Services.AddonUsageService,
+		ResourceUsageService: te.Services.ResourceUsageService,
 		Env:                  te.Env.Name,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			SecretService: te.Services.SecretService,
@@ -569,7 +568,7 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 		ObjectStoreService:   te.Services.ObjectStoreService,
 		NamespaceService:     te.Services.NamespaceService,
 		SecretService:        te.Services.SecretService,
-		AddonUsageStore:      te.Services.AddonUsageService,
+		ConnectionUsageChecker: pgstore.NewStackConnectionStore(pgstore.StackConnectionStoreSpec{SessionFactory: te.DBSession}),
 		ClusterManager:       te.ClusterManager,
 		CRBuilder:            builders.NewPostgresClusterBuilder(),
 		Env:                  te.Env.Name,

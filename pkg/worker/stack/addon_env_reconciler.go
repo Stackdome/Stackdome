@@ -16,7 +16,6 @@ const addonReadinessRequeueInterval = 30 * time.Second
 type addonEnvReconciler struct {
 	postgresAddonService postgresAddonService
 	secretService        secretOutputService
-	addonUsageService    addonUsageService
 	logger               logger.Logger
 }
 
@@ -27,14 +26,12 @@ type secretOutputService interface {
 type AddonEnvReconcilerSpec struct {
 	PostgresAddonService postgresAddonService
 	SecretService        secretOutputService
-	AddonUsageService    addonUsageService
 }
 
 func NewAddonEnvReconciler(spec AddonEnvReconcilerSpec) *addonEnvReconciler {
 	return &addonEnvReconciler{
 		postgresAddonService: spec.PostgresAddonService,
 		secretService:        spec.SecretService,
-		addonUsageService:    spec.AddonUsageService,
 		logger:               logger.NewLoggerWithPrefix(context.Background(), "stack-addon-env-reconciler"),
 	}
 }
@@ -48,12 +45,10 @@ func (r *addonEnvReconciler) Reconcile(ctx context.Context, stack *models.Stack)
 		return resultNil, nil
 	}
 
-	var desiredAddonUsages []*models.AddonUsage
 	for _, resource := range stack.StackResources {
-		hasLegacyAddonEnv := resource.ExecutionConfig != nil && len(resource.ExecutionConfig.EnvFromAddons) > 0
 		hasConnectionEnv := hasEnvConnections(stack, resource.Name)
 		hasSelfOutputEnv := hasSelfOutputEnvVars(resource)
-		if !hasLegacyAddonEnv && !hasConnectionEnv && !hasSelfOutputEnv {
+		if !hasConnectionEnv && !hasSelfOutputEnv {
 			continue
 		}
 
@@ -63,14 +58,13 @@ func (r *addonEnvReconciler) Reconcile(ctx context.Context, stack *models.Stack)
 			}
 		}
 
-		resolvedEnvVars, usages, requeueResult, err := r.resolveAddonEnvVars(ctx, stack.ID, stack, resource)
+		resolvedEnvVars, requeueResult, err := r.resolveConnectionEnvVars(ctx, stack, resource)
 		if err != nil {
-			return resultNil, fmt.Errorf("failed to resolve addon env vars for resource '%s': %w", resource.Name, err)
+			return resultNil, fmt.Errorf("failed to resolve connection env vars for resource '%s': %w", resource.Name, err)
 		}
 		if requeueResult != nil {
 			return *requeueResult, nil
 		}
-		desiredAddonUsages = append(desiredAddonUsages, usages...)
 
 		if len(resolvedEnvVars) > 0 {
 			if resource.ExecutionConfig == nil {
@@ -78,159 +72,58 @@ func (r *addonEnvReconciler) Reconcile(ctx context.Context, stack *models.Stack)
 			}
 			mergedEnv, mergeErr := appendWithoutDuplicates(resource.ExecutionConfig.Env, resolvedEnvVars)
 			if mergeErr != nil {
-				return resultNil, fmt.Errorf("failed to merge addon env vars for resource '%s': %w", resource.Name, mergeErr)
+				return resultNil, fmt.Errorf("failed to merge connection env vars for resource '%s': %w", resource.Name, mergeErr)
 			}
 			resource.ExecutionConfig.Env = mergedEnv
 		}
 	}
 
-	if err := r.syncAddonUsages(ctx, stack.ID, desiredAddonUsages); err != nil {
-		return resultNil, fmt.Errorf("failed to sync addon usages: %w", err)
-	}
-
 	return resultNil, nil
 }
 
-func (r *addonEnvReconciler) resolveAddonEnvVars(ctx context.Context, stackID string, stack *models.Stack, resource *models.StackResource) ([]models.EnvVar, []*models.AddonUsage, *subReconcilerResult, error) {
+func (r *addonEnvReconciler) resolveConnectionEnvVars(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]models.EnvVar, *subReconcilerResult, error) {
 	var envVars []models.EnvVar
-	var desiredAddonUsages []*models.AddonUsage
-
-	for _, addonSource := range envFromAddonSources(resource) {
-		if addonSource.Postgres == nil {
-			continue
-		}
-		pg := addonSource.Postgres
-
-		creds, credErr := r.postgresAddonService.InternalGetCredentials(ctx, pg.AddonID, pg.Database, pg.Superuser)
-		if credErr != nil {
-			r.logger.Errorf("failed to fetch db: '%s' credentials, got err: %s", pg.Database, credErr.Error())
-			// Check if credentials were resolved in a prior reconciliation.
-			// If yes, the CR already has valid env vars — proceed without blocking.
-			previouslyResolved, lookupErr := r.addonUsageService.ExistsByStackResourceAndAddon(ctx, stackID, resource.ID, pg.AddonID)
-			if lookupErr != nil {
-				return nil, nil, nil, fmt.Errorf("failed to check addon usage for addon '%s': %w", pg.AddonID, lookupErr)
-			}
-
-			if previouslyResolved {
-				r.logger.Infof("addon '%s' credentials unavailable but previously resolved, proceeding with existing CR values", pg.AddonID)
-				continue
-			}
-
-			// First deploy — addon must be ready before we can proceed
-			r.logger.Infof("addon '%s' not available for first-time credential resolution, will requeue in %s", pg.AddonID, addonReadinessRequeueInterval)
-			result := resultRequeueAfter(addonReadinessRequeueInterval)
-			return nil, nil, &result, nil
-		}
-
-		// TODO: Pass K8s secret references to the cluster-agent instead of resolving
-		// credentials as plain env var values (see docs/plans/postgres-addon-improvements.md #8).
-		fieldMap := creds.ToOutputMap()
-		for credField, envName := range pg.EnvMapping {
-			value, ok := fieldMap[credField]
-			if !ok {
-				return nil, nil, nil, fmt.Errorf("unknown credential field '%s' in env mapping for addon '%s'", credField, pg.AddonID)
-			}
-			envVars = append(envVars, models.EnvVar{
-				Name:  envName,
-				Value: value,
-			})
-		}
-		desiredAddonUsages = append(desiredAddonUsages, &models.AddonUsage{
-			AddonType:       models.AddonTypePostgres,
-			AddonID:         pg.AddonID,
-			StackID:         stack.ID,
-			StackResourceID: resource.ID,
-		})
-	}
 
 	resourceMap := stack.ResourcesMap()
 	for _, connection := range postgresEnvConnectionsForResource(stack, resource.Name) {
-		resolvedEnvVars, usages, requeueResult, err := r.resolvePostgresConnectionEnvVars(ctx, stackID, resource, connection)
+		resolvedEnvVars, requeueResult, err := r.resolvePostgresConnectionEnvVars(ctx, connection)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		if requeueResult != nil {
-			return nil, nil, requeueResult, nil
+			return nil, requeueResult, nil
 		}
 		envVars = append(envVars, resolvedEnvVars...)
-		desiredAddonUsages = append(desiredAddonUsages, usages...)
 	}
 
 	for _, connection := range stackResourceEnvConnectionsForResource(stack, resource.Name) {
 		sourceResource, ok := resourceMap[connection.From.Name]
 		if !ok {
-			return nil, nil, nil, fmt.Errorf("stack resource connection '%s' references unknown resource '%s'", connection.Id, connection.From.Name)
+			return nil, nil, fmt.Errorf("stack resource connection '%s' references unknown resource '%s'", connection.Id, connection.From.Name)
 		}
 		resolvedEnvVars, err := resolveConnectionMappings(connection, sourceResource.ToOutputMap())
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		envVars = append(envVars, resolvedEnvVars...)
 	}
 
 	for _, connection := range secretEnvConnectionsForResource(stack, resource.Name) {
 		if r.secretService == nil {
-			return nil, nil, nil, fmt.Errorf("secret service is not configured for resolving connection '%s'", connection.Id)
+			return nil, nil, fmt.Errorf("secret service is not configured for resolving connection '%s'", connection.Id)
 		}
 		secret, serviceErr := r.secretService.InternalGetByID(ctx, connection.From.Id)
 		if serviceErr != nil {
-			return nil, nil, nil, fmt.Errorf("failed to fetch secret '%s' for connection '%s': %w", connection.From.Id, connection.Id, serviceErr)
+			return nil, nil, fmt.Errorf("failed to fetch secret '%s' for connection '%s': %w", connection.From.Id, connection.Id, serviceErr)
 		}
 		resolvedEnvVars, err := resolveConnectionMappings(connection, secret.ToOutputMap())
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		envVars = append(envVars, resolvedEnvVars...)
 	}
 
-	return envVars, desiredAddonUsages, nil, nil
-}
-
-func addonUsageKey(resourceID, addonID string, addonType models.AddonType) string {
-	return resourceID + ":" + addonID + ":" + string(addonType)
-}
-
-func (r *addonEnvReconciler) syncAddonUsages(ctx context.Context, stackID string, desiredAddonUsages []*models.AddonUsage) error {
-	existing, err := r.addonUsageService.GetByStackID(ctx, stackID)
-	if err != nil {
-		return fmt.Errorf("failed to list addon usages for stack '%s': %w", stackID, err)
-	}
-
-	existingKeys := make(map[string]struct{}, len(existing))
-	for _, u := range existing {
-		existingKeys[addonUsageKey(u.StackResourceID, u.AddonID, u.AddonType)] = struct{}{}
-	}
-
-	desiredKeys := make(map[string]struct{}, len(desiredAddonUsages))
-	for _, u := range desiredAddonUsages {
-		key := addonUsageKey(u.StackResourceID, u.AddonID, u.AddonType)
-		if _, ok := desiredKeys[key]; ok {
-			continue
-		}
-		desiredKeys[key] = struct{}{}
-		if _, ok := existingKeys[key]; !ok {
-			if err := r.addonUsageService.Create(ctx, u); err != nil {
-				return fmt.Errorf("failed to create addon usage for addon '%s': %w", u.AddonID, err)
-			}
-		}
-	}
-
-	for _, u := range existing {
-		if _, ok := desiredKeys[addonUsageKey(u.StackResourceID, u.AddonID, u.AddonType)]; !ok {
-			if err := r.addonUsageService.Delete(ctx, u.AddonType, u.AddonID, stackID, u.StackResourceID); err != nil {
-				return fmt.Errorf("failed to delete stale addon usage for addon '%s': %w", u.AddonID, err)
-			}
-		}
-	}
-
-	return nil
-}
-
-func envFromAddonSources(resource *models.StackResource) []models.AddonEnvSource {
-	if resource.ExecutionConfig == nil {
-		return nil
-	}
-	return resource.ExecutionConfig.EnvFromAddons
+	return envVars, nil, nil
 }
 
 func hasSelfOutputEnvVars(resource *models.StackResource) bool {
@@ -332,46 +225,27 @@ func postgresConnectionConfig(connection models.StackConnection) (database strin
 
 func (r *addonEnvReconciler) resolvePostgresConnectionEnvVars(
 	ctx context.Context,
-	stackID string,
-	resource *models.StackResource,
 	connection models.StackConnection,
-) ([]models.EnvVar, []*models.AddonUsage, *subReconcilerResult, error) {
+) ([]models.EnvVar, *subReconcilerResult, error) {
 	addonID := connection.From.Id
 	database, superuser, err := postgresConnectionConfig(connection)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	creds, credErr := r.postgresAddonService.InternalGetCredentials(ctx, addonID, database, superuser)
 	if credErr != nil {
-		r.logger.Errorf("failed to fetch postgres addon '%s' credentials, got err: %s", addonID, credErr.Error())
-		previouslyResolved, lookupErr := r.addonUsageService.ExistsByStackResourceAndAddon(ctx, stackID, resource.ID, addonID)
-		if lookupErr != nil {
-			return nil, nil, nil, fmt.Errorf("failed to check addon usage for addon '%s': %w", addonID, lookupErr)
-		}
-		if previouslyResolved {
-			r.logger.Infof("addon '%s' credentials unavailable but previously resolved, proceeding with existing CR values", addonID)
-			return nil, nil, nil, nil
-		}
-
-		r.logger.Infof("addon '%s' not available for first-time credential resolution, will requeue in %s", addonID, addonReadinessRequeueInterval)
+		r.logger.Infof("addon '%s' credentials unavailable, will requeue in %s", addonID, addonReadinessRequeueInterval)
 		result := resultRequeueAfter(addonReadinessRequeueInterval)
-		return nil, nil, &result, nil
+		return nil, &result, nil
 	}
 
 	envVars, err := resolveConnectionMappings(connection, creds.ToOutputMap())
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	return envVars, []*models.AddonUsage{
-		{
-			AddonType:       models.AddonTypePostgres,
-			AddonID:         addonID,
-			StackID:         stackID,
-			StackResourceID: resource.ID,
-		},
-	}, nil, nil
+	return envVars, nil, nil
 }
 
 func resolveConnectionMappings(connection models.StackConnection, outputs map[string]string) ([]models.EnvVar, error) {
@@ -417,7 +291,6 @@ func resolveConnectionValue(valueRef models.ValueRef, outputs map[string]string)
 	return "", fmt.Errorf("value ref is missing output or template")
 }
 
-// appendWithoutDuplicates appends new env vars, rejecting any whose name already exists.
 func appendWithoutDuplicates(existing []models.EnvVar, newVars []models.EnvVar) ([]models.EnvVar, error) {
 	nameSet := make(map[string]struct{}, len(existing))
 	for _, v := range existing {

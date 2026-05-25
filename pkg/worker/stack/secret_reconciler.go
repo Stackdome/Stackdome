@@ -16,23 +16,26 @@ import (
 )
 
 type secretReconciler struct {
-	clusterManager clustermanager.ClusterManager
-	secretService  secretService
-	secretBuilder  builders.SecretBuilder
-	logger         logger.Logger
+	clusterManager       clustermanager.ClusterManager
+	secretService        secretService
+	resourceUsageService resourceUsageService
+	secretBuilder        builders.SecretBuilder
+	logger               logger.Logger
 }
 
 type SecretReconcilerSpec struct {
-	ClusterManager clustermanager.ClusterManager
-	SecretService  secretService
-	Logger         logger.Logger
+	ClusterManager       clustermanager.ClusterManager
+	SecretService        secretService
+	ResourceUsageService resourceUsageService
+	Logger               logger.Logger
 }
 
 func NewSecretReconciler(spec SecretReconcilerSpec) *secretReconciler {
 	return &secretReconciler{
-		clusterManager: spec.ClusterManager,
-		secretService:  spec.SecretService,
-		logger:         spec.Logger,
+		clusterManager:       spec.ClusterManager,
+		secretService:        spec.SecretService,
+		resourceUsageService: spec.ResourceUsageService,
+		logger:               spec.Logger,
 		secretBuilder: builders.NewSecretBuilder(
 			builders.SecretBuilderSpec{
 				SecretFetcher: spec.SecretService,
@@ -50,8 +53,7 @@ func (s *secretReconciler) Reconcile(ctx context.Context, stack *models.Stack) (
 		s.reconcileImagePullSecrets,
 		s.reconcileImagePushSecrets,
 		s.reconcileGitCredentials,
-		// TODO add env var secret reconciliation when implemented.
-		s.reconcileSecretUsage,
+		s.reconcileDirectConfigUsage,
 		s.removeUnusedSecrets,
 	}
 	for _, fn := range reconcileFns {
@@ -174,8 +176,6 @@ func (s *secretReconciler) reconcileGitCredentials(ctx context.Context, clusterC
 	return resultNil, nil
 }
 
-// removeUnusedSecrets checks for secrets in the stack's namespace that are not in use by the stack.
-// It deletes those secrets from the cluster and their corresponding secret usages from the database.
 func (s *secretReconciler) removeUnusedSecrets(ctx context.Context, clusterClient client.Client, stack *models.Stack) (subReconcilerResult, error) {
 	secretList := &corev1.SecretList{}
 	if err := clusterClient.List(ctx, secretList, client.InNamespace(stack.Namespace), client.MatchingLabels{models.StackIDLabel: stack.ID}); err != nil {
@@ -197,46 +197,61 @@ func (s *secretReconciler) removeUnusedSecrets(ctx context.Context, clusterClien
 		s.logger.Infof("deleting secret '%s' in namespace '%s'", secret.Name, stack.Namespace)
 		if err := clusterClient.Delete(ctx, &secret, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
 			if k8sapierrors.IsNotFound(err) {
-				continue // Secret already deleted
+				continue
 			}
 			return resultNil, fmt.Errorf("failed to delete secret '%s' in namespace '%s': %w", secret.Name, stack.Namespace, err)
 		}
 	}
 
-	secretUsages, err := s.secretService.GetSecretUsageByStackID(ctx, stack.ID)
+	existingUsages, err := s.resourceUsageService.GetByStackID(ctx, stack.ID)
 	if err != nil {
-		return resultNil, fmt.Errorf("failed to get secret usages for stack '%s': %w", stack.ID, err)
+		return resultNil, fmt.Errorf("failed to get resource usages for stack '%s': %w", stack.ID, err)
 	}
+	directConfigSecretIDs := stack.DirectConfigSecretsInUse()
 
-	secretUsagesToDelete := lo.Filter(secretUsages, func(usage *models.SecretUsage, _ int) bool {
-		return !lo.Contains(currentSecretsInUse, usage.SecretID)
-	})
-
-	for _, usage := range secretUsagesToDelete {
-		s.logger.Infof("deleting secret usage for secret ID '%s' in stack '%s'", usage.SecretID, stack.ID)
-		if err := s.secretService.DeleteSecretUsage(ctx, usage.SecretID, usage.StackID); err != nil {
-			return resultNil, fmt.Errorf("failed to delete secret usage for secret ID '%s' in stack '%s': %w", usage.SecretID, stack.ID, err)
+	for _, usage := range existingUsages {
+		if usage.ResourceType != "secret" {
+			continue
+		}
+		if !lo.Contains(directConfigSecretIDs, usage.ResourceID) {
+			s.logger.Infof("deleting resource usage for secret ID '%s' in stack '%s'", usage.ResourceID, stack.ID)
+			if err := s.resourceUsageService.Delete(ctx, usage.ResourceType, usage.ResourceID, usage.StackID); err != nil {
+				return resultNil, fmt.Errorf("failed to delete resource usage for secret ID '%s' in stack '%s': %w", usage.ResourceID, stack.ID, err)
+			}
 		}
 	}
 
 	return resultNil, nil
 }
 
-// reconcileSecretUsage checks if the secrets in use by the stack have corresponding secret usages.
-// If a secret usage does not exist for a secret in use, it creates one.
-func (s *secretReconciler) reconcileSecretUsage(ctx context.Context, clusterClient client.Client, stack *models.Stack) (subReconcilerResult, error) {
-	currentSecretsInUse := stack.SecretsInUse()
-	for _, secretID := range currentSecretsInUse {
-		_, err := s.secretService.GetSecretUsageBySecretIDAndStackID(ctx, secretID, stack.ID)
-		if err != nil {
-			if err.Is404() {
-				s.logger.Infof("creating secret usage for secret ID '%s' in stack '%s'", secretID, stack.ID)
-				if err := s.secretService.CreateSecretUsage(ctx, secretID, stack.ID); err != nil {
-					return resultNil, fmt.Errorf("failed to create secret usage for secret ID '%s' in stack '%s': %w", secretID, stack.ID, err)
-				}
-				continue // Secret usage created successfully, continue to next secret
+// reconcileDirectConfigUsage tracks secrets referenced by direct config fields
+// (pull secrets, push secrets, git secrets) in the resource_usages table for
+// delete protection. Connection-sourced secrets are tracked in stack_connections.
+func (s *secretReconciler) reconcileDirectConfigUsage(ctx context.Context, _ client.Client, stack *models.Stack) (subReconcilerResult, error) {
+	directConfigSecretIDs := stack.DirectConfigSecretsInUse()
+	existingUsages, err := s.resourceUsageService.GetByStackID(ctx, stack.ID)
+	if err != nil {
+		return resultNil, fmt.Errorf("failed to get resource usages for stack '%s': %w", stack.ID, err)
+	}
+	existingSecretIDs := make(map[string]struct{})
+	for _, usage := range existingUsages {
+		if usage.ResourceType == "secret" {
+			existingSecretIDs[usage.ResourceID] = struct{}{}
+		}
+	}
+
+	for _, secretID := range directConfigSecretIDs {
+		if _, exists := existingSecretIDs[secretID]; !exists {
+			s.logger.Infof("creating resource usage for direct-config secret '%s' in stack '%s'", secretID, stack.ID)
+			if err := s.resourceUsageService.Create(ctx, &models.ResourceUsage{
+				ResourceType: "secret",
+				ResourceID:   secretID,
+				ConsumerType: "stack",
+				ConsumerID:   stack.ID,
+				StackID:      stack.ID,
+			}); err != nil {
+				return resultNil, fmt.Errorf("failed to create resource usage for secret '%s' in stack '%s': %w", secretID, stack.ID, err)
 			}
-			return resultNil, fmt.Errorf("failed to get secret usage for secret ID '%s' in stack '%s': %w", secretID, stack.ID, err)
 		}
 	}
 	return resultNil, nil

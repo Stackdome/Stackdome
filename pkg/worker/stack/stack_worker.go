@@ -32,7 +32,7 @@ type StackWorkerSpec struct {
 	SecretBuilder        builders.SecretBuilder
 	NamespaceService     namespaceService
 	PostgresAddonService postgresAddonService
-	AddonUsageService    addonUsageService
+	ResourceUsageService resourceUsageService
 	Env                  string
 	ClusterManager       clustermanager.ClusterManager
 }
@@ -45,13 +45,13 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 		BaseWorker:     worker.NewBaseWorker(StackWorkerName, spec.Env),
 		subReconcilers: []subReconciler{
 			NewDeprovisionReconciler(DeprovisionReconcilerSpec{
-				StackService:      spec.StackService,
-				SecretService:     spec.SecretService,
-				NamespaceService:  spec.NamespaceService,
-				Logger:            logger.NewLoggerWithPrefix(context.Background(), "stack-deprovision-reconciler"),
-				VolumeService:     spec.VolumeService,
-				ClusterManager:    spec.ClusterManager,
-				AddonUsageService: spec.AddonUsageService,
+				StackService:         spec.StackService,
+				SecretService:        spec.SecretService,
+				NamespaceService:     spec.NamespaceService,
+				Logger:               logger.NewLoggerWithPrefix(context.Background(), "stack-deprovision-reconciler"),
+				VolumeService:        spec.VolumeService,
+				ClusterManager:       spec.ClusterManager,
+				ResourceUsageService: spec.ResourceUsageService,
 			}),
 			NewValidationReconciler(ValidationReconcilerSpec{
 				Logger:         logger.NewLoggerWithPrefix(context.Background(), "stack-validation-reconciler"),
@@ -64,9 +64,10 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 				NamespaceService: spec.NamespaceService,
 			}),
 			NewSecretReconciler(SecretReconcilerSpec{
-				ClusterManager: spec.ClusterManager,
-				SecretService:  spec.SecretService,
-				Logger:         logger.NewLoggerWithPrefix(context.Background(), "stack-secret-reconciler"),
+				ClusterManager:       spec.ClusterManager,
+				SecretService:        spec.SecretService,
+				ResourceUsageService: spec.ResourceUsageService,
+				Logger:               logger.NewLoggerWithPrefix(context.Background(), "stack-secret-reconciler"),
 			}),
 			NewVolumeReconciler(VolumeReconcilerSpec{
 				ClusterManager:  spec.ClusterManager,
@@ -76,7 +77,6 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 			NewAddonEnvReconciler(AddonEnvReconcilerSpec{
 				PostgresAddonService: spec.PostgresAddonService,
 				SecretService:        spec.SecretService,
-				AddonUsageService:    spec.AddonUsageService,
 			}),
 			NewStackReconciler(StackReconcilerSpec{
 				ClusterManager: spec.ClusterManager,
@@ -97,7 +97,7 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 	if err != nil {
 		if err.Is404() {
 			w.Logger().Infof("Stack %s not found, skipping reconciliation", stackID.ID)
-			return worker.Result{}, nil // Stack not found, no error
+			return worker.Result{}, nil
 		}
 		return worker.Result{}, err
 	}
@@ -121,7 +121,7 @@ func (w *stackWorker) reconcile(ctx context.Context, stack *models.Stack) (worke
 		case err != nil:
 			return worker.Result{}, w.WorkerError.NewError("failed to reconcile stack %s with sub-reconciler %s: %v", stack.ID, subReconciler.Name(), err)
 		case result.resultStop:
-			return worker.Result{}, nil // Stop further sub-reconciler processing.
+			return worker.Result{}, nil
 		case result.resultRequeue:
 			return worker.Result{Requeue: true}, nil
 		case result.resultRequeueAfter != nil:

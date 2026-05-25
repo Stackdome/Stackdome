@@ -13,4 +13,5 @@ type StackConnectionStore interface {
 	UpdateWithTx(ctx context.Context, stackID, connectionID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError)
 	DeleteWithTx(ctx context.Context, stackID, connectionID string) *errors.ServiceError
 	ReplaceByStackIDWithTx(ctx context.Context, stackID string, connections models.StackConnections) *errors.ServiceError
+	IsResourceReferencedAsSource(ctx context.Context, resourceType, resourceID string) (bool, error)
 }

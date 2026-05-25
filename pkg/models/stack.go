@@ -141,6 +141,23 @@ func (ws *Stack) SecretsInUse() []string {
 	return lo.Uniq(res)
 }
 
+func (ws *Stack) DirectConfigSecretsInUse() []string {
+	var res []string
+	for _, resource := range ws.StackResources {
+		if resource.BuildConfig != nil && resource.BuildConfig.SourceContext.Git != nil &&
+			resource.BuildConfig.SourceContext.Git.GitSecretRef != nil {
+			res = append(res, resource.BuildConfig.SourceContext.Git.GitSecretRef.SecretID)
+		}
+		if resource.ImageConfig != nil && resource.ImageConfig.PullSecretRef != nil {
+			res = append(res, resource.ImageConfig.PullSecretRef.SecretID)
+		}
+		if resource.BuildConfig != nil && resource.BuildConfig.RegistrySecretRef != nil {
+			res = append(res, resource.BuildConfig.RegistrySecretRef.SecretID)
+		}
+	}
+	return lo.Uniq(res)
+}
+
 func (ws *Stack) HasVolumeMounts() bool {
 	for i := range ws.StackResources {
 		if len(ws.StackResources[i].VolumeMounts) > 0 {
