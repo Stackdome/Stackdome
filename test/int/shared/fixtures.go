@@ -653,6 +653,116 @@ func CreateStackWithBrokenBuildSource(name string, repoURL string, secretID stri
 	return openapi.NewStack(name, *spec)
 }
 
+// SkipProvisioningAnnotation is the annotation value that causes the stack worker
+// to skip cluster provisioning and mark the stack as Ready immediately.
+const SkipProvisioningAnnotationKey = "stack.stackdome.io/skip-cluster-provisioning"
+
+func skipProvisioningAnnotation() []openapi.Annotation {
+	return []openapi.Annotation{
+		*openapi.NewAnnotation(SkipProvisioningAnnotationKey, "true"),
+	}
+}
+
+func CreateSkipProvisioningStack(name string, resources []openapi.StackResource) *openapi.Stack {
+	spec := openapi.NewStackSpec(resources)
+	stack := openapi.NewStack(name, *spec)
+	stack.SetAnnotations(skipProvisioningAnnotation())
+	return stack
+}
+
+func CreateSkipProvisioningStackWithVolumes(name string, resources []openapi.StackResource, volumes []openapi.Volume) *openapi.Stack {
+	spec := openapi.NewStackSpec(resources)
+	spec.SetVolumes(volumes)
+	stack := openapi.NewStack(name, *spec)
+	stack.SetAnnotations(skipProvisioningAnnotation())
+	return stack
+}
+
+func CreateSkipProvisioningStackWithConnections(name string, resources []openapi.StackResource, connections []openapi.StackConnection) *openapi.Stack {
+	spec := openapi.NewStackSpec(resources)
+	spec.SetConnections(connections)
+	stack := openapi.NewStack(name, *spec)
+	stack.SetAnnotations(skipProvisioningAnnotation())
+	return stack
+}
+
+func CreateSkipProvisioningStackFull(name string, resources []openapi.StackResource, volumes []openapi.Volume, connections []openapi.StackConnection) *openapi.Stack {
+	spec := openapi.NewStackSpec(resources)
+	spec.SetVolumes(volumes)
+	spec.SetConnections(connections)
+	stack := openapi.NewStack(name, *spec)
+	stack.SetAnnotations(skipProvisioningAnnotation())
+	return stack
+}
+
+func SimpleResource(name string) openapi.StackResource {
+	r := openapi.NewStackResource(name)
+	r.SetImageSpec(*openapi.NewImageSpec(TestImage))
+	return *r
+}
+
+func ResourceWithPort(name string, port int32) openapi.StackResource {
+	r := openapi.NewStackResource(name)
+	r.SetImageSpec(*openapi.NewImageSpec(TestImage))
+	r.SetPorts([]openapi.Port{*openapi.NewPort("http", port, false)})
+	return *r
+}
+
+func ResourceWithDependsOn(name string, deps []string) openapi.StackResource {
+	r := openapi.NewStackResource(name)
+	r.SetImageSpec(*openapi.NewImageSpec(TestImage))
+	r.SetDependsOn(deps)
+	return *r
+}
+
+func EnvConnection(fromType, fromName, toType, toName string, mappings []openapi.ConnectionMapping) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef(fromType)
+	from.SetName(fromName)
+	to := openapi.NewTopologyNodeRef(toType)
+	to.SetName(toName)
+	conn := openapi.NewStackConnection("env", *from, *to)
+	if len(mappings) > 0 {
+		conn.SetMappings(mappings)
+	}
+	return *conn
+}
+
+func EnvConnectionWithID(fromType, fromID, toType, toName string, mappings []openapi.ConnectionMapping) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef(fromType)
+	from.SetId(fromID)
+	to := openapi.NewTopologyNodeRef(toType)
+	to.SetName(toName)
+	conn := openapi.NewStackConnection("env", *from, *to)
+	if len(mappings) > 0 {
+		conn.SetMappings(mappings)
+	}
+	return *conn
+}
+
+func VolumeMountConn(volumeName, targetResource, mountPath, subPath string) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef("volume")
+	from.SetName(volumeName)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(targetResource)
+	conn := openapi.NewStackConnection("volume_mount", *from, *to)
+	config := map[string]interface{}{
+		"mount_path": mountPath,
+	}
+	if subPath != "" {
+		config["sub_path"] = subPath
+	}
+	conn.SetConfig(config)
+	return *conn
+}
+
+func HostMapping() openapi.ConnectionMapping {
+	target := openapi.NewConnectionTarget("env")
+	target.SetName("API_HOST")
+	value := openapi.NewValueRef()
+	value.SetOutput("host")
+	return *openapi.NewConnectionMapping(*target, *value)
+}
+
 func CreateStackWithBuildSource(name string, repoURL string, secretID string) *openapi.Stack {
 	resource := openapi.NewStackResource(BuildSourceResourceName)
 

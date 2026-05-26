@@ -414,7 +414,15 @@ func (s *stackService) UpdateStackConnection(ctx context.Context, stackID, conne
 			if connections[i].ID == connectionID {
 				connections[i] = updated
 				found = true
-				break
+				continue
+			}
+			if connections[i].Kind == updated.Kind &&
+				connections[i].From == updated.From &&
+				connections[i].To == updated.To {
+				return nil, nil, errors.Conflict("a '%s' connection from %s to %s already exists",
+					updated.Kind,
+					connectionNodeLabel(updated.From),
+					connectionNodeLabel(updated.To))
 			}
 		}
 		if !found {

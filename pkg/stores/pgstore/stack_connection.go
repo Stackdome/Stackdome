@@ -94,18 +94,50 @@ func (s *stackConnectionStore) ReplaceByStackIDWithTx(ctx context.Context, stack
 		return errors.GeneralError("transaction not found in context")
 	}
 
-	if err := tx.Where("stack_id = ?", stackID).Delete(&models.StackConnection{}).Error; err != nil {
-		return errors.GeneralError("failed to delete existing stack connections: %s", err.Error())
+	existing, err := s.ListByStackID(ctx, stackID)
+	if err != nil {
+		return err
 	}
-	if len(connections) == 0 {
-		return nil
+
+	desiredByID := make(map[string]models.StackConnection, len(connections))
+	for i := range connections {
+		connections[i].StackID = stackID
+		if connections[i].ID != "" {
+			desiredByID[connections[i].ID] = connections[i]
+		}
+	}
+
+	existingByID := make(map[string]struct{}, len(existing))
+	for _, e := range existing {
+		existingByID[e.ID] = struct{}{}
+		if _, keep := desiredByID[e.ID]; !keep {
+			if delErr := tx.Where("stack_id = ? AND id = ?", stackID, e.ID).Delete(&models.StackConnection{}).Error; delErr != nil {
+				return errors.GeneralError("failed to delete stack connection '%s': %s", e.ID, delErr.Error())
+			}
+		}
 	}
 
 	for i := range connections {
-		connections[i].StackID = stackID
-	}
-	if err := tx.Create(&connections).Error; err != nil {
-		return errors.GeneralError("failed to create stack connections: %s", err.Error())
+		c := &connections[i]
+		if c.ID != "" {
+			if _, exists := existingByID[c.ID]; exists {
+				if updErr := tx.Model(&models.StackConnection{}).
+					Where("stack_id = ? AND id = ?", stackID, c.ID).
+					Updates(map[string]interface{}{
+						"kind":     c.Kind,
+						"from_ref": c.From,
+						"to_ref":   c.To,
+						"mappings": c.Mappings,
+						"config":   c.Config,
+					}).Error; updErr != nil {
+					return errors.GeneralError("failed to update stack connection '%s': %s", c.ID, updErr.Error())
+				}
+				continue
+			}
+		}
+		if createErr := tx.Create(c).Error; createErr != nil {
+			return errors.GeneralError("failed to create stack connection: %s", createErr.Error())
+		}
 	}
 	return nil
 }
