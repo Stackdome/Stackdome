@@ -16,8 +16,7 @@ type StackResourceStoreSpec struct {
 }
 
 type stackResourceStore struct {
-	sessionFactory   db.SessionFactory
-	volumeMountStore stores.VolumeMountStore
+	sessionFactory db.SessionFactory
 	atomicExecutor
 }
 
@@ -25,29 +24,13 @@ func NewStackResourceStore(spec StackResourceStoreSpec) stores.StackResourceStor
 	return &stackResourceStore{
 		sessionFactory: spec.SessionFactory,
 		atomicExecutor: atomicExecutor{sessionFactory: spec.SessionFactory},
-		volumeMountStore: NewVolumeMountStore(VolumeMountStoreSpec{
-			SessionFactory: spec.SessionFactory,
-		}),
 	}
 }
 
 func (w *stackResourceStore) Create(ctx context.Context, spec *models.StackResource) (*models.StackResource, *errors.ServiceError) {
-	tx := w.sessionFactory.New(ctx).Begin()
-	if err := tx.Model(&models.StackResource{}).Omit(clause.Associations).Create(spec).Error; err != nil {
-		tx.Rollback()
+	if err := w.sessionFactory.New(ctx).Model(&models.StackResource{}).Omit(clause.Associations).Create(spec).Error; err != nil {
 		return nil, errors.GeneralError("failed to create stack resource: %s", err.Error())
 	}
-	if len(spec.VolumeMounts) > 0 {
-		for _, volumeMount := range spec.VolumeMounts {
-			volumeMount.StackID = spec.StackID
-			volumeMount.StackResourceID = spec.ID
-		}
-		if _, err := w.volumeMountStore.BulkCreateWithTx(ctx, spec.VolumeMounts); err != nil {
-			tx.Rollback()
-			return nil, errors.GeneralError("failed to create stack resource: %s", err.Error())
-		}
-	}
-	tx.Commit()
 	return w.GetByID(ctx, spec.ID)
 }
 
@@ -59,62 +42,14 @@ func (w *stackResourceStore) CreateWithTx(ctx context.Context, spec *models.Stac
 	if err := tx.Model(&models.StackResource{}).Omit(clause.Associations).Create(spec).Error; err != nil {
 		return nil, errors.GeneralError("failed to create stack resource: %s", err.Error())
 	}
-
-	if len(spec.VolumeMounts) > 0 {
-		volumesMap := stack.VolumesMap()
-		for _, volumeMount := range spec.VolumeMounts {
-			referencedVolume, found := volumesMap[volumeMount.SourceVolumeName]
-			if !found || referencedVolume == nil || referencedVolume.ID == "" {
-				return nil, errors.GeneralError(
-					"failed to create stack resource: '%s'. Missing volume '%s'", spec.Name, volumeMount.SourceVolumeName)
-			}
-			volumeMount.StackResourceID = spec.ID
-			volumeMount.StackID = spec.StackID
-			volumeMount.SourceVolumeID = referencedVolume.ID
-			volumeMount.SourceVolumeType = referencedVolume.VolumeSourceType()
-		}
-		if _, err := w.volumeMountStore.BulkCreateWithTx(ctx, spec.VolumeMounts); err != nil {
-			return nil, errors.GeneralError("failed to create stack resource: %s", err.Error())
-		}
-	}
 	return w.GetByID(ctx, spec.ID)
 }
 
 func (w *stackResourceStore) Update(ctx context.Context, ID string, spec *models.StackResource, stack *models.Stack) (*models.StackResource, *errors.ServiceError) {
-	tx := w.sessionFactory.New(ctx).Begin()
-	ctx = db.CtxWithTransaction(ctx, tx)
-	// Update all fields except status
 	spec.Status = nil
-	if err := tx.Model(&models.StackResource{}).Omit(clause.Associations).Where("id = ?", ID).Updates(spec).Error; err != nil {
-		tx.Rollback()
+	if err := w.sessionFactory.New(ctx).Model(&models.StackResource{}).Omit(clause.Associations).Where("id = ?", ID).Updates(spec).Error; err != nil {
 		return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
 	}
-
-	if err := w.volumeMountStore.DeleteForStackResourceWithTx(ctx, ID); err != nil {
-		tx.Rollback()
-		return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
-	}
-
-	if len(spec.VolumeMounts) > 0 {
-		volumesMap := stack.VolumesMap()
-		for _, volumeMount := range spec.VolumeMounts {
-			referencedVolume, found := volumesMap[volumeMount.SourceVolumeName]
-			if !found || referencedVolume == nil || referencedVolume.ID == "" {
-				tx.Rollback()
-				return nil, errors.GeneralError(
-					"failed to update stack resource: '%s'. Missing volume '%s'", spec.Name, volumeMount.SourceVolumeName)
-			}
-			volumeMount.StackResourceID = ID
-			volumeMount.StackID = spec.StackID
-			volumeMount.SourceVolumeID = referencedVolume.ID
-			volumeMount.SourceVolumeType = referencedVolume.VolumeSourceType()
-		}
-		if _, err := w.volumeMountStore.BulkCreateWithTx(ctx, spec.VolumeMounts); err != nil {
-			tx.Rollback()
-			return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
-		}
-	}
-	tx.Commit()
 	return w.GetByID(ctx, ID)
 }
 
@@ -123,31 +58,9 @@ func (w *stackResourceStore) UpdateWithTx(ctx context.Context, ID string, spec *
 	if tx == nil {
 		return nil, errors.GeneralError("transaction not found in context")
 	}
-	// Update all fields except status
 	spec.Status = nil
 	if err := tx.Model(&models.StackResource{}).Omit(clause.Associations).Where("id = ?", ID).Updates(spec).Error; err != nil {
 		return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
-	}
-	if err := w.volumeMountStore.DeleteForStackResourceWithTx(ctx, ID); err != nil {
-		return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
-	}
-
-	if len(spec.VolumeMounts) > 0 {
-		volumesMap := stack.VolumesMap()
-		for _, volumeMount := range spec.VolumeMounts {
-			referencedVolume, found := volumesMap[volumeMount.SourceVolumeName]
-			if !found || referencedVolume == nil || referencedVolume.ID == "" {
-				return nil, errors.GeneralError(
-					"failed to update stack resource: '%s'. Missing volume '%s'", spec.Name, volumeMount.SourceVolumeName)
-			}
-			volumeMount.StackResourceID = ID
-			volumeMount.StackID = spec.StackID
-			volumeMount.SourceVolumeID = referencedVolume.ID
-			volumeMount.SourceVolumeType = referencedVolume.VolumeSourceType()
-		}
-		if _, err := w.volumeMountStore.BulkCreateWithTx(ctx, spec.VolumeMounts); err != nil {
-			return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
-		}
 	}
 	return w.GetByID(ctx, ID)
 }
@@ -157,7 +70,6 @@ func (w *stackResourceStore) UpdatePortsWithTx(ctx context.Context, resourceID s
 	if tx == nil {
 		return errors.GeneralError("transaction not found in context")
 	}
-	// Update ports for the stack resource
 	if err := tx.Model(&models.StackResource{}).Where("id = ?", resourceID).Updates(map[string]interface{}{
 		"ports": resource.Ports,
 	}).Error; err != nil {

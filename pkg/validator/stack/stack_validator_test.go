@@ -95,7 +95,7 @@ func TestValidateForCreateRejectsEnvVarWithBothValueAndSelfOutput(t *testing.T) 
 func TestValidateForCreateRejectsSecretMountConnectionKind(t *testing.T) {
 	v := NewStackValidator(StackValidatorSpec{})
 	spec := stackWithConnections(models.StackConnection{
-		Id:   "secret-files",
+		ID:   "secret-files",
 		Kind: models.ConnectionKind("secret_mount"),
 		From: models.TopologyNodeRef{
 			Type: models.TopologyNodeTypeSecret,
@@ -119,7 +119,7 @@ func TestValidateForCreateRejectsSecretMountConnectionKind(t *testing.T) {
 func TestValidateForCreateAllowsPostgresConnectionConfig(t *testing.T) {
 	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
 	spec := stackWithConnections(models.StackConnection{
-		Id:   "pg-env",
+		ID:   "pg-env",
 		Kind: models.ConnectionKindEnv,
 		From: models.TopologyNodeRef{
 			Type: models.TopologyNodeTypePostgresAddon,
@@ -149,7 +149,7 @@ func TestValidateForCreateAllowsPostgresConnectionConfig(t *testing.T) {
 func TestValidateForCreateAllowsPostgresSuperuserConnectionConfig(t *testing.T) {
 	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
 	spec := stackWithConnections(models.StackConnection{
-		Id:   "pg-env",
+		ID:   "pg-env",
 		Kind: models.ConnectionKindEnv,
 		From: models.TopologyNodeRef{
 			Type: models.TopologyNodeTypePostgresAddon,
@@ -179,7 +179,7 @@ func TestValidateForCreateAllowsPostgresSuperuserConnectionConfig(t *testing.T) 
 func TestValidateForCreateRejectsPostgresConnectionConfigWithoutDatabase(t *testing.T) {
 	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
 	spec := stackWithConnections(models.StackConnection{
-		Id:   "pg-env",
+		ID:   "pg-env",
 		Kind: models.ConnectionKindEnv,
 		From: models.TopologyNodeRef{
 			Type: models.TopologyNodeTypePostgresAddon,
@@ -204,7 +204,7 @@ func TestValidateForCreateRejectsPostgresConnectionConfigWithoutDatabase(t *test
 func TestValidateForCreateRejectsUnknownPostgresConnectionConfigKey(t *testing.T) {
 	v, _ := newValidatorWithMockedPostgresAddonService(t)
 	spec := stackWithConnections(models.StackConnection{
-		Id:   "pg-env",
+		ID:   "pg-env",
 		Kind: models.ConnectionKindEnv,
 		From: models.TopologyNodeRef{
 			Type: models.TopologyNodeTypePostgresAddon,
@@ -232,7 +232,7 @@ func TestValidateForCreateRejectsUnknownPostgresConnectionConfigKey(t *testing.T
 func TestValidateForCreateAllowsVolumeMountConnectionConfig(t *testing.T) {
 	v := NewStackValidator(StackValidatorSpec{})
 	spec := stackWithConnections(models.StackConnection{
-		Id:   "volume-mount",
+		ID:   "volume-mount",
 		Kind: models.ConnectionKindVolumeMount,
 		From: models.TopologyNodeRef{
 			Type: models.TopologyNodeTypeVolume,
@@ -261,7 +261,7 @@ func TestValidateForCreateAllowsVolumeMountConnectionConfig(t *testing.T) {
 func TestValidateForCreateRejectsVolumeMountConnectionWithoutMountPath(t *testing.T) {
 	v := NewStackValidator(StackValidatorSpec{})
 	spec := stackWithConnections(models.StackConnection{
-		Id:   "volume-mount",
+		ID:   "volume-mount",
 		Kind: models.ConnectionKindVolumeMount,
 		From: models.TopologyNodeRef{
 			Type: models.TopologyNodeTypeVolume,
@@ -288,7 +288,7 @@ func TestValidateForCreateRejectsVolumeMountConnectionWithoutMountPath(t *testin
 func TestValidateForCreateRejectsVolumeMountConnectionWithInvalidReadOnlyType(t *testing.T) {
 	v := NewStackValidator(StackValidatorSpec{})
 	spec := stackWithConnections(models.StackConnection{
-		Id:   "volume-mount",
+		ID:   "volume-mount",
 		Kind: models.ConnectionKindVolumeMount,
 		From: models.TopologyNodeRef{
 			Type: models.TopologyNodeTypeVolume,
@@ -319,7 +319,7 @@ func TestValidateForCreateRejectsVolumeMountConnectionWithInvalidReadOnlyType(t 
 func TestValidateForCreateAllowsStackResourceEnvConnectionUsingDeclaredOutput(t *testing.T) {
 	v := NewStackValidator(StackValidatorSpec{})
 	spec := stackWithConnections(models.StackConnection{
-		Id:   "internal-api",
+		ID:   "internal-api",
 		Kind: models.ConnectionKindEnv,
 		From: models.TopologyNodeRef{
 			Type: models.TopologyNodeTypeStackResource,
@@ -351,7 +351,7 @@ func TestValidateForCreateAllowsStackResourceEnvConnectionUsingDeclaredOutput(t 
 func TestValidateForCreateRejectsUnknownStackResourceConnectionOutput(t *testing.T) {
 	v := NewStackValidator(StackValidatorSpec{})
 	spec := stackWithConnections(models.StackConnection{
-		Id:   "internal-api",
+		ID:   "internal-api",
 		Kind: models.ConnectionKindEnv,
 		From: models.TopologyNodeRef{
 			Type: models.TopologyNodeTypeStackResource,
@@ -386,7 +386,7 @@ func TestValidateForCreateRejectsUnknownStackResourceConnectionOutput(t *testing
 func TestValidateForCreateAllowsSecretConnectionUsingBracketAccessor(t *testing.T) {
 	v, secrets := newValidatorWithMockedSecretService(t)
 	spec := stackWithConnections(models.StackConnection{
-		Id:   "tls-cert",
+		ID:   "tls-cert",
 		Kind: models.ConnectionKindEnv,
 		From: models.TopologyNodeRef{
 			Type: models.TopologyNodeTypeSecret,
@@ -427,7 +427,7 @@ func TestValidateForUpdateAllowsVolumeMountConnectionUsingExistingDBVolume(t *te
 	}
 
 	patch := stackWithConnections(models.StackConnection{
-		Id:   "volume-mount",
+		ID:   "volume-mount",
 		Kind: models.ConnectionKindVolumeMount,
 		From: models.TopologyNodeRef{
 			Type: models.TopologyNodeTypeVolume,
@@ -501,7 +501,7 @@ func TestValidateForCreateAllowsBuildArtifactSourceConnection(t *testing.T) {
 	spec.Volumes = []*models.Volume{{Name: "src"}, {Name: "assets"}}
 	spec.Connections = models.StackConnections{
 		{
-			Id:   "build-assets",
+			ID:   "build-assets",
 			Kind: models.ConnectionKindBuildArtifactSource,
 			From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "builder"},
 			To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "assets"},
@@ -525,7 +525,7 @@ func TestValidateForCreateRejectsBuildArtifactSourceWithoutSourcePath(t *testing
 	spec.Volumes = []*models.Volume{{Name: "assets"}}
 	spec.Connections = models.StackConnections{
 		{
-			Id:   "build-assets",
+			ID:   "build-assets",
 			Kind: models.ConnectionKindBuildArtifactSource,
 			From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
 			To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "assets"},
@@ -547,7 +547,7 @@ func TestValidateForCreateRejectsBuildArtifactSourceTargetingNonVolume(t *testin
 	spec.StackResources[0].BuildConfig = &models.BuildConfigSpec{}
 	spec.Connections = models.StackConnections{
 		{
-			Id:   "build-assets",
+			ID:   "build-assets",
 			Kind: models.ConnectionKindBuildArtifactSource,
 			From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
 			To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
@@ -569,7 +569,7 @@ func TestValidateForCreateRejectsBuildArtifactSourceWithUnknownVolume(t *testing
 	spec.StackResources[0].BuildConfig = &models.BuildConfigSpec{}
 	spec.Connections = models.StackConnections{
 		{
-			Id:   "build-assets",
+			ID:   "build-assets",
 			Kind: models.ConnectionKindBuildArtifactSource,
 			From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
 			To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "nonexistent"},

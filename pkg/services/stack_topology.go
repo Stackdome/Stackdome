@@ -96,7 +96,7 @@ func nodesAndEdgesFromConnections(
 		ensureNode(nodes, toRef)
 
 		edges = append(edges, models.TopologyEdge{
-			Id:            connection.Id,
+			Id:            connection.ID,
 			Kind:          connection.Kind.String(),
 			Source:        fromRef,
 			Target:        toRef,

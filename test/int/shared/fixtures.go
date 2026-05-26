@@ -49,6 +49,23 @@ var PostgresEnvMapping = map[string]string{
 	"url":      "DATABASE_URL",
 }
 
+// Full-stack e2e fixture values (2 resources, postgres, secret, volume, depends_on)
+const (
+	FullStackAPIName    = "api"
+	FullStackWorkerName = "worker"
+	FullStackAPIPort    = 8080
+	FullStackVolumeName = "uploads"
+	FullStackMountPath  = "/data/uploads"
+	FullStackSubPath    = "api"
+	FullStackSecretName = "tls-certs"
+)
+
+// FullStackSecretEnvMapping maps secret output accessors to env var names.
+var FullStackSecretEnvMapping = map[string]string{
+	"key.tls_cert": "TLS_CERT",
+	"key.tls_key":  "TLS_KEY",
+}
+
 // Crash detection fixture values
 const (
 	CrashResourceName = "crash-app"
@@ -503,6 +520,99 @@ func postgresEnvConnection(addonID, targetResource, database string, superuser b
 		mappings = append(mappings, *openapi.NewConnectionMapping(*target, *value))
 	}
 	conn.SetMappings(mappings)
+	return *conn
+}
+
+// CreateFullStack creates a stack with 2 resources (api + worker), a volume mount,
+// postgres addon connection, secret connection, resource-to-resource connection,
+// and depends_on. This exercises all connection kinds and topology features.
+func CreateFullStack(name string, addonID string, database string, secretID string) *openapi.Stack {
+	api := openapi.NewStackResource(FullStackAPIName)
+	apiImage := openapi.NewImageSpec(TestImage)
+	api.SetImageSpec(*apiImage)
+	api.SetPorts([]openapi.Port{
+		*openapi.NewPort("http", int32(FullStackAPIPort), false),
+	})
+	api.SetDependsOn([]string{FullStackWorkerName})
+
+	worker := openapi.NewStackResource(FullStackWorkerName)
+	workerImage := openapi.NewImageSpec(TestImage)
+	worker.SetImageSpec(*workerImage)
+
+	volumeSpec := openapi.NewVolumeSpec("1Gi", false, openapi.READ_WRITE_ONCE)
+	volume := openapi.NewVolume(FullStackVolumeName, *volumeSpec)
+
+	connections := []openapi.StackConnection{
+		postgresEnvConnection(addonID, FullStackAPIName, database, false),
+		postgresEnvConnection(addonID, FullStackWorkerName, database, false),
+		secretEnvConnection(secretID, FullStackAPIName),
+		volumeMountConnection(FullStackVolumeName, FullStackAPIName, FullStackMountPath, FullStackSubPath),
+		resourceToResourceEnvConnection(FullStackAPIName, FullStackWorkerName),
+	}
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{*api, *worker})
+	spec.SetVolumes([]openapi.Volume{*volume})
+	spec.SetConnections(connections)
+	return openapi.NewStack(name, *spec)
+}
+
+func secretEnvConnection(secretID, targetResource string) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef("secret")
+	from.SetId(secretID)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(targetResource)
+	conn := openapi.NewStackConnection("env", *from, *to)
+
+	var mappings []openapi.ConnectionMapping
+	for output, envName := range FullStackSecretEnvMapping {
+		target := openapi.NewConnectionTarget("env")
+		target.SetName(envName)
+		value := openapi.NewValueRef()
+		value.SetOutput(output)
+		mappings = append(mappings, *openapi.NewConnectionMapping(*target, *value))
+	}
+	conn.SetMappings(mappings)
+	return *conn
+}
+
+func volumeMountConnection(volumeName, targetResource, mountPath, subPath string) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef("volume")
+	from.SetName(volumeName)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(targetResource)
+	conn := openapi.NewStackConnection("volume_mount", *from, *to)
+	config := map[string]interface{}{
+		"mount_path": mountPath,
+	}
+	if subPath != "" {
+		config["sub_path"] = subPath
+	}
+	conn.SetConfig(config)
+	return *conn
+}
+
+func resourceToResourceEnvConnection(sourceResource, targetResource string) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef("stack_resource")
+	from.SetName(sourceResource)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(targetResource)
+	conn := openapi.NewStackConnection("env", *from, *to)
+	conn.SetMappings([]openapi.ConnectionMapping{
+		func() openapi.ConnectionMapping {
+			target := openapi.NewConnectionTarget("env")
+			target.SetName("API_HOST")
+			value := openapi.NewValueRef()
+			value.SetOutput("host")
+			return *openapi.NewConnectionMapping(*target, *value)
+		}(),
+		func() openapi.ConnectionMapping {
+			target := openapi.NewConnectionTarget("env")
+			target.SetName("API_URL")
+			value := openapi.NewValueRef()
+			value.SetOutput("url.http")
+			return *openapi.NewConnectionMapping(*target, *value)
+		}(),
+	})
 	return *conn
 }
 

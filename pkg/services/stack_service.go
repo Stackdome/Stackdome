@@ -373,7 +373,6 @@ func (s *stackService) GetStack(ctx context.Context, ID string) (*models.Stack, 
 	return stack, nil
 }
 
-
 func (s *stackService) ListStackConnections(ctx context.Context, stackID string) (models.StackConnections, *errors.ServiceError) {
 	stack, err := s.GetStack(ctx, stackID)
 	if err != nil {
@@ -409,10 +408,10 @@ func (s *stackService) CreateStackConnection(ctx context.Context, stackID string
 func (s *stackService) UpdateStackConnection(ctx context.Context, stackID, connectionID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
 	stack, _, err := s.prepareDesiredStackWithConnectionMutation(ctx, stackID, func(connections models.StackConnections) (models.StackConnections, *models.StackConnection, *errors.ServiceError) {
 		updated := *connection
-		updated.Id = connectionID
+		updated.ID = connectionID
 		found := false
 		for i := range connections {
-			if connections[i].Id == connectionID {
+			if connections[i].ID == connectionID {
 				connections[i] = updated
 				found = true
 				break
@@ -435,7 +434,7 @@ func (s *stackService) DeleteStackConnection(ctx context.Context, stackID, conne
 		result := make(models.StackConnections, 0, len(connections))
 		found := false
 		for _, existing := range connections {
-			if existing.Id == connectionID {
+			if existing.ID == connectionID {
 				found = true
 				continue
 			}

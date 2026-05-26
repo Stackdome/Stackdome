@@ -681,8 +681,8 @@ func getOptionalBoolConfig(config map[string]interface{}, key string, label stri
 }
 
 func connectionLabel(connection models.StackConnection, index int) string {
-	if connection.Id != "" {
-		return connection.Id
+	if connection.ID != "" {
+		return connection.ID
 	}
 	return fmt.Sprintf("#%d", index)
 }

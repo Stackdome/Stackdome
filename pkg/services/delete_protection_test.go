@@ -120,7 +120,6 @@ func newVolumeServiceForDeleteProtectionTest(checker connectionUsageChecker) *vo
 				TeamID: "team-1",
 			},
 		},
-		volumeMountStore:       &fakeVolumeMountStore{},
 		stackVolumeStore:       &fakeStackVolumeStore{stackID: "stack-1"},
 		connectionUsageChecker: checker,
 		clusterResourceService: fakeVolumeClusterResourceService{},
@@ -329,39 +328,6 @@ func (f *fakeVolumeStore) WithTransaction(ctx context.Context, fn func(context.C
 	return fn(ctx)
 }
 
-type fakeVolumeMountStore struct{}
-
-func (fakeVolumeMountStore) ListByStackResourceID(context.Context, string) ([]*models.VolumeMount, *errors.ServiceError) {
-	panic("not used")
-}
-func (fakeVolumeMountStore) ListByStackID(context.Context, string) ([]*models.VolumeMount, *errors.ServiceError) {
-	panic("not used")
-}
-func (fakeVolumeMountStore) ListBySourceVolumeID(context.Context, string) ([]*models.VolumeMount, *errors.ServiceError) {
-	return nil, nil
-}
-func (fakeVolumeMountStore) Create(context.Context, *models.VolumeMount) (*models.VolumeMount, *errors.ServiceError) {
-	panic("not used")
-}
-func (fakeVolumeMountStore) CreateWithTx(context.Context, *models.VolumeMount) (*models.VolumeMount, *errors.ServiceError) {
-	panic("not used")
-}
-func (fakeVolumeMountStore) BulkCreateWithTx(context.Context, []*models.VolumeMount) ([]*models.VolumeMount, *errors.ServiceError) {
-	panic("not used")
-}
-func (fakeVolumeMountStore) DeleteForStackResource(context.Context, string) *errors.ServiceError {
-	panic("not used")
-}
-func (fakeVolumeMountStore) DeleteForStackResourceWithTx(context.Context, string) *errors.ServiceError {
-	panic("not used")
-}
-func (fakeVolumeMountStore) DeleteForStack(context.Context, string) *errors.ServiceError {
-	panic("not used")
-}
-func (fakeVolumeMountStore) DeleteForStackWithTx(context.Context, string) *errors.ServiceError {
-	panic("not used")
-}
-
 type fakeStackVolumeStore struct {
 	stackID string
 }
@@ -404,5 +370,4 @@ var _ auth.PermissionService = allowPermissions{}
 var _ stores.SecretStore = (*fakeSecretStore)(nil)
 var _ stores.PostgresAddonStore = (*fakePostgresAddonStore)(nil)
 var _ stores.VolumeStore = (*fakeVolumeStore)(nil)
-var _ stores.VolumeMountStore = fakeVolumeMountStore{}
 var _ stores.StackVolumeStore = fakeStackVolumeStore{}

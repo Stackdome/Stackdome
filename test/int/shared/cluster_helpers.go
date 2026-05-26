@@ -486,6 +486,17 @@ func GetContainerEnvVar(deploy *appsv1.Deployment, envName string) (string, bool
 	return "", false
 }
 
+func GetContainerVolumeMount(deploy *appsv1.Deployment, mountPath string) (*corev1.VolumeMount, bool) {
+	for _, container := range deploy.Spec.Template.Spec.Containers {
+		for i, vm := range container.VolumeMounts {
+			if vm.MountPath == mountPath {
+				return &container.VolumeMounts[i], true
+			}
+		}
+	}
+	return nil, false
+}
+
 func VerifyGitCredentialsSecretExists(ctx context.Context, clusterClient client.Client, namespace, stackID string) {
 	secretList := &corev1.SecretList{}
 	err := clusterClient.List(ctx, secretList,

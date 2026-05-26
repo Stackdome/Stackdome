@@ -29,7 +29,7 @@ func TestNodesAndEdgesFromConnectionsDrivesTopology(t *testing.T) {
 		Volumes:        volumes,
 		Connections: models.StackConnections{
 			{
-				Id:   "pg-api",
+				ID:   "pg-api",
 				Kind: models.ConnectionKindEnv,
 				From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "pg-1"},
 				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
@@ -41,7 +41,7 @@ func TestNodesAndEdgesFromConnectionsDrivesTopology(t *testing.T) {
 				},
 			},
 			{
-				Id:   "tls-api",
+				ID:   "tls-api",
 				Kind: models.ConnectionKindEnv,
 				From: models.TopologyNodeRef{Type: models.TopologyNodeTypeSecret, Id: "sec-1"},
 				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
@@ -53,10 +53,10 @@ func TestNodesAndEdgesFromConnectionsDrivesTopology(t *testing.T) {
 				},
 			},
 			{
-				Id:   "vol-api",
-				Kind: models.ConnectionKindVolumeMount,
-				From: models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "uploads"},
-				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
+				ID:     "vol-api",
+				Kind:   models.ConnectionKindVolumeMount,
+				From:   models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "uploads"},
+				To:     models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
 				Config: models.ConnectionConfig{"mount_path": "/uploads"},
 			},
 		},

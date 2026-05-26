@@ -23,17 +23,12 @@ func NewStackConnectionStore(spec StackConnectionStoreSpec) stores.StackConnecti
 }
 
 func (s *stackConnectionStore) ListByStackID(ctx context.Context, stackID string) (models.StackConnections, *errors.ServiceError) {
-	var records []models.StackConnectionRecord
+	var connections models.StackConnections
 	if err := s.db(ctx).
 		Where("stack_id = ?", stackID).
 		Order("created_at ASC").
-		Find(&records).Error; err != nil {
+		Find(&connections).Error; err != nil {
 		return nil, errors.GeneralError("failed to list stack connections: %s", err.Error())
-	}
-
-	connections := make(models.StackConnections, 0, len(records))
-	for _, record := range records {
-		connections = append(connections, record.ToStackConnection())
 	}
 	return connections, nil
 }
@@ -44,13 +39,11 @@ func (s *stackConnectionStore) CreateWithTx(ctx context.Context, stackID string,
 		return nil, errors.GeneralError("transaction not found in context")
 	}
 
-	record := models.NewStackConnectionRecord(stackID, *connection)
-	if err := tx.Create(&record).Error; err != nil {
+	connection.StackID = stackID
+	if err := tx.Create(connection).Error; err != nil {
 		return nil, errors.GeneralError("failed to create stack connection: %s", err.Error())
 	}
-
-	created := record.ToStackConnection()
-	return &created, nil
+	return connection, nil
 }
 
 func (s *stackConnectionStore) UpdateWithTx(ctx context.Context, stackID, connectionID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
@@ -59,16 +52,16 @@ func (s *stackConnectionStore) UpdateWithTx(ctx context.Context, stackID, connec
 		return nil, errors.GeneralError("transaction not found in context")
 	}
 
-	record := models.NewStackConnectionRecord(stackID, *connection)
-	record.ID = connectionID
-	result := tx.Model(&models.StackConnectionRecord{}).
+	connection.StackID = stackID
+	connection.ID = connectionID
+	result := tx.Model(&models.StackConnection{}).
 		Where("stack_id = ? AND id = ?", stackID, connectionID).
 		Updates(map[string]interface{}{
-			"kind":     record.Kind,
-			"from_ref": record.FromRef,
-			"to_ref":   record.ToRef,
-			"mappings": record.Mappings,
-			"config":   record.Config,
+			"kind":     connection.Kind,
+			"from_ref": connection.From,
+			"to_ref":   connection.To,
+			"mappings": connection.Mappings,
+			"config":   connection.Config,
 		})
 	if result.Error != nil {
 		return nil, errors.GeneralError("failed to update stack connection: %s", result.Error.Error())
@@ -76,9 +69,7 @@ func (s *stackConnectionStore) UpdateWithTx(ctx context.Context, stackID, connec
 	if result.RowsAffected == 0 {
 		return nil, errors.NotFound("stack connection '%s' not found", connectionID)
 	}
-
-	updated := record.ToStackConnection()
-	return &updated, nil
+	return connection, nil
 }
 
 func (s *stackConnectionStore) DeleteWithTx(ctx context.Context, stackID, connectionID string) *errors.ServiceError {
@@ -87,7 +78,7 @@ func (s *stackConnectionStore) DeleteWithTx(ctx context.Context, stackID, connec
 		return errors.GeneralError("transaction not found in context")
 	}
 
-	result := tx.Where("stack_id = ? AND id = ?", stackID, connectionID).Delete(&models.StackConnectionRecord{})
+	result := tx.Where("stack_id = ? AND id = ?", stackID, connectionID).Delete(&models.StackConnection{})
 	if result.Error != nil {
 		return errors.GeneralError("failed to delete stack connection: %s", result.Error.Error())
 	}
@@ -103,19 +94,17 @@ func (s *stackConnectionStore) ReplaceByStackIDWithTx(ctx context.Context, stack
 		return errors.GeneralError("transaction not found in context")
 	}
 
-	if err := tx.Where("stack_id = ?", stackID).Delete(&models.StackConnectionRecord{}).Error; err != nil {
+	if err := tx.Where("stack_id = ?", stackID).Delete(&models.StackConnection{}).Error; err != nil {
 		return errors.GeneralError("failed to delete existing stack connections: %s", err.Error())
 	}
 	if len(connections) == 0 {
 		return nil
 	}
 
-	records := make([]models.StackConnectionRecord, 0, len(connections))
 	for i := range connections {
-		records = append(records, models.NewStackConnectionRecord(stackID, connections[i]))
+		connections[i].StackID = stackID
 	}
-
-	if err := tx.Create(&records).Error; err != nil {
+	if err := tx.Create(&connections).Error; err != nil {
 		return errors.GeneralError("failed to create stack connections: %s", err.Error())
 	}
 	return nil
@@ -138,7 +127,7 @@ func (s *stackConnectionStore) isNodeReferenced(ctx context.Context, stackID str
 		return false, nil
 	}
 
-	db := s.sessionFactory.New(ctx).Model(&models.StackConnectionRecord{})
+	db := s.sessionFactory.New(ctx).Model(&models.StackConnection{})
 	query := db.Where(s.nodeReferenceCondition(stackID, ref, refColumns[0]), s.nodeReferenceArgs(stackID, ref)...)
 	for _, refColumn := range refColumns[1:] {
 		query = query.Or(s.nodeReferenceCondition(stackID, ref, refColumn), s.nodeReferenceArgs(stackID, ref)...)

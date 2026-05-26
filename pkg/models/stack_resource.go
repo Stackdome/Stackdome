@@ -21,7 +21,7 @@ type StackResource struct {
 	ImageConfig     *ImageConfigSpec   `gorm:"type:jsonb"`
 	Init            *InitConfig        `gorm:"type:jsonb"`
 	ExecutionConfig *ExecutionConfig   `gorm:"type:jsonb"`
-	VolumeMounts    []*VolumeMount     `gorm:"foreignKey:StackResourceID"`
+	VolumeMounts    []*VolumeMount     `gorm:"-"`
 	DependsOn       Dependencies       `gorm:"type:jsonb"`
 	LifecycleConfig *LifecycleConfig   `gorm:"type:jsonb"`
 	Ports           Ports              `gorm:"type:jsonb"`

@@ -13,7 +13,7 @@ func TestPresentStackIncludesConnections(t *testing.T) {
 		Name: "demo",
 		Connections: models.StackConnections{
 			{
-				Id:   "conn-1",
+				ID:   "conn-1",
 				Kind: models.ConnectionKindEnv,
 				From: models.TopologyNodeRef{
 					Type: models.TopologyNodeTypeStackResource,

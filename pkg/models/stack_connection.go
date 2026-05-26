@@ -38,24 +38,15 @@ type ConnectionMappings []ConnectionMapping
 type ConnectionConfig map[string]interface{}
 
 type StackConnection struct {
-	Id       string              `json:"id,omitempty"`
-	Kind     ConnectionKind      `json:"kind"`
-	From     TopologyNodeRef     `json:"from"`
-	To       TopologyNodeRef     `json:"to"`
-	Mappings []ConnectionMapping `json:"mappings,omitempty"`
-	Config   ConnectionConfig    `json:"config,omitempty"`
-}
-
-type StackConnectionRecord struct {
-	ID        string             `gorm:"primary_key;default:gen_random_uuid()"`
-	StackID   string             `gorm:"not null;index"`
-	Kind      ConnectionKind     `gorm:"not null"`
-	FromRef   TopologyNodeRef    `gorm:"column:from_ref;type:jsonb;not null"`
-	ToRef     TopologyNodeRef    `gorm:"column:to_ref;type:jsonb;not null"`
-	Mappings  ConnectionMappings `gorm:"type:jsonb"`
-	Config    ConnectionConfig   `gorm:"type:jsonb"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        string             `json:"id" gorm:"column:id;primary_key;default:gen_random_uuid()"`
+	StackID   string             `json:"-" gorm:"not null;index"`
+	Kind      ConnectionKind     `json:"kind" gorm:"not null"`
+	From      TopologyNodeRef    `json:"from" gorm:"column:from_ref;type:jsonb;not null"`
+	To        TopologyNodeRef    `json:"to" gorm:"column:to_ref;type:jsonb;not null"`
+	Mappings  ConnectionMappings `json:"mappings,omitempty" gorm:"type:jsonb"`
+	Config    ConnectionConfig   `json:"config,omitempty" gorm:"type:jsonb"`
+	CreatedAt time.Time          `json:"-"`
+	UpdatedAt time.Time          `json:"-"`
 }
 
 type TopologyNodeRef struct {
@@ -183,30 +174,7 @@ func (connections StackConnections) FromType(sourceType TopologyNodeType) StackC
 	return result
 }
 
-func (r StackConnectionRecord) ToStackConnection() StackConnection {
-	return StackConnection{
-		Id:       r.ID,
-		Kind:     r.Kind,
-		From:     r.FromRef,
-		To:       r.ToRef,
-		Mappings: []ConnectionMapping(r.Mappings),
-		Config:   r.Config,
-	}
-}
-
-func NewStackConnectionRecord(stackID string, connection StackConnection) StackConnectionRecord {
-	return StackConnectionRecord{
-		ID:       connection.Id,
-		StackID:  stackID,
-		Kind:     connection.Kind,
-		FromRef:  connection.From,
-		ToRef:    connection.To,
-		Mappings: ConnectionMappings(connection.Mappings),
-		Config:   connection.Config,
-	}
-}
-
-func (StackConnectionRecord) TableName() string {
+func (StackConnection) TableName() string {
 	return "stack_connections"
 }
 

@@ -63,12 +63,12 @@ func TestStackConnectionStoreReferencesSourceByTypeAndID(t *testing.T) {
 	sf := newTestSessionFactory(t)
 	store := NewStackConnectionStore(StackConnectionStoreSpec{SessionFactory: sf})
 
-	createConnectionRecord(t, sf, models.StackConnectionRecord{
+	createConnectionRecord(t, sf, models.StackConnection{
 		ID:      "conn-1",
 		StackID: "stack-1",
 		Kind:    models.ConnectionKindEnv,
-		FromRef: models.TopologyNodeRef{Type: models.TopologyNodeTypeSecret, Id: "sec-1"},
-		ToRef:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
+		From:    models.TopologyNodeRef{Type: models.TopologyNodeTypeSecret, Id: "sec-1"},
+		To:      models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
 	})
 
 	referenced, err := store.IsNodeReferencedAsSource(ctx, "", models.TopologyNodeRef{
@@ -88,12 +88,12 @@ func TestStackConnectionStoreReferencesTargetByTypeAndID(t *testing.T) {
 	sf := newTestSessionFactory(t)
 	store := NewStackConnectionStore(StackConnectionStoreSpec{SessionFactory: sf})
 
-	createConnectionRecord(t, sf, models.StackConnectionRecord{
+	createConnectionRecord(t, sf, models.StackConnection{
 		ID:      "conn-1",
 		StackID: "stack-1",
 		Kind:    models.ConnectionKindEnv,
-		FromRef: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
-		ToRef:   models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "pg-1"},
+		From:    models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
+		To:      models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "pg-1"},
 	})
 
 	referenced, err := store.IsNodeReferencedAsTarget(ctx, "", models.TopologyNodeRef{
@@ -113,19 +113,19 @@ func TestStackConnectionStoreReferencesSourceByStackScopedName(t *testing.T) {
 	sf := newTestSessionFactory(t)
 	store := NewStackConnectionStore(StackConnectionStoreSpec{SessionFactory: sf})
 
-	createConnectionRecord(t, sf, models.StackConnectionRecord{
+	createConnectionRecord(t, sf, models.StackConnection{
 		ID:      "conn-1",
 		StackID: "stack-1",
 		Kind:    models.ConnectionKindVolumeMount,
-		FromRef: models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "uploads"},
-		ToRef:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+		From:    models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "uploads"},
+		To:      models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
 	})
-	createConnectionRecord(t, sf, models.StackConnectionRecord{
+	createConnectionRecord(t, sf, models.StackConnection{
 		ID:      "conn-2",
 		StackID: "stack-2",
 		Kind:    models.ConnectionKindVolumeMount,
-		FromRef: models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "uploads"},
-		ToRef:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+		From:    models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "uploads"},
+		To:      models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
 	})
 
 	referenced, err := store.IsNodeReferencedAsSource(ctx, "stack-1", models.TopologyNodeRef{
@@ -156,12 +156,12 @@ func TestStackConnectionStoreReferencesTargetByStackScopedName(t *testing.T) {
 	sf := newTestSessionFactory(t)
 	store := NewStackConnectionStore(StackConnectionStoreSpec{SessionFactory: sf})
 
-	createConnectionRecord(t, sf, models.StackConnectionRecord{
+	createConnectionRecord(t, sf, models.StackConnection{
 		ID:      "conn-1",
 		StackID: "stack-1",
 		Kind:    models.ConnectionKindBuildArtifactSource,
-		FromRef: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "builder"},
-		ToRef:   models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "assets"},
+		From:    models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "builder"},
+		To:      models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "assets"},
 	})
 
 	referenced, err := store.IsNodeReferencedAsTarget(ctx, "stack-1", models.TopologyNodeRef{
@@ -176,7 +176,7 @@ func TestStackConnectionStoreReferencesTargetByStackScopedName(t *testing.T) {
 	}
 }
 
-func createConnectionRecord(t *testing.T, sf *testSessionFactory, record models.StackConnectionRecord) {
+func createConnectionRecord(t *testing.T, sf *testSessionFactory, record models.StackConnection) {
 	t.Helper()
 	if err := sf.db.Create(&record).Error; err != nil {
 		t.Fatalf("failed to create stack connection record: %v", err)

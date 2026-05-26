@@ -310,8 +310,8 @@ func presentConnections(connections models.StackConnections) []openapi.StackConn
 			From: presentTopologyNodeRef(connection.From),
 			To:   presentTopologyNodeRef(connection.To),
 		}
-		if connection.Id != "" {
-			result[i].SetId(connection.Id)
+		if connection.ID != "" {
+			result[i].SetId(connection.ID)
 		}
 		if len(connection.Mappings) > 0 {
 			result[i].SetMappings(presentConnectionMappings(connection.Mappings))
@@ -578,7 +578,7 @@ func convertConnections(connections []openapi.StackConnection) models.StackConne
 	result := make(models.StackConnections, len(connections))
 	for i, connection := range connections {
 		result[i] = models.StackConnection{
-			Id:       connection.GetId(),
+			ID:       connection.GetId(),
 			Kind:     models.ConnectionKind(connection.Kind),
 			From:     convertTopologyNodeRef(connection.From),
 			To:       convertTopologyNodeRef(connection.To),

@@ -26,7 +26,7 @@ func TestConnectionReconcilerResolvesVolumeMountConnections(t *testing.T) {
 		},
 		Connections: models.StackConnections{
 			{
-				Id:   "vol-web",
+				ID:   "vol-web",
 				Kind: models.ConnectionKindVolumeMount,
 				From: models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "uploads"},
 				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
@@ -80,7 +80,7 @@ func TestConnectionReconcilerResolvesBuildArtifactSourceConnections(t *testing.T
 		},
 		Connections: models.StackConnections{
 			{
-				Id:   "build-assets",
+				ID:   "build-assets",
 				Kind: models.ConnectionKindBuildArtifactSource,
 				From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "builder"},
 				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "assets"},
@@ -152,7 +152,7 @@ func TestConnectionReconcilerErrorsOnUnknownVolume(t *testing.T) {
 		},
 		Connections: models.StackConnections{
 			{
-				Id:   "bad-vol",
+				ID:   "bad-vol",
 				Kind: models.ConnectionKindVolumeMount,
 				From: models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "nonexistent"},
 				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
@@ -201,7 +201,7 @@ func TestConnectionReconcilerResolvesPostgresEnvConnections(t *testing.T) {
 		},
 		Connections: models.StackConnections{
 			{
-				Id:   "pg-web",
+				ID:   "pg-web",
 				Kind: models.ConnectionKindEnv,
 				From: models.TopologyNodeRef{
 					Type: models.TopologyNodeTypePostgresAddon,
@@ -278,7 +278,7 @@ func TestConnectionReconcilerSupportsTemplateConnectionValues(t *testing.T) {
 		},
 		Connections: models.StackConnections{
 			{
-				Id:   "pg-web",
+				ID:   "pg-web",
 				Kind: models.ConnectionKindEnv,
 				From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "pg-1"},
 				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
@@ -332,7 +332,7 @@ func TestConnectionReconcilerRequeuesWhenCredentialsUnavailable(t *testing.T) {
 		},
 		Connections: models.StackConnections{
 			{
-				Id:   "pg-web",
+				ID:   "pg-web",
 				Kind: models.ConnectionKindEnv,
 				From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "pg-1"},
 				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
@@ -389,7 +389,7 @@ func TestConnectionReconcilerResolvesStackResourceEnvConnections(t *testing.T) {
 		},
 		Connections: models.StackConnections{
 			{
-				Id:   "api-web",
+				ID:   "api-web",
 				Kind: models.ConnectionKindEnv,
 				From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
 				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
@@ -471,7 +471,7 @@ func TestConnectionReconcilerResolvesSecretEnvConnections(t *testing.T) {
 		},
 		Connections: models.StackConnections{
 			{
-				Id:   "tls-web",
+				ID:   "tls-web",
 				Kind: models.ConnectionKindEnv,
 				From: models.TopologyNodeRef{Type: models.TopologyNodeTypeSecret, Id: "sec-1"},
 				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},

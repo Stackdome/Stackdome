@@ -108,21 +108,21 @@ func (r *connectionReconciler) resolveVolumeMountConnections(
 	for _, connection := range stack.Connections.OfKind(models.ConnectionKindVolumeMount) {
 		volume, ok := volumeMap[connection.From.Name]
 		if !ok {
-			return fmt.Errorf("volume_mount connection '%s' references unknown volume '%s'", connection.Id, connection.From.Name)
+			return fmt.Errorf("volume_mount connection '%s' references unknown volume '%s'", connection.ID, connection.From.Name)
 		}
 
 		resource, ok := resourceMap[connection.To.Name]
 		if !ok {
-			return fmt.Errorf("volume_mount connection '%s' references unknown stack resource '%s'", connection.Id, connection.To.Name)
+			return fmt.Errorf("volume_mount connection '%s' references unknown stack resource '%s'", connection.ID, connection.To.Name)
 		}
 
 		mountPath, err := connection.RequiredConfigString("mount_path")
 		if err != nil {
-			return fmt.Errorf("volume_mount connection '%s' has invalid config: %w", connection.Id, err)
+			return fmt.Errorf("volume_mount connection '%s' has invalid config: %w", connection.ID, err)
 		}
 		subPath, _, err := connection.ConfigString("sub_path")
 		if err != nil {
-			return fmt.Errorf("volume_mount connection '%s' has invalid config: %w", connection.Id, err)
+			return fmt.Errorf("volume_mount connection '%s' has invalid config: %w", connection.ID, err)
 		}
 
 		mount := &models.VolumeMount{
@@ -136,7 +136,7 @@ func (r *connectionReconciler) resolveVolumeMountConnections(
 		}
 
 		resource.VolumeMounts = append(resource.VolumeMounts, mount)
-		r.logger.Infof("resolved volume_mount connection '%s': volume '%s' → resource '%s' at '%s'", connection.Id, volume.Name, resource.Name, mountPath)
+		r.logger.Infof("resolved volume_mount connection '%s': volume '%s' → resource '%s' at '%s'", connection.ID, volume.Name, resource.Name, mountPath)
 	}
 
 	return nil
@@ -149,21 +149,21 @@ func (r *connectionReconciler) resolveBuildArtifactSourceConnections(
 ) error {
 	for _, connection := range stack.Connections.OfKind(models.ConnectionKindBuildArtifactSource) {
 		if _, ok := resourceMap[connection.From.Name]; !ok {
-			return fmt.Errorf("build_artifact_source connection '%s' references unknown stack resource '%s'", connection.Id, connection.From.Name)
+			return fmt.Errorf("build_artifact_source connection '%s' references unknown stack resource '%s'", connection.ID, connection.From.Name)
 		}
 
 		volume, ok := volumeMap[connection.To.Name]
 		if !ok {
-			return fmt.Errorf("build_artifact_source connection '%s' references unknown volume '%s'", connection.Id, connection.To.Name)
+			return fmt.Errorf("build_artifact_source connection '%s' references unknown volume '%s'", connection.ID, connection.To.Name)
 		}
 
 		sourcePath, err := connection.RequiredConfigString("source_path")
 		if err != nil {
-			return fmt.Errorf("build_artifact_source connection '%s' has invalid config: %w", connection.Id, err)
+			return fmt.Errorf("build_artifact_source connection '%s' has invalid config: %w", connection.ID, err)
 		}
 		destinationPath, _, err := connection.ConfigString("destination_path")
 		if err != nil {
-			return fmt.Errorf("build_artifact_source connection '%s' has invalid config: %w", connection.Id, err)
+			return fmt.Errorf("build_artifact_source connection '%s' has invalid config: %w", connection.ID, err)
 		}
 
 		if volume.VolumeSource == nil {
@@ -175,7 +175,7 @@ func (r *connectionReconciler) resolveBuildArtifactSourceConnections(
 			SourcePath:      sourcePath,
 			DestinationPath: destinationPath,
 		})
-		r.logger.Infof("resolved build_artifact_source connection '%s': resource '%s' → volume '%s'", connection.Id, connection.From.Name, volume.Name)
+		r.logger.Infof("resolved build_artifact_source connection '%s': resource '%s' → volume '%s'", connection.ID, connection.From.Name, volume.Name)
 	}
 
 	return nil
@@ -243,7 +243,7 @@ func (r *connectionReconciler) resolveConnectionEnvVars(
 	for _, connection := range connections.FromType(models.TopologyNodeTypeStackResource) {
 		sourceResource, ok := resourceMap[connection.From.Name]
 		if !ok {
-			return nil, nil, fmt.Errorf("stack resource connection '%s' references unknown resource '%s'", connection.Id, connection.From.Name)
+			return nil, nil, fmt.Errorf("stack resource connection '%s' references unknown resource '%s'", connection.ID, connection.From.Name)
 		}
 		resolvedEnvVars, err := resolveConnectionMappings(connection, sourceResource.ToOutputMap())
 		if err != nil {
@@ -254,11 +254,11 @@ func (r *connectionReconciler) resolveConnectionEnvVars(
 
 	for _, connection := range connections.FromType(models.TopologyNodeTypeSecret) {
 		if r.secretService == nil {
-			return nil, nil, fmt.Errorf("secret service is not configured for resolving connection '%s'", connection.Id)
+			return nil, nil, fmt.Errorf("secret service is not configured for resolving connection '%s'", connection.ID)
 		}
 		secret, serviceErr := r.secretService.InternalGetByID(ctx, connection.From.Id)
 		if serviceErr != nil {
-			return nil, nil, fmt.Errorf("failed to fetch secret '%s' for connection '%s': %w", connection.From.Id, connection.Id, serviceErr)
+			return nil, nil, fmt.Errorf("failed to fetch secret '%s' for connection '%s': %w", connection.From.Id, connection.ID, serviceErr)
 		}
 		resolvedEnvVars, err := resolveConnectionMappings(connection, secret.ToOutputMap())
 		if err != nil {
@@ -338,18 +338,18 @@ func resolveSelfOutputEnvVars(resource *models.StackResource) error {
 
 func postgresConnectionConfig(connection models.StackConnection) (database string, superuser bool, err error) {
 	if value, ok, err := connection.ConfigString("database"); err != nil {
-		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.Id, err)
+		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.ID, err)
 	} else if ok {
 		database = value
 	}
 
 	if scope, ok, err := connection.ConfigString("credential_scope"); err != nil {
-		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.Id, err)
+		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.ID, err)
 	} else if ok {
 		superuser = scope == "superuser"
 	}
 	if value, ok, err := connection.ConfigBool("superuser"); err != nil {
-		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.Id, err)
+		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.ID, err)
 	} else if ok {
 		superuser = value
 	}
@@ -361,11 +361,11 @@ func resolveConnectionMappings(connection models.StackConnection, outputs map[st
 	envVars := make([]models.EnvVar, 0, len(connection.Mappings))
 	for _, mapping := range connection.Mappings {
 		if mapping.Target.Type != models.ConnectionTargetTypeEnv {
-			return nil, fmt.Errorf("connection '%s' target type '%s' is not supported for env resolution", connection.Id, mapping.Target.Type)
+			return nil, fmt.Errorf("connection '%s' target type '%s' is not supported for env resolution", connection.ID, mapping.Target.Type)
 		}
 		value, err := resolveConnectionValue(mapping.Value, outputs)
 		if err != nil {
-			return nil, fmt.Errorf("failed to resolve connection '%s' mapping for env '%s': %w", connection.Id, mapping.Target.Name, err)
+			return nil, fmt.Errorf("failed to resolve connection '%s' mapping for env '%s': %w", connection.ID, mapping.Target.Name, err)
 		}
 		envVars = append(envVars, models.EnvVar{
 			Name:  mapping.Target.Name,

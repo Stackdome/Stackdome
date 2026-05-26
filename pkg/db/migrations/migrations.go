@@ -54,4 +54,5 @@ var MigrationList = []*gormigrate.Migration{
 	encryptClusterCredentials(),
 	createStackConnectionsTable(),
 	dropLegacyUsageTables(),
+	dropVolumeMountsTable(),
 }
