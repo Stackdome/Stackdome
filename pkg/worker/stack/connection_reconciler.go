@@ -33,17 +33,7 @@ func (r *connectionReconciler) Reconcile(ctx context.Context, stack *models.Stac
 		return resultNil, nil
 	}
 
-	hasVolumeMounts := false
-	hasBuildArtifactSources := false
-	for _, connection := range stack.Connections {
-		if connection.Kind == models.ConnectionKindVolumeMount {
-			hasVolumeMounts = true
-		}
-		if connection.Kind == models.ConnectionKindBuildArtifactSource {
-			hasBuildArtifactSources = true
-		}
-	}
-	if !hasVolumeMounts && !hasBuildArtifactSources {
+	if !stack.Connections.HasAnyKind(models.ConnectionKindVolumeMount, models.ConnectionKindBuildArtifactSource) {
 		return resultNil, nil
 	}
 
@@ -59,16 +49,12 @@ func (r *connectionReconciler) Reconcile(ctx context.Context, stack *models.Stac
 
 	resourceMap := stack.ResourcesMap()
 
-	if hasVolumeMounts {
-		if err := r.resolveVolumeMountConnections(stack, resourceMap, volumeMap); err != nil {
-			return resultNil, err
-		}
+	if err := r.resolveVolumeMountConnections(stack, resourceMap, volumeMap); err != nil {
+		return resultNil, err
 	}
 
-	if hasBuildArtifactSources {
-		if err := r.resolveBuildArtifactSourceConnections(stack, resourceMap, volumeMap); err != nil {
-			return resultNil, err
-		}
+	if err := r.resolveBuildArtifactSourceConnections(stack, resourceMap, volumeMap); err != nil {
+		return resultNil, err
 	}
 
 	return resultNil, nil
@@ -79,11 +65,7 @@ func (r *connectionReconciler) resolveVolumeMountConnections(
 	resourceMap map[string]*models.StackResource,
 	volumeMap map[string]*models.Volume,
 ) error {
-	for _, connection := range stack.Connections {
-		if connection.Kind != models.ConnectionKindVolumeMount {
-			continue
-		}
-
+	for _, connection := range stack.Connections.OfKind(models.ConnectionKindVolumeMount) {
 		volume, ok := volumeMap[connection.From.Name]
 		if !ok {
 			return fmt.Errorf("volume_mount connection '%s' references unknown volume '%s'", connection.Id, connection.From.Name)
@@ -94,8 +76,14 @@ func (r *connectionReconciler) resolveVolumeMountConnections(
 			return fmt.Errorf("volume_mount connection '%s' references unknown stack resource '%s'", connection.Id, connection.To.Name)
 		}
 
-		mountPath, _ := stringFromConfig(connection.Config, "mount_path")
-		subPath, _ := stringFromConfig(connection.Config, "sub_path")
+		mountPath, err := connection.RequiredConfigString("mount_path")
+		if err != nil {
+			return fmt.Errorf("volume_mount connection '%s' has invalid config: %w", connection.Id, err)
+		}
+		subPath, _, err := connection.ConfigString("sub_path")
+		if err != nil {
+			return fmt.Errorf("volume_mount connection '%s' has invalid config: %w", connection.Id, err)
+		}
 
 		mount := &models.VolumeMount{
 			StackID:          stack.ID,
@@ -119,11 +107,7 @@ func (r *connectionReconciler) resolveBuildArtifactSourceConnections(
 	resourceMap map[string]*models.StackResource,
 	volumeMap map[string]*models.Volume,
 ) error {
-	for _, connection := range stack.Connections {
-		if connection.Kind != models.ConnectionKindBuildArtifactSource {
-			continue
-		}
-
+	for _, connection := range stack.Connections.OfKind(models.ConnectionKindBuildArtifactSource) {
 		if _, ok := resourceMap[connection.From.Name]; !ok {
 			return fmt.Errorf("build_artifact_source connection '%s' references unknown stack resource '%s'", connection.Id, connection.From.Name)
 		}
@@ -133,8 +117,14 @@ func (r *connectionReconciler) resolveBuildArtifactSourceConnections(
 			return fmt.Errorf("build_artifact_source connection '%s' references unknown volume '%s'", connection.Id, connection.To.Name)
 		}
 
-		sourcePath, _ := stringFromConfig(connection.Config, "source_path")
-		destinationPath, _ := stringFromConfig(connection.Config, "destination_path")
+		sourcePath, err := connection.RequiredConfigString("source_path")
+		if err != nil {
+			return fmt.Errorf("build_artifact_source connection '%s' has invalid config: %w", connection.Id, err)
+		}
+		destinationPath, _, err := connection.ConfigString("destination_path")
+		if err != nil {
+			return fmt.Errorf("build_artifact_source connection '%s' has invalid config: %w", connection.Id, err)
+		}
 
 		if volume.VolumeSource == nil {
 			volume.VolumeSource = &models.VolumeSource{}
@@ -149,13 +139,4 @@ func (r *connectionReconciler) resolveBuildArtifactSourceConnections(
 	}
 
 	return nil
-}
-
-func stringFromConfig(config map[string]interface{}, key string) (string, bool) {
-	v, ok := config[key]
-	if !ok {
-		return "", false
-	}
-	s, ok := v.(string)
-	return s, ok
 }

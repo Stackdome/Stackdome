@@ -4,25 +4,29 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
 	serrors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"go.uber.org/mock/gomock"
 )
 
 func TestAddonEnvReconcilerResolvesPostgresEnvConnections(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	postgresAddons := NewMockpostgresAddonService(ctrl)
+	postgresAddons.EXPECT().
+		InternalGetCredentials(gomock.Any(), "pg-1", "app", false).
+		Return(&models.PostgresCredentials{
+			Database:         "app",
+			Host:             "pg-rw.default.svc.cluster.local",
+			Port:             5432,
+			Username:         "app_user",
+			Password:         "secret",
+			SSLMode:          "require",
+			ConnectionString: "postgresql://app_user:secret@pg-rw.default.svc.cluster.local:5432/app",
+		}, nil)
+
 	reconciler := NewAddonEnvReconciler(AddonEnvReconcilerSpec{
-		PostgresAddonService: fakeWorkerPostgresAddonService{
-			credentials: map[string]*models.PostgresCredentials{
-				"pg-1": {
-					Database:         "app",
-					Host:             "pg-rw.default.svc.cluster.local",
-					Port:             5432,
-					Username:         "app_user",
-					Password:         "secret",
-					SSLMode:          "require",
-					ConnectionString: "postgresql://app_user:secret@pg-rw.default.svc.cluster.local:5432/app",
-				},
-			},
-		},
+		PostgresAddonService: postgresAddons,
 	})
 
 	stack := &models.Stack{
@@ -86,20 +90,22 @@ func TestAddonEnvReconcilerResolvesPostgresEnvConnections(t *testing.T) {
 }
 
 func TestAddonEnvReconcilerSupportsTemplateConnectionValues(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	postgresAddons := NewMockpostgresAddonService(ctrl)
+	postgresAddons.EXPECT().
+		InternalGetCredentials(gomock.Any(), "pg-1", "app", false).
+		Return(&models.PostgresCredentials{
+			Database:      "app",
+			Host:          "pg-rw.default.svc.cluster.local",
+			Port:          5432,
+			Username:      "app_user",
+			Password:      "secret",
+			SSLMode:       "require",
+			CACertificate: "ca-data",
+		}, nil)
+
 	reconciler := NewAddonEnvReconciler(AddonEnvReconcilerSpec{
-		PostgresAddonService: fakeWorkerPostgresAddonService{
-			credentials: map[string]*models.PostgresCredentials{
-				"pg-1": {
-					Database:      "app",
-					Host:          "pg-rw.default.svc.cluster.local",
-					Port:          5432,
-					Username:      "app_user",
-					Password:      "secret",
-					SSLMode:       "require",
-					CACertificate: "ca-data",
-				},
-			},
-		},
+		PostgresAddonService: postgresAddons,
 	})
 
 	stack := &models.Stack{
@@ -150,10 +156,14 @@ func TestAddonEnvReconcilerSupportsTemplateConnectionValues(t *testing.T) {
 }
 
 func TestAddonEnvReconcilerRequeuesWhenConnectionCredentialsAreUnavailable(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	postgresAddons := NewMockpostgresAddonService(ctrl)
+	postgresAddons.EXPECT().
+		InternalGetCredentials(gomock.Any(), "pg-1", "app", false).
+		Return(nil, serrors.BadRequest("not ready"))
+
 	reconciler := NewAddonEnvReconciler(AddonEnvReconcilerSpec{
-		PostgresAddonService: fakeWorkerPostgresAddonService{
-			err: serrors.BadRequest("not ready"),
-		},
+		PostgresAddonService: postgresAddons,
 	})
 
 	stack := &models.Stack{
@@ -265,11 +275,35 @@ func TestAddonEnvReconcilerResolvesStackResourceEnvConnections(t *testing.T) {
 	if env[2].Name != "API_PUBLIC_URL" || env[2].Value != "http://api.example.com" {
 		t.Fatalf("unexpected API_PUBLIC_URL env var: %#v", env[2])
 	}
+
+	stackCR, buildErr := builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}).BuildStackCR(stack)
+	if buildErr != nil {
+		t.Fatalf("expected stack CR build to succeed, got %v", buildErr)
+	}
+	crEnv := stackCR.Spec.StackResources[1].Spec.EnvironmentVariables
+	if len(crEnv) != 3 {
+		t.Fatalf("expected 3 normal CR env vars, got %d", len(crEnv))
+	}
+	if crEnv[0].Name != "API_HOST" || crEnv[0].Value != "api.default.svc.cluster.local" {
+		t.Fatalf("unexpected API_HOST CR env var: %#v", crEnv[0])
+	}
+	if crEnv[1].Name != "API_URL" || crEnv[1].Value != "http://api.default.svc.cluster.local:8080" {
+		t.Fatalf("unexpected API_URL CR env var: %#v", crEnv[1])
+	}
+	if crEnv[2].Name != "API_PUBLIC_URL" || crEnv[2].Value != "http://api.example.com" {
+		t.Fatalf("unexpected API_PUBLIC_URL CR env var: %#v", crEnv[2])
+	}
 }
 
 func TestAddonEnvReconcilerResolvesSecretEnvConnections(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	secrets := NewMocksecretOutputService(ctrl)
+	secrets.EXPECT().
+		InternalGetByID(gomock.Any(), "sec-1").
+		Return(&models.Secret{ID: "sec-1", Data: map[string]string{"tls.crt": "cert-data"}}, nil)
+
 	reconciler := NewAddonEnvReconciler(AddonEnvReconcilerSpec{
-		SecretService: fakeWorkerSecretService{secrets: map[string]*models.Secret{"sec-1": {ID: "sec-1", Data: map[string]string{"tls.crt": "cert-data"}}}},
+		SecretService: secrets,
 	})
 
 	stack := &models.Stack{
@@ -357,38 +391,6 @@ func TestAddonEnvReconcilerResolvesSelfOutputEnvVars(t *testing.T) {
 	if env[1].Name != "INTERNAL_URL" || env[1].Value != "http://web.default.svc.cluster.local:3000" {
 		t.Fatalf("unexpected INTERNAL_URL env var: %#v", env[1])
 	}
-}
-
-type fakeWorkerPostgresAddonService struct {
-	credentials map[string]*models.PostgresCredentials
-	err         *serrors.ServiceError
-}
-
-func (f fakeWorkerPostgresAddonService) InternalGetPostgresAddon(_ context.Context, id string) (*models.PostgresAddon, *serrors.ServiceError) {
-	return &models.PostgresAddon{ID: id}, nil
-}
-
-func (f fakeWorkerPostgresAddonService) InternalGetCredentials(_ context.Context, addonID string, _ string, _ bool) (*models.PostgresCredentials, *serrors.ServiceError) {
-	if f.err != nil {
-		return nil, f.err
-	}
-	creds, ok := f.credentials[addonID]
-	if !ok {
-		return nil, serrors.NotFound("postgres addon credentials not found")
-	}
-	return creds, nil
-}
-
-type fakeWorkerSecretService struct {
-	secrets map[string]*models.Secret
-}
-
-func (f fakeWorkerSecretService) InternalGetByID(_ context.Context, id string) (*models.Secret, *serrors.ServiceError) {
-	secret, ok := f.secrets[id]
-	if !ok {
-		return nil, serrors.NotFound("secret not found")
-	}
-	return secret, nil
 }
 
 func stringPtr(in string) *string {

@@ -23,6 +23,11 @@ type secretOutputService interface {
 	InternalGetByID(ctx context.Context, id string) (*models.Secret, *errors.ServiceError)
 }
 
+type postgresAddonService interface {
+	InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
+	InternalGetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError)
+}
+
 type AddonEnvReconcilerSpec struct {
 	PostgresAddonService postgresAddonService
 	SecretService        secretOutputService
@@ -46,9 +51,9 @@ func (r *addonEnvReconciler) Reconcile(ctx context.Context, stack *models.Stack)
 	}
 
 	for _, resource := range stack.StackResources {
-		hasConnectionEnv := hasEnvConnections(stack, resource.Name)
+		envConnections := stack.Connections.EnvForStackResource(resource.Name)
 		hasSelfOutputEnv := hasSelfOutputEnvVars(resource)
-		if !hasConnectionEnv && !hasSelfOutputEnv {
+		if len(envConnections) == 0 && !hasSelfOutputEnv {
 			continue
 		}
 
@@ -58,7 +63,7 @@ func (r *addonEnvReconciler) Reconcile(ctx context.Context, stack *models.Stack)
 			}
 		}
 
-		resolvedEnvVars, requeueResult, err := r.resolveConnectionEnvVars(ctx, stack, resource)
+		resolvedEnvVars, requeueResult, err := r.resolveConnectionEnvVars(ctx, stack, resource, envConnections)
 		if err != nil {
 			return resultNil, fmt.Errorf("failed to resolve connection env vars for resource '%s': %w", resource.Name, err)
 		}
@@ -81,11 +86,16 @@ func (r *addonEnvReconciler) Reconcile(ctx context.Context, stack *models.Stack)
 	return resultNil, nil
 }
 
-func (r *addonEnvReconciler) resolveConnectionEnvVars(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]models.EnvVar, *subReconcilerResult, error) {
+func (r *addonEnvReconciler) resolveConnectionEnvVars(
+	ctx context.Context,
+	stack *models.Stack,
+	resource *models.StackResource,
+	connections models.StackConnections,
+) ([]models.EnvVar, *subReconcilerResult, error) {
 	var envVars []models.EnvVar
 
 	resourceMap := stack.ResourcesMap()
-	for _, connection := range postgresEnvConnectionsForResource(stack, resource.Name) {
+	for _, connection := range connections.FromType(models.TopologyNodeTypePostgresAddon) {
 		resolvedEnvVars, requeueResult, err := r.resolvePostgresConnectionEnvVars(ctx, connection)
 		if err != nil {
 			return nil, nil, err
@@ -96,7 +106,7 @@ func (r *addonEnvReconciler) resolveConnectionEnvVars(ctx context.Context, stack
 		envVars = append(envVars, resolvedEnvVars...)
 	}
 
-	for _, connection := range stackResourceEnvConnectionsForResource(stack, resource.Name) {
+	for _, connection := range connections.FromType(models.TopologyNodeTypeStackResource) {
 		sourceResource, ok := resourceMap[connection.From.Name]
 		if !ok {
 			return nil, nil, fmt.Errorf("stack resource connection '%s' references unknown resource '%s'", connection.Id, connection.From.Name)
@@ -108,7 +118,7 @@ func (r *addonEnvReconciler) resolveConnectionEnvVars(ctx context.Context, stack
 		envVars = append(envVars, resolvedEnvVars...)
 	}
 
-	for _, connection := range secretEnvConnectionsForResource(stack, resource.Name) {
+	for _, connection := range connections.FromType(models.TopologyNodeTypeSecret) {
 		if r.secretService == nil {
 			return nil, nil, fmt.Errorf("secret service is not configured for resolving connection '%s'", connection.Id)
 		}
@@ -156,67 +166,21 @@ func resolveSelfOutputEnvVars(resource *models.StackResource) error {
 	return nil
 }
 
-func hasEnvConnections(stack *models.Stack, resourceName string) bool {
-	return len(envConnectionsForResource(stack, resourceName)) > 0
-}
-
-func envConnectionsForResource(stack *models.Stack, resourceName string) []models.StackConnection {
-	var connections []models.StackConnection
-	for _, connection := range stack.Connections {
-		if connection.Kind != models.ConnectionKindEnv {
-			continue
-		}
-		if connection.To.Type != models.TopologyNodeTypeStackResource || connection.To.Name != resourceName {
-			continue
-		}
-		connections = append(connections, connection)
-	}
-	return connections
-}
-
-func postgresEnvConnectionsForResource(stack *models.Stack, resourceName string) []models.StackConnection {
-	return filterEnvConnectionsBySourceType(envConnectionsForResource(stack, resourceName), models.TopologyNodeTypePostgresAddon)
-}
-
-func stackResourceEnvConnectionsForResource(stack *models.Stack, resourceName string) []models.StackConnection {
-	return filterEnvConnectionsBySourceType(envConnectionsForResource(stack, resourceName), models.TopologyNodeTypeStackResource)
-}
-
-func secretEnvConnectionsForResource(stack *models.Stack, resourceName string) []models.StackConnection {
-	return filterEnvConnectionsBySourceType(envConnectionsForResource(stack, resourceName), models.TopologyNodeTypeSecret)
-}
-
-func filterEnvConnectionsBySourceType(connections []models.StackConnection, sourceType models.TopologyNodeType) []models.StackConnection {
-	var filtered []models.StackConnection
-	for _, connection := range connections {
-		if connection.From.Type == sourceType {
-			filtered = append(filtered, connection)
-		}
-	}
-	return filtered
-}
-
 func postgresConnectionConfig(connection models.StackConnection) (database string, superuser bool, err error) {
-	if rawDatabase, ok := connection.Config["database"]; ok {
-		value, ok := rawDatabase.(string)
-		if !ok {
-			return "", false, fmt.Errorf("connection '%s' config.database must be a string", connection.Id)
-		}
+	if value, ok, err := connection.ConfigString("database"); err != nil {
+		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.Id, err)
+	} else if ok {
 		database = value
 	}
 
-	if rawScope, ok := connection.Config["credential_scope"]; ok {
-		scope, ok := rawScope.(string)
-		if !ok {
-			return "", false, fmt.Errorf("connection '%s' config.credential_scope must be a string", connection.Id)
-		}
+	if scope, ok, err := connection.ConfigString("credential_scope"); err != nil {
+		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.Id, err)
+	} else if ok {
 		superuser = scope == "superuser"
 	}
-	if rawSuperuser, ok := connection.Config["superuser"]; ok {
-		value, ok := rawSuperuser.(bool)
-		if !ok {
-			return "", false, fmt.Errorf("connection '%s' config.superuser must be a boolean", connection.Id)
-		}
+	if value, ok, err := connection.ConfigBool("superuser"); err != nil {
+		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.Id, err)
+	} else if ok {
 		superuser = value
 	}
 

@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -38,12 +39,12 @@ type ConnectionMappings []ConnectionMapping
 type ConnectionConfig map[string]interface{}
 
 type StackConnection struct {
-	Id       string                 `json:"id,omitempty"`
-	Kind     ConnectionKind         `json:"kind"`
-	From     TopologyNodeRef        `json:"from"`
-	To       TopologyNodeRef        `json:"to"`
-	Mappings []ConnectionMapping    `json:"mappings,omitempty"`
-	Config   map[string]interface{} `json:"config,omitempty"`
+	Id       string              `json:"id,omitempty"`
+	Kind     ConnectionKind      `json:"kind"`
+	From     TopologyNodeRef     `json:"from"`
+	To       TopologyNodeRef     `json:"to"`
+	Mappings []ConnectionMapping `json:"mappings,omitempty"`
+	Config   ConnectionConfig    `json:"config,omitempty"`
 }
 
 type StackConnectionRecord struct {
@@ -89,6 +90,99 @@ func (k ConnectionKind) String() string {
 	return string(k)
 }
 
+func (c StackConnection) IsKind(kind ConnectionKind) bool {
+	return c.Kind == kind
+}
+
+func (c StackConnection) SourceIs(nodeType TopologyNodeType) bool {
+	return c.From.Type == nodeType
+}
+
+func (c StackConnection) TargetIs(nodeType TopologyNodeType) bool {
+	return c.To.Type == nodeType
+}
+
+func (c StackConnection) TargetsStackResource(resourceName string) bool {
+	return c.TargetIs(TopologyNodeTypeStackResource) &&
+		c.To.Name == resourceName
+}
+
+func (c StackConnection) ConfigString(key string) (string, bool, error) {
+	value, ok := c.Config[key]
+	if !ok {
+		return "", false, nil
+	}
+	asString, ok := value.(string)
+	if !ok {
+		return "", false, fmt.Errorf("config.%s must be a string", key)
+	}
+	return asString, true, nil
+}
+
+func (c StackConnection) RequiredConfigString(key string) (string, error) {
+	value, _, err := c.ConfigString(key)
+	if err != nil {
+		return "", err
+	}
+	if value == "" {
+		return "", fmt.Errorf("config.%s is required", key)
+	}
+	return value, nil
+}
+
+func (c StackConnection) ConfigBool(key string) (bool, bool, error) {
+	value, ok := c.Config[key]
+	if !ok {
+		return false, false, nil
+	}
+	asBool, ok := value.(bool)
+	if !ok {
+		return false, false, fmt.Errorf("config.%s must be a boolean", key)
+	}
+	return asBool, true, nil
+}
+
+func (connections StackConnections) HasAnyKind(kinds ...ConnectionKind) bool {
+	for _, connection := range connections {
+		for _, kind := range kinds {
+			if connection.IsKind(kind) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (connections StackConnections) OfKind(kind ConnectionKind) StackConnections {
+	result := make(StackConnections, 0, len(connections))
+	for _, connection := range connections {
+		if connection.IsKind(kind) {
+			result = append(result, connection)
+		}
+	}
+	return result
+}
+
+func (connections StackConnections) EnvForStackResource(resourceName string) StackConnections {
+	result := make(StackConnections, 0, len(connections))
+	for _, connection := range connections {
+		if connection.IsKind(ConnectionKindEnv) && connection.TargetsStackResource(resourceName) {
+			result = append(result, connection)
+		}
+	}
+	return result
+}
+
+func (connections StackConnections) FromType(sourceType TopologyNodeType) StackConnections {
+	result := make(StackConnections, 0, len(connections))
+	for _, connection := range connections {
+		if connection.SourceIs(sourceType) {
+			result = append(result, connection)
+		}
+	}
+	return result
+}
+
 func (r StackConnectionRecord) ToStackConnection() StackConnection {
 	return StackConnection{
 		Id:       r.ID,
@@ -96,7 +190,7 @@ func (r StackConnectionRecord) ToStackConnection() StackConnection {
 		From:     r.FromRef,
 		To:       r.ToRef,
 		Mappings: []ConnectionMapping(r.Mappings),
-		Config:   map[string]interface{}(r.Config),
+		Config:   r.Config,
 	}
 }
 
@@ -108,7 +202,7 @@ func NewStackConnectionRecord(stackID string, connection StackConnection) StackC
 		FromRef:  connection.From,
 		ToRef:    connection.To,
 		Mappings: ConnectionMappings(connection.Mappings),
-		Config:   ConnectionConfig(connection.Config),
+		Config:   connection.Config,
 	}
 }
 
