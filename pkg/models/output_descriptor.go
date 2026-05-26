@@ -2,7 +2,6 @@ package models
 
 import (
 	"fmt"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -51,25 +50,8 @@ func (p *PostgresAddon) EnsureDeclaredOutputs() []OutputDescriptor {
 func (r *StackResource) ToOutputMap() map[string]string {
 	outputs := make(map[string]string)
 
-	host := r.Name
-	if r.Status != nil && r.Status.InternalServiceName != nil && *r.Status.InternalServiceName != "" {
-		host = *r.Status.InternalServiceName
-	}
+	host := r.InternalServiceHost()
 	outputs["host"] = host
-
-	publicURLsByPort := make(map[int]string)
-	publicHostsByPort := make(map[int]string)
-	if r.Status != nil {
-		for _, ingress := range r.Status.PublicIngresses {
-			if ingress.URL == "" {
-				continue
-			}
-			publicURLsByPort[ingress.TargetPort] = ingress.URL
-			if parsed, err := url.Parse(ingress.URL); err == nil && parsed.Host != "" {
-				publicHostsByPort[ingress.TargetPort] = parsed.Host
-			}
-		}
-	}
 
 	for _, port := range r.Ports {
 		outputs["port."+port.Name] = strconv.Itoa(port.Number)
@@ -79,24 +61,21 @@ func (r *StackResource) ToOutputMap() map[string]string {
 			continue
 		}
 
-		publicHost := publicHostsByPort[port.Number]
-		if publicHost == "" {
-			publicHost = port.ExposedFqdn
+		if port.ExposedFqdn == "" {
+			continue
 		}
-		if publicHost != "" {
-			outputs["public."+port.Name+".host"] = publicHost
-		}
-
-		publicURL := publicURLsByPort[port.Number]
-		if publicURL == "" && port.ExposedFqdn != "" {
-			publicURL = "http://" + port.ExposedFqdn
-		}
-		if publicURL != "" {
-			outputs["public."+port.Name+".url"] = publicURL
-		}
+		outputs["public."+port.Name+".host"] = port.ExposedFqdn
+		outputs["public."+port.Name+".url"] = "http://" + port.ExposedFqdn
 	}
 
 	return outputs
+}
+
+func (r *StackResource) InternalServiceHost() string {
+	if r.Namespace == "" {
+		return r.Name
+	}
+	return fmt.Sprintf("%s.%s.svc", r.Name, r.Namespace)
 }
 
 func (s *Secret) ToOutputMap() map[string]string {
