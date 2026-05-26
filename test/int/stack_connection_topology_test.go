@@ -263,7 +263,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
 			Expect(topology.GetEdges()).To(HaveLen(1))
 			edge := topology.GetEdges()[0]
-			Expect(edge.GetSourceOfTruth()).To(Equal("depends_on"))
+			Expect(edge.GetSourceOfTruth()).To(Equal("derived"))
 			Expect(edge.GetKind()).To(Equal("depends_on"))
 		})
 
@@ -282,7 +282,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			hasDepsEdge := false
 			hasConnEdge := false
 			for _, e := range topology.GetEdges() {
-				if e.GetSourceOfTruth() == "depends_on" {
+				if e.GetSourceOfTruth() == "derived" {
 					hasDepsEdge = true
 				}
 				if e.GetSourceOfTruth() == "connection" {

@@ -82,7 +82,10 @@ func (h *stackHandler) ListConnections(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return nil, err
 			}
-			return presenters.PresentStackConnections(obj), nil
+			return openapi.StackConnectionList{
+				Items: presenters.PresentStackConnections(obj),
+				Total: ptr.To(int32(len(obj))),
+			}, nil
 		},
 	}
 	handleList(w, r, cfg)

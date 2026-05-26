@@ -17,7 +17,7 @@ import (
 // TopologyEdge An edge in the stack topology graph.
 type TopologyEdge struct {
 	Id *string `json:"id,omitempty"`
-	// Edge kind. Explicit connections reuse connection kinds; derived edges may use values such as depends_on.
+	// Edge kind. Explicit connections reuse connection kinds; derived edges use depends_on.
 	Kind     string              `json:"kind"`
 	Source   TopologyNodeRef     `json:"source"`
 	Target   TopologyNodeRef     `json:"target"`

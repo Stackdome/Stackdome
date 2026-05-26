@@ -8,6 +8,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
+//go:generate mockgen -source=postgres_addon_store.go -destination=../mocks/mock_postgres_addon_store.go -package=mocks
 type PostgresAddonStore interface {
 	Create(ctx context.Context, addon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, addon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError)

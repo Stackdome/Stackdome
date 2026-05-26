@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
@@ -11,12 +12,12 @@ import (
 )
 
 func TestConnectionReconcilerResolvesVolumeMountConnections(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	volumeSvc := NewMockvolumeService(ctrl)
+	volumeSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), "stack-1").
+		Return([]*models.Volume{{ID: "vol-1", Name: "uploads", VolumeSource: nil}}, nil)
 	reconciler := NewConnectionReconciler(ConnectionReconcilerSpec{
-		VolumeService: fakeVolumeService{
-			volumes: []*models.Volume{
-				{ID: "vol-1", Name: "uploads", VolumeSource: nil},
-			},
-		},
+		VolumeService: volumeSvc,
 	})
 
 	stack := &models.Stack{
@@ -65,12 +66,12 @@ func TestConnectionReconcilerResolvesVolumeMountConnections(t *testing.T) {
 }
 
 func TestConnectionReconcilerResolvesBuildArtifactSourceConnections(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	volumeSvc := NewMockvolumeService(ctrl)
+	volumeSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), "stack-1").
+		Return([]*models.Volume{{ID: "vol-1", Name: "assets"}}, nil)
 	reconciler := NewConnectionReconciler(ConnectionReconcilerSpec{
-		VolumeService: fakeVolumeService{
-			volumes: []*models.Volume{
-				{ID: "vol-1", Name: "assets"},
-			},
-		},
+		VolumeService: volumeSvc,
 	})
 
 	stack := &models.Stack{
@@ -120,8 +121,9 @@ func TestConnectionReconcilerResolvesBuildArtifactSourceConnections(t *testing.T
 }
 
 func TestConnectionReconcilerSkipsWhenNoConnections(t *testing.T) {
+	ctrl := gomock.NewController(t)
 	reconciler := NewConnectionReconciler(ConnectionReconcilerSpec{
-		VolumeService: fakeVolumeService{},
+		VolumeService: NewMockvolumeService(ctrl),
 	})
 
 	stack := &models.Stack{
@@ -141,8 +143,12 @@ func TestConnectionReconcilerSkipsWhenNoConnections(t *testing.T) {
 }
 
 func TestConnectionReconcilerErrorsOnUnknownVolume(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	volumeSvc := NewMockvolumeService(ctrl)
+	volumeSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), "stack-1").
+		Return([]*models.Volume{}, nil)
 	reconciler := NewConnectionReconciler(ConnectionReconcilerSpec{
-		VolumeService: fakeVolumeService{volumes: []*models.Volume{}},
+		VolumeService: volumeSvc,
 	})
 
 	stack := &models.Stack{
@@ -361,6 +367,50 @@ func TestConnectionReconcilerRequeuesWhenCredentialsUnavailable(t *testing.T) {
 	}
 }
 
+func TestConnectionReconcilerHardErrorsWhenAddonNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	postgresAddons := NewMockpostgresAddonService(ctrl)
+	postgresAddons.EXPECT().
+		InternalGetCredentials(gomock.Any(), "pg-1", "app", false).
+		Return(nil, serrors.NotFound("postgres addon not found"))
+
+	reconciler := NewConnectionReconciler(ConnectionReconcilerSpec{
+		PostgresAddonService: postgresAddons,
+	})
+
+	stack := &models.Stack{
+		ID: "stack-1",
+		StackResources: []*models.StackResource{
+			{ID: "res-1", Name: "web"},
+		},
+		Connections: models.StackConnections{
+			{
+				ID:   "pg-web",
+				Kind: models.ConnectionKindEnv,
+				From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "pg-1"},
+				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+				Config: map[string]interface{}{
+					"database": "app",
+				},
+				Mappings: []models.ConnectionMapping{
+					{
+						Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "DATABASE_URL"},
+						Value:  models.ValueRef{Output: "url"},
+					},
+				},
+			},
+		},
+	}
+
+	_, err := reconciler.Reconcile(context.Background(), stack)
+	if err == nil {
+		t.Fatal("expected hard error for 404 addon, got nil")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected not-found error, got: %v", err)
+	}
+}
+
 func TestConnectionReconcilerResolvesStackResourceEnvConnections(t *testing.T) {
 	reconciler := NewConnectionReconciler(ConnectionReconcilerSpec{})
 
@@ -542,14 +592,3 @@ func TestConnectionReconcilerResolvesSelfOutputEnvVars(t *testing.T) {
 	}
 }
 
-type fakeVolumeService struct {
-	volumes []*models.Volume
-}
-
-func (f fakeVolumeService) ListVolumesUsedByStack(_ context.Context, _ string) ([]*models.Volume, *serrors.ServiceError) {
-	return f.volumes, nil
-}
-
-func (f fakeVolumeService) InternalDeleteVolumesUsedByStackFromDB(_ context.Context, _ string) *serrors.ServiceError {
-	return nil
-}

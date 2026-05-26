@@ -20,6 +20,7 @@ type connectionReconciler struct {
 	logger               logger.Logger
 }
 
+//go:generate mockgen -source=connection_reconciler.go -destination=connection_reconciler_mock.go -package=stack
 type secretOutputService interface {
 	InternalGetByID(ctx context.Context, id string) (*models.Secret, *errors.ServiceError)
 }
@@ -282,6 +283,9 @@ func (r *connectionReconciler) resolvePostgresConnectionEnvVars(
 
 	creds, credErr := r.postgresAddonService.InternalGetCredentials(ctx, addonID, database, superuser)
 	if credErr != nil {
+		if credErr.Is404() {
+			return nil, nil, fmt.Errorf("postgres addon '%s' not found", addonID)
+		}
 		r.logger.Infof("addon '%s' credentials unavailable, will requeue in %s", addonID, addonReadinessRequeueInterval)
 		result := resultRequeueAfter(addonReadinessRequeueInterval)
 		return nil, &result, nil
@@ -407,7 +411,7 @@ func appendWithoutDuplicates(existing []models.EnvVar, newVars []models.EnvVar) 
 	}
 	for _, v := range newVars {
 		if _, exists := nameSet[v.Name]; exists {
-			return nil, fmt.Errorf("duplicate env var name '%s'", v.Name)
+			return nil, fmt.Errorf("duplicate env var name '%s': check connections that target this resource for overlapping mappings", v.Name)
 		}
 		existing = append(existing, v)
 		nameSet[v.Name] = struct{}{}

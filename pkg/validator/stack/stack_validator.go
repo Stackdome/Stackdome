@@ -463,7 +463,20 @@ func validateConnectionMappings(label string, connection models.StackConnection,
 }
 
 func validateValueRef(label string, source models.TopologyNodeRef, valueRef models.ValueRef, allowedOutputs map[string]struct{}) *errors.ServiceError {
-	if valueRef.Output != "" {
+	hasOutput := valueRef.Output != ""
+	hasTemplate := valueRef.Template != ""
+
+	if !hasOutput && !hasTemplate {
+		return errors.BadRequest("connection '%s' mapping must specify either 'output' or 'template'", label)
+	}
+	if hasOutput && hasTemplate {
+		return errors.BadRequest("connection '%s' mapping must specify either 'output' or 'template', not both", label)
+	}
+	if hasTemplate && len(valueRef.Values) == 0 {
+		return errors.BadRequest("connection '%s' mapping has template but no values", label)
+	}
+
+	if hasOutput {
 		if _, ok := allowedOutputs[valueRef.Output]; !ok {
 			return errors.BadRequest("connection '%s' references unsupported output '%s' for source '%s'", label, valueRef.Output, topologyNodeRefLabel(source))
 		}

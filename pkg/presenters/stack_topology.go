@@ -20,7 +20,7 @@ func presentTopologyNodes(nodes []models.TopologyNode) []openapi.TopologyNode {
 	result := make([]openapi.TopologyNode, len(nodes))
 	for i, node := range nodes {
 		result[i] = openapi.TopologyNode{
-			Ref:   presentNodeRef(node.Ref),
+			Ref:   presentTopologyNodeRef(node.Ref),
 			Label: node.Label,
 		}
 		if len(node.Outputs) > 0 {
@@ -38,8 +38,8 @@ func presentTopologyEdges(edges []models.TopologyEdge) []openapi.TopologyEdge {
 	for i, edge := range edges {
 		result[i] = openapi.TopologyEdge{
 			Kind:          edge.Kind,
-			Source:        presentNodeRef(edge.Source),
-			Target:        presentNodeRef(edge.Target),
+			Source:        presentTopologyNodeRef(edge.Source),
+			Target:        presentTopologyNodeRef(edge.Target),
 			SourceOfTruth: edge.SourceOfTruth,
 		}
 		if edge.Id != "" {
@@ -55,15 +55,3 @@ func presentTopologyEdges(edges []models.TopologyEdge) []openapi.TopologyEdge {
 	return result
 }
 
-func presentNodeRef(ref models.TopologyNodeRef) openapi.TopologyNodeRef {
-	result := openapi.TopologyNodeRef{
-		Type: string(ref.Type),
-	}
-	if ref.Id != "" {
-		result.SetId(ref.Id)
-	}
-	if ref.Name != "" {
-		result.SetName(ref.Name)
-	}
-	return result
-}

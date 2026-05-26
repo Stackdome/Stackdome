@@ -290,6 +290,7 @@ Class | Method | HTTP request | Description
  - [SecretType](docs/SecretType.md)
  - [Stack](docs/Stack.md)
  - [StackConnection](docs/StackConnection.md)
+ - [StackConnectionList](docs/StackConnectionList.md)
  - [StackList](docs/StackList.md)
  - [StackResource](docs/StackResource.md)
  - [StackResourceBuildSpec](docs/StackResourceBuildSpec.md)

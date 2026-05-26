@@ -585,6 +585,90 @@ func TestValidateForCreateRejectsBuildArtifactSourceWithUnknownVolume(t *testing
 	}
 }
 
+func TestValidateForCreateRejectsValueRefWithTemplateMissingValues(t *testing.T) {
+	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
+	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
+		ID:        "pg-1",
+		Databases: []models.PostgresAddonDatabase{{Name: "app"}},
+	}, nil)
+
+	spec := stackWithConnections(models.StackConnection{
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "pg-1"},
+		To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+		Config: map[string]interface{}{
+			"database": "app",
+		},
+		Mappings: []models.ConnectionMapping{
+			{
+				Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "DATABASE_URL"},
+				Value:  models.ValueRef{Template: "postgres://{{ host }}:{{ port }}/{{ db }}"},
+			},
+		},
+	})
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected template with empty values to be rejected")
+	}
+}
+
+func TestValidateForCreateRejectsValueRefWithBothOutputAndTemplate(t *testing.T) {
+	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
+	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
+		ID:        "pg-1",
+		Databases: []models.PostgresAddonDatabase{{Name: "app"}},
+	}, nil)
+
+	spec := stackWithConnections(models.StackConnection{
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "pg-1"},
+		To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+		Config: map[string]interface{}{
+			"database": "app",
+		},
+		Mappings: []models.ConnectionMapping{
+			{
+				Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "PG_HOST"},
+				Value:  models.ValueRef{Output: "host", Template: "{{ host }}"},
+			},
+		},
+	})
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected value ref with both output and template to be rejected")
+	}
+}
+
+func TestValidateForCreateRejectsValueRefWithNeitherOutputNorTemplate(t *testing.T) {
+	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
+	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
+		ID:        "pg-1",
+		Databases: []models.PostgresAddonDatabase{{Name: "app"}},
+	}, nil)
+
+	spec := stackWithConnections(models.StackConnection{
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "pg-1"},
+		To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+		Config: map[string]interface{}{
+			"database": "app",
+		},
+		Mappings: []models.ConnectionMapping{
+			{
+				Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "PG_HOST"},
+				Value:  models.ValueRef{},
+			},
+		},
+	})
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected empty value ref to be rejected")
+	}
+}
+
 func newValidatorWithMockedSecretService(t *testing.T) (validator.StackValidator, *mocks.MocksecretService) {
 	t.Helper()
 	ctrl := gomock.NewController(t)

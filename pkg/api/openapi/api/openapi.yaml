@@ -2225,9 +2225,7 @@ paths:
           content:
             application/json:
               schema:
-                items:
-                  $ref: '#/components/schemas/StackConnection'
-                type: array
+                $ref: '#/components/schemas/StackConnectionList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -2333,7 +2331,8 @@ paths:
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The ID of the stack connection
+        explode: false
         in: path
         name: connection_id
         required: true
@@ -2382,7 +2381,8 @@ paths:
         schema:
           type: string
         style: simple
-      - explode: false
+      - description: The ID of the stack connection
+        explode: false
         in: path
         name: connection_id
         required: true
@@ -4030,6 +4030,15 @@ components:
       explode: false
       in: path
       name: resource_name
+      required: true
+      schema:
+        type: string
+      style: simple
+    connection_id:
+      description: The ID of the stack connection
+      explode: false
+      in: path
+      name: connection_id
       required: true
       schema:
         type: string
@@ -6841,6 +6850,84 @@ components:
         total:
           type: integer
       type: object
+    StackConnectionList:
+      example:
+        total: 0
+        items:
+        - mappings:
+          - value:
+              output: output
+              template: template
+              values:
+                key:
+                  output: output
+            target:
+              path: path
+              name: name
+              type: env
+          - value:
+              output: output
+              template: template
+              values:
+                key:
+                  output: output
+            target:
+              path: path
+              name: name
+              type: env
+          kind: env
+          from:
+            name: name
+            id: id
+            type: stack_resource
+          id: id
+          to:
+            name: name
+            id: id
+            type: stack_resource
+          config:
+            key: ""
+        - mappings:
+          - value:
+              output: output
+              template: template
+              values:
+                key:
+                  output: output
+            target:
+              path: path
+              name: name
+              type: env
+          - value:
+              output: output
+              template: template
+              values:
+                key:
+                  output: output
+            target:
+              path: path
+              name: name
+              type: env
+          kind: env
+          from:
+            name: name
+            id: id
+            type: stack_resource
+          id: id
+          to:
+            name: name
+            id: id
+            type: stack_resource
+          config:
+            key: ""
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/StackConnection'
+          type: array
+        total:
+          type: integer
+      type: object
     StackSpec:
       example:
         stack_resources:
@@ -7958,13 +8045,13 @@ components:
               path: path
               name: name
               type: env
-          kind: kind
+          kind: env
           id: id
           source:
             name: name
             id: id
             type: stack_resource
-          source_of_truth: source_of_truth
+          source_of_truth: connection
           config:
             key: ""
           target:
@@ -7992,13 +8079,13 @@ components:
               path: path
               name: name
               type: env
-          kind: kind
+          kind: env
           id: id
           source:
             name: name
             id: id
             type: stack_resource
-          source_of_truth: source_of_truth
+          source_of_truth: connection
           config:
             key: ""
           target:
@@ -8075,13 +8162,13 @@ components:
             path: path
             name: name
             type: env
-        kind: kind
+        kind: env
         id: id
         source:
           name: name
           id: id
           type: stack_resource
-        source_of_truth: source_of_truth
+        source_of_truth: connection
         config:
           key: ""
         target:
@@ -8093,7 +8180,12 @@ components:
           type: string
         kind:
           description: Edge kind. Explicit connections reuse connection kinds; derived
-            edges may use values such as depends_on.
+            edges use depends_on.
+          enum:
+          - env
+          - volume_mount
+          - build_artifact_source
+          - depends_on
           type: string
         source:
           $ref: '#/components/schemas/TopologyNodeRef'
@@ -8114,6 +8206,9 @@ components:
         source_of_truth:
           description: Whether the edge came from an explicit connection or a derived
             relationship such as depends_on.
+          enum:
+          - connection
+          - derived
           type: string
       required:
       - kind

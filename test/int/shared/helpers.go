@@ -304,8 +304,13 @@ func ListStackConnections(client *openapi.APIClient, orgID, teamName, stackID st
 	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet(ctx, orgID, teamName, stackID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to list stack connections")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack connection list response")
 
-	return resp
+	items := resp.GetItems()
+	if items == nil {
+		return []openapi.StackConnection{}
+	}
+	return items
 }
 
 func CreateStackConnection(client *openapi.APIClient, orgID, teamName, stackID string, connection *openapi.StackConnection) *openapi.StackConnection {

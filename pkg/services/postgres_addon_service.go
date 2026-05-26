@@ -68,6 +68,7 @@ type PostgresAddonServiceSpec struct {
 	Permissions            auth.PermissionService
 }
 
+//go:generate mockgen -source=postgres_addon_service.go -destination=postgres_addon_service_mock.go -package=services
 type connectionUsageChecker interface {
 	IsNodeReferenced(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
 	IsNodeReferencedAsSource(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)

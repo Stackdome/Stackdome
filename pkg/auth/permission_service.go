@@ -12,6 +12,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 )
 
+//go:generate mockgen -source=permission_service.go -destination=../mocks/mock_permission_service.go -package=mocks
 type PermissionService interface {
 	Check(ctx context.Context, domain, resource, resourceID, action string) *errors.ServiceError
 }

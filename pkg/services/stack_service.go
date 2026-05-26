@@ -490,32 +490,6 @@ func (s *stackService) prepareDesiredStackWithConnectionMutation(
 	return stack, &desired, nil
 }
 
-func (s *stackService) updateStackConnections(ctx context.Context, existingStack *models.Stack, desired *models.Stack) (*models.Stack, *errors.ServiceError) {
-	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		return s.stackStore.UpdateConnectionsWithTx(txCtx, existingStack.ID, desired.Connections)
-	}); err != nil {
-		return nil, err
-	}
-
-	updatedStack, err := s.GetStack(ctx, existingStack.ID)
-	if err != nil {
-		return nil, errors.GeneralError("failed to get updated stack '%s': %s", existingStack.Name, err.Error())
-	}
-
-	crHash, cerr := s.clusterResourceBuidler.GetStackCRHash(updatedStack)
-	if cerr != nil {
-		return nil, errors.GeneralError("failed to build stack CR hash for stack '%s': %s", updatedStack.Name, cerr.Error())
-	}
-	updatedStack.CrRevision = crHash
-	if err := s.UpdateStackCrRevision(ctx, updatedStack.ID, crHash); err != nil {
-		return nil, errors.GeneralError("failed to update stack CR revision for stack '%s': %s", updatedStack.Name, err.Error())
-	}
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.Stack{ID: updatedStack.ID}); err != nil {
-		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", updatedStack.Name, err.Error())
-	}
-	return updatedStack, nil
-}
-
 func (s *stackService) createStackConnection(ctx context.Context, existingStack *models.Stack, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
 	var createdConnection *models.StackConnection
 	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {

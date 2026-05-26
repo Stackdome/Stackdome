@@ -4599,7 +4599,7 @@ func main() {
     orgId := "orgId_example" // string | The ID of the organization
     teamName := "teamName_example" // string | The name of the team
     id := "id_example" // string | The id of record
-    connectionId := "connectionId_example" // string | 
+    connectionId := "connectionId_example" // string | The ID of the stack connection
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -4620,7 +4620,7 @@ Name | Type | Description  | Notes
 **orgId** | **string** | The ID of the organization | 
 **teamName** | **string** | The name of the team | 
 **id** | **string** | The id of record | 
-**connectionId** | **string** |  | 
+**connectionId** | **string** | The ID of the stack connection | 
 
 ### Other Parameters
 
@@ -4674,7 +4674,7 @@ func main() {
     orgId := "orgId_example" // string | The ID of the organization
     teamName := "teamName_example" // string | The name of the team
     id := "id_example" // string | The id of record
-    connectionId := "connectionId_example" // string | 
+    connectionId := "connectionId_example" // string | The ID of the stack connection
     stackConnection := *openapiclient.NewStackConnection("Kind_example", *openapiclient.NewTopologyNodeRef("Type_example"), *openapiclient.NewTopologyNodeRef("Type_example")) // StackConnection | 
 
     configuration := openapiclient.NewConfiguration()
@@ -4698,7 +4698,7 @@ Name | Type | Description  | Notes
 **orgId** | **string** | The ID of the organization | 
 **teamName** | **string** | The name of the team | 
 **id** | **string** | The id of record | 
-**connectionId** | **string** |  | 
+**connectionId** | **string** | The ID of the stack connection | 
 
 ### Other Parameters
 
@@ -4733,7 +4733,7 @@ Name | Type | Description  | Notes
 
 ## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet
 
-> []StackConnection ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet(ctx, orgId, teamName, id).Execute()
+> StackConnectionList ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet(ctx, orgId, teamName, id).Execute()
 
 List stack connections
 
@@ -4761,7 +4761,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet`: []StackConnection
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet`: StackConnectionList
     fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet`: %v\n", resp)
 }
 ```
@@ -4789,7 +4789,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**[]StackConnection**](StackConnection.md)
+[**StackConnectionList**](StackConnectionList.md)
 
 ### Authorization
 

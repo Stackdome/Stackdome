@@ -9,6 +9,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 )
 
+//go:generate mockgen -source=resource_usage_service.go -destination=../mocks/mock_resource_usage_service.go -package=mocks
 type ResourceUsageService interface {
 	Create(ctx context.Context, usage *models.ResourceUsage) error
 	IsResourceInUse(ctx context.Context, resourceType, resourceID string) (bool, error)

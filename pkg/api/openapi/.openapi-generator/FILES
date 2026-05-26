@@ -122,6 +122,7 @@ docs/SecretReference.md
 docs/SecretType.md
 docs/Stack.md
 docs/StackConnection.md
+docs/StackConnectionList.md
 docs/StackList.md
 docs/StackResource.md
 docs/StackResourceBuildSpec.md
@@ -282,6 +283,7 @@ model_secret_type.go
 model_ssh_config.go
 model_stack.go
 model_stack_connection.go
+model_stack_connection_list.go
 model_stack_list.go
 model_stack_resource.go
 model_stack_resource_build_spec.go

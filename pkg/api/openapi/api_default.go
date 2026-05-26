@@ -7501,7 +7501,7 @@ ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete Delete
 	@param orgId The ID of the organization
 	@param teamName The name of the team
 	@param id The id of record
-	@param connectionId
+	@param connectionId The ID of the stack connection
 	@return ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDeleteRequest
 */
 func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete(ctx context.Context, orgId string, teamName string, id string, connectionId string) ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDeleteRequest {
@@ -7618,7 +7618,7 @@ ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut Update st
 	@param orgId The ID of the organization
 	@param teamName The name of the team
 	@param id The id of record
-	@param connectionId
+	@param connectionId The ID of the stack connection
 	@return ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutRequest
 */
 func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut(ctx context.Context, orgId string, teamName string, id string, connectionId string) ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPutRequest {
@@ -7744,7 +7744,7 @@ type ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetRequest struct
 	id         string
 }
 
-func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetRequest) Execute() ([]StackConnection, *http.Response, error) {
+func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetRequest) Execute() (*StackConnectionList, *http.Response, error) {
 	return r.ApiService.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetExecute(r)
 }
 
@@ -7769,13 +7769,13 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnecti
 
 // Execute executes the request
 //
-//	@return []StackConnection
-func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetExecute(r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetRequest) ([]StackConnection, *http.Response, error) {
+//	@return StackConnectionList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetExecute(r ApiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGetRequest) (*StackConnectionList, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodGet
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue []StackConnection
+		localVarReturnValue *StackConnectionList
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet")

@@ -1526,9 +1526,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/StackConnection'
+                $ref: '#/components/schemas/StackConnectionList'
         '401':
           description: Unauthorized
         '404':
@@ -1591,11 +1589,7 @@ paths:
         - $ref: '#/components/parameters/org_id'
         - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
-        - in: path
-          name: connection_id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/connection_id'
       requestBody:
         required: true
         content:
@@ -1633,11 +1627,7 @@ paths:
         - $ref: '#/components/parameters/org_id'
         - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
-        - in: path
-          name: connection_id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/connection_id'
       responses:
         '204':
           description: Stack connection deleted successfully
@@ -2705,6 +2695,13 @@ components:
       schema:
         type: string
       description: The name of the stack resource
+    connection_id:
+      name: connection_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The ID of the stack connection
     build_id:
       name: build_id
       in: path
@@ -3368,6 +3365,16 @@ components:
         total:
           type: integer
 
+    StackConnectionList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StackConnection'
+        total:
+          type: integer
+
     StackSpec:
       type: object
       required:
@@ -3536,10 +3543,17 @@ components:
           type: string
         kind:
           type: string
-          description: Edge kind. Explicit connections reuse connection kinds; derived edges may use values such as depends_on.
+          enum:
+            - env
+            - volume_mount
+            - build_artifact_source
+            - depends_on
+          description: Edge kind. Explicit connections reuse connection kinds; derived edges use depends_on.
         source:
+          description: The producing end of the edge. Corresponds to StackConnection.from.
           $ref: '#/components/schemas/TopologyNodeRef'
         target:
+          description: The consuming end of the edge. Corresponds to StackConnection.to.
           $ref: '#/components/schemas/TopologyNodeRef'
         mappings:
           type: array
@@ -3549,6 +3563,9 @@ components:
           $ref: '#/components/schemas/StackConnectionConfig'
         source_of_truth:
           type: string
+          enum:
+            - connection
+            - derived
           description: Whether the edge came from an explicit connection or a derived relationship such as depends_on.
 
     StackConnection:

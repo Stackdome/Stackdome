@@ -7,6 +7,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
+//go:generate mockgen -source=volume_store.go -destination=../mocks/mock_volume_store.go -package=mocks
 type VolumeStore interface {
 	Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)

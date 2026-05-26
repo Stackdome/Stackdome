@@ -57,7 +57,7 @@ func (s *stackService) GetStackTopology(ctx context.Context, ID string) (*models
 				Kind:          models.DependsOnTopologyEdgeKind,
 				Source:        depRef,
 				Target:        models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Id: resource.ID, Name: resource.Name},
-				SourceOfTruth: "depends_on",
+				SourceOfTruth: "derived",
 			})
 		}
 	}
@@ -145,6 +145,12 @@ func (s *stackService) enrichExternalNodes(ctx context.Context, nodes map[string
 		case models.TopologyNodeTypePostgresAddon:
 			addon, err := s.postgresAddonService.InternalGetPostgresAddon(ctx, node.Ref.Id)
 			if err != nil {
+				if err.Is404() {
+					s.logger.Warnf("postgres addon '%s' not found for topology, marking as missing", node.Ref.Id)
+					node.State = "missing"
+					nodes[key] = node
+					continue
+				}
 				return errors.GeneralError("failed to fetch postgres addon '%s' for topology: %s", node.Ref.Id, err.Error())
 			}
 			node.Ref.Name = addon.Name
@@ -157,6 +163,12 @@ func (s *stackService) enrichExternalNodes(ctx context.Context, nodes map[string
 		case models.TopologyNodeTypeSecret:
 			secret, err := s.secretService.InternalGetByID(ctx, node.Ref.Id)
 			if err != nil {
+				if err.Is404() {
+					s.logger.Warnf("secret '%s' not found for topology, marking as missing", node.Ref.Id)
+					node.State = "missing"
+					nodes[key] = node
+					continue
+				}
 				return errors.GeneralError("failed to fetch secret '%s' for topology: %s", node.Ref.Id, err.Error())
 			}
 			node.Ref.Name = secret.Name

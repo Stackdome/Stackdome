@@ -37,6 +37,11 @@ func createStackConnectionsTable() *gormigrate.Migration {
 			).Error; err != nil {
 				return fmt.Errorf("error creating stack_connections stack index: %w", err)
 			}
+			if err := tx.Exec(
+				"CREATE UNIQUE INDEX IF NOT EXISTS idx_stack_connections_unique_edge ON stack_connections(stack_id, kind, from_ref, to_ref)",
+			).Error; err != nil {
+				return fmt.Errorf("error creating stack_connections unique edge index: %w", err)
+			}
 			return nil
 		},
 	}

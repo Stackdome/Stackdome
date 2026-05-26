@@ -5,7 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** |  | [optional] 
-**Kind** | **string** | Edge kind. Explicit connections reuse connection kinds; derived edges may use values such as depends_on. | 
+**Kind** | **string** | Edge kind. Explicit connections reuse connection kinds; derived edges use depends_on. | 
 **Source** | [**TopologyNodeRef**](TopologyNodeRef.md) |  | 
 **Target** | [**TopologyNodeRef**](TopologyNodeRef.md) |  | 
 **Mappings** | Pointer to [**[]ConnectionMapping**](ConnectionMapping.md) |  | [optional] 
