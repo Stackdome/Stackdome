@@ -104,6 +104,11 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 	}
 	w.Logger().Infof("Processing stack: %s", stack.ID)
 
+	if stack.Annotations.ToMap()[models.SkipClusterProvisioningAnnotation] == "true" {
+		w.Logger().Infof("Skipping cluster provisioning for stack %s due to annotation", stack.ID)
+		return worker.Result{}, w.markAsReadyForSkippedClusterProvisioning(ctx, stack)
+	}
+
 	res, err := w.reconcile(ctx, stack)
 	if err != nil {
 		w.Logger().Errorf("Failed to reconcile stack %s: %v", stack.ID, err)
@@ -150,4 +155,15 @@ func (w *stackWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.S
 		})
 	}
 	return operands, nil
+}
+
+func (w *stackWorker) markAsReadyForSkippedClusterProvisioning(ctx context.Context, stack *models.Stack) *errors.ServiceError {
+	if stack.Status == nil {
+		stack.Status = &models.StackStatus{}
+	}
+	stack.Status.State = models.StackReady
+	stack.Status.Message = "Stack is ready"
+	stack.Status.ObservedCrRevision = stack.CrRevision
+	stack.Status.LastObservedStatusHash = "computed-hash"
+	return w.stackService.UpdateStatus(ctx, stack.ID, stack.Status)
 }

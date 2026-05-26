@@ -16,6 +16,12 @@ const (
 	StackRevisionLabel = "stack.stackdome.io/revision"
 )
 
+const (
+	// SkipClusterProvisioningAnnotation can be set on a stack to indicate that cluster provisioning should be skipped for this stack.
+	// This is useful for testing purposes.
+	SkipClusterProvisioningAnnotation = "stack.stackdome.io/skip-cluster-provisioning"
+)
+
 type StackState string
 
 const (
