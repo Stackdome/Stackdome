@@ -18,11 +18,11 @@ import (
 type StackConnection struct {
 	// Stable connection identifier. Generated when omitted.
 	Id *string `json:"id,omitempty"`
-	// The relationship type. `env` injects values into environment variables, `secret_mount` mounts secret values as files, `volume_mount` mounts a volume into a resource, and `build_artifact_source` seeds a volume from build output.
+	// The relationship type. `env` injects values into environment variables, `volume_mount` mounts a volume into a resource, and `build_artifact_source` seeds a volume from build output.
 	Kind string          `json:"kind"`
 	From TopologyNodeRef `json:"from"`
 	To   TopologyNodeRef `json:"to"`
-	// Target/value mappings for kinds that move values, such as `env` and `secret_mount`.
+	// Target/value mappings for kinds that move values, such as `env`.
 	Mappings []ConnectionMapping `json:"mappings,omitempty"`
 	// Kind-specific connection configuration. Expected keys depend on `kind`. Examples: for `env` from `addon/postgres`, use fields such as `database` and `credential_scope`; for `volume_mount`, use `mount_path`, `sub_path`, and `read_only`; for `build_artifact_source`, use `source_path` and `destination_path`.
 	Config map[string]interface{} `json:"config,omitempty"`

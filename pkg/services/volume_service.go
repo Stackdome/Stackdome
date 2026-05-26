@@ -38,9 +38,10 @@ type VolumeService interface {
 }
 
 type VolumeServiceSpec struct {
-	SessionFactory db.SessionFactory
-	Logger         logger.Logger
-	Permissions    auth.PermissionService
+	SessionFactory         db.SessionFactory
+	ConnectionUsageChecker connectionUsageChecker
+	Logger                 logger.Logger
+	Permissions            auth.PermissionService
 }
 
 func NewVolumeService(spec VolumeServiceSpec) VolumeService {
@@ -54,8 +55,9 @@ func NewVolumeService(spec VolumeServiceSpec) VolumeService {
 		stackVolumeStore: pgstore.NewStackVolumeStore(pgstore.StackVolumeStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		logger:      spec.Logger,
-		permissions: spec.Permissions,
+		connectionUsageChecker: spec.ConnectionUsageChecker,
+		logger:                 spec.Logger,
+		permissions:            spec.Permissions,
 	}
 }
 
@@ -63,6 +65,7 @@ type volumeService struct {
 	volumeStore            stores.VolumeStore
 	volumeMountStore       stores.VolumeMountStore
 	stackVolumeStore       stores.StackVolumeStore
+	connectionUsageChecker connectionUsageChecker
 	clusterResourceService clusterresource.VolumeClusterResourceService
 	logger                 logger.Logger
 	permissions            auth.PermissionService
@@ -321,6 +324,9 @@ func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 	if permErr := s.permissions.Check(ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
+	if err := s.validateVolumeNotReferencedByConnections(ctx, volume); err != nil {
+		return err
+	}
 
 	volumeMounts, err := s.volumeMountStore.ListBySourceVolumeID(ctx, ID)
 	if err != nil {
@@ -353,8 +359,11 @@ func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 }
 
 func (s *volumeService) InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError {
-	_, err := s.volumeStore.GetByID(ctx, ID)
+	volume, err := s.volumeStore.GetByID(ctx, ID)
 	if err != nil {
+		return err
+	}
+	if err := s.validateVolumeNotReferencedByConnections(ctx, volume); err != nil {
 		return err
 	}
 	volumeMounts, err := s.volumeMountStore.ListBySourceVolumeID(ctx, ID)
@@ -392,6 +401,9 @@ func (s *volumeService) DeleteWithTx(ctx context.Context, ID string) *errors.Ser
 		s.logger.Errorf("failed to get volume for deletion: %v", err)
 		return err
 	}
+	if err := s.validateVolumeNotReferencedByConnections(ctx, volume); err != nil {
+		return err
+	}
 
 	volumeMounts, err := s.volumeMountStore.ListBySourceVolumeID(ctx, ID)
 	if err != nil {
@@ -411,6 +423,32 @@ func (s *volumeService) DeleteWithTx(ctx context.Context, ID string) *errors.Ser
 	if err != nil {
 		s.logger.Errorf("failed to delete volume: %v", err)
 		return err
+	}
+	return nil
+}
+
+func (s *volumeService) validateVolumeNotReferencedByConnections(ctx context.Context, volume *models.Volume) *errors.ServiceError {
+	if s.connectionUsageChecker == nil {
+		return nil
+	}
+
+	stackVolume, err := s.stackVolumeStore.GetByVolumeID(ctx, volume.ID)
+	if err != nil {
+		if err.Is404() {
+			return nil
+		}
+		return err
+	}
+
+	inUse, usageErr := s.connectionUsageChecker.IsNodeReferenced(ctx, stackVolume.StackID, models.TopologyNodeRef{
+		Type: models.TopologyNodeTypeVolume,
+		Name: volume.Name,
+	})
+	if usageErr != nil {
+		return errors.GeneralError("failed to check connection usages for volume ID %s: %s", volume.ID, usageErr.Error())
+	}
+	if inUse {
+		return errors.BadRequest("volume is in use by one or more stack connections")
 	}
 	return nil
 }

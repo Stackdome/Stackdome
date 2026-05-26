@@ -219,7 +219,10 @@ func (s *secretService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 		return permErr
 	}
 
-	connInUse, connErr := s.connectionUsageChecker.IsResourceReferencedAsSource(ctx, string(models.TopologyNodeTypeSecret), ID)
+	connInUse, connErr := s.connectionUsageChecker.IsNodeReferencedAsSource(ctx, "", models.TopologyNodeRef{
+		Type: models.TopologyNodeTypeSecret,
+		Id:   ID,
+	})
 	if connErr != nil {
 		return errors.GeneralError("failed to check connection usages for secret ID %s: %s", ID, connErr.Error())
 	}

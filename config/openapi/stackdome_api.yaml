@@ -3566,12 +3566,10 @@ components:
           type: string
           description: >
             The relationship type. `env` injects values into environment variables,
-            `secret_mount` mounts secret values as files, `volume_mount` mounts a
-            volume into a resource, and `build_artifact_source` seeds a volume
-            from build output.
+            `volume_mount` mounts a volume into a resource, and
+            `build_artifact_source` seeds a volume from build output.
           enum:
             - env
-            - secret_mount
             - volume_mount
             - build_artifact_source
         from:
@@ -3581,8 +3579,7 @@ components:
         mappings:
           type: array
           description: >
-            Target/value mappings for kinds that move values, such as `env` and
-            `secret_mount`.
+            Target/value mappings for kinds that move values, such as `env`.
           items:
             $ref: '#/components/schemas/ConnectionMapping'
         config:

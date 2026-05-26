@@ -92,6 +92,30 @@ func TestValidateForCreateRejectsEnvVarWithBothValueAndSelfOutput(t *testing.T) 
 	}
 }
 
+func TestValidateForCreateRejectsSecretMountConnectionKind(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithConnections(models.StackConnection{
+		Id:   "secret-files",
+		Kind: models.ConnectionKind("secret_mount"),
+		From: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeSecret,
+			Id:   "sec-1",
+		},
+		To: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeStackResource,
+			Name: "web",
+		},
+	})
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatalf("expected secret_mount connection to be rejected")
+	}
+	if got, want := err.Error(), "error: connection 'secret-files' has unsupported kind 'secret_mount'"; got != want {
+		t.Fatalf("unexpected error: got %q want %q", got, want)
+	}
+}
+
 func TestValidateForCreateAllowsPostgresConnectionConfig(t *testing.T) {
 	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
 	spec := stackWithConnections(models.StackConnection{

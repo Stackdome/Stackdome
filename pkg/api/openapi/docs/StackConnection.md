@@ -5,10 +5,10 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** | Stable connection identifier. Generated when omitted. | [optional] 
-**Kind** | **string** | The relationship type. &#x60;env&#x60; injects values into environment variables, &#x60;secret_mount&#x60; mounts secret values as files, &#x60;volume_mount&#x60; mounts a volume into a resource, and &#x60;build_artifact_source&#x60; seeds a volume from build output.  | 
+**Kind** | **string** | The relationship type. &#x60;env&#x60; injects values into environment variables, &#x60;volume_mount&#x60; mounts a volume into a resource, and &#x60;build_artifact_source&#x60; seeds a volume from build output.  | 
 **From** | [**TopologyNodeRef**](TopologyNodeRef.md) |  | 
 **To** | [**TopologyNodeRef**](TopologyNodeRef.md) |  | 
-**Mappings** | Pointer to [**[]ConnectionMapping**](ConnectionMapping.md) | Target/value mappings for kinds that move values, such as &#x60;env&#x60; and &#x60;secret_mount&#x60;.  | [optional] 
+**Mappings** | Pointer to [**[]ConnectionMapping**](ConnectionMapping.md) | Target/value mappings for kinds that move values, such as &#x60;env&#x60;.  | [optional] 
 **Config** | Pointer to **map[string]interface{}** | Kind-specific connection configuration. Expected keys depend on &#x60;kind&#x60;. Examples: for &#x60;env&#x60; from &#x60;addon/postgres&#x60;, use fields such as &#x60;database&#x60; and &#x60;credential_scope&#x60;; for &#x60;volume_mount&#x60;, use &#x60;mount_path&#x60;, &#x60;sub_path&#x60;, and &#x60;read_only&#x60;; for &#x60;build_artifact_source&#x60;, use &#x60;source_path&#x60; and &#x60;destination_path&#x60;.  | [optional] 
 
 ## Methods

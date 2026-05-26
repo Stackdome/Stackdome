@@ -121,15 +121,54 @@ func (s *stackConnectionStore) ReplaceByStackIDWithTx(ctx context.Context, stack
 	return nil
 }
 
-func (s *stackConnectionStore) IsResourceReferencedAsSource(ctx context.Context, resourceType, resourceID string) (bool, error) {
+func (s *stackConnectionStore) IsNodeReferenced(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error) {
+	return s.isNodeReferenced(ctx, stackID, ref, "from_ref", "to_ref")
+}
+
+func (s *stackConnectionStore) IsNodeReferencedAsSource(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error) {
+	return s.isNodeReferenced(ctx, stackID, ref, "from_ref")
+}
+
+func (s *stackConnectionStore) IsNodeReferencedAsTarget(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error) {
+	return s.isNodeReferenced(ctx, stackID, ref, "to_ref")
+}
+
+func (s *stackConnectionStore) isNodeReferenced(ctx context.Context, stackID string, ref models.TopologyNodeRef, refColumns ...string) (bool, error) {
+	if ref.Type == "" || (ref.Id == "" && ref.Name == "") || len(refColumns) == 0 {
+		return false, nil
+	}
+
+	db := s.sessionFactory.New(ctx).Model(&models.StackConnectionRecord{})
+	query := db.Where(s.nodeReferenceCondition(stackID, ref, refColumns[0]), s.nodeReferenceArgs(stackID, ref)...)
+	for _, refColumn := range refColumns[1:] {
+		query = query.Or(s.nodeReferenceCondition(stackID, ref, refColumn), s.nodeReferenceArgs(stackID, ref)...)
+	}
+
 	var count int64
-	if err := s.sessionFactory.New(ctx).
-		Model(&models.StackConnectionRecord{}).
-		Where("from_ref->>'type' = ? AND from_ref->>'id' = ?", resourceType, resourceID).
-		Count(&count).Error; err != nil {
+	if err := query.Count(&count).Error; err != nil {
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (s *stackConnectionStore) nodeReferenceCondition(stackID string, ref models.TopologyNodeRef, refColumn string) string {
+	if ref.Id != "" {
+		return refColumn + "->>'type' = ? AND " + refColumn + "->>'id' = ?"
+	}
+	if stackID != "" {
+		return "stack_id = ? AND " + refColumn + "->>'type' = ? AND " + refColumn + "->>'name' = ?"
+	}
+	return refColumn + "->>'type' = ? AND " + refColumn + "->>'name' = ?"
+}
+
+func (s *stackConnectionStore) nodeReferenceArgs(stackID string, ref models.TopologyNodeRef) []interface{} {
+	if ref.Id != "" {
+		return []interface{}{ref.Type, ref.Id}
+	}
+	if stackID != "" {
+		return []interface{}{stackID, ref.Type, ref.Name}
+	}
+	return []interface{}{ref.Type, ref.Name}
 }
 
 func (s *stackConnectionStore) db(ctx context.Context) *gorm.DB {

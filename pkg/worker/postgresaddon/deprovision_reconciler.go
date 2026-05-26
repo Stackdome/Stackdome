@@ -39,7 +39,10 @@ func (r *deprovisionReconciler) Reconcile(ctx context.Context, addon *models.Pos
 		return resultNil, nil
 	}
 
-	inUse, err := r.connectionUsageChecker.IsResourceReferencedAsSource(ctx, string(models.TopologyNodeTypePostgresAddon), addon.ID)
+	inUse, err := r.connectionUsageChecker.IsNodeReferencedAsSource(ctx, "", models.TopologyNodeRef{
+		Type: models.TopologyNodeTypePostgresAddon,
+		Id:   addon.ID,
+	})
 	if err != nil {
 		return resultNil, fmt.Errorf("failed to check addon usage: %w", err)
 	}

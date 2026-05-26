@@ -353,6 +353,9 @@ func (v *stackValidator) validateConnections(ctx context.Context, existing *mode
 	for i, connection := range spec.Connections {
 		label := connectionLabel(connection, i)
 
+		if err := validateConnectionKind(label, connection.Kind); err != nil {
+			return err
+		}
 		if err := validateConnectionTargetResource(resourceMap, label, connection.To); err != nil {
 			return err
 		}
@@ -367,6 +370,17 @@ func (v *stackValidator) validateConnections(ctx context.Context, existing *mode
 	}
 
 	return nil
+}
+
+func validateConnectionKind(label string, kind models.ConnectionKind) *errors.ServiceError {
+	switch kind {
+	case models.ConnectionKindEnv,
+		models.ConnectionKindVolumeMount,
+		models.ConnectionKindBuildArtifactSource:
+		return nil
+	default:
+		return errors.BadRequest("connection '%s' has unsupported kind '%s'", label, kind)
+	}
 }
 
 func (v *stackValidator) validateConnectionSource(

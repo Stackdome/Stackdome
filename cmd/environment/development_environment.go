@@ -113,14 +113,14 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 	d.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
 
 	pgAddonWorker := postgresaddonworker.NewPostgresAddonWorker(postgresaddonworker.PostgresAddonWorkerSpec{
-		PostgresAddonService: d.Services.PostgresAddonService,
-		ObjectStoreService:   d.Services.ObjectStoreService,
-		NamespaceService:     d.Services.NamespaceService,
-		SecretService:        d.Services.SecretService,
+		PostgresAddonService:   d.Services.PostgresAddonService,
+		ObjectStoreService:     d.Services.ObjectStoreService,
+		NamespaceService:       d.Services.NamespaceService,
+		SecretService:          d.Services.SecretService,
 		ConnectionUsageChecker: pgstore.NewStackConnectionStore(pgstore.StackConnectionStoreSpec{SessionFactory: d.DBSession}),
-		ClusterManager:       d.ClusterManager,
-		CRBuilder:            builders.NewPostgresClusterBuilder(),
-		Env:                  d.Env.Name,
+		ClusterManager:         d.ClusterManager,
+		CRBuilder:              builders.NewPostgresClusterBuilder(),
+		Env:                    d.Env.Name,
 	})
 	d.WorkerManager.RegisterWorker(pgAddonWorker, &models.PostgresAddon{})
 
@@ -379,9 +379,10 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	volumeService := services.NewVolumeService(services.VolumeServiceSpec{
-		SessionFactory: d.DBSession,
-		Logger:         d.Logger,
-		Permissions:    d.PermissionService,
+		SessionFactory:         d.DBSession,
+		ConnectionUsageChecker: pgstore.NewStackConnectionStore(pgstore.StackConnectionStoreSpec{SessionFactory: d.DBSession}),
+		Logger:                 d.Logger,
+		Permissions:            d.PermissionService,
 	})
 
 	stackStore := pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: d.DBSession})

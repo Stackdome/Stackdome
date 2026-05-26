@@ -58,35 +58,37 @@ type PostgresAddonServiceSpec struct {
 	SessionFactory         db.SessionFactory
 	ConnectionUsageChecker connectionUsageChecker
 	ObjectStoreService     ObjectStoreService
-	ClusterService        ClusterService
-	NamespaceService      NamespaceService
-	SecretService         SecretService
-	PostgresBackupService PostgresBackupService
-	ClusterManager        clustermanager.ClusterManager
-	TeamService           TeamService
-	Logger                logger.Logger
-	Permissions           auth.PermissionService
+	ClusterService         ClusterService
+	NamespaceService       NamespaceService
+	SecretService          SecretService
+	PostgresBackupService  PostgresBackupService
+	ClusterManager         clustermanager.ClusterManager
+	TeamService            TeamService
+	Logger                 logger.Logger
+	Permissions            auth.PermissionService
 }
 
 type connectionUsageChecker interface {
-	IsResourceReferencedAsSource(ctx context.Context, resourceType, resourceID string) (bool, error)
+	IsNodeReferenced(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
+	IsNodeReferencedAsSource(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
+	IsNodeReferencedAsTarget(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
 }
 
 type postgresAddonService struct {
 	postgresAddonStore     stores.PostgresAddonStore
 	connectionUsageChecker connectionUsageChecker
 	databaseService        PostgresAddonDatabaseService
-	backupService      PostgresBackupService
-	namespaceService   NamespaceService
-	clusterService     ClusterService
-	objectStoreService ObjectStoreService
-	secretService      SecretService
-	teamService        TeamService
-	clusterManager     clustermanager.ClusterManager
-	validator          validator.PostgresAddonValidator
-	logger             logger.Logger
-	sessionFactory     db.SessionFactory
-	permissions        auth.PermissionService
+	backupService          PostgresBackupService
+	namespaceService       NamespaceService
+	clusterService         ClusterService
+	objectStoreService     ObjectStoreService
+	secretService          SecretService
+	teamService            TeamService
+	clusterManager         clustermanager.ClusterManager
+	validator              validator.PostgresAddonValidator
+	logger                 logger.Logger
+	sessionFactory         db.SessionFactory
+	permissions            auth.PermissionService
 
 	BackgroundJobEnqueuerDep
 	ClusterResourceServiceDeps
@@ -105,18 +107,18 @@ func NewPostgresAddonService(spec PostgresAddonServiceSpec) PostgresAddonService
 	return &postgresAddonService{
 		postgresAddonStore:     postgresAddonStore,
 		connectionUsageChecker: spec.ConnectionUsageChecker,
-		databaseService:    databaseService,
-		backupService:      spec.PostgresBackupService,
-		clusterService:     spec.ClusterService,
-		namespaceService:   spec.NamespaceService,
-		objectStoreService: spec.ObjectStoreService,
-		secretService:      spec.SecretService,
-		teamService:        spec.TeamService,
-		clusterManager:     spec.ClusterManager,
-		validator:          postgresaddon.NewPostgresAddonValidator(),
-		logger:             spec.Logger,
-		sessionFactory:     spec.SessionFactory,
-		permissions:        spec.Permissions,
+		databaseService:        databaseService,
+		backupService:          spec.PostgresBackupService,
+		clusterService:         spec.ClusterService,
+		namespaceService:       spec.NamespaceService,
+		objectStoreService:     spec.ObjectStoreService,
+		secretService:          spec.SecretService,
+		teamService:            spec.TeamService,
+		clusterManager:         spec.ClusterManager,
+		validator:              postgresaddon.NewPostgresAddonValidator(),
+		logger:                 spec.Logger,
+		sessionFactory:         spec.SessionFactory,
+		permissions:            spec.Permissions,
 	}
 }
 
@@ -415,7 +417,10 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 		return nil, permErr
 	}
 
-	inUse, usageErr := s.connectionUsageChecker.IsResourceReferencedAsSource(ctx, string(models.TopologyNodeTypePostgresAddon), id)
+	inUse, usageErr := s.connectionUsageChecker.IsNodeReferencedAsSource(ctx, "", models.TopologyNodeRef{
+		Type: models.TopologyNodeTypePostgresAddon,
+		Id:   id,
+	})
 	if usageErr != nil {
 		return nil, errors.GeneralError("failed to check addon usage: %v", usageErr)
 	}

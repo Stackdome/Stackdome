@@ -28,5 +28,7 @@ type secretService interface {
 }
 
 type connectionUsageChecker interface {
-	IsResourceReferencedAsSource(ctx context.Context, resourceType, resourceID string) (bool, error)
+	IsNodeReferenced(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
+	IsNodeReferencedAsSource(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
+	IsNodeReferencedAsTarget(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
 }

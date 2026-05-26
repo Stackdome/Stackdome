@@ -12,7 +12,6 @@ type ConnectionKind string
 
 const (
 	ConnectionKindEnv                 ConnectionKind = "env"
-	ConnectionKindSecretMount         ConnectionKind = "secret_mount"
 	ConnectionKindVolumeMount         ConnectionKind = "volume_mount"
 	ConnectionKindBuildArtifactSource ConnectionKind = "build_artifact_source"
 )
