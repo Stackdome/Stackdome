@@ -72,7 +72,8 @@ type ConnectionMapping struct {
 type ConnectionTarget struct {
 	Type ConnectionTargetType `json:"type"`
 	Name string               `json:"name,omitempty"`
-	Path string               `json:"path,omitempty"`
+	// Used when Type is file, represents the path where the file should be mounted inside the container
+	Path string `json:"path,omitempty"`
 }
 
 type ValueRef struct {

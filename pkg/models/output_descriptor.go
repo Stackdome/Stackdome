@@ -55,7 +55,11 @@ func (r *StackResource) ToOutputMap() map[string]string {
 
 	for _, port := range r.Ports {
 		outputs["port."+port.Name] = strconv.Itoa(port.Number)
-		outputs["url."+port.Name] = fmt.Sprintf("%s://%s:%d", port.Protocol, host, port.Number)
+		if port.Protocol == "http" {
+			outputs["url."+port.Name] = fmt.Sprintf("http://%s:%d", host, port.Number)
+		} else {
+			outputs["url."+port.Name] = fmt.Sprintf("%s:%d", host, port.Number)
+		}
 
 		if !port.ExposedToPublic {
 			continue

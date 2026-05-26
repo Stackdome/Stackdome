@@ -70,16 +70,14 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 				Logger:               logger.NewLoggerWithPrefix(context.Background(), "stack-secret-reconciler"),
 			}),
 			NewConnectionReconciler(ConnectionReconcilerSpec{
-				VolumeService: spec.VolumeService,
+				VolumeService:        spec.VolumeService,
+				PostgresAddonService: spec.PostgresAddonService,
+				SecretService:        spec.SecretService,
 			}),
 			NewVolumeReconciler(VolumeReconcilerSpec{
 				ClusterManager:  spec.ClusterManager,
 				VolumeService:   spec.VolumeService,
 				VolumeCrBuilder: spec.CRBuilder,
-			}),
-			NewAddonEnvReconciler(AddonEnvReconcilerSpec{
-				PostgresAddonService: spec.PostgresAddonService,
-				SecretService:        spec.SecretService,
 			}),
 			NewStackReconciler(StackReconcilerSpec{
 				ClusterManager: spec.ClusterManager,

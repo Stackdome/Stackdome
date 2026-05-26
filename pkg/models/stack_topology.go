@@ -1,5 +1,9 @@
 package models
 
+const (
+	DependsOnTopologyEdgeKind = "depends_on"
+)
+
 type StackTopology struct {
 	Nodes []TopologyNode `json:"nodes"`
 	Edges []TopologyEdge `json:"edges"`
@@ -13,11 +17,12 @@ type TopologyNode struct {
 }
 
 type TopologyEdge struct {
-	Id            string                 `json:"id,omitempty"`
-	Kind          string                 `json:"kind"`
-	Source        TopologyNodeRef        `json:"source"`
-	Target        TopologyNodeRef        `json:"target"`
-	Mappings      []ConnectionMapping    `json:"mappings,omitempty"`
-	Config        map[string]interface{} `json:"config,omitempty"`
-	SourceOfTruth string                 `json:"source_of_truth"`
+	Id       string                 `json:"id,omitempty"`
+	Kind     string                 `json:"kind"`
+	Source   TopologyNodeRef        `json:"source"`
+	Target   TopologyNodeRef        `json:"target"`
+	Mappings []ConnectionMapping    `json:"mappings,omitempty"`
+	Config   map[string]interface{} `json:"config,omitempty"`
+	// If its from user's explict connection or inferred by the system, Like consuming pull secrets, git credentials.
+	SourceOfTruth string `json:"source_of_truth"`
 }

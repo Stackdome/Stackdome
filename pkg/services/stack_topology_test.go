@@ -6,26 +6,27 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
-func TestBuildStackTopologyIncludesExplicitAndDerivedEdges(t *testing.T) {
+func TestNodesAndEdgesFromConnectionsDrivesTopology(t *testing.T) {
+	resources := []*models.StackResource{
+		{ID: "res-api", Name: "api"},
+		{ID: "res-worker", Name: "worker"},
+	}
+	volumes := []*models.Volume{
+		{ID: "vol-1", Name: "uploads"},
+	}
+
+	resourcesByName := map[string]*models.StackResource{
+		"api":    resources[0],
+		"worker": resources[1],
+	}
+	volumesByName := map[string]*models.Volume{
+		"uploads": volumes[0],
+	}
+
 	stack := &models.Stack{
-		ID: "stack-1",
-		StackResources: []*models.StackResource{
-			{
-				Name:      "api",
-				DependsOn: models.Dependencies{"postgres"},
-				Ports: models.Ports{
-					{Name: "http", Number: 8080, Protocol: "http", ExposedToPublic: true},
-				},
-				Status: &models.StackResourceStatus{State: models.StackResourcePhaseReady},
-			},
-			{
-				Name:   "worker",
-				Status: &models.StackResourceStatus{State: models.StackResourcePhasePending},
-			},
-		},
-		Volumes: []*models.Volume{
-			{Name: "uploads"},
-		},
+		ID:             "stack-1",
+		StackResources: resources,
+		Volumes:        volumes,
 		Connections: models.StackConnections{
 			{
 				Id:   "pg-api",
@@ -51,52 +52,63 @@ func TestBuildStackTopologyIncludesExplicitAndDerivedEdges(t *testing.T) {
 					},
 				},
 			},
+			{
+				Id:   "vol-api",
+				Kind: models.ConnectionKindVolumeMount,
+				From: models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "uploads"},
+				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
+				Config: models.ConnectionConfig{"mount_path": "/uploads"},
+			},
 		},
 	}
 
-	topology := buildStackTopology(stack, map[string]*models.PostgresAddon{
-		"pg-1": {ID: "pg-1", Name: "postgres"},
-	}, map[string]*models.Secret{
-		"sec-1": {ID: "sec-1", Name: "tls", Keys: []string{"tls.crt"}},
-	})
+	nodes, edges := nodesAndEdgesFromConnections(stack, resourcesByName, volumesByName)
 
-	if len(topology.Nodes) != 5 {
-		t.Fatalf("expected 5 nodes, got %d", len(topology.Nodes))
+	if len(nodes) != 4 {
+		t.Fatalf("expected 4 nodes from connections (pg, secret, volume, stack_resource), got %d", len(nodes))
 	}
-	if len(topology.Edges) != 3 {
-		t.Fatalf("expected 3 edges, got %d", len(topology.Edges))
+	if len(edges) != 3 {
+		t.Fatalf("expected 3 edges from connections, got %d", len(edges))
 	}
 
-	nodesByLabel := make(map[string]models.TopologyNode)
-	for _, node := range topology.Nodes {
-		nodesByLabel[node.Label] = node
-	}
-	if _, ok := nodesByLabel["api"]; !ok {
-		t.Fatalf("expected api node")
-	}
-	if _, ok := nodesByLabel["postgres"]; !ok {
-		t.Fatalf("expected postgres node")
-	}
-	if _, ok := nodesByLabel["tls"]; !ok {
-		t.Fatalf("expected tls node")
-	}
-	if _, ok := nodesByLabel["uploads"]; !ok {
-		t.Fatalf("expected uploads volume node")
+	pgKey := nodeKey(models.TopologyNodeTypePostgresAddon, "pg-1")
+	if node, ok := nodes[pgKey]; !ok {
+		t.Fatalf("expected postgres addon node from connection ref")
+	} else if node.Ref.Id != "pg-1" {
+		t.Fatalf("expected postgres node ref.Id 'pg-1', got '%s'", node.Ref.Id)
 	}
 
-	var foundDependsOn bool
-	for _, edge := range topology.Edges {
-		if edge.SourceOfTruth == "depends_on" {
-			foundDependsOn = true
-			if edge.Kind != "depends_on" {
-				t.Fatalf("expected depends_on edge kind, got %q", edge.Kind)
-			}
-			if edge.Source.Name != "postgres" || edge.Target.Name != "api" {
-				t.Fatalf("unexpected depends_on edge: %#v", edge)
+	secretKey := nodeKey(models.TopologyNodeTypeSecret, "sec-1")
+	if node, ok := nodes[secretKey]; !ok {
+		t.Fatalf("expected secret node from connection ref")
+	} else if node.Ref.Id != "sec-1" {
+		t.Fatalf("expected secret node ref.Id 'sec-1', got '%s'", node.Ref.Id)
+	}
+
+	volumeKey := nodeKey(models.TopologyNodeTypeVolume, "vol-1")
+	if node, ok := nodes[volumeKey]; !ok {
+		t.Fatalf("expected volume node from connection ref")
+	} else if node.Ref.Name != "uploads" || node.Ref.Id != "vol-1" {
+		t.Fatalf("expected volume node with name 'uploads' and id 'vol-1', got name='%s' id='%s'", node.Ref.Name, node.Ref.Id)
+	}
+
+	apiKey := nodeKey(models.TopologyNodeTypeStackResource, "res-api")
+	if node, ok := nodes[apiKey]; !ok {
+		t.Fatalf("expected stack_resource node from connection ref")
+	} else if node.Ref.Name != "api" || node.Ref.Id != "res-api" {
+		t.Fatalf("expected api node with name 'api' and id 'res-api', got name='%s' id='%s'", node.Ref.Name, node.Ref.Id)
+	}
+
+	var foundVolumeMount bool
+	for _, edge := range edges {
+		if edge.Kind == "volume_mount" {
+			foundVolumeMount = true
+			if edge.Source.Id != "vol-1" || edge.Target.Id != "res-api" {
+				t.Fatalf("expected volume_mount edge with populated IDs, got source.Id='%s' target.Id='%s'", edge.Source.Id, edge.Target.Id)
 			}
 		}
 	}
-	if !foundDependsOn {
-		t.Fatalf("expected derived depends_on edge")
+	if !foundVolumeMount {
+		t.Fatalf("expected volume_mount edge from connections")
 	}
 }

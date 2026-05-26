@@ -428,10 +428,6 @@ func (s *volumeService) DeleteWithTx(ctx context.Context, ID string) *errors.Ser
 }
 
 func (s *volumeService) validateVolumeNotReferencedByConnections(ctx context.Context, volume *models.Volume) *errors.ServiceError {
-	if s.connectionUsageChecker == nil {
-		return nil
-	}
-
 	stackVolume, err := s.stackVolumeStore.GetByVolumeID(ctx, volume.ID)
 	if err != nil {
 		if err.Is404() {

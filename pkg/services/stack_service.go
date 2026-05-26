@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
@@ -372,48 +373,6 @@ func (s *stackService) GetStack(ctx context.Context, ID string) (*models.Stack, 
 	return stack, nil
 }
 
-func (s *stackService) GetStackTopology(ctx context.Context, ID string) (*models.StackTopology, *errors.ServiceError) {
-	stack, err := s.GetStack(ctx, ID)
-	if err != nil {
-		return nil, err
-	}
-
-	addonsByID := make(map[string]*models.PostgresAddon)
-	secretsByID := make(map[string]*models.Secret)
-	for _, connection := range stack.Connections {
-		for _, ref := range []models.TopologyNodeRef{connection.From, connection.To} {
-			switch ref.Type {
-			case models.TopologyNodeTypePostgresAddon:
-				if ref.Id == "" {
-					continue
-				}
-				if _, ok := addonsByID[ref.Id]; ok {
-					continue
-				}
-				addon, serr := s.postgresAddonService.InternalGetPostgresAddon(ctx, ref.Id)
-				if serr != nil {
-					return nil, errors.GeneralError("failed to fetch postgres addon '%s' for stack topology: %s", ref.Id, serr.Error())
-				}
-				addonsByID[ref.Id] = addon
-			case models.TopologyNodeTypeSecret:
-				if ref.Id == "" {
-					continue
-				}
-				if _, ok := secretsByID[ref.Id]; ok {
-					continue
-				}
-				secret, serr := s.secretService.InternalGetByID(ctx, ref.Id)
-				if serr != nil {
-					return nil, errors.GeneralError("failed to fetch secret '%s' for stack topology: %s", ref.Id, serr.Error())
-				}
-				secretsByID[ref.Id] = secret
-			}
-		}
-	}
-
-	topology := buildStackTopology(stack, addonsByID, secretsByID)
-	return &topology, nil
-}
 
 func (s *stackService) ListStackConnections(ctx context.Context, stackID string) (models.StackConnections, *errors.ServiceError) {
 	stack, err := s.GetStack(ctx, stackID)
@@ -427,11 +386,13 @@ func (s *stackService) CreateStackConnection(ctx context.Context, stackID string
 	stack, _, err := s.prepareDesiredStackWithConnectionMutation(ctx, stackID, func(connections models.StackConnections) (models.StackConnections, *models.StackConnection, *errors.ServiceError) {
 		newConnection := *connection
 		for _, existing := range connections {
-			if newConnection.Id == "" {
-				continue
-			}
-			if existing.Id == newConnection.Id {
-				return nil, nil, errors.Conflict("stack connection '%s' already exists", newConnection.Id)
+			if existing.Kind == newConnection.Kind &&
+				existing.From == newConnection.From &&
+				existing.To == newConnection.To {
+				return nil, nil, errors.Conflict("a '%s' connection from %s to %s already exists",
+					newConnection.Kind,
+					connectionNodeLabel(newConnection.From),
+					connectionNodeLabel(newConnection.To))
 			}
 		}
 		connections = append(connections, newConnection)
@@ -743,4 +704,14 @@ func (s *stackService) populateAssociations(ctx context.Context, spec *models.St
 		spec.StackResources[i].UserID = spec.UserID
 		spec.StackResources[i].Namespace = spec.Namespace
 	}
+}
+
+func connectionNodeLabel(ref models.TopologyNodeRef) string {
+	if ref.Name != "" {
+		return fmt.Sprintf("%s:%s", ref.Type, ref.Name)
+	}
+	if ref.Id != "" {
+		return fmt.Sprintf("%s:%s", ref.Type, ref.Id)
+	}
+	return string(ref.Type)
 }

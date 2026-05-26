@@ -142,7 +142,8 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			backendURL, found := shared.GetContainerEnvVar(frontendDeploy, "BACKEND_URL")
 			Expect(found).To(BeTrue(), "BACKEND_URL env var should exist")
-			Expect(backendURL).To(Equal(shared.MultiResourceBackendName), "BACKEND_URL should be the backend K8s service name")
+			Expect(backendURL).To(HavePrefix(shared.MultiResourceBackendName+"."), "BACKEND_URL should be the backend K8s internal service host")
+			Expect(backendURL).To(HaveSuffix(".svc"), "BACKEND_URL should be a cluster-local service FQDN")
 		})
 	})
 
