@@ -1,63 +1,69 @@
 import type React from "react";
-import { MailIcon } from "lucide-react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { TeamChip } from "./team-chip";
 import type { PendingRow as PendingRowModel } from "../hooks/use-users";
+import { formatRelative } from "../lib/format-relative";
 
 interface PendingRowProps {
   row: PendingRowModel;
   actions?: React.ReactNode;
+  /** Name of the default team in the org (to render star on chip) */
+  defaultTeamName?: string;
 }
 
-export function PendingRow({ row, actions }: PendingRowProps) {
+export function PendingRow({ row, actions, defaultTeamName }: PendingRowProps) {
+  // Use invite.created_at for "invited X ago" label
+  const invitedAgo = formatRelative(row.invite.created_at);
+
+  // Build a synthetic TeamMembership shape for TeamChip
+  const teamMembership = row.team_name
+    ? {
+      team_name: row.team_name,
+      role: row.role,
+      default_team: defaultTeamName ? row.team_name === defaultTeamName : false,
+    }
+    : null;
+
   return (
-    <TableRow className="hover:bg-muted/50">
-      <TableCell className="py-3">
-        <div className="flex items-center gap-3">
-          <div className="size-7 shrink-0 flex items-center justify-center rounded-full border border-dashed border-border bg-muted">
-            <MailIcon className="size-3.5 text-muted-foreground" />
+    <TableRow className="border-b border-border hover:bg-muted/50">
+      {/* User */}
+      <TableCell className="py-3.5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-xs text-foreground truncate">{row.email}</span>
+            <span className="inline-flex items-center px-2 py-px rounded border border-warn-border bg-warn-bg text-warn text-[11px] font-mono shrink-0">
+              invited
+            </span>
           </div>
-          <div className="min-w-0">
-            <div className="font-mono text-[11px] text-foreground truncate">{row.email}</div>
-            {row.invited_by && (
-              <div className="font-mono text-[11px] text-muted-foreground truncate">
-                invited by {row.invited_by}
-              </div>
-            )}
+          <div className="font-mono text-[11px] text-muted-foreground truncate mt-0.5">
+            Invited by {row.invited_by ?? "—"} · {invitedAgo}
           </div>
         </div>
       </TableCell>
-      <TableCell className="py-3">
-        <Badge
-          variant="secondary"
-          className="font-mono text-[11px] border border-warn-border bg-warn-bg text-warn"
-        >
-          invited
-        </Badge>
+
+      {/* Org role — en dash for pending */}
+      <TableCell className="py-3.5">
+        <span className="font-mono text-[11px] text-muted-foreground">–</span>
       </TableCell>
-      <TableCell className="py-3">
-        {row.team_name ? (
-          <span className="inline-flex h-[22px] items-center rounded-[2px] border border-border bg-muted px-2 font-mono text-[11px] text-foreground">
-            {row.team_name}
-            {row.role && (
-              <span className="ml-1.5 text-muted-foreground">{row.role}</span>
-            )}
-          </span>
+
+      {/* Teams */}
+      <TableCell className="py-3.5">
+        {teamMembership ? (
+          <TeamChip
+            membership={teamMembership}
+            isDefault={defaultTeamName ? row.team_name === defaultTeamName : undefined}
+          />
         ) : (
-          <span className="font-mono text-[11px] text-muted-foreground">—</span>
+          <span className="font-mono text-[11px] text-muted-foreground">–</span>
         )}
       </TableCell>
-      {/* Shared "Last active" column — intentionally repurposed for invite expiry per approved design */}
-      <TableCell className="py-3">
-        {row.expires_at ? (
-          <span className="font-mono text-[11px] text-warn">
-            Expires {new Date(row.expires_at).toLocaleDateString()}
-          </span>
-        ) : (
-          <span className="font-mono text-[11px] text-muted-foreground">—</span>
-        )}
+
+      {/* Last active */}
+      <TableCell className="py-3.5">
+        <span className="font-mono text-[11px] text-muted-foreground">–</span>
       </TableCell>
-      <TableCell className="py-3 text-right">{actions}</TableCell>
+
+      <TableCell className="py-3.5 text-right">{actions}</TableCell>
     </TableRow>
   );
 }
