@@ -580,7 +580,7 @@ Deploy a sample nginx application to verify the complete workflow.
 
 Stacks with public ports require a domain to be configured.
 
-For local development, use `127.0.0.1.nip.io` as the organization domain. The nip.io service resolves any `<anything>.127.0.0.1.nip.io` address to `127.0.0.1` via public DNS, so no `/etc/hosts` editing is needed.
+For local development, use `stackdome.127.0.0.1.nip.io` as the organization domain. The nip.io service resolves any `<anything>.stackdome.127.0.0.1.nip.io` address to `127.0.0.1` via public DNS, so no `/etc/hosts` editing is needed.
 
 ```bash
 TOKEN=$(cat /tmp/stackdome-token.txt)
@@ -592,7 +592,7 @@ cat > /tmp/org-update.json << EOF
   "name": "DefaultOrganisation",
   "domains": [
     {
-      "fqdn": "127.0.0.1.nip.io"
+      "fqdn": "stackdome.127.0.0.1.nip.io"
     }
   ]
 }
