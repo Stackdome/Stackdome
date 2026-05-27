@@ -236,6 +236,16 @@ func TestComputeDiscriminatorReturnsEmptyForNonPostgres(t *testing.T) {
 	}
 }
 
+func TestComputeDiscriminatorReturnsEmptyForPostgresWithNilConfig(t *testing.T) {
+	conn := models.StackConnection{
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "pg-1"},
+	}
+	if got := conn.ComputeDiscriminator(); got != "" {
+		t.Fatalf("expected empty discriminator for postgres addon with nil config, got '%s'", got)
+	}
+}
+
 func TestComputeDiscriminatorReturnsEmptyForVolumeMount(t *testing.T) {
 	conn := models.StackConnection{
 		Kind: models.ConnectionKindVolumeMount,

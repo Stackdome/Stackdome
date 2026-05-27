@@ -61,27 +61,31 @@ PG_PORT := 5432
 .PHONY: ensure-postgres
 ensure-postgres: SHELL := /usr/bin/env bash
 ensure-postgres: ## Start the dev PostgreSQL container if it isn't already running.
-	@if $(DOCKER) ps --format '{{.Names}}' | grep -q '^$(PG_CONTAINER)$$'; then \
-		echo "PostgreSQL container '$(PG_CONTAINER)' already running."; \
-	elif $(DOCKER) ps -a --format '{{.Names}}' | grep -q '^$(PG_CONTAINER)$$'; then \
-		echo "Starting existing PostgreSQL container '$(PG_CONTAINER)'..."; \
-		$(DOCKER) start $(PG_CONTAINER); \
+	@if pg_isready -h localhost -p $(PG_PORT) -q 2>/dev/null; then \
+		echo "PostgreSQL already listening on port $(PG_PORT), skipping container setup."; \
 	else \
-		echo "Creating PostgreSQL container '$(PG_CONTAINER)'..."; \
-		$(DOCKER) run --name $(PG_CONTAINER) \
-			-e POSTGRES_USER=$(PG_USER) \
-			-e POSTGRES_PASSWORD=$(PG_PASSWORD) \
-			-e POSTGRES_DB=$(PG_DB) \
-			-p $(PG_PORT):5432 \
-			-d postgres; \
+		if $(DOCKER) ps --format '{{.Names}}' | grep -q '^$(PG_CONTAINER)$$'; then \
+			echo "PostgreSQL container '$(PG_CONTAINER)' already running."; \
+		elif $(DOCKER) ps -a --format '{{.Names}}' | grep -q '^$(PG_CONTAINER)$$'; then \
+			echo "Starting existing PostgreSQL container '$(PG_CONTAINER)'..."; \
+			$(DOCKER) start $(PG_CONTAINER); \
+		else \
+			echo "Creating PostgreSQL container '$(PG_CONTAINER)'..."; \
+			$(DOCKER) run --name $(PG_CONTAINER) \
+				-e POSTGRES_USER=$(PG_USER) \
+				-e POSTGRES_PASSWORD=$(PG_PASSWORD) \
+				-e POSTGRES_DB=$(PG_DB) \
+				-p $(PG_PORT):5432 \
+				-d postgres; \
+		fi; \
+		echo "Waiting for PostgreSQL to be ready..."; \
+		for i in $$(seq 1 30); do \
+			$(DOCKER) exec $(PG_CONTAINER) pg_isready -U $(PG_USER) >/dev/null 2>&1 && \
+				echo "PostgreSQL ready (port: $(PG_PORT))" && exit 0; \
+			sleep 1; \
+		done; \
+		echo "PostgreSQL failed to start within 30 seconds" && exit 1; \
 	fi
-	@echo "Waiting for PostgreSQL to be ready..."
-	@for i in $$(seq 1 30); do \
-		$(DOCKER) exec $(PG_CONTAINER) pg_isready -U $(PG_USER) >/dev/null 2>&1 && \
-			echo "PostgreSQL ready (port: $(PG_PORT))" && exit 0; \
-		sleep 1; \
-	done; \
-	echo "PostgreSQL failed to start within 30 seconds" && exit 1
 
 .PHONY: test-integration
 test-integration: SHELL := /usr/bin/env bash

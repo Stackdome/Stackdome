@@ -389,6 +389,38 @@ var _ = Describe("Stack Connections & Topology", func() {
 			Expect(databases).To(HaveKey("appdb"))
 			Expect(databases).To(HaveKey("tooljetdb"))
 		})
+
+		It("should reject a second env connection targeting the same database with 409", func() {
+			By("Creating a postgres addon")
+			addon := shared.CreateMinimalPostgresAddon("test-dup-db")
+			db1 := openapi.NewPostgresDatabase("appdb")
+			db1.SetExtensions([]string{})
+			addon.Spec.SetDatabases([]openapi.PostgresDatabase{*db1})
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
+			addonID := createdAddon.GetId()
+
+			By("Creating a stack with a resource")
+			web := shared.ResourceWithPort("web", 8080)
+			stack := shared.CreateSkipProvisioningStack("test-dup-db-conn", []openapi.StackResource{web})
+			createdStack := shared.CreateStack(client, orgID, teamName, stack)
+			stackID := createdStack.GetId()
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+
+			By("Creating first connection targeting appdb")
+			conn1 := shared.EnvConnectionWithID("addon/postgres", addonID, "stack_resource", "web", []openapi.ConnectionMapping{
+				shared.PostgresMapping("host", "PG_HOST"),
+			})
+			conn1.SetConfig(map[string]interface{}{"database": "appdb"})
+			created := shared.CreateStackConnection(client, orgID, teamName, stackID, &conn1)
+			Expect(created.GetId()).NotTo(BeEmpty())
+
+			By("Attempting duplicate connection targeting same database")
+			conn2 := shared.EnvConnectionWithID("addon/postgres", addonID, "stack_resource", "web", []openapi.ConnectionMapping{
+				shared.PostgresMapping("host", "PG_HOST_2"),
+			})
+			conn2.SetConfig(map[string]interface{}{"database": "appdb"})
+			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn2, http.StatusConflict)
+		})
 	})
 
 	// -----------------------------------------------------------------
