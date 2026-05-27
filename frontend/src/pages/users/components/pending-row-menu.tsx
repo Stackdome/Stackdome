@@ -26,7 +26,7 @@ export function PendingRowMenu({ row, onChanged }: PendingRowMenuProps) {
     setBusy(true);
     try {
       await resend(row.id);
-      toast({ title: "Invite resent", description: `Resent invite to ${row.email}.` });
+      toast({ title: "Invite resent", description: `Resent invite to ${row.email}` });
       onChanged();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to resend invite.";
