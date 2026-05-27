@@ -269,7 +269,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
         {/* ── Form / Submitting phase ── */}
         {(phase === "form" || phase === "submitting") && (
           <>
-            <div className="space-y-4">
+            <div className="min-w-0 space-y-4">
               {/* Server error banner */}
               {localServerError && (
                 <ServerErrorBanner
@@ -372,7 +372,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
         {/* ── Success phases ── */}
         {isSuccess && (
           <>
-            <div className="space-y-4">
+            <div className="min-w-0 space-y-4">
               {/* Email delivery banner */}
               <div
                 className={[
