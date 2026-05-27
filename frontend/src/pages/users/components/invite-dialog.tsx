@@ -215,7 +215,10 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
   }
 
   function handleCopy() {
-    void navigator.clipboard.writeText(resultToken);
+    const urlToCopy = resultToken
+      ? `${window.location.origin}/sign-up?invite_token=${resultToken}`
+      : resultToken;
+    void navigator.clipboard.writeText(urlToCopy);
     setCopied(true);
     // FIX 2: clear any existing timeout before setting a new one
     if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
@@ -227,6 +230,9 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
 
   const isSubmitting = phase === "submitting" || submitting;
   const isSuccess = phase === "success-sent" || phase === "success-failed";
+  const inviteUrl = resultToken
+    ? `${window.location.origin}/sign-up?invite_token=${resultToken}`
+    : "";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -273,7 +279,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
               )}
 
               {/* Email field */}
-              <FieldShell label="Email" htmlFor="invite-email" error={emailError}>
+              <FieldShell label="Email" htmlFor="invite-email" error={emailError} required>
                 <Input
                   id="invite-email"
                   type="email"
@@ -295,7 +301,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
               </FieldShell>
 
               {/* Team field */}
-              <FieldShell label="Team" htmlFor="invite-team" error={teamError}>
+              <FieldShell label="Team" htmlFor="invite-team" error={teamError} required>
                 <Select
                   value={resolvedTeam}
                   onValueChange={(v) => {
@@ -332,7 +338,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
               </FieldShell>
 
               {/* Role field */}
-              <FieldShell label="Role on this team">
+              <FieldShell label="Role on this team" required>
                 <div className="grid grid-cols-2 gap-2.5">
                   {(["Developer", "Viewer"] as const).map((r) => (
                     <RoleCard
@@ -347,18 +353,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
               </FieldShell>
             </div>
 
-            <DialogFooter className="items-center">
-              {/* Left: "Will send to" hint */}
-              <span className="mr-auto text-xs text-muted-foreground">
-                {email ? (
-                  <>
-                    Will send to{" "}
-                    <code className="font-mono text-foreground">{email}</code>
-                  </>
-                ) : (
-                  <span className="invisible">placeholder</span>
-                )}
-              </span>
+            <DialogFooter>
               <Button
                 variant="outline"
                 onClick={() => handleOpenChange(false)}
@@ -392,7 +387,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                 ) : (
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
                 )}
-                <div>
+                <div className="min-w-0 grow">
                   <p
                     className={[
                       "text-sm font-medium",
@@ -428,8 +423,8 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                 {/* Link box */}
                 <div className="flex items-center gap-2 rounded-md border border-border bg-input px-3 py-2">
                   <LinkIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <code className="grow truncate font-mono text-xs text-foreground">
-                    {resultToken}
+                  <code className="min-w-0 grow truncate font-mono text-xs text-foreground">
+                    {inviteUrl}
                   </code>
                   <Button variant="ghost" size="icon" onClick={handleCopy} className="shrink-0 h-7 w-7">
                     {copied ? (
