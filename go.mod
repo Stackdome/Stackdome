@@ -11,6 +11,7 @@ require (
 	github.com/cloudnative-pg/plugin-barman-cloud v0.11.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/getkin/kin-openapi v0.126.0
+	github.com/glebarez/sqlite v1.7.0
 	github.com/go-git/go-git/v5 v5.16.0
 	github.com/go-gormigrate/gormigrate/v2 v2.1.2
 	github.com/go-logr/logr v1.4.3
@@ -84,7 +85,6 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/glebarez/go-sqlite v1.20.3 // indirect
-	github.com/glebarez/sqlite v1.7.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
