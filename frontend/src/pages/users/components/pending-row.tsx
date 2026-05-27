@@ -1,4 +1,5 @@
 import type React from "react";
+import { Mail } from "lucide-react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { TeamChip } from "./team-chip";
 import type { PendingRow as PendingRowModel } from "../hooks/use-users";
@@ -28,15 +29,20 @@ export function PendingRow({ row, actions, defaultTeamName }: PendingRowProps) {
     <TableRow className="border-b border-border hover:bg-muted/50">
       {/* User */}
       <TableCell className="py-3.5">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-xs text-foreground truncate">{row.email}</span>
-            <span className="inline-flex items-center px-2 py-px rounded border border-warn-border bg-warn-bg text-warn text-[11px] font-mono shrink-0">
-              invited
-            </span>
+        <div className="flex items-center gap-3">
+          <div className="h-7 w-7 rounded shrink-0 flex items-center justify-center bg-muted text-muted-foreground">
+            <Mail className="h-3.5 w-3.5" />
           </div>
-          <div className="font-mono text-[11px] text-muted-foreground truncate mt-0.5">
-            Invited by {row.invited_by ?? "—"} · {invitedAgo}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono text-xs text-foreground truncate">{row.email}</span>
+              <span className="inline-flex items-center px-2 py-px rounded border border-warn-border bg-warn-bg text-warn text-[11px] font-mono shrink-0">
+                invited
+              </span>
+            </div>
+            <div className="font-mono text-[11px] text-muted-foreground truncate mt-0.5">
+              Invited by {row.invited_by ?? "—"} · {invitedAgo}
+            </div>
           </div>
         </div>
       </TableCell>
