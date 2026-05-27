@@ -16,8 +16,9 @@ import (
 
 // StackSpec struct for StackSpec
 type StackSpec struct {
-	StackResources []StackResource `json:"stack_resources"`
-	Volumes        []Volume        `json:"volumes,omitempty"`
+	StackResources []StackResource   `json:"stack_resources"`
+	Volumes        []Volume          `json:"volumes,omitempty"`
+	Connections    []StackConnection `json:"connections,omitempty"`
 }
 
 // NewStackSpec instantiates a new StackSpec object
@@ -94,6 +95,38 @@ func (o *StackSpec) SetVolumes(v []Volume) {
 	o.Volumes = v
 }
 
+// GetConnections returns the Connections field value if set, zero value otherwise.
+func (o *StackSpec) GetConnections() []StackConnection {
+	if o == nil || o.Connections == nil {
+		var ret []StackConnection
+		return ret
+	}
+	return o.Connections
+}
+
+// GetConnectionsOk returns a tuple with the Connections field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackSpec) GetConnectionsOk() ([]StackConnection, bool) {
+	if o == nil || o.Connections == nil {
+		return nil, false
+	}
+	return o.Connections, true
+}
+
+// HasConnections returns a boolean if a field has been set.
+func (o *StackSpec) HasConnections() bool {
+	if o != nil && o.Connections != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetConnections gets a reference to the given []StackConnection and assigns it to the Connections field.
+func (o *StackSpec) SetConnections(v []StackConnection) {
+	o.Connections = v
+}
+
 func (o StackSpec) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -101,6 +134,9 @@ func (o StackSpec) MarshalJSON() ([]byte, error) {
 	}
 	if o.Volumes != nil {
 		toSerialize["volumes"] = o.Volumes
+	}
+	if o.Connections != nil {
+		toSerialize["connections"] = o.Connections
 	}
 	return json.Marshal(toSerialize)
 }

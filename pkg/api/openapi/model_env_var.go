@@ -16,18 +16,20 @@ import (
 
 // EnvVar struct for EnvVar
 type EnvVar struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
+	Name string `json:"name"`
+	// Literal environment variable value.
+	Value *string `json:"value,omitempty"`
+	// Read this environment variable from one of the resource's own declared outputs, for example public.http.url.
+	SelfOutput *string `json:"self_output,omitempty"`
 }
 
 // NewEnvVar instantiates a new EnvVar object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewEnvVar(name string, value string) *EnvVar {
+func NewEnvVar(name string) *EnvVar {
 	this := EnvVar{}
 	this.Name = name
-	this.Value = value
 	return &this
 }
 
@@ -63,28 +65,68 @@ func (o *EnvVar) SetName(v string) {
 	o.Name = v
 }
 
-// GetValue returns the Value field value
+// GetValue returns the Value field value if set, zero value otherwise.
 func (o *EnvVar) GetValue() string {
-	if o == nil {
+	if o == nil || o.Value == nil {
 		var ret string
 		return ret
 	}
-
-	return o.Value
+	return *o.Value
 }
 
-// GetValueOk returns a tuple with the Value field value
+// GetValueOk returns a tuple with the Value field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *EnvVar) GetValueOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.Value == nil {
 		return nil, false
 	}
-	return &o.Value, true
+	return o.Value, true
 }
 
-// SetValue sets field value
+// HasValue returns a boolean if a field has been set.
+func (o *EnvVar) HasValue() bool {
+	if o != nil && o.Value != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetValue gets a reference to the given string and assigns it to the Value field.
 func (o *EnvVar) SetValue(v string) {
-	o.Value = v
+	o.Value = &v
+}
+
+// GetSelfOutput returns the SelfOutput field value if set, zero value otherwise.
+func (o *EnvVar) GetSelfOutput() string {
+	if o == nil || o.SelfOutput == nil {
+		var ret string
+		return ret
+	}
+	return *o.SelfOutput
+}
+
+// GetSelfOutputOk returns a tuple with the SelfOutput field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *EnvVar) GetSelfOutputOk() (*string, bool) {
+	if o == nil || o.SelfOutput == nil {
+		return nil, false
+	}
+	return o.SelfOutput, true
+}
+
+// HasSelfOutput returns a boolean if a field has been set.
+func (o *EnvVar) HasSelfOutput() bool {
+	if o != nil && o.SelfOutput != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetSelfOutput gets a reference to the given string and assigns it to the SelfOutput field.
+func (o *EnvVar) SetSelfOutput(v string) {
+	o.SelfOutput = &v
 }
 
 func (o EnvVar) MarshalJSON() ([]byte, error) {
@@ -92,8 +134,11 @@ func (o EnvVar) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["name"] = o.Name
 	}
-	if true {
+	if o.Value != nil {
 		toSerialize["value"] = o.Value
+	}
+	if o.SelfOutput != nil {
+		toSerialize["self_output"] = o.SelfOutput
 	}
 	return json.Marshal(toSerialize)
 }

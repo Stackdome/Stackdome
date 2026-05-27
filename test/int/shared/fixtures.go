@@ -39,14 +39,31 @@ const (
 	EnvPortsPort2        = 9090
 )
 
-// Postgres addon env mapping keys used in CreateStackWithPostgresAddon
+// PostgresEnvMapping maps output accessor names to env var names for postgres connections.
 var PostgresEnvMapping = map[string]string{
-	"host":             "PG_HOST",
-	"port":             "PG_PORT",
-	"username":         "PG_USER",
-	"password":         "PG_PASSWORD",
-	"database":         "PG_DATABASE",
-	"connectionString": "DATABASE_URL",
+	"host":     "PG_HOST",
+	"port":     "PG_PORT",
+	"username": "PG_USER",
+	"password": "PG_PASSWORD",
+	"database": "PG_DATABASE",
+	"url":      "DATABASE_URL",
+}
+
+// Full-stack e2e fixture values (2 resources, postgres, secret, volume, depends_on)
+const (
+	FullStackAPIName    = "api"
+	FullStackWorkerName = "worker"
+	FullStackAPIPort    = 8080
+	FullStackVolumeName = "uploads"
+	FullStackMountPath  = "/data/uploads"
+	FullStackSubPath    = "api"
+	FullStackSecretName = "tls-certs"
+)
+
+// FullStackSecretEnvMapping maps secret output accessors to env var names.
+var FullStackSecretEnvMapping = map[string]string{
+	"key.tls_cert": "TLS_CERT",
+	"key.tls_key":  "TLS_KEY",
 }
 
 // Crash detection fixture values
@@ -329,7 +346,7 @@ func CreateSimpleStack(name string) *openapi.Stack {
 	imageSpec := openapi.NewImageSpec("nginx:1.25-alpine")
 	resource.SetImageSpec(*imageSpec)
 	resource.SetPorts([]openapi.Port{
-		*openapi.NewPort(80, false),
+		*openapi.NewPort("http", 80, false),
 	})
 
 	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
@@ -341,11 +358,15 @@ func CreateMultiResourceStack(name string) *openapi.Stack {
 	backendImage := openapi.NewImageSpec(TestImage)
 	backend.SetImageSpec(*backendImage)
 	backend.SetPorts([]openapi.Port{
-		*openapi.NewPort(MultiResourceBackendPort, false),
+		*openapi.NewPort("http", MultiResourceBackendPort, false),
 	})
 	backendExec := openapi.NewExecutionConfig()
 	backendExec.SetEnvironmentVariables([]openapi.EnvVar{
-		*openapi.NewEnvVar("APP_ROLE", MultiResourceBackendName),
+		func() openapi.EnvVar {
+			v := openapi.NewEnvVar("APP_ROLE")
+			v.SetValue(MultiResourceBackendName)
+			return *v
+		}(),
 	})
 	backend.SetExecutionConfig(*backendExec)
 
@@ -353,15 +374,22 @@ func CreateMultiResourceStack(name string) *openapi.Stack {
 	frontendImage := openapi.NewImageSpec(TestImage)
 	frontend.SetImageSpec(*frontendImage)
 	frontend.SetPorts([]openapi.Port{
-		*openapi.NewPort(MultiResourceFrontendPort, false),
+		*openapi.NewPort("http", MultiResourceFrontendPort, false),
 	})
-	frontendExec := openapi.NewExecutionConfig()
-	frontendExec.SetEnvironmentVariables([]openapi.EnvVar{
-		*openapi.NewEnvVar("BACKEND_URL", "{{ STACKDOME_BACKEND_INTERNAL }}"),
-	})
-	frontend.SetExecutionConfig(*frontendExec)
+
+	from := openapi.NewTopologyNodeRef("stack_resource")
+	from.SetName(MultiResourceBackendName)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(MultiResourceFrontendName)
+	conn := openapi.NewStackConnection("env", *from, *to)
+	target := openapi.NewConnectionTarget("env")
+	target.SetName("BACKEND_URL")
+	value := openapi.NewValueRef()
+	value.SetOutput("host")
+	conn.SetMappings([]openapi.ConnectionMapping{*openapi.NewConnectionMapping(*target, *value)})
 
 	spec := openapi.NewStackSpec([]openapi.StackResource{*backend, *frontend})
+	spec.SetConnections([]openapi.StackConnection{*conn})
 	return openapi.NewStack(name, *spec)
 }
 
@@ -370,14 +398,14 @@ func CreateStackWithDependencies(name string) *openapi.Stack {
 	imageA := openapi.NewImageSpec("nginx:1.25-alpine")
 	resourceA.SetImageSpec(*imageA)
 	resourceA.SetPorts([]openapi.Port{
-		*openapi.NewPort(5432, false),
+		*openapi.NewPort("postgres", 5432, false),
 	})
 
 	resourceB := openapi.NewStackResource("app")
 	imageB := openapi.NewImageSpec("nginx:1.25-alpine")
 	resourceB.SetImageSpec(*imageB)
 	resourceB.SetPorts([]openapi.Port{
-		*openapi.NewPort(8080, false),
+		*openapi.NewPort("http", 8080, false),
 	})
 	resourceB.SetDependsOn([]string{"database"})
 
@@ -390,14 +418,26 @@ func CreateStackWithEnvAndPorts(name string) *openapi.Stack {
 	image := openapi.NewImageSpec(TestImage)
 	resource.SetImageSpec(*image)
 	resource.SetPorts([]openapi.Port{
-		*openapi.NewPort(EnvPortsPort1, false),
-		*openapi.NewPort(EnvPortsPort2, false),
+		*openapi.NewPort("http", EnvPortsPort1, false),
+		*openapi.NewPort("metrics", EnvPortsPort2, false),
 	})
 	exec := openapi.NewExecutionConfig()
 	exec.SetEnvironmentVariables([]openapi.EnvVar{
-		*openapi.NewEnvVar(EnvPortsAppEnvKey, EnvPortsAppEnvVal),
-		*openapi.NewEnvVar(EnvPortsAppPortKey, EnvPortsAppPortVal),
-		*openapi.NewEnvVar(EnvPortsLogLevelKey, EnvPortsLogLevelVal),
+		func() openapi.EnvVar {
+			v := openapi.NewEnvVar(EnvPortsAppEnvKey)
+			v.SetValue(EnvPortsAppEnvVal)
+			return *v
+		}(),
+		func() openapi.EnvVar {
+			v := openapi.NewEnvVar(EnvPortsAppPortKey)
+			v.SetValue(EnvPortsAppPortVal)
+			return *v
+		}(),
+		func() openapi.EnvVar {
+			v := openapi.NewEnvVar(EnvPortsLogLevelKey)
+			v.SetValue(EnvPortsLogLevelVal)
+			return *v
+		}(),
 	})
 	resource.SetExecutionConfig(*exec)
 
@@ -410,7 +450,7 @@ func CreateStackWithInitContainer(name string) *openapi.Stack {
 	image := openapi.NewImageSpec(TestImage)
 	resource.SetImageSpec(*image)
 	resource.SetPorts([]openapi.Port{
-		*openapi.NewPort(80, false),
+		*openapi.NewPort("http", 80, false),
 	})
 
 	initSpec := openapi.NewInitSpec()
@@ -428,19 +468,13 @@ func CreateStackWithPostgresAddon(name string, addonID string, database string) 
 	image := openapi.NewImageSpec("nginx:1.25-alpine")
 	resource.SetImageSpec(*image)
 	resource.SetPorts([]openapi.Port{
-		*openapi.NewPort(8080, false),
+		*openapi.NewPort("http", 8080, false),
 	})
 
-	pgEnvSource := openapi.NewPostgresAddonEnvSource(addonID, PostgresEnvMapping)
-	pgEnvSource.SetDatabase(database)
-	addonEnvSource := openapi.NewAddonEnvSource()
-	addonEnvSource.SetPostgres(*pgEnvSource)
-
-	exec := openapi.NewExecutionConfig()
-	exec.SetEnvFromAddons([]openapi.AddonEnvSource{*addonEnvSource})
-	resource.SetExecutionConfig(*exec)
-
 	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	spec.SetConnections([]openapi.StackConnection{
+		postgresEnvConnection(addonID, "app", database, false),
+	})
 	return openapi.NewStack(name, *spec)
 }
 
@@ -449,20 +483,137 @@ func CreateStackWithPostgresAddonSuperuser(name string, addonID string) *openapi
 	image := openapi.NewImageSpec("nginx:1.25-alpine")
 	resource.SetImageSpec(*image)
 	resource.SetPorts([]openapi.Port{
-		*openapi.NewPort(8080, false),
+		*openapi.NewPort("http", 8080, false),
 	})
 
-	pgEnvSource := openapi.NewPostgresAddonEnvSource(addonID, PostgresEnvMapping)
-	pgEnvSource.SetSuperuser(true)
-	addonEnvSource := openapi.NewAddonEnvSource()
-	addonEnvSource.SetPostgres(*pgEnvSource)
-
-	exec := openapi.NewExecutionConfig()
-	exec.SetEnvFromAddons([]openapi.AddonEnvSource{*addonEnvSource})
-	resource.SetExecutionConfig(*exec)
-
 	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	spec.SetConnections([]openapi.StackConnection{
+		postgresEnvConnection(addonID, "app", "", true),
+	})
 	return openapi.NewStack(name, *spec)
+}
+
+func postgresEnvConnection(addonID, targetResource, database string, superuser bool) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef("addon/postgres")
+	from.SetId(addonID)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(targetResource)
+	conn := openapi.NewStackConnection("env", *from, *to)
+
+	config := map[string]interface{}{}
+	if database != "" {
+		config["database"] = database
+	}
+	if superuser {
+		config["credential_scope"] = "superuser"
+	}
+	if len(config) > 0 {
+		conn.SetConfig(config)
+	}
+
+	var mappings []openapi.ConnectionMapping
+	for output, envName := range PostgresEnvMapping {
+		target := openapi.NewConnectionTarget("env")
+		target.SetName(envName)
+		value := openapi.NewValueRef()
+		value.SetOutput(output)
+		mappings = append(mappings, *openapi.NewConnectionMapping(*target, *value))
+	}
+	conn.SetMappings(mappings)
+	return *conn
+}
+
+// CreateFullStack creates a stack with 2 resources (api + worker), a volume mount,
+// postgres addon connection, secret connection, resource-to-resource connection,
+// and depends_on. This exercises all connection kinds and topology features.
+func CreateFullStack(name string, addonID string, database string, secretID string) *openapi.Stack {
+	api := openapi.NewStackResource(FullStackAPIName)
+	apiImage := openapi.NewImageSpec(TestImage)
+	api.SetImageSpec(*apiImage)
+	api.SetPorts([]openapi.Port{
+		*openapi.NewPort("http", int32(FullStackAPIPort), false),
+	})
+	api.SetDependsOn([]string{FullStackWorkerName})
+
+	worker := openapi.NewStackResource(FullStackWorkerName)
+	workerImage := openapi.NewImageSpec(TestImage)
+	worker.SetImageSpec(*workerImage)
+
+	volumeSpec := openapi.NewVolumeSpec("1Gi", false, openapi.READ_WRITE_ONCE)
+	volume := openapi.NewVolume(FullStackVolumeName, *volumeSpec)
+
+	connections := []openapi.StackConnection{
+		postgresEnvConnection(addonID, FullStackAPIName, database, false),
+		postgresEnvConnection(addonID, FullStackWorkerName, database, false),
+		secretEnvConnection(secretID, FullStackAPIName),
+		volumeMountConnection(FullStackVolumeName, FullStackAPIName, FullStackMountPath, FullStackSubPath),
+		resourceToResourceEnvConnection(FullStackAPIName, FullStackWorkerName),
+	}
+
+	spec := openapi.NewStackSpec([]openapi.StackResource{*api, *worker})
+	spec.SetVolumes([]openapi.Volume{*volume})
+	spec.SetConnections(connections)
+	return openapi.NewStack(name, *spec)
+}
+
+func secretEnvConnection(secretID, targetResource string) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef("secret")
+	from.SetId(secretID)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(targetResource)
+	conn := openapi.NewStackConnection("env", *from, *to)
+
+	var mappings []openapi.ConnectionMapping
+	for output, envName := range FullStackSecretEnvMapping {
+		target := openapi.NewConnectionTarget("env")
+		target.SetName(envName)
+		value := openapi.NewValueRef()
+		value.SetOutput(output)
+		mappings = append(mappings, *openapi.NewConnectionMapping(*target, *value))
+	}
+	conn.SetMappings(mappings)
+	return *conn
+}
+
+func volumeMountConnection(volumeName, targetResource, mountPath, subPath string) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef("volume")
+	from.SetName(volumeName)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(targetResource)
+	conn := openapi.NewStackConnection("volume_mount", *from, *to)
+	config := map[string]interface{}{
+		"mount_path": mountPath,
+	}
+	if subPath != "" {
+		config["sub_path"] = subPath
+	}
+	conn.SetConfig(config)
+	return *conn
+}
+
+func resourceToResourceEnvConnection(sourceResource, targetResource string) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef("stack_resource")
+	from.SetName(sourceResource)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(targetResource)
+	conn := openapi.NewStackConnection("env", *from, *to)
+	conn.SetMappings([]openapi.ConnectionMapping{
+		func() openapi.ConnectionMapping {
+			target := openapi.NewConnectionTarget("env")
+			target.SetName("API_HOST")
+			value := openapi.NewValueRef()
+			value.SetOutput("host")
+			return *openapi.NewConnectionMapping(*target, *value)
+		}(),
+		func() openapi.ConnectionMapping {
+			target := openapi.NewConnectionTarget("env")
+			target.SetName("API_URL")
+			value := openapi.NewValueRef()
+			value.SetOutput("url.http")
+			return *openapi.NewConnectionMapping(*target, *value)
+		}(),
+	})
+	return *conn
 }
 
 // CreateStackWithBrokenBuildSource creates a stack pointing at a branch with a broken
@@ -502,6 +653,116 @@ func CreateStackWithBrokenBuildSource(name string, repoURL string, secretID stri
 	return openapi.NewStack(name, *spec)
 }
 
+// SkipProvisioningAnnotation is the annotation value that causes the stack worker
+// to skip cluster provisioning and mark the stack as Ready immediately.
+const SkipProvisioningAnnotationKey = "stack.stackdome.io/skip-cluster-provisioning"
+
+func skipProvisioningAnnotation() []openapi.Annotation {
+	return []openapi.Annotation{
+		*openapi.NewAnnotation(SkipProvisioningAnnotationKey, "true"),
+	}
+}
+
+func CreateSkipProvisioningStack(name string, resources []openapi.StackResource) *openapi.Stack {
+	spec := openapi.NewStackSpec(resources)
+	stack := openapi.NewStack(name, *spec)
+	stack.SetAnnotations(skipProvisioningAnnotation())
+	return stack
+}
+
+func CreateSkipProvisioningStackWithVolumes(name string, resources []openapi.StackResource, volumes []openapi.Volume) *openapi.Stack {
+	spec := openapi.NewStackSpec(resources)
+	spec.SetVolumes(volumes)
+	stack := openapi.NewStack(name, *spec)
+	stack.SetAnnotations(skipProvisioningAnnotation())
+	return stack
+}
+
+func CreateSkipProvisioningStackWithConnections(name string, resources []openapi.StackResource, connections []openapi.StackConnection) *openapi.Stack {
+	spec := openapi.NewStackSpec(resources)
+	spec.SetConnections(connections)
+	stack := openapi.NewStack(name, *spec)
+	stack.SetAnnotations(skipProvisioningAnnotation())
+	return stack
+}
+
+func CreateSkipProvisioningStackFull(name string, resources []openapi.StackResource, volumes []openapi.Volume, connections []openapi.StackConnection) *openapi.Stack {
+	spec := openapi.NewStackSpec(resources)
+	spec.SetVolumes(volumes)
+	spec.SetConnections(connections)
+	stack := openapi.NewStack(name, *spec)
+	stack.SetAnnotations(skipProvisioningAnnotation())
+	return stack
+}
+
+func SimpleResource(name string) openapi.StackResource {
+	r := openapi.NewStackResource(name)
+	r.SetImageSpec(*openapi.NewImageSpec(TestImage))
+	return *r
+}
+
+func ResourceWithPort(name string, port int32) openapi.StackResource {
+	r := openapi.NewStackResource(name)
+	r.SetImageSpec(*openapi.NewImageSpec(TestImage))
+	r.SetPorts([]openapi.Port{*openapi.NewPort("http", port, false)})
+	return *r
+}
+
+func ResourceWithDependsOn(name string, deps []string) openapi.StackResource {
+	r := openapi.NewStackResource(name)
+	r.SetImageSpec(*openapi.NewImageSpec(TestImage))
+	r.SetDependsOn(deps)
+	return *r
+}
+
+func EnvConnection(fromType, fromName, toType, toName string, mappings []openapi.ConnectionMapping) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef(fromType)
+	from.SetName(fromName)
+	to := openapi.NewTopologyNodeRef(toType)
+	to.SetName(toName)
+	conn := openapi.NewStackConnection("env", *from, *to)
+	if len(mappings) > 0 {
+		conn.SetMappings(mappings)
+	}
+	return *conn
+}
+
+func EnvConnectionWithID(fromType, fromID, toType, toName string, mappings []openapi.ConnectionMapping) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef(fromType)
+	from.SetId(fromID)
+	to := openapi.NewTopologyNodeRef(toType)
+	to.SetName(toName)
+	conn := openapi.NewStackConnection("env", *from, *to)
+	if len(mappings) > 0 {
+		conn.SetMappings(mappings)
+	}
+	return *conn
+}
+
+func VolumeMountConn(volumeName, targetResource, mountPath, subPath string) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef("volume")
+	from.SetName(volumeName)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(targetResource)
+	conn := openapi.NewStackConnection("volume_mount", *from, *to)
+	config := map[string]interface{}{
+		"mount_path": mountPath,
+	}
+	if subPath != "" {
+		config["sub_path"] = subPath
+	}
+	conn.SetConfig(config)
+	return *conn
+}
+
+func HostMapping() openapi.ConnectionMapping {
+	target := openapi.NewConnectionTarget("env")
+	target.SetName("API_HOST")
+	value := openapi.NewValueRef()
+	value.SetOutput("host")
+	return *openapi.NewConnectionMapping(*target, *value)
+}
+
 func CreateStackWithBuildSource(name string, repoURL string, secretID string) *openapi.Stack {
 	resource := openapi.NewStackResource(BuildSourceResourceName)
 
@@ -539,7 +800,7 @@ func CreateStackWithBuildSource(name string, repoURL string, secretID string) *o
 
 	// Port 3000 exposed to public
 	resource.SetPorts([]openapi.Port{
-		*openapi.NewPort(int32(BuildSourcePort), true),
+		*openapi.NewPort("http", int32(BuildSourcePort), true),
 	})
 
 	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})

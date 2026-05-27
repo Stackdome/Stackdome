@@ -32,10 +32,22 @@ func PresentStack(s *models.Stack) openapi.Stack {
 	}
 }
 
+func PresentStackConnections(connections models.StackConnections) []openapi.StackConnection {
+	return presentConnections(connections)
+}
+
+func PresentStackConnection(connection *models.StackConnection) openapi.StackConnection {
+	if connection == nil {
+		return openapi.StackConnection{}
+	}
+	return presentConnections(models.StackConnections{*connection})[0]
+}
+
 func presentStackSpec(w *models.Stack) openapi.StackSpec {
 	return openapi.StackSpec{
 		StackResources: presentStackResources(w.StackResources),
 		Volumes:        presentVolumes(w.Volumes, true),
+		Connections:    presentConnections(w.Connections),
 	}
 }
 
@@ -57,29 +69,9 @@ func presentStackStatus(status *models.StackStatus) *openapi.StackStatus {
 func presentStackResources(resources []*models.StackResource) []openapi.StackResource {
 	result := make([]openapi.StackResource, len(resources))
 	for i, r := range resources {
-		result[i] = presentStackResource(r)
+		result[i] = PresentStackResource(r)
 	}
 	return result
-}
-
-func presentStackResource(r *models.StackResource) openapi.StackResource {
-	return openapi.StackResource{
-		Id:              &r.ID,
-		StackId:         &r.StackID,
-		Name:            r.Name,
-		Labels:          presentLabels(r.Labels),
-		Annotations:     presentAnnotations(r.Annotations),
-		BuildSpec:       presentBuildConfig(r.BuildConfig),
-		ImageSpec:       presentImageConfig(r.ImageConfig),
-		InitSpec:        presentInitConfig(r.Init),
-		ExecutionConfig: presentExecutionConfig(r.ExecutionConfig),
-		VolumeMounts:    presentVolumeMounts(r.VolumeMounts),
-		DependsOn:       presentDependencies(r.DependsOn),
-		LifecycleConfig: presentLifecycleConfig(r.LifecycleConfig),
-		Ports:           presentPorts(r.Ports),
-		Stateful:        &r.StateFul,
-		Status:          presentStackResourceStatus(r.Status),
-	}
 }
 
 func presentBuildConfig(config *models.BuildConfigSpec) *openapi.StackResourceBuildSpec {
@@ -194,41 +186,18 @@ func presentExecutionConfig(config *models.ExecutionConfig) *openapi.ExecutionCo
 		Command:              config.Command,
 		Args:                 config.Args,
 		EnvironmentVariables: presentEnvVars(config.Env),
-		EnvFromAddons:        presentEnvFromAddons(config.EnvFromAddons),
 	}
 }
 
 func presentEnvVars(envVars []models.EnvVar) []openapi.EnvVar {
 	result := make([]openapi.EnvVar, len(envVars))
 	for i, env := range envVars {
-		result[i] = openapi.EnvVar{
-			Name:  env.Name,
-			Value: env.Value,
+		result[i] = openapi.EnvVar{Name: env.Name}
+		if env.Value != "" {
+			result[i].SetValue(env.Value)
 		}
-	}
-	return result
-}
-
-func presentEnvFromAddons(sources []models.AddonEnvSource) []openapi.AddonEnvSource {
-	if sources == nil {
-		return nil
-	}
-	result := make([]openapi.AddonEnvSource, len(sources))
-	for i, s := range sources {
-		if s.Postgres != nil {
-			pgSource := &openapi.PostgresAddonEnvSource{
-				AddonId:    s.Postgres.AddonID,
-				EnvMapping: s.Postgres.EnvMapping,
-			}
-			if s.Postgres.Database != "" {
-				pgSource.SetDatabase(s.Postgres.Database)
-			}
-			if s.Postgres.Superuser {
-				pgSource.SetSuperuser(true)
-			}
-			result[i] = openapi.AddonEnvSource{
-				Postgres: pgSource,
-			}
+		if env.SelfOutput != "" {
+			result[i].SetSelfOutput(env.SelfOutput)
 		}
 	}
 	return result
@@ -285,6 +254,7 @@ func presentPorts(ports models.Ports) []openapi.Port {
 	result := make([]openapi.Port, len(ports))
 	for i, port := range ports {
 		result[i] = openapi.Port{
+			Name:            port.Name,
 			Number:          int32(port.Number),
 			Protocol:        &port.Protocol,
 			ExposedToPublic: port.ExposedToPublic,
@@ -312,9 +282,100 @@ func ConvertStack(w *openapi.Stack) *models.Stack {
 		Name:           w.Name,
 		Labels:         convertLabels(w.Labels),
 		Annotations:    convertAnnotations(w.Annotations),
+		Connections:    convertConnections(w.Spec.Connections),
 		StackResources: convertStackResources(w.Spec.StackResources),
 		Volumes:        convertVolumes(w.Spec.Volumes),
 	}
+}
+
+func ConvertStackConnection(connection *openapi.StackConnection) *models.StackConnection {
+	if connection == nil {
+		return nil
+	}
+	converted := convertConnections([]openapi.StackConnection{*connection})
+	if len(converted) == 0 {
+		return nil
+	}
+	return &converted[0]
+}
+
+func presentConnections(connections models.StackConnections) []openapi.StackConnection {
+	if connections == nil {
+		return nil
+	}
+	result := make([]openapi.StackConnection, len(connections))
+	for i, connection := range connections {
+		result[i] = openapi.StackConnection{
+			Kind: connection.Kind.String(),
+			From: presentTopologyNodeRef(connection.From),
+			To:   presentTopologyNodeRef(connection.To),
+		}
+		if connection.ID != "" {
+			result[i].SetId(connection.ID)
+		}
+		if len(connection.Mappings) > 0 {
+			result[i].SetMappings(presentConnectionMappings(connection.Mappings))
+		}
+		if len(connection.Config) > 0 {
+			result[i].SetConfig(connection.Config)
+		}
+	}
+	return result
+}
+
+func presentTopologyNodeRef(ref models.TopologyNodeRef) openapi.TopologyNodeRef {
+	result := openapi.TopologyNodeRef{Type: string(ref.Type)}
+	if ref.Id != "" {
+		result.SetId(ref.Id)
+	}
+	if ref.Name != "" {
+		result.SetName(ref.Name)
+	}
+	return result
+}
+
+func presentConnectionMappings(mappings []models.ConnectionMapping) []openapi.ConnectionMapping {
+	result := make([]openapi.ConnectionMapping, len(mappings))
+	for i, mapping := range mappings {
+		result[i] = openapi.ConnectionMapping{
+			Target: presentConnectionTarget(mapping.Target),
+			Value:  presentValueRef(mapping.Value),
+		}
+	}
+	return result
+}
+
+func presentConnectionTarget(target models.ConnectionTarget) openapi.ConnectionTarget {
+	result := openapi.ConnectionTarget{Type: string(target.Type)}
+	if target.Name != "" {
+		result.SetName(target.Name)
+	}
+	if target.Path != "" {
+		result.SetPath(target.Path)
+	}
+	return result
+}
+
+func presentValueRef(value models.ValueRef) openapi.ValueRef {
+	result := openapi.ValueRef{}
+	if value.Output != "" {
+		result.SetOutput(value.Output)
+	}
+	if value.Template != "" {
+		result.SetTemplate(value.Template)
+	}
+	if len(value.Values) > 0 {
+		result.SetValues(presentOutputValueRefs(value.Values))
+	}
+	return result
+}
+
+func presentOutputValueRefs(values map[string]models.OutputValueRef) map[string]openapi.OutputValueRef {
+	result := make(map[string]openapi.OutputValueRef, len(values))
+	for key, value := range values {
+		result[key] = openapi.OutputValueRef{Output: value.Output}
+	}
+	return result
 }
 
 func convertStackResources(resources []openapi.StackResource) []*models.StackResource {
@@ -449,56 +510,19 @@ func convertExecutionConfig(config *openapi.ExecutionConfig) *models.ExecutionCo
 		return nil
 	}
 	return &models.ExecutionConfig{
-		Command:            config.Command,
-		Args:               config.Args,
-		Env:                convertEnvVars(config.EnvironmentVariables),
-		EnvVarsFromSecrets: convertEnvVarsFromSecret(config.EnvironmentVariablesFromSecret),
-		EnvFromAddons:      convertEnvFromAddons(config.EnvFromAddons),
+		Command: config.Command,
+		Args:    config.Args,
+		Env:     convertEnvVars(config.EnvironmentVariables),
 	}
-}
-
-func convertEnvVarsFromSecret(envVars []openapi.EnvVarFromSecret) []models.EnvSecretReference {
-	if envVars == nil {
-		return nil
-	}
-	result := make([]models.EnvSecretReference, len(envVars))
-	for i, env := range envVars {
-		result[i] = models.EnvSecretReference{
-			SecretID:  env.SecretRef.SecretId,
-			SecretKey: env.Key,
-			EnvName:   env.Name,
-		}
-	}
-	return result
-
-}
-
-func convertEnvFromAddons(sources []openapi.AddonEnvSource) []models.AddonEnvSource {
-	if sources == nil {
-		return nil
-	}
-	result := make([]models.AddonEnvSource, len(sources))
-	for i, s := range sources {
-		if s.Postgres != nil {
-			result[i] = models.AddonEnvSource{
-				Postgres: &models.PostgresAddonEnvSource{
-					AddonID:    s.Postgres.AddonId,
-					Database:   s.Postgres.GetDatabase(),
-					Superuser:  s.Postgres.GetSuperuser(),
-					EnvMapping: s.Postgres.EnvMapping,
-				},
-			}
-		}
-	}
-	return result
 }
 
 func convertEnvVars(envVars []openapi.EnvVar) []models.EnvVar {
 	result := make([]models.EnvVar, len(envVars))
 	for i, env := range envVars {
 		result[i] = models.EnvVar{
-			Name:  env.Name,
-			Value: env.Value,
+			Name:       env.Name,
+			Value:      env.GetValue(),
+			SelfOutput: env.GetSelfOutput(),
 		}
 	}
 	return result
@@ -537,6 +561,7 @@ func convertPorts(ports []openapi.Port) []models.Port {
 	result := make([]models.Port, len(ports))
 	for i, port := range ports {
 		result[i] = models.Port{
+			Name:   port.Name,
 			Number: int(port.Number),
 		}
 		result[i].Protocol = port.GetProtocol()
@@ -544,4 +569,71 @@ func convertPorts(ports []openapi.Port) []models.Port {
 		result[i].SubdomainPrefix = port.GetSubdomainPrefix()
 	}
 	return models.Ports(result)
+}
+
+func convertConnections(connections []openapi.StackConnection) models.StackConnections {
+	if connections == nil {
+		return nil
+	}
+	result := make(models.StackConnections, len(connections))
+	for i, connection := range connections {
+		result[i] = models.StackConnection{
+			ID:       connection.GetId(),
+			Kind:     models.ConnectionKind(connection.Kind),
+			From:     convertTopologyNodeRef(connection.From),
+			To:       convertTopologyNodeRef(connection.To),
+			Mappings: convertConnectionMappings(connection.Mappings),
+			Config:   connection.GetConfig(),
+		}
+	}
+	return result
+}
+
+func convertTopologyNodeRef(ref openapi.TopologyNodeRef) models.TopologyNodeRef {
+	return models.TopologyNodeRef{
+		Type: models.TopologyNodeType(ref.Type),
+		Id:   ref.GetId(),
+		Name: ref.GetName(),
+	}
+}
+
+func convertConnectionMappings(mappings []openapi.ConnectionMapping) []models.ConnectionMapping {
+	if mappings == nil {
+		return nil
+	}
+	result := make([]models.ConnectionMapping, len(mappings))
+	for i, mapping := range mappings {
+		result[i] = models.ConnectionMapping{
+			Target: convertConnectionTarget(mapping.Target),
+			Value:  convertValueRef(mapping.Value),
+		}
+	}
+	return result
+}
+
+func convertConnectionTarget(target openapi.ConnectionTarget) models.ConnectionTarget {
+	return models.ConnectionTarget{
+		Type: models.ConnectionTargetType(target.Type),
+		Name: target.GetName(),
+		Path: target.GetPath(),
+	}
+}
+
+func convertValueRef(value openapi.ValueRef) models.ValueRef {
+	result := models.ValueRef{
+		Output:   value.GetOutput(),
+		Template: value.GetTemplate(),
+	}
+	if values, ok := value.GetValuesOk(); ok && values != nil {
+		result.Values = convertOutputValueRefs(*values)
+	}
+	return result
+}
+
+func convertOutputValueRefs(values map[string]openapi.OutputValueRef) map[string]models.OutputValueRef {
+	result := make(map[string]models.OutputValueRef, len(values))
+	for key, value := range values {
+		result[key] = models.OutputValueRef{Output: value.Output}
+	}
+	return result
 }

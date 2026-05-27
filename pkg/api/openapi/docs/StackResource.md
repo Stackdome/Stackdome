@@ -18,6 +18,7 @@ Name | Type | Description | Notes
 **DependsOn** | Pointer to **[]string** |  | [optional] 
 **LifecycleConfig** | Pointer to [**LifecycleConfig**](LifecycleConfig.md) |  | [optional] 
 **Ports** | Pointer to [**[]Port**](Port.md) |  | [optional] 
+**Outputs** | Pointer to [**[]OutputDescriptor**](OutputDescriptor.md) |  | [optional] [readonly] 
 **Stateful** | Pointer to **bool** |  | [optional] 
 **Status** | Pointer to [**StackResourceStatus**](StackResourceStatus.md) |  | [optional] 
 
@@ -384,6 +385,31 @@ SetPorts sets Ports field to given value.
 `func (o *StackResource) HasPorts() bool`
 
 HasPorts returns a boolean if a field has been set.
+
+### GetOutputs
+
+`func (o *StackResource) GetOutputs() []OutputDescriptor`
+
+GetOutputs returns the Outputs field if non-nil, zero value otherwise.
+
+### GetOutputsOk
+
+`func (o *StackResource) GetOutputsOk() (*[]OutputDescriptor, bool)`
+
+GetOutputsOk returns a tuple with the Outputs field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetOutputs
+
+`func (o *StackResource) SetOutputs(v []OutputDescriptor)`
+
+SetOutputs sets Outputs field to given value.
+
+### HasOutputs
+
+`func (o *StackResource) HasOutputs() bool`
+
+HasOutputs returns a boolean if a field has been set.
 
 ### GetStateful
 

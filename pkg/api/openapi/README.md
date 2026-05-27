@@ -141,6 +141,10 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks | List all stacks for a team
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsBuildIdGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidbuildsbuildidget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds/{build_id} | Get a specific build under a stack
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidbuildsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds | List all builds under a stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidconnectionsconnectioniddelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections/{connection_id} | Delete stack connection
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdPut**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidconnectionsconnectionidput) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections/{connection_id} | Update stack connection
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidconnectionsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections | List stack connections
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidconnectionspost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections | Create stack connection
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksiddelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id} | Delete a stack
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id} | Get a specific stack
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdLogsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidlogsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/logs | Get logs for a stack
@@ -151,6 +155,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenameget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Get a specific stack resource by name
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenamelogsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs | Get logs for a stack resource
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenamemetricsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/metrics | Get metrics for a stack resource
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidtopologyget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/topology | Get stack topology
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestackspost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks | Create a new stack
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamevolumesiddelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id} | Delete a volume
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamevolumesidget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id} | Get a specific volume
@@ -175,7 +180,6 @@ Class | Method | HTTP request | Description
  - [APITokenCreateResponse](docs/APITokenCreateResponse.md)
  - [APITokenList](docs/APITokenList.md)
  - [AddTeamMemberRequest](docs/AddTeamMemberRequest.md)
- - [AddonEnvSource](docs/AddonEnvSource.md)
  - [Annotation](docs/Annotation.md)
  - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response.md)
  - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest.md)
@@ -200,11 +204,12 @@ Class | Method | HTTP request | Description
  - [ClusterImageRegistryStatus](docs/ClusterImageRegistryStatus.md)
  - [ClusterList](docs/ClusterList.md)
  - [Condition](docs/Condition.md)
+ - [ConnectionMapping](docs/ConnectionMapping.md)
+ - [ConnectionTarget](docs/ConnectionTarget.md)
  - [ContainerFailureDetail](docs/ContainerFailureDetail.md)
  - [DemoteAdminRequest](docs/DemoteAdminRequest.md)
  - [DomainName](docs/DomainName.md)
  - [EnvVar](docs/EnvVar.md)
- - [EnvVarFromSecret](docs/EnvVarFromSecret.md)
  - [Error](docs/Error.md)
  - [ErrorAllOf](docs/ErrorAllOf.md)
  - [ErrorList](docs/ErrorList.md)
@@ -238,9 +243,10 @@ Class | Method | HTTP request | Description
  - [OrgInviteInfo](docs/OrgInviteInfo.md)
  - [OrgInviteList](docs/OrgInviteList.md)
  - [Organisation](docs/Organisation.md)
+ - [OutputDescriptor](docs/OutputDescriptor.md)
+ - [OutputValueRef](docs/OutputValueRef.md)
  - [Port](docs/Port.md)
  - [PostgresAddon](docs/PostgresAddon.md)
- - [PostgresAddonEnvSource](docs/PostgresAddonEnvSource.md)
  - [PostgresAddonList](docs/PostgresAddonList.md)
  - [PostgresAddonSpec](docs/PostgresAddonSpec.md)
  - [PostgresAddonStatus](docs/PostgresAddonStatus.md)
@@ -283,6 +289,8 @@ Class | Method | HTTP request | Description
  - [SecretReference](docs/SecretReference.md)
  - [SecretType](docs/SecretType.md)
  - [Stack](docs/Stack.md)
+ - [StackConnection](docs/StackConnection.md)
+ - [StackConnectionList](docs/StackConnectionList.md)
  - [StackList](docs/StackList.md)
  - [StackResource](docs/StackResource.md)
  - [StackResourceBuildSpec](docs/StackResourceBuildSpec.md)
@@ -291,6 +299,7 @@ Class | Method | HTTP request | Description
  - [StackResourceStatus](docs/StackResourceStatus.md)
  - [StackSpec](docs/StackSpec.md)
  - [StackStatus](docs/StackStatus.md)
+ - [StackTopology](docs/StackTopology.md)
  - [Team](docs/Team.md)
  - [TeamCreateRequest](docs/TeamCreateRequest.md)
  - [TeamList](docs/TeamList.md)
@@ -299,6 +308,9 @@ Class | Method | HTTP request | Description
  - [TeamRole](docs/TeamRole.md)
  - [TeamRoleList](docs/TeamRoleList.md)
  - [TeamUpdateRequest](docs/TeamUpdateRequest.md)
+ - [TopologyEdge](docs/TopologyEdge.md)
+ - [TopologyNode](docs/TopologyNode.md)
+ - [TopologyNodeRef](docs/TopologyNodeRef.md)
  - [UpdateTeamMemberRoleRequest](docs/UpdateTeamMemberRoleRequest.md)
  - [User](docs/User.md)
  - [UserList](docs/UserList.md)
@@ -306,6 +318,7 @@ Class | Method | HTTP request | Description
  - [UserSignupRequest](docs/UserSignupRequest.md)
  - [UserSignupResponse](docs/UserSignupResponse.md)
  - [UserTeamMembership](docs/UserTeamMembership.md)
+ - [ValueRef](docs/ValueRef.md)
  - [Volume](docs/Volume.md)
  - [VolumeAccessMode](docs/VolumeAccessMode.md)
  - [VolumeList](docs/VolumeList.md)

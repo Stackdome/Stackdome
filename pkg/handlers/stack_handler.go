@@ -60,6 +60,86 @@ func (h *stackHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	handleGet(w, r, cfg)
 }
 
+func (h *stackHandler) GetTopology(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			id := mux.Vars(r)["id"]
+			obj, err := h.stackService.GetStackTopology(r.Context(), id)
+			if err != nil {
+				return nil, err
+			}
+			return presenters.PresentStackTopology(obj), nil
+		},
+	}
+	handleGet(w, r, cfg)
+}
+
+func (h *stackHandler) ListConnections(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			id := mux.Vars(r)["id"]
+			obj, err := h.stackService.ListStackConnections(r.Context(), id)
+			if err != nil {
+				return nil, err
+			}
+			return openapi.StackConnectionList{
+				Items: presenters.PresentStackConnections(obj),
+				Total: ptr.To(int32(len(obj))),
+			}, nil
+		},
+	}
+	handleList(w, r, cfg)
+}
+
+func (h *stackHandler) CreateConnection(w http.ResponseWriter, r *http.Request) {
+	var connection openapi.StackConnection
+	cfg := &handlerConfig{
+		MarshalInto: &connection,
+		Action: func() (interface{}, *errors.ServiceError) {
+			id := mux.Vars(r)["id"]
+			obj, err := h.stackService.CreateStackConnection(r.Context(), id, presenters.ConvertStackConnection(&connection))
+			if err != nil {
+				return nil, err
+			}
+			return presenters.PresentStackConnection(obj), nil
+		},
+		ErrorHandler: handleError,
+	}
+	handle(w, r, cfg, http.StatusCreated)
+}
+
+func (h *stackHandler) UpdateConnection(w http.ResponseWriter, r *http.Request) {
+	var connection openapi.StackConnection
+	cfg := &handlerConfig{
+		MarshalInto: &connection,
+		Action: func() (interface{}, *errors.ServiceError) {
+			stackID := mux.Vars(r)["id"]
+			connectionID := mux.Vars(r)["connection_id"]
+			obj, err := h.stackService.UpdateStackConnection(r.Context(), stackID, connectionID, presenters.ConvertStackConnection(&connection))
+			if err != nil {
+				return nil, err
+			}
+			return presenters.PresentStackConnection(obj), nil
+		},
+		ErrorHandler: handleError,
+	}
+	handle(w, r, cfg, http.StatusOK)
+}
+
+func (h *stackHandler) DeleteConnection(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			stackID := mux.Vars(r)["id"]
+			connectionID := mux.Vars(r)["connection_id"]
+			if err := h.stackService.DeleteStackConnection(r.Context(), stackID, connectionID); err != nil {
+				return nil, err
+			}
+			return nil, nil
+		},
+	}
+	handleDelete(w, r, cfg, http.StatusNoContent)
+}
+
 func (h *stackHandler) StreamLogs(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {

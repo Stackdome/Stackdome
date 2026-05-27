@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
@@ -20,6 +21,10 @@ import (
 type StackService interface {
 	CreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
+	ListStackConnections(ctx context.Context, stackID string) (models.StackConnections, *errors.ServiceError)
+	CreateStackConnection(ctx context.Context, stackID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError)
+	UpdateStackConnection(ctx context.Context, stackID, connectionID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError)
+	DeleteStackConnection(ctx context.Context, stackID, connectionID string) *errors.ServiceError
 	UpdateStatus(ctx context.Context, ID string, status *models.StackStatus) *errors.ServiceError
 	DeleteStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	UpdateStackCrRevision(ctx context.Context, ID string, revision string) *errors.ServiceError
@@ -32,6 +37,7 @@ type StackService interface {
 
 type StackQueryService interface {
 	GetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
+	GetStackTopology(ctx context.Context, ID string) (*models.StackTopology, *errors.ServiceError)
 	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError)
 	// GetStacksByUserID(ctx context.Context, teamID, orgID, userID string) ([]*models.Stack, *errors.ServiceError)
@@ -68,6 +74,7 @@ type stackService struct {
 	namespaceService       NamespaceService
 	clusterService         ClusterService
 	secretService          SecretService
+	postgresAddonService   PostgresAddonService
 	clusterRegistryService ImageRegistryService
 	defaultingService      DefaultingService[*models.Stack]
 	teamService            TeamService
@@ -105,6 +112,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 		namespaceService:       spec.NamespaceService,
 		domainNameService:      stackDomainNameService,
 		secretService:          spec.SecretService,
+		postgresAddonService:   spec.PostgresAddonService,
 		clusterResourceBuidler: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			SecretService: spec.SecretService,
 		}),
@@ -365,8 +373,183 @@ func (s *stackService) GetStack(ctx context.Context, ID string) (*models.Stack, 
 	return stack, nil
 }
 
+func (s *stackService) ListStackConnections(ctx context.Context, stackID string) (models.StackConnections, *errors.ServiceError) {
+	stack, err := s.GetStack(ctx, stackID)
+	if err != nil {
+		return nil, err
+	}
+	return stack.Connections, nil
+}
+
+func (s *stackService) CreateStackConnection(ctx context.Context, stackID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
+	stack, _, err := s.prepareDesiredStackWithConnectionMutation(ctx, stackID, func(connections models.StackConnections) (models.StackConnections, *models.StackConnection, *errors.ServiceError) {
+		newConnection := *connection
+		for _, existing := range connections {
+			if existing.Kind == newConnection.Kind &&
+				existing.From == newConnection.From &&
+				existing.To == newConnection.To {
+				return nil, nil, errors.Conflict("a '%s' connection from %s to %s already exists",
+					newConnection.Kind,
+					connectionNodeLabel(newConnection.From),
+					connectionNodeLabel(newConnection.To))
+			}
+		}
+		connections = append(connections, newConnection)
+		return connections, &newConnection, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	createdConnection, err := s.createStackConnection(ctx, stack, connection)
+	return createdConnection, err
+}
+
+func (s *stackService) UpdateStackConnection(ctx context.Context, stackID, connectionID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
+	stack, _, err := s.prepareDesiredStackWithConnectionMutation(ctx, stackID, func(connections models.StackConnections) (models.StackConnections, *models.StackConnection, *errors.ServiceError) {
+		updated := *connection
+		updated.ID = connectionID
+		found := false
+		for i := range connections {
+			if connections[i].ID == connectionID {
+				connections[i] = updated
+				found = true
+				continue
+			}
+			if connections[i].Kind == updated.Kind &&
+				connections[i].From == updated.From &&
+				connections[i].To == updated.To {
+				return nil, nil, errors.Conflict("a '%s' connection from %s to %s already exists",
+					updated.Kind,
+					connectionNodeLabel(updated.From),
+					connectionNodeLabel(updated.To))
+			}
+		}
+		if !found {
+			return nil, nil, errors.NotFound("stack connection '%s' not found", connectionID)
+		}
+		return connections, &updated, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return s.updateSingleStackConnection(ctx, stack, connectionID, connection)
+}
+
+func (s *stackService) DeleteStackConnection(ctx context.Context, stackID, connectionID string) *errors.ServiceError {
+	stack, _, err := s.prepareDesiredStackWithConnectionMutation(ctx, stackID, func(connections models.StackConnections) (models.StackConnections, *models.StackConnection, *errors.ServiceError) {
+		result := make(models.StackConnections, 0, len(connections))
+		found := false
+		for _, existing := range connections {
+			if existing.ID == connectionID {
+				found = true
+				continue
+			}
+			result = append(result, existing)
+		}
+		if !found {
+			return nil, nil, errors.NotFound("stack connection '%s' not found", connectionID)
+		}
+		return result, nil, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return s.deleteSingleStackConnection(ctx, stack, connectionID)
+}
+
 func (s *stackService) InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError) {
 	return s.stackStore.GetByID(ctx, ID)
+}
+
+func (s *stackService) prepareDesiredStackWithConnectionMutation(
+	ctx context.Context,
+	stackID string,
+	mutate func(connections models.StackConnections) (models.StackConnections, *models.StackConnection, *errors.ServiceError),
+) (*models.Stack, *models.Stack, *errors.ServiceError) {
+	stack, err := s.GetStack(ctx, stackID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
+		return nil, nil, permErr
+	}
+
+	desired := *stack
+	desired.Connections = append(models.StackConnections(nil), stack.Connections...)
+	nextConnections, _, serr := mutate(desired.Connections)
+	if serr != nil {
+		return nil, nil, serr
+	}
+	desired.Connections = nextConnections
+	if err := s.stackValidator.ValidateForUpdate(ctx, stack, &desired); err != nil {
+		return nil, nil, err
+	}
+	return stack, &desired, nil
+}
+
+func (s *stackService) createStackConnection(ctx context.Context, existingStack *models.Stack, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
+	var createdConnection *models.StackConnection
+	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		var serr *errors.ServiceError
+		createdConnection, serr = s.stackStore.CreateConnectionWithTx(txCtx, existingStack.ID, connection)
+		return serr
+	}); err != nil {
+		return nil, err
+	}
+
+	if _, err := s.refreshStackRevisionAndEnqueue(ctx, existingStack); err != nil {
+		return nil, err
+	}
+	return createdConnection, nil
+}
+
+func (s *stackService) updateSingleStackConnection(ctx context.Context, existingStack *models.Stack, connectionID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
+	var updatedConnection *models.StackConnection
+	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		var serr *errors.ServiceError
+		updatedConnection, serr = s.stackStore.UpdateConnectionWithTx(txCtx, existingStack.ID, connectionID, connection)
+		return serr
+	}); err != nil {
+		return nil, err
+	}
+
+	if _, err := s.refreshStackRevisionAndEnqueue(ctx, existingStack); err != nil {
+		return nil, err
+	}
+	return updatedConnection, nil
+}
+
+func (s *stackService) deleteSingleStackConnection(ctx context.Context, existingStack *models.Stack, connectionID string) *errors.ServiceError {
+	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		return s.stackStore.DeleteConnectionWithTx(txCtx, existingStack.ID, connectionID)
+	}); err != nil {
+		return err
+	}
+
+	_, err := s.refreshStackRevisionAndEnqueue(ctx, existingStack)
+	return err
+}
+
+func (s *stackService) refreshStackRevisionAndEnqueue(ctx context.Context, existingStack *models.Stack) (*models.Stack, *errors.ServiceError) {
+	updatedStack, err := s.GetStack(ctx, existingStack.ID)
+	if err != nil {
+		return nil, errors.GeneralError("failed to get updated stack '%s': %s", existingStack.Name, err.Error())
+	}
+	crHash, cerr := s.clusterResourceBuidler.GetStackCRHash(updatedStack)
+	if cerr != nil {
+		return nil, errors.GeneralError("failed to build stack CR hash for stack '%s': %s", updatedStack.Name, cerr.Error())
+	}
+	updatedStack.CrRevision = crHash
+	if err := s.UpdateStackCrRevision(ctx, updatedStack.ID, crHash); err != nil {
+		return nil, errors.GeneralError("failed to update stack CR revision for stack '%s': %s", updatedStack.Name, err.Error())
+	}
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.Stack{ID: updatedStack.ID}); err != nil {
+		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", updatedStack.Name, err.Error())
+	}
+	return updatedStack, nil
 }
 
 func (s *stackService) GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError) {
@@ -502,4 +685,14 @@ func (s *stackService) populateAssociations(ctx context.Context, spec *models.St
 		spec.StackResources[i].UserID = spec.UserID
 		spec.StackResources[i].Namespace = spec.Namespace
 	}
+}
+
+func connectionNodeLabel(ref models.TopologyNodeRef) string {
+	if ref.Name != "" {
+		return fmt.Sprintf("%s:%s", ref.Type, ref.Name)
+	}
+	if ref.Id != "" {
+		return fmt.Sprintf("%s:%s", ref.Type, ref.Id)
+	}
+	return string(ref.Type)
 }

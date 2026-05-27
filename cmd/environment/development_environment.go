@@ -100,7 +100,7 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		VolumeService:        d.Services.VolumeService,
 		NamespaceService:     d.Services.NamespaceService,
 		PostgresAddonService: d.Services.PostgresAddonService,
-		AddonUsageService:    d.Services.AddonUsageService,
+		ResourceUsageService: d.Services.ResourceUsageService,
 		Env:                  d.Env.Name,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			SecretService: d.Services.SecretService,
@@ -113,14 +113,14 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 	d.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
 
 	pgAddonWorker := postgresaddonworker.NewPostgresAddonWorker(postgresaddonworker.PostgresAddonWorkerSpec{
-		PostgresAddonService: d.Services.PostgresAddonService,
-		ObjectStoreService:   d.Services.ObjectStoreService,
-		NamespaceService:     d.Services.NamespaceService,
-		SecretService:        d.Services.SecretService,
-		AddonUsageStore:      d.Services.AddonUsageService,
-		ClusterManager:       d.ClusterManager,
-		CRBuilder:            builders.NewPostgresClusterBuilder(),
-		Env:                  d.Env.Name,
+		PostgresAddonService:   d.Services.PostgresAddonService,
+		ObjectStoreService:     d.Services.ObjectStoreService,
+		NamespaceService:       d.Services.NamespaceService,
+		SecretService:          d.Services.SecretService,
+		ConnectionUsageChecker: pgstore.NewStackConnectionStore(pgstore.StackConnectionStoreSpec{SessionFactory: d.DBSession}),
+		ClusterManager:         d.ClusterManager,
+		CRBuilder:              builders.NewPostgresClusterBuilder(),
+		Env:                    d.Env.Name,
 	})
 	d.WorkerManager.RegisterWorker(pgAddonWorker, &models.PostgresAddon{})
 
@@ -330,11 +330,13 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	secretService := services.NewSecretService(services.SecretServiceSpec{
-		SessionFactory:    d.DBSession,
-		Logger:            d.Logger,
-		EncryptionService: encryptionService,
-		TeamService:       teamService,
-		Permissions:       d.PermissionService,
+		SessionFactory:         d.DBSession,
+		Logger:                 d.Logger,
+		EncryptionService:      encryptionService,
+		TeamService:            teamService,
+		Permissions:            d.PermissionService,
+		ConnectionUsageChecker: pgstore.NewStackConnectionStore(pgstore.StackConnectionStoreSpec{SessionFactory: d.DBSession}),
+		ResourceUsageService:   services.NewResourceUsageService(services.ResourceUsageServiceSpec{SessionFactory: d.DBSession}),
 	})
 
 	d.RefreshTokenStore = pgstore.NewRefreshTokenStore(pgstore.RefreshTokenStoreSpec{
@@ -377,9 +379,10 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	volumeService := services.NewVolumeService(services.VolumeServiceSpec{
-		SessionFactory: d.DBSession,
-		Logger:         d.Logger,
-		Permissions:    d.PermissionService,
+		SessionFactory:         d.DBSession,
+		ConnectionUsageChecker: pgstore.NewStackConnectionStore(pgstore.StackConnectionStoreSpec{SessionFactory: d.DBSession}),
+		Logger:                 d.Logger,
+		Permissions:            d.PermissionService,
 	})
 
 	stackStore := pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: d.DBSession})
@@ -424,21 +427,18 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:         d.Logger,
 	})
 
-	addonUsageService := services.NewAddonUsageService(services.AddonUsageServiceSpec{
-		SessionFactory: d.DBSession,
-	})
-
 	postgresAddonService := services.NewPostgresAddonService(services.PostgresAddonServiceSpec{
-		SessionFactory:        d.DBSession,
-		NamespaceService:      namespaceService,
-		ClusterService:        clusterService,
-		SecretService:         secretService,
-		PostgresBackupService: postgresBackupService,
-		ObjectStoreService:    objectStoreService,
-		TeamService:           teamService,
-		ClusterManager:        d.ClusterManager,
-		Logger:                d.Logger,
-		Permissions:           d.PermissionService,
+		SessionFactory:         d.DBSession,
+		ConnectionUsageChecker: pgstore.NewStackConnectionStore(pgstore.StackConnectionStoreSpec{SessionFactory: d.DBSession}),
+		NamespaceService:       namespaceService,
+		ClusterService:         clusterService,
+		SecretService:          secretService,
+		PostgresBackupService:  postgresBackupService,
+		ObjectStoreService:     objectStoreService,
+		TeamService:            teamService,
+		ClusterManager:         d.ClusterManager,
+		Logger:                 d.Logger,
+		Permissions:            d.PermissionService,
 	})
 
 	stackService := services.NewStackService(services.StackServiceSpec{
@@ -535,7 +535,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		ObjectStoreService:          objectStoreService,
 		PostgresAddonService:        postgresAddonService,
 		PostgresBackupService:       postgresBackupService,
-		AddonUsageService:           addonUsageService,
+		ResourceUsageService:        services.NewResourceUsageService(services.ResourceUsageServiceSpec{SessionFactory: d.DBSession}),
 		APITokenService:             apiTokenService,
 		TeamService:                 teamService,
 		OrgInviteService:            orgInviteService,

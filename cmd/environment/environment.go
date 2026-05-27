@@ -72,7 +72,7 @@ type Services struct {
 	ObjectStoreService          services.ObjectStoreService
 	PostgresAddonService        services.PostgresAddonService
 	PostgresBackupService       services.PostgresBackupService
-	AddonUsageService           services.AddonUsageService
+	ResourceUsageService        services.ResourceUsageService
 	APITokenService             services.APITokenService
 	TeamService                 services.TeamService
 	OrgInviteService            services.OrgInviteService

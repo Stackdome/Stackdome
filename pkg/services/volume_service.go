@@ -38,9 +38,10 @@ type VolumeService interface {
 }
 
 type VolumeServiceSpec struct {
-	SessionFactory db.SessionFactory
-	Logger         logger.Logger
-	Permissions    auth.PermissionService
+	SessionFactory         db.SessionFactory
+	ConnectionUsageChecker connectionUsageChecker
+	Logger                 logger.Logger
+	Permissions            auth.PermissionService
 }
 
 func NewVolumeService(spec VolumeServiceSpec) VolumeService {
@@ -48,21 +49,19 @@ func NewVolumeService(spec VolumeServiceSpec) VolumeService {
 		volumeStore: pgstore.NewVolumeStore(pgstore.VolumeStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		volumeMountStore: pgstore.NewVolumeMountStore(pgstore.VolumeMountStoreSpec{
-			SessionFactory: spec.SessionFactory,
-		}),
 		stackVolumeStore: pgstore.NewStackVolumeStore(pgstore.StackVolumeStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		logger:      spec.Logger,
-		permissions: spec.Permissions,
+		connectionUsageChecker: spec.ConnectionUsageChecker,
+		logger:                 spec.Logger,
+		permissions:            spec.Permissions,
 	}
 }
 
 type volumeService struct {
 	volumeStore            stores.VolumeStore
-	volumeMountStore       stores.VolumeMountStore
 	stackVolumeStore       stores.StackVolumeStore
+	connectionUsageChecker connectionUsageChecker
 	clusterResourceService clusterresource.VolumeClusterResourceService
 	logger                 logger.Logger
 	permissions            auth.PermissionService
@@ -102,6 +101,7 @@ func (s *volumeService) CreateVolumesInDBForStackWithTx(ctx context.Context, sta
 	for _, volume := range stack.Volumes {
 		volume.NamespaceID = stack.NamespaceID
 		volume.OrganisationID = stack.OrganisationID
+		volume.TeamID = stack.TeamID
 		volume.UserID = stack.UserID
 		volume.Namespace = stack.Namespace
 
@@ -120,6 +120,7 @@ func (s *volumeService) UpdateVolumesInDBForStackWithTx(ctx context.Context, pat
 	for _, volume := range patch.Volumes {
 		volume.NamespaceID = existingStack.NamespaceID
 		volume.OrganisationID = existingStack.OrganisationID
+		volume.TeamID = existingStack.TeamID
 		volume.UserID = existingStack.UserID
 		volume.Namespace = existingStack.Namespace
 		if _, found := existingVolumesMap[volume.Name]; found {
@@ -321,14 +322,8 @@ func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 	if permErr := s.permissions.Check(ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
-
-	volumeMounts, err := s.volumeMountStore.ListBySourceVolumeID(ctx, ID)
-	if err != nil {
-		s.logger.Errorf("failed to list volume mounts for deletion: %v", err)
-	}
-	if len(volumeMounts) > 0 {
-		s.logger.Errorf("cannot delete volume with mounts: %v", volumeMounts)
-		return errors.BadRequest("cannot delete volume with mounts")
+	if err := s.validateVolumeNotReferencedByConnections(ctx, volume); err != nil {
+		return err
 	}
 
 	deleteErr := s.volumeStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
@@ -353,16 +348,12 @@ func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 }
 
 func (s *volumeService) InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError {
-	_, err := s.volumeStore.GetByID(ctx, ID)
+	volume, err := s.volumeStore.GetByID(ctx, ID)
 	if err != nil {
 		return err
 	}
-	volumeMounts, err := s.volumeMountStore.ListBySourceVolumeID(ctx, ID)
-	if err != nil {
+	if err := s.validateVolumeNotReferencedByConnections(ctx, volume); err != nil {
 		return err
-	}
-	if len(volumeMounts) > 0 {
-		return errors.BadRequest("cannot delete volume with mounts")
 	}
 	if err := s.volumeStore.Delete(ctx, ID); err != nil {
 		return err
@@ -392,14 +383,8 @@ func (s *volumeService) DeleteWithTx(ctx context.Context, ID string) *errors.Ser
 		s.logger.Errorf("failed to get volume for deletion: %v", err)
 		return err
 	}
-
-	volumeMounts, err := s.volumeMountStore.ListBySourceVolumeID(ctx, ID)
-	if err != nil {
-		s.logger.Errorf("failed to list volume mounts for deletion: %v", err)
-	}
-	if len(volumeMounts) > 0 {
-		s.logger.Errorf("cannot delete volume with mounts: %v", volumeMounts)
-		return errors.BadRequest("cannot delete volume with mounts")
+	if err := s.validateVolumeNotReferencedByConnections(ctx, volume); err != nil {
+		return err
 	}
 
 	cErr := s.clusterResourceService.DeleteVolumeInCluster(ctx, volume)
@@ -411,6 +396,28 @@ func (s *volumeService) DeleteWithTx(ctx context.Context, ID string) *errors.Ser
 	if err != nil {
 		s.logger.Errorf("failed to delete volume: %v", err)
 		return err
+	}
+	return nil
+}
+
+func (s *volumeService) validateVolumeNotReferencedByConnections(ctx context.Context, volume *models.Volume) *errors.ServiceError {
+	stackVolume, err := s.stackVolumeStore.GetByVolumeID(ctx, volume.ID)
+	if err != nil {
+		if err.Is404() {
+			return nil
+		}
+		return err
+	}
+
+	inUse, usageErr := s.connectionUsageChecker.IsNodeReferenced(ctx, stackVolume.StackID, models.TopologyNodeRef{
+		Type: models.TopologyNodeTypeVolume,
+		Name: volume.Name,
+	})
+	if usageErr != nil {
+		return errors.GeneralError("failed to check connection usages for volume ID %s: %s", volume.ID, usageErr.Error())
+	}
+	if inUse {
+		return errors.BadRequest("volume is in use by one or more stack connections")
 	}
 	return nil
 }

@@ -50,6 +50,71 @@ var _ = Describe("Stack", func() {
 			Expect(fetched.Spec.StackResources[0].GetName()).To(Equal("web"))
 		})
 
+		It("should manage explicit connections independently and project them into topology", func() {
+			api := openapi.NewStackResource("api")
+			api.SetImageSpec(*openapi.NewImageSpec("nginx:1.25-alpine"))
+			api.SetPorts([]openapi.Port{
+				*openapi.NewPort("http", 8080, false),
+			})
+
+			web := openapi.NewStackResource("web")
+			web.SetImageSpec(*openapi.NewImageSpec("nginx:1.25-alpine"))
+
+			spec := openapi.NewStackSpec([]openapi.StackResource{*api, *web})
+			stack := openapi.NewStack("test-connections", *spec)
+
+			created := shared.CreateStack(client, orgID, teamName, stack)
+
+			from := openapi.NewTopologyNodeRef("stack_resource")
+			from.SetName("api")
+			to := openapi.NewTopologyNodeRef("stack_resource")
+			to.SetName("web")
+			connection := openapi.NewStackConnection("env", *from, *to)
+
+			target := openapi.NewConnectionTarget("env")
+			target.SetName("API_HOST")
+			value := openapi.NewValueRef()
+			value.SetOutput("host")
+			mapping := openapi.NewConnectionMapping(*target, *value)
+			connection.SetMappings([]openapi.ConnectionMapping{*mapping})
+
+			createdConnection := shared.CreateStackConnection(client, orgID, teamName, created.GetId(), connection)
+			Expect(createdConnection.GetId()).NotTo(BeEmpty())
+			Expect(createdConnection.GetMappings()).To(HaveLen(1))
+			connectionID := createdConnection.GetId()
+
+			fetched := shared.GetStack(client, orgID, teamName, created.GetId())
+			Expect(fetched.Spec.GetConnections()).To(HaveLen(1))
+			Expect(fetched.Spec.GetConnections()[0].GetId()).To(Equal(connectionID))
+
+			listedConnections := shared.ListStackConnections(client, orgID, teamName, created.GetId())
+			Expect(listedConnections).To(HaveLen(1))
+			Expect(listedConnections[0].GetMappings()[0].Target.GetName()).To(Equal("API_HOST"))
+
+			topology := shared.GetStackTopology(client, orgID, teamName, created.GetId())
+			Expect(topology.GetEdges()).To(HaveLen(1))
+			Expect(topology.GetEdges()[0].GetId()).To(Equal(connectionID))
+			Expect(topology.GetEdges()[0].GetSourceOfTruth()).To(Equal("connection"))
+
+			updatedTarget := openapi.NewConnectionTarget("env")
+			updatedTarget.SetName("UPSTREAM_HOST")
+			updatedMapping := openapi.NewConnectionMapping(*updatedTarget, *value)
+			connection.SetMappings([]openapi.ConnectionMapping{*updatedMapping})
+
+			updatedConnection := shared.UpdateStackConnection(client, orgID, teamName, created.GetId(), connectionID, connection)
+			Expect(updatedConnection.GetMappings()).To(HaveLen(1))
+			Expect(updatedConnection.GetMappings()[0].Target.GetName()).To(Equal("UPSTREAM_HOST"))
+
+			listedConnections = shared.ListStackConnections(client, orgID, teamName, created.GetId())
+			Expect(listedConnections).To(HaveLen(1))
+			Expect(listedConnections[0].GetMappings()[0].Target.GetName()).To(Equal("UPSTREAM_HOST"))
+
+			shared.DeleteStackConnection(client, orgID, teamName, created.GetId(), connectionID)
+
+			Expect(shared.ListStackConnections(client, orgID, teamName, created.GetId())).To(BeEmpty())
+			Expect(shared.GetStackTopology(client, orgID, teamName, created.GetId()).GetEdges()).To(BeEmpty())
+		})
+
 		It("should list stacks by organization", func() {
 			stack1 := shared.CreateSimpleStack("test-list-1")
 			stack2 := shared.CreateSimpleStack("test-list-2")
@@ -67,12 +132,12 @@ var _ = Describe("Stack", func() {
 			updateStack := shared.CreateSimpleStack("test-update")
 			exec := openapi.NewExecutionConfig()
 			exec.SetEnvironmentVariables([]openapi.EnvVar{
-				*openapi.NewEnvVar("NEW_VAR", "new-value"),
+				func() openapi.EnvVar { v := openapi.NewEnvVar("NEW_VAR"); v.SetValue("new-value"); return *v }(),
 			})
 			updateStack.Spec.StackResources[0].SetExecutionConfig(*exec)
 			updateStack.Spec.StackResources[0].SetPorts([]openapi.Port{
-				*openapi.NewPort(80, false),
-				*openapi.NewPort(443, false),
+				*openapi.NewPort("http", 80, false),
+				*openapi.NewPort("https", 443, false),
 			})
 
 			updated := shared.UpdateStack(client, orgID, teamName, created.GetId(), updateStack)

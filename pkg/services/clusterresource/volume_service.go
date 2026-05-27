@@ -15,6 +15,8 @@ import (
 	storagev1alpha1 "stackdome.io/cluster-agent/api/storage/v1alpha1"
 )
 
+//go:generate mockgen -source=volume_service.go -destination=../../mocks/mock_volume_cluster_resource_service.go -package=mocks
+
 // VolumeClusterResourceService is an interface for managing volume resources in a cluster.
 type VolumeClusterResourceService interface {
 	UpdateVolumeRemoteDirRevisionInCluster(ctx context.Context, volume *models.Volume) *ClusterResourceError

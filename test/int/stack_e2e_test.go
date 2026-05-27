@@ -108,7 +108,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 	})
 
 	Context("Multi-Resource Stack", func() {
-		It("should deploy multiple resources and interpolate env vars", func() {
+		It("should deploy multiple resources and resolve connection env vars", func() {
 			testEnv := GetEnvironment()
 			clusterClient := testEnv.Cluster.GetClient()
 			ctx := context.Background()
@@ -136,13 +136,14 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(backendDeploy).NotTo(BeNil())
 
-			By("Verifying frontend Deployment has interpolated BACKEND_URL env var")
+			By("Verifying frontend Deployment has connection-resolved BACKEND_URL env var")
 			frontendDeploy, err := shared.GetDeploymentForStackResource(ctx, clusterClient, namespace, shared.MultiResourceFrontendName)
 			Expect(err).NotTo(HaveOccurred())
 
 			backendURL, found := shared.GetContainerEnvVar(frontendDeploy, "BACKEND_URL")
 			Expect(found).To(BeTrue(), "BACKEND_URL env var should exist")
-			Expect(backendURL).To(Equal(shared.MultiResourceBackendName), "BACKEND_URL should be the backend K8s service name")
+			Expect(backendURL).To(HavePrefix(shared.MultiResourceBackendName+"."), "BACKEND_URL should be the backend K8s internal service host")
+			Expect(backendURL).To(HaveSuffix(".svc"), "BACKEND_URL should be a cluster-local service FQDN")
 		})
 	})
 
@@ -284,7 +285,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			updateStack := shared.CreateSimpleStack("test-update-e2e")
 			exec := openapi.NewExecutionConfig()
 			exec.SetEnvironmentVariables([]openapi.EnvVar{
-				*openapi.NewEnvVar("UPDATED", "true"),
+				func() openapi.EnvVar { v := openapi.NewEnvVar("UPDATED"); v.SetValue("true"); return *v }(),
 			})
 			updateStack.Spec.StackResources[0].SetExecutionConfig(*exec)
 			shared.UpdateStack(client, orgID, teamName, stackID, updateStack)
@@ -362,7 +363,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			pgUser, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["username"])
 			Expect(pgUser).NotTo(BeEmpty(), "PG_USER should be a valid database username")
 
-			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["connectionString"])
+			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["url"])
 			Expect(dbURL).To(HavePrefix("postgresql://"), "DATABASE_URL should be a postgresql:// connection string")
 			Expect(dbURL).To(ContainSubstring("testdb"), "DATABASE_URL should reference the requested database")
 		})
@@ -419,7 +420,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			pgUser, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["username"])
 			Expect(pgUser).To(Equal("postgres"), "superuser username should be 'postgres'")
 
-			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["connectionString"])
+			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["url"])
 			Expect(dbURL).To(HavePrefix("postgresql://"), "DATABASE_URL should be a postgresql:// connection string")
 
 			By("Fetching superuser credentials via API")
@@ -478,6 +479,104 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			err = newDB.QueryRowContext(ctx, "SELECT 1").Scan(&result)
 			Expect(err).NotTo(HaveOccurred(), "superuser should be able to connect to the newly created database")
 			Expect(result).To(Equal(1))
+		})
+	})
+
+	Context("Full Stack with all connection types", func() {
+		It("should deploy a stack with postgres, secret, volume mount, resource-to-resource, and depends_on", func() {
+			testEnv := GetEnvironment()
+			clusterClient := testEnv.Cluster.GetClient()
+			ctx := context.Background()
+
+			By("Creating a postgres addon with a database")
+			addon := shared.CreatePostgresAddonWithResources("test-full-stack-pg")
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
+			addonID := createdAddon.GetId()
+
+			DeferCleanup(func() {
+				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
+			})
+
+			By("Waiting for the postgres addon to become Ready")
+			shared.WaitForAddonReady(client, orgID, teamName, addonID, 10*time.Minute)
+
+			By("Creating a secret with TLS credentials")
+			secret := shared.CreateGenericSecret(shared.FullStackSecretName, map[string]string{
+				"tls_cert": "-----BEGIN CERTIFICATE-----\ntest-cert-data\n-----END CERTIFICATE-----",
+				"tls_key":  "-----BEGIN PRIVATE KEY-----\ntest-key-data\n-----END PRIVATE KEY-----",
+			})
+			createdSecret := shared.CreateSecret(client, orgID, teamName, secret)
+			secretID := createdSecret.GetId()
+
+			DeferCleanup(func() {
+				shared.DeleteSecret(client, orgID, teamName, secretID)
+			})
+
+			By("Creating the full stack")
+			stack := shared.CreateFullStack("test-full", addonID, "testdb", secretID)
+			created := shared.CreateStack(client, orgID, teamName, stack)
+			stackID := created.GetId()
+			namespace := created.GetNamespace()
+
+			DeferCleanup(func() {
+				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
+			})
+
+			By("Waiting for stack to become Ready")
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
+
+			By("Verifying both StackResource CRs are Available")
+			shared.WaitForStackResourceCRAvailable(ctx, clusterClient, shared.FullStackAPIName, namespace, 5*time.Minute)
+			shared.WaitForStackResourceCRAvailable(ctx, clusterClient, shared.FullStackWorkerName, namespace, 5*time.Minute)
+
+			By("Verifying API deployment has postgres env vars")
+			apiDeploy, err := shared.GetDeploymentForStackResource(ctx, clusterClient, namespace, shared.FullStackAPIName)
+			Expect(err).NotTo(HaveOccurred())
+
+			for credField, envName := range shared.PostgresEnvMapping {
+				val, found := shared.GetContainerEnvVar(apiDeploy, envName)
+				Expect(found).To(BeTrue(), "api: env var %s (mapped from %s) should be injected", envName, credField)
+				Expect(val).NotTo(BeEmpty(), "api: env var %s should have a non-empty value", envName)
+			}
+
+			By("Verifying API deployment has secret env vars")
+			for _, envName := range shared.FullStackSecretEnvMapping {
+				val, found := shared.GetContainerEnvVar(apiDeploy, envName)
+				Expect(found).To(BeTrue(), "api: env var %s should be injected from secret", envName)
+				Expect(val).NotTo(BeEmpty(), "api: env var %s should have a non-empty value", envName)
+			}
+
+			By("Verifying API deployment has volume mount")
+			vm, found := shared.GetContainerVolumeMount(apiDeploy, shared.FullStackMountPath)
+			Expect(found).To(BeTrue(), "api: volume mount at %s should exist", shared.FullStackMountPath)
+			Expect(vm.SubPath).To(Equal(shared.FullStackSubPath), "api: volume mount sub_path should match")
+
+			By("Verifying worker deployment has postgres env vars")
+			workerDeploy, err := shared.GetDeploymentForStackResource(ctx, clusterClient, namespace, shared.FullStackWorkerName)
+			Expect(err).NotTo(HaveOccurred())
+
+			dbURL, found := shared.GetContainerEnvVar(workerDeploy, shared.PostgresEnvMapping["url"])
+			Expect(found).To(BeTrue(), "worker: DATABASE_URL should be injected")
+			Expect(dbURL).To(HavePrefix("postgresql://"), "worker: DATABASE_URL should be a postgresql:// connection string")
+
+			By("Verifying worker deployment has resource-to-resource env vars")
+			apiHost, found := shared.GetContainerEnvVar(workerDeploy, "API_HOST")
+			Expect(found).To(BeTrue(), "worker: API_HOST should be injected from api resource connection")
+			Expect(apiHost).To(HaveSuffix(".svc"), "worker: API_HOST should be a cluster-local service FQDN")
+
+			apiURL, found := shared.GetContainerEnvVar(workerDeploy, "API_URL")
+			Expect(found).To(BeTrue(), "worker: API_URL should be injected from api resource connection")
+			Expect(apiURL).To(ContainSubstring(fmt.Sprintf(":%d", shared.FullStackAPIPort)), "worker: API_URL should include api port")
+
+			By("Verifying topology API returns correct graph")
+			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
+			Expect(topology.Nodes).To(HaveLen(5), "topology should have 5 nodes: api, worker, volume, addon, secret")
+			Expect(len(topology.Edges)).To(BeNumerically(">=", 6), "topology should have at least 6 edges: 5 connections + 1 depends_on")
+
+			By("Verifying connections API returns all 5 connections")
+			connections := shared.ListStackConnections(client, orgID, teamName, stackID)
+			Expect(connections).To(HaveLen(5), "should have 5 persisted connections")
 		})
 	})
 

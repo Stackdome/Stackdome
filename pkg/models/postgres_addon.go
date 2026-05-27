@@ -88,6 +88,7 @@ type PostgresAddon struct {
 	// Relationships
 	Databases []PostgresAddonDatabase `gorm:"foreignKey:PostgresAddonID"`
 	Backups   []PostgresBackup        `gorm:"foreignKey:PostgresAddonID"`
+	Outputs   []OutputDescriptor      `gorm:"-" json:"outputs,omitempty"`
 }
 
 func (p PostgresAddon) DefaultDatabaseSpecified() bool {
@@ -291,30 +292,17 @@ type PostgresCredentials struct {
 	CACertificate    string `json:"caCertificate,omitempty"`
 }
 
-// ToFieldMap returns credential values keyed by PostgresAddonEnvFields names.
-func (c *PostgresCredentials) ToFieldMap() map[string]string {
-	m := make(map[string]string, len(PostgresAddonEnvFields))
-	for _, field := range PostgresAddonEnvFields {
-		switch field {
-		case "host":
-			m[field] = c.Host
-		case "port":
-			m[field] = strconv.Itoa(int(c.Port))
-		case "username":
-			m[field] = c.Username
-		case "password":
-			m[field] = c.Password
-		case "database":
-			m[field] = c.Database
-		case "sslmode":
-			m[field] = c.SSLMode
-		case "connectionString":
-			m[field] = c.ConnectionString
-		case "caCertificate":
-			m[field] = c.CACertificate
-		}
+func (c *PostgresCredentials) ToOutputMap() map[string]string {
+	return map[string]string{
+		"host":           c.Host,
+		"port":           strconv.Itoa(int(c.Port)),
+		"username":       c.Username,
+		"password":       c.Password,
+		"database":       c.Database,
+		"sslmode":        c.SSLMode,
+		"url":            c.ConnectionString,
+		"ca_certificate": c.CACertificate,
 	}
-	return m
 }
 
 // Implement driver.Valuer and sql.Scanner for custom types

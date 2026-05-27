@@ -28,6 +28,7 @@ type PostgresAddon struct {
 	Labels      []Label              `json:"labels,omitempty"`
 	Annotations []Annotation         `json:"annotations,omitempty"`
 	Revision    *string              `json:"revision,omitempty"`
+	Outputs     []OutputDescriptor   `json:"outputs,omitempty"`
 	Spec        PostgresAddonSpec    `json:"spec"`
 	Status      *PostgresAddonStatus `json:"status,omitempty"`
 	CreatedAt   *time.Time           `json:"created_at,omitempty"`
@@ -365,6 +366,38 @@ func (o *PostgresAddon) SetRevision(v string) {
 	o.Revision = &v
 }
 
+// GetOutputs returns the Outputs field value if set, zero value otherwise.
+func (o *PostgresAddon) GetOutputs() []OutputDescriptor {
+	if o == nil || o.Outputs == nil {
+		var ret []OutputDescriptor
+		return ret
+	}
+	return o.Outputs
+}
+
+// GetOutputsOk returns a tuple with the Outputs field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PostgresAddon) GetOutputsOk() ([]OutputDescriptor, bool) {
+	if o == nil || o.Outputs == nil {
+		return nil, false
+	}
+	return o.Outputs, true
+}
+
+// HasOutputs returns a boolean if a field has been set.
+func (o *PostgresAddon) HasOutputs() bool {
+	if o != nil && o.Outputs != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetOutputs gets a reference to the given []OutputDescriptor and assigns it to the Outputs field.
+func (o *PostgresAddon) SetOutputs(v []OutputDescriptor) {
+	o.Outputs = v
+}
+
 // GetSpec returns the Spec field value
 func (o *PostgresAddon) GetSpec() PostgresAddonSpec {
 	if o == nil {
@@ -516,6 +549,9 @@ func (o PostgresAddon) MarshalJSON() ([]byte, error) {
 	}
 	if o.Revision != nil {
 		toSerialize["revision"] = o.Revision
+	}
+	if o.Outputs != nil {
+		toSerialize["outputs"] = o.Outputs
 	}
 	if true {
 		toSerialize["spec"] = o.Spec

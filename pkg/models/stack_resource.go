@@ -17,14 +17,15 @@ type StackResource struct {
 	Annotations Annotations `gorm:"type:jsonb"`
 	// Tracks the version of the object in the database.
 	Version         int
-	BuildConfig     *BuildConfigSpec `gorm:"type:jsonb"`
-	ImageConfig     *ImageConfigSpec `gorm:"type:jsonb"`
-	Init            *InitConfig      `gorm:"type:jsonb"`
-	ExecutionConfig *ExecutionConfig `gorm:"type:jsonb"`
-	VolumeMounts    []*VolumeMount   `gorm:"foreignKey:StackResourceID"`
-	DependsOn       Dependencies     `gorm:"type:jsonb"`
-	LifecycleConfig *LifecycleConfig `gorm:"type:jsonb"`
-	Ports           Ports            `gorm:"type:jsonb"`
+	BuildConfig     *BuildConfigSpec   `gorm:"type:jsonb"`
+	ImageConfig     *ImageConfigSpec   `gorm:"type:jsonb"`
+	Init            *InitConfig        `gorm:"type:jsonb"`
+	ExecutionConfig *ExecutionConfig   `gorm:"type:jsonb"`
+	VolumeMounts    []*VolumeMount     `gorm:"-"`
+	DependsOn       Dependencies       `gorm:"type:jsonb"`
+	LifecycleConfig *LifecycleConfig   `gorm:"type:jsonb"`
+	Ports           Ports              `gorm:"type:jsonb"`
+	Outputs         []OutputDescriptor `gorm:"-" json:"outputs,omitempty"`
 	StateFul        bool
 	Status          *StackResourceStatus `gorm:"type:jsonb"`
 	CreatedAt       time.Time
@@ -50,13 +51,6 @@ func (s *StackResource) HasGitCredentials() bool {
 	if s.BuildConfig != nil &&
 		s.BuildConfig.SourceContext.Git != nil &&
 		s.BuildConfig.SourceContext.Git.GitSecretRef != nil {
-		return true
-	}
-	return false
-}
-
-func (s *StackResource) HasEnvVarsFromSecret() bool {
-	if s.ExecutionConfig != nil && len(s.ExecutionConfig.EnvVarsFromSecrets) > 0 {
 		return true
 	}
 	return false
@@ -115,6 +109,7 @@ type StackResourceFailure struct {
 }
 
 type Port struct {
+	Name                     string `json:"name"`
 	Number                   int    `json:"number"`
 	Protocol                 string `json:"protocol"`
 	ExposedToPublic          bool   `json:"exposed_to_public"`
@@ -146,39 +141,15 @@ type InitConfig struct {
 }
 
 type ExecutionConfig struct {
-	Command            []string             `json:"command,omitempty"`
-	Args               []string             `json:"args,omitempty"`
-	Env                []EnvVar             `json:"env,omitempty"`
-	EnvVarsFromSecrets []EnvSecretReference `json:"env_vars_from_secrets,omitempty"`
-	EnvFromAddons      []AddonEnvSource     `json:"env_from_addons,omitempty"`
-}
-
-type AddonEnvSource struct {
-	Postgres *PostgresAddonEnvSource `json:"postgres,omitempty"`
-}
-
-type PostgresAddonEnvSource struct {
-	AddonID    string            `json:"addon_id"`
-	Database   string            `json:"database,omitempty"`
-	Superuser  bool              `json:"superuser,omitempty"`
-	EnvMapping map[string]string `json:"env_mapping"`
-}
-
-var PostgresAddonEnvFields = []string{
-	"host", "port", "username", "password",
-	"database", "sslmode", "connectionString", "caCertificate",
+	Command []string `json:"command,omitempty"`
+	Args    []string `json:"args,omitempty"`
+	Env     []EnvVar `json:"env,omitempty"`
 }
 
 type EnvVar struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
-// EnvSecretReference maps a secret key to an environment variable
-type EnvSecretReference struct {
-	SecretID  string `json:"secret_id"`  // Id of the secret
-	SecretKey string `json:"secret_key"` // Key within the secret
-	EnvName   string `json:"env_name"`   // Target environment variable name
+	Name       string `json:"name"`
+	Value      string `json:"value,omitempty"`
+	SelfOutput string `json:"self_output,omitempty"`
 }
 
 func (v *StackResource) VolumeMountMap() map[string]*VolumeMount {

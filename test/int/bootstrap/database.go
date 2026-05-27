@@ -142,14 +142,14 @@ func (dm *DatabaseManager) ClearData(ctx context.Context) error {
 		"postgres_backups",
 		"postgres_addons",
 		"object_stores",
+		"stack_connections",
 		"stack_domains",
 		"stack_volumes",
-		"volume_mounts",
 		"stack_resources",
 		"stack_storages",
 		"stacks",
 		"volumes",
-		"secret_usage",
+		"resource_usages",
 		"secrets",
 	}
 

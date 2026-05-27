@@ -7,6 +7,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
+//go:generate mockgen -source=secret.go -destination=../mocks/mock_secret_store.go -package=mocks
 type SecretStore interface {
 	Create(ctx context.Context, secret *models.Secret) (*models.Secret, *errors.ServiceError)
 	GetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError)

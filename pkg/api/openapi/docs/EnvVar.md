@@ -5,13 +5,14 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Name** | **string** |  | 
-**Value** | **string** |  | 
+**Value** | Pointer to **string** | Literal environment variable value. | [optional] 
+**SelfOutput** | Pointer to **string** | Read this environment variable from one of the resource&#39;s own declared outputs, for example public.http.url. | [optional] 
 
 ## Methods
 
 ### NewEnvVar
 
-`func NewEnvVar(name string, value string, ) *EnvVar`
+`func NewEnvVar(name string, ) *EnvVar`
 
 NewEnvVar instantiates a new EnvVar object
 This constructor will assign default values to properties that have it defined,
@@ -65,6 +66,36 @@ and a boolean to check if the value has been set.
 
 SetValue sets Value field to given value.
 
+### HasValue
+
+`func (o *EnvVar) HasValue() bool`
+
+HasValue returns a boolean if a field has been set.
+
+### GetSelfOutput
+
+`func (o *EnvVar) GetSelfOutput() string`
+
+GetSelfOutput returns the SelfOutput field if non-nil, zero value otherwise.
+
+### GetSelfOutputOk
+
+`func (o *EnvVar) GetSelfOutputOk() (*string, bool)`
+
+GetSelfOutputOk returns a tuple with the SelfOutput field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetSelfOutput
+
+`func (o *EnvVar) SetSelfOutput(v string)`
+
+SetSelfOutput sets SelfOutput field to given value.
+
+### HasSelfOutput
+
+`func (o *EnvVar) HasSelfOutput() bool`
+
+HasSelfOutput returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

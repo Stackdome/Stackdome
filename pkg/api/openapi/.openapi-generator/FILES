@@ -11,7 +11,6 @@ docs/APITokenCreateRequest.md
 docs/APITokenCreateResponse.md
 docs/APITokenList.md
 docs/AddTeamMemberRequest.md
-docs/AddonEnvSource.md
 docs/Annotation.md
 docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response.md
 docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest.md
@@ -36,12 +35,13 @@ docs/ClusterImageRegistryState.md
 docs/ClusterImageRegistryStatus.md
 docs/ClusterList.md
 docs/Condition.md
+docs/ConnectionMapping.md
+docs/ConnectionTarget.md
 docs/ContainerFailureDetail.md
 docs/DefaultApi.md
 docs/DemoteAdminRequest.md
 docs/DomainName.md
 docs/EnvVar.md
-docs/EnvVarFromSecret.md
 docs/Error.md
 docs/ErrorAllOf.md
 docs/ErrorList.md
@@ -75,9 +75,10 @@ docs/OrgInviteCreateResponse.md
 docs/OrgInviteInfo.md
 docs/OrgInviteList.md
 docs/Organisation.md
+docs/OutputDescriptor.md
+docs/OutputValueRef.md
 docs/Port.md
 docs/PostgresAddon.md
-docs/PostgresAddonEnvSource.md
 docs/PostgresAddonList.md
 docs/PostgresAddonSpec.md
 docs/PostgresAddonStatus.md
@@ -120,6 +121,8 @@ docs/SecretRef.md
 docs/SecretReference.md
 docs/SecretType.md
 docs/Stack.md
+docs/StackConnection.md
+docs/StackConnectionList.md
 docs/StackList.md
 docs/StackResource.md
 docs/StackResourceBuildSpec.md
@@ -128,6 +131,7 @@ docs/StackResourceList.md
 docs/StackResourceStatus.md
 docs/StackSpec.md
 docs/StackStatus.md
+docs/StackTopology.md
 docs/Team.md
 docs/TeamCreateRequest.md
 docs/TeamList.md
@@ -136,6 +140,9 @@ docs/TeamMembershipList.md
 docs/TeamRole.md
 docs/TeamRoleList.md
 docs/TeamUpdateRequest.md
+docs/TopologyEdge.md
+docs/TopologyNode.md
+docs/TopologyNodeRef.md
 docs/UpdateTeamMemberRoleRequest.md
 docs/User.md
 docs/UserList.md
@@ -143,6 +150,7 @@ docs/UserRole.md
 docs/UserSignupRequest.md
 docs/UserSignupResponse.md
 docs/UserTeamMembership.md
+docs/ValueRef.md
 docs/Volume.md
 docs/VolumeAccessMode.md
 docs/VolumeList.md
@@ -167,7 +175,6 @@ model__api_v1_organizations__org_id__teams__team_name__addons_postgres__id__acti
 model__api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_hibernate_post_200_response.go
 model__api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_hibernate_post_request.go
 model_add_team_member_request.go
-model_addon_env_source.go
 model_annotation.go
 model_api_token.go
 model_api_token_create_request.go
@@ -190,11 +197,12 @@ model_cluster_image_registry_state.go
 model_cluster_image_registry_status.go
 model_cluster_list.go
 model_condition.go
+model_connection_mapping.go
+model_connection_target.go
 model_container_failure_detail.go
 model_demote_admin_request.go
 model_domain_name.go
 model_env_var.go
-model_env_var_from_secret.go
 model_error.go
 model_error_all_of.go
 model_error_list.go
@@ -228,9 +236,10 @@ model_org_invite_create_response.go
 model_org_invite_info.go
 model_org_invite_list.go
 model_organisation.go
+model_output_descriptor.go
+model_output_value_ref.go
 model_port.go
 model_postgres_addon.go
-model_postgres_addon_env_source.go
 model_postgres_addon_list.go
 model_postgres_addon_spec.go
 model_postgres_addon_status.go
@@ -273,6 +282,8 @@ model_secret_reference.go
 model_secret_type.go
 model_ssh_config.go
 model_stack.go
+model_stack_connection.go
+model_stack_connection_list.go
 model_stack_list.go
 model_stack_resource.go
 model_stack_resource_build_spec.go
@@ -281,6 +292,7 @@ model_stack_resource_list.go
 model_stack_resource_status.go
 model_stack_spec.go
 model_stack_status.go
+model_stack_topology.go
 model_team.go
 model_team_create_request.go
 model_team_list.go
@@ -289,6 +301,9 @@ model_team_membership_list.go
 model_team_role.go
 model_team_role_list.go
 model_team_update_request.go
+model_topology_edge.go
+model_topology_node.go
+model_topology_node_ref.go
 model_update_team_member_role_request.go
 model_user.go
 model_user_list.go
@@ -296,6 +311,7 @@ model_user_role.go
 model_user_signup_request.go
 model_user_signup_response.go
 model_user_team_membership.go
+model_value_ref.go
 model_volume.go
 model_volume_access_mode.go
 model_volume_list.go

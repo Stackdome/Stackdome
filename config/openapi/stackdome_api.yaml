@@ -1485,6 +1485,162 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/topology:
+    get:
+      summary: Get stack topology
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackTopology'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Stack not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections:
+    get:
+      summary: List stack connections
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackConnectionList'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Stack not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create stack connection
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StackConnection'
+      responses:
+        '201':
+          description: Stack connection created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackConnection'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Stack not found
+        '409':
+          description: Stack connection already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections/{connection_id}:
+    put:
+      summary: Update stack connection
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/connection_id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StackConnection'
+      responses:
+        '200':
+          description: Stack connection updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackConnection'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Stack or connection not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete stack connection
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/connection_id'
+      responses:
+        '204':
+          description: Stack connection deleted successfully
+        '401':
+          description: Unauthorized
+        '404':
+          description: Stack or connection not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   # Team-scoped secret routes
   /api/v1/organizations/{org_id}/teams/{team_name}/secrets:
@@ -2539,6 +2695,13 @@ components:
       schema:
         type: string
       description: The name of the stack resource
+    connection_id:
+      name: connection_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The ID of the stack connection
     build_id:
       name: build_id
       in: path
@@ -3202,6 +3365,16 @@ components:
         total:
           type: integer
 
+    StackConnectionList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StackConnection'
+        total:
+          type: integer
+
     StackSpec:
       type: object
       required:
@@ -3215,6 +3388,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Volume'
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/StackConnection'
 
     StackStatus:
       type: object
@@ -3274,6 +3451,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Port'
+        outputs:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/OutputDescriptor'
         stateful:
           type: boolean
         status:
@@ -3291,6 +3473,225 @@ components:
             $ref: '#/components/schemas/StackResource'
         total:
           type: integer
+
+    OutputDescriptor:
+      type: object
+      description: Declared output metadata for a topology node. Values are not returned here.
+      required:
+        - name
+        - type
+        - sensitive
+      properties:
+        name:
+          type: string
+          description: Stable output accessor name, for example `host` or `public.http.url`.
+        type:
+          type: string
+          description: Scalar value type exposed by this output.
+          enum:
+            - string
+            - integer
+            - boolean
+        sensitive:
+          type: boolean
+          description: True when the output value is sensitive and should never be returned in normal metadata APIs.
+
+    StackTopology:
+      type: object
+      required:
+        - nodes
+        - edges
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopologyNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopologyEdge'
+
+    TopologyNode:
+      type: object
+      description: A node in the stack topology graph.
+      required:
+        - ref
+        - label
+      properties:
+        ref:
+          $ref: '#/components/schemas/TopologyNodeRef'
+        label:
+          type: string
+        outputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/OutputDescriptor'
+        state:
+          type: string
+          description: Optional runtime state for nodes that have status, such as stack resources or addons.
+
+    TopologyEdge:
+      type: object
+      description: An edge in the stack topology graph.
+      required:
+        - kind
+        - source
+        - target
+        - source_of_truth
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum:
+            - env
+            - volume_mount
+            - build_artifact_source
+            - depends_on
+          description: Edge kind. Explicit connections reuse connection kinds; derived edges use depends_on.
+        source:
+          description: The producing end of the edge. Corresponds to StackConnection.from.
+          $ref: '#/components/schemas/TopologyNodeRef'
+        target:
+          description: The consuming end of the edge. Corresponds to StackConnection.to.
+          $ref: '#/components/schemas/TopologyNodeRef'
+        mappings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConnectionMapping'
+        config:
+          $ref: '#/components/schemas/StackConnectionConfig'
+        source_of_truth:
+          type: string
+          enum:
+            - connection
+            - derived
+          description: Whether the edge came from an explicit connection or a derived relationship such as depends_on.
+
+    StackConnection:
+      type: object
+      description: A user-authored topology edge between two nodes in a stack.
+      required:
+        - kind
+        - from
+        - to
+      properties:
+        id:
+          type: string
+          description: Stable connection identifier. Generated when omitted.
+        kind:
+          type: string
+          description: >
+            The relationship type. `env` injects values into environment variables,
+            `volume_mount` mounts a volume into a resource, and
+            `build_artifact_source` seeds a volume from build output.
+          enum:
+            - env
+            - volume_mount
+            - build_artifact_source
+        from:
+          $ref: '#/components/schemas/TopologyNodeRef'
+        to:
+          $ref: '#/components/schemas/TopologyNodeRef'
+        mappings:
+          type: array
+          description: >
+            Target/value mappings for kinds that move values, such as `env`.
+          items:
+            $ref: '#/components/schemas/ConnectionMapping'
+        config:
+          $ref: '#/components/schemas/StackConnectionConfig'
+
+    TopologyNodeRef:
+      type: object
+      description: Identifies a topology node within the stack graph.
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: The node category.
+          enum:
+            - stack_resource
+            - addon/postgres
+            - secret
+            - volume
+            - object_store
+        id:
+          type: string
+          description: Stable ID for persisted resources such as addons or secrets.
+        name:
+          type: string
+          description: Name-scoped reference for stack-local resources such as StackResources or Volumes.
+
+    ConnectionMapping:
+      type: object
+      description: Maps one produced value into one target location on the consumer.
+      required:
+        - target
+        - value
+      properties:
+        target:
+          $ref: '#/components/schemas/ConnectionTarget'
+        value:
+          $ref: '#/components/schemas/ValueRef'
+
+    ConnectionTarget:
+      type: object
+      description: The destination field that receives a mapped value.
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: env writes an environment variable and file writes a mounted file path.
+          enum:
+            - env
+            - file
+        name:
+          type: string
+          description: Environment variable name when type is env.
+        path:
+          type: string
+          description: Absolute file path when type is file.
+
+    StackConnectionConfig:
+      type: object
+      description: >
+        Kind-specific connection configuration. Expected keys depend on `kind`.
+        Examples: for `env` from `addon/postgres`, use fields such as `database`
+        and `credential_scope`; for `volume_mount`, use `mount_path`, `sub_path`,
+        and `read_only`; for `build_artifact_source`, use `source_path` and
+        `destination_path`.
+      additionalProperties: true
+
+    ValueRef:
+      type: object
+      description: >
+        Describes how to read a value from the connection's `from` node. This is
+        only used inside `StackConnection.mappings[]`.
+      properties:
+        output:
+          type: string
+          description: Output accessor on the connection's `from` node, such as `url` or `public.http.url`.
+        template:
+          type: string
+          description: Template used when one target value must be composed from multiple outputs.
+        values:
+          type: object
+          description: Named template inputs, each resolving one output from the connection's `from` node.
+          additionalProperties:
+            $ref: '#/components/schemas/OutputValueRef'
+
+    OutputValueRef:
+      type: object
+      description: References one output on the connection's `from` node.
+      required:
+        - output
+      properties:
+        output:
+          type: string
+          description: Output accessor on the connection's `from` node.
 
     ImageBuild:
       type: object
@@ -3409,6 +3810,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SecretData'
+        outputs:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/OutputDescriptor'
         created_at:
           type: string
           format: date-time
@@ -3623,9 +4029,12 @@ components:
     Port:
       type: object
       required:
+        - name
         - number
         - exposed_to_public
       properties:
+        name:
+          type: string
         number:
           type: integer
         protocol:
@@ -3758,40 +4167,20 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EnvVar'
-        environment_variables_from_secret:
-          type: array
-          items:
-            $ref: '#/components/schemas/EnvVarFromSecret'
-        env_from_addons:
-          type: array
-          items:
-            $ref: '#/components/schemas/AddonEnvSource'
-    EnvVarFromSecret:
-      type: object
-      additionalProperties: false
-      required:
-        - name
-        - secret_ref
-        - key
-      properties:
-        name:
-          type: string
-        secret_ref:
-          $ref: '#/components/schemas/SecretRef'
-        key:
-          type: string
-          description: The key in the secret to use for this environment variable
     EnvVar:
       type: object
       additionalProperties: false
       required:
         - name
-        - value
       properties:
         name:
           type: string
         value:
           type: string
+          description: Literal environment variable value.
+        self_output:
+          type: string
+          description: Read this environment variable from one of the resource's own declared outputs, for example public.http.url.
 
 
     Condition:
@@ -4061,6 +4450,11 @@ components:
         revision:
           type: string
           readOnly: true
+        outputs:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/OutputDescriptor'
         spec:
           $ref: '#/components/schemas/PostgresAddonSpec'
         status:
@@ -4480,31 +4874,6 @@ components:
           type: string
         caCertificate:
           type: string
-    AddonEnvSource:
-      type: object
-      properties:
-        postgres:
-          $ref: '#/components/schemas/PostgresAddonEnvSource'
-    PostgresAddonEnvSource:
-      type: object
-      required:
-        - addon_id
-        - env_mapping
-      properties:
-        addon_id:
-          type: string
-        database:
-          type: string
-          description: Target database name. Required when superuser is false. Defaults to 'postgres' when superuser is true and omitted.
-        superuser:
-          type: boolean
-          default: false
-          description: When true, use superuser credentials. The addon must have enableSuperuserAccess enabled.
-        env_mapping:
-          type: object
-          additionalProperties:
-            type: string
-          description: Maps addon credential fields to environment variable names. Valid fields are host, port, username, password, database, sslmode, connectionString, caCertificate.
     ScopeResource:
       type: object
       properties:

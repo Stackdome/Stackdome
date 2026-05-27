@@ -27,6 +27,8 @@ type secretService interface {
 	InternalGetByID(ctx context.Context, id string) (*models.Secret, *errors.ServiceError)
 }
 
-type addonUsageStore interface {
-	IsAddonInUse(ctx context.Context, addonType models.AddonType, addonID string) (bool, error)
+type connectionUsageChecker interface {
+	IsNodeReferenced(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
+	IsNodeReferencedAsSource(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
+	IsNodeReferencedAsTarget(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
 }

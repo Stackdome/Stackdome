@@ -16,6 +16,12 @@ const (
 	StackRevisionLabel = "stack.stackdome.io/revision"
 )
 
+const (
+	// SkipClusterProvisioningAnnotation can be set on a stack to indicate that cluster provisioning should be skipped for this stack.
+	// This is useful for testing purposes.
+	SkipClusterProvisioningAnnotation = "stack.stackdome.io/skip-cluster-provisioning"
+)
+
 type StackState string
 
 const (
@@ -38,6 +44,7 @@ type Stack struct {
 	Labels            Labels      `gorm:"type:jsonb"`
 	Annotations       Annotations `gorm:"type:jsonb"`
 	CrRevision        string
+	Connections       StackConnections `gorm:"-"`
 	StackResources    []*StackResource `gorm:"foreignKey:StackID"`
 	Volumes           []*Volume        `gorm:"-"`
 	Status            *StackStatus     `gorm:"type:jsonb"`
@@ -124,12 +131,27 @@ func (ws *Stack) SecretsInUse() []string {
 			}
 		}
 
-		if resource.HasEnvVarsFromSecret() {
-			if resource.ExecutionConfig != nil && len(resource.ExecutionConfig.EnvVarsFromSecrets) > 0 {
-				for _, secretRef := range resource.ExecutionConfig.EnvVarsFromSecrets {
-					res = append(res, secretRef.SecretID)
-				}
-			}
+	}
+	for _, connection := range ws.Connections {
+		if connection.From.Type == TopologyNodeTypeSecret && connection.From.Id != "" {
+			res = append(res, connection.From.Id)
+		}
+	}
+	return lo.Uniq(res)
+}
+
+func (ws *Stack) DirectConfigSecretsInUse() []string {
+	var res []string
+	for _, resource := range ws.StackResources {
+		if resource.BuildConfig != nil && resource.BuildConfig.SourceContext.Git != nil &&
+			resource.BuildConfig.SourceContext.Git.GitSecretRef != nil {
+			res = append(res, resource.BuildConfig.SourceContext.Git.GitSecretRef.SecretID)
+		}
+		if resource.ImageConfig != nil && resource.ImageConfig.PullSecretRef != nil {
+			res = append(res, resource.ImageConfig.PullSecretRef.SecretID)
+		}
+		if resource.BuildConfig != nil && resource.BuildConfig.RegistrySecretRef != nil {
+			res = append(res, resource.BuildConfig.RegistrySecretRef.SecretID)
 		}
 	}
 	return lo.Uniq(res)

@@ -25,7 +25,7 @@ type PostgresAddonWorkerSpec struct {
 	ObjectStoreService   objectStoreService
 	NamespaceService     namespaceService
 	SecretService        secretService
-	AddonUsageStore      addonUsageStore
+	ConnectionUsageChecker connectionUsageChecker
 	ClusterManager       clustermanager.ClusterManager
 	CRBuilder            builders.PostgresClusterBuilder
 	Env                  string

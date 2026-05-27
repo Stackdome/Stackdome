@@ -62,7 +62,8 @@ type Secret struct {
 	UpdatedAt      time.Time
 
 	// Transient field for API responses (not stored in DB)
-	Data map[string]string `gorm:"-" json:"data,omitempty"`
+	Data    map[string]string  `gorm:"-" json:"data,omitempty"`
+	Outputs []OutputDescriptor `gorm:"-" json:"outputs,omitempty"`
 }
 
 // SecretReference points to a secret and an optional key within that secret.

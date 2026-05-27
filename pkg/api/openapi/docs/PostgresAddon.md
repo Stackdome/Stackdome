@@ -14,6 +14,7 @@ Name | Type | Description | Notes
 **Labels** | Pointer to [**[]Label**](Label.md) |  | [optional] 
 **Annotations** | Pointer to [**[]Annotation**](Annotation.md) |  | [optional] 
 **Revision** | Pointer to **string** |  | [optional] [readonly] 
+**Outputs** | Pointer to [**[]OutputDescriptor**](OutputDescriptor.md) |  | [optional] [readonly] 
 **Spec** | [**PostgresAddonSpec**](PostgresAddonSpec.md) |  | 
 **Status** | Pointer to [**PostgresAddonStatus**](PostgresAddonStatus.md) |  | [optional] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] [readonly] 
@@ -282,6 +283,31 @@ SetRevision sets Revision field to given value.
 `func (o *PostgresAddon) HasRevision() bool`
 
 HasRevision returns a boolean if a field has been set.
+
+### GetOutputs
+
+`func (o *PostgresAddon) GetOutputs() []OutputDescriptor`
+
+GetOutputs returns the Outputs field if non-nil, zero value otherwise.
+
+### GetOutputsOk
+
+`func (o *PostgresAddon) GetOutputsOk() (*[]OutputDescriptor, bool)`
+
+GetOutputsOk returns a tuple with the Outputs field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetOutputs
+
+`func (o *PostgresAddon) SetOutputs(v []OutputDescriptor)`
+
+SetOutputs sets Outputs field to given value.
+
+### HasOutputs
+
+`func (o *PostgresAddon) HasOutputs() bool`
+
+HasOutputs returns a boolean if a field has been set.
 
 ### GetSpec
 
