@@ -75,7 +75,7 @@ function filterRows(
   });
 }
 
-const COLUMN_HEAD_CLASS = "text-[11px] uppercase tracking-widest text-muted-foreground font-medium";
+const COLUMN_HEAD_CLASS = "text-[11px] uppercase tracking-widest text-muted-foreground font-mono";
 
 function TabCount({ count }: { count: number }) {
   return <span className="ml-1.5 font-mono text-[11px] text-muted-foreground">{count}</span>;
