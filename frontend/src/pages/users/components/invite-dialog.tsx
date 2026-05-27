@@ -334,7 +334,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                             <DefaultPill />
                           ) : (
                             <>
-                              <span className="font-mono">{t.name}</span>
+                              <span className="font-mono text-sm">{t.name}</span>
                               {t.default_team && <DefaultPill />}
                             </>
                           )}
