@@ -11,7 +11,7 @@ import (
 
 const (
 	// Stackdome agent Helm chart (bundles cluster-agent + all dependencies)
-	DefaultChartVersion = "0.5.5-alpha"
+	DefaultChartVersion = "0.5.6-alpha"
 	ChartRepo           = "oci://quay.io/stackdome/charts/stackdome-agent"
 	ChartReleaseName    = "stackdome-agent"
 	ChartNamespace      = "stackdome-control-plane"

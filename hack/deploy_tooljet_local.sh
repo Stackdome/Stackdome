@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
-# Run Stackdome locally for development.
+# Deploy ToolJet to a local Stackdome environment.
 #
-# Bootstraps a complete local Stackdome environment:
+# This script bootstraps everything from scratch:
 #   1. PostgreSQL database for the API server
 #   2. k3d cluster with stackdome-agent Helm chart (operators + CRDs + cluster agent)
 #   3. API server (built and run locally)
 #   4. Service account, cluster registration, org domain
 #   5. (Optional) Postgres addon deployment
-#   6. (Optional) Stack deployment
+#   6. ToolJet stack deployment
 #
 # Prerequisites:
 #   - Go 1.22+
@@ -19,27 +19,24 @@
 #   - mage (https://magefile.org)
 #
 # Usage:
-#   # Start environment only (no stack)
-#   ./hack/run_local.sh
+#   # Deploy ToolJet (without postgres addon)
+#   ./hack/deploy_tooljet_local.sh
 #
-#   # Deploy a stack
-#   ./hack/run_local.sh samples/tooljet.json
-#
-#   # Deploy a stack with a postgres addon
-#   ADDON_FILE=samples/tooljet_addon_postgres.json ./hack/run_local.sh samples/tooljet_with_addon.json
+#   # Deploy ToolJet with a postgres addon
+#   USE_ADDON=true ./hack/deploy_tooljet_local.sh
 #
 # Environment variables (all optional, defaults provided):
 #   DB_HOST              PostgreSQL host (default: localhost)
 #   DB_PORT              PostgreSQL port (default: 5432)
 #   DB_USERNAME          PostgreSQL user (default: postgres)
 #   DB_PASSWORD          PostgreSQL password (default: foobar-bizz-buzz)
-#   DB_NAME              Database name (default: stackdome_local_dev)
+#   DB_NAME              Database name (default: stackdome_tooljet_demo)
 #   API_PORT             API server port (default: 8000)
 #   ORG_DOMAIN           Organisation domain (default: local.stackdome.io)
-#   ADDON_FILE             Postgres addon JSON file (creates addon before stack)
-#   SKIP_CLUSTER           Set to "true" to skip k3d cluster setup (reuse existing)
-#   SKIP_DB                Set to "true" to skip database creation
-#   SKIP_API_SERVER        Set to "true" to skip building/starting the API server
+#   USE_ADDON            Set to "true" to use Postgres addon instead of raw postgres image
+#   SKIP_CLUSTER         Set to "true" to skip k3d cluster setup (reuse existing)
+#   SKIP_DB              Set to "true" to skip database creation
+#   SKIP_API_SERVER      Set to "true" to skip building/starting the API server
 
 set -euo pipefail
 
@@ -51,7 +48,7 @@ DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
 DB_USERNAME="${DB_USERNAME:-postgres}"
 DB_PASSWORD="${DB_PASSWORD:-foobar-bizz-buzz}"
-DB_NAME="${DB_NAME:-stackdome_local_dev}"
+DB_NAME="${DB_NAME:-stackdome_tooljet_demo}"
 API_PORT="${API_PORT:-8000}"
 API_BASE="http://localhost:${API_PORT}"
 ADMIN_EMAIL="admin@stackdome.io"
@@ -61,9 +58,7 @@ ORG_DOMAIN="${ORG_DOMAIN:-127.0.0.1.nip.io}"
 SKIP_CLUSTER="${SKIP_CLUSTER:-false}"
 SKIP_DB="${SKIP_DB:-false}"
 SKIP_API_SERVER="${SKIP_API_SERVER:-false}"
-
-STACK_FILE="${1:-}"
-ADDON_FILE="${ADDON_FILE:-}"
+USE_ADDON="${USE_ADDON:-false}"
 
 # Colors
 RED='\033[0;31m'
@@ -77,7 +72,7 @@ warn() { echo -e "${YELLOW}[!]${NC} $*"; }
 err()  { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
 info() { echo -e "${BLUE}[i]${NC} $*"; }
 
-PG_CONTAINER_NAME="psql-stackdome-dev"
+PG_CONTAINER_NAME="psql-stackdome-demo"
 
 # ============================================================
 # Cleanup
@@ -87,7 +82,7 @@ cleanup() {
     log "Cleaning up..."
 
     if [[ -n "${STACK_ID:-}" && -n "${AUTH_TOKEN:-}" && -n "${ORG_ID:-}" ]]; then
-        log "Deleting stack (${STACK_ID})..."
+        log "Deleting ToolJet stack (${STACK_ID})..."
         curl -sf -X DELETE "${API_BASE}/api/v1/organizations/${ORG_ID}/stacks/${STACK_ID}" \
             -H "Authorization: Bearer ${AUTH_TOKEN}" >/dev/null 2>&1 || true
     fi
@@ -125,12 +120,6 @@ cleanup() {
         log "Restored original .env"
     fi
 
-    # Delete the dev_env.yaml config file
-    if [[ -f "$API_SERVER_DIR/dev_env.yaml" ]]; then
-        rm "$API_SERVER_DIR/dev_env.yaml"
-        log "Deleted dev_env.yaml"
-    fi
-
     log "Cleanup complete."
 }
 trap cleanup EXIT
@@ -149,19 +138,6 @@ check_prerequisites() {
     if [[ ${#missing[@]} -gt 0 ]]; then
         err "Missing required tools: ${missing[*]}"
     fi
-
-    if [[ -n "$ADDON_FILE" && -z "$STACK_FILE" ]]; then
-        err "ADDON_FILE requires a stack file argument (the stack must reference the addon)"
-    fi
-
-    if [[ -n "$STACK_FILE" && ! -f "$STACK_FILE" ]]; then
-        err "Stack file not found: $STACK_FILE"
-    fi
-
-    if [[ -n "$ADDON_FILE" && ! -f "$ADDON_FILE" ]]; then
-        err "Addon file not found: $ADDON_FILE"
-    fi
-
     log "All prerequisites found."
 }
 
@@ -225,7 +201,6 @@ setup_cluster() {
         log "This may take 5-10 minutes..."
 
         local stackdome_chart_version="${STACKDOME_CHART_VERSION:-0.5.6-alpha}"
-
         helm upgrade --install stackdome-agent \
             "oci://quay.io/stackdome/charts/stackdome-agent" \
             --version "$stackdome_chart_version" \
@@ -323,21 +298,10 @@ signup_and_authenticate() {
         err "Failed to get organization ID."
     fi
 
-    # Get the default team name
-    local teams
-    teams=$(curl -sf -H "Authorization: Bearer ${AUTH_TOKEN}" \
-        "${API_BASE}/api/v1/organizations/${ORG_ID}/teams")
-    TEAM_NAME=$(echo "$teams" | jq -r '.items[0].name // empty')
-    if [[ -z "$TEAM_NAME" ]]; then
-        TEAM_NAME="default"
-    fi
-
     log "Authenticated. Token obtained."
     log "Organization ID: ${ORG_ID}"
-    log "Team: ${TEAM_NAME}"
 }
 
-TEAM_BASE=""
 api() {
     local method="$1" path="$2"
     shift 2
@@ -458,7 +422,17 @@ register_cluster() {
             name: $name,
             cluster_url: $url,
             cluster_ca_data: $ca,
-            cluster_sa_token: $token
+            cluster_sa_token: $token,
+            cluster_image_registry: {
+                name: "local-registry",
+                spec: {
+                    backend_storage_size: "10Gi",
+                    backend_storage_class: "local-path",
+                    max_repositories: 100,
+                    tags_per_repository: 50,
+                    delete_untagged: true
+                }
+            }
         }')
 
     local response
@@ -493,19 +467,24 @@ wait_for_registry() {
 }
 
 # ============================================================
-# Step 9: Create addon (optional)
+# Step 9: Create Postgres addon (if USE_ADDON=true)
 # ============================================================
-create_addon() {
-    if [[ -z "$ADDON_FILE" ]]; then
+create_postgres_addon() {
+    if [[ "$USE_ADDON" != "true" ]]; then
         return
     fi
 
+    local addon_file="${API_SERVER_DIR}/samples/tooljet_addon_postgres.json"
+    if [[ ! -f "$addon_file" ]]; then
+        err "Addon file not found: $addon_file"
+    fi
+
     local addon_name
-    addon_name=$(jq -r '.name' "$ADDON_FILE")
+    addon_name=$(jq -r '.name' "$addon_file")
     log "Creating Postgres addon '${addon_name}'..."
 
     local response
-    response=$(api POST "/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}/addons/postgres" -d @"$ADDON_FILE")
+    response=$(api POST "/api/v1/organizations/${ORG_ID}/addons/postgres" -d @"$addon_file")
     ADDON_ID=$(echo "$response" | jq -r '.id')
     if [[ -z "$ADDON_ID" || "$ADDON_ID" == "null" ]]; then
         err "Failed to create postgres addon. Response: $response"
@@ -513,7 +492,7 @@ create_addon() {
     log "Postgres addon created. ID: ${ADDON_ID}"
 
     log "Waiting for Postgres addon to become Ready..."
-    for i in $(seq 1 30); do
+    for i in $(seq 1 300); do
         local state
         state=$(api GET "/api/v1/organizations/${ORG_ID}/addons/postgres/${ADDON_ID}" 2>/dev/null \
             | jq -r '.status.state // empty' 2>/dev/null || echo "")
@@ -522,151 +501,104 @@ create_addon() {
             return
         fi
         if (( i % 15 == 0 )); then
-            warn "  Addon state: ${state:-unknown} (${i}s elapsed, waiting up to 30s)..."
+            warn "  Addon state: ${state:-unknown} (${i}s elapsed, waiting up to 300s)..."
         fi
         sleep 1
     done
-    warn "Postgres addon did not reach Ready state within 30s. Proceeding anyway."
+    warn "Postgres addon did not reach Ready state within 300s. Proceeding anyway."
 }
 
 # ============================================================
-# Step 10: Deploy stack (optional)
+# Step 10: Deploy ToolJet stack
 # ============================================================
-deploy_stack() {
-    if [[ -z "$STACK_FILE" ]]; then
-        return
-    fi
+deploy_tooljet() {
+    local stack_file response
+    if [[ "$USE_ADDON" == "true" ]]; then
+        log "Deploying ToolJet stack (with Postgres addon)..."
+        stack_file="${API_SERVER_DIR}/samples/tooljet_with_addon.json"
+        [[ -f "$stack_file" ]] || err "Stack file not found: $stack_file"
 
-    local stack_name
-    stack_name=$(jq -r '.name' "$STACK_FILE")
-    log "Deploying stack '${stack_name}'..."
-
-    local response
-    if [[ -n "${ADDON_ID:-}" ]]; then
         local stack_payload
-        stack_payload=$(sed "s/<POSTGRES_ADDON_ID>/${ADDON_ID}/g" "$STACK_FILE")
-        response=$(echo "$stack_payload" | api POST "/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}/stacks" -d @-)
+        stack_payload=$(sed "s/<POSTGRES_ADDON_ID>/${ADDON_ID}/g" "$stack_file")
+        response=$(echo "$stack_payload" | api POST "/api/v1/organizations/${ORG_ID}/stacks" -d @-)
     else
-        response=$(api POST "/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}/stacks" -d @"$STACK_FILE")
+        log "Deploying ToolJet stack..."
+        stack_file="${API_SERVER_DIR}/samples/tooljet.json"
+        [[ -f "$stack_file" ]] || err "Stack file not found: $stack_file"
+
+        response=$(api POST "/api/v1/organizations/${ORG_ID}/stacks" -d @"$stack_file")
     fi
 
     STACK_ID=$(echo "$response" | jq -r '.id')
     if [[ -z "$STACK_ID" || "$STACK_ID" == "null" ]]; then
         err "Failed to create stack. Response: $response"
     fi
-    log "Stack '${stack_name}' created. ID: ${STACK_ID}"
+    log "ToolJet stack created. ID: ${STACK_ID}"
 }
 
 # ============================================================
-# Print environment info
+# Print environment info and wait
 # ============================================================
 print_info() {
     log ""
     log "============================================"
-    log " Stackdome local environment is running"
+    log " ToolJet deployed to local Stackdome"
     log "============================================"
     log ""
     info "API Server:   ${API_BASE}"
     info "Org ID:       ${ORG_ID}"
-    info "Team:         ${TEAM_NAME}"
     info "Cluster ID:   ${CLUSTER_ID}"
     info "Auth Token:   ${AUTH_TOKEN}"
     info "Org Domain:   ${ORG_DOMAIN}"
     info "Kubectl ctx:  k3d-${K3D_CLUSTER_NAME}"
+    info "Stack ID:     ${STACK_ID}"
 
-    local team_base="${API_BASE}/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}"
+    if [[ -n "${ADDON_ID:-}" ]]; then
+        info "Addon ID:     ${ADDON_ID}"
+    fi
 
     local config_file="${API_SERVER_DIR}/dev_env.yaml"
     cat > "$config_file" <<EOF
 api_server: ${API_BASE}
 org_id: ${ORG_ID}
-team_name: ${TEAM_NAME}
 cluster_id: ${CLUSTER_ID}
 auth_token: ${AUTH_TOKEN}
 org_domain: ${ORG_DOMAIN}
 kubectl_context: k3d-${K3D_CLUSTER_NAME}
 admin_email: ${ADMIN_EMAIL}
 admin_password: ${ADMIN_PASS}
+stack_id: ${STACK_ID}
 EOF
+    if [[ -n "${ADDON_ID:-}" ]]; then
+        echo "addon_id: ${ADDON_ID}" >> "$config_file"
+    fi
     log "Config saved to ${config_file}"
 
     log ""
     log "Useful commands:"
     log ""
-    log "  # Deploy a stack"
-    log "  curl -s -X POST -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-    log "    -H 'Content-Type: application/json' \\"
-    log "    ${team_base}/stacks -d @samples/tooljet.json | jq"
+    log "  # Check stack status"
+    log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
+    log "    ${API_BASE}/api/v1/organizations/${ORG_ID}/stacks/${STACK_ID} | jq '.status'"
     log ""
-    log "  # Create a postgres addon"
-    log "  curl -s -X POST -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-    log "    -H 'Content-Type: application/json' \\"
-    log "    ${team_base}/addons/postgres -d @samples/postgres_addon_basic.json | jq"
-    log ""
-    log "  # Export kubeconfig"
-    log "  k3d kubeconfig get ${K3D_CLUSTER_NAME} > /tmp/k3d-kubeconfig.yaml"
+    log "  # List stack resources"
+    log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
+    log "    ${API_BASE}/api/v1/organizations/${ORG_ID}/stacks/${STACK_ID}/resources | jq '.[].name'"
     log ""
     log "  # Watch pods in the cluster"
     log "  kubectl --context k3d-${K3D_CLUSTER_NAME} get pods -A -w"
     log ""
-}
-
-# ============================================================
-# Print stack/addon info and wait
-# ============================================================
-print_stack_info() {
-    if [[ -z "${ADDON_ID:-}" && -z "${STACK_ID:-}" ]]; then
-        return
-    fi
-
-
-    log ""
-    log "============================================"
-    log " Stack deployment info"
-    log "============================================"
-    log ""
-
-    if [[ -n "${ADDON_ID:-}" ]]; then
-        info "Addon ID:     ${ADDON_ID}"
-    fi
-    if [[ -n "${STACK_ID:-}" ]]; then
-        info "Stack ID:     ${STACK_ID}"
-    fi
-
-    log ""
-    log "Useful commands:"
-    log ""
-    log "  # List stacks"
-    log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-    log "    ${API_BASE}/api/v1/organizations/${ORG_ID}/stacks | jq '.items[].name'"
-    log ""
-    log "  # List postgres addons"
-    log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-    log "    ${API_BASE}/api/v1/organizations/${ORG_ID}/addons/postgres | jq '.items[] | {name, id, state: .status.state}'"
-
-    if [[ -n "${STACK_ID:-}" ]]; then
-        log ""
-        log "  # Check stack status"
-        log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-        log "    ${API_BASE}/api/v1/organizations/${ORG_ID}/stacks/${STACK_ID} | jq '.status'"
-        log ""
-        log "  # List stack resources"
-        log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-        log "    ${API_BASE}/api/v1/organizations/${ORG_ID}/stacks/${STACK_ID}/resources | jq '.[].name'"
-    fi
-    log ""
+    log "Press Ctrl+C to tear down and exit."
+    wait "$API_SERVER_PID"
 }
 
 # ============================================================
 # Main
 # ============================================================
 main() {
-    log "Starting local Stackdome environment"
-    if [[ -n "$STACK_FILE" ]]; then
-        info "Stack file: ${STACK_FILE}"
-    fi
-    if [[ -n "$ADDON_FILE" ]]; then
-        info "Addon file: ${ADDON_FILE}"
+    log "Starting ToolJet deployment to local Stackdome environment"
+    if [[ "$USE_ADDON" == "true" ]]; then
+        info "Using Postgres addon"
     fi
     log ""
 
@@ -678,17 +610,10 @@ main() {
     create_org_domain
     setup_service_account
     register_cluster
+    wait_for_registry
+    create_postgres_addon
+    deploy_tooljet
     print_info
-
-    if [[ -n "$ADDON_FILE" || -n "$STACK_FILE" ]]; then
-        # wait_for_registry  # skipped: no image registry created for local dev
-        create_addon
-        deploy_stack
-        print_stack_info
-    fi
-
-    log "Press Ctrl+C to tear down and exit."
-    wait "$API_SERVER_PID"
 }
 
-main
+main "$@"

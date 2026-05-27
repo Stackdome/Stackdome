@@ -4,7 +4,7 @@ TL;DR guide for experienced users. For detailed instructions, see [BOOTSTRAP_GUI
 
 ## Prerequisites
 
-✅ Go 1.24+, Docker, kubectl, kind, jq, mage
+✅ Go 1.24+, Docker, kubectl, k3d (https://k3d.io), jq, mage
 
 ## 5-Minute Setup
 
@@ -40,7 +40,7 @@ DB_PORT=5432
 DB_NAME=stackdome
 DB_USERNAME=postgres
 DB_PASSWORD=mypassword
-DEFAULT_USER_EMAIL=admin@stackdome.local
+DEFAULT_USER_EMAIL=admin@127.0.0.1.nip.io
 DEFAULT_USER_NAME=admin
 DEFAULT_USER_PASS=admin123
 EOF
@@ -57,11 +57,11 @@ go build -o bin/stackdome-server ./cmd/main.go
 # Login
 TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@stackdome.local","password":"admin123"}' | jq -r '.token')
+  -d '{"email":"admin@127.0.0.1.nip.io","password":"admin123"}' | jq -r '.token')
 
 ORG_ID=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@stackdome.local","password":"admin123"}' | jq -r '.user.organisation_id')
+  -d '{"email":"admin@127.0.0.1.nip.io","password":"admin123"}' | jq -r '.user.organisation_id')
 
 # Deploy service account
 export KUBECONFIG=~/stackdome/stackdome-cluster-agent/.cache/dev-env/kubeconfig.yaml
@@ -94,7 +94,7 @@ curl -X POST "http://localhost:8000/api/v1/organizations/${ORG_ID}/clusters" \
 curl -X PUT "http://localhost:8000/api/v1/organizations/${ORG_ID}" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"DefaultOrganisation","domains":[{"fqdn":"stackdome.local"}]}'
+  -d '{"name":"DefaultOrganisation","domains":[{"fqdn":"127.0.0.1.nip.io"}]}'
 
 # Create stack
 curl -X POST "http://localhost:8000/api/v1/organizations/${ORG_ID}/stacks" \
@@ -127,7 +127,7 @@ curl http://localhost:8000/health
 # Get Token
 TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@stackdome.local","password":"admin123"}' | jq -r '.token')
+  -d '{"email":"admin@127.0.0.1.nip.io","password":"admin123"}' | jq -r '.token')
 
 # List Stacks
 curl -H "Authorization: Bearer $TOKEN" \

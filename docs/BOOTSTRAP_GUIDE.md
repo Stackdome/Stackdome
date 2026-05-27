@@ -86,10 +86,10 @@ Flow: User → API Server → K8s CR → Cluster Agent → K8s Resources
   kubectl version --client
   ```
 
-- **Kind** (Kubernetes in Docker): For local cluster
+- **k3d**: Lightweight Kubernetes in Docker (https://k3d.io)
   ```bash
-  kind version
-  # If not installed: go install sigs.k8s.io/kind@latest
+  k3d version
+  # If not installed: see https://k3d.io/#installation
   ```
 
 - **Mage**: Build tool (for cluster-agent)
@@ -225,48 +225,56 @@ The cluster agent runs inside your Kubernetes cluster and reconciles Stack Custo
 
 ### 2.1: Create Development Cluster
 
-```bash
-cd ~/stackdome/stackdome-cluster-agent
-
-# Fix cd command if using gvm (Go Version Manager)
-unset -f cd 2>/dev/null || true
-
-# Create Kind cluster with cluster-agent operator
-./mage dev:setup
-
-# This will:
-# - Create 3-node Kind cluster (1 control-plane, 2 workers)
-# - Install CloudNativePG operator (for PostgreSQL addons)
-# - Install Traefik ingress controller
-# - Install cert-manager (for TLS certificates)
-# - Deploy cluster-agent operator with all CRDs
-# - Deploy barman-cloud plugin (for PostgreSQL backups)
-```
-
-**Expected output:**
-```
-Creating cluster "stackdome-cluster-agent-dev" ...
-✓ Ensuring node image (kindest/node:v1.32.2)
-✓ Preparing nodes
-✓ Starting control-plane
-✓ Installing CNI
-✓ Joining worker nodes
-...
-Loaded content from URL: config/deploy/barman-cloud-manifest.yaml
-Loaded objects from files: 17
-```
-
-**Time:** 3-5 minutes
-
-### 2.2: Verify Cluster Agent
+Create a k3d cluster with port mappings for ingress and two agent nodes:
 
 ```bash
-# Set kubeconfig
-export KUBECONFIG=$(pwd)/.cache/dev-env/kubeconfig.yaml
+k3d cluster create stackdome-dev \
+  --port "80:80@loadbalancer" \
+  --port "443:443@loadbalancer" \
+  --k3s-arg "--disable=traefik@server:0" \
+  --k3s-arg "--disable=servicelb@server:0" \
+  --agents 2
+```
 
+This creates a 3-node k3d cluster (1 server, 2 agents) with host ports 80/443 forwarded to the load balancer. The built-in Traefik and ServiceLB are disabled so we can install the versions the stackdome-agent requires.
+
+**Time:** 1-2 minutes
+
+### 2.2: Install Required Operators and Cluster Agent
+
+Install the dependencies and the stackdome-agent helm chart into the k3d cluster:
+
+```bash
+# Switch to the k3d cluster context
+kubectl config use-context k3d-stackdome-dev
+
+# Install cert-manager
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=120s
+
+# Install CloudNativePG operator (for PostgreSQL addons)
+helm repo add cnpg https://cloudnative-pg.github.io/charts
+helm repo update
+helm install cnpg cnpg/cloudnative-pg -n cnpg-system --create-namespace --wait
+
+# Install Traefik ingress controller
+helm repo add traefik https://traefik.github.io/charts
+helm install traefik traefik/traefik -n traefik-v2 --create-namespace --wait
+
+# Install stackdome-agent (cluster-agent operator + CRDs)
+# Replace <version> with the desired release version
+helm install stackdome-agent oci://ghcr.io/stackdome/charts/stackdome-agent \
+  -n stackdome-control-plane --create-namespace --wait
+```
+
+> **Note:** The cluster-agent repo has its own `mage dev:setup` that creates a separate Kind cluster for operator development. That workflow is independent and unaffected by using k3d here.
+
+### 2.3: Verify Cluster Agent
+
+```bash
 # Check cluster nodes
 kubectl get nodes
-# Should show 3 nodes: 1 control-plane, 2 workers
+# Should show 3 nodes: 1 server, 2 agents
 
 # Check cluster-agent operator
 kubectl get deployment -n stackdome-control-plane
@@ -274,7 +282,7 @@ kubectl get deployment -n stackdome-control-plane
 
 # Check installed operators
 kubectl get pods -n cnpg-system
-# Should show: cnpg-cloudnative-pg, barman-cloud
+# Should show: cnpg-cloudnative-pg
 
 kubectl get pods -n cert-manager
 # Should show: cert-manager, cert-manager-cainjector, cert-manager-webhook
@@ -287,15 +295,15 @@ kubectl get crds | grep stackdome.io
 # Should show: stacks.core.stackdome.io, volumes.storage.stackdome.io, etc.
 ```
 
-### 2.3: Save Kubeconfig Path
+### 2.4: Save Kubeconfig Path
 
 ```bash
-# Add to your shell profile for persistence
-echo "export STACKDOME_KUBECONFIG=$(pwd)/.cache/dev-env/kubeconfig.yaml" >> ~/.zshrc
-# or ~/.bashrc depending on your shell
+# Export k3d kubeconfig for the stackdome-dev cluster
+export KUBECONFIG=$(k3d kubeconfig get stackdome-dev)
 
-# For current session
-export KUBECONFIG=$(pwd)/.cache/dev-env/kubeconfig.yaml
+# Add to your shell profile for persistence
+echo 'export STACKDOME_KUBECONFIG=$(k3d kubeconfig get stackdome-dev)' >> ~/.zshrc
+# or ~/.bashrc depending on your shell
 ```
 
 ---
@@ -472,8 +480,8 @@ The API server needs credentials to communicate with the Kubernetes cluster.
 ```bash
 cd ~/stackdome/stackdome-api-server
 
-# Set kubeconfig to cluster-agent cluster
-export KUBECONFIG=~/stackdome/stackdome-cluster-agent/.cache/dev-env/kubeconfig.yaml
+# Set kubeconfig to the k3d cluster
+export KUBECONFIG=$(k3d kubeconfig get stackdome-dev)
 
 # Deploy service account
 kubectl apply -f deploy/sa.yaml
@@ -572,6 +580,8 @@ Deploy a sample nginx application to verify the complete workflow.
 
 Stacks with public ports require a domain to be configured.
 
+For local development, use `127.0.0.1.nip.io` as the organization domain. The nip.io service resolves any `<anything>.127.0.0.1.nip.io` address to `127.0.0.1` via public DNS, so no `/etc/hosts` editing is needed.
+
 ```bash
 TOKEN=$(cat /tmp/stackdome-token.txt)
 ORG_ID=$(cat /tmp/stackdome-org-id.txt)
@@ -582,7 +592,7 @@ cat > /tmp/org-update.json << EOF
   "name": "DefaultOrganisation",
   "domains": [
     {
-      "fqdn": "stackdome.local"
+      "fqdn": "127.0.0.1.nip.io"
     }
   ]
 }
@@ -674,7 +684,7 @@ curl -s "http://localhost:8000/api/v1/organizations/${ORG_ID}/stacks/${STACK_ID}
 
 ```bash
 # Set kubeconfig
-export KUBECONFIG=~/stackdome/stackdome-cluster-agent/.cache/dev-env/kubeconfig.yaml
+export KUBECONFIG=$(k3d kubeconfig get stackdome-dev)
 
 # List Stack CRs
 kubectl get stacks -A
@@ -759,13 +769,13 @@ psql -h localhost -U postgres -d stackdome -c "\dt"
 # Check API server logs for detailed error
 ```
 
-### Cluster Agent Issues
+### Cluster Issues
 
-**Problem: dev:setup fails**
+**Problem: k3d cluster create fails**
 
 ```bash
-# Delete existing cluster
-./mage dev:teardown
+# Delete existing cluster and retry
+k3d cluster delete stackdome-dev
 
 # Verify Docker is running
 docker ps
@@ -773,20 +783,42 @@ docker ps
 # Check available resources
 docker stats --no-stream
 
-# Retry setup with verbose logging
-./mage -v dev:setup
+# Retry cluster creation
+k3d cluster create stackdome-dev \
+  --port "80:80@loadbalancer" \
+  --port "443:443@loadbalancer" \
+  --k3s-arg "--disable=traefik@server:0" \
+  --k3s-arg "--disable=servicelb@server:0" \
+  --agents 2
+```
+
+**Problem: Port 80/443 already in use**
+
+```bash
+# Check what is using the ports
+lsof -i :80
+lsof -i :443
+
+# Stop the conflicting process, or use different host ports:
+k3d cluster create stackdome-dev \
+  --port "8080:80@loadbalancer" \
+  --port "8443:443@loadbalancer" \
+  --k3s-arg "--disable=traefik@server:0" \
+  --k3s-arg "--disable=servicelb@server:0" \
+  --agents 2
 ```
 
 **Problem: CRDs not installed**
 
 ```bash
-export KUBECONFIG=$(pwd)/.cache/dev-env/kubeconfig.yaml
+export KUBECONFIG=$(k3d kubeconfig get stackdome-dev)
 
 # Check CRDs
 kubectl get crds | grep stackdome
 
-# If missing, manually apply
-kubectl apply -f config/crd/bases/
+# If missing, re-install the stackdome-agent helm chart
+helm install stackdome-agent oci://ghcr.io/stackdome/charts/stackdome-agent \
+  -n stackdome-control-plane --create-namespace --wait
 ```
 
 **Problem: Operator pod not running**
@@ -1068,7 +1100,7 @@ postgres_addons (many) >── (1) object_stores
 | `~/.stackdome/` | Data directory (if used) |
 | `/tmp/stackdome-token.txt` | Saved API token |
 | `/tmp/stackdome-org-id.txt` | Organization ID |
-| `~/stackdome/stackdome-cluster-agent/.cache/dev-env/kubeconfig.yaml` | Kind cluster kubeconfig |
+| `k3d kubeconfig get stackdome-dev` | k3d cluster kubeconfig (generated dynamically) |
 
 ### Useful Commands
 
@@ -1092,7 +1124,7 @@ kubectl get stacks -A
 
 # Clean up everything
 docker stop stackdome-postgres && docker rm stackdome-postgres
-cd ~/stackdome/stackdome-cluster-agent && ./mage dev:teardown
+k3d cluster delete stackdome-dev
 pkill -f stackdome-server
 ```
 
