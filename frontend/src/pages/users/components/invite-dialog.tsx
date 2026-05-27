@@ -314,8 +314,14 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                     <SelectValue placeholder="Select a team">
                       {resolvedTeam && (
                         <span className="flex items-center gap-1.5">
-                          <span className="font-mono text-sm">{resolvedTeam}</span>
-                          {isDefaultTeamSelected && <DefaultPill />}
+                          {isDefaultTeamSelected && resolvedTeam === "default" ? (
+                            <DefaultPill />
+                          ) : (
+                            <>
+                              <span className="font-mono text-sm">{resolvedTeam}</span>
+                              {isDefaultTeamSelected && <DefaultPill />}
+                            </>
+                          )}
                         </span>
                       )}
                     </SelectValue>
@@ -324,8 +330,14 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                     {teams.map((t) => (
                       <SelectItem key={t.name} value={t.name}>
                         <span className="flex items-center gap-1.5">
-                          <span className="font-mono">{t.name}</span>
-                          {t.default_team && <DefaultPill />}
+                          {t.default_team && t.name === "default" ? (
+                            <DefaultPill />
+                          ) : (
+                            <>
+                              <span className="font-mono">{t.name}</span>
+                              {t.default_team && <DefaultPill />}
+                            </>
+                          )}
                         </span>
                       </SelectItem>
                     ))}
