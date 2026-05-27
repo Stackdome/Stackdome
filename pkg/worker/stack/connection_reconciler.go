@@ -117,11 +117,11 @@ func (r *connectionReconciler) resolveVolumeMountConnections(
 			return fmt.Errorf("volume_mount connection '%s' references unknown stack resource '%s'", connection.ID, connection.To.Name)
 		}
 
-		mountPath, err := connection.RequiredConfigString("mount_path")
+		mountPath, err := connection.RequiredConfigString(string(models.ConnectionConfigKeyMountPath))
 		if err != nil {
 			return fmt.Errorf("volume_mount connection '%s' has invalid config: %w", connection.ID, err)
 		}
-		subPath, _, err := connection.ConfigString("sub_path")
+		subPath, _, err := connection.ConfigString(string(models.ConnectionConfigKeySubPath))
 		if err != nil {
 			return fmt.Errorf("volume_mount connection '%s' has invalid config: %w", connection.ID, err)
 		}
@@ -158,11 +158,11 @@ func (r *connectionReconciler) resolveBuildArtifactSourceConnections(
 			return fmt.Errorf("build_artifact_source connection '%s' references unknown volume '%s'", connection.ID, connection.To.Name)
 		}
 
-		sourcePath, err := connection.RequiredConfigString("source_path")
+		sourcePath, err := connection.RequiredConfigString(string(models.ConnectionConfigKeySourcePath))
 		if err != nil {
 			return fmt.Errorf("build_artifact_source connection '%s' has invalid config: %w", connection.ID, err)
 		}
-		destinationPath, _, err := connection.ConfigString("destination_path")
+		destinationPath, _, err := connection.ConfigString(string(models.ConnectionConfigKeyDestinationPath))
 		if err != nil {
 			return fmt.Errorf("build_artifact_source connection '%s' has invalid config: %w", connection.ID, err)
 		}
@@ -341,18 +341,18 @@ func resolveSelfOutputEnvVars(resource *models.StackResource) error {
 }
 
 func postgresConnectionConfig(connection models.StackConnection) (database string, superuser bool, err error) {
-	if value, ok, err := connection.ConfigString("database"); err != nil {
+	if value, ok, err := connection.ConfigString(string(models.ConnectionConfigKeyDatabase)); err != nil {
 		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.ID, err)
 	} else if ok {
 		database = value
 	}
 
-	if scope, ok, err := connection.ConfigString("credential_scope"); err != nil {
+	if scope, ok, err := connection.ConfigString(string(models.ConnectionConfigKeyCredentialScope)); err != nil {
 		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.ID, err)
 	} else if ok {
 		superuser = scope == "superuser"
 	}
-	if value, ok, err := connection.ConfigBool("superuser"); err != nil {
+	if value, ok, err := connection.ConfigBool(string(models.ConnectionConfigKeySuperuser)); err != nil {
 		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.ID, err)
 	} else if ok {
 		superuser = value

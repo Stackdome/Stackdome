@@ -31,6 +31,7 @@ func newTestSessionFactory(t *testing.T) *testSessionFactory {
 			to_ref jsonb NOT NULL,
 			mappings jsonb,
 			config jsonb,
+			discriminator text NOT NULL DEFAULT '',
 			created_at datetime,
 			updated_at datetime
 		)
@@ -173,6 +174,75 @@ func TestStackConnectionStoreReferencesTargetByStackScopedName(t *testing.T) {
 	}
 	if !referenced {
 		t.Fatalf("expected stack-local volume target to be referenced")
+	}
+}
+
+func TestStackConnectionStoreAllowsMultipleConnectionsToSameAddonWithDifferentDatabases(t *testing.T) {
+	sf := newTestSessionFactory(t)
+
+	pgFrom := models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "pg-1"}
+	webTo := models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"}
+
+	conn1 := models.StackConnection{
+		ID:      "conn-1",
+		StackID: "stack-1",
+		Kind:    models.ConnectionKindEnv,
+		From:    pgFrom,
+		To:      webTo,
+		Config:  models.ConnectionConfig{"database": "app_db"},
+	}
+	conn1.Discriminator = conn1.ComputeDiscriminator()
+
+	conn2 := models.StackConnection{
+		ID:      "conn-2",
+		StackID: "stack-1",
+		Kind:    models.ConnectionKindEnv,
+		From:    pgFrom,
+		To:      webTo,
+		Config:  models.ConnectionConfig{"database": "tooljet_db"},
+	}
+	conn2.Discriminator = conn2.ComputeDiscriminator()
+
+	createConnectionRecord(t, sf, conn1)
+	createConnectionRecord(t, sf, conn2)
+
+	var count int64
+	if err := sf.db.Model(&models.StackConnection{}).Where("stack_id = ?", "stack-1").Count(&count).Error; err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("expected 2 connections, got %d", count)
+	}
+}
+
+func TestComputeDiscriminatorReturnsDatabase(t *testing.T) {
+	conn := models.StackConnection{
+		Kind:   models.ConnectionKindEnv,
+		From:   models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "pg-1"},
+		Config: models.ConnectionConfig{"database": "app_db"},
+	}
+	if got := conn.ComputeDiscriminator(); got != "app_db" {
+		t.Fatalf("expected discriminator 'app_db', got '%s'", got)
+	}
+}
+
+func TestComputeDiscriminatorReturnsEmptyForNonPostgres(t *testing.T) {
+	conn := models.StackConnection{
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{Type: models.TopologyNodeTypeSecret, Id: "sec-1"},
+	}
+	if got := conn.ComputeDiscriminator(); got != "" {
+		t.Fatalf("expected empty discriminator for secret connection, got '%s'", got)
+	}
+}
+
+func TestComputeDiscriminatorReturnsEmptyForVolumeMount(t *testing.T) {
+	conn := models.StackConnection{
+		Kind: models.ConnectionKindVolumeMount,
+		From: models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "data"},
+	}
+	if got := conn.ComputeDiscriminator(); got != "" {
+		t.Fatalf("expected empty discriminator for volume mount, got '%s'", got)
 	}
 }
 

@@ -384,10 +384,12 @@ func (s *stackService) ListStackConnections(ctx context.Context, stackID string)
 func (s *stackService) CreateStackConnection(ctx context.Context, stackID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
 	stack, _, err := s.prepareDesiredStackWithConnectionMutation(ctx, stackID, func(connections models.StackConnections) (models.StackConnections, *models.StackConnection, *errors.ServiceError) {
 		newConnection := *connection
+		newDiscriminator := newConnection.ComputeDiscriminator()
 		for _, existing := range connections {
 			if existing.Kind == newConnection.Kind &&
 				existing.From == newConnection.From &&
-				existing.To == newConnection.To {
+				existing.To == newConnection.To &&
+				existing.ComputeDiscriminator() == newDiscriminator {
 				return nil, nil, errors.Conflict("a '%s' connection from %s to %s already exists",
 					newConnection.Kind,
 					connectionNodeLabel(newConnection.From),
@@ -409,6 +411,7 @@ func (s *stackService) UpdateStackConnection(ctx context.Context, stackID, conne
 	stack, _, err := s.prepareDesiredStackWithConnectionMutation(ctx, stackID, func(connections models.StackConnections) (models.StackConnections, *models.StackConnection, *errors.ServiceError) {
 		updated := *connection
 		updated.ID = connectionID
+		updatedDiscriminator := updated.ComputeDiscriminator()
 		found := false
 		for i := range connections {
 			if connections[i].ID == connectionID {
@@ -418,7 +421,8 @@ func (s *stackService) UpdateStackConnection(ctx context.Context, stackID, conne
 			}
 			if connections[i].Kind == updated.Kind &&
 				connections[i].From == updated.From &&
-				connections[i].To == updated.To {
+				connections[i].To == updated.To &&
+				connections[i].ComputeDiscriminator() == updatedDiscriminator {
 				return nil, nil, errors.Conflict("a '%s' connection from %s to %s already exists",
 					updated.Kind,
 					connectionNodeLabel(updated.From),

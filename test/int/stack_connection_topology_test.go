@@ -339,6 +339,59 @@ var _ = Describe("Stack Connections & Topology", func() {
 	})
 
 	// -----------------------------------------------------------------
+	// Multi-database discriminator
+	// -----------------------------------------------------------------
+	Context("Multi-database addon connections", func() {
+		It("should allow two env connections from the same postgres addon to the same resource with different databases", func() {
+			By("Creating a postgres addon with two databases")
+			addon := shared.CreateMinimalPostgresAddon("test-multi-db")
+			db1 := openapi.NewPostgresDatabase("appdb")
+			db1.SetExtensions([]string{})
+			db2 := openapi.NewPostgresDatabase("tooljetdb")
+			db2.SetExtensions([]string{})
+			addon.Spec.SetDatabases([]openapi.PostgresDatabase{*db1, *db2})
+			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
+			addonID := createdAddon.GetId()
+
+			By("Creating a stack with a resource")
+			web := shared.ResourceWithPort("web", 8080)
+			stack := shared.CreateSkipProvisioningStack("test-multi-db-conn", []openapi.StackResource{web})
+			createdStack := shared.CreateStack(client, orgID, teamName, stack)
+			stackID := createdStack.GetId()
+			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+
+			By("Creating first connection targeting appdb")
+			conn1 := shared.EnvConnectionWithID("addon/postgres", addonID, "stack_resource", "web", []openapi.ConnectionMapping{
+				shared.PostgresMapping("host", "PG_HOST"),
+				shared.PostgresMapping("database", "PG_DB"),
+			})
+			conn1.SetConfig(map[string]interface{}{"database": "appdb"})
+			created1 := shared.CreateStackConnection(client, orgID, teamName, stackID, &conn1)
+			Expect(created1.GetId()).NotTo(BeEmpty())
+
+			By("Creating second connection targeting tooljetdb (same addon, same resource, different database)")
+			conn2 := shared.EnvConnectionWithID("addon/postgres", addonID, "stack_resource", "web", []openapi.ConnectionMapping{
+				shared.PostgresMapping("host", "TOOLJET_DB_HOST"),
+				shared.PostgresMapping("database", "TOOLJET_DB"),
+			})
+			conn2.SetConfig(map[string]interface{}{"database": "tooljetdb"})
+			created2 := shared.CreateStackConnection(client, orgID, teamName, stackID, &conn2)
+			Expect(created2.GetId()).NotTo(BeEmpty())
+
+			By("Verifying both connections exist")
+			connections := shared.ListStackConnections(client, orgID, teamName, stackID)
+			Expect(connections).To(HaveLen(2))
+
+			databases := map[string]bool{}
+			for _, c := range connections {
+				databases[c.GetConfig()["database"].(string)] = true
+			}
+			Expect(databases).To(HaveKey("appdb"))
+			Expect(databases).To(HaveKey("tooljetdb"))
+		})
+	})
+
+	// -----------------------------------------------------------------
 	// Connection Create — Negative Paths
 	// -----------------------------------------------------------------
 	Context("Connection Create Negative Paths", func() {
