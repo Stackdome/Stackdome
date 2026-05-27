@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Users, UserX } from "lucide-react";
 import { useUsers } from "./hooks/use-users";
+import { useTeamOptions } from "./hooks/use-team-options";
 import { InviteDialog } from "./components/invite-dialog";
 import type { UserRowModel } from "./hooks/use-users";
 import { UserRow } from "./components/user-row";
@@ -74,26 +75,15 @@ function filterRows(
   });
 }
 
-function extractTeams(rows: UserRowModel[]): string[] {
-  const set = new Set<string>();
-  for (const row of rows) {
-    if (row.kind === "active") {
-      row.teams.forEach((t) => { if (t.team_name) set.add(t.team_name); });
-    } else if (row.team_name) {
-      set.add(row.team_name);
-    }
-  }
-  return Array.from(set).sort();
-}
-
 export default function UsersPage() {
   const { rows, loading, error, refetch } = useUsers();
+  const { teams: teamOptions } = useTeamOptions();
   const [search, setSearch] = useState("");
   const [roleTab, setRoleTab] = useState<RoleTab>("all");
   const [team, setTeam] = useState("all");
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  const allTeams = extractTeams(rows);
+  const allTeams = teamOptions.map((t) => t.name).sort();
   const filtered = filterRows(rows, search, roleTab, team);
   const filtersActive = hasActiveFilters(search, roleTab, team);
 
