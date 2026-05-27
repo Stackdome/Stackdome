@@ -445,9 +445,9 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
             </div>
 
             <DialogFooter className="items-center">
-              {/* Left: token prefix */}
-              <span className="mr-auto font-mono text-xs text-muted-foreground">
-                invite &middot; {resultToken.slice(0, 12)}&hellip;
+              {/* Left: invited email */}
+              <span className="mr-auto min-w-0 truncate font-mono text-xs text-muted-foreground">
+                {resultEmail}
               </span>
               <Button
                 variant="ghost"
