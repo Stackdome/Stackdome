@@ -5685,8 +5685,7 @@ components:
               name: name
               id: id
               type: stack_resource
-            config:
-              key: ""
+            config: null
           - mappings:
             - value:
                 output: output
@@ -5718,8 +5717,7 @@ components:
               name: name
               id: id
               type: stack_resource
-            config:
-              key: ""
+            config: null
         labels:
         - value: value
           key: key
@@ -6256,8 +6254,7 @@ components:
                 name: name
                 id: id
                 type: stack_resource
-              config:
-                key: ""
+              config: null
             - mappings:
               - value:
                   output: output
@@ -6289,8 +6286,7 @@ components:
                 name: name
                 id: id
                 type: stack_resource
-              config:
-                key: ""
+              config: null
           labels:
           - value: value
             key: key
@@ -6778,8 +6774,7 @@ components:
                 name: name
                 id: id
                 type: stack_resource
-              config:
-                key: ""
+              config: null
             - mappings:
               - value:
                   output: output
@@ -6811,8 +6806,7 @@ components:
                 name: name
                 id: id
                 type: stack_resource
-              config:
-                key: ""
+              config: null
           labels:
           - value: value
             key: key
@@ -6885,8 +6879,7 @@ components:
             name: name
             id: id
             type: stack_resource
-          config:
-            key: ""
+          config: null
         - mappings:
           - value:
               output: output
@@ -6918,8 +6911,7 @@ components:
             name: name
             id: id
             type: stack_resource
-          config:
-            key: ""
+          config: null
       properties:
         items:
           items:
@@ -7380,8 +7372,7 @@ components:
             name: name
             id: id
             type: stack_resource
-          config:
-            key: ""
+          config: null
         - mappings:
           - value:
               output: output
@@ -7413,8 +7404,7 @@ components:
             name: name
             id: id
             type: stack_resource
-          config:
-            key: ""
+          config: null
       properties:
         stack_resources:
           items:
@@ -8052,8 +8042,7 @@ components:
             id: id
             type: stack_resource
           source_of_truth: connection
-          config:
-            key: ""
+          config: null
           target:
             name: name
             id: id
@@ -8086,8 +8075,7 @@ components:
             id: id
             type: stack_resource
           source_of_truth: connection
-          config:
-            key: ""
+          config: null
           target:
             name: name
             id: id
@@ -8169,8 +8157,7 @@ components:
           id: id
           type: stack_resource
         source_of_truth: connection
-        config:
-          key: ""
+        config: null
         target:
           name: name
           id: id
@@ -8196,13 +8183,7 @@ components:
             $ref: '#/components/schemas/ConnectionMapping'
           type: array
         config:
-          additionalProperties: true
-          description: "Kind-specific connection configuration. Expected keys depend\
-            \ on `kind`. Examples: for `env` from `addon/postgres`, use fields such\
-            \ as `database` and `credential_scope`; for `volume_mount`, use `mount_path`,\
-            \ `sub_path`, and `read_only`; for `build_artifact_source`, use `source_path`\
-            \ and `destination_path`.\n"
-          type: object
+          $ref: '#/components/schemas/StackConnectionConfig'
         source_of_truth:
           description: Whether the edge came from an explicit connection or a derived
             relationship such as depends_on.
@@ -8250,8 +8231,7 @@ components:
           name: name
           id: id
           type: stack_resource
-        config:
-          key: ""
+        config: null
       properties:
         id:
           description: Stable connection identifier. Generated when omitted.
@@ -8276,13 +8256,7 @@ components:
             $ref: '#/components/schemas/ConnectionMapping'
           type: array
         config:
-          additionalProperties: true
-          description: "Kind-specific connection configuration. Expected keys depend\
-            \ on `kind`. Examples: for `env` from `addon/postgres`, use fields such\
-            \ as `database` and `credential_scope`; for `volume_mount`, use `mount_path`,\
-            \ `sub_path`, and `read_only`; for `build_artifact_source`, use `source_path`\
-            \ and `destination_path`.\n"
-          type: object
+          $ref: '#/components/schemas/StackConnectionConfig'
       required:
       - from
       - kind
@@ -8360,11 +8334,61 @@ components:
       - type
       type: object
     StackConnectionConfig:
-      additionalProperties: true
-      description: "Kind-specific connection configuration. Expected keys depend on\
-        \ `kind`. Examples: for `env` from `addon/postgres`, use fields such as `database`\
-        \ and `credential_scope`; for `volume_mount`, use `mount_path`, `sub_path`,\
-        \ and `read_only`; for `build_artifact_source`, use `source_path` and `destination_path`.\n"
+      description: "Kind-specific connection configuration. The shape depends on the\
+        \ connection kind and source type: use PostgresEnvConfig when kind is env\
+        \ and from.type is addon/postgres, VolumeMountConfig when kind is volume_mount,\
+        \ and BuildArtifactSourceConfig when kind is build_artifact_source. Omit config\
+        \ entirely for env connections from stack_resource or secret sources.\n"
+      oneOf:
+      - $ref: '#/components/schemas/PostgresEnvConfig'
+      - $ref: '#/components/schemas/VolumeMountConfig'
+      - $ref: '#/components/schemas/BuildArtifactSourceConfig'
+    PostgresEnvConfig:
+      additionalProperties: false
+      description: "Config for env connections from a PostgreSQL addon (kind=env,\
+        \ from.type=addon/postgres). credential_scope and superuser are mutually exclusive.\n"
+      properties:
+        database:
+          description: Target database name within the addon.
+          type: string
+        credential_scope:
+          description: Which credential set to inject. Mutually exclusive with superuser.
+          enum:
+          - owner
+          - superuser
+          type: string
+        superuser:
+          description: Use superuser credentials. Mutually exclusive with credential_scope.
+          type: boolean
+      type: object
+    VolumeMountConfig:
+      additionalProperties: false
+      description: Config for volume mount connections (kind=volume_mount).
+      properties:
+        mount_path:
+          description: Absolute path where the volume is mounted in the container.
+          type: string
+        sub_path:
+          description: Sub-path within the volume to mount.
+          type: string
+        read_only:
+          description: Mount the volume read-only.
+          type: boolean
+      required:
+      - mount_path
+      type: object
+    BuildArtifactSourceConfig:
+      additionalProperties: false
+      description: Config for build artifact source connections (kind=build_artifact_source).
+      properties:
+        source_path:
+          description: Path within the build output to copy from.
+          type: string
+        destination_path:
+          description: Path within the volume to copy to.
+          type: string
+      required:
+      - source_path
       type: object
     ValueRef:
       description: "Describes how to read a value from the connection's `from` node.\

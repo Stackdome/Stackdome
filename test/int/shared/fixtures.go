@@ -500,15 +500,19 @@ func postgresEnvConnection(addonID, targetResource, database string, superuser b
 	to.SetName(targetResource)
 	conn := openapi.NewStackConnection("env", *from, *to)
 
-	config := map[string]interface{}{}
+	pgConfig := openapi.NewPostgresEnvConfig()
+	hasConfig := false
 	if database != "" {
-		config["database"] = database
+		pgConfig.Database = &database
+		hasConfig = true
 	}
 	if superuser {
-		config["credential_scope"] = "superuser"
+		scope := "superuser"
+		pgConfig.CredentialScope = &scope
+		hasConfig = true
 	}
-	if len(config) > 0 {
-		conn.SetConfig(config)
+	if hasConfig {
+		conn.SetConfig(openapi.StackConnectionConfig{PostgresEnvConfig: pgConfig})
 	}
 
 	var mappings []openapi.ConnectionMapping
@@ -581,13 +585,11 @@ func volumeMountConnection(volumeName, targetResource, mountPath, subPath string
 	to := openapi.NewTopologyNodeRef("stack_resource")
 	to.SetName(targetResource)
 	conn := openapi.NewStackConnection("volume_mount", *from, *to)
-	config := map[string]interface{}{
-		"mount_path": mountPath,
-	}
+	vc := openapi.NewVolumeMountConfig(mountPath)
 	if subPath != "" {
-		config["sub_path"] = subPath
+		vc.SubPath = &subPath
 	}
-	conn.SetConfig(config)
+	conn.SetConfig(openapi.StackConnectionConfig{VolumeMountConfig: vc})
 	return *conn
 }
 
@@ -745,13 +747,11 @@ func VolumeMountConn(volumeName, targetResource, mountPath, subPath string) open
 	to := openapi.NewTopologyNodeRef("stack_resource")
 	to.SetName(targetResource)
 	conn := openapi.NewStackConnection("volume_mount", *from, *to)
-	config := map[string]interface{}{
-		"mount_path": mountPath,
-	}
+	vc := openapi.NewVolumeMountConfig(mountPath)
 	if subPath != "" {
-		config["sub_path"] = subPath
+		vc.SubPath = &subPath
 	}
-	conn.SetConfig(config)
+	conn.SetConfig(openapi.StackConnectionConfig{VolumeMountConfig: vc})
 	return *conn
 }
 

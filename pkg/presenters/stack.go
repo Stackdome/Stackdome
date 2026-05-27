@@ -316,8 +316,8 @@ func presentConnections(connections models.StackConnections) []openapi.StackConn
 		if len(connection.Mappings) > 0 {
 			result[i].SetMappings(presentConnectionMappings(connection.Mappings))
 		}
-		if len(connection.Config) > 0 {
-			result[i].SetConfig(connection.Config)
+		if apiConfig := presentConnectionConfig(connection.Kind, connection.From, connection.Config); apiConfig != nil {
+			result[i].SetConfig(*apiConfig)
 		}
 	}
 	return result
@@ -583,7 +583,7 @@ func convertConnections(connections []openapi.StackConnection) models.StackConne
 			From:     convertTopologyNodeRef(connection.From),
 			To:       convertTopologyNodeRef(connection.To),
 			Mappings: convertConnectionMappings(connection.Mappings),
-			Config:   connection.GetConfig(),
+			Config:   convertConnectionConfig(connection.GetConfig()),
 		}
 	}
 	return result
@@ -636,4 +636,91 @@ func convertOutputValueRefs(values map[string]openapi.OutputValueRef) map[string
 		result[key] = models.OutputValueRef{Output: value.Output}
 	}
 	return result
+}
+
+func presentConnectionConfig(kind models.ConnectionKind, from models.TopologyNodeRef, cfg models.ConnectionConfig) *openapi.StackConnectionConfig {
+	if len(cfg) == 0 {
+		return nil
+	}
+	switch kind {
+	case models.ConnectionKindVolumeMount:
+		vc := openapi.NewVolumeMountConfig(stringFromConfig(cfg, string(models.ConnectionConfigKeyMountPath)))
+		if v, ok := cfg[string(models.ConnectionConfigKeySubPath)].(string); ok {
+			vc.SubPath = &v
+		}
+		if v, ok := cfg[string(models.ConnectionConfigKeyReadOnly)].(bool); ok {
+			vc.ReadOnly = &v
+		}
+		return &openapi.StackConnectionConfig{VolumeMountConfig: vc}
+
+	case models.ConnectionKindBuildArtifactSource:
+		bc := openapi.NewBuildArtifactSourceConfig(stringFromConfig(cfg, string(models.ConnectionConfigKeySourcePath)))
+		if v, ok := cfg[string(models.ConnectionConfigKeyDestinationPath)].(string); ok {
+			bc.DestinationPath = &v
+		}
+		return &openapi.StackConnectionConfig{BuildArtifactSourceConfig: bc}
+
+	case models.ConnectionKindEnv:
+		if from.Type != models.TopologyNodeTypePostgresAddon {
+			return nil
+		}
+		pc := openapi.NewPostgresEnvConfig()
+		if v, ok := cfg[string(models.ConnectionConfigKeyDatabase)].(string); ok {
+			pc.Database = &v
+		}
+		if v, ok := cfg[string(models.ConnectionConfigKeyCredentialScope)].(string); ok {
+			pc.CredentialScope = &v
+		}
+		if v, ok := cfg[string(models.ConnectionConfigKeySuperuser)].(bool); ok {
+			pc.Superuser = &v
+		}
+		if pc.Database == nil && pc.CredentialScope == nil && pc.Superuser == nil {
+			return nil
+		}
+		return &openapi.StackConnectionConfig{PostgresEnvConfig: pc}
+	}
+	return nil
+}
+
+func convertConnectionConfig(cfg openapi.StackConnectionConfig) models.ConnectionConfig {
+	result := make(models.ConnectionConfig)
+	switch {
+	case cfg.PostgresEnvConfig != nil:
+		pc := cfg.PostgresEnvConfig
+		if pc.Database != nil {
+			result[string(models.ConnectionConfigKeyDatabase)] = *pc.Database
+		}
+		if pc.CredentialScope != nil {
+			result[string(models.ConnectionConfigKeyCredentialScope)] = *pc.CredentialScope
+		}
+		if pc.Superuser != nil {
+			result[string(models.ConnectionConfigKeySuperuser)] = *pc.Superuser
+		}
+	case cfg.VolumeMountConfig != nil:
+		vc := cfg.VolumeMountConfig
+		result[string(models.ConnectionConfigKeyMountPath)] = vc.MountPath
+		if vc.SubPath != nil {
+			result[string(models.ConnectionConfigKeySubPath)] = *vc.SubPath
+		}
+		if vc.ReadOnly != nil {
+			result[string(models.ConnectionConfigKeyReadOnly)] = *vc.ReadOnly
+		}
+	case cfg.BuildArtifactSourceConfig != nil:
+		bc := cfg.BuildArtifactSourceConfig
+		result[string(models.ConnectionConfigKeySourcePath)] = bc.SourcePath
+		if bc.DestinationPath != nil {
+			result[string(models.ConnectionConfigKeyDestinationPath)] = *bc.DestinationPath
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func stringFromConfig(cfg models.ConnectionConfig, key string) string {
+	if v, ok := cfg[key].(string); ok {
+		return v
+	}
+	return ""
 }

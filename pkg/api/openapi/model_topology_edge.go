@@ -18,12 +18,11 @@ import (
 type TopologyEdge struct {
 	Id *string `json:"id,omitempty"`
 	// Edge kind. Explicit connections reuse connection kinds; derived edges use depends_on.
-	Kind     string              `json:"kind"`
-	Source   TopologyNodeRef     `json:"source"`
-	Target   TopologyNodeRef     `json:"target"`
-	Mappings []ConnectionMapping `json:"mappings,omitempty"`
-	// Kind-specific connection configuration. Expected keys depend on `kind`. Examples: for `env` from `addon/postgres`, use fields such as `database` and `credential_scope`; for `volume_mount`, use `mount_path`, `sub_path`, and `read_only`; for `build_artifact_source`, use `source_path` and `destination_path`.
-	Config map[string]interface{} `json:"config,omitempty"`
+	Kind     string                 `json:"kind"`
+	Source   TopologyNodeRef        `json:"source"`
+	Target   TopologyNodeRef        `json:"target"`
+	Mappings []ConnectionMapping    `json:"mappings,omitempty"`
+	Config   *StackConnectionConfig `json:"config,omitempty"`
 	// Whether the edge came from an explicit connection or a derived relationship such as depends_on.
 	SourceOfTruth string `json:"source_of_truth"`
 }
@@ -186,17 +185,17 @@ func (o *TopologyEdge) SetMappings(v []ConnectionMapping) {
 }
 
 // GetConfig returns the Config field value if set, zero value otherwise.
-func (o *TopologyEdge) GetConfig() map[string]interface{} {
+func (o *TopologyEdge) GetConfig() StackConnectionConfig {
 	if o == nil || o.Config == nil {
-		var ret map[string]interface{}
+		var ret StackConnectionConfig
 		return ret
 	}
-	return o.Config
+	return *o.Config
 }
 
 // GetConfigOk returns a tuple with the Config field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *TopologyEdge) GetConfigOk() (map[string]interface{}, bool) {
+func (o *TopologyEdge) GetConfigOk() (*StackConnectionConfig, bool) {
 	if o == nil || o.Config == nil {
 		return nil, false
 	}
@@ -212,9 +211,9 @@ func (o *TopologyEdge) HasConfig() bool {
 	return false
 }
 
-// SetConfig gets a reference to the given map[string]interface{} and assigns it to the Config field.
-func (o *TopologyEdge) SetConfig(v map[string]interface{}) {
-	o.Config = v
+// SetConfig gets a reference to the given StackConnectionConfig and assigns it to the Config field.
+func (o *TopologyEdge) SetConfig(v StackConnectionConfig) {
+	o.Config = &v
 }
 
 // GetSourceOfTruth returns the SourceOfTruth field value

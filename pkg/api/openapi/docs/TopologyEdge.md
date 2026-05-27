@@ -9,7 +9,7 @@ Name | Type | Description | Notes
 **Source** | [**TopologyNodeRef**](TopologyNodeRef.md) |  | 
 **Target** | [**TopologyNodeRef**](TopologyNodeRef.md) |  | 
 **Mappings** | Pointer to [**[]ConnectionMapping**](ConnectionMapping.md) |  | [optional] 
-**Config** | Pointer to **map[string]interface{}** | Kind-specific connection configuration. Expected keys depend on &#x60;kind&#x60;. Examples: for &#x60;env&#x60; from &#x60;addon/postgres&#x60;, use fields such as &#x60;database&#x60; and &#x60;credential_scope&#x60;; for &#x60;volume_mount&#x60;, use &#x60;mount_path&#x60;, &#x60;sub_path&#x60;, and &#x60;read_only&#x60;; for &#x60;build_artifact_source&#x60;, use &#x60;source_path&#x60; and &#x60;destination_path&#x60;.  | [optional] 
+**Config** | Pointer to [**StackConnectionConfig**](StackConnectionConfig.md) |  | [optional] 
 **SourceOfTruth** | **string** | Whether the edge came from an explicit connection or a derived relationship such as depends_on. | 
 
 ## Methods
@@ -143,20 +143,20 @@ HasMappings returns a boolean if a field has been set.
 
 ### GetConfig
 
-`func (o *TopologyEdge) GetConfig() map[string]interface{}`
+`func (o *TopologyEdge) GetConfig() StackConnectionConfig`
 
 GetConfig returns the Config field if non-nil, zero value otherwise.
 
 ### GetConfigOk
 
-`func (o *TopologyEdge) GetConfigOk() (*map[string]interface{}, bool)`
+`func (o *TopologyEdge) GetConfigOk() (*StackConnectionConfig, bool)`
 
 GetConfigOk returns a tuple with the Config field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetConfig
 
-`func (o *TopologyEdge) SetConfig(v map[string]interface{})`
+`func (o *TopologyEdge) SetConfig(v StackConnectionConfig)`
 
 SetConfig sets Config field to given value.
 

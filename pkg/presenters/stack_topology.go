@@ -48,8 +48,8 @@ func presentTopologyEdges(edges []models.TopologyEdge) []openapi.TopologyEdge {
 		if len(edge.Mappings) > 0 {
 			result[i].SetMappings(presentConnectionMappings(edge.Mappings))
 		}
-		if len(edge.Config) > 0 {
-			result[i].SetConfig(edge.Config)
+		if apiConfig := presentConnectionConfig(models.ConnectionKind(edge.Kind), edge.Source, edge.Config); apiConfig != nil {
+			result[i].SetConfig(*apiConfig)
 		}
 	}
 	return result
