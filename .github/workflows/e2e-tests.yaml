@@ -37,8 +37,16 @@ jobs:
       - name: Configure private module access
         run: git config --global url."https://${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
 
+      - name: Install Mage
+        run: go install github.com/magefile/mage@latest
+
       - name: Download dependencies
         run: go mod download
+        env:
+          GOPRIVATE: github.com/ashishmax31/*,stackdome.io/*,github.com/Stackdome/*
+
+      - name: Run unit tests
+        run: mage test:unit
         env:
           GOPRIVATE: github.com/ashishmax31/*,stackdome.io/*,github.com/Stackdome/*
 

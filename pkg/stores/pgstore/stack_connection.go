@@ -40,6 +40,7 @@ func (s *stackConnectionStore) CreateWithTx(ctx context.Context, stackID string,
 	}
 
 	connection.StackID = stackID
+	connection.Discriminator = connection.ComputeDiscriminator()
 	if err := tx.Create(connection).Error; err != nil {
 		return nil, errors.GeneralError("failed to create stack connection: %s", err.Error())
 	}
@@ -54,14 +55,16 @@ func (s *stackConnectionStore) UpdateWithTx(ctx context.Context, stackID, connec
 
 	connection.StackID = stackID
 	connection.ID = connectionID
+	connection.Discriminator = connection.ComputeDiscriminator()
 	result := tx.Model(&models.StackConnection{}).
 		Where("stack_id = ? AND id = ?", stackID, connectionID).
 		Updates(map[string]interface{}{
-			"kind":     connection.Kind,
-			"from_ref": connection.From,
-			"to_ref":   connection.To,
-			"mappings": connection.Mappings,
-			"config":   connection.Config,
+			"kind":          connection.Kind,
+			"from_ref":      connection.From,
+			"to_ref":        connection.To,
+			"mappings":      connection.Mappings,
+			"config":        connection.Config,
+			"discriminator": connection.Discriminator,
 		})
 	if result.Error != nil {
 		return nil, errors.GeneralError("failed to update stack connection: %s", result.Error.Error())
@@ -119,16 +122,18 @@ func (s *stackConnectionStore) ReplaceByStackIDWithTx(ctx context.Context, stack
 
 	for i := range connections {
 		c := &connections[i]
+		c.Discriminator = c.ComputeDiscriminator()
 		if c.ID != "" {
 			if _, exists := existingByID[c.ID]; exists {
 				if updErr := tx.Model(&models.StackConnection{}).
 					Where("stack_id = ? AND id = ?", stackID, c.ID).
 					Updates(map[string]interface{}{
-						"kind":     c.Kind,
-						"from_ref": c.From,
-						"to_ref":   c.To,
-						"mappings": c.Mappings,
-						"config":   c.Config,
+						"kind":          c.Kind,
+						"from_ref":      c.From,
+						"to_ref":        c.To,
+						"mappings":      c.Mappings,
+						"config":        c.Config,
+						"discriminator": c.Discriminator,
 					}).Error; updErr != nil {
 					return errors.GeneralError("failed to update stack connection '%s': %s", c.ID, updErr.Error())
 				}

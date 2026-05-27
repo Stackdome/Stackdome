@@ -755,6 +755,14 @@ func VolumeMountConn(volumeName, targetResource, mountPath, subPath string) open
 	return *conn
 }
 
+func PostgresMapping(output, envName string) openapi.ConnectionMapping {
+	target := openapi.NewConnectionTarget("env")
+	target.SetName(envName)
+	value := openapi.NewValueRef()
+	value.SetOutput(output)
+	return *openapi.NewConnectionMapping(*target, *value)
+}
+
 func HostMapping() openapi.ConnectionMapping {
 	target := openapi.NewConnectionTarget("env")
 	target.SetName("API_HOST")

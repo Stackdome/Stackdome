@@ -538,19 +538,19 @@ func validateBuildArtifactSourceConfig(volumeMap map[string]*models.Volume, labe
 		return errors.BadRequest("connection '%s' references unknown volume '%s'", label, connection.To.Name)
 	}
 	if err := validateConfigKeys(connection.Config, map[string]struct{}{
-		"source_path":      {},
-		"destination_path": {},
+		string(models.ConnectionConfigKeySourcePath):      {},
+		string(models.ConnectionConfigKeyDestinationPath): {},
 	}, label, "build_artifact_source"); err != nil {
 		return err
 	}
-	sourcePath, _, err := getOptionalStringConfig(connection.Config, "source_path", label)
+	sourcePath, _, err := getOptionalStringConfig(connection.Config, string(models.ConnectionConfigKeySourcePath), label)
 	if err != nil {
 		return err
 	}
 	if sourcePath == "" {
 		return errors.BadRequest("connection '%s' requires config.source_path for build artifact sources", label)
 	}
-	if _, _, err := getOptionalStringConfig(connection.Config, "destination_path", label); err != nil {
+	if _, _, err := getOptionalStringConfig(connection.Config, string(models.ConnectionConfigKeyDestinationPath), label); err != nil {
 		return err
 	}
 	return nil
@@ -565,23 +565,23 @@ func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, l
 	}
 
 	if err := validateConfigKeys(connection.Config, map[string]struct{}{
-		"database":         {},
-		"credential_scope": {},
-		"superuser":        {},
+		string(models.ConnectionConfigKeyDatabase):        {},
+		string(models.ConnectionConfigKeyCredentialScope): {},
+		string(models.ConnectionConfigKeySuperuser):       {},
 	}, label, "postgres"); err != nil {
 		return nil, err
 	}
 
-	database, _, err := getOptionalStringConfig(connection.Config, "database", label)
+	database, _, err := getOptionalStringConfig(connection.Config, string(models.ConnectionConfigKeyDatabase), label)
 	if err != nil {
 		return nil, err
 	}
 
-	credentialScope, hasCredentialScope, err := getOptionalStringConfig(connection.Config, "credential_scope", label)
+	credentialScope, hasCredentialScope, err := getOptionalStringConfig(connection.Config, string(models.ConnectionConfigKeyCredentialScope), label)
 	if err != nil {
 		return nil, err
 	}
-	superuser, hasSuperuser, err := getOptionalBoolConfig(connection.Config, "superuser", label)
+	superuser, hasSuperuser, err := getOptionalBoolConfig(connection.Config, string(models.ConnectionConfigKeySuperuser), label)
 	if err != nil {
 		return nil, err
 	}
@@ -635,14 +635,14 @@ func validateVolumeConnectionConfig(volumeMap map[string]*models.Volume, label s
 	}
 
 	if err := validateConfigKeys(connection.Config, map[string]struct{}{
-		"mount_path": {},
-		"sub_path":   {},
-		"read_only":  {},
+		string(models.ConnectionConfigKeyMountPath): {},
+		string(models.ConnectionConfigKeySubPath):   {},
+		string(models.ConnectionConfigKeyReadOnly):  {},
 	}, label, "volume"); err != nil {
 		return err
 	}
 
-	mountPath, _, err := getOptionalStringConfig(connection.Config, "mount_path", label)
+	mountPath, _, err := getOptionalStringConfig(connection.Config, string(models.ConnectionConfigKeyMountPath), label)
 	if err != nil {
 		return err
 	}
@@ -650,10 +650,10 @@ func validateVolumeConnectionConfig(volumeMap map[string]*models.Volume, label s
 		return errors.BadRequest("connection '%s' requires config.mount_path for volume mounts", label)
 	}
 
-	if _, _, err := getOptionalStringConfig(connection.Config, "sub_path", label); err != nil {
+	if _, _, err := getOptionalStringConfig(connection.Config, string(models.ConnectionConfigKeySubPath), label); err != nil {
 		return err
 	}
-	if _, _, err := getOptionalBoolConfig(connection.Config, "read_only", label); err != nil {
+	if _, _, err := getOptionalBoolConfig(connection.Config, string(models.ConnectionConfigKeyReadOnly), label); err != nil {
 		return err
 	}
 

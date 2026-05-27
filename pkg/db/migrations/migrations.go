@@ -55,4 +55,5 @@ var MigrationList = []*gormigrate.Migration{
 	createStackConnectionsTable(),
 	dropLegacyUsageTables(),
 	dropVolumeMountsTable(),
+	addStackConnectionDiscriminator(),
 }
