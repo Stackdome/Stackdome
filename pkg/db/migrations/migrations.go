@@ -56,4 +56,5 @@ var MigrationList = []*gormigrate.Migration{
 	dropLegacyUsageTables(),
 	dropVolumeMountsTable(),
 	addStackConnectionDiscriminator(),
+	addTimestampsToVolumesTable(),
 }

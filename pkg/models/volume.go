@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"time"
 )
 
 type GitRepoRevisionType string
@@ -38,6 +39,8 @@ type Volume struct {
 	VolumeSource   *VolumeSource    `gorm:"type:jsonb" json:"volume_source,omitempty"`
 	SyncBeforeUse  bool             `json:"sync_before_use"`
 	Status         *VolumeStatus    `gorm:"type:jsonb" json:"volume_status,omitempty"`
+	CreatedAt      time.Time        `json:"created_at"`
+	UpdatedAt      time.Time        `json:"updated_at"`
 }
 
 func (v *Volume) VolumeSourceType() SourceVolumeType {
