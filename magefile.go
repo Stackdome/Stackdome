@@ -87,7 +87,7 @@ func init() {
 // Configuration constants
 const (
 	// Test cluster configuration
-	DefaultClusterName = "stackdome-dev-cluster"
+	DefaultClusterName = "stackdome-dev"
 
 	// Timeouts
 	ClusterCreateTimeout = "10m"
@@ -102,7 +102,7 @@ const (
 	PnpmVersion      = "v10.33.2"
 
 	// Stackdome agent Helm chart
-	DefaultStackdomeChartVersion = "0.5.5-alpha"
+	DefaultStackdomeChartVersion = "0.5.6-alpha"
 	StackdomeChartRepo           = "oci://quay.io/stackdome/charts/stackdome-agent"
 	StackdomeChartReleaseName    = "stackdome-agent"
 	StackdomeChartNamespace      = "stackdome-control-plane"
@@ -118,8 +118,11 @@ const (
 	DevSecretName  = "stackdome-api-server-account-secret"
 )
 
-// GetClusterName returns the cluster name from KIND_CLUSTER_NAME env var or the default.
+// GetClusterName returns the cluster name from K3D_CLUSTER_NAME or KIND_CLUSTER_NAME env var, or the default.
 func GetClusterName() string {
+	if name := os.Getenv("K3D_CLUSTER_NAME"); name != "" {
+		return name
+	}
 	if name := os.Getenv("KIND_CLUSTER_NAME"); name != "" {
 		return name
 	}
@@ -904,7 +907,7 @@ type DevCredentials struct {
 }
 
 // Setup bootstraps a complete local development environment:
-// Kind cluster with stackdome-agent, RBAC for cluster registration,
+// k3d cluster with stackdome-agent, RBAC for cluster registration,
 // and a PostgreSQL container. Safe to run multiple times.
 func (Dev) Setup(ctx context.Context) error {
 	fmt.Println("========================================")
@@ -921,28 +924,38 @@ func (Dev) Setup(ctx context.Context) error {
 		return fmt.Errorf("failed to start PostgreSQL: %w", err)
 	}
 
-	// Step 3: Create Kind cluster + install stackdome-agent
+	// Step 3: Create k3d cluster + install stackdome-agent
 	fmt.Println()
-	fmt.Println("[2/4] Setting up Kind cluster with stackdome-agent...")
-
-	mg.Deps(mg.F(Deps.Install))
-	if err := initDevEnvironment(); err != nil {
-		return fmt.Errorf("failed to init dev environment config: %w", err)
-	}
+	fmt.Println("[2/4] Setting up k3d cluster with stackdome-agent...")
 
 	clusterName := GetClusterName()
-	kubeconfig := filepath.Join(devEnvironment.WorkDir, "kubeconfig.yaml")
 
-	if kindClusterExists(ctx, clusterName) {
-		fmt.Printf("Kind cluster '%s' already exists. Reusing.\n", clusterName)
-		if err := ensureStackdomeAgent(ctx, kubeconfig); err != nil {
-			return fmt.Errorf("failed to ensure stackdome-agent: %w", err)
-		}
+	if k3dClusterExists(ctx, clusterName) {
+		fmt.Printf("k3d cluster '%s' already exists. Reusing.\n", clusterName)
 	} else {
-		if err := devEnvironment.Init(ctx); err != nil {
-			return fmt.Errorf("failed to create cluster: %w", err)
+		fmt.Println("Creating k3d cluster...")
+		createCmd := exec.CommandContext(ctx, "k3d", "cluster", "create", clusterName,
+			"--port", "80:80@loadbalancer",
+			"--port", "443:443@loadbalancer",
+			"--k3s-arg", "--disable=traefik@server:0",
+			"--agents", "2",
+			"--wait",
+		)
+		createCmd.Stdout = os.Stdout
+		createCmd.Stderr = os.Stderr
+		if err := createCmd.Run(); err != nil {
+			return fmt.Errorf("failed to create k3d cluster: %w", err)
 		}
 		fmt.Println("✅ Cluster created.")
+	}
+
+	kubeconfig, err := k3dKubeconfig(ctx, clusterName)
+	if err != nil {
+		return fmt.Errorf("failed to get kubeconfig: %w", err)
+	}
+
+	if err := ensureStackdomeAgent(ctx, kubeconfig); err != nil {
+		return fmt.Errorf("failed to ensure stackdome-agent: %w", err)
 	}
 
 	// Step 4: Deploy RBAC resources
@@ -970,19 +983,31 @@ func (Dev) Setup(ctx context.Context) error {
 	return nil
 }
 
-// kindClusterExists checks whether a Kind cluster with the given name exists.
-func kindClusterExists(ctx context.Context, name string) bool {
-	cmd := exec.CommandContext(ctx, "kind", "get", "clusters")
+// k3dClusterExists checks whether a k3d cluster with the given name exists.
+func k3dClusterExists(ctx context.Context, name string) bool {
+	cmd := exec.CommandContext(ctx, "k3d", "cluster", "list", "-o", "json")
 	output, err := cmd.Output()
 	if err != nil {
 		return false
 	}
-	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-		if line == name {
-			return true
-		}
+	return strings.Contains(string(output), fmt.Sprintf("\"name\":\"%s\"", name))
+}
+
+// k3dKubeconfig writes the k3d kubeconfig to a temp file and returns its path.
+func k3dKubeconfig(ctx context.Context, clusterName string) (string, error) {
+	cmd := exec.CommandContext(ctx, "k3d", "kubeconfig", "get", clusterName)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("k3d kubeconfig get: %w", err)
 	}
-	return false
+	kubeconfigPath := filepath.Join(cacheDir, "dev-env", "kubeconfig.yaml")
+	if err := os.MkdirAll(filepath.Dir(kubeconfigPath), 0o755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(kubeconfigPath, output, 0o600); err != nil {
+		return "", err
+	}
+	return kubeconfigPath, nil
 }
 
 // ensureStackdomeAgent runs helm upgrade --install so the chart is
@@ -1025,10 +1050,14 @@ func (Dev) Teardown(ctx context.Context) error {
 		fmt.Println("Warning: no container runtime found, skipping postgres cleanup")
 	}
 
-	// Delete Kind cluster (handles missing cluster gracefully)
-	fmt.Println("Deleting Kind cluster...")
-	if err := (Cluster{}).Delete(ctx); err != nil {
-		fmt.Printf("Warning: failed to delete cluster: %v\n", err)
+	// Delete k3d cluster (handles missing cluster gracefully)
+	clusterName := GetClusterName()
+	fmt.Printf("Deleting k3d cluster '%s'...\n", clusterName)
+	cmd := exec.CommandContext(ctx, "k3d", "cluster", "delete", clusterName)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Warning: failed to delete k3d cluster: %v\n", err)
 	}
 
 	// Remove config file
@@ -1321,7 +1350,7 @@ cluster_name: %s
 cluster_url: %s
 cluster_ca_data: %s
 cluster_sa_token: %s
-kubectl_context: kind-%s
+kubectl_context: k3d-%s
 db_host: %s
 db_port: %d
 db_name: %s

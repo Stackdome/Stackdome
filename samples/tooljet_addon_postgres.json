@@ -11,7 +11,7 @@
         },
         "storage": {
             "size": "5Gi",
-            "storage_class": "standard"
+            "storage_class": "local-path"
         },
         "resources": {
             "cpu": {

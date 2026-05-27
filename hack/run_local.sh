@@ -3,20 +3,24 @@
 # Run Stackdome locally for development.
 #
 # Bootstraps a complete local Stackdome environment:
-#   1. PostgreSQL database for the API server
-#   2. Kind cluster with stackdome-agent Helm chart (operators + CRDs + cluster agent)
-#   3. API server (built and run locally)
-#   4. Service account, cluster registration, org domain
-#   5. (Optional) Postgres addon deployment
-#   6. (Optional) Stack deployment
+#   1. mage dev:setup (PostgreSQL + k3d cluster + operators + RBAC)
+#   2. API server (built and run locally)
+#   3. User signup, cluster registration, org domain
+#   4. (Optional) Postgres addon deployment
+#   5. (Optional) Stack deployment
+#
+# Idempotent: safe to run multiple times. Reuses existing infrastructure,
+# user, org, and cluster registration. Only the API server process is
+# restarted on each run.
 #
 # Prerequisites:
 #   - Go 1.22+
 #   - Docker
-#   - kind (https://kind.sigs.k8s.io)
+#   - k3d (https://k3d.io)
 #   - kubectl
 #   - jq
 #   - mage (https://magefile.org)
+#   - helm
 #
 # Usage:
 #   # Start environment only (no stack)
@@ -29,17 +33,13 @@
 #   ADDON_FILE=samples/tooljet_addon_postgres.json ./hack/run_local.sh samples/tooljet_with_addon.json
 #
 # Environment variables (all optional, defaults provided):
-#   DB_HOST              PostgreSQL host (default: localhost)
-#   DB_PORT              PostgreSQL port (default: 5432)
-#   DB_USERNAME          PostgreSQL user (default: postgres)
-#   DB_PASSWORD          PostgreSQL password (default: foobar-bizz-buzz)
-#   DB_NAME              Database name (default: stackdome_local_dev)
-#   API_PORT             API server port (default: 8000)
-#   ORG_DOMAIN           Organisation domain (default: local.stackdome.io)
-#   ADDON_FILE             Postgres addon JSON file (creates addon before stack)
-#   SKIP_CLUSTER           Set to "true" to skip Kind cluster setup (reuse existing)
-#   SKIP_DB                Set to "true" to skip database creation
-#   SKIP_API_SERVER        Set to "true" to skip building/starting the API server
+#   API_PORT                   API server port (default: 8000)
+#   ORG_DOMAIN                 Organisation domain (default: stackdome.127.0.0.1.nip.io)
+#   ADDON_FILE                 Postgres addon JSON file (creates addon before stack)
+#   SKIP_INFRA                 Set to "true" to skip mage dev:setup (reuse existing)
+#   SKIP_API_SERVER            Set to "true" to skip building/starting the API server
+#   FORCE_CLUSTER_RECREATE     Set to "true" to delete and recreate k3d cluster
+#   FORCE_PG_RECREATE          Set to "true" to delete and recreate PostgreSQL container
 
 set -euo pipefail
 
@@ -47,20 +47,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 API_SERVER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # --- Configuration ---
-DB_HOST="${DB_HOST:-localhost}"
-DB_PORT="${DB_PORT:-5432}"
-DB_USERNAME="${DB_USERNAME:-postgres}"
-DB_PASSWORD="${DB_PASSWORD:-foobar-bizz-buzz}"
-DB_NAME="${DB_NAME:-stackdome_local_dev}"
 API_PORT="${API_PORT:-8000}"
 API_BASE="http://localhost:${API_PORT}"
 ADMIN_EMAIL="admin@stackdome.io"
 ADMIN_PASS="welcome@123"
-KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-stackdome-dev-cluster}"
-ORG_DOMAIN="${ORG_DOMAIN:-local.stackdome.io}"
-SKIP_CLUSTER="${SKIP_CLUSTER:-false}"
-SKIP_DB="${SKIP_DB:-false}"
+K3D_CLUSTER_NAME="${K3D_CLUSTER_NAME:-stackdome-dev}"
+ORG_DOMAIN="${ORG_DOMAIN:-stackdome.127.0.0.1.nip.io}"
+SKIP_INFRA="${SKIP_INFRA:-false}"
 SKIP_API_SERVER="${SKIP_API_SERVER:-false}"
+FORCE_CLUSTER_RECREATE="${FORCE_CLUSTER_RECREATE:-false}"
+FORCE_PG_RECREATE="${FORCE_PG_RECREATE:-false}"
+DEV_CONFIG="${API_SERVER_DIR}/dev_env.yaml"
 
 STACK_FILE="${1:-}"
 ADDON_FILE="${ADDON_FILE:-}"
@@ -80,60 +77,21 @@ info() { echo -e "${BLUE}[i]${NC} $*"; }
 PG_CONTAINER_NAME="psql-stackdome-dev"
 
 # ============================================================
-# Cleanup
+# Cleanup — only stops the API server process, leaves infra intact
 # ============================================================
 cleanup() {
-    log ""
-    log "Cleaning up..."
-
-    if [[ -n "${STACK_ID:-}" && -n "${AUTH_TOKEN:-}" && -n "${ORG_ID:-}" ]]; then
-        log "Deleting stack (${STACK_ID})..."
-        curl -sf -X DELETE "${API_BASE}/api/v1/organizations/${ORG_ID}/stacks/${STACK_ID}" \
-            -H "Authorization: Bearer ${AUTH_TOKEN}" >/dev/null 2>&1 || true
-    fi
-
-    if [[ -n "${ADDON_ID:-}" && -n "${AUTH_TOKEN:-}" && -n "${ORG_ID:-}" ]]; then
-        log "Deleting Postgres addon (${ADDON_ID})..."
-        curl -sf -X DELETE "${API_BASE}/api/v1/organizations/${ORG_ID}/addons/postgres/${ADDON_ID}" \
-            -H "Authorization: Bearer ${AUTH_TOKEN}" >/dev/null 2>&1 || true
-    fi
-
-    if [[ -n "${CLUSTER_ID:-}" && -n "${AUTH_TOKEN:-}" && -n "${ORG_ID:-}" ]]; then
-        log "Deleting cluster registration (${CLUSTER_ID})..."
-        curl -sf -X DELETE "${API_BASE}/api/v1/organizations/${ORG_ID}/clusters/${CLUSTER_ID}" \
-            -H "Authorization: Bearer ${AUTH_TOKEN}" >/dev/null 2>&1 || true
-    fi
-
     if [[ -n "${API_SERVER_PID:-}" ]]; then
         log "Stopping API server (PID: $API_SERVER_PID)"
         kill "$API_SERVER_PID" 2>/dev/null || true
         wait "$API_SERVER_PID" 2>/dev/null || true
     fi
 
-    if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "^${PG_CONTAINER_NAME}$"; then
-        log "Removing PostgreSQL container (${PG_CONTAINER_NAME})..."
-        docker rm -f "$PG_CONTAINER_NAME" >/dev/null 2>&1 || true
-    fi
-
-    if kind get clusters 2>/dev/null | grep -q "^${KIND_CLUSTER_NAME}$"; then
-        log "Deleting Kind cluster (${KIND_CLUSTER_NAME})..."
-        kind delete cluster --name "$KIND_CLUSTER_NAME" 2>/dev/null || true
-    fi
-
     if [[ -f "$API_SERVER_DIR/.env.bak" ]]; then
         mv "$API_SERVER_DIR/.env.bak" "$API_SERVER_DIR/.env"
-        log "Restored original .env"
     fi
-
-    # Delete the local_dev_env.yaml config file
-    if [[ -f "$API_SERVER_DIR/local_dev_env.yaml" ]]; then
-        rm "$API_SERVER_DIR/local_dev_env.yaml"
-        log "Deleted local_dev_env.yaml"
-    fi
-
-    log "Cleanup complete."
 }
 trap cleanup EXIT
+trap 'exit 0' INT TERM
 
 # ============================================================
 # Prerequisites
@@ -141,7 +99,7 @@ trap cleanup EXIT
 check_prerequisites() {
     log "Checking prerequisites..."
     local missing=()
-    for cmd in go docker kind kubectl jq mage; do
+    for cmd in go docker k3d kubectl jq mage helm; do
         if ! command -v "$cmd" &>/dev/null; then
             missing+=("$cmd")
         fi
@@ -166,63 +124,62 @@ check_prerequisites() {
 }
 
 # ============================================================
-# Step 1: Database
+# Step 1: Infrastructure (mage dev:setup)
 # ============================================================
-setup_database() {
-    if [[ "$SKIP_DB" == "true" ]]; then
-        warn "Skipping database setup (SKIP_DB=true)"
-        return
-    fi
-
-    if docker ps --format '{{.Names}}' | grep -q "^${PG_CONTAINER_NAME}$"; then
-        log "PostgreSQL container '${PG_CONTAINER_NAME}' already running."
-    elif docker ps -a --format '{{.Names}}' | grep -q "^${PG_CONTAINER_NAME}$"; then
-        log "Starting existing PostgreSQL container '${PG_CONTAINER_NAME}'..."
-        docker start "$PG_CONTAINER_NAME"
-    else
-        log "Starting PostgreSQL container '${PG_CONTAINER_NAME}'..."
-        docker run --name "$PG_CONTAINER_NAME" \
-            -e POSTGRES_USER="$DB_USERNAME" \
-            -e POSTGRES_PASSWORD="$DB_PASSWORD" \
-            -e POSTGRES_DB="$DB_NAME" \
-            -p "${DB_PORT}:5432" \
-            -d postgres
-    fi
-
-    log "Waiting for PostgreSQL to be ready..."
-    for i in $(seq 1 30); do
-        if docker exec "$PG_CONTAINER_NAME" pg_isready -U "$DB_USERNAME" >/dev/null 2>&1; then
-            break
+setup_infra() {
+    if [[ "$SKIP_INFRA" == "true" ]]; then
+        warn "Skipping infrastructure setup (SKIP_INFRA=true)"
+        if [[ ! -f "$DEV_CONFIG" ]]; then
+            err "SKIP_INFRA=true but ${DEV_CONFIG} not found. Run mage dev:setup first."
         fi
-        sleep 1
-    done
-    docker exec "$PG_CONTAINER_NAME" pg_isready -U "$DB_USERNAME" >/dev/null 2>&1 \
-        || err "PostgreSQL failed to start within 30 seconds."
-    log "PostgreSQL ready with database '${DB_NAME}'."
-}
-
-# ============================================================
-# Step 2: Kind cluster + cluster agent
-# ============================================================
-setup_cluster() {
-    if [[ "$SKIP_CLUSTER" == "true" ]]; then
-        warn "Skipping cluster setup (SKIP_CLUSTER=true)"
         return
     fi
 
-    if kind get clusters 2>/dev/null | grep -q "^${KIND_CLUSTER_NAME}$"; then
-        warn "Kind cluster '${KIND_CLUSTER_NAME}' already exists. Reusing."
-    else
-        log "Setting up Kind cluster with stackdome-agent chart (includes all operators and CRDs)..."
-        log "This may take 5-10 minutes..."
-        cd "$API_SERVER_DIR"
-        KIND_CLUSTER_NAME="$KIND_CLUSTER_NAME" mage cluster:setup
+    # Force recreate cluster if requested
+    if [[ "$FORCE_CLUSTER_RECREATE" == "true" ]]; then
+        warn "FORCE_CLUSTER_RECREATE=true — deleting existing k3d cluster..."
+        k3d cluster delete "$K3D_CLUSTER_NAME" 2>/dev/null || true
     fi
 
+    # Force recreate postgres if requested
+    if [[ "$FORCE_PG_RECREATE" == "true" ]]; then
+        warn "FORCE_PG_RECREATE=true — removing existing PostgreSQL container..."
+        docker rm -f "$PG_CONTAINER_NAME" 2>/dev/null || true
+    fi
+
+    log "Running mage dev:setup (PostgreSQL + k3d cluster + operators + RBAC)..."
+    log "This may take 5-10 minutes on first run..."
+    cd "$API_SERVER_DIR"
+    mage dev:setup
+
+    if [[ ! -f "$DEV_CONFIG" ]]; then
+        err "mage dev:setup completed but ${DEV_CONFIG} not found."
+    fi
+    log "Infrastructure ready."
 }
 
 # ============================================================
-# Step 3: Build and start API server
+# Read credentials from dev_env.yaml
+# ============================================================
+read_dev_config() {
+    log "Reading cluster credentials from ${DEV_CONFIG}..."
+    CLUSTER_URL=$(grep '^cluster_url:' "$DEV_CONFIG" | awk '{print $2}')
+    CLUSTER_CA=$(grep '^cluster_ca_data:' "$DEV_CONFIG" | awk '{print $2}')
+    SA_TOKEN=$(grep '^cluster_sa_token:' "$DEV_CONFIG" | awk '{print $2}')
+    DB_HOST=$(grep '^db_host:' "$DEV_CONFIG" | awk '{print $2}')
+    DB_PORT=$(grep '^db_port:' "$DEV_CONFIG" | awk '{print $2}')
+    DB_NAME=$(grep '^db_name:' "$DEV_CONFIG" | awk '{print $2}')
+    DB_USERNAME=$(grep '^db_username:' "$DEV_CONFIG" | awk '{print $2}')
+    DB_PASSWORD=$(grep '^db_password:' "$DEV_CONFIG" | awk '{print $2}')
+
+    if [[ -z "$CLUSTER_URL" || -z "$SA_TOKEN" ]]; then
+        err "Failed to read cluster credentials from ${DEV_CONFIG}."
+    fi
+    log "Cluster credentials loaded."
+}
+
+# ============================================================
+# Step 2: Build and start API server
 # ============================================================
 start_api_server() {
     if [[ "$SKIP_API_SERVER" == "true" ]]; then
@@ -236,7 +193,6 @@ start_api_server() {
 
     if [[ -f "$API_SERVER_DIR/.env" ]]; then
         cp "$API_SERVER_DIR/.env" "$API_SERVER_DIR/.env.bak"
-        warn "Existing .env backed up to .env.bak"
     fi
     cat > "$API_SERVER_DIR/.env" <<EOF
 JWT_SECRET="ScmCX4vNcS5nj9HFSQbq7PYnRaxM29Lz9E5Z5r1A5RAWZz9li6CMqi2YSxJK5uEU"
@@ -272,20 +228,54 @@ EOF
 }
 
 # ============================================================
-# Step 4: Authenticate
+# Step 3: Sign up or login
 # ============================================================
-authenticate() {
-    log "Authenticating as ${ADMIN_EMAIL}..."
+signup_and_authenticate() {
+    # Try login first (existing user from previous run)
+    log "Authenticating..."
     local response
     response=$(curl -sf -X POST "${API_BASE}/api/v1/auth/login" \
         -H "Content-Type: application/json" \
-        -d "{\"email\": \"${ADMIN_EMAIL}\", \"password\": \"${ADMIN_PASS}\"}")
+        -d "{\"email\": \"${ADMIN_EMAIL}\", \"password\": \"${ADMIN_PASS}\"}" 2>/dev/null || echo "")
 
-    AUTH_TOKEN=$(echo "$response" | jq -r '.token')
-    if [[ -z "$AUTH_TOKEN" || "$AUTH_TOKEN" == "null" ]]; then
-        err "Failed to authenticate. Response: $response"
+    AUTH_TOKEN=$(echo "$response" | jq -r '.token // empty' 2>/dev/null)
+    if [[ -n "$AUTH_TOKEN" ]]; then
+        ORG_ID=$(echo "$response" | jq -r '.user.organisation_id')
+        log "Logged in as existing user."
+    else
+        # First run — sign up
+        log "No existing user. Signing up ${ADMIN_EMAIL}..."
+        response=$(curl -sf -X POST "${API_BASE}/api/v1/user-signup" \
+            -H "Content-Type: application/json" \
+            -d "{
+                \"name\": \"Admin\",
+                \"email\": \"${ADMIN_EMAIL}\",
+                \"password\": \"${ADMIN_PASS}\",
+                \"organisation\": { \"name\": \"Default\" }
+            }")
+
+        AUTH_TOKEN=$(echo "$response" | jq -r '.jwt_token')
+        if [[ -z "$AUTH_TOKEN" || "$AUTH_TOKEN" == "null" ]]; then
+            err "Failed to sign up. Response: $response"
+        fi
+        ORG_ID=$(echo "$response" | jq -r '.user.organisation_id')
     fi
-    log "Authenticated. Token obtained."
+
+    if [[ -z "$ORG_ID" || "$ORG_ID" == "null" ]]; then
+        err "Failed to get organization ID."
+    fi
+
+    # Get the default team name
+    local teams
+    teams=$(curl -sf -H "Authorization: Bearer ${AUTH_TOKEN}" \
+        "${API_BASE}/api/v1/organizations/${ORG_ID}/teams")
+    TEAM_NAME=$(echo "$teams" | jq -r '.items[0].name // empty')
+    if [[ -z "$TEAM_NAME" ]]; then
+        TEAM_NAME="default"
+    fi
+
+    log "Organization ID: ${ORG_ID}"
+    log "Team: ${TEAM_NAME}"
 }
 
 api() {
@@ -298,24 +288,20 @@ api() {
 }
 
 # ============================================================
-# Step 5: Get default organization
+# Step 4: Ensure domain on organisation
 # ============================================================
-get_default_org() {
-    log "Fetching default organization..."
-    local response
-    response=$(api GET "/api/v1/organizations/default")
-    ORG_ID=$(echo "$response" | jq -r '.id')
-    if [[ -z "$ORG_ID" || "$ORG_ID" == "null" ]]; then
-        err "Failed to get default organization. Response: $response"
-    fi
-    log "Organization ID: ${ORG_ID}"
-}
+ensure_org_domain() {
+    log "Ensuring domain '${ORG_DOMAIN}' on organisation..."
+    local org_response
+    org_response=$(api GET "/api/v1/organizations/${ORG_ID}")
+    local existing_domain
+    existing_domain=$(echo "$org_response" | jq -r ".domains[]? | select(.fqdn == \"${ORG_DOMAIN}\") | .fqdn" 2>/dev/null)
 
-# ============================================================
-# Step 6: Add domain to organisation
-# ============================================================
-create_org_domain() {
-    log "Adding domain '${ORG_DOMAIN}' to organisation..."
+    if [[ "$existing_domain" == "$ORG_DOMAIN" ]]; then
+        log "Domain '${ORG_DOMAIN}' already configured."
+        return
+    fi
+
     local response
     response=$(api PUT "/api/v1/organizations/${ORG_ID}" \
         -d "{\"domains\": [{\"fqdn\": \"${ORG_DOMAIN}\"}]}")
@@ -324,97 +310,31 @@ create_org_domain() {
     if [[ "$domain_count" -lt 1 ]]; then
         err "Failed to add domain. Response: $response"
     fi
-    log "Organisation domain '${ORG_DOMAIN}' added."
+    log "Domain '${ORG_DOMAIN}' added."
 }
 
 # ============================================================
-# Step 7: Setup service account and register cluster
+# Step 5: Ensure cluster is registered
 # ============================================================
-setup_service_account() {
-    log "Setting up service account in Kind cluster..."
-    local kubeconfig
-    kubeconfig=$(kind get kubeconfig --name "$KIND_CLUSTER_NAME")
+ensure_cluster_registered() {
+    log "Ensuring cluster is registered..."
 
-    export KUBECONFIG_DATA="$kubeconfig"
+    # Check if a cluster is already registered
+    local clusters_response
+    clusters_response=$(api GET "/api/v1/organizations/${ORG_ID}/clusters" 2>/dev/null || echo '{"items":[]}')
+    CLUSTER_ID=$(echo "$clusters_response" | jq -r '.items[0].id // empty' 2>/dev/null)
 
-    kubectl --kubeconfig <(echo "$kubeconfig") create namespace stackdome-control-plane 2>/dev/null || true
+    if [[ -n "$CLUSTER_ID" ]]; then
+        log "Cluster already registered. ID: ${CLUSTER_ID}"
+        ensure_image_registry
+        wait_for_image_registry
+        return
+    fi
 
-    kubectl --kubeconfig <(echo "$kubeconfig") apply -f - <<EOF
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: stackdome-api-server-account
-  namespace: stackdome-control-plane
-EOF
-
-    kubectl --kubeconfig <(echo "$kubeconfig") apply -f - <<EOF
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: stackdome-api-server-role
-rules:
-  - apiGroups: ["*"]
-    resources: ["*"]
-    verbs: ["*"]
-EOF
-
-    kubectl --kubeconfig <(echo "$kubeconfig") apply -f - <<EOF
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: stackdome-api-server-role-binding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: stackdome-api-server-role
-subjects:
-  - kind: ServiceAccount
-    name: stackdome-api-server-account
-    namespace: stackdome-control-plane
-EOF
-
-    kubectl --kubeconfig <(echo "$kubeconfig") apply -f - <<EOF
-apiVersion: v1
-kind: Secret
-metadata:
-  name: stackdome-api-server-account-secret
-  namespace: stackdome-control-plane
-  annotations:
-    kubernetes.io/service-account.name: stackdome-api-server-account
-type: kubernetes.io/service-account-token
-EOF
-
-    log "Waiting for service account token..."
-    for i in $(seq 1 30); do
-        local token
-        token=$(kubectl --kubeconfig <(echo "$kubeconfig") get secret \
-            stackdome-api-server-account-secret \
-            -n stackdome-control-plane \
-            -o jsonpath='{.data.token}' 2>/dev/null || echo "")
-        if [[ -n "$token" ]]; then
-            SA_TOKEN=$(echo "$token" | base64 -d)
-            break
-        fi
-        sleep 1
-    done
-    [[ -n "${SA_TOKEN:-}" ]] || err "Timeout waiting for service account token."
-
-    CLUSTER_URL=$(kubectl --kubeconfig <(echo "$kubeconfig") config view --raw --minify \
-        --flatten -o jsonpath='{.clusters[0].cluster.server}')
-    CLUSTER_CA=$(kubectl --kubeconfig <(echo "$kubeconfig") get secret \
-        stackdome-api-server-account-secret \
-        -n stackdome-control-plane \
-        -o jsonpath='{.data.ca\.crt}')
-
-    log "Service account ready."
-    log "  Cluster URL: ${CLUSTER_URL}"
-}
-
-register_cluster() {
     log "Registering cluster with API server..."
     local payload
     payload=$(jq -n \
-        --arg name "local-kind-cluster" \
+        --arg name "local-k3d-cluster" \
         --arg url "$CLUSTER_URL" \
         --arg ca "$CLUSTER_CA" \
         --arg token "$SA_TOKEN" \
@@ -427,7 +347,6 @@ register_cluster() {
                 name: "local-registry",
                 spec: {
                     backend_storage_size: "10Gi",
-                    backend_storage_class: "standard",
                     max_repositories: 100,
                     tags_per_repository: 50,
                     delete_untagged: true
@@ -441,33 +360,68 @@ register_cluster() {
     if [[ -z "$CLUSTER_ID" || "$CLUSTER_ID" == "null" ]]; then
         err "Failed to register cluster. Response: $response"
     fi
-    log "Cluster registered. ID: ${CLUSTER_ID}"
+    log "Cluster registered with image registry. ID: ${CLUSTER_ID}"
+    wait_for_image_registry
 }
 
-# ============================================================
-# Step 8: Wait for image registry
-# ============================================================
-wait_for_registry() {
-    log "Waiting for in-cluster image registry to reach Running state..."
-    for i in $(seq 1 120); do
-        local response
-        response=$(api GET "/api/v1/organizations/${ORG_ID}/clusters/${CLUSTER_ID}/image_registries" 2>/dev/null || echo "[]")
+ensure_image_registry() {
+    local registries_response
+    registries_response=$(api GET "/api/v1/organizations/${ORG_ID}/clusters/${CLUSTER_ID}/image_registries" 2>/dev/null || echo '{"items":[]}')
+    local registry_id
+    registry_id=$(echo "$registries_response" | jq -r '.items[0].id // empty' 2>/dev/null)
+
+    if [[ -n "$registry_id" ]]; then
+        log "Image registry already exists. ID: ${registry_id}"
+        return
+    fi
+
+    log "Creating image registry on cluster..."
+    local payload
+    payload=$(jq -n '{
+        name: "local-registry",
+        spec: {
+            backend_storage_size: "10Gi",
+            max_repositories: 100,
+            tags_per_repository: 50,
+            delete_untagged: true
+        }
+    }')
+
+    local response
+    response=$(api POST "/api/v1/organizations/${ORG_ID}/clusters/${CLUSTER_ID}/image_registries" -d "$payload")
+    registry_id=$(echo "$response" | jq -r '.id')
+    if [[ -z "$registry_id" || "$registry_id" == "null" ]]; then
+        err "Failed to create image registry. Response: $response"
+    fi
+    log "Image registry created. ID: ${registry_id}"
+}
+
+wait_for_image_registry() {
+    log "Waiting for image registry to become Running..."
+    for i in $(seq 1 30); do
+        local registries_response
+        registries_response=$(api GET "/api/v1/organizations/${ORG_ID}/clusters/${CLUSTER_ID}/image_registries" 2>/dev/null || echo '{"items":[]}')
         local state
-        state=$(echo "$response" | jq -r '.items[0].status.state // empty' 2>/dev/null || echo "")
+        state=$(echo "$registries_response" | jq -r '.items[0].status.state // empty' 2>/dev/null)
+
         if [[ "$state" == "ImageRegistryRunning" ]]; then
             log "Image registry is Running."
             return
         fi
+        if [[ "$state" == "ImageRegistryError" ]]; then
+            warn "Image registry entered ImageRegistryError state. Proceeding anyway."
+            return
+        fi
         if (( i % 10 == 0 )); then
-            warn "  Registry state: ${state:-unknown} (${i}s elapsed, waiting up to 120s)..."
+            info "  Registry state: ${state:-unknown} (${i}s elapsed)..."
         fi
         sleep 1
     done
-    warn "Registry did not reach Running state within 120s. Proceeding anyway."
+    warn "Image registry did not reach ImageRegistryRunning within 30s. Proceeding anyway."
 }
 
 # ============================================================
-# Step 9: Create addon (optional)
+# Step 6: Create addon (optional)
 # ============================================================
 create_addon() {
     if [[ -z "$ADDON_FILE" ]]; then
@@ -479,7 +433,7 @@ create_addon() {
     log "Creating Postgres addon '${addon_name}'..."
 
     local response
-    response=$(api POST "/api/v1/organizations/${ORG_ID}/addons/postgres" -d @"$ADDON_FILE")
+    response=$(api POST "/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}/addons/postgres" -d @"$ADDON_FILE")
     ADDON_ID=$(echo "$response" | jq -r '.id')
     if [[ -z "$ADDON_ID" || "$ADDON_ID" == "null" ]]; then
         err "Failed to create postgres addon. Response: $response"
@@ -489,7 +443,7 @@ create_addon() {
     log "Waiting for Postgres addon to become Ready..."
     for i in $(seq 1 30); do
         local state
-        state=$(api GET "/api/v1/organizations/${ORG_ID}/addons/postgres/${ADDON_ID}" 2>/dev/null \
+        state=$(api GET "/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}/addons/postgres/${ADDON_ID}" 2>/dev/null \
             | jq -r '.status.state // empty' 2>/dev/null || echo "")
         if [[ "$state" == "Ready" ]]; then
             log "Postgres addon is Ready."
@@ -504,7 +458,7 @@ create_addon() {
 }
 
 # ============================================================
-# Step 10: Deploy stack (optional)
+# Step 7: Deploy stack (optional)
 # ============================================================
 deploy_stack() {
     if [[ -z "$STACK_FILE" ]]; then
@@ -519,9 +473,9 @@ deploy_stack() {
     if [[ -n "${ADDON_ID:-}" ]]; then
         local stack_payload
         stack_payload=$(sed "s/<POSTGRES_ADDON_ID>/${ADDON_ID}/g" "$STACK_FILE")
-        response=$(echo "$stack_payload" | api POST "/api/v1/organizations/${ORG_ID}/stacks" -d @-)
+        response=$(echo "$stack_payload" | api POST "/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}/stacks" -d @-)
     else
-        response=$(api POST "/api/v1/organizations/${ORG_ID}/stacks" -d @"$STACK_FILE")
+        response=$(api POST "/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}/stacks" -d @"$STACK_FILE")
     fi
 
     STACK_ID=$(echo "$response" | jq -r '.id')
@@ -542,23 +496,30 @@ print_info() {
     log ""
     info "API Server:   ${API_BASE}"
     info "Org ID:       ${ORG_ID}"
+    info "Team:         ${TEAM_NAME}"
     info "Cluster ID:   ${CLUSTER_ID}"
     info "Auth Token:   ${AUTH_TOKEN}"
     info "Org Domain:   ${ORG_DOMAIN}"
-    info "Kubectl ctx:  kind-${KIND_CLUSTER_NAME}"
+    info "Kubectl ctx:  k3d-${K3D_CLUSTER_NAME}"
 
-    local config_file="${API_SERVER_DIR}/local_dev_env.yaml"
-    cat > "$config_file" <<EOF
+    local team_base="${API_BASE}/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}"
+
+    # Append API-level config to dev_env.yaml
+    # Remove old API-level entries first to avoid duplicates on re-runs
+    local tmp_config
+    tmp_config=$(grep -v '^api_server:\|^org_id:\|^team_name:\|^cluster_id:\|^auth_token:\|^org_domain:\|^admin_email:\|^admin_password:' "$DEV_CONFIG" 2>/dev/null || true)
+    echo "$tmp_config" > "$DEV_CONFIG"
+    cat >> "$DEV_CONFIG" <<EOF
 api_server: ${API_BASE}
 org_id: ${ORG_ID}
+team_name: ${TEAM_NAME}
 cluster_id: ${CLUSTER_ID}
 auth_token: ${AUTH_TOKEN}
 org_domain: ${ORG_DOMAIN}
-kubectl_context: kind-${KIND_CLUSTER_NAME}
 admin_email: ${ADMIN_EMAIL}
 admin_password: ${ADMIN_PASS}
 EOF
-    log "Config saved to ${config_file}"
+    log "Config saved to ${DEV_CONFIG}"
 
     log ""
     log "Useful commands:"
@@ -566,29 +527,31 @@ EOF
     log "  # Deploy a stack"
     log "  curl -s -X POST -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
     log "    -H 'Content-Type: application/json' \\"
-    log "    ${API_BASE}/api/v1/organizations/${ORG_ID}/stacks -d @samples/tooljet.json | jq"
+    log "    ${team_base}/stacks -d @samples/tooljet.json | jq"
     log ""
     log "  # Create a postgres addon"
     log "  curl -s -X POST -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
     log "    -H 'Content-Type: application/json' \\"
-    log "    ${API_BASE}/api/v1/organizations/${ORG_ID}/addons/postgres -d @samples/postgres_addon_basic.json | jq"
+    log "    ${team_base}/addons/postgres -d @samples/postgres_addon_basic.json | jq"
     log ""
     log "  # Export kubeconfig"
-    log "  kind get kubeconfig --name ${KIND_CLUSTER_NAME} > /tmp/kind-kubeconfig.yaml"
+    log "  k3d kubeconfig get ${K3D_CLUSTER_NAME} > /tmp/k3d-kubeconfig.yaml"
     log ""
     log "  # Watch pods in the cluster"
-    log "  kubectl --context kind-${KIND_CLUSTER_NAME} get pods -A -w"
+    log "  kubectl --context k3d-${K3D_CLUSTER_NAME} get pods -A -w"
+    log ""
+    log "  # Tear down everything"
+    log "  mage dev:teardown"
     log ""
 }
 
 # ============================================================
-# Print stack/addon info and wait
+# Print stack/addon info
 # ============================================================
 print_stack_info() {
     if [[ -z "${ADDON_ID:-}" && -z "${STACK_ID:-}" ]]; then
         return
     fi
-
 
     log ""
     log "============================================"
@@ -603,26 +566,24 @@ print_stack_info() {
         info "Stack ID:     ${STACK_ID}"
     fi
 
+    local team_base="${API_BASE}/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}"
+
     log ""
     log "Useful commands:"
     log ""
     log "  # List stacks"
     log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-    log "    ${API_BASE}/api/v1/organizations/${ORG_ID}/stacks | jq '.items[].name'"
+    log "    ${team_base}/stacks | jq '.items[].name'"
     log ""
     log "  # List postgres addons"
     log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-    log "    ${API_BASE}/api/v1/organizations/${ORG_ID}/addons/postgres | jq '.items[] | {name, id, state: .status.state}'"
+    log "    ${team_base}/addons/postgres | jq '.items[] | {name, id, state: .status.state}'"
 
     if [[ -n "${STACK_ID:-}" ]]; then
         log ""
         log "  # Check stack status"
         log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-        log "    ${API_BASE}/api/v1/organizations/${ORG_ID}/stacks/${STACK_ID} | jq '.status'"
-        log ""
-        log "  # List stack resources"
-        log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-        log "    ${API_BASE}/api/v1/organizations/${ORG_ID}/stacks/${STACK_ID}/resources | jq '.[].name'"
+        log "    ${team_base}/stacks/${STACK_ID} | jq '.status'"
     fi
     log ""
 }
@@ -641,21 +602,23 @@ main() {
     log ""
 
     check_prerequisites
-    setup_database
-    setup_cluster
+    setup_infra
+    read_dev_config
     start_api_server
-    authenticate
-    get_default_org
-    create_org_domain
-    setup_service_account
-    register_cluster
+    signup_and_authenticate
+    ensure_org_domain
+    ensure_cluster_registered
     print_info
-    wait_for_registry
-    create_addon
-    deploy_stack
-    print_stack_info
 
-    log "Press Ctrl+C to tear down and exit."
+    if [[ -n "$ADDON_FILE" || -n "$STACK_FILE" ]]; then
+        create_addon
+        deploy_stack
+        print_stack_info
+    fi
+
+    log "Press Ctrl+C to stop the API server."
+    log "Infrastructure (k3d + PostgreSQL) will remain running."
+    log "To tear down everything: mage dev:teardown"
     wait "$API_SERVER_PID"
 }
 

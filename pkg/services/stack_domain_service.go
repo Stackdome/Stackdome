@@ -137,9 +137,8 @@ func (s *stackDomainService) PopulateAndSaveExposedPortDomainsForStackWithTx(ctx
 					curr.Ports[j].ExposedFqdn = fmt.Sprintf(
 						"%s.%s.%s", curr.Ports[j].GeneratedSubdomainPrefix, curr.Name, domainToUse.Domain)
 				} else {
-					// Set the exposed port's FQDN using the subdomain prefix and the domain to use.
 					curr.Ports[j].ExposedFqdn = fmt.Sprintf(
-						"%s.%s.%s", curr.Ports[j].SubdomainPrefix, curr.Name, domainToUse.Domain)
+						"%s.%s", curr.Ports[j].SubdomainPrefix, domainToUse.Domain)
 				}
 				// Create the domain object for the exposed port.
 				domain := &models.StackDomain{
@@ -163,8 +162,14 @@ func (s *stackDomainService) PopulateAndSaveExposedPortDomainsForStackWithTx(ctx
 				}
 				if _, cerr := s.InternalCreateWithTx(ctx, domain); cerr != nil {
 					if cerr.Code == errors.ErrorConflict {
+						existing, _ := s.GetByFqdn(ctx, curr.Ports[j].ExposedFqdn)
+						if existing != nil {
+							return errors.Conflict(
+								"domain '%s' is already in use by resource '%s' in another stack (id: %s)",
+								curr.Ports[j].ExposedFqdn, existing.StackResourceName, existing.StackID)
+						}
 						return errors.Conflict(
-							"domain with fqdn '%s' already exists for stack resource '%s'", curr.Ports[j].ExposedFqdn, curr.Name)
+							"domain '%s' is already in use", curr.Ports[j].ExposedFqdn)
 					} else {
 						return errors.GeneralError(
 							"failed to create domain for stack resource '%s': %s", curr.Name, cerr.Error())

@@ -717,6 +717,7 @@ func (v *stackValidator) validateDomainExistence(ctx context.Context, spec *mode
 }
 
 func (v *stackValidator) validateStackPorts(spec *models.Stack) *errors.ServiceError {
+	subdomainPrefixes := make(map[string]string)
 	for i := range spec.StackResources {
 		currentResource := spec.StackResources[i]
 		if len(currentResource.Ports) == 0 {
@@ -743,6 +744,14 @@ func (v *stackValidator) validateStackPorts(spec *models.Stack) *errors.ServiceE
 			portNumbers[port.Number] = struct{}{}
 			if err := validatePortName(port.Name); err != nil {
 				return errors.BadRequest("stack resource '%s' has invalid port name '%s': %s", currentResource.Name, port.Name, err.Error())
+			}
+			if port.ExposedToPublic && port.SubdomainPrefix != "" {
+				if owner, exists := subdomainPrefixes[port.SubdomainPrefix]; exists {
+					return errors.BadRequest(
+						"duplicate subdomain prefix '%s': used by both resource '%s' and '%s'",
+						port.SubdomainPrefix, owner, currentResource.Name)
+				}
+				subdomainPrefixes[port.SubdomainPrefix] = currentResource.Name
 			}
 		}
 	}

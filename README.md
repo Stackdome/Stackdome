@@ -51,7 +51,7 @@ The system follows a **hub-and-spoke model**:
 - Go 1.25+
 - Docker
 - kubectl
-- [kind](https://kind.sigs.k8s.io) (for local development)
+- [k3d](https://k3d.io) (for local development)
 - [mage](https://magefile.org)
 - jq
 
@@ -59,7 +59,7 @@ The system follows a **hub-and-spoke model**:
 
 ### One-Command Setup (Recommended)
 
-`mage dev:setup` bootstraps everything you need to develop locally — a PostgreSQL container, a Kind cluster with the stackdome-agent operator, and RBAC credentials for cluster registration:
+`mage dev:setup` bootstraps everything you need to develop locally — a PostgreSQL container, a k3d cluster with the stackdome-agent operator, and RBAC credentials for cluster registration:
 
 ```bash
 mage dev:setup
@@ -67,7 +67,7 @@ mage dev:setup
 
 This will:
 1. Start a PostgreSQL container (reads config from `.env` if present, otherwise uses defaults)
-2. Create a Kind cluster and install the stackdome-agent Helm chart
+2. Create a k3d cluster and install the stackdome-agent Helm chart
 3. Deploy RBAC resources (ServiceAccount, ClusterRole, ClusterRoleBinding) for API server access
 4. Extract cluster credentials (API URL, CA data, SA token) and write them to `dev_env.yaml`
 
@@ -84,7 +84,7 @@ To tear everything down:
 mage dev:teardown
 ```
 
-The command is fully idempotent — safe to run multiple times. It will reuse an existing PostgreSQL container and Kind cluster instead of recreating them.
+The command is fully idempotent — safe to run multiple times. It will reuse an existing PostgreSQL container and k3d cluster instead of recreating them.
 
 **Database configuration:** `mage dev:setup` loads the `.env` file if present, then falls back to these defaults. Any missing DB variables are automatically appended to `.env` so that `mage migrate` and `mage run` work without manual editing. If `.env` doesn't exist at all, it is created from `.env_template`.
 
@@ -212,7 +212,7 @@ mage dev:setup               # Bootstrap full dev environment (postgres + cluste
 mage dev:teardown            # Tear down dev environment
 
 # Cluster management
-mage cluster:setup           # Create Kind cluster with stackdome-agent chart
+mage cluster:setup           # Create k3d cluster with stackdome-agent chart
 mage cluster:delete          # Delete the cluster
 mage cluster:status          # Show cluster status
 
