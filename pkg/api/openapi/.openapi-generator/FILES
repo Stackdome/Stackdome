@@ -20,6 +20,7 @@ docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost200
 docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest.md
 docs/AzureCredentials.md
 docs/BuildArtifact.md
+docs/BuildArtifactSourceConfig.md
 docs/BuildArtifactSyncInfo.md
 docs/BuildFailureDetail.md
 docs/BuildSourceContext.md
@@ -92,6 +93,7 @@ docs/PostgresConnectionInfoCredentials.md
 docs/PostgresConnectionInfoDatabasesInner.md
 docs/PostgresCredentials.md
 docs/PostgresDatabase.md
+docs/PostgresEnvConfig.md
 docs/PostgresInitialization.md
 docs/PostgresInitializationImportFromExternal.md
 docs/PostgresInitializationRestoreFromBackup.md
@@ -122,6 +124,7 @@ docs/SecretReference.md
 docs/SecretType.md
 docs/Stack.md
 docs/StackConnection.md
+docs/StackConnectionConfig.md
 docs/StackConnectionList.md
 docs/StackList.md
 docs/StackResource.md
@@ -155,6 +158,7 @@ docs/Volume.md
 docs/VolumeAccessMode.md
 docs/VolumeList.md
 docs/VolumeMount.md
+docs/VolumeMountConfig.md
 docs/VolumeMountSourceType.md
 docs/VolumeSource.md
 docs/VolumeSourceTypes.md
@@ -182,6 +186,7 @@ model_api_token_create_response.go
 model_api_token_list.go
 model_azure_credentials.go
 model_build_artifact.go
+model_build_artifact_source_config.go
 model_build_artifact_sync_info.go
 model_build_failure_detail.go
 model_build_source_context.go
@@ -253,6 +258,7 @@ model_postgres_connection_info_credentials.go
 model_postgres_connection_info_databases_inner.go
 model_postgres_credentials.go
 model_postgres_database.go
+model_postgres_env_config.go
 model_postgres_initialization.go
 model_postgres_initialization_import_from_external.go
 model_postgres_initialization_restore_from_backup.go
@@ -283,6 +289,7 @@ model_secret_type.go
 model_ssh_config.go
 model_stack.go
 model_stack_connection.go
+model_stack_connection_config.go
 model_stack_connection_list.go
 model_stack_list.go
 model_stack_resource.go
@@ -316,6 +323,7 @@ model_volume.go
 model_volume_access_mode.go
 model_volume_list.go
 model_volume_mount.go
+model_volume_mount_config.go
 model_volume_mount_source_type.go
 model_volume_source.go
 model_volume_source_types.go

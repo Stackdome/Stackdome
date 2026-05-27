@@ -16,8 +16,8 @@ func TestPresentStackIncludesConnections(t *testing.T) {
 				ID:   "conn-1",
 				Kind: models.ConnectionKindEnv,
 				From: models.TopologyNodeRef{
-					Type: models.TopologyNodeTypeStackResource,
-					Name: "redis",
+					Type: models.TopologyNodeTypePostgresAddon,
+					Id:   "pg-1",
 				},
 				To: models.TopologyNodeRef{
 					Type: models.TopologyNodeTypeStackResource,
@@ -50,14 +50,18 @@ func TestPresentStackIncludesConnections(t *testing.T) {
 	if out.Spec.Connections[0].Kind != string(models.ConnectionKindEnv) {
 		t.Fatalf("expected env connection kind, got %q", out.Spec.Connections[0].Kind)
 	}
-	if out.Spec.Connections[0].From.GetName() != "redis" {
-		t.Fatalf("expected from redis, got %q", out.Spec.Connections[0].From.GetName())
+	if out.Spec.Connections[0].From.GetId() != "pg-1" {
+		t.Fatalf("expected from pg-1, got %q", out.Spec.Connections[0].From.GetId())
 	}
 	if out.Spec.Connections[0].Mappings[0].Value.GetOutput() != "url.http" {
 		t.Fatalf("expected mapping output url.http, got %q", out.Spec.Connections[0].Mappings[0].Value.GetOutput())
 	}
-	if out.Spec.Connections[0].GetConfig()["database"] != "app" {
-		t.Fatalf("expected connection config database app, got %#v", out.Spec.Connections[0].GetConfig()["database"])
+	config := out.Spec.Connections[0].GetConfig()
+	if config.PostgresEnvConfig == nil {
+		t.Fatal("expected PostgresEnvConfig to be set")
+	}
+	if config.PostgresEnvConfig.GetDatabase() != "app" {
+		t.Fatalf("expected database app, got %q", config.PostgresEnvConfig.GetDatabase())
 	}
 }
 
@@ -78,9 +82,13 @@ func TestConvertStackIncludesConnections(t *testing.T) {
 	mapping.Target.SetName("REDIS_URL")
 	mapping.Value.SetOutput("url.http")
 	conn.SetMappings([]openapi.ConnectionMapping{*mapping})
-	conn.SetConfig(map[string]interface{}{
-		"database":         "app",
-		"credential_scope": "owner",
+	db := "app"
+	scope := "owner"
+	conn.SetConfig(openapi.StackConnectionConfig{
+		PostgresEnvConfig: &openapi.PostgresEnvConfig{
+			Database:        &db,
+			CredentialScope: &scope,
+		},
 	})
 
 	spec := openapi.NewStackSpec([]openapi.StackResource{})
@@ -103,6 +111,38 @@ func TestConvertStackIncludesConnections(t *testing.T) {
 	}
 	if out.Connections[0].Config["database"] != "app" {
 		t.Fatalf("expected connection config database app, got %#v", out.Connections[0].Config["database"])
+	}
+}
+
+func TestPresentPostgresEnvConnectionWithUnrecognizedConfigReturnsNilConfig(t *testing.T) {
+	stack := &models.Stack{
+		Name: "demo",
+		Connections: models.StackConnections{
+			{
+				ID:   "conn-1",
+				Kind: models.ConnectionKindEnv,
+				From: models.TopologyNodeRef{
+					Type: models.TopologyNodeTypePostgresAddon,
+					Id:   "pg-1",
+				},
+				To: models.TopologyNodeRef{
+					Type: models.TopologyNodeTypeStackResource,
+					Name: "web",
+				},
+				Config: map[string]interface{}{
+					"unknown_key": "value",
+				},
+			},
+		},
+	}
+
+	out := presenters.PresentStack(stack)
+	if len(out.Spec.Connections) != 1 {
+		t.Fatalf("expected one connection, got %d", len(out.Spec.Connections))
+	}
+	cfg, ok := out.Spec.Connections[0].GetConfigOk()
+	if ok && cfg != nil && cfg.PostgresEnvConfig != nil {
+		t.Fatal("expected nil config when only unrecognized keys are present")
 	}
 }
 

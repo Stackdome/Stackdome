@@ -88,8 +88,9 @@ var _ = Describe("Stack Connections & Topology", func() {
 			Expect(createdConn.GetId()).NotTo(BeEmpty())
 			Expect(createdConn.GetKind()).To(Equal("volume_mount"))
 			config := createdConn.GetConfig()
-			Expect(config["mount_path"]).To(Equal("/mnt/data"))
-			Expect(config["sub_path"]).To(Equal("subdir"))
+			Expect(config.VolumeMountConfig).NotTo(BeNil())
+			Expect(config.VolumeMountConfig.MountPath).To(Equal("/mnt/data"))
+			Expect(config.VolumeMountConfig.GetSubPath()).To(Equal("subdir"))
 		})
 
 		It("should return empty list for stack with no connections", func() {
@@ -154,15 +155,21 @@ var _ = Describe("Stack Connections & Topology", func() {
 			conn := shared.VolumeMountConn("cfg-data", "api", "/mnt/data", "")
 			createdConn := shared.CreateStackConnection(client, orgID, teamName, cfgStackID, &conn)
 
-			conn.SetConfig(map[string]interface{}{
-				"mount_path": "/mnt/updated",
-				"sub_path":   "new-sub",
-				"read_only":  true,
+			readOnly := true
+			subPath := "new-sub"
+			conn.SetConfig(openapi.StackConnectionConfig{
+				VolumeMountConfig: &openapi.VolumeMountConfig{
+					MountPath: "/mnt/updated",
+					SubPath:   &subPath,
+					ReadOnly:  &readOnly,
+				},
 			})
 			updated := shared.UpdateStackConnection(client, orgID, teamName, cfgStackID, createdConn.GetId(), &conn)
-			Expect(updated.GetConfig()["mount_path"]).To(Equal("/mnt/updated"))
-			Expect(updated.GetConfig()["sub_path"]).To(Equal("new-sub"))
-			Expect(updated.GetConfig()["read_only"]).To(BeTrue())
+			updatedCfg := updated.GetConfig()
+			Expect(updatedCfg.VolumeMountConfig).NotTo(BeNil())
+			Expect(updatedCfg.VolumeMountConfig.MountPath).To(Equal("/mnt/updated"))
+			Expect(updatedCfg.VolumeMountConfig.GetSubPath()).To(Equal("new-sub"))
+			Expect(updatedCfg.VolumeMountConfig.GetReadOnly()).To(BeTrue())
 		})
 
 		It("should delete a connection", func() {
@@ -365,7 +372,10 @@ var _ = Describe("Stack Connections & Topology", func() {
 				shared.PostgresMapping("host", "PG_HOST"),
 				shared.PostgresMapping("database", "PG_DB"),
 			})
-			conn1.SetConfig(map[string]interface{}{"database": "appdb"})
+			appdb := "appdb"
+			conn1.SetConfig(openapi.StackConnectionConfig{
+				PostgresEnvConfig: &openapi.PostgresEnvConfig{Database: &appdb},
+			})
 			created1 := shared.CreateStackConnection(client, orgID, teamName, stackID, &conn1)
 			Expect(created1.GetId()).NotTo(BeEmpty())
 
@@ -374,7 +384,10 @@ var _ = Describe("Stack Connections & Topology", func() {
 				shared.PostgresMapping("host", "TOOLJET_DB_HOST"),
 				shared.PostgresMapping("database", "TOOLJET_DB"),
 			})
-			conn2.SetConfig(map[string]interface{}{"database": "tooljetdb"})
+			tooljetdb := "tooljetdb"
+			conn2.SetConfig(openapi.StackConnectionConfig{
+				PostgresEnvConfig: &openapi.PostgresEnvConfig{Database: &tooljetdb},
+			})
 			created2 := shared.CreateStackConnection(client, orgID, teamName, stackID, &conn2)
 			Expect(created2.GetId()).NotTo(BeEmpty())
 
@@ -384,7 +397,8 @@ var _ = Describe("Stack Connections & Topology", func() {
 
 			databases := map[string]bool{}
 			for _, c := range connections {
-				databases[c.GetConfig()["database"].(string)] = true
+				Expect(c.GetConfig().PostgresEnvConfig).NotTo(BeNil())
+				databases[c.GetConfig().PostgresEnvConfig.GetDatabase()] = true
 			}
 			Expect(databases).To(HaveKey("appdb"))
 			Expect(databases).To(HaveKey("tooljetdb"))
@@ -410,7 +424,10 @@ var _ = Describe("Stack Connections & Topology", func() {
 			conn1 := shared.EnvConnectionWithID("addon/postgres", addonID, "stack_resource", "web", []openapi.ConnectionMapping{
 				shared.PostgresMapping("host", "PG_HOST"),
 			})
-			conn1.SetConfig(map[string]interface{}{"database": "appdb"})
+			appdb := "appdb"
+			conn1.SetConfig(openapi.StackConnectionConfig{
+				PostgresEnvConfig: &openapi.PostgresEnvConfig{Database: &appdb},
+			})
 			created := shared.CreateStackConnection(client, orgID, teamName, stackID, &conn1)
 			Expect(created.GetId()).NotTo(BeEmpty())
 
@@ -418,7 +435,9 @@ var _ = Describe("Stack Connections & Topology", func() {
 			conn2 := shared.EnvConnectionWithID("addon/postgres", addonID, "stack_resource", "web", []openapi.ConnectionMapping{
 				shared.PostgresMapping("host", "PG_HOST_2"),
 			})
-			conn2.SetConfig(map[string]interface{}{"database": "appdb"})
+			conn2.SetConfig(openapi.StackConnectionConfig{
+				PostgresEnvConfig: &openapi.PostgresEnvConfig{Database: &appdb},
+			})
 			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn2, http.StatusConflict)
 		})
 	})
@@ -508,7 +527,9 @@ var _ = Describe("Stack Connections & Topology", func() {
 			to := openapi.NewTopologyNodeRef("stack_resource")
 			to.SetName("api")
 			conn := openapi.NewStackConnection("volume_mount", *from, *to)
-			conn.SetConfig(map[string]interface{}{"mount_path": "/mnt"})
+			conn.SetConfig(openapi.StackConnectionConfig{
+				VolumeMountConfig: openapi.NewVolumeMountConfig("/mnt"),
+			})
 
 			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, conn, http.StatusBadRequest)
 		})
@@ -533,28 +554,6 @@ var _ = Describe("Stack Connections & Topology", func() {
 			to.SetName("api")
 			conn := openapi.NewStackConnection("volume_mount", *from, *to)
 			// No config set — mount_path missing
-
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, volStackID, conn, http.StatusBadRequest)
-		})
-
-		It("should reject volume mount with unsupported config key", func() {
-			api := shared.ResourceWithPort("api", 8080)
-			web := shared.SimpleResource("web")
-			vol := openapi.NewVolume("test-vol2", *openapi.NewVolumeSpec("1Gi", false, openapi.READ_WRITE_ONCE))
-			stack := shared.CreateSkipProvisioningStackWithVolumes("test-bad-cfg-key", []openapi.StackResource{api, web}, []openapi.Volume{*vol})
-			created := shared.CreateStack(client, orgID, teamName, stack)
-			volStackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, volStackID, 1*time.Minute)
-
-			from := openapi.NewTopologyNodeRef("volume")
-			from.SetName("test-vol2")
-			to := openapi.NewTopologyNodeRef("stack_resource")
-			to.SetName("api")
-			conn := openapi.NewStackConnection("volume_mount", *from, *to)
-			conn.SetConfig(map[string]interface{}{
-				"mount_path":      "/mnt",
-				"unsupported_key": "value",
-			})
 
 			shared.CreateStackConnectionExpectError(client, orgID, teamName, volStackID, conn, http.StatusBadRequest)
 		})

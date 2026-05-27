@@ -23,9 +23,8 @@ type StackConnection struct {
 	From TopologyNodeRef `json:"from"`
 	To   TopologyNodeRef `json:"to"`
 	// Target/value mappings for kinds that move values, such as `env`.
-	Mappings []ConnectionMapping `json:"mappings,omitempty"`
-	// Kind-specific connection configuration. Expected keys depend on `kind`. Examples: for `env` from `addon/postgres`, use fields such as `database` and `credential_scope`; for `volume_mount`, use `mount_path`, `sub_path`, and `read_only`; for `build_artifact_source`, use `source_path` and `destination_path`.
-	Config map[string]interface{} `json:"config,omitempty"`
+	Mappings []ConnectionMapping    `json:"mappings,omitempty"`
+	Config   *StackConnectionConfig `json:"config,omitempty"`
 }
 
 // NewStackConnection instantiates a new StackConnection object
@@ -185,17 +184,17 @@ func (o *StackConnection) SetMappings(v []ConnectionMapping) {
 }
 
 // GetConfig returns the Config field value if set, zero value otherwise.
-func (o *StackConnection) GetConfig() map[string]interface{} {
+func (o *StackConnection) GetConfig() StackConnectionConfig {
 	if o == nil || o.Config == nil {
-		var ret map[string]interface{}
+		var ret StackConnectionConfig
 		return ret
 	}
-	return o.Config
+	return *o.Config
 }
 
 // GetConfigOk returns a tuple with the Config field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StackConnection) GetConfigOk() (map[string]interface{}, bool) {
+func (o *StackConnection) GetConfigOk() (*StackConnectionConfig, bool) {
 	if o == nil || o.Config == nil {
 		return nil, false
 	}
@@ -211,9 +210,9 @@ func (o *StackConnection) HasConfig() bool {
 	return false
 }
 
-// SetConfig gets a reference to the given map[string]interface{} and assigns it to the Config field.
-func (o *StackConnection) SetConfig(v map[string]interface{}) {
-	o.Config = v
+// SetConfig gets a reference to the given StackConnectionConfig and assigns it to the Config field.
+func (o *StackConnection) SetConfig(v StackConnectionConfig) {
+	o.Config = &v
 }
 
 func (o StackConnection) MarshalJSON() ([]byte, error) {

@@ -3656,14 +3656,69 @@ components:
           description: Absolute file path when type is file.
 
     StackConnectionConfig:
+      description: >
+        Kind-specific connection configuration. The shape depends on the
+        connection kind and source type: use PostgresEnvConfig when kind is
+        env and from.type is addon/postgres, VolumeMountConfig when kind is
+        volume_mount, and BuildArtifactSourceConfig when kind is
+        build_artifact_source. Omit config entirely for env connections from
+        stack_resource or secret sources.
+      oneOf:
+        - $ref: '#/components/schemas/PostgresEnvConfig'
+        - $ref: '#/components/schemas/VolumeMountConfig'
+        - $ref: '#/components/schemas/BuildArtifactSourceConfig'
+
+    PostgresEnvConfig:
       type: object
       description: >
-        Kind-specific connection configuration. Expected keys depend on `kind`.
-        Examples: for `env` from `addon/postgres`, use fields such as `database`
-        and `credential_scope`; for `volume_mount`, use `mount_path`, `sub_path`,
-        and `read_only`; for `build_artifact_source`, use `source_path` and
-        `destination_path`.
-      additionalProperties: true
+        Config for env connections from a PostgreSQL addon
+        (kind=env, from.type=addon/postgres). credential_scope and superuser
+        are mutually exclusive.
+      properties:
+        database:
+          type: string
+          description: Target database name within the addon.
+        credential_scope:
+          type: string
+          enum:
+            - owner
+            - superuser
+          description: Which credential set to inject. Mutually exclusive with superuser.
+        superuser:
+          type: boolean
+          description: Use superuser credentials. Mutually exclusive with credential_scope.
+      additionalProperties: false
+
+    VolumeMountConfig:
+      type: object
+      description: Config for volume mount connections (kind=volume_mount).
+      required:
+        - mount_path
+      properties:
+        mount_path:
+          type: string
+          description: Absolute path where the volume is mounted in the container.
+        sub_path:
+          type: string
+          description: Sub-path within the volume to mount.
+        read_only:
+          type: boolean
+          description: Mount the volume read-only.
+      additionalProperties: false
+
+    BuildArtifactSourceConfig:
+      type: object
+      description: Config for build artifact source connections (kind=build_artifact_source).
+      required:
+        - source_path
+      properties:
+        source_path:
+          type: string
+          description: Path within the build output to copy from.
+        destination_path:
+          type: string
+          description: Path within the volume to copy to.
+      additionalProperties: false
 
     ValueRef:
       type: object
