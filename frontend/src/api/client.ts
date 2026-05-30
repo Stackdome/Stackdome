@@ -100,14 +100,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Skip on auth pages so a wrong-password 403 shows inline instead of refresh-looping.
+// Only 401 (unauthenticated — bad/expired token) resets the session. A 403 means
+// the session is valid but the caller lacks permission for that resource (RBAC),
+// e.g. an OrgMember hitting an admin-only endpoint. Logging out on 403 would lock
+// members out of the whole app, so we let the calling code surface it in-page.
+// Skip on auth pages so a wrong-password 401 shows inline instead of refresh-looping.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status;
     const path = window.location.pathname;
     const onAuthPage = path === '/sign-in' || path === '/sign-up';
-    if ((status === 401 || status === 403) && !onAuthPage) {
+    if (status === 401 && !onAuthPage) {
       localStorage.removeItem('authToken');
       localStorage.removeItem('currentUser');
       window.location.href = '/sign-in';

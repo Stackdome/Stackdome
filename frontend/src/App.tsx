@@ -46,16 +46,17 @@ const router = createBrowserRouter(
         <Route path="/stacks" element={<StacksPage />} />
         <Route path="/stacks/create" element={<StackCreatePage />} />
         <Route path="/stacks/:id" element={<StackDetailPage />} />
-        <Route path="/clusters" element={<ClustersPage />} />
-        <Route path="/clusters/:id" element={<ClusterDetailPage />} />
         <Route path="/secrets" element={<SecretsPage />} />
         <Route path="/object-stores" element={<ObjectStoresPage />} />
         <Route path="/addons" element={<AddonsPage />} />
         <Route path="/addons/create/postgres" element={<PostgresFormPage />} />
         <Route path="/addons/postgres/:id/edit" element={<PostgresFormPage />} />
         <Route path="/addons/postgres/:id" element={<PostgresDetailPage />} />
-        <Route path="/domains" element={<DomainsPage />} />
+        {/* Org-scoped, admin-only pages — members are redirected to "/" */}
         <Route element={<RequireAdmin />}>
+          <Route path="/clusters" element={<ClustersPage />} />
+          <Route path="/clusters/:id" element={<ClusterDetailPage />} />
+          <Route path="/domains" element={<DomainsPage />} />
           <Route path="/settings/users" element={<UsersPage />} />
           <Route path="/settings/teams" element={<TeamsPage />} />
           <Route path="/settings/teams/:teamName" element={<TeamDetailPage />} />
