@@ -18,14 +18,21 @@ The integration tests follow a **shared infrastructure** pattern where:
 # Run all integration tests
 make test-integration
 
-# Keep cluster for debugging
-KEEP_CLUSTER=true make test-integration
+# Run a focused test (ALWAYS use this when developing new tests or features)
+FOCUS="My Test Name" make test-integration
+
+# Recommended workflow for developing/debugging tests:
+# - FOCUS: run only the test you're working on (accepts Ginkgo regex)
+# - KEEP_CLUSTER: preserve the Kind cluster between runs (skip 3-8min bootstrap)
+# - KEEP_RESOURCES_ON_FAILURE: skip resource cleanup on failure so you can
+#   inspect the cluster (kubectl) and DB to figure out what went wrong
+KEEP_CLUSTER=true KEEP_RESOURCES_ON_FAILURE=true FOCUS="My Test Name" make test-integration
 
 # With debug logging
 TEST_LOG_LEVEL=debug make test-integration
 ```
 
-Output is logged to `test/int/last-run.log`.
+`FOCUS` accepts a Ginkgo regex — use the `It()` description text or a `Context()` name to scope the run. Output is logged to `test/int/last-run.log`.
 
 ### Using go test directly
 ```bash
@@ -48,6 +55,8 @@ go test ./test/int/... -v -ginkgo.v -timeout 30m -count=1 -ginkgo.focus="Postgre
 | `DB_USERNAME` | Database username | `postgres` |
 | `DB_PASSWORD` | Database password | `foobar-bizz-buzz` |
 | `KEEP_CLUSTER` | Keep infrastructure after tests for debugging | `false` |
+| `KEEP_RESOURCES_ON_FAILURE` | Skip resource cleanup on failure (use with `KEEP_CLUSTER`) | `false` |
+| `FOCUS` | Ginkgo regex to run specific tests (e.g. `FOCUS="Full Lifecycle"`) | (all) |
 | `CLUSTER_AGENT_IMAGE_TAG` | Cluster agent container image tag | `v0.4.6-alpha` |
 
 ## Test Structure
@@ -200,8 +209,14 @@ After bootstrap, all test specs share:
 
 For detailed troubleshooting:
 ```bash
-# Maximum debug output
-TEST_LOG_LEVEL=debug KEEP_CLUSTER=true make test-integration
+# Maximum debug output with resource preservation on failure
+TEST_LOG_LEVEL=debug KEEP_CLUSTER=true KEEP_RESOURCES_ON_FAILURE=true FOCUS="Failing Test" make test-integration
+
+# After a failure with KEEP_RESOURCES_ON_FAILURE, inspect:
+# - Cluster: kubectl get all -A
+# - CRs: kubectl get stacks,postgresclusters -A
+# - Pods/logs: kubectl logs -n <namespace> <pod>
+# - DB: psql to the test database (see last-run.log for DB name)
 
 # Keep infrastructure for manual inspection
 KEEP_CLUSTER=true make test-integration

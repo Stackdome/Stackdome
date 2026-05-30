@@ -31,7 +31,8 @@ Build system is **Mage** (`magefile.go`, namespaced targets); `Makefile` wraps s
 | Tear down local env | `mage dev:teardown` |
 | Backend unit tests | `mage test:unit` (or `make test`) |
 | Single Go test | `go test ./pkg/<pkg>/ -run TestName` |
-| Integration tests (needs Docker/Kind) | `mage test:integration` |
+| Integration tests (needs Docker/Kind) | `make test-integration` |
+| Focused integration test | `KEEP_CLUSTER=true KEEP_RESOURCES_ON_FAILURE=true FOCUS="Test Name" make test-integration` |
 | Lint Go | `golangci-lint run ./...` (or `mage lint`) |
 | Format Go | `mage fmt` |
 | Regenerate mocks | `make mocks` (mockgen via `go:generate`) |
@@ -43,9 +44,75 @@ Build system is **Mage** (`magefile.go`, namespaced targets); `Makefile` wraps s
 Notes:
 - `mage dev:setup` is idempotent; reads/writes `.env` (creates from `.env_template`), writes cluster creds to `dev_env.yaml`.
 - `mage build` skips `tsc -b` so unrelated frontend type errors don't block the binary; frontend's own `pnpm build` does run `tsc -b`.
-- Integration tests need `TEST_KUBECONFIG` pointing at a Mage-created Kind cluster (`mage cluster:create` / `cluster:delete`); state cached in `~/.cache/stackdome-api-server/clusters/`.
+- **Running integration tests for new features or new tests:** Always use focused runs (`FOCUS="Test Name"`) for faster feedback instead of running the full suite. Use `KEEP_CLUSTER=true` to preserve the Kind cluster between runs (avoids 3-8min bootstrap). Use `KEEP_RESOURCES_ON_FAILURE=true` to skip resource cleanup on failure so you can inspect cluster state (`kubectl`) and DB to diagnose what went wrong. Recommended command:
+  ```
+  KEEP_CLUSTER=true KEEP_RESOURCES_ON_FAILURE=true FOCUS="My New Test" make test-integration
+  ```
+  `FOCUS` accepts a Ginkgo regex — use the `It()` description text or a `Context()` name to scope the run. Output is saved to `test/int/last-run.log`.
 - New DB migration: scaffold with `hack/create_migration.sh`; ordered files live in `pkg/db/migrations/`.
 - Full end-to-end demo env: `hack/run_local.sh [stack.json]`.
+
+## Integration Test Patterns
+
+When writing new integration tests, follow these conventions:
+
+**File organization:**
+- E2E tests that need a real cluster go in `test/int/*_e2e_test.go`
+- API-only tests (no cluster interaction) go in `test/int/*_test.go`
+- Fixtures (factory functions for OpenAPI objects) go in `test/int/shared/fixtures.go`
+- CRUD helpers (create/get/update/delete via API client) go in `test/int/shared/helpers.go`
+- Cluster inspection helpers (get deployments, services, CRs) go in `test/int/shared/cluster_helpers.go`
+
+**Test structure:**
+```go
+var _ = Describe("Feature E2E", Ordered, func() {
+    var client *openapi.APIClient
+    var orgID string
+    teamName := models.DefaultTeamName
+
+    BeforeAll(func() {
+        testEnv := GetEnvironment()
+        client = testEnv.Client
+        orgID = testEnv.OrgID
+    })
+
+    Context("Scenario", func() {
+        It("should do something", func() {
+            By("Creating a resource")
+            // Use factory functions from shared/fixtures.go
+            resource := shared.CreateSimpleStack("test-name")
+            created := shared.CreateStack(client, orgID, teamName, resource)
+
+            // Always register cleanup
+            shared.DeferResourceCleanup(func() {
+                shared.DeleteStack(client, orgID, teamName, created.GetId())
+            })
+
+            By("Verifying the result")
+            // Assertions with gomega
+        })
+    })
+})
+```
+
+**Key conventions:**
+- Use `shared.DeferResourceCleanup()` (not raw `DeferCleanup`) for all resource cleanup — it respects `KEEP_RESOURCES_ON_FAILURE`
+- Use `shared.ShouldSkipCleanup()` in custom `DeferCleanup` blocks that mix cleanup with debug logging
+- Use `By("description")` to document each step — these appear in test output
+- Use factory functions from `shared/fixtures.go` to create test objects — don't construct OpenAPI objects inline
+- Add new CRUD helpers to `shared/helpers.go` following the existing pattern (call API, `Expect` no error, return result)
+- Add new cluster inspection helpers to `shared/cluster_helpers.go`
+- Use `GetEnvironment()` to access the shared test environment (client, cluster, org ID)
+- Prefix test resource names with `test-` to make them identifiable in cluster output
+
+**API-only tests (no cluster needed):**
+For tests that only exercise the API layer (validation, CRUD, connections, topology) without needing real cluster reconciliation, use the `CreateSkipProvisioningStack()` fixtures. These add the `stack.stackdome.io/skip-cluster-provisioning` annotation which tells the stack worker to mark the stack as Ready immediately without creating CRs in the cluster. This makes tests much faster and avoids cluster dependencies.
+
+**Running tests during development:**
+```
+KEEP_CLUSTER=true KEEP_RESOURCES_ON_FAILURE=true FOCUS="My New Test" make test-integration
+```
+Always use focused runs when developing. See `test/int/README.md` for full details.
 
 ## Agent skills
 
