@@ -18,7 +18,6 @@ import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-d
 import StickyActionBar, { type StickyActionBarSegment } from "@/pages/stacks/components/shared/sticky-action-bar";
 import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
 import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
-import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +28,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { AddonGroupStateMap } from "@/pages/stacks/components/shared/stack-resource-item";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
@@ -76,11 +74,6 @@ export default function StackDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const session = useStackEditSession();
-  const { addons: postgresAddons } = usePostgresAddons();
-  const addonNameById = useMemo(
-    () => new Map(postgresAddons.filter((a) => a.id).map((a) => [a.id!, a.name])),
-    [postgresAddons],
-  );
   const [isSaving, setIsSaving] = useState(false);
   const [editingBindingIds, setEditingBindingIds] = useState<Set<string>>(new Set());
   // Per-addonId provenance for converted env rows after a successful detach
@@ -203,47 +196,19 @@ export default function StackDetailPage() {
   }, [session]);
 
   // Compute "linked but unbound" — addons in linkedAddonIds with zero env
-  // bindings across the draft.
-  const computeUnboundLinked = (): string[] => {
-    const referenced = new Set<string>();
-    for (const r of session.draft.resources) {
-      const envs = (r?.execution_config?.environment_variables || []) as FormEnvVarData[];
-      for (const e of envs) {
-        if (e.from === "addon" && e.addonId) referenced.add(e.addonId);
-      }
-    }
-    return Array.from(session.linkedAddonIds).filter((id) => !referenced.has(id));
-  };
+  // bindings across the draft. Env vars no longer carry addon-backed sources,
+  // so every linked addon is unbound.
+  const computeUnboundLinked = (): string[] => Array.from(session.linkedAddonIds);
 
-  // Convert addon rows in pendingDetach to plain stack rows. Returns the new
-  // resources array and the provenance map of resourceIdx::envName entries.
+  // Env vars are no longer addon-backed, so there is nothing to convert on
+  // detach; resources pass through unchanged with empty provenance.
   const applyPendingDetach = (): {
     resources: Partial<FormStackResourceData>[];
     provenance: Map<string, { addonName: string; credField?: string }>;
-  } => {
-    const provenance = new Map<string, { addonName: string; credField?: string }>();
-    const resources = session.draft.resources.map((r, rIdx) => {
-      const envs = (r?.execution_config?.environment_variables || []) as FormEnvVarData[];
-      const newEnvs = envs.map((e) => {
-        if (e.from === "addon" && session.pendingDetach.has(e.addonId)) {
-          provenance.set(`${rIdx}::${e.name}`, {
-            addonName: addonNameById.get(e.addonId) ?? e.addonId,
-            credField: e.credField,
-          });
-          return { from: "stack" as const, name: e.name, value: "" };
-        }
-        return e;
-      });
-      return {
-        ...r,
-        execution_config: {
-          ...(r.execution_config || {}),
-          environment_variables: newEnvs,
-        },
-      };
-    });
-    return { resources, provenance };
-  };
+  } => ({
+    resources: session.draft.resources,
+    provenance: new Map<string, { addonName: string; credField?: string }>(),
+  });
 
   const performSave = async () => {
     if (!stackToShow || !session.isActive || !id) return;
@@ -363,21 +328,15 @@ export default function StackDetailPage() {
     [session],
   );
 
-  // Stable Set of every addonId currently available to env rows: explicit
-  // links + addons referenced by existing env vars. Without useMemo this
-  // would be a fresh Set every render of detail/index.tsx, breaking memo
-  // on every StackResourceItem child via the addons → availableAddonIds
-  // → addons.filter chain.
-  const availableAddonIds = useMemo(() => {
-    const ids = new Set(session.linkedAddonIds);
-    for (const r of session.draft.resources) {
-      const envs = (r?.execution_config?.environment_variables || []) as FormEnvVarData[];
-      for (const e of envs) {
-        if (e.from === "addon" && e.addonId) ids.add(e.addonId);
-      }
-    }
-    return ids;
-  }, [session.linkedAddonIds, session.draft.resources]);
+  // Stable Set of every addonId explicitly linked to the stack. Env vars no
+  // longer carry addon-backed sources, so explicit links are the only source.
+  // Without useMemo this would be a fresh Set every render of detail/index.tsx,
+  // breaking memo on every StackResourceItem child via the addons →
+  // availableAddonIds → addons.filter chain.
+  const availableAddonIds = useMemo(
+    () => new Set(session.linkedAddonIds),
+    [session.linkedAddonIds],
+  );
 
   if (loading) {
     return (

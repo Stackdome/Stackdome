@@ -166,6 +166,13 @@ const SecretType = z.enum([
 const SecretData = z
   .object({ key: z.string(), value: z.string() })
   .passthrough();
+const OutputDescriptor = z
+  .object({
+    name: z.string(),
+    type: z.enum(["string", "integer", "boolean"]),
+    sensitive: z.boolean(),
+  })
+  .passthrough();
 const Secret = z.object({
   id: z.string().optional(),
   name: z.string(),
@@ -174,6 +181,7 @@ const Secret = z.object({
   team_id: z.string().optional(),
   type: SecretType,
   data: z.array(SecretData),
+  outputs: z.array(OutputDescriptor).optional(),
   created_at: z.string().datetime({ offset: true }).optional(),
   updated_at: z.string().datetime({ offset: true }).optional(),
 });
@@ -301,31 +309,16 @@ const InitSpec = z
     args: z.array(z.string()),
   })
   .partial();
-const EnvVar = z.object({ name: z.string(), value: z.string() });
-const EnvVarFromSecret = z.object({
+const EnvVar = z.object({
   name: z.string(),
-  secret_ref: SecretRef,
-  key: z.string(),
+  value: z.string().optional(),
+  self_output: z.string().optional(),
 });
-const PostgresAddonEnvSource = z
-  .object({
-    addon_id: z.string(),
-    database: z.string().optional(),
-    superuser: z.boolean().optional().default(false),
-    env_mapping: z.record(z.string()),
-  })
-  .passthrough();
-const AddonEnvSource = z
-  .object({ postgres: PostgresAddonEnvSource })
-  .partial()
-  .passthrough();
 const ExecutionConfig = z
   .object({
     command: z.array(z.string()),
     args: z.array(z.string()),
     environment_variables: z.array(EnvVar),
-    environment_variables_from_secret: z.array(EnvVarFromSecret),
-    env_from_addons: z.array(AddonEnvSource),
   })
   .partial()
   .passthrough();
@@ -350,6 +343,7 @@ const LifecycleConfig = z
   .passthrough();
 const Port = z
   .object({
+    name: z.string(),
     number: z.number().int(),
     protocol: z.string().optional(),
     exposed_to_public: z.boolean(),
@@ -370,6 +364,47 @@ const Condition = z
     message: z.string(),
   })
   .partial();
+const ContainerFailureDetail = z
+  .object({
+    failure_type: z.enum([
+      "crash_loop",
+      "out_of_memory",
+      "image_pull_failed",
+      "create_container_error",
+      "exit_error",
+    ]),
+    reason: z.string(),
+    message: z.string(),
+    restart_count: z.number().int(),
+    exit_code: z.number().int(),
+  })
+  .partial()
+  .passthrough();
+const BuildFailureDetail = z
+  .object({
+    failure_type: z.enum([
+      "crash_loop",
+      "out_of_memory",
+      "image_pull_failed",
+      "create_container_error",
+      "exit_error",
+    ]),
+    reason: z.string(),
+    message: z.string(),
+    restart_count: z.number().int(),
+    exit_code: z.number().int(),
+  })
+  .partial()
+  .passthrough();
+const StackResourceFailure = z
+  .object({
+    type: z.enum(["runtime_crash", "build_failure"]),
+    container: ContainerFailureDetail,
+    init_container: ContainerFailureDetail,
+    build: BuildFailureDetail,
+  })
+  .partial()
+  .passthrough();
 const StackResourceStatus = z
   .object({
     public_ingress: z.array(Ingress),
@@ -378,6 +413,7 @@ const StackResourceStatus = z
     state: z.string(),
     observed_revision: z.string(),
     conditions: z.array(Condition),
+    last_failure: StackResourceFailure,
   })
   .partial()
   .passthrough();
@@ -397,6 +433,7 @@ const StackResource = z
     depends_on: z.array(z.string()).optional(),
     lifecycle_config: LifecycleConfig.optional(),
     ports: z.array(Port).optional(),
+    outputs: z.array(OutputDescriptor).optional(),
     stateful: z.boolean().optional(),
     status: StackResourceStatus.optional(),
   })
@@ -460,10 +497,74 @@ const Volume = z.object({
   spec: VolumeSpec,
   status: VolumeStatus.optional(),
 });
+const TopologyNodeRef = z
+  .object({
+    type: z.enum([
+      "stack_resource",
+      "addon/postgres",
+      "secret",
+      "volume",
+      "object_store",
+    ]),
+    id: z.string().optional(),
+    name: z.string().optional(),
+  })
+  .passthrough();
+const ConnectionTarget = z
+  .object({
+    type: z.enum(["env", "file"]),
+    name: z.string().optional(),
+    path: z.string().optional(),
+  })
+  .passthrough();
+const OutputValueRef = z.object({ output: z.string() }).passthrough();
+const ValueRef = z
+  .object({
+    output: z.string(),
+    template: z.string(),
+    values: z.record(OutputValueRef),
+  })
+  .partial()
+  .passthrough();
+const ConnectionMapping = z
+  .object({ target: ConnectionTarget, value: ValueRef })
+  .passthrough();
+const PostgresEnvConfig = z
+  .object({
+    database: z.string(),
+    credential_scope: z.enum(["owner", "superuser"]),
+    superuser: z.boolean(),
+  })
+  .partial();
+const VolumeMountConfig = z.object({
+  mount_path: z.string(),
+  sub_path: z.string().optional(),
+  read_only: z.boolean().optional(),
+});
+const BuildArtifactSourceConfig = z.object({
+  source_path: z.string(),
+  destination_path: z.string().optional(),
+});
+const StackConnectionConfig = z.union([
+  PostgresEnvConfig,
+  VolumeMountConfig,
+  BuildArtifactSourceConfig,
+]);
+const StackConnection = z
+  .object({
+    id: z.string().optional(),
+    kind: z.enum(["env", "volume_mount", "build_artifact_source"]),
+    from: TopologyNodeRef,
+    to: TopologyNodeRef,
+    mappings: z.array(ConnectionMapping).optional(),
+    config: StackConnectionConfig.optional(),
+  })
+  .passthrough();
 const StackSpec = z
   .object({
     stack_resources: z.array(StackResource),
     volumes: z.array(Volume).optional(),
+    connections: z.array(StackConnection).optional(),
   })
   .passthrough();
 const StackStatus = z
@@ -610,6 +711,7 @@ const ImageBuildStatus = z
     conditions: z.array(Condition),
     image_url: z.string(),
     build_source_revision: z.string(),
+    last_build_failure_detail: BuildFailureDetail,
   })
   .partial()
   .passthrough();
@@ -630,6 +732,37 @@ const ImageBuild = z
   .passthrough();
 const ImageBuildList = z
   .object({ items: z.array(ImageBuild), total: z.number().int() })
+  .partial()
+  .passthrough();
+const TopologyNode = z
+  .object({
+    ref: TopologyNodeRef,
+    label: z.string(),
+    outputs: z.array(OutputDescriptor).optional(),
+    state: z.string().optional(),
+  })
+  .passthrough();
+const TopologyEdge = z
+  .object({
+    id: z.string().optional(),
+    kind: z.enum([
+      "env",
+      "volume_mount",
+      "build_artifact_source",
+      "depends_on",
+    ]),
+    source: TopologyNodeRef,
+    target: TopologyNodeRef,
+    mappings: z.array(ConnectionMapping).optional(),
+    config: StackConnectionConfig.optional(),
+    source_of_truth: z.enum(["connection", "derived"]),
+  })
+  .passthrough();
+const StackTopology = z
+  .object({ nodes: z.array(TopologyNode), edges: z.array(TopologyEdge) })
+  .passthrough();
+const StackConnectionList = z
+  .object({ items: z.array(StackConnection), total: z.number().int() })
   .partial()
   .passthrough();
 const PostgresVersion = z
@@ -816,6 +949,7 @@ const PostgresAddon = z
     labels: z.array(Label).optional(),
     annotations: z.array(Annotation).optional(),
     revision: z.string().optional(),
+    outputs: z.array(OutputDescriptor).optional(),
     spec: PostgresAddonSpec,
     status: PostgresAddonStatus.optional(),
     created_at: z.string().datetime({ offset: true }).optional(),
@@ -993,6 +1127,7 @@ export const schemas = {
   UserList,
   SecretType,
   SecretData,
+  OutputDescriptor,
   Secret,
   SecretList,
   SecretReference,
@@ -1015,9 +1150,6 @@ export const schemas = {
   ImageSpec,
   InitSpec,
   EnvVar,
-  EnvVarFromSecret,
-  PostgresAddonEnvSource,
-  AddonEnvSource,
   ExecutionConfig,
   VolumeMountSourceType,
   VolumeMount,
@@ -1025,6 +1157,9 @@ export const schemas = {
   Port,
   Ingress,
   Condition,
+  ContainerFailureDetail,
+  BuildFailureDetail,
+  StackResourceFailure,
   StackResourceStatus,
   StackResource,
   VolumeAccessMode,
@@ -1037,6 +1172,16 @@ export const schemas = {
   BuildArtifactSyncInfo,
   VolumeStatus,
   Volume,
+  TopologyNodeRef,
+  ConnectionTarget,
+  OutputValueRef,
+  ValueRef,
+  ConnectionMapping,
+  PostgresEnvConfig,
+  VolumeMountConfig,
+  BuildArtifactSourceConfig,
+  StackConnectionConfig,
+  StackConnection,
   StackSpec,
   StackStatus,
   Stack,
@@ -1063,6 +1208,10 @@ export const schemas = {
   ImageBuildStatus,
   ImageBuild,
   ImageBuildList,
+  TopologyNode,
+  TopologyEdge,
+  StackTopology,
+  StackConnectionList,
   PostgresVersion,
   PostgresInstances,
   PostgresStorage,
@@ -3714,6 +3863,207 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/connections",
+    alias: "getApiv1organizationsOrg_idteamsTeam_namestacksIdconnections",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackConnectionList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/connections",
+    alias: "postApiv1organizationsOrg_idteamsTeam_namestacksIdconnections",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackConnection,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackConnection,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Stack connection already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/connections/:connection_id",
+    alias:
+      "putApiv1organizationsOrg_idteamsTeam_namestacksIdconnectionsConnection_id",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackConnection,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "connection_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackConnection,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack or connection not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/connections/:connection_id",
+    alias:
+      "deleteApiv1organizationsOrg_idteamsTeam_namestacksIdconnectionsConnection_id",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "connection_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack or connection not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
     path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/logs",
     alias: "getApiv1organizationsOrg_idteamsTeam_namestacksIdlogs",
     requestFormat: "json",
@@ -4023,6 +4373,47 @@ const endpoints = makeApi([
       {
         status: 401,
         description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/topology",
+    alias: "getApiv1organizationsOrg_idteamsTeam_namestacksIdtopology",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackTopology,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack not found`,
         schema: z.void(),
       },
       {

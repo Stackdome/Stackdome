@@ -104,10 +104,9 @@ describe("isPathDirty — structurally-empty equivalence", () => {
 });
 
 describe("getAddonLinkCount", () => {
-  // Regression: the stack create page's sticky action bar wasn't surfacing
-  // any indicator when an addon was attached — only resources/volumes had
-  // segments. This helper feeds that segment, so it must union both sources
-  // (panel-linked ids and resource-derived ids) and dedupe.
+  // Env vars no longer carry addon-backed sources, so addon links come solely
+  // from the explicit "addons in stack" panel. This helper just counts the
+  // distinct panel-linked ids; resources never contribute.
 
   it("returns 0 with no linked addons and no resources", () => {
     expect(getAddonLinkCount(new Set(), [])).toBe(0);
@@ -117,42 +116,12 @@ describe("getAddonLinkCount", () => {
     expect(getAddonLinkCount(new Set(["pg-1", "pg-2"]), [])).toBe(2);
   });
 
-  it("counts addons referenced as env-var sources on resources", () => {
+  it("does not derive addon links from resource env vars", () => {
     const resources: ResourceArr = [
       {
         execution_config: {
           environment_variables: [
-            { from: "addon", addonId: "pg-1", name: "DATABASE_URL", value: "" },
-            { from: "literal", name: "FOO", value: "bar" },
-          ],
-        } as never,
-      },
-    ];
-    expect(getAddonLinkCount(new Set(), resources)).toBe(1);
-  });
-
-  it("unions panel-linked and env-var-derived ids without double counting", () => {
-    const resources: ResourceArr = [
-      {
-        execution_config: {
-          environment_variables: [
-            { from: "addon", addonId: "pg-1", name: "DATABASE_URL", value: "" },
-          ],
-        } as never,
-      },
-    ];
-    // pg-1 in both sources, pg-2 only in panel — total 2 distinct ids.
-    expect(getAddonLinkCount(new Set(["pg-1", "pg-2"]), resources)).toBe(2);
-  });
-
-  it("ignores env vars without an addonId or with a different `from` source", () => {
-    const resources: ResourceArr = [
-      {
-        execution_config: {
-          environment_variables: [
-            { from: "addon", addonId: "", name: "BAD", value: "" },
-            { from: "addon", name: "MISSING_ID", value: "" },
-            { from: "secret", addonId: "pg-9", name: "FROM_SECRET", value: "" },
+            { from: "stack", name: "FOO", value: "bar" },
           ],
         } as never,
       },
@@ -160,24 +129,17 @@ describe("getAddonLinkCount", () => {
     expect(getAddonLinkCount(new Set(), resources)).toBe(0);
   });
 
-  it("dedupes the same addonId referenced across multiple resources", () => {
+  it("counts only panel-linked ids regardless of resources", () => {
     const resources: ResourceArr = [
       {
         execution_config: {
           environment_variables: [
-            { from: "addon", addonId: "pg-1", name: "URL_A", value: "" },
-          ],
-        } as never,
-      },
-      {
-        execution_config: {
-          environment_variables: [
-            { from: "addon", addonId: "pg-1", name: "URL_B", value: "" },
+            { from: "stack", name: "DATABASE_URL", value: "x" },
           ],
         } as never,
       },
     ];
-    expect(getAddonLinkCount(new Set(), resources)).toBe(1);
+    expect(getAddonLinkCount(new Set(["pg-1", "pg-2"]), resources)).toBe(2);
   });
 
   it("handles resources with no execution_config", () => {

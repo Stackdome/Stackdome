@@ -3150,6 +3150,341 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/topology": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get stack topology */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StackTopology"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Stack not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List stack connections */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StackConnectionList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Stack not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create stack connection */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StackConnection"];
+                };
+            };
+            responses: {
+                /** @description Stack connection created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StackConnection"];
+                    };
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Stack not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Stack connection already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections/{connection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update stack connection */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    /** @description The ID of the stack connection */
+                    connection_id: components["parameters"]["connection_id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StackConnection"];
+                };
+            };
+            responses: {
+                /** @description Stack connection updated successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StackConnection"];
+                    };
+                };
+                /** @description Invalid request data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Stack or connection not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete stack connection */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    /** @description The ID of the stack connection */
+                    connection_id: components["parameters"]["connection_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Stack connection deleted successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Stack or connection not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{org_id}/teams/{team_name}/secrets": {
         parameters: {
             query?: never;
@@ -5666,9 +6001,14 @@ export interface components {
             items?: components["schemas"]["Stack"][];
             total?: number;
         };
+        StackConnectionList: {
+            items?: components["schemas"]["StackConnection"][];
+            total?: number;
+        };
         StackSpec: {
             stack_resources: components["schemas"]["StackResource"][];
             volumes?: components["schemas"]["Volume"][];
+            connections?: components["schemas"]["StackConnection"][];
         };
         StackStatus: {
             state?: string;
@@ -5691,12 +6031,152 @@ export interface components {
             depends_on?: string[];
             lifecycle_config?: components["schemas"]["LifecycleConfig"];
             ports?: components["schemas"]["Port"][];
+            readonly outputs?: components["schemas"]["OutputDescriptor"][];
             stateful?: boolean;
             readonly status?: components["schemas"]["StackResourceStatus"];
         };
         StackResourceList: {
             items?: components["schemas"]["StackResource"][];
             total?: number;
+        };
+        /** @description Declared output metadata for a topology node. Values are not returned here. */
+        OutputDescriptor: {
+            /** @description Stable output accessor name, for example `host` or `public.http.url`. */
+            name: string;
+            /**
+             * @description Scalar value type exposed by this output.
+             * @enum {string}
+             */
+            type: "string" | "integer" | "boolean";
+            /** @description True when the output value is sensitive and should never be returned in normal metadata APIs. */
+            sensitive: boolean;
+        };
+        StackTopology: {
+            nodes: components["schemas"]["TopologyNode"][];
+            edges: components["schemas"]["TopologyEdge"][];
+        };
+        /** @description A node in the stack topology graph. */
+        TopologyNode: {
+            ref: components["schemas"]["TopologyNodeRef"];
+            label: string;
+            outputs?: components["schemas"]["OutputDescriptor"][];
+            /** @description Optional runtime state for nodes that have status, such as stack resources or addons. */
+            state?: string;
+        };
+        /** @description An edge in the stack topology graph. */
+        TopologyEdge: {
+            id?: string;
+            /**
+             * @description Edge kind. Explicit connections reuse connection kinds; derived edges use depends_on.
+             * @enum {string}
+             */
+            kind: "env" | "volume_mount" | "build_artifact_source" | "depends_on";
+            /** @description The producing end of the edge. Corresponds to StackConnection.from. */
+            source: components["schemas"]["TopologyNodeRef"];
+            /** @description The consuming end of the edge. Corresponds to StackConnection.to. */
+            target: components["schemas"]["TopologyNodeRef"];
+            mappings?: components["schemas"]["ConnectionMapping"][];
+            config?: components["schemas"]["StackConnectionConfig"];
+            /**
+             * @description Whether the edge came from an explicit connection or a derived relationship such as depends_on.
+             * @enum {string}
+             */
+            source_of_truth: "connection" | "derived";
+        };
+        /** @description A user-authored topology edge between two nodes in a stack. */
+        StackConnection: {
+            /** @description Stable connection identifier. Generated when omitted. */
+            id?: string;
+            /**
+             * @description The relationship type. `env` injects values into environment variables, `volume_mount` mounts a volume into a resource, and `build_artifact_source` seeds a volume from build output.
+             *
+             * @enum {string}
+             */
+            kind: "env" | "volume_mount" | "build_artifact_source";
+            from: components["schemas"]["TopologyNodeRef"];
+            to: components["schemas"]["TopologyNodeRef"];
+            /** @description Target/value mappings for kinds that move values, such as `env`.
+             *      */
+            mappings?: components["schemas"]["ConnectionMapping"][];
+            config?: components["schemas"]["StackConnectionConfig"];
+        };
+        /** @description Identifies a topology node within the stack graph. */
+        TopologyNodeRef: {
+            /**
+             * @description The node category.
+             * @enum {string}
+             */
+            type: "stack_resource" | "addon/postgres" | "secret" | "volume" | "object_store";
+            /** @description Stable ID for persisted resources such as addons or secrets. */
+            id?: string;
+            /** @description Name-scoped reference for stack-local resources such as StackResources or Volumes. */
+            name?: string;
+        };
+        /** @description Maps one produced value into one target location on the consumer. */
+        ConnectionMapping: {
+            target: components["schemas"]["ConnectionTarget"];
+            value: components["schemas"]["ValueRef"];
+        };
+        /** @description The destination field that receives a mapped value. */
+        ConnectionTarget: {
+            /**
+             * @description env writes an environment variable and file writes a mounted file path.
+             * @enum {string}
+             */
+            type: "env" | "file";
+            /** @description Environment variable name when type is env. */
+            name?: string;
+            /** @description Absolute file path when type is file. */
+            path?: string;
+        };
+        /** @description Kind-specific connection configuration. The shape depends on the connection kind and source type: use PostgresEnvConfig when kind is env and from.type is addon/postgres, VolumeMountConfig when kind is volume_mount, and BuildArtifactSourceConfig when kind is build_artifact_source. Omit config entirely for env connections from stack_resource or secret sources.
+         *      */
+        StackConnectionConfig: components["schemas"]["PostgresEnvConfig"] | components["schemas"]["VolumeMountConfig"] | components["schemas"]["BuildArtifactSourceConfig"];
+        /** @description Config for env connections from a PostgreSQL addon (kind=env, from.type=addon/postgres). credential_scope and superuser are mutually exclusive.
+         *      */
+        PostgresEnvConfig: {
+            /** @description Target database name within the addon. */
+            database?: string;
+            /**
+             * @description Which credential set to inject. Mutually exclusive with superuser.
+             * @enum {string}
+             */
+            credential_scope?: "owner" | "superuser";
+            /** @description Use superuser credentials. Mutually exclusive with credential_scope. */
+            superuser?: boolean;
+        };
+        /** @description Config for volume mount connections (kind=volume_mount). */
+        VolumeMountConfig: {
+            /** @description Absolute path where the volume is mounted in the container. */
+            mount_path: string;
+            /** @description Sub-path within the volume to mount. */
+            sub_path?: string;
+            /** @description Mount the volume read-only. */
+            read_only?: boolean;
+        };
+        /** @description Config for build artifact source connections (kind=build_artifact_source). */
+        BuildArtifactSourceConfig: {
+            /** @description Path within the build output to copy from. */
+            source_path: string;
+            /** @description Path within the volume to copy to. */
+            destination_path?: string;
+        };
+        /** @description Describes how to read a value from the connection's `from` node. This is only used inside `StackConnection.mappings[]`.
+         *      */
+        ValueRef: {
+            /** @description Output accessor on the connection's `from` node, such as `url` or `public.http.url`. */
+            output?: string;
+            /** @description Template used when one target value must be composed from multiple outputs. */
+            template?: string;
+            /** @description Named template inputs, each resolving one output from the connection's `from` node. */
+            values?: {
+                [key: string]: components["schemas"]["OutputValueRef"];
+            };
+        };
+        /** @description References one output on the connection's `from` node. */
+        OutputValueRef: {
+            /** @description Output accessor on the connection's `from` node. */
+            output: string;
         };
         ImageBuild: {
             id?: string;
@@ -5740,6 +6220,7 @@ export interface components {
             conditions?: components["schemas"]["Condition"][];
             image_url?: string;
             build_source_revision?: string;
+            last_build_failure_detail?: components["schemas"]["BuildFailureDetail"];
         };
         Secret: {
             readonly id?: string;
@@ -5749,6 +6230,7 @@ export interface components {
             readonly team_id?: string;
             type: components["schemas"]["SecretType"];
             data: components["schemas"]["SecretData"][];
+            readonly outputs?: components["schemas"]["OutputDescriptor"][];
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
@@ -5803,6 +6285,34 @@ export interface components {
             state?: string;
             observed_revision?: string;
             conditions?: components["schemas"]["Condition"][];
+            last_failure?: components["schemas"]["StackResourceFailure"];
+        };
+        ContainerFailureDetail: {
+            /** @enum {string} */
+            failure_type?: "crash_loop" | "out_of_memory" | "image_pull_failed" | "create_container_error" | "exit_error";
+            reason?: string;
+            message?: string;
+            /** Format: int32 */
+            restart_count?: number;
+            /** Format: int32 */
+            exit_code?: number;
+        };
+        BuildFailureDetail: {
+            /** @enum {string} */
+            failure_type?: "crash_loop" | "out_of_memory" | "image_pull_failed" | "create_container_error" | "exit_error";
+            reason?: string;
+            message?: string;
+            /** Format: int32 */
+            restart_count?: number;
+            /** Format: int32 */
+            exit_code?: number;
+        };
+        StackResourceFailure: {
+            /** @enum {string} */
+            type?: "runtime_crash" | "build_failure";
+            container?: components["schemas"]["ContainerFailureDetail"];
+            init_container?: components["schemas"]["ContainerFailureDetail"];
+            build?: components["schemas"]["BuildFailureDetail"];
         };
         Ingress: {
             url?: string;
@@ -5818,6 +6328,7 @@ export interface components {
         /** @enum {string} */
         VolumeMountSourceType: "EmptyVolume" | "RemoteDirSyncedVolume" | "BuildArtifactSyncedVolume" | "GitRepoSyncedVolume";
         Port: {
+            name: string;
             number: number;
             protocol?: string;
             exposed_to_public: boolean;
@@ -5873,18 +6384,13 @@ export interface components {
             command?: string[];
             args?: string[];
             environment_variables?: components["schemas"]["EnvVar"][];
-            environment_variables_from_secret?: components["schemas"]["EnvVarFromSecret"][];
-            env_from_addons?: components["schemas"]["AddonEnvSource"][];
-        };
-        EnvVarFromSecret: {
-            name: string;
-            secret_ref: components["schemas"]["SecretRef"];
-            /** @description The key in the secret to use for this environment variable */
-            key: string;
         };
         EnvVar: {
             name: string;
-            value: string;
+            /** @description Literal environment variable value. */
+            value?: string;
+            /** @description Read this environment variable from one of the resource's own declared outputs, for example public.http.url. */
+            self_output?: string;
         };
         Condition: {
             type?: string;
@@ -6004,6 +6510,7 @@ export interface components {
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
             readonly revision?: string;
+            readonly outputs?: components["schemas"]["OutputDescriptor"][];
             spec: components["schemas"]["PostgresAddonSpec"];
             readonly status?: components["schemas"]["PostgresAddonStatus"];
             /** Format: date-time */
@@ -6258,23 +6765,6 @@ export interface components {
             connectionString?: string;
             caCertificate?: string;
         };
-        AddonEnvSource: {
-            postgres?: components["schemas"]["PostgresAddonEnvSource"];
-        };
-        PostgresAddonEnvSource: {
-            addon_id: string;
-            /** @description Target database name. Required when superuser is false. Defaults to 'postgres' when superuser is true and omitted. */
-            database?: string;
-            /**
-             * @description When true, use superuser credentials. The addon must have enableSuperuserAccess enabled.
-             * @default false
-             */
-            superuser: boolean;
-            /** @description Maps addon credential fields to environment variable names. Valid fields are host, port, username, password, database, sslmode, connectionString, caCertificate. */
-            env_mapping: {
-                [key: string]: string;
-            };
-        };
         ScopeResource: {
             /** @description The resource name (e.g., stacks, secrets, addons/postgres) */
             resource?: string;
@@ -6400,6 +6890,8 @@ export interface components {
         user_id: string;
         /** @description The name of the stack resource */
         resource_name: string;
+        /** @description The ID of the stack connection */
+        connection_id: string;
         /** @description The ID of the build */
         build_id: string;
         /** @description The name of the database */

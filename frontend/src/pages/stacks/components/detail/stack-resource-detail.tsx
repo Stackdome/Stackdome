@@ -10,8 +10,6 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { useToast } from "@/components/ui/use-toast";
 import { Box, GitBranch, ExternalLink, Copy, Pencil } from "lucide-react";
 import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
-import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
-import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 import type { z } from "zod";
 import type { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
 import { variantFromState } from "@/components/branded";
@@ -39,8 +37,6 @@ export default function StackResourceDetail({
   detachedProvenance,
 }: StackResourceDetailProps) {
   const { toast } = useToast();
-  const { addons: allAddons } = usePostgresAddons();
-  const addonNameById = new Map(allAddons.filter((a) => a.id).map((a) => [a.id!, a.name]));
   const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
   const status = statusObj.state?.toLowerCase() || 'pending';
   const statusVariant = variantFromState(statusObj.state);
@@ -438,22 +434,6 @@ export default function StackResourceDetail({
                       <div className="text-sm text-muted-foreground">No environment variables configured</div>
                     );
                   }
-                  // Group: non-addon rows in original order first, then one
-                  // group per addonId in first-seen order.
-                  const general: { env: FormEnvVarData; idx: number }[] = [];
-                  const groupOrder: string[] = [];
-                  const groups = new Map<string, { env: FormEnvVarData; idx: number }[]>();
-                  envs.forEach((env, idx) => {
-                    if (env.from === "addon" && env.addonId) {
-                      if (!groups.has(env.addonId)) {
-                        groups.set(env.addonId, []);
-                        groupOrder.push(env.addonId);
-                      }
-                      groups.get(env.addonId)!.push({ env, idx });
-                    } else {
-                      general.push({ env, idx });
-                    }
-                  });
                   const renderRow = ({ env, idx }: { env: FormEnvVarData; idx: number }) => {
                     const prov = env.name
                       ? detachedProvenance?.get(`${index}::${env.name}`)
@@ -477,32 +457,8 @@ export default function StackResourceDetail({
                     );
                   };
                   return (
-                    <div className="space-y-4">
-                      {general.length > 0 && (
-                        <div className="rounded-md border border-border bg-background">
-                          {general.map(renderRow)}
-                        </div>
-                      )}
-                      {groupOrder.map((addonId) => {
-                        const rows = groups.get(addonId)!;
-                        const name = addonNameById.get(addonId) ?? addonId;
-                        return (
-                          <div
-                            key={addonId}
-                            className="rounded-md border border-dashed border-border bg-background"
-                          >
-                            <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
-                              <AddonTypeIcon type="postgres" size={14} />
-                              <span className="text-sm font-medium text-foreground">{name}</span>
-                              <span className="text-muted-foreground">·</span>
-                              <span className="text-[11.5px] uppercase tracking-wider text-muted-foreground">
-                                Postgres
-                              </span>
-                            </div>
-                            {rows.map(renderRow)}
-                          </div>
-                        );
-                      })}
+                    <div className="rounded-md border border-border bg-background">
+                      {envs.map((env, idx) => renderRow({ env, idx }))}
                     </div>
                   );
                 })()}

@@ -89,6 +89,7 @@ describe('convertDockerComposeToStackData', () => {
     expect(resource.image_spec?.image).toBe('nginx:latest');
     expect(resource.ports).toHaveLength(1);
     expect(resource.ports[0]).toEqual({
+      name: 'http-80',
       number: 80,
       protocol: 'http',
       exposed_to_public: true,
@@ -376,11 +377,13 @@ describe('convertServiceToStackResource', () => {
     expect(result.success).toBe(true);
     expect(result.data!.ports).toHaveLength(4);
     expect(result.data!.ports[0]).toEqual({
+      name: 'http-80',
       number: 80,
       protocol: 'http',
       exposed_to_public: true,
     });
     expect(result.data!.ports[3]).toEqual({
+      name: 'http-3000',
       number: 3000,
       protocol: 'http',
       exposed_to_public: true,
@@ -502,24 +505,28 @@ describe('convertServiceToStackResource', () => {
 
     // Check that internal ports are exposed, not external ports
     expect(result.data!.ports[0]).toEqual({
+      name: 'http-80',
       number: 80,      // Internal port, not external 8080
       protocol: 'http',
       exposed_to_public: true,
     });
 
     expect(result.data!.ports[1]).toEqual({
+      name: 'http-443',
       number: 443,     // Internal port (same as external in this case)
       protocol: 'http',
       exposed_to_public: true,
     });
 
     expect(result.data!.ports[2]).toEqual({
+      name: 'http-3000',
       number: 3000,    // Internal port (same as external in this case)
       protocol: 'http',
       exposed_to_public: true,
     });
 
     expect(result.data!.ports[3]).toEqual({
+      name: 'http-8000',
       number: 8000,    // Internal port, not external 9000
       protocol: 'http',
       exposed_to_public: true,
@@ -556,12 +563,14 @@ describe('convertServiceToStackResource', () => {
 
     // The internal port should be exposed, not the external port
     expect(result.data!.ports[0]).toEqual({
+      name: 'http-3000',
       number: 3000,    // Internal port, not external 8080
       protocol: 'http',
       exposed_to_public: true,
     });
 
     expect(result.data!.ports[1]).toEqual({
+      name: 'http-4000',
       number: 4000,    // Internal port, not external 9090
       protocol: 'http',
       exposed_to_public: true,

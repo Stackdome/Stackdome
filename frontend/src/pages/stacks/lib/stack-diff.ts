@@ -124,17 +124,11 @@ function countEnvRowsChanged(
   return n;
 }
 
-function uniqueAddonIds(resources: ResourceArr): Set<string> {
-  const ids = new Set<string>();
-  for (const r of resources) {
-    const envs = getEnvVars(r);
-    for (const e of envs) {
-      if (e && e.from === "addon" && typeof e.addonId === "string" && e.addonId.length > 0) {
-        ids.add(e.addonId);
-      }
-    }
-  }
-  return ids;
+function uniqueAddonIds(_resources: ResourceArr): Set<string> {
+  // Env vars no longer carry addon-backed sources, so resources never imply an
+  // addon link. Addon links now come solely from the explicit "addons in stack"
+  // panel (`linkedAddonIds`).
+  return new Set<string>();
 }
 
 /**

@@ -12,10 +12,12 @@ import {
 } from "@/components/ui/select";
 import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
-import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 
 interface AddonsInStackPanelProps {
-  resources: Partial<FormStackResourceData>[];
+  // Kept for API compatibility with callers; env vars no longer derive addon
+  // links so this is unused.
+  resources?: Partial<FormStackResourceData>[];
   linkedAddonIds: Set<string>;
   onLinkAddon: (addonId: string) => void;
   onRemoveLinkedAddon?: (addonId: string) => void;
@@ -27,7 +29,6 @@ interface DerivedRow {
 }
 
 export default function AddonsInStackPanel({
-  resources,
   linkedAddonIds,
   onLinkAddon,
   onRemoveLinkedAddon,
@@ -36,39 +37,15 @@ export default function AddonsInStackPanel({
   // Each entry is a unique slot id for a not-yet-picked addon row.
   const [pendingSlots, setPendingSlots] = useState<string[]>([]);
 
-  const derived = useMemo<DerivedRow[]>(() => {
-    const resourceSet = new Map<string, Set<number>>();
-    resources.forEach((r, idx) => {
-      const envs = (r.execution_config?.environment_variables || []) as FormEnvVarData[];
-      for (const e of envs) {
-        if (e.from === "addon" && e.addonId) {
-          if (!resourceSet.has(e.addonId)) resourceSet.set(e.addonId, new Set());
-          resourceSet.get(e.addonId)!.add(idx);
-        }
-      }
-    });
-    return Array.from(resourceSet.entries()).map(([addonId, idxSet]) => ({
-      addonId,
-      resourceNames: Array.from(idxSet)
-        .map((i) => resources[i]?.name)
-        .filter((n): n is string => !!n),
-    }));
-  }, [resources]);
-
-  const derivedIds = useMemo(() => new Set(derived.map((d) => d.addonId)), [derived]);
-
-  const linkedOnly = useMemo(
-    () => Array.from(linkedAddonIds).filter((id) => !derivedIds.has(id)),
-    [linkedAddonIds, derivedIds],
+  // Env vars no longer carry addon-backed sources, so addon links come solely
+  // from the explicit `linkedAddonIds` set.
+  const allRows: DerivedRow[] = useMemo(
+    () => Array.from(linkedAddonIds).map((id) => ({ addonId: id, resourceNames: [] })),
+    [linkedAddonIds],
   );
 
-  const allRows: DerivedRow[] = [
-    ...derived,
-    ...linkedOnly.map((id) => ({ addonId: id, resourceNames: [] })),
-  ];
-
   const availablePostgres = addons.filter(
-    (a) => a.id && !derivedIds.has(a.id) && !linkedAddonIds.has(a.id),
+    (a) => a.id && !linkedAddonIds.has(a.id),
   );
 
   const findAddonName = (id: string) => addons.find((a) => a.id === id)?.name ?? id;

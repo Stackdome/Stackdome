@@ -2,13 +2,6 @@ import React, { useMemo, useState } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -22,19 +15,13 @@ import { toast } from "@/components/ui/use-toast";
 import { envRowsDiff } from "@/pages/stacks/lib/stack-diff";
 
 import type { FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
-import type { UseSecretsReturn } from "../../hooks/use-secrets";
-import { EnvRow, type EnvFrom, type EnvRowErrors, type AddonBindingPatch } from "./env-row";
-import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
-import type { PostgresAddon } from "@/api/addons";
+import { EnvRow, type EnvRowErrors } from "./env-row";
 
 interface StackResourceEnvironmentTabProps {
   index: number;
   envVars: FormEnvVarData[];
   baselineEnvVars: FormEnvVarData[] | undefined;
   errors: { [field: string]: string | undefined };
-  secrets: UseSecretsReturn;
-  addons: PostgresAddon[];
-  addonNameById: Map<string, string>;
   /** Replace the entire environment_variables array. Identity must be stable. */
   onChangeEnvVars: (next: FormEnvVarData[]) => void;
   /** Reset a single env row to its baseline value. */
@@ -46,9 +33,6 @@ function StackResourceEnvironmentTabImpl({
   envVars,
   baselineEnvVars,
   errors,
-  secrets,
-  addons,
-  addonNameById,
   onChangeEnvVars,
   onDiscardEnvRow,
 }: StackResourceEnvironmentTabProps) {
@@ -71,57 +55,18 @@ function StackResourceEnvironmentTabImpl({
     });
   };
 
-  // Helper: insert one env var (defaults to a stack-literal row).
+  // Helper: insert one literal env var.
   const addEnvVar = (next: FormEnvVarData = { from: "stack", name: "", value: "" }) => {
     onChangeEnvVars([...(envVars || []), next]);
   };
 
-  // Helper: replace a single env-var row entirely. Discriminated-union safe.
+  // Helper: replace a single env-var row entirely.
   const replaceEnvVar = (envIdx: number, next: FormEnvVarData) => {
     onChangeEnvVars((envVars || []).map((env, i) => (i === envIdx ? next : env)));
   };
 
   const removeEnvVar = (envIdx: number) => {
     onChangeEnvVars((envVars || []).filter((_, i) => i !== envIdx));
-  };
-
-  const switchRowFrom = (envIdx: number, from: EnvFrom) => {
-    const current = envVars?.[envIdx];
-    if (!current) return;
-    if (from === "stack") {
-      replaceEnvVar(envIdx, { from: "stack", name: current.name, value: "" });
-    } else if (from === "secret") {
-      replaceEnvVar(envIdx, { from: "secret", name: current.name, secretId: "", secretKey: "" });
-    } else if (from === "addon") {
-      replaceEnvVar(envIdx, {
-        from: "addon",
-        name: current.name,
-        addonType: "postgres",
-        addonId: "",
-        database: undefined,
-        superuser: false,
-        credField: undefined,
-      });
-    }
-  };
-
-  const onChangeAddonForRow = (envIdx: number, patch: AddonBindingPatch) => {
-    const current = envVars?.[envIdx];
-    if (!current || current.from !== "addon") return;
-    const nextDatabase =
-      patch.database === null
-        ? undefined
-        : patch.database === undefined
-          ? current.database
-          : patch.database;
-    replaceEnvVar(envIdx, {
-      ...current,
-      addonId: patch.addonId ?? current.addonId,
-      database: nextDatabase,
-      superuser: patch.superuser ?? current.superuser,
-      credField: patch.credField ?? current.credField,
-    });
-    markEnvRowDirty(envIdx);
   };
 
   const addMultipleEnvVars = (incoming: Array<{ name: string; value: string }>) => {
@@ -289,9 +234,8 @@ function StackResourceEnvironmentTabImpl({
       <div className="border border-muted rounded-md">
         {/* Header Row */}
         <div className="grid grid-cols-12 gap-2 p-3 border-b bg-muted/30 text-sm font-medium">
-          <div className="col-span-3">Key</div>
-          <div className="col-span-6">Value</div>
-          <div className="col-span-2 text-center">From</div>
+          <div className="col-span-4">Key</div>
+          <div className="col-span-7">Value</div>
           <div className="col-span-1"></div>
         </div>
 
@@ -314,11 +258,6 @@ function StackResourceEnvironmentTabImpl({
             const dirty = dirtyEnvRows.has(envIdx);
             const errPath = (field: string) =>
               errors[`execution_config.environment_variables.${envIdx}.${field}`];
-            if (r.from === "addon") {
-              if ((dirty || errPath("addonId")) && !r.addonId) out.addonId = "Pick an addon";
-              if ((dirty || errPath("database")) && !r.superuser && !r.database) out.database = "Pick a database";
-              if ((dirty || errPath("credField")) && !r.credField) out.credField = "Pick a field";
-            }
             if ((dirty || errPath("name")) && !r.name) out.name = "Required";
             return Object.keys(out).length === 0 ? undefined : out;
           };
@@ -331,224 +270,25 @@ function StackResourceEnvironmentTabImpl({
             );
           }
 
-          type PlainGroup = { kind: "plain"; items: { env: FormEnvVarData; envIdx: number }[] };
-          type AddonGroup = { kind: "addon"; addonId: string; database: string; items: { env: FormEnvVarData; envIdx: number }[] };
-          type Group = PlainGroup | AddonGroup;
-          const groups: Group[] = [];
-          const addonGroupByKey = new Map<string, AddonGroup>();
-          envVars.forEach((env, envIdx) => {
-            if (env.from === "addon") {
-              const aid = env.addonId || "";
-              const db = env.database || "";
-              const key = `${aid}|${db}`;
-              let g = addonGroupByKey.get(key);
-              if (!g) {
-                g = { kind: "addon", addonId: aid, database: db, items: [] };
-                addonGroupByKey.set(key, g);
-                groups.push(g);
-              }
-              g.items.push({ env, envIdx });
-            } else {
-              const last = groups[groups.length - 1];
-              if (last && last.kind === "plain") {
-                last.items.push({ env, envIdx });
-              } else {
-                groups.push({ kind: "plain", items: [{ env, envIdx }] });
-              }
-            }
-          });
-
-          const renderRow = ({ env, envIdx }: { env: FormEnvVarData; envIdx: number }) => (
+          return envVars.map((env, envIdx) => (
             <EnvRow
               key={envIdx}
               row={env}
               index={envIdx}
               resourceIndex={index}
-              secrets={secrets.secrets}
-              secretsLoading={secrets.isLoading}
-              addonNameById={addonNameById}
               rowErrors={rowErrorsForIndex(envIdx)}
               status={envRowStatuses[envIdx] ?? "unchanged"}
               onReset={onDiscardEnvRow ? () => onDiscardEnvRow(envIdx) : undefined}
-              onChangeAddon={(patch) => onChangeAddonForRow(envIdx, patch)}
               onChangeName={(name) => {
                 replaceEnvVar(envIdx, { ...env, name });
               }}
               onChangeValue={(value) => {
-                if (env.from === "stack") {
-                  replaceEnvVar(envIdx, { ...env, value });
-                }
+                replaceEnvVar(envIdx, { ...env, value });
               }}
-              onChangeFrom={(from) => {
-                switchRowFrom(envIdx, from);
-                markEnvRowDirty(envIdx);
-              }}
-              onChangeSecret={(secretId, secretKey) =>
-                replaceEnvVar(envIdx, {
-                  from: "secret",
-                  name: env.name,
-                  secretId,
-                  secretKey,
-                })
-              }
               onBlur={() => markEnvRowDirty(envIdx)}
               onRemove={() => removeEnvVar(envIdx)}
             />
-          );
-
-          return groups.map((g, gIdx) => {
-            if (g.kind === "plain") {
-              return <div key={`p-${gIdx}`}>{g.items.map(renderRow)}</div>;
-            }
-            const aid = g.addonId;
-            const db = g.database;
-            const selectedAddon = addons.find((a) => a.id === aid);
-            const databases = ((selectedAddon?.spec as unknown as { databases?: { name?: string }[] })
-              ?.databases ?? []) as { name?: string }[];
-            const name = aid ? (addonNameById?.get(aid) ?? aid) : null;
-
-            const updateAllInGroup = (patch: { addonId?: string; database?: string | undefined }) => {
-              const next = (envVars || []).map((e, i) => {
-                if (g.items.some((it) => it.envIdx === i) && e.from === "addon") {
-                  return { ...e, ...patch };
-                }
-                return e;
-              });
-              onChangeEnvVars(next);
-            };
-
-            // Disallow picking an (addon, db) combo that already has its own group.
-            const usedDbsByAddon = new Map<string, Set<string>>();
-            const usedAddonsByDb = new Map<string, Set<string>>();
-            for (const og of groups) {
-              if (og.kind !== "addon" || og === g) continue;
-              if (og.addonId) {
-                if (!usedDbsByAddon.has(og.addonId)) usedDbsByAddon.set(og.addonId, new Set());
-                if (og.database) usedDbsByAddon.get(og.addonId)!.add(og.database);
-              }
-              if (og.database) {
-                if (!usedAddonsByDb.has(og.database)) usedAddonsByDb.set(og.database, new Set());
-                if (og.addonId) usedAddonsByDb.get(og.database)!.add(og.addonId);
-              }
-            }
-            const dbBlocked = (dbName: string) =>
-              aid !== "" && (usedDbsByAddon.get(aid)?.has(dbName) ?? false);
-            const addonBlocked = (addonId: string) =>
-              db !== "" && (usedAddonsByDb.get(db)?.has(addonId) ?? false);
-
-            const handleAddonChange = (newAid: string) => {
-              const a = addons.find((x) => x.id === newAid);
-              const dbs = ((a?.spec as unknown as { databases?: { name?: string }[] })?.databases ?? []) as { name?: string }[];
-              const usedDbs = usedDbsByAddon.get(newAid) ?? new Set();
-              const firstFreeDb = dbs.find((d) => d.name && !usedDbs.has(d.name))?.name;
-              const newDb = dbs.length === 1 ? dbs[0].name : firstFreeDb;
-              updateAllInGroup({ addonId: newAid, database: newDb });
-            };
-            const handleDbChange = (newDb: string) => {
-              updateAllInGroup({ database: newDb });
-            };
-            const handleAddBinding = () => {
-              addEnvVar({
-                from: "addon",
-                name: "",
-                addonType: "postgres",
-                addonId: aid,
-                database: db || undefined,
-                superuser: false,
-                credField: undefined,
-              });
-            };
-
-            return (
-              <div
-                key={`a-${gIdx}-${aid}-${db}`}
-                className="rounded-md border border-dashed border-foreground/25 my-2"
-              >
-                <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                  <Select value={aid || undefined} onValueChange={handleAddonChange}>
-                    <SelectTrigger className="h-7 w-[200px] text-[12.5px] font-semibold gap-2">
-                      <span className="flex items-center gap-2 min-w-0">
-                        {aid && <AddonTypeIcon type="postgres" size={14} />}
-                        <SelectValue placeholder="Pick addon">
-                          {aid ? name : undefined}
-                        </SelectValue>
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {addons.length === 0 ? (
-                        <div className="px-3 py-2 text-xs text-muted-foreground">
-                          No addons linked. Add one from the bottom panel.
-                        </div>
-                      ) : (
-                        addons.map((a) => (
-                          <SelectItem
-                            key={a.id}
-                            value={a.id!}
-                            disabled={a.id !== aid && addonBlocked(a.id!)}
-                          >
-                            <span className="flex items-center gap-2">
-                              <AddonTypeIcon type="postgres" size={14} />
-                              <span>{a.name}</span>
-                              {a.id !== aid && addonBlocked(a.id!) && (
-                                <span className="ml-1 text-[10px] text-muted-foreground">
-                                  in use
-                                </span>
-                              )}
-                            </span>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {aid && (
-                    <>
-                      <span className="text-muted-foreground/60">·</span>
-                      {databases.length > 1 ? (
-                        <Select value={db || undefined} onValueChange={handleDbChange}>
-                          <SelectTrigger className="h-7 w-[160px] text-[12.5px]">
-                            <SelectValue placeholder="Pick database" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {databases.map((d) =>
-                              d.name ? (
-                                <SelectItem
-                                  key={d.name}
-                                  value={d.name}
-                                  disabled={d.name !== db && dbBlocked(d.name)}
-                                >
-                                  {d.name}
-                                  {d.name !== db && dbBlocked(d.name) && (
-                                    <span className="ml-2 text-[10px] text-muted-foreground">
-                                      in use
-                                    </span>
-                                  )}
-                                </SelectItem>
-                              ) : null,
-                            )}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span className="text-[12px] text-muted-foreground">
-                          db: {db || databases[0]?.name || "—"}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-                {g.items.map(renderRow)}
-                <div className="px-3 py-1.5 flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleAddBinding}
-                    className="h-7 text-[12.5px]"
-                  >
-                    <PlusCircle className="h-3 w-3 mr-1" /> Add binding
-                  </Button>
-                </div>
-              </div>
-            );
-          });
+          ));
         })()}
       </div>
       {/* Add Variable button */}
