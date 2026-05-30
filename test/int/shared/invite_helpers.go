@@ -150,6 +150,13 @@ func CreateTeam(client *openapi.APIClient, orgID, teamName string) *openapi.Team
 	return resp
 }
 
+func DeleteTeam(client *openapi.APIClient, orgID, teamName string) {
+	ctx := context.Background()
+	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameDelete(ctx, orgID, teamName).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to delete team")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusNoContent))
+}
+
 func ListTeamMembers(client *openapi.APIClient, orgID, teamName string) *openapi.TeamMembershipList {
 	ctx := context.Background()
 	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersGet(ctx, orgID, teamName).Execute()

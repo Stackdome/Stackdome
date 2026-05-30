@@ -2,12 +2,34 @@ package shared
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 
+	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 )
+
+// ShouldSkipCleanup returns true when KEEP_RESOURCES_ON_FAILURE is set and the current spec failed.
+// Use inside DeferCleanup callbacks to preserve cluster resources for debugging.
+func ShouldSkipCleanup() bool {
+	return os.Getenv("KEEP_RESOURCES_ON_FAILURE") == "true" && ginkgo.CurrentSpecReport().Failed()
+}
+
+// DeferResourceCleanup wraps ginkgo.DeferCleanup to skip resource deletion when
+// KEEP_RESOURCES_ON_FAILURE is set and the current spec failed.
+func DeferResourceCleanup(fn func()) {
+	ginkgo.DeferCleanup(func() {
+		if ShouldSkipCleanup() {
+			fmt.Fprintf(ginkgo.GinkgoWriter, "KEEP_RESOURCES_ON_FAILURE: skipping cleanup for failed spec %q\n",
+				ginkgo.CurrentSpecReport().FullText())
+			return
+		}
+		fn()
+	})
+}
 
 // PostgreSQL addon CRUD operations for Ginkgo tests
 func CreatePostgresAddon(client *openapi.APIClient, orgID, teamName string, addon *openapi.PostgresAddon) *openapi.PostgresAddon {

@@ -52,7 +52,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			By("Verifying CR has the addon ID label")
 			shared.VerifyCRLabel(cr, addonID)
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 		})
@@ -74,7 +74,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			Expect(addonID).NotTo(BeEmpty())
 			Expect(namespace).NotTo(BeEmpty())
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
@@ -141,7 +141,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			addonName := createdAddon.GetName()
 			namespace := createdAddon.GetNamespace()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
@@ -205,7 +205,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 			addonID := createdAddon.GetId()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
@@ -256,7 +256,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 			addonID := createdAddon.GetId()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
