@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { Users } from "lucide-react";
 import { useTeams } from "./hooks/use-teams";
 import { CreateTeamDialog } from "./components/create-team-dialog";
+import { RenameTeamDialog } from "./components/rename-team-dialog";
 import { DeleteTeamDialog } from "./components/delete-team-dialog";
 import { TeamRowMenu } from "./components/team-row-menu";
 import { PageHeader, EmptyState, StackdomeMark } from "@/components/branded";
@@ -22,9 +23,10 @@ import { useToast } from "@/components/ui/use-toast";
 import type { Team } from "@/api/teams";
 
 export default function TeamsPage() {
-  const { teams, loading, error, refetch, create, remove, onlyDefault } = useTeams();
+  const { teams, loading, error, refetch, create, rename, remove, onlyDefault } = useTeams();
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<Team | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Team | null>(null);
 
   async function handleCreate(name: string) {
@@ -128,7 +130,11 @@ export default function TeamsPage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="p-2 text-right">
-                      <TeamRowMenu team={team} onDelete={(t) => setDeleteTarget(t)} />
+                      <TeamRowMenu
+                        team={team}
+                        onRename={(t) => setRenameTarget(t)}
+                        onDelete={(t) => setDeleteTarget(t)}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -155,6 +161,25 @@ export default function TeamsPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreate={handleCreate}
+      />
+
+      <RenameTeamDialog
+        open={!!renameTarget}
+        currentName={renameTarget?.name ?? ""}
+        onOpenChange={(o) => { if (!o) setRenameTarget(null); }}
+        onRename={async (newName) => {
+          if (!renameTarget) return { ok: false as const, error: "No team selected" };
+          const oldName = renameTarget.name;
+          const result = await rename(oldName, newName);
+          if (result.ok) {
+            toast({
+              title: "Team renamed",
+              description: `"${oldName}" is now "${newName}".`,
+            });
+            setRenameTarget(null);
+          }
+          return result;
+        }}
       />
 
       <DeleteTeamDialog

@@ -12,10 +12,11 @@ import type { Team } from "@/api/teams";
 
 interface TeamRowMenuProps {
   team: Team;
+  onRename?: (team: Team) => void;
   onDelete?: (team: Team) => void;
 }
 
-export function TeamRowMenu({ team, onDelete }: TeamRowMenuProps) {
+export function TeamRowMenu({ team, onRename, onDelete }: TeamRowMenuProps) {
   const navigate = useNavigate();
 
   function handleManageMembers() {
@@ -33,7 +34,12 @@ export function TeamRowMenu({ team, onDelete }: TeamRowMenuProps) {
         <DropdownMenuItem onSelect={handleManageMembers}>
           Manage members
         </DropdownMenuItem>
-        <DropdownMenuItem disabled={team.default_team}>
+        <DropdownMenuItem
+          disabled={team.default_team}
+          onSelect={() => {
+            if (!team.default_team && onRename) onRename(team);
+          }}
+        >
           Rename
         </DropdownMenuItem>
         <DropdownMenuSeparator />

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Users, ChevronLeft } from "lucide-react";
 import { useTeamMembers } from "./hooks/use-team-members";
 import { MemberRowMenu } from "./components/member-row-menu";
 import { AddMemberDialog } from "./components/add-member-dialog";
+import { RenameTeamDialog } from "./components/rename-team-dialog";
 import { PageHeader, EmptyState, StackdomeMark } from "@/components/branded";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,13 +22,16 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { getTeam } from "@/api/teams";
+import { getTeam, renameTeam } from "@/api/teams";
 import { getErrorMessage } from "@/api/client";
 import type { Team } from "@/api/teams";
 
 export default function TeamDetailPage() {
   const { teamName } = useParams<{ teamName: string }>();
+  const navigate = useNavigate();
   const { toast } = useToast();
+
+  const [renameOpen, setRenameOpen] = useState(false);
 
   const [team, setTeam] = useState<Team | null>(null);
   const [teamLoading, setTeamLoading] = useState(false);
@@ -119,6 +123,7 @@ export default function TeamDetailPage() {
               variant="outline"
               disabled={team?.default_team ?? true}
               title={team?.default_team ? "Default team cannot be renamed" : undefined}
+              onClick={() => setRenameOpen(true)}
             >
               Rename
             </Button>
@@ -283,6 +288,30 @@ export default function TeamDetailPage() {
         onOpenChange={setAddOpen}
         onAdd={handleAddMember}
         existingMemberUserIds={existingIds}
+      />
+
+      <RenameTeamDialog
+        open={renameOpen}
+        currentName={team?.name ?? ""}
+        onOpenChange={setRenameOpen}
+        onRename={async (newName) => {
+          const orgId = getCurrentOrganizationId();
+          if (!orgId || !team) return { ok: false as const, error: "No team loaded" };
+          const oldName = team.name;
+          try {
+            await renameTeam(orgId, oldName, { name: newName });
+            toast({
+              title: "Team renamed",
+              description: `"${oldName}" is now "${newName}".`,
+            });
+            setRenameOpen(false);
+            // The detail route is keyed by team name — move to the new slug.
+            void navigate(`/settings/teams/${encodeURIComponent(newName)}`, { replace: true });
+            return { ok: true as const };
+          } catch (e) {
+            return { ok: false as const, error: getErrorMessage(e) };
+          }
+        }}
       />
     </div>
   );
