@@ -48,7 +48,7 @@ installer-linux-arm64: ## Build installer for linux/arm64
 all: frontend binary
 .PHONY: all
 
-image-build: ## Build API server container image
+image-build: frontend ## Build API server container image
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/linux_amd64/stackdome-server cmd/main.go
 	$(DOCKER) build -t $(IMAGE_TAG) .
 	@echo "Built image: $(IMAGE_TAG)"
