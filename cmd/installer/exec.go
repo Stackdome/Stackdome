@@ -19,18 +19,6 @@ func run(name string, args ...string) error {
 	return nil
 }
 
-func runWithEnv(env []string, name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Env = append(os.Environ(), env...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command %q failed: %w", name+" "+strings.Join(args, " "), err)
-	}
-	return nil
-}
-
 func output(name string, args ...string) (string, error) {
 	cmd := exec.Command(name, args...)
 	cmd.Stderr = os.Stderr

@@ -77,7 +77,7 @@ func main() {
 }
 
 func printSummary(domain, email, password string, externallyReachable bool, result *bootstrapResult) {
-	phaseLog(7, "Installation complete!")
+	successLog("Installation complete!")
 	fmt.Println()
 	fmt.Println("================================================================")
 	fmt.Println("  StackDome installed successfully!")

@@ -111,14 +111,39 @@ func checkResources() {
 	memBytes, err := readMemTotal()
 	if err != nil {
 		warnLog("Could not detect system memory")
-		return
-	}
-	memGB := memBytes / (1024 * 1024 * 1024)
-	if memGB < 4 {
-		warnLog(fmt.Sprintf("Only %d GB RAM detected -- 4+ GB recommended", memGB))
 	} else {
-		stepLog(fmt.Sprintf("Memory: %d GB", memGB))
+		memGB := memBytes / (1024 * 1024 * 1024)
+		if memGB < 4 {
+			warnLog(fmt.Sprintf("Only %d GB RAM detected -- 4+ GB recommended", memGB))
+		} else {
+			stepLog(fmt.Sprintf("Memory: %d GB", memGB))
+		}
 	}
+
+	diskFreeGB, err := readDiskFree("/")
+	if err != nil {
+		warnLog("Could not detect available disk space")
+	} else if diskFreeGB < 20 {
+		warnLog(fmt.Sprintf("Only %d GB disk space available -- 20+ GB recommended", diskFreeGB))
+	} else {
+		stepLog(fmt.Sprintf("Disk: %d GB available", diskFreeGB))
+	}
+}
+
+func readDiskFree(path string) (uint64, error) {
+	out, err := output("df", "--output=avail", "-B1", path)
+	if err != nil {
+		return 0, err
+	}
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) < 2 {
+		return 0, fmt.Errorf("unexpected df output")
+	}
+	avail, err := strconv.ParseUint(strings.TrimSpace(lines[1]), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return avail / (1024 * 1024 * 1024), nil
 }
 
 func readMemTotal() (uint64, error) {

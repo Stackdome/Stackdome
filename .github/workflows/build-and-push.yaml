@@ -47,8 +47,16 @@ jobs:
       - name: Build frontend
         run: make frontend
 
-      - name: Build binary
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/linux_amd64/stackdome-server cmd/main.go
+      - name: Build binaries
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/linux_amd64/stackdome-server cmd/main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o bin/linux_arm64/stackdome-server cmd/main.go
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to Quay.io
         run: echo "${{ secrets.QUAY_TOKEN }}" | docker login quay.io -u "${{ secrets.QUAY_USER }}" --password-stdin
@@ -57,10 +65,10 @@ jobs:
         env:
           VERSION: ${{ steps.tag.outputs.version }}
         run: |
-          docker build -t ${{ env.IMAGE_REPO }}:${VERSION} .
-          docker tag ${{ env.IMAGE_REPO }}:${VERSION} ${{ env.IMAGE_REPO }}:latest
-          docker push ${{ env.IMAGE_REPO }}:${VERSION}
-          docker push ${{ env.IMAGE_REPO }}:latest
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            -t ${{ env.IMAGE_REPO }}:${VERSION} \
+            -t ${{ env.IMAGE_REPO }}:latest \
+            --push .
 
       - name: Build installer binaries
         run: |

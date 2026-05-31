@@ -38,8 +38,7 @@ func installK3s() error {
 
 func setupKubeconfig() error {
 	os.Setenv("KUBECONFIG", k3sKubeconfigPath)
-	// Make kubeconfig readable by non-root users
-	os.Chmod(k3sKubeconfigPath, 0644)
+	os.Chmod(k3sKubeconfigPath, 0600)
 	return nil
 }
 

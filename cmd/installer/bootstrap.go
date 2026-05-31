@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -149,9 +150,12 @@ func configureDomain(token, orgID, domain string) error {
 		},
 	})
 
-	req, _ := http.NewRequest("PUT",
+	req, err := http.NewRequest("PUT",
 		fmt.Sprintf("%s/api/v1/organizations/%s", apiBaseURL, orgID),
 		bytes.NewReader(payload))
+	if err != nil {
+		return fmt.Errorf("creating request: %w", err)
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -174,9 +178,12 @@ type orgResponse struct {
 }
 
 func domainExists(token, orgID, domain string) bool {
-	req, _ := http.NewRequest("GET",
+	req, err := http.NewRequest("GET",
 		fmt.Sprintf("%s/api/v1/organizations/%s", apiBaseURL, orgID),
 		nil)
+	if err != nil {
+		return false
+	}
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -230,18 +237,21 @@ func extractClusterCredentials() (clusterURL, caData, saToken string, err error)
 		return "", "", "", fmt.Errorf("getting SA token: %w", err)
 	}
 
-	decoded, err := output("sh", "-c", fmt.Sprintf("echo '%s' | base64 -d", saTokenB64))
+	decoded, err := base64.StdEncoding.DecodeString(saTokenB64)
 	if err != nil {
 		return "", "", "", fmt.Errorf("decoding SA token: %w", err)
 	}
 
-	return clusterURL, caData, decoded, nil
+	return clusterURL, caData, string(decoded), nil
 }
 
 func registerCluster(token, orgID, clusterURL, caData, saToken string) (string, error) {
-	req, _ := http.NewRequest("GET",
+	req, err := http.NewRequest("GET",
 		fmt.Sprintf("%s/api/v1/organizations/%s/clusters", apiBaseURL, orgID),
 		nil)
+	if err != nil {
+		return "", fmt.Errorf("creating request: %w", err)
+	}
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -276,9 +286,12 @@ func registerCluster(token, orgID, clusterURL, caData, saToken string) (string, 
 		},
 	})
 
-	req, _ = http.NewRequest("POST",
+	req, err = http.NewRequest("POST",
 		fmt.Sprintf("%s/api/v1/organizations/%s/clusters", apiBaseURL, orgID),
 		bytes.NewReader(payload))
+	if err != nil {
+		return "", fmt.Errorf("creating request: %w", err)
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
 

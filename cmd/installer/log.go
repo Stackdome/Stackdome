@@ -10,7 +10,7 @@ const (
 	colorBlue   = "\033[0;34m"
 )
 
-var totalPhases = 7
+var totalPhases = 6
 
 func phaseLog(phase int, msg string) {
 	fmt.Printf("%s[%d/%d]%s %s\n", colorGreen, phase, totalPhases, colorReset, msg)
