@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+const DefaultClusterIssuerName = "letsencrypt-prod"
+
 type Cluster struct {
 	ID                     string `gorm:"primary_key;default:gen_random_uuid()"`
 	OrganisationID         string `gorm:"unique;not null"`

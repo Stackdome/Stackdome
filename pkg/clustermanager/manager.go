@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cnpgv1 "github.com/cloudnative-pg/cloudnative-pg/api/v1"
 	barmancloudv1 "github.com/cloudnative-pg/plugin-barman-cloud/api/v1"
 	"github.com/openshift-online/ocm-sdk-go/leadership"
@@ -364,6 +365,10 @@ func createScheme() (*runtime.Scheme, error) {
 
 	if err := barmancloudv1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("failed to add barmancloudv1 scheme: %w", err)
+	}
+
+	if err := cmv1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to add cert-manager scheme: %w", err)
 	}
 
 	return scheme, nil

@@ -7,6 +7,10 @@ import (
 	"net/url"
 	"strings"
 
+	cmacme "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
@@ -15,7 +19,11 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	certutil "k8s.io/client-go/util/cert"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ClusterService interface {
@@ -139,6 +147,11 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 		s.logger.Errorf("failed to create cluster: %v", cerr)
 		return nil, cerr
 	}
+
+	if err := s.ensureClusterIssuer(ctx, createdCluster); err != nil {
+		s.logger.Errorf("failed to create ClusterIssuer on cluster %s: %v", createdCluster.ID, err)
+	}
+
 	return createdCluster, nil
 }
 
@@ -348,6 +361,63 @@ func (s *clusterService) decryptClusterCredentials(cluster *models.Cluster) *err
 	}
 	cluster.Token = string(token)
 	cluster.ClusterCAData = string(caData)
+	return nil
+}
+
+func (s *clusterService) ensureClusterIssuer(ctx context.Context, cluster *models.Cluster) error {
+	k8sClient, err := s.clusterManager.GetClient(cluster.ID)
+	if err != nil {
+		return fmt.Errorf("getting cluster client: %w", err)
+	}
+
+	user, uerr := auth.GetCurrentUserFromCtx(ctx)
+	if uerr != nil {
+		return fmt.Errorf("getting current user: %w", uerr)
+	}
+
+	issuer := &cmv1.ClusterIssuer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: models.DefaultClusterIssuerName,
+			Labels: map[string]string{
+				"app.kubernetes.io/part-of":    "stackdome",
+				"app.kubernetes.io/managed-by": "stackdome-api-server",
+			},
+		},
+		Spec: cmv1.IssuerSpec{
+			IssuerConfig: cmv1.IssuerConfig{
+				ACME: &cmacme.ACMEIssuer{
+					Server: "https://acme-v02.api.letsencrypt.org/directory",
+					Email:  user.Email,
+					PrivateKey: cmmeta.SecretKeySelector{
+						LocalObjectReference: cmmeta.LocalObjectReference{
+							Name: "letsencrypt-prod-key",
+						},
+					},
+					Solvers: []cmacme.ACMEChallengeSolver{{
+						HTTP01: &cmacme.ACMEChallengeSolverHTTP01{
+							Ingress: &cmacme.ACMEChallengeSolverHTTP01Ingress{
+								Class: ptr.To("traefik"),
+							},
+						},
+					}},
+				},
+			},
+		},
+	}
+
+	existing := &cmv1.ClusterIssuer{}
+	if gerr := k8sClient.Get(ctx, client.ObjectKeyFromObject(issuer), existing); gerr != nil {
+		if !k8serrors.IsNotFound(gerr) {
+			return fmt.Errorf("checking existing ClusterIssuer: %w", gerr)
+		}
+		if cerr := k8sClient.Create(ctx, issuer); cerr != nil {
+			return fmt.Errorf("creating ClusterIssuer: %w", cerr)
+		}
+		s.logger.Infof("created ClusterIssuer %s on cluster %s", models.DefaultClusterIssuerName, cluster.ID)
+		return nil
+	}
+
+	s.logger.Infof("ClusterIssuer %s already exists on cluster %s, skipping", models.DefaultClusterIssuerName, cluster.ID)
 	return nil
 }
 

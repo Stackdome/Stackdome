@@ -152,6 +152,16 @@ func (b *clusterResourceBuilder) BuildStackCR(stack *models.Stack) (*corev1alpha
 		}
 	}
 	stackCR.Spec.StackResources = stackResourcesTemplates
+
+	for _, tmpl := range stackResourcesTemplates {
+		if hasTLSPorts(&tmpl.Spec) {
+			stackCR.Annotations = map[string]string{
+				corev1alpha1.StackdomeClusterIssuerAnnotationKey: models.DefaultClusterIssuerName,
+			}
+			break
+		}
+	}
+
 	return stackCR, nil
 }
 
@@ -172,7 +182,23 @@ func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.Stac
 		},
 		Spec: *stackResourceSpec,
 	}
+
+	if hasTLSPorts(stackResourceSpec) {
+		stackResourceCR.Annotations = map[string]string{
+			corev1alpha1.StackdomeClusterIssuerAnnotationKey: models.DefaultClusterIssuerName,
+		}
+	}
+
 	return stackResourceCR, nil
+}
+
+func hasTLSPorts(spec *corev1alpha1.StackResourceSpec) bool {
+	for _, port := range spec.Ports {
+		if port.TLS {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *clusterResourceBuilder) buildStackResourceSpec(stackResource *models.StackResource) (*corev1alpha1.StackResourceSpec, error) {
@@ -380,12 +406,26 @@ func setPorts(resourceSpecCr *corev1alpha1.StackResourceSpec, stackResource *mod
 				Number:         int32(port.Number),
 				ExposeToPublic: port.ExposedToPublic,
 				IsHttp:         strings.ToLower(port.Protocol) == "http",
+				TLS:            port.ExposedToPublic && shouldEnableTLS(port.ExposedFqdn),
 			}
 			if port.ExposedToPublic {
 				resourceSpecCr.Ports[i].FQDN = port.ExposedFqdn
 			}
 		}
 	}
+}
+
+func shouldEnableTLS(fqdn string) bool {
+	if fqdn == "" {
+		return false
+	}
+	nonTLSDomains := []string{".nip.io", ".sslip.io", ".local", ".localhost"}
+	for _, suffix := range nonTLSDomains {
+		if strings.HasSuffix(fqdn, suffix) {
+			return false
+		}
+	}
+	return true
 }
 
 func setEnvVars(resourceSpecCr *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) {

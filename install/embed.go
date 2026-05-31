@@ -18,6 +18,7 @@ type TemplateValues struct {
 	AdminPassword  string
 	Domain         string
 	APIServerImage string
+	TLSEnabled     bool
 }
 
 func RenderManifest(name string, vals TemplateValues) ([]byte, error) {
