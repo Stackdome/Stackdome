@@ -7,11 +7,21 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/install"
 )
 
+func isTLSDomain(domain string) bool {
+	nonTLSSuffixes := []string{".nip.io", ".sslip.io", ".local", ".localhost"}
+	for _, suffix := range nonTLSSuffixes {
+		if strings.HasSuffix(domain, suffix) {
+			return false
+		}
+	}
+	return domain != ""
+}
+
 func configureTLS(vals install.TemplateValues) error {
 	phaseLog(6, "Configuring TLS...")
 
-	if strings.Contains(vals.Domain, "nip.io") {
-		stepLog("Using nip.io domain -- Traefik default self-signed TLS")
+	if !vals.TLSEnabled {
+		stepLog("Using wildcard/local domain -- Traefik default self-signed TLS")
 		successLog("TLS configured (self-signed)")
 		return nil
 	}

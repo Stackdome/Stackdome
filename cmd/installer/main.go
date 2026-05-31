@@ -49,11 +49,17 @@ func main() {
 		AdminEmail:     *email,
 		Domain:         preflight.Domain,
 		APIServerImage: *image,
+		TLSEnabled:     isTLSDomain(preflight.Domain),
 	}
 
 	secrets, err := loadOrCreateSecrets(&vals)
 	if err != nil {
 		errLog(fmt.Sprintf("Secret generation failed: %v", err))
+		os.Exit(1)
+	}
+
+	if err := configureTLS(vals); err != nil {
+		errLog(fmt.Sprintf("TLS configuration failed: %v", err))
 		os.Exit(1)
 	}
 
@@ -65,11 +71,6 @@ func main() {
 	result, err := runAPIBootstrap(vals, secrets)
 	if err != nil {
 		errLog(fmt.Sprintf("API bootstrap failed: %v", err))
-		os.Exit(1)
-	}
-
-	if err := configureTLS(vals); err != nil {
-		errLog(fmt.Sprintf("TLS configuration failed: %v", err))
 		os.Exit(1)
 	}
 

@@ -7,6 +7,10 @@ metadata:
     app.kubernetes.io/part-of: stackdome-platform
     app.kubernetes.io/managed-by: stackdome-installer
     stackdome.io/bootstrap: "true"
+  {{- if .TLSEnabled }}
+  annotations:
+    stackdome.io/cluster-issuer: letsencrypt-prod
+  {{- end }}
 spec:
   stackResources:
     - name: db
@@ -43,6 +47,7 @@ spec:
             exposeToPublic: true
             isHttp: true
             fqdn: "{{.Domain}}"
+            tls: {{.TLSEnabled}}
         environmentVariables:
           - name: DB_HOST
             value: db.stackdome-control-plane.svc.cluster.local

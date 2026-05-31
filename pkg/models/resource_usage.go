@@ -3,12 +3,12 @@ package models
 import "time"
 
 type ResourceUsage struct {
-	ID           string    `gorm:"primary_key;default:gen_random_uuid()"`
-	ResourceType string    `gorm:"not null"`
-	ResourceID   string    `gorm:"not null"`
-	ConsumerType string    `gorm:"not null"`
-	ConsumerID   string    `gorm:"not null"`
-	StackID      string    `gorm:"not null;index"`
+	ID           string `gorm:"primary_key;default:gen_random_uuid()"`
+	ResourceType string `gorm:"not null"`
+	ResourceID   string `gorm:"not null"`
+	ConsumerType string `gorm:"not null"`
+	ConsumerID   string `gorm:"not null"`
+	StackID      string `gorm:"not null;index"`
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
