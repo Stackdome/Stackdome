@@ -155,9 +155,10 @@ func (b *clusterResourceBuilder) BuildStackCR(stack *models.Stack) (*corev1alpha
 
 	for _, tmpl := range stackResourcesTemplates {
 		if hasTLSPorts(&tmpl.Spec) {
-			stackCR.Annotations = map[string]string{
-				corev1alpha1.StackdomeClusterIssuerAnnotationKey: models.DefaultClusterIssuerName,
+			if stackCR.Annotations == nil {
+				stackCR.Annotations = map[string]string{}
 			}
+			stackCR.Annotations[corev1alpha1.StackdomeClusterIssuerAnnotationKey] = models.DefaultClusterIssuerName
 			break
 		}
 	}
@@ -184,9 +185,10 @@ func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.Stac
 	}
 
 	if hasTLSPorts(stackResourceSpec) {
-		stackResourceCR.Annotations = map[string]string{
-			corev1alpha1.StackdomeClusterIssuerAnnotationKey: models.DefaultClusterIssuerName,
+		if stackResourceCR.Annotations == nil {
+			stackResourceCR.Annotations = map[string]string{}
 		}
+		stackResourceCR.Annotations[corev1alpha1.StackdomeClusterIssuerAnnotationKey] = models.DefaultClusterIssuerName
 	}
 
 	return stackResourceCR, nil
