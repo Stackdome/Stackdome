@@ -1,0 +1,62 @@
+apiVersion: core.stackdome.io/v1alpha1
+kind: Stack
+metadata:
+  name: stackdome-platform
+  namespace: stackdome-control-plane
+  labels:
+    app.kubernetes.io/part-of: stackdome-platform
+    app.kubernetes.io/managed-by: stackdome-installer
+    stackdome.io/bootstrap: "true"
+spec:
+  stackResources:
+    - name: db
+      spec:
+        imageSpec:
+          image: postgres:16-alpine
+        stateFul: true
+        ports:
+          - number: 5432
+            exposeToPublic: false
+            fqdn: "internal"
+        volumeMounts:
+          - sourceVolume: stackdome-db-data
+            destination: /var/lib/postgresql/data
+        environmentVariables:
+          - name: POSTGRES_DB
+            value: stackdome
+          - name: POSTGRES_USER
+            value: stackdome
+          - name: POSTGRES_PASSWORD
+            value: "{{.DBPassword}}"
+
+    - name: api-server
+      spec:
+        imageSpec:
+          image: "{{.APIServerImage}}"
+        init:
+          command: ["./stackdome-server", "migrate"]
+        command: ["./stackdome-server"]
+        args: ["serve"]
+        dependsOn: [db]
+        ports:
+          - number: 8000
+            exposeToPublic: true
+            isHttp: true
+            fqdn: "{{.Domain}}"
+        environmentVariables:
+          - name: DB_HOST
+            value: db.stackdome-control-plane.svc.cluster.local
+          - name: DB_PORT
+            value: "5432"
+          - name: DB_NAME
+            value: stackdome
+          - name: DB_USERNAME
+            value: stackdome
+          - name: DB_PASSWORD
+            value: "{{.DBPassword}}"
+          - name: JWT_SECRET
+            value: "{{.JWTSecret}}"
+          - name: ENCRYPTION_KEY
+            value: "{{.EncryptionKey}}"
+          - name: LOG_LEVEL
+            value: info

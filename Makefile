@@ -1,10 +1,11 @@
 DOCKER ?= docker
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
-VERSION := $(shell date +%s)
 
-# Tag for the image
-IMAGE_TAG := $(VERSION)
+# Image config
+IMAGE_REPO ?= quay.io/stackdome/stackdome
+VERSION ?= $(shell git rev-parse --short HEAD)
+IMAGE_TAG ?= $(IMAGE_REPO):$(VERSION)
 
 generate:
 	rm -rf pkg/api/openapi
@@ -32,21 +33,31 @@ binary:
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o bin/stackdome-server cmd/main.go
 .PHONY: binary
 
+installer: ## Build the VPS installer binary
+	CGO_ENABLED=0 go build -o bin/stackdome-install ./cmd/installer/
+.PHONY: installer
+
+installer-linux-amd64: ## Build installer for linux/amd64
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/stackdome-install-linux-amd64 ./cmd/installer/
+.PHONY: installer-linux-amd64
+
+installer-linux-arm64: ## Build installer for linux/arm64
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o bin/stackdome-install-linux-arm64 ./cmd/installer/
+.PHONY: installer-linux-arm64
+
 all: frontend binary
 .PHONY: all
 
-image: GOOS=linux
-image: frontend binary
-	@if [ -z "$(EXTERNAL_IMAGE_REGISTRY)" ]; then \
-	  echo "Error: EXTERNAL_IMAGE_REGISTRY is not set"; \
-	  exit 1; \
-	fi
-	@if [ -z "$(IMAGE_REPOSITORY)" ]; then \
-	  echo "Error: IMAGE_REPOSITORY is not set"; \
-	  exit 1; \
-	fi
-	$(DOCKER) build -t "$(EXTERNAL_IMAGE_REGISTRY)/$(IMAGE_REPOSITORY):$(IMAGE_TAG)" .
-.PHONY: image
+image-build: frontend ## Build API server container image
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/linux_amd64/stackdome-server cmd/main.go
+	$(DOCKER) build -t $(IMAGE_TAG) .
+	@echo "Built image: $(IMAGE_TAG)"
+.PHONY: image-build
+
+image-push: image-build ## Build and push API server container image
+	$(DOCKER) push $(IMAGE_TAG)
+	@echo "Pushed image: $(IMAGE_TAG)"
+.PHONY: image-push
 
 test:
 	mage test:unit
