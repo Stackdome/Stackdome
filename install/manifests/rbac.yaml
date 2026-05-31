@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stackdome-api-server-account
+  namespace: stackdome-control-plane
+  labels:
+    app.kubernetes.io/part-of: stackdome-platform
+    app.kubernetes.io/managed-by: stackdome-installer
+    stackdome.io/bootstrap: "true"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: stackdome-api-server-role
+  labels:
+    app.kubernetes.io/part-of: stackdome-platform
+    app.kubernetes.io/managed-by: stackdome-installer
+    stackdome.io/bootstrap: "true"
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: stackdome-api-server-role-binding
+  labels:
+    app.kubernetes.io/part-of: stackdome-platform
+    app.kubernetes.io/managed-by: stackdome-installer
+    stackdome.io/bootstrap: "true"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: stackdome-api-server-role
+subjects:
+  - kind: ServiceAccount
+    name: stackdome-api-server-account
+    namespace: stackdome-control-plane
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: stackdome-api-server-account-secret
+  namespace: stackdome-control-plane
+  annotations:
+    kubernetes.io/service-account.name: stackdome-api-server-account
+  labels:
+    app.kubernetes.io/part-of: stackdome-platform
+    app.kubernetes.io/managed-by: stackdome-installer
+    stackdome.io/bootstrap: "true"
+type: kubernetes.io/service-account-token

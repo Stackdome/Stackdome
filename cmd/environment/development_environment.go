@@ -143,19 +143,13 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 }
 
 func (d *developmentEnvironment) loadEnvAndConfigs(ctx context.Context) error {
-	if err := godotenv.Load(); err != nil {
-		return fmt.Errorf("failed to load .env file: %w", err)
-	}
+	_ = godotenv.Load()
 
 	d.Config.LoadEnvVariables()
 	d.BootstrapConfig.LoadEnvVariables()
 
 	if err := d.Config.Validate(); err != nil {
 		return fmt.Errorf("invalid application config: %w", err)
-	}
-
-	if err := d.BootstrapConfig.Validate(); err != nil {
-		return fmt.Errorf("invalid bootstrap config: %w", err)
 	}
 	return nil
 }
@@ -171,9 +165,7 @@ func (d *developmentEnvironment) setupLogger(ctx context.Context) error {
 }
 
 func (d *developmentEnvironment) setupDatabase(ctx context.Context) error {
-	if err := godotenv.Load(); err != nil {
-		return fmt.Errorf("failed to load .env file: %w", err)
-	}
+	_ = godotenv.Load()
 	d.Config.Database.LoadEnvVariables()
 	if err := d.Config.Database.Validate(); err != nil {
 		return fmt.Errorf("invalid database config: %w", err)

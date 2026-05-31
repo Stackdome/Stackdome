@@ -1,0 +1,14 @@
+apiVersion: storage.stackdome.io/v1alpha1
+kind: Volume
+metadata:
+  name: stackdome-db-data
+  namespace: stackdome-control-plane
+  labels:
+    app.kubernetes.io/part-of: stackdome-platform
+    app.kubernetes.io/managed-by: stackdome-installer
+    stackdome.io/bootstrap: "true"
+spec:
+  size: 10Gi
+  storageClass: local-path
+  needsSyncBeforeUse: false
+  accessMode: ReadWriteOnce
