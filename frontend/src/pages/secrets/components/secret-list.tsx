@@ -21,6 +21,7 @@ interface SecretListProps {
   secrets: Secret[];
   onEdit: (secret: Secret) => void;
   onDelete: (secret: Secret) => void;
+  canWrite?: (teamId?: string) => boolean;
 }
 
 function formatSecretType(type: string): string {
@@ -55,7 +56,7 @@ function getSecretTypeColor(type: string): "default" | "secondary" | "destructiv
   }
 }
 
-export function SecretList({ secrets, onEdit, onDelete }: SecretListProps) {
+export function SecretList({ secrets, onEdit, onDelete, canWrite }: SecretListProps) {
   return (
     <div className="rounded-md border">
       <Table>
@@ -69,53 +70,58 @@ export function SecretList({ secrets, onEdit, onDelete }: SecretListProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {secrets.map((secret) => (
-            <TableRow key={secret.id} className="hover:bg-muted/50">
-              <TableCell className="font-medium py-4">
-                <div className="break-words max-w-[180px]">
-                  {secret.name}
-                </div>
-              </TableCell>
-              <TableCell className="py-4">
-                <Badge variant={getSecretTypeColor(secret.type)} className="text-xs">
-                  {formatSecretType(secret.type)}
-                </Badge>
-              </TableCell>
-              <TableCell className="py-4 min-w-[250px] max-w-[400px]">
-                <div className="text-sm text-muted-foreground break-words whitespace-pre-wrap">
-                  {secret.description || "No description"}
-                </div>
-              </TableCell>
-              <TableCell className="py-4">
-                <span className="text-sm text-muted-foreground">
-                  {secret.created_at ? new Date(secret.created_at).toLocaleDateString() : "Unknown"}
-                </span>
-              </TableCell>
-              <TableCell className="py-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted">
-                      <span className="sr-only">Open menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[160px]">
-                    <DropdownMenuItem onClick={() => onEdit(secret)}>
-                      <Edit className="h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-danger focus:text-danger"
-                      onClick={() => onDelete(secret)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
+          {secrets.map((secret) => {
+            const rowCanWrite = canWrite ? canWrite(secret.team_id) : true;
+            return (
+              <TableRow key={secret.id} className="hover:bg-muted/50">
+                <TableCell className="font-medium py-4">
+                  <div className="break-words max-w-[180px]">
+                    {secret.name}
+                  </div>
+                </TableCell>
+                <TableCell className="py-4">
+                  <Badge variant={getSecretTypeColor(secret.type)} className="text-xs">
+                    {formatSecretType(secret.type)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="py-4 min-w-[250px] max-w-[400px]">
+                  <div className="text-sm text-muted-foreground break-words whitespace-pre-wrap">
+                    {secret.description || "No description"}
+                  </div>
+                </TableCell>
+                <TableCell className="py-4">
+                  <span className="text-sm text-muted-foreground">
+                    {secret.created_at ? new Date(secret.created_at).toLocaleDateString() : "Unknown"}
+                  </span>
+                </TableCell>
+                <TableCell className="py-4">
+                  {rowCanWrite && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-[160px]">
+                        <DropdownMenuItem onClick={() => onEdit(secret)}>
+                          <Edit className="h-4 w-4" />
+                        Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-danger focus:text-danger"
+                          onClick={() => onDelete(secret)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

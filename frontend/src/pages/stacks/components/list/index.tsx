@@ -21,6 +21,7 @@ import { DockerComposeImportDropdown } from "@/pages/stacks/components/shared/im
 import DockerComposeImportDialog from "@/pages/stacks/components/shared/docker-compose-import-dialog";
 import { useDockerComposeImport } from "@/pages/stacks/hooks/use-docker-compose-import";
 import type { Stack } from "@/pages/stacks/types";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 
 type StatusFilter = "all" | "ready" | "pending" | "error";
@@ -64,6 +65,7 @@ export default function StacksPage() {
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated");
   const navigate = useNavigate();
+  const { canWriteAnyTeam } = useCurrentUser();
 
   const {
     isLoading: isImportLoading,
@@ -165,16 +167,18 @@ export default function StacksPage() {
           title="Stacks"
           subtitle="Provision and manage your application stacks"
           actions={
-            <>
-              <DockerComposeImportDropdown
-                onDockerComposeImport={openImportDialog}
-                variant="outline"
-              />
-              <Button onClick={handleCreateNewStack}>
-                <PlusCircle className="h-4 w-4" />
-                New Stack
-              </Button>
-            </>
+            canWriteAnyTeam ? (
+              <>
+                <DockerComposeImportDropdown
+                  onDockerComposeImport={openImportDialog}
+                  variant="outline"
+                />
+                <Button onClick={handleCreateNewStack}>
+                  <PlusCircle className="h-4 w-4" />
+                  New Stack
+                </Button>
+              </>
+            ) : undefined
           }
         />
 
@@ -184,10 +188,12 @@ export default function StacksPage() {
             title="No stacks deployed yet"
             description="Deploy your first stack to get started."
             action={
-              <Button onClick={handleCreateNewStack}>
-                <PlusCircle className="h-4 w-4" />
-                Create New Stack
-              </Button>
+              canWriteAnyTeam ? (
+                <Button onClick={handleCreateNewStack}>
+                  <PlusCircle className="h-4 w-4" />
+                  Create New Stack
+                </Button>
+              ) : undefined
             }
           />
         ) : (

@@ -20,6 +20,14 @@ vi.mock("@/helpers/common", () => ({
   getCurrentOrganizationId: vi.fn(() => "org-1"),
 }));
 
+vi.mock("@/hooks/use-resource-teams", () => ({
+  useResourceTeams: () => ({
+    teamNameById: (id: string | undefined) => (id === "t1" ? "alpha" : undefined),
+    defaultTeamName: "alpha",
+    teams: [],
+  }),
+}));
+
 import { deleteObjectStore } from "@/api/object-stores";
 import { ObjectStoreDeleteDialog } from "../object-store-delete-dialog";
 
@@ -29,6 +37,7 @@ function mkStore(over: Partial<ObjectStore> = {}): ObjectStore {
   return {
     id: "os-1",
     name: "my-store",
+    team_id: "t1",
     ...over,
   } as ObjectStore;
 }
@@ -80,7 +89,7 @@ describe("ObjectStoreDeleteDialog", () => {
     await clickDelete();
 
     await waitFor(() => expect(mockedDelete).toHaveBeenCalledTimes(1));
-    expect(mockedDelete).toHaveBeenCalledWith("org-1", "os-1");
+    expect(mockedDelete).toHaveBeenCalledWith("org-1", "alpha", "os-1");
     await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
     expect(onOpenChange).toHaveBeenCalledWith(false);
     // success toast fired exactly once, with destructive variant

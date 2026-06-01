@@ -21,6 +21,8 @@ interface AddonsInStackPanelProps {
   linkedAddonIds: Set<string>;
   onLinkAddon: (addonId: string) => void;
   onRemoveLinkedAddon?: (addonId: string) => void;
+  /** When true, hide all link/unlink affordances (Viewer read-only). */
+  readOnly?: boolean;
 }
 
 interface DerivedRow {
@@ -32,6 +34,7 @@ export default function AddonsInStackPanel({
   linkedAddonIds,
   onLinkAddon,
   onRemoveLinkedAddon,
+  readOnly = false,
 }: AddonsInStackPanelProps) {
   const { addons } = usePostgresAddons();
   // Each entry is a unique slot id for a not-yet-picked addon row.
@@ -84,7 +87,7 @@ export default function AddonsInStackPanel({
               ? "You haven't created any addons yet. Create one in the Addons page, then come back to attach it here."
               : "Attach a managed Postgres, Redis, or other addon and bind its credentials into your services."}
           </p>
-          {noAddonsInSystem ? (
+          {readOnly ? null : noAddonsInSystem ? (
             <Button
               type="button"
               variant="outline"
@@ -141,7 +144,7 @@ export default function AddonsInStackPanel({
                 )}
               </div>
               <div className="grow" />
-              {isLinkedOnly && onRemoveLinkedAddon && (
+              {!readOnly && isLinkedOnly && onRemoveLinkedAddon && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -155,7 +158,7 @@ export default function AddonsInStackPanel({
             </div>
           );
         })}
-        {pendingSlots.map((slot) => (
+        {!readOnly && pendingSlots.map((slot) => (
           <div key={slot} className="flex items-center gap-3 px-5 py-3">
             <Select onValueChange={(v) => handlePick(slot, v)}>
               <SelectTrigger className="h-8 w-[280px] text-[13px]">
@@ -191,7 +194,7 @@ export default function AddonsInStackPanel({
           </div>
         ))}
       </div>
-      {totalRows > 0 && (
+      {totalRows > 0 && !readOnly && (
         <div className="flex justify-center mt-4">
           {(() => {
             const allLinked = !noAddonsInSystem && availablePostgres.length === 0;

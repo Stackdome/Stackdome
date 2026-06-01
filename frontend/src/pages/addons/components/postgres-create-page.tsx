@@ -34,6 +34,7 @@ import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
+import { useResourceTeams } from "@/hooks/use-resource-teams";
 import * as addonsApi from "@/api/addons";
 import {
   PostgresAddonFormSchema,
@@ -67,6 +68,8 @@ export default function PostgresFormPage() {
   const { id: editId } = useParams<{ id: string }>();
   const isEdit = Boolean(editId);
   const { toast } = useToast();
+  const { teamNameById, defaultTeamName } = useResourceTeams();
+  const [addonTeamId, setAddonTeamId] = useState<string | undefined>(undefined);
   const { setCustomLabel, setPathLoading, registerNonClickablePath } = useBreadcrumb();
   const [values, setValues] = useState<PostgresAddonFormValues>(() =>
     defaultFormValues(""),
@@ -137,6 +140,7 @@ export default function PostgresFormPage() {
         };
         setValues(hydrated);
         setOriginalValues(hydrated);
+        setAddonTeamId(addon.team_id);
         setLoadError(null);
       })
       .catch((e) => {
@@ -211,13 +215,22 @@ export default function PostgresFormPage() {
     try {
       const input = buildCreateInput(values, { isEdit });
       if (isEdit && editId) {
-        await addonsApi.updatePostgresAddon(orgId, editId, input);
+        const teamName = teamNameById(addonTeamId);
+        if (!teamName) {
+          setSubmitError("Could not resolve the team for this addon.");
+          return;
+        }
+        await addonsApi.updatePostgresAddon(orgId, teamName, editId, input);
         toast({
           title: "Addon updated",
           description: "Changes have been applied.",
         });
       } else {
-        await addonsApi.createPostgresAddon(orgId, input);
+        if (!defaultTeamName) {
+          setSubmitError("You don't have a team to create addons in.");
+          return;
+        }
+        await addonsApi.createPostgresAddon(orgId, defaultTeamName, input);
         toast({
           title: "Addon created",
           description: "Provisioning has started; status will update as it's ready.",

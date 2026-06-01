@@ -36,6 +36,8 @@ import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById, updateStack } from "@/api/stacks";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
+import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import type { z } from "zod";
 import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
 import { useToast } from "@/components/ui/use-toast";
@@ -90,9 +92,15 @@ export default function StackDetailPage() {
 
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const { toast } = useToast();
+  const { teamNameById } = useResourceTeams();
+  const { canWrite } = useCurrentUser();
 
   // Find the current stack in context
   const currentStack = stacks.find((stack) => stack.id === id);
+
+  // Viewer read-only gating: only OrgAdmin / team Developer may mutate this stack.
+  const stackTeamId = fetchedStack?.team_id ?? currentStack?.team_id;
+  const canWriteStack = canWrite(stackTeamId ?? "");
 
   // Update breadcrumb with stack name
   useEffect(() => {
@@ -254,8 +262,19 @@ export default function StackDetailPage() {
         return;
       }
 
+      const teamName = teamNameById(fetchedStack?.team_id ?? currentStack?.team_id);
+      if (!teamName) {
+        toast({
+          title: "Failed to update stack",
+          description: "Could not resolve the team for this stack.",
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return;
+      }
+
       const apiData = convertFormStackToApiStack(formStackData);
-      const updatedStack = await updateStack(orgId, id, apiData);
+      const updatedStack = await updateStack(orgId, teamName, id, apiData);
 
       setFetchedStack(updatedStack);
       if (detachResult) setDetachedProvenance(detachResult.provenance);
@@ -378,7 +397,9 @@ export default function StackDetailPage() {
     `${volumeCount} ${volumeCount === 1 ? "volume" : "volumes"}`,
   ];
 
-  const headerActions = (
+  // The actions menu only holds mutating items (Edit + Delete). Hide the whole
+  // trigger for users who can't write this stack.
+  const headerActions = canWriteStack ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" aria-label="Stack actions">
@@ -407,7 +428,7 @@ export default function StackDetailPage() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  ) : undefined;
 
   return (
     <div className="p-8 space-y-8">
@@ -529,20 +550,26 @@ export default function StackDetailPage() {
               <StackResourcesDetail
                 resources={baselineResources}
                 accordionDefaultOpen={false}
-                onEditResource={(idx) =>
-                  activateEdit({ resourceIdx: idx, openTab: "environment" })
+                onEditResource={
+                  canWriteStack
+                    ? (idx) => activateEdit({ resourceIdx: idx, openTab: "environment" })
+                    : undefined
                 }
-                onAddResource={() => {
-                  const nextIdx = baselineResources.length;
-                  session.start(
-                    {
-                      resources: [...baselineResources, getDefaultResource() as FormStackResourceData],
-                      volumes: baselineVolumes,
-                    },
-                    { openResourceIdx: nextIdx, openTab: "configuration" },
-                  );
-                  setEditingBindingIds(new Set());
-                }}
+                onAddResource={
+                  canWriteStack
+                    ? () => {
+                      const nextIdx = baselineResources.length;
+                      session.start(
+                        {
+                          resources: [...baselineResources, getDefaultResource() as FormStackResourceData],
+                          volumes: baselineVolumes,
+                        },
+                        { openResourceIdx: nextIdx, openTab: "configuration" },
+                      );
+                      setEditingBindingIds(new Set());
+                    }
+                    : undefined
+                }
                 detachedProvenance={detachedProvenance}
               />
             )}
@@ -568,18 +595,22 @@ export default function StackDetailPage() {
                 volumes={baselineVolumes}
                 stackResources={baselineResources}
                 accordionDefaultOpen={false}
-                onEditVolume={(idx) => activateEdit({ volumeIdx: idx })}
-                onAddVolume={() => {
-                  const nextIdx = baselineVolumes.length;
-                  session.start(
-                    {
-                      resources: baselineResources,
-                      volumes: [...baselineVolumes, getDefaultVolume() as VolumeFormData],
-                    },
-                    { openVolumeIdx: nextIdx },
-                  );
-                  setEditingBindingIds(new Set());
-                }}
+                onEditVolume={canWriteStack ? (idx) => activateEdit({ volumeIdx: idx }) : undefined}
+                onAddVolume={
+                  canWriteStack
+                    ? () => {
+                      const nextIdx = baselineVolumes.length;
+                      session.start(
+                        {
+                          resources: baselineResources,
+                          volumes: [...baselineVolumes, getDefaultVolume() as VolumeFormData],
+                        },
+                        { openVolumeIdx: nextIdx },
+                      );
+                      setEditingBindingIds(new Set());
+                    }
+                    : undefined
+                }
               />
             )}
           </Panel>
@@ -591,6 +622,7 @@ export default function StackDetailPage() {
             };
             return (
               <AddonsInStackPanel
+                readOnly={!canWriteStack}
                 resources={(session.isActive ? session.draft.resources : baselineResources) as Partial<FormStackResourceData>[]}
                 linkedAddonIds={session.linkedAddonIds}
                 onLinkAddon={(addonId) => {
