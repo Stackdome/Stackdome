@@ -56,3 +56,125 @@ describe("useCurrentUser", () => {
     expect(result.current.organisationId).toBe("org-1");
   });
 });
+
+describe("useCurrentUser team-role helpers", () => {
+  const memberUser = {
+    id: "m1",
+    role: "OrgMember",
+    organisation_id: "org-1",
+    teams: [
+      { team_id: "t1", team_name: "alpha", role: "Developer", default_team: true },
+      { team_id: "t2", team_name: "beta", role: "Viewer", default_team: false },
+    ],
+  };
+  const adminUser = {
+    id: "a1",
+    role: "OrgAdmin",
+    organisation_id: "org-1",
+    teams: [{ team_id: "t1", team_name: "alpha", role: "Viewer", default_team: true }],
+  };
+
+  function mockUser(u: unknown) {
+    vi.mocked(getStoredUser).mockReturnValue(u as never);
+    vi.mocked(fetchCurrentUser).mockResolvedValue(u as never);
+  }
+
+  describe("roleInTeam", () => {
+    it("resolves the role by team_id", () => {
+      mockUser(memberUser);
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.roleInTeam("t1")).toBe("Developer");
+      expect(result.current.roleInTeam("t2")).toBe("Viewer");
+    });
+
+    it("resolves the role by team_name", () => {
+      mockUser(memberUser);
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.roleInTeam("alpha")).toBe("Developer");
+      expect(result.current.roleInTeam("beta")).toBe("Viewer");
+    });
+
+    it("returns undefined for a team the user does not belong to", () => {
+      mockUser(memberUser);
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.roleInTeam("t99")).toBeUndefined();
+      expect(result.current.roleInTeam("gamma")).toBeUndefined();
+    });
+
+    it("returns undefined when there is no user", () => {
+      mockUser(null);
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.roleInTeam("t1")).toBeUndefined();
+    });
+  });
+
+  describe("canWrite", () => {
+    it("is true for an OrgAdmin regardless of team (even a Viewer membership or unknown team)", () => {
+      mockUser(adminUser);
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.canWrite("t1")).toBe(true);
+      expect(result.current.canWrite("t99")).toBe(true);
+    });
+
+    it("is true for a Developer in the team", () => {
+      mockUser(memberUser);
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.canWrite("t1")).toBe(true);
+      expect(result.current.canWrite("alpha")).toBe(true);
+    });
+
+    it("is false for a Viewer in the team", () => {
+      mockUser(memberUser);
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.canWrite("t2")).toBe(false);
+      expect(result.current.canWrite("beta")).toBe(false);
+    });
+
+    it("is false for a non-member team", () => {
+      mockUser(memberUser);
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.canWrite("t99")).toBe(false);
+    });
+
+    it("handles a multi-team user: Developer in A, Viewer in B", () => {
+      mockUser(memberUser);
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.canWrite("t1")).toBe(true);
+      expect(result.current.canWrite("t2")).toBe(false);
+    });
+  });
+
+  describe("canWriteAnyTeam", () => {
+    it("is true for an OrgAdmin", () => {
+      mockUser(adminUser);
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.canWriteAnyTeam).toBe(true);
+    });
+
+    it("is true for a member who is Developer in at least one team", () => {
+      mockUser(memberUser); // Developer in alpha, Viewer in beta
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.canWriteAnyTeam).toBe(true);
+    });
+
+    it("is false for a member who is only ever a Viewer", () => {
+      mockUser({
+        id: "v1",
+        role: "OrgMember",
+        organisation_id: "org-1",
+        teams: [
+          { team_id: "t2", team_name: "beta", role: "Viewer", default_team: true },
+          { team_id: "t3", team_name: "gamma", role: "Viewer", default_team: false },
+        ],
+      });
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.canWriteAnyTeam).toBe(false);
+    });
+
+    it("is false when there is no user", () => {
+      mockUser(null);
+      const { result } = renderHook(() => useCurrentUser(), { wrapper });
+      expect(result.current.canWriteAnyTeam).toBe(false);
+    });
+  });
+});
