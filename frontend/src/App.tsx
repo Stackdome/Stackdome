@@ -20,9 +20,9 @@ import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/contexts/theme-provider"
 import { CurrentUserProvider } from "@/contexts/current-user-context"
 import { RequireAdmin } from "@/components/require-admin"
-import UsersPage from "@/pages/users"
-import TeamsPage from "@/pages/teams"
-import TeamDetailPage from "@/pages/teams/team-detail"
+// Users + Teams (workspace collaboration) are shelved — pages remain in the
+// repo (src/pages/users, src/pages/teams) but are unrouted; /settings/* below
+// redirects home so a typed URL doesn't 404.
 
 const Logout = () => {
   logoutAndRedirect("/sign-in");
@@ -57,10 +57,9 @@ const router = createBrowserRouter(
           <Route path="/clusters" element={<ClustersPage />} />
           <Route path="/clusters/:id" element={<ClusterDetailPage />} />
           <Route path="/domains" element={<DomainsPage />} />
-          <Route path="/settings/users" element={<UsersPage />} />
-          <Route path="/settings/teams" element={<TeamsPage />} />
-          <Route path="/settings/teams/:teamName" element={<TeamDetailPage />} />
         </Route>
+        {/* Workspace collaboration (Users + Teams) shelved — redirect home. */}
+        <Route path="/settings/*" element={<Navigate to="/" replace />} />
       </Route>
       <Route path="/sign-in" element={<Login />} />
       <Route path="/sign-up" element={<Signup />} />
