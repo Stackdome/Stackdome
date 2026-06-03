@@ -22,6 +22,13 @@ interface StackResourceEnvironmentTabProps {
   envVars: FormEnvVarData[];
   baselineEnvVars: FormEnvVarData[] | undefined;
   errors: { [field: string]: string | undefined };
+  /** Sibling resources (excluding this one), each with their declared outputs. */
+  resourceOptions: { name: string; outputs: string[] }[];
+  /** This resource's own declared outputs, for the Self source picker. */
+  selfOutputs: string[];
+  secrets: import("@/api/secrets").Secret[];
+  secretsLoading: boolean;
+  addonNameById: Map<string, string>;
   /** Replace the entire environment_variables array. Identity must be stable. */
   onChangeEnvVars: (next: FormEnvVarData[]) => void;
   /** Reset a single env row to its baseline value. */
@@ -33,6 +40,11 @@ function StackResourceEnvironmentTabImpl({
   envVars,
   baselineEnvVars,
   errors,
+  resourceOptions,
+  selfOutputs,
+  secrets,
+  secretsLoading,
+  addonNameById,
   onChangeEnvVars,
   onDiscardEnvRow,
 }: StackResourceEnvironmentTabProps) {
@@ -89,6 +101,30 @@ function StackResourceEnvironmentTabImpl({
       description: `Added ${newVars.length} new environment variables`,
       variant: "default",
     });
+  };
+
+  const freshRowForSource = (from: FormEnvVarData["from"], name: string): FormEnvVarData => {
+    switch (from) {
+      case "secret": return { from: "secret", name, secretId: "", secretKey: "" };
+      case "addon": return { from: "addon", name, addonId: "", superuser: false };
+      case "resource": return { from: "resource", name, resourceName: "", output: "" };
+      case "self": return { from: "self", name, selfOutput: "" };
+      default: return { from: "stack", name, value: "" };
+    }
+  };
+
+  const applyAddonPatch = (
+    env: FormEnvVarData,
+    patch: import("./env-row").AddonBindingPatch,
+  ): FormEnvVarData => {
+    const base = env.from === "addon" ? env : { from: "addon" as const, name: env.name, addonId: "", superuser: false };
+    return {
+      ...base,
+      addonId: patch.addonId ?? base.addonId,
+      database: patch.database === null ? undefined : patch.database ?? base.database,
+      superuser: patch.superuser ?? base.superuser,
+      credField: patch.credField ?? base.credField,
+    };
   };
 
   const parseEnvContent = (content: string): Array<{ name: string; value: string }> =>
@@ -276,6 +312,11 @@ function StackResourceEnvironmentTabImpl({
               row={env}
               index={envIdx}
               resourceIndex={index}
+              secrets={secrets}
+              secretsLoading={secretsLoading}
+              addonNameById={addonNameById}
+              resourceOptions={resourceOptions}
+              selfOutputs={selfOutputs}
               rowErrors={rowErrorsForIndex(envIdx)}
               status={envRowStatuses[envIdx] ?? "unchanged"}
               onReset={onDiscardEnvRow ? () => onDiscardEnvRow(envIdx) : undefined}
@@ -283,19 +324,31 @@ function StackResourceEnvironmentTabImpl({
                 replaceEnvVar(envIdx, { ...env, name });
               }}
               onChangeValue={(value) => {
-                replaceEnvVar(envIdx, { ...env, value });
+                replaceEnvVar(envIdx, { from: "stack", name: env.name, value });
               }}
+              onChangeFrom={(from) => replaceEnvVar(envIdx, freshRowForSource(from, env.name))}
+              onChangeSecret={(secretId, secretKey) =>
+                replaceEnvVar(envIdx, { from: "secret", name: env.name, secretId, secretKey })}
+              onChangeAddon={(patch) => replaceEnvVar(envIdx, applyAddonPatch(env, patch))}
+              onChangeResource={(resourceName, output) =>
+                replaceEnvVar(envIdx, { from: "resource", name: env.name, resourceName, output })}
+              onChangeSelf={(selfOutput) =>
+                replaceEnvVar(envIdx, { from: "self", name: env.name, selfOutput })}
               onBlur={() => markEnvRowDirty(envIdx)}
               onRemove={() => removeEnvVar(envIdx)}
             />
           ));
         })()}
       </div>
-      {/* Add Variable button */}
-      <div className="mt-2">
-        <Button variant="ghost" size="sm" onClick={() => addEnvVar()}>
+      {/* Add Variable buttons — one per source type */}
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Button variant="ghost" size="sm" onClick={() => addEnvVar({ from: "stack", name: "", value: "" })}>
           <PlusCircle className="h-4 w-4 mr-2" />Add variable
         </Button>
+        <Button variant="ghost" size="sm" onClick={() => addEnvVar({ from: "secret", name: "", secretId: "", secretKey: "" })}>From secret</Button>
+        <Button variant="ghost" size="sm" onClick={() => addEnvVar({ from: "addon", name: "", addonId: "", superuser: false })}>From addon</Button>
+        <Button variant="ghost" size="sm" onClick={() => addEnvVar({ from: "resource", name: "", resourceName: "", output: "" })}>From resource</Button>
+        <Button variant="ghost" size="sm" onClick={() => addEnvVar({ from: "self", name: "", selfOutput: "" })}>From self output</Button>
       </div>
     </TabsContent>
   );

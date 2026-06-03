@@ -77,7 +77,12 @@ export default function StackResourcesForm({
     [allAddons, availableAddonIds],
   );
   const addonNameById = useMemo(
-    () => new Map(allAddons.filter((a: PostgresAddon) => a.id).map((a: PostgresAddon) => [a.id!, a.name])),
+    () =>
+      new Map(
+        allAddons
+          .filter((a: PostgresAddon) => a.id && a.name)
+          .map((a: PostgresAddon) => [a.id!, a.name!] as [string, string]),
+      ),
     [allAddons],
   );
 
@@ -113,7 +118,12 @@ export default function StackResourcesForm({
   // field. Without this, every keystroke would hand a new array to each
   // StackResourceItem and break React.memo.
   const allResourcesRef = useMemo(
-    () => resources.map((r, i) => ({ name: r.name || `Resource ${i + 1}`, index: i })),
+    () =>
+      resources.map((r, i) => ({
+        name: r.name || `Resource ${i + 1}`,
+        index: i,
+        outputs: (r.outputs ?? []).map((o) => o.name),
+      })),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- name list is the only structural input
     [resources.length, ...resources.map((r) => r.name)],
   );

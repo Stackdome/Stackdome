@@ -36,7 +36,7 @@ interface StackResourceItemProps {
   onRemove: (index: number) => void;
   errors: { [field: string]: string | undefined };
   volumes?: Partial<VolumeFormData>[];
-  allResources?: { name: string; index: number }[];
+  allResources?: { name: string; index: number; outputs: string[] }[];
   secrets: UseSecretsReturn;
   addons: PostgresAddon[];
   addonNameById: Map<string, string>;
@@ -64,6 +64,7 @@ function StackResourceItemImpl({
   volumes = [],
   allResources,
   secrets,
+  addonNameById,
   baselineResource,
   onDiscardEnvRow,
   onDiscardResource,
@@ -172,6 +173,20 @@ function StackResourceItemImpl({
 
   const envVars = (resource.execution_config?.environment_variables || []) as FormEnvVarData[];
   const baselineEnvVars = baselineResource?.execution_config?.environment_variables as FormEnvVarData[] | undefined;
+
+  // Picker data for env-row source bindings.
+  const thisResourceName = resource.name ?? `Resource ${index + 1}`;
+  const resourceOptions = useMemo(
+    () =>
+      (allResources ?? [])
+        .filter((r) => r.name !== thisResourceName)
+        .map((r) => ({ name: r.name, outputs: r.outputs })),
+    [allResources, thisResourceName],
+  );
+  const selfOutputs = useMemo(
+    () => (resource.outputs ?? []).map((o) => o.name),
+    [resource.outputs],
+  );
 
   return (
     <TooltipProvider>
@@ -288,6 +303,11 @@ function StackResourceItemImpl({
                 envVars={envVars}
                 baselineEnvVars={baselineEnvVars}
                 errors={errors}
+                resourceOptions={resourceOptions}
+                selfOutputs={selfOutputs}
+                secrets={secrets.secrets}
+                secretsLoading={secrets.isLoading}
+                addonNameById={addonNameById}
                 onChangeEnvVars={onChangeEnvVars}
                 onDiscardEnvRow={onDiscardEnvRow}
               />

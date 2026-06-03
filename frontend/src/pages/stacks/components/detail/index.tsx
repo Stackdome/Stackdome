@@ -31,9 +31,20 @@ import {
 import type { AddonGroupStateMap } from "@/pages/stacks/components/shared/stack-resource-item";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
-import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById, updateStack } from "@/api/stacks";
+import {
+  createStackConnection,
+  updateStackConnection,
+  deleteStackConnection,
+} from "@/api/connections";
+import {
+  connectionsToEnvRows,
+  buildDesiredConnections,
+  diffConnections,
+  type FormEnvRow,
+} from "@/pages/stacks/lib/connection-mapping";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
@@ -145,10 +156,24 @@ export default function StackDetailPage() {
 
   const stackToShow = currentStack || fetchedStack;
 
-  const baselineResources = useMemo<FormStackResourceData[]>(
-    () => (stackToShow?.spec.stack_resources || []).map(mapStackResourceToFormData),
-    [stackToShow],
-  );
+  const baselineResources = useMemo<FormStackResourceData[]>(() => {
+    const connections = stackToShow?.spec?.connections ?? [];
+    return (stackToShow?.spec?.stack_resources || []).map((r) => {
+      const form = mapStackResourceToFormData(r);
+      const connRows = connectionsToEnvRows(form.name ?? "", connections) as FormEnvVarData[];
+      if (connRows.length === 0) return form;
+      return {
+        ...form,
+        execution_config: {
+          ...(form.execution_config ?? {}),
+          environment_variables: [
+            ...((form.execution_config?.environment_variables ?? []) as FormEnvVarData[]),
+            ...connRows,
+          ],
+        },
+      };
+    });
+  }, [stackToShow]);
   const baselineVolumes = useMemo<VolumeFormData[]>(
     () => (stackToShow?.spec?.volumes || []).map(mapVolumeToFormData),
     [stackToShow],
@@ -306,9 +331,38 @@ export default function StackDetailPage() {
       }
 
       const apiData = convertFormStackToApiStack(formStackData);
-      const updatedStack = await updateStack(orgId, teamName, id, apiData);
+      await updateStack(orgId, teamName, id, apiData);
 
-      setFetchedStack(updatedStack);
+      // Reconcile connections (secret/addon/resource env bindings) after the
+      // stack PUT. StackUpdateRequest carries no connections, so they are diffed
+      // and applied via the dedicated connections API.
+      const desired = buildDesiredConnections(
+        resources.map((r) => ({
+          name: r.name ?? "",
+          rows: (r.execution_config?.environment_variables ?? []) as FormEnvRow[],
+        })),
+      );
+      const loadedConnections = stackToShow.spec?.connections ?? [];
+      const { creates, updates, deletes } = diffConnections(loadedConnections, desired);
+
+      const connectionResults = await Promise.allSettled([
+        ...creates.map((c) => createStackConnection(orgId, teamName, id, c)),
+        ...updates.map((c) => updateStackConnection(orgId, teamName, id, c.id!, c)),
+        ...deletes.map((cid) => deleteStackConnection(orgId, teamName, id, cid)),
+      ]);
+      const connectionFailures = connectionResults.filter((r) => r.status === "rejected").length;
+
+      const refreshed = await getStackById(orgId, teamName, id);
+      setFetchedStack(refreshed);
+
+      if (connectionFailures > 0) {
+        toast({
+          title: "Stack saved, but some bindings failed",
+          description: `${connectionFailures} connection change(s) did not apply. Re-open the resource to retry.`,
+          variant: "destructive",
+        });
+      }
+
       if (detachResult) setDetachedProvenance(detachResult.provenance);
       else setDetachedProvenance(new Map());
       session.discard();
