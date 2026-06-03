@@ -10,17 +10,18 @@ export type PostgresAddonState = NonNullable<PostgresAddonStatus["state"]>;
 export type PostgresAddonCreateInput = Pick<PostgresAddon, "name" | "spec"> &
   Partial<Pick<PostgresAddon, "labels" | "annotations" | "cluster_id">>;
 
-export async function listPostgresAddons(orgId: string): Promise<PostgresAddonList> {
-  const res = await api.get(`/organizations/${orgId}/addons/postgres`);
+// Addons are team-scoped (every addon belongs to a team); reads and writes both
+// go through the team-scoped endpoints. The UI scopes everything to the default team.
+export async function listPostgresAddons(orgId: string, teamName: string): Promise<PostgresAddonList> {
+  const res = await api.get(`/organizations/${orgId}/teams/${teamName}/addons/postgres`);
   return res.data as PostgresAddonList;
 }
 
-export async function getPostgresAddon(orgId: string, id: string): Promise<PostgresAddon> {
-  const res = await api.get(`/organizations/${orgId}/addons/postgres/${id}`);
+export async function getPostgresAddon(orgId: string, teamName: string, id: string): Promise<PostgresAddon> {
+  const res = await api.get(`/organizations/${orgId}/teams/${teamName}/addons/postgres/${id}`);
   return res.data as PostgresAddon;
 }
 
-// Writes go through team-scoped endpoints (the org-scoped paths are GET-only).
 export async function createPostgresAddon(
   orgId: string,
   teamName: string,

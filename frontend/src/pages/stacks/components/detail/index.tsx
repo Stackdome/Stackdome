@@ -92,7 +92,7 @@ export default function StackDetailPage() {
 
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const { toast } = useToast();
-  const { teamNameById } = useResourceTeams();
+  const { teamNameById, defaultTeamName } = useResourceTeams();
   const { canWrite } = useCurrentUser();
 
   // Find the current stack in context
@@ -122,7 +122,12 @@ export default function StackDetailPage() {
 
       setLoading(true);
       setError(null);
-      getStackById(orgId, id)
+      // Single-stack read is team-scoped; wait for the default team to resolve
+      // (this effect re-runs once it does).
+      if (!defaultTeamName) {
+        return;
+      }
+      getStackById(orgId, defaultTeamName, id)
         .then((data) => {
           setFetchedStack(data);
           setLoading(false);
@@ -136,7 +141,7 @@ export default function StackDetailPage() {
           setPathLoading(path, false);
         });
     }
-  }, [currentStack, id, setCustomLabel, setPathLoading]);
+  }, [currentStack, id, defaultTeamName, setCustomLabel, setPathLoading]);
 
   const stackToShow = currentStack || fetchedStack;
 

@@ -45,8 +45,10 @@ export async function createStack(orgId: string, teamName: string, input: Stack)
   return response.data;
 }
 
-export async function getStackById(orgId: string, stackId: string): Promise<Stack> {
-  const response = await api.get<Stack>(`/organizations/${orgId}/stacks/${stackId}`);
+// Single-stack reads are team-scoped (only the org-level *list* is aggregated);
+// the UI scopes to the default team.
+export async function getStackById(orgId: string, teamName: string, stackId: string): Promise<Stack> {
+  const response = await api.get<Stack>(`/organizations/${orgId}/teams/${teamName}/stacks/${stackId}`);
   return response.data;
 }
 
