@@ -76,7 +76,7 @@ func runPreflight(email, domain string) (*preflightResult, error) {
 }
 
 func detectPublicIP() (string, error) {
-	ip, err := output("curl", "-s", "--max-time", "10", "ifconfig.me")
+	ip, err := output("curl", "-4", "-s", "--max-time", "10", "ifconfig.me")
 	if err != nil {
 		return "", fmt.Errorf("failed to detect public IP (curl ifconfig.me): %w", err)
 	}
