@@ -215,6 +215,9 @@ const FormStackSchema = ApiStackSchema.extend({
 type FormStackData = z.infer<typeof FormStackSchema>;
 type FormStackResourceData = z.infer<typeof FormStackResourceSchema> & {
   status?: unknown;
+  // Server-computed, read-only in the API schema; carried in form data for the
+  // Self/Resource output pickers but stripped before any PUT.
+  outputs?: unknown;
 };
 type FormVolumeData = z.infer<typeof FormVolumeSchema> & {
   status?: unknown;
@@ -241,6 +244,7 @@ function convertFormResourceToApiResource(
     useGitSecret,
     selectedGitSecretId,
     status,
+    outputs,
     ...rest
   } = resource;
 
