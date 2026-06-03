@@ -90,12 +90,6 @@ func (b *postgresClusterBuilder) BuildPostgresClusterCR(addon *models.PostgresAd
 		},
 		Spec: addonsv1alpha1.PostgresClusterSpec{
 			Instances: addon.Instances.Count,
-			// TODO(cluster-agent): Remove hardcoded NumSynchronousReplicas once cluster-agent
-			// skips setting Synchronous when NumSynchronousReplicas=0 (see docs/plans/cluster-agent-fixes.md #1).
-			ReplicasSpec: addonsv1alpha1.ReplicasSpec{
-				NumSynchronousReplicas:           1,
-				SynchronousReplicaDataDurability: "preferred",
-			},
 			PostgreSQLSpec: &addonsv1alpha1.PostgreSQLSpec{
 				ImageCatalogRef: &addonsv1alpha1.ImageCatalogRef{
 					Name: DefaultImageCatalogName,
