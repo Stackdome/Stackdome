@@ -11,19 +11,67 @@ import {
   ApiStackSchema,
 } from "./api-schema";
 import type { StackUpdateRequest, StackResourceUpdateRequest, VolumeUpdateRequest } from "@/api/stacks";
+import { ADDON_OUTPUT_FIELDS } from "@/pages/stacks/lib/addon-presets";
+import type { FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
 
 /**
  * Form-specific UI schema additions
  */
 const FormGitRevisionTypeSchema = z.enum(["commit", "branch", "tag"]);
 
-const FormEnvVarSchema = z.object({
-  from: z.literal("stack"),
-  name: z.string().min(1, "Required"),
-  value: z.string(),
-});
+const FormEnvVarSchema = z.union([
+  z.object({
+    from: z.literal("stack"),
+    name: z.string().min(1, "Required"),
+    value: z.string(),
+  }),
+  z.object({
+    from: z.literal("secret"),
+    name: z.string().min(1, "Required"),
+    secretId: z.string().min(1, "Pick a secret"),
+    secretKey: z.string().min(1, "Pick a key"),
+  }),
+  z
+    .object({
+      from: z.literal("addon"),
+      name: z.string().min(1, "Required"),
+      addonId: z.string().min(1, "Pick an addon"),
+      database: z.string().optional(),
+      superuser: z.boolean().default(false),
+      credField: z.enum(ADDON_OUTPUT_FIELDS).optional(),
+    })
+    .refine((d) => d.superuser || (typeof d.database === "string" && d.database.length > 0), {
+      message: "Pick a database",
+      path: ["database"],
+    })
+    .refine((d) => typeof d.credField === "string" && d.credField.length > 0, {
+      message: "Pick a field",
+      path: ["credField"],
+    }),
+  z.object({
+    from: z.literal("resource"),
+    name: z.string().min(1, "Required"),
+    resourceName: z.string().min(1, "Pick a resource"),
+    output: z.string().min(1, "Pick an output"),
+  }),
+  z.object({
+    from: z.literal("self"),
+    name: z.string().min(1, "Required"),
+    selfOutput: z.string().min(1, "Pick an output"),
+  }),
+]);
 
 type FormEnvVarData = z.infer<typeof FormEnvVarSchema>;
+
+// Compile-time assertion: the zod-inferred env-row type must stay structurally
+// identical to FormEnvRow (the canonical union in connection-mapping.ts).
+type _AssertEnvRowsMatch = FormEnvVarData extends FormEnvRow
+  ? FormEnvRow extends FormEnvVarData
+    ? true
+    : ["FormEnvRow has arms FormEnvVarData lacks"]
+  : ["FormEnvVarData has arms FormEnvRow lacks"];
+const _envRowsMatch: _AssertEnvRowsMatch = true;
+void _envRowsMatch;
 
 const FormStackResourceSchema = ApiStackResourceSchema.extend({
   // UI helper, not part of API spec for StackResource
@@ -211,15 +259,20 @@ function convertFormResourceToApiResource(
     return cleanVolumeMount;
   });
 
-  // Process environment variables: emit literal env-var rows only.
+  // Only literal (stack) and self rows persist as env vars. Secret/addon/resource
+  // rows persist as stack connections, handled in the save orchestration.
   const envVars = (rest.execution_config?.environment_variables ?? []) as FormEnvVarData[];
 
-  const literalEnvs = envVars.map((r) => ({ name: r.name, value: r.value }));
+  const apiEnvVars = envVars.flatMap((r): { name: string; value?: string; self_output?: string }[] => {
+    if (r.from === "stack") return [{ name: r.name, value: r.value }];
+    if (r.from === "self") return [{ name: r.name, self_output: r.selfOutput }];
+    return [];
+  });
 
   const processedExecutionConfig = rest.execution_config
     ? {
       ...rest.execution_config,
-      environment_variables: literalEnvs,
+      environment_variables: apiEnvVars,
     }
     : undefined;
 
@@ -287,14 +340,15 @@ function convertApiResourceToFormResource(
     }
   }
 
-  // Process environment variables: build literal env-var rows.
+  // Env vars deserialize into literal + self rows. Secret/addon/resource rows
+  // are merged in by the caller from the stack's connections.
   const processedEnvVars: FormEnvVarData[] = (
     resource.execution_config?.environment_variables ?? []
-  ).map((v) => ({
-    from: "stack" as const,
-    name: v.name,
-    value: v.value ?? "",
-  }));
+  ).map((v) =>
+    v.self_output
+      ? { from: "self" as const, name: v.name, selfOutput: v.self_output }
+      : { from: "stack" as const, name: v.name, value: v.value ?? "" },
+  );
 
   // Detect if secrets are being used
   const useImageSecret = Boolean(resource.image_spec?.pull_secret?.secret_id);
@@ -429,6 +483,7 @@ export {
   FormVolumeExtendedSchema,
   FormStackSchema,
   convertApiResourceToFormResource,
+  convertFormResourceToApiResource,
   convertApiVolumeToFormVolume,
   convertFormStackToApiStack,
 };
