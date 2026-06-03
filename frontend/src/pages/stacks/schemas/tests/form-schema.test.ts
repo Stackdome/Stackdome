@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   convertApiResourceToFormResource,
   convertFormResourceToApiResource,
+  convertFormStackToApiStack,
 } from "../form-schema";
 
 type ApiResourceArg = Parameters<typeof convertApiResourceToFormResource>[0];
@@ -92,6 +93,50 @@ describe("env round-trip", () => {
     };
     const api = convertFormResourceToApiResource(form as never);
     expect(api.execution_config?.environment_variables).toEqual([{ name: "A", value: "1" }]);
+  });
+});
+
+describe("convertFormStackToApiStack — spec.connections", () => {
+  it("emits spec.connections built from secret/addon/resource rows on convertFormStackToApiStack", () => {
+    const form = {
+      name: "tooljet",
+      labels: [],
+      spec: {
+        stack_resources: [
+          {
+            name: "web",
+            sourceType: "image" as const,
+            image_spec: { image: "nginx" },
+            execution_config: {
+              environment_variables: [
+                { from: "stack" as const, name: "A", value: "1" },
+                { from: "secret" as const, name: "B", secretId: "s1", secretKey: "B" },
+                { from: "resource" as const, name: "C", resourceName: "mailhog", output: "host" },
+              ],
+            },
+          },
+        ],
+      },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    // literal stays an env var:
+    expect(api.spec.stack_resources[0].execution_config?.environment_variables).toEqual([{ name: "A", value: "1" }]);
+    // secret + resource become connections (2 groups, to web):
+    expect(api.spec.connections).toBeDefined();
+    expect(api.spec.connections!.map((c) => c.from)).toEqual(
+      expect.arrayContaining([{ type: "secret", id: "s1" }, { type: "stack_resource", name: "mailhog" }]),
+    );
+    api.spec.connections!.forEach((c) => expect(c.to).toEqual({ type: "stack_resource", name: "web" }));
+  });
+
+  it("omits spec.connections when there are no secret/addon/resource rows", () => {
+    const form = {
+      name: "s", labels: [],
+      spec: { stack_resources: [{ name: "web", sourceType: "image" as const, image_spec: { image: "nginx" },
+        execution_config: { environment_variables: [{ from: "stack" as const, name: "A", value: "1" }] } }] },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    expect(api.spec.connections).toBeUndefined();
   });
 });
 

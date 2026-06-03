@@ -35,15 +35,7 @@ import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, F
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById, updateStack } from "@/api/stacks";
 import {
-  createStackConnection,
-  updateStackConnection,
-  deleteStackConnection,
-} from "@/api/connections";
-import {
   connectionsToEnvRows,
-  buildDesiredConnections,
-  diffConnections,
-  type FormEnvRow,
 } from "@/pages/stacks/lib/connection-mapping";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
@@ -330,38 +322,12 @@ export default function StackDetailPage() {
         return;
       }
 
+      // The stack PUT carries the full desired connection set in spec.connections;
+      // the backend replaces the connection set atomically (upsert-by-id) and
+      // returns the stack with its reconciled connections. No separate diff.
       const apiData = convertFormStackToApiStack(formStackData);
-      await updateStack(orgId, teamName, id, apiData);
-
-      // Reconcile connections (secret/addon/resource env bindings) after the
-      // stack PUT. StackUpdateRequest carries no connections, so they are diffed
-      // and applied via the dedicated connections API.
-      const desired = buildDesiredConnections(
-        resources.map((r) => ({
-          name: r.name ?? "",
-          rows: (r.execution_config?.environment_variables ?? []) as FormEnvRow[],
-        })),
-      );
-      const loadedConnections = stackToShow.spec?.connections ?? [];
-      const { creates, updates, deletes } = diffConnections(loadedConnections, desired);
-
-      const connectionResults = await Promise.allSettled([
-        ...creates.map((c) => createStackConnection(orgId, teamName, id, c)),
-        ...updates.map((c) => updateStackConnection(orgId, teamName, id, c.id!, c)),
-        ...deletes.map((cid) => deleteStackConnection(orgId, teamName, id, cid)),
-      ]);
-      const connectionFailures = connectionResults.filter((r) => r.status === "rejected").length;
-
-      const refreshed = await getStackById(orgId, teamName, id);
-      setFetchedStack(refreshed);
-
-      if (connectionFailures > 0) {
-        toast({
-          title: "Stack saved, but some bindings failed",
-          description: `${connectionFailures} connection change(s) did not apply. Re-open the resource to retry.`,
-          variant: "destructive",
-        });
-      }
+      const updatedStack = await updateStack(orgId, teamName, id, apiData);
+      setFetchedStack(updatedStack);
 
       if (detachResult) setDetachedProvenance(detachResult.provenance);
       else setDetachedProvenance(new Map());

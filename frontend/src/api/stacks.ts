@@ -29,6 +29,7 @@ export type StackUpdateRequest = Omit<Stack,
   spec: {
     stack_resources: StackResourceUpdateRequest[];
     volumes?: VolumeUpdateRequest[];
+    connections?: components["schemas"]["StackConnection"][];
   };
 };
 

@@ -12,6 +12,7 @@ import {
 } from "./api-schema";
 import type { StackUpdateRequest, StackResourceUpdateRequest, VolumeUpdateRequest } from "@/api/stacks";
 import { ADDON_OUTPUT_FIELDS } from "@/pages/stacks/lib/addon-presets";
+import { buildDesiredConnections } from "@/pages/stacks/lib/connection-mapping";
 import type { FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
 
 /**
@@ -460,10 +461,21 @@ function convertFormStackToApiStack(
     ? validVolumes.map(convertFormVolumeToApiVolume)
     : undefined;
 
+  // Secret/addon/resource env rows persist as stack connections, not env vars.
+  // The per-resource serializer already drops them from environment_variables;
+  // rebuild the full desired connection set here so the stack PUT carries it.
+  const connections = buildDesiredConnections(
+    validResources.map((r) => ({
+      name: r.name ?? "",
+      rows: (r.execution_config?.environment_variables ?? []) as FormEnvRow[],
+    })),
+  );
+
   // Create a new clean spec object that will only include API-expected fields
   const apiSpec = {
     stack_resources: apiStackResources as z.infer<typeof ApiStackSchema>["spec"]["stack_resources"],
     volumes: apiVolumes as z.infer<typeof ApiStackSchema>["spec"]["volumes"] | undefined,
+    ...(connections.length > 0 ? { connections } : {}),
   };
 
   // Combine everything into the final API-compliant object

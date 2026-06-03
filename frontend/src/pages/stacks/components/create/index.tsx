@@ -20,10 +20,6 @@ import {
   convertFormStackToApiStack,
 } from "@/pages/stacks/schemas/form-schema";
 import { createStack } from '@/api/stacks';
-import {
-  buildDesiredConnections,
-  type FormEnvRow,
-} from "@/pages/stacks/lib/connection-mapping";
 import { getCurrentOrganizationId } from '@/helpers/common';
 import { getErrorMessage } from '@/api/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -384,20 +380,10 @@ export default function StackCreatePage() {
     }
 
     try {
-      // Secret/addon/resource env rows persist as stack connections, not env
-      // vars. convertFormStackToApiStack drops them from env vars; rebuild them
-      // here and ride them in the create payload's spec.connections.
+      // convertFormStackToApiStack builds spec.connections from the
+      // secret/addon/resource env rows, so the create payload carries them.
       const apiStack = convertFormStackToApiStack(validationResult.data);
-      const connections = buildDesiredConnections(
-        validationResult.data.spec.stack_resources.map((r) => ({
-          name: r.name ?? "",
-          rows: (r.execution_config?.environment_variables ?? []) as FormEnvRow[],
-        })),
-      );
-      await createStack(orgId, defaultTeamName, {
-        ...apiStack,
-        spec: { ...apiStack.spec, ...(connections.length > 0 ? { connections } : {}) },
-      });
+      await createStack(orgId, defaultTeamName, apiStack);
       setIsLoading(false);
       toast({
         title: 'Stack Created',
