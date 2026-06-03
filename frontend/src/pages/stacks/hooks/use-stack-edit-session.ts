@@ -31,6 +31,9 @@ export interface EditSessionStartOpts {
   openResourceIdx?: number | null;
   openVolumeIdx?: number | null;
   openTab?: EditSessionTab | null;
+  /** Addon ids already bound to the stack (from its saved connections), so the
+   *  edit session starts with them linked rather than wiping to empty. */
+  linkedAddonIds?: Set<string>;
 }
 
 const EMPTY_DRAFT: EditSessionDraft = { resources: [], volumes: [] };
@@ -97,7 +100,7 @@ export function useStackEditSession(): UseStackEditSession {
         openVolumeIdx: opts?.openVolumeIdx ?? null,
         openTab: opts?.openTab ?? null,
       });
-      setLinkedAddonIdsState(new Set());
+      setLinkedAddonIdsState(opts?.linkedAddonIds ? new Set(opts.linkedAddonIds) : new Set());
       setPendingDetachState(new Set());
     },
     [],

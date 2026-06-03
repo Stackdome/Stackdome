@@ -154,6 +154,19 @@ export default function StackDetailPage() {
     [stackToShow],
   );
 
+  // Addons bound to the saved stack come from its connections (from.type
+  // "addon/postgres"), not from the env vars — so this is the source of truth
+  // for the "Stack Addons" panel in display mode.
+  const connectionAddonIds = useMemo<Set<string>>(
+    () =>
+      new Set(
+        (stackToShow?.spec?.connections ?? [])
+          .filter((c) => c.from?.type === "addon/postgres" && c.from?.id)
+          .map((c) => c.from!.id as string),
+      ),
+    [stackToShow],
+  );
+
   const activateEdit = (opts?: { resourceIdx?: number; volumeIdx?: number; openTab?: EditSessionTab }) => {
     session.start(
       { resources: baselineResources, volumes: baselineVolumes },
@@ -161,6 +174,7 @@ export default function StackDetailPage() {
         openResourceIdx: opts?.resourceIdx ?? null,
         openVolumeIdx: opts?.volumeIdx ?? null,
         openTab: opts?.openTab ?? null,
+        linkedAddonIds: connectionAddonIds,
       },
     );
     setEditingBindingIds(new Set());
@@ -358,8 +372,8 @@ export default function StackDetailPage() {
   // breaking memo on every StackResourceItem child via the addons →
   // availableAddonIds → addons.filter chain.
   const availableAddonIds = useMemo(
-    () => new Set(session.linkedAddonIds),
-    [session.linkedAddonIds],
+    () => (session.isActive ? new Set(session.linkedAddonIds) : connectionAddonIds),
+    [session.isActive, session.linkedAddonIds, connectionAddonIds],
   );
 
   if (loading) {
@@ -569,7 +583,7 @@ export default function StackDetailPage() {
                           resources: [...baselineResources, getDefaultResource() as FormStackResourceData],
                           volumes: baselineVolumes,
                         },
-                        { openResourceIdx: nextIdx, openTab: "configuration" },
+                        { openResourceIdx: nextIdx, openTab: "configuration", linkedAddonIds: connectionAddonIds },
                       );
                       setEditingBindingIds(new Set());
                     }
@@ -610,7 +624,7 @@ export default function StackDetailPage() {
                           resources: baselineResources,
                           volumes: [...baselineVolumes, getDefaultVolume() as VolumeFormData],
                         },
-                        { openVolumeIdx: nextIdx },
+                        { openVolumeIdx: nextIdx, linkedAddonIds: connectionAddonIds },
                       );
                       setEditingBindingIds(new Set());
                     }
@@ -623,13 +637,13 @@ export default function StackDetailPage() {
           {(() => {
             const baseline = { resources: baselineResources, volumes: baselineVolumes };
             const ensureActive = () => {
-              if (!session.isActive) session.start(baseline);
+              if (!session.isActive) session.start(baseline, { linkedAddonIds: connectionAddonIds });
             };
             return (
               <AddonsInStackPanel
                 readOnly={!canWriteStack}
                 resources={(session.isActive ? session.draft.resources : baselineResources) as Partial<FormStackResourceData>[]}
-                linkedAddonIds={session.linkedAddonIds}
+                linkedAddonIds={session.isActive ? session.linkedAddonIds : connectionAddonIds}
                 onLinkAddon={(addonId) => {
                   ensureActive();
                   session.setLinkedAddonIds((prev) => {
