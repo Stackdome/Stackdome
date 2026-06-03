@@ -11,9 +11,6 @@ const ApiPortSchema = schemas.Port;
 const ApiSecretRefSchema = schemas.SecretRef;
 const ApiImageSpecSchema = schemas.ImageSpec;
 const ApiEnvVarSchema = schemas.EnvVar;
-const ApiEnvVarFromSecretSchema = schemas.EnvVarFromSecret;
-const ApiPostgresAddonEnvSourceSchema = schemas.PostgresAddonEnvSource;
-const ApiAddonEnvSourceSchema = schemas.AddonEnvSource;
 const ApiExecutionConfigSchema = schemas.ExecutionConfig;
 const ApiInitSpecSchema = schemas.InitSpec;
 const ApiGitRepoRevisionSchema = schemas.GitRepoRevision;
@@ -56,11 +53,9 @@ const ApiStackResourceStatusSchema = schemas.StackResourceStatus;
 const ApiVolumeStatusSchema = schemas.VolumeStatus;
 
 export {
-  ApiAddonEnvSourceSchema,
   ApiAnnotationSchema,
   ApiBuildArtifactSchema,
   ApiBuildSourceContextSchema,
-  ApiEnvVarFromSecretSchema,
   ApiEnvVarSchema,
   ApiExecutionConfigSchema,
   ApiGitRepoRevisionSchema,
@@ -70,7 +65,6 @@ export {
   ApiInitSpecSchema,
   ApiLabelSchema,
   ApiPortSchema,
-  ApiPostgresAddonEnvSourceSchema,
   ApiRemoteSourceSchema,
   ApiSecretRefSchema,
   ApiStackResourceBuildSpecSchema,

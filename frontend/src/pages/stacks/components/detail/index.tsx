@@ -18,7 +18,6 @@ import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-d
 import StickyActionBar, { type StickyActionBarSegment } from "@/pages/stacks/components/shared/sticky-action-bar";
 import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
 import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
-import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +28,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { AddonGroupStateMap } from "@/pages/stacks/components/shared/stack-resource-item";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
@@ -38,6 +36,8 @@ import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById, updateStack } from "@/api/stacks";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
+import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import type { z } from "zod";
 import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
 import { useToast } from "@/components/ui/use-toast";
@@ -76,11 +76,6 @@ export default function StackDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const session = useStackEditSession();
-  const { addons: postgresAddons } = usePostgresAddons();
-  const addonNameById = useMemo(
-    () => new Map(postgresAddons.filter((a) => a.id).map((a) => [a.id!, a.name])),
-    [postgresAddons],
-  );
   const [isSaving, setIsSaving] = useState(false);
   const [editingBindingIds, setEditingBindingIds] = useState<Set<string>>(new Set());
   // Per-addonId provenance for converted env rows after a successful detach
@@ -97,9 +92,15 @@ export default function StackDetailPage() {
 
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const { toast } = useToast();
+  const { teamNameById } = useResourceTeams();
+  const { canWrite } = useCurrentUser();
 
   // Find the current stack in context
   const currentStack = stacks.find((stack) => stack.id === id);
+
+  // Viewer read-only gating: only OrgAdmin / team Developer may mutate this stack.
+  const stackTeamId = fetchedStack?.team_id ?? currentStack?.team_id;
+  const canWriteStack = canWrite(stackTeamId ?? "");
 
   // Update breadcrumb with stack name
   useEffect(() => {
@@ -203,47 +204,19 @@ export default function StackDetailPage() {
   }, [session]);
 
   // Compute "linked but unbound" — addons in linkedAddonIds with zero env
-  // bindings across the draft.
-  const computeUnboundLinked = (): string[] => {
-    const referenced = new Set<string>();
-    for (const r of session.draft.resources) {
-      const envs = (r?.execution_config?.environment_variables || []) as FormEnvVarData[];
-      for (const e of envs) {
-        if (e.from === "addon" && e.addonId) referenced.add(e.addonId);
-      }
-    }
-    return Array.from(session.linkedAddonIds).filter((id) => !referenced.has(id));
-  };
+  // bindings across the draft. Env vars no longer carry addon-backed sources,
+  // so every linked addon is unbound.
+  const computeUnboundLinked = (): string[] => Array.from(session.linkedAddonIds);
 
-  // Convert addon rows in pendingDetach to plain stack rows. Returns the new
-  // resources array and the provenance map of resourceIdx::envName entries.
+  // Env vars are no longer addon-backed, so there is nothing to convert on
+  // detach; resources pass through unchanged with empty provenance.
   const applyPendingDetach = (): {
     resources: Partial<FormStackResourceData>[];
     provenance: Map<string, { addonName: string; credField?: string }>;
-  } => {
-    const provenance = new Map<string, { addonName: string; credField?: string }>();
-    const resources = session.draft.resources.map((r, rIdx) => {
-      const envs = (r?.execution_config?.environment_variables || []) as FormEnvVarData[];
-      const newEnvs = envs.map((e) => {
-        if (e.from === "addon" && session.pendingDetach.has(e.addonId)) {
-          provenance.set(`${rIdx}::${e.name}`, {
-            addonName: addonNameById.get(e.addonId) ?? e.addonId,
-            credField: e.credField,
-          });
-          return { from: "stack" as const, name: e.name, value: "" };
-        }
-        return e;
-      });
-      return {
-        ...r,
-        execution_config: {
-          ...(r.execution_config || {}),
-          environment_variables: newEnvs,
-        },
-      };
-    });
-    return { resources, provenance };
-  };
+  } => ({
+    resources: session.draft.resources,
+    provenance: new Map<string, { addonName: string; credField?: string }>(),
+  });
 
   const performSave = async () => {
     if (!stackToShow || !session.isActive || !id) return;
@@ -289,8 +262,19 @@ export default function StackDetailPage() {
         return;
       }
 
+      const teamName = teamNameById(fetchedStack?.team_id ?? currentStack?.team_id);
+      if (!teamName) {
+        toast({
+          title: "Failed to update stack",
+          description: "Could not resolve the team for this stack.",
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return;
+      }
+
       const apiData = convertFormStackToApiStack(formStackData);
-      const updatedStack = await updateStack(orgId, id, apiData);
+      const updatedStack = await updateStack(orgId, teamName, id, apiData);
 
       setFetchedStack(updatedStack);
       if (detachResult) setDetachedProvenance(detachResult.provenance);
@@ -363,21 +347,15 @@ export default function StackDetailPage() {
     [session],
   );
 
-  // Stable Set of every addonId currently available to env rows: explicit
-  // links + addons referenced by existing env vars. Without useMemo this
-  // would be a fresh Set every render of detail/index.tsx, breaking memo
-  // on every StackResourceItem child via the addons → availableAddonIds
-  // → addons.filter chain.
-  const availableAddonIds = useMemo(() => {
-    const ids = new Set(session.linkedAddonIds);
-    for (const r of session.draft.resources) {
-      const envs = (r?.execution_config?.environment_variables || []) as FormEnvVarData[];
-      for (const e of envs) {
-        if (e.from === "addon" && e.addonId) ids.add(e.addonId);
-      }
-    }
-    return ids;
-  }, [session.linkedAddonIds, session.draft.resources]);
+  // Stable Set of every addonId explicitly linked to the stack. Env vars no
+  // longer carry addon-backed sources, so explicit links are the only source.
+  // Without useMemo this would be a fresh Set every render of detail/index.tsx,
+  // breaking memo on every StackResourceItem child via the addons →
+  // availableAddonIds → addons.filter chain.
+  const availableAddonIds = useMemo(
+    () => new Set(session.linkedAddonIds),
+    [session.linkedAddonIds],
+  );
 
   if (loading) {
     return (
@@ -419,7 +397,9 @@ export default function StackDetailPage() {
     `${volumeCount} ${volumeCount === 1 ? "volume" : "volumes"}`,
   ];
 
-  const headerActions = (
+  // The actions menu only holds mutating items (Edit + Delete). Hide the whole
+  // trigger for users who can't write this stack.
+  const headerActions = canWriteStack ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" aria-label="Stack actions">
@@ -448,7 +428,7 @@ export default function StackDetailPage() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  ) : undefined;
 
   return (
     <div className="p-8 space-y-8">
@@ -570,20 +550,26 @@ export default function StackDetailPage() {
               <StackResourcesDetail
                 resources={baselineResources}
                 accordionDefaultOpen={false}
-                onEditResource={(idx) =>
-                  activateEdit({ resourceIdx: idx, openTab: "environment" })
+                onEditResource={
+                  canWriteStack
+                    ? (idx) => activateEdit({ resourceIdx: idx, openTab: "environment" })
+                    : undefined
                 }
-                onAddResource={() => {
-                  const nextIdx = baselineResources.length;
-                  session.start(
-                    {
-                      resources: [...baselineResources, getDefaultResource() as FormStackResourceData],
-                      volumes: baselineVolumes,
-                    },
-                    { openResourceIdx: nextIdx, openTab: "configuration" },
-                  );
-                  setEditingBindingIds(new Set());
-                }}
+                onAddResource={
+                  canWriteStack
+                    ? () => {
+                      const nextIdx = baselineResources.length;
+                      session.start(
+                        {
+                          resources: [...baselineResources, getDefaultResource() as FormStackResourceData],
+                          volumes: baselineVolumes,
+                        },
+                        { openResourceIdx: nextIdx, openTab: "configuration" },
+                      );
+                      setEditingBindingIds(new Set());
+                    }
+                    : undefined
+                }
                 detachedProvenance={detachedProvenance}
               />
             )}
@@ -609,18 +595,22 @@ export default function StackDetailPage() {
                 volumes={baselineVolumes}
                 stackResources={baselineResources}
                 accordionDefaultOpen={false}
-                onEditVolume={(idx) => activateEdit({ volumeIdx: idx })}
-                onAddVolume={() => {
-                  const nextIdx = baselineVolumes.length;
-                  session.start(
-                    {
-                      resources: baselineResources,
-                      volumes: [...baselineVolumes, getDefaultVolume() as VolumeFormData],
-                    },
-                    { openVolumeIdx: nextIdx },
-                  );
-                  setEditingBindingIds(new Set());
-                }}
+                onEditVolume={canWriteStack ? (idx) => activateEdit({ volumeIdx: idx }) : undefined}
+                onAddVolume={
+                  canWriteStack
+                    ? () => {
+                      const nextIdx = baselineVolumes.length;
+                      session.start(
+                        {
+                          resources: baselineResources,
+                          volumes: [...baselineVolumes, getDefaultVolume() as VolumeFormData],
+                        },
+                        { openVolumeIdx: nextIdx },
+                      );
+                      setEditingBindingIds(new Set());
+                    }
+                    : undefined
+                }
               />
             )}
           </Panel>
@@ -632,6 +622,7 @@ export default function StackDetailPage() {
             };
             return (
               <AddonsInStackPanel
+                readOnly={!canWriteStack}
                 resources={(session.isActive ? session.draft.resources : baselineResources) as Partial<FormStackResourceData>[]}
                 linkedAddonIds={session.linkedAddonIds}
                 onLinkAddon={(addonId) => {

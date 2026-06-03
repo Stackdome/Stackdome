@@ -38,9 +38,13 @@ function stateVariant(state?: string): StatusVariant {
 export function PostgresDetailHeader({
   addon,
   onDelete,
+  canWrite = true,
 }: {
   addon: PostgresAddon;
   onDelete: () => void;
+  // Hide the Edit/Delete affordances for viewers without write access on the
+  // addon's team. Defaults to true so callers that don't gate keep current UX.
+  canWrite?: boolean;
 }) {
   const state = addon.status?.state;
   // Only surface a status tooltip when the addon is in a non-healthy
@@ -101,18 +105,20 @@ export function PostgresDetailHeader({
             : "Managed PostgreSQL cluster"
         }
         actions={
-          <div className="flex gap-3">
-            <Link to={`/addons/postgres/${addon.id}/edit`}>
-              <Button variant="outline">Edit</Button>
-            </Link>
-            <Button
-              variant="outline"
-              className="text-danger hover:border-danger hover:bg-danger/10 hover:text-danger"
-              onClick={onDelete}
-            >
-              Delete
-            </Button>
-          </div>
+          canWrite ? (
+            <div className="flex gap-3">
+              <Link to={`/addons/postgres/${addon.id}/edit`}>
+                <Button variant="outline">Edit</Button>
+              </Link>
+              <Button
+                variant="outline"
+                className="text-danger hover:border-danger hover:bg-danger/10 hover:text-danger"
+                onClick={onDelete}
+              >
+                Delete
+              </Button>
+            </div>
+          ) : undefined
         }
       />
     </div>

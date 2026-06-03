@@ -2,19 +2,21 @@ package migrations
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/gorm"
 )
 
 func addRefreshTokensTable() *gormigrate.Migration {
+	// Timestamps use time.Time so the columns are TIMESTAMPTZ (model reads time.Time).
 	type RefreshToken struct {
-		ID        string `gorm:"primary_key;default:gen_random_uuid()"`
-		UserID    string `gorm:"not null"`
-		TokenHash string `gorm:"not null"`
-		ExpiresAt string `gorm:"not null"`
-		CreatedAt string `gorm:"not null"`
-		RevokedAt *string
+		ID        string    `gorm:"primary_key;default:gen_random_uuid()"`
+		UserID    string    `gorm:"not null"`
+		TokenHash string    `gorm:"not null"`
+		ExpiresAt time.Time `gorm:"not null"`
+		CreatedAt time.Time `gorm:"not null"`
+		RevokedAt *time.Time
 	}
 	return &gormigrate.Migration{
 		ID: "202605030002_add_refresh_tokens_table",

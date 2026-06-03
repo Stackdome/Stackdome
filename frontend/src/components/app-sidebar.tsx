@@ -10,6 +10,7 @@ import { NavDomains } from "@/components/nav-domains"
 import { NavAddons } from "@/components/nav-addons"
 import { NavUser } from "@/components/nav-user"
 import { getCurrentUser } from "@/helpers/common"
+import { useCurrentUser } from "@/hooks/use-current-user"
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +27,7 @@ import {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const user = getCurrentUser();
+  const { isOrgAdmin } = useCurrentUser();
 
   // Create required user data for NavUser component
   const userData = {
@@ -62,10 +64,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <NavSecrets />
             <NavObjectStores />
             <NavAddons />
-            <NavClusters />
-            <NavDomains />
+            {/* Org-scoped, admin-only resources. Hidden for members so they
+                don't see (or fetch) endpoints that return 403 for them. */}
+            {isOrgAdmin && <NavClusters />}
+            {isOrgAdmin && <NavDomains />}
           </SidebarGroupContent>
         </SidebarGroup>
+        {/* Settings group (Users + Teams) is shelved — nav hidden and routes
+            redirected in App.tsx. Components/pages remain in the repo. */}
       </SidebarContent>
 
       <SidebarFooter>

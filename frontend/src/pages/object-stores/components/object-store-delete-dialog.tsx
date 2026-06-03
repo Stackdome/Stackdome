@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage, getErrorStatus } from "@/api/client";
 import { deleteObjectStore } from "@/api/object-stores";
+import { useResourceTeams } from "@/hooks/use-resource-teams";
 import type { ObjectStore } from "../types";
 
 type Props = {
@@ -25,6 +26,7 @@ const IN_USE_PATTERN = /in use/i;
 
 export function ObjectStoreDeleteDialog({ store, onOpenChange, onDeleted }: Props) {
   const { toast } = useToast();
+  const { teamNameById } = useResourceTeams();
   const [submitting, setSubmitting] = useState(false);
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
   const open = !!store;
@@ -40,10 +42,19 @@ export function ObjectStoreDeleteDialog({ store, onOpenChange, onDeleted }: Prop
       });
       return;
     }
+    const teamName = teamNameById(store.team_id);
+    if (!teamName) {
+      toast({
+        title: "Could not delete Object Store",
+        description: "Could not resolve the team for this object store.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSubmitting(true);
     setConflictMessage(null);
     try {
-      await deleteObjectStore(orgId, store.id);
+      await deleteObjectStore(orgId, teamName, store.id);
       toast({ title: "Object Store deleted", variant: "destructive" });
       onDeleted();
       onOpenChange(false);

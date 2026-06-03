@@ -9,6 +9,7 @@ import type { LoginFormData } from "../types";
 import { loginSchema } from "../types";
 import { setAuthSession } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { FormHead, FieldLabel } from "@/pages/auth/components/auth-shell";
 
 export function LoginForm() {
@@ -17,6 +18,7 @@ export function LoginForm() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useLogin();
+  const { refresh } = useCurrentUser();
   const navigate = useNavigate();
 
   const validateForm = (): boolean => {
@@ -51,8 +53,12 @@ export function LoginForm() {
     try {
       const response = await login(formData);
       if (response && response.token && response.user) {
-        setAuthSession(response.token, response.user);
+        setAuthSession(response.token, response.user, response.refresh_token);
       }
+      // Reload the current-user context with the freshly-authenticated user so
+      // role-gated nav (Settings, Clusters, Domains) reflects this session
+      // immediately instead of carrying stale state until a manual reload.
+      await refresh();
       navigate("/dashboard");
     } catch (err) {
       setServerError(getErrorMessage(err));

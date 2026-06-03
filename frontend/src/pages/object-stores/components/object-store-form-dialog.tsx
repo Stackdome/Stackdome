@@ -16,6 +16,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { createObjectStore, updateObjectStore } from "@/api/object-stores";
+import { useResourceTeams } from "@/hooks/use-resource-teams";
 import {
   objectStoreFormSchema,
   toApiPayload,
@@ -101,6 +102,7 @@ function fromObjectStore(store: ObjectStore): ObjectStoreFormValues | null {
 
 export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: Props) {
   const { toast } = useToast();
+  const { teamNameById, defaultTeamName } = useResourceTeams();
   const [values, setValues] = useState<ObjectStoreFormValues>(empty);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -165,10 +167,19 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
     try {
       const payload = toApiPayload(parsed.data);
       if (editing?.id) {
-        await updateObjectStore(orgId, editing.id, payload);
+        const teamName = teamNameById(editing.team_id);
+        if (!teamName) {
+          toast({ title: "Failed to save Object Store", description: "Could not resolve the team for this object store.", variant: "destructive" });
+          return;
+        }
+        await updateObjectStore(orgId, teamName, editing.id, payload);
         toast({ title: "Object Store updated" });
       } else {
-        await createObjectStore(orgId, payload);
+        if (!defaultTeamName) {
+          toast({ title: "Failed to save Object Store", description: "You don't have a team to create object stores in.", variant: "destructive" });
+          return;
+        }
+        await createObjectStore(orgId, defaultTeamName, payload);
         toast({ title: "Object Store created" });
       }
       onSaved();

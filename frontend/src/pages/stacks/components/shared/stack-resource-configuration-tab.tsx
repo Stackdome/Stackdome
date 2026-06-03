@@ -177,10 +177,11 @@ function StackResourceConfigurationTabImpl({
   };
 
   const addPort = () => {
+    const existing = draft.ports || [];
     update({
       ports: [
-        ...(draft.ports || []),
-        { number: 80, protocol: "tcp", exposed_to_public: false },
+        ...existing,
+        { name: `port-${existing.length + 1}`, number: 80, protocol: "tcp", exposed_to_public: false },
       ],
     });
   };

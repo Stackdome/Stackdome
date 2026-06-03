@@ -20,23 +20,26 @@ export async function getPostgresAddon(orgId: string, id: string): Promise<Postg
   return res.data as PostgresAddon;
 }
 
+// Writes go through team-scoped endpoints (the org-scoped paths are GET-only).
 export async function createPostgresAddon(
   orgId: string,
+  teamName: string,
   input: PostgresAddonCreateInput,
 ): Promise<PostgresAddon> {
-  const res = await api.post(`/organizations/${orgId}/addons/postgres`, input);
+  const res = await api.post(`/organizations/${orgId}/teams/${teamName}/addons/postgres`, input);
   return res.data as PostgresAddon;
 }
 
 export async function updatePostgresAddon(
   orgId: string,
+  teamName: string,
   id: string,
   input: PostgresAddonCreateInput,
 ): Promise<PostgresAddon> {
-  const res = await api.put(`/organizations/${orgId}/addons/postgres/${id}`, input);
+  const res = await api.put(`/organizations/${orgId}/teams/${teamName}/addons/postgres/${id}`, input);
   return res.data as PostgresAddon;
 }
 
-export async function deletePostgresAddon(orgId: string, id: string): Promise<void> {
-  await api.delete(`/organizations/${orgId}/addons/postgres/${id}`);
+export async function deletePostgresAddon(orgId: string, teamName: string, id: string): Promise<void> {
+  await api.delete(`/organizations/${orgId}/teams/${teamName}/addons/postgres/${id}`);
 }

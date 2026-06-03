@@ -11,43 +11,17 @@ import {
   ApiStackSchema,
 } from "./api-schema";
 import type { StackUpdateRequest, StackResourceUpdateRequest, VolumeUpdateRequest } from "@/api/stacks";
-import { CRED_FIELDS } from "@/pages/stacks/lib/addon-presets";
 
 /**
  * Form-specific UI schema additions
  */
 const FormGitRevisionTypeSchema = z.enum(["commit", "branch", "tag"]);
 
-const FormEnvVarSchema = z.union([
-  z.object({
-    from: z.literal("stack"),
-    name: z.string().min(1, "Required"),
-    value: z.string(),
-  }),
-  z.object({
-    from: z.literal("secret"),
-    name: z.string().min(1, "Required"),
-    secretId: z.string().min(1),
-    secretKey: z.string().min(1),
-  }),
-  z.object({
-    from: z.literal("addon"),
-    name: z.string().min(1, "Required"),
-    addonType: z.literal("postgres"),
-    addonId: z.string().min(1, "Pick an addon"),
-    database: z.string().optional(),
-    superuser: z.boolean().default(false),
-    credField: z.enum(CRED_FIELDS).optional(),
-  })
-    .refine(
-      (d) => d.superuser || (typeof d.database === "string" && d.database.length > 0),
-      { message: "Pick a database", path: ["database"] },
-    )
-    .refine(
-      (d) => typeof d.credField === "string" && d.credField.length > 0,
-      { message: "Pick a field", path: ["credField"] },
-    ),
-]);
+const FormEnvVarSchema = z.object({
+  from: z.literal("stack"),
+  name: z.string().min(1, "Required"),
+  value: z.string(),
+});
 
 type FormEnvVarData = z.infer<typeof FormEnvVarSchema>;
 
@@ -63,9 +37,8 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
   useGitSecret: z.boolean().optional().default(false),
   selectedGitSecretId: z.string().optional(),
   // Override execution_config to use our form env var schema. The
-  // environment_variables list holds form rows discriminated by `from`;
-  // the API arrays (literal/secret/addon) are reconstructed in the
-  // converter on save, so they aren't part of this form-side shape.
+  // environment_variables list holds literal env-var rows (`from: "stack"`);
+  // the API array is reconstructed in the converter on save.
   execution_config: z.object({
     command: z.array(z.string()).optional(),
     args: z.array(z.string()).optional(),
@@ -238,69 +211,15 @@ function convertFormResourceToApiResource(
     return cleanVolumeMount;
   });
 
-  // Process environment variables: split form rows by `from` discriminator
-  // back into the three API arrays (literals, secret-backed, addon-backed).
+  // Process environment variables: emit literal env-var rows only.
   const envVars = (rest.execution_config?.environment_variables ?? []) as FormEnvVarData[];
 
-  const literalEnvs = envVars
-    .filter((r): r is Extract<FormEnvVarData, { from: "stack" }> => r.from === "stack")
-    .map((r) => ({ name: r.name, value: r.value }));
-
-  const secretEnvs = envVars
-    .filter((r): r is Extract<FormEnvVarData, { from: "secret" }> => r.from === "secret")
-    .map((r) => ({
-      name: r.name,
-      secret_ref: { secret_id: r.secretId },
-      key: r.secretKey,
-    }));
-
-  const groups = new Map<
-    string,
-    {
-      addonId: string;
-      database?: string;
-      superuser: boolean;
-      mapping: Record<string, string>;
-    }
-  >();
-  for (const r of envVars) {
-    if (r.from !== "addon") continue;
-    if (!r.credField) continue; // schema enforces this on save; guard for in-progress rows
-    const key = `${r.addonId}::${r.database ?? ""}::${r.superuser}`;
-    let g = groups.get(key);
-    if (!g) {
-      g = {
-        addonId: r.addonId,
-        database: r.database,
-        superuser: r.superuser,
-        mapping: {},
-      };
-      groups.set(key, g);
-    }
-    g.mapping[r.credField] = r.name;
-  }
-
-  const env_from_addons = [...groups.values()]
-    .filter((g) => Object.keys(g.mapping).length > 0)
-    .sort((a, b) => {
-      if (a.addonId !== b.addonId) return a.addonId.localeCompare(b.addonId);
-      return (a.database ?? "").localeCompare(b.database ?? "");
-    })
-    .map((g) => ({
-      postgres: {
-        addon_id: g.addonId,
-        ...(g.superuser ? {} : { database: g.database }),
-        superuser: g.superuser,
-        env_mapping: g.mapping,
-      },
-    }));
+  const literalEnvs = envVars.map((r) => ({ name: r.name, value: r.value }));
 
   const processedExecutionConfig = rest.execution_config
     ? {
       ...rest.execution_config,
       environment_variables: literalEnvs,
-      environment_variables_from_secret: secretEnvs,
-      env_from_addons,
     }
     : undefined;
 
@@ -368,49 +287,14 @@ function convertApiResourceToFormResource(
     }
   }
 
-  // Process environment variables: fan out the three API arrays
-  // (literals, secret-backed, addon-backed) into a single list of form
-  // rows discriminated by `from`. Addon entries become one row per
-  // credField in their env_mapping.
-  const literalRows: FormEnvVarData[] = (
+  // Process environment variables: build literal env-var rows.
+  const processedEnvVars: FormEnvVarData[] = (
     resource.execution_config?.environment_variables ?? []
   ).map((v) => ({
     from: "stack" as const,
     name: v.name,
-    value: v.value,
+    value: v.value ?? "",
   }));
-
-  const secretRows: FormEnvVarData[] = (
-    resource.execution_config?.environment_variables_from_secret ?? []
-  ).map((v) => ({
-    from: "secret" as const,
-    name: v.name,
-    secretId: v.secret_ref.secret_id,
-    secretKey: v.key,
-  }));
-
-  const credOrderIndex = (f: string) =>
-    CRED_FIELDS.indexOf(f as (typeof CRED_FIELDS)[number]);
-
-  const addonRows: FormEnvVarData[] = (
-    resource.execution_config?.env_from_addons ?? []
-  ).flatMap((entry) => {
-    const pg = entry.postgres;
-    if (!pg) return [];
-    return Object.entries(pg.env_mapping ?? {})
-      .sort(([a], [b]) => credOrderIndex(a) - credOrderIndex(b))
-      .map(([credField, envName]) => ({
-        from: "addon" as const,
-        name: envName,
-        addonType: "postgres" as const,
-        addonId: pg.addon_id,
-        database: pg.database,
-        superuser: pg.superuser ?? false,
-        credField: credField as (typeof CRED_FIELDS)[number],
-      }));
-  });
-
-  const processedEnvVars = [...literalRows, ...secretRows, ...addonRows];
 
   // Detect if secrets are being used
   const useImageSecret = Boolean(resource.image_spec?.pull_secret?.secret_id);

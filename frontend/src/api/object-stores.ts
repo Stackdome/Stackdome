@@ -22,23 +22,26 @@ export async function getObjectStore(orgId: string, id: string): Promise<ObjectS
   return res.data as ObjectStore;
 }
 
+// Writes go through team-scoped endpoints (the org-scoped paths are GET-only).
 export async function createObjectStore(
   orgId: string,
+  teamName: string,
   payload: ObjectStoreCreatePayload,
 ): Promise<ObjectStore> {
-  const res = await api.post(`/organizations/${orgId}/object-stores`, payload);
+  const res = await api.post(`/organizations/${orgId}/teams/${teamName}/object-stores`, payload);
   return res.data as ObjectStore;
 }
 
 export async function updateObjectStore(
   orgId: string,
+  teamName: string,
   id: string,
   payload: ObjectStoreCreatePayload,
 ): Promise<ObjectStore> {
-  const res = await api.put(`/organizations/${orgId}/object-stores/${id}`, payload);
+  const res = await api.put(`/organizations/${orgId}/teams/${teamName}/object-stores/${id}`, payload);
   return res.data as ObjectStore;
 }
 
-export async function deleteObjectStore(orgId: string, id: string): Promise<void> {
-  await api.delete(`/organizations/${orgId}/object-stores/${id}`);
+export async function deleteObjectStore(orgId: string, teamName: string, id: string): Promise<void> {
+  await api.delete(`/organizations/${orgId}/teams/${teamName}/object-stores/${id}`);
 }

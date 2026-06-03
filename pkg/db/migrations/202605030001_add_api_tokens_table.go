@@ -2,12 +2,14 @@ package migrations
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/gorm"
 )
 
 func addAPITokensTable() *gormigrate.Migration {
+	// Timestamps use time.Time so the columns are TIMESTAMPTZ (model reads time.Time).
 	type APIToken struct {
 		ID          string  `gorm:"primary_key;default:gen_random_uuid()"`
 		Name        string  `gorm:"not null"`
@@ -17,10 +19,10 @@ func addAPITokensTable() *gormigrate.Migration {
 		Scopes      string  `gorm:"type:jsonb;not null;default:'[]'"`
 		ResourceIDs *string `gorm:"type:jsonb"`
 		OrgID       string  `gorm:"not null"`
-		ExpiresAt   *string
-		LastUsedAt  *string
-		CreatedAt   string `gorm:"not null"`
-		RevokedAt   *string
+		ExpiresAt   *time.Time
+		LastUsedAt  *time.Time
+		CreatedAt   time.Time `gorm:"not null"`
+		RevokedAt   *time.Time
 	}
 	return &gormigrate.Migration{
 		ID: "202605030001_add_api_tokens_table",

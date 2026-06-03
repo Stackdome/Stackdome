@@ -9,10 +9,12 @@ import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageHeader, Panel, EmptyState } from "@/components/branded";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export default function ObjectStoresPage() {
   const { objectStores, loading, error, refetch } = useObjectStores();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
+  const { canWrite, canWriteAnyTeam } = useCurrentUser();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingStore, setEditingStore] = useState<ObjectStore | null>(null);
   const [deletingStore, setDeletingStore] = useState<ObjectStore | null>(null);
@@ -53,15 +55,17 @@ export default function ObjectStoresPage() {
           title="Object Stores"
           subtitle="Backup destinations for Postgres add-ons. Supports AWS S3, S3-compatible (e.g. MinIO), Azure, and GCS."
           actions={
-            <Button
-              onClick={() => {
-                setEditingStore(null);
-                setShowAddDialog(true);
-              }}
-            >
-              <PlusCircle className="h-4 w-4" />
-              New Object Store
-            </Button>
+            canWriteAnyTeam ? (
+              <Button
+                onClick={() => {
+                  setEditingStore(null);
+                  setShowAddDialog(true);
+                }}
+              >
+                <PlusCircle className="h-4 w-4" />
+                New Object Store
+              </Button>
+            ) : undefined
           }
         />
 
@@ -76,16 +80,18 @@ export default function ObjectStoresPage() {
               title="No Object Stores yet"
               description="Add an S3-compatible bucket, Azure container, or GCS bucket to use as a backup destination."
               action={
-                <Button
-                  onClick={() => {
-                    setEditingStore(null);
-                    setShowAddDialog(true);
-                  }}
-                  variant="outline"
-                >
-                  <PlusCircle className="h-4 w-4" />
-                  New Object Store
-                </Button>
+                canWriteAnyTeam ? (
+                  <Button
+                    onClick={() => {
+                      setEditingStore(null);
+                      setShowAddDialog(true);
+                    }}
+                    variant="outline"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    New Object Store
+                  </Button>
+                ) : undefined
               }
             />
           ) : (
@@ -96,6 +102,7 @@ export default function ObjectStoresPage() {
                 setShowAddDialog(true);
               }}
               onDelete={(store) => setDeletingStore(store)}
+              canWrite={(teamId?: string) => canWrite(teamId ?? "")}
             />
           )}
         </Panel>

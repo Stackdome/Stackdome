@@ -32,7 +32,15 @@ const SORT_OPTIONS: { key: AddonSortKey; label: string }[] = [
   { key: "name", label: "Name (A–Z)" },
 ];
 
-export function AddonList({ addons }: { addons: PostgresAddon[] }) {
+export function AddonList({
+  addons,
+  canWrite,
+}: {
+  addons: PostgresAddon[];
+  // Gate per-row mutating actions by the row's team. Show by default when
+  // undefined (caller hasn't opted into role-based gating).
+  canWrite?: (teamId?: string) => boolean;
+}) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<AddonStatusFilter>("all");
   const [sortKey, setSortKey] = useState<AddonSortKey>("created");
@@ -120,6 +128,10 @@ export function AddonList({ addons }: { addons: PostgresAddon[] }) {
             <Link
               key={a.id || a.name}
               to={`/addons/postgres/${a.id}`}
+              // Per-row write capability; reserved for gating any per-row
+              // mutating affordances. Defaults to writable when the caller
+              // hasn't opted into role-based gating.
+              data-can-write={canWrite ? canWrite(a.team_id) : true}
               className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors group"
             >
               <div className="flex items-center gap-3 min-w-0">

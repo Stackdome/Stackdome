@@ -16,16 +16,17 @@ export async function getSecret(orgId: string, secretId: string): Promise<Secret
   return res.data as Secret;
 }
 
-export async function createSecret(orgId: string, secret: Omit<Secret, "id" | "organisation_id" | "created_at" | "updated_at">): Promise<Secret> {
-  const res = await api.post(`/organizations/${orgId}/secrets`, secret);
+// Writes go through team-scoped endpoints (the org-scoped paths are GET-only).
+export async function createSecret(orgId: string, teamName: string, secret: Omit<Secret, "id" | "organisation_id" | "created_at" | "updated_at">): Promise<Secret> {
+  const res = await api.post(`/organizations/${orgId}/teams/${teamName}/secrets`, secret);
   return res.data as Secret;
 }
 
-export async function updateSecret(orgId: string, secretId: string, secret: Omit<Secret, "id" | "organisation_id" | "created_at" | "updated_at">): Promise<Secret> {
-  const res = await api.put(`/organizations/${orgId}/secrets/${secretId}`, secret);
+export async function updateSecret(orgId: string, teamName: string, secretId: string, secret: Omit<Secret, "id" | "organisation_id" | "created_at" | "updated_at">): Promise<Secret> {
+  const res = await api.put(`/organizations/${orgId}/teams/${teamName}/secrets/${secretId}`, secret);
   return res.data as Secret;
 }
 
-export async function deleteSecret(orgId: string, secretId: string): Promise<void> {
-  await api.delete(`/organizations/${orgId}/secrets/${secretId}`);
+export async function deleteSecret(orgId: string, teamName: string, secretId: string): Promise<void> {
+  await api.delete(`/organizations/${orgId}/teams/${teamName}/secrets/${secretId}`);
 }

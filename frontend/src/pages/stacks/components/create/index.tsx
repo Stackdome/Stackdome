@@ -23,6 +23,7 @@ import { createStack } from '@/api/stacks';
 import { getCurrentOrganizationId } from '@/helpers/common';
 import { getErrorMessage } from '@/api/client';
 import { useToast } from '@/components/ui/use-toast';
+import { useResourceTeams } from '@/hooks/use-resource-teams';
 
 type FormErrors = { [path: string]: string | undefined };
 
@@ -43,6 +44,7 @@ export default function StackCreatePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { defaultTeamName } = useResourceTeams();
 
   // Handle imported data from navigation state
   useEffect(() => {
@@ -366,8 +368,19 @@ export default function StackCreatePage() {
       return;
     }
 
+    if (!defaultTeamName) {
+      setIsLoading(false);
+      toast({
+        title: 'No team available',
+        description: "You don't have a team to create stacks in.",
+        variant: 'destructive',
+      });
+      setApiError("You don't have a team to create stacks in.");
+      return;
+    }
+
     try {
-      await createStack(orgId, convertFormStackToApiStack(validationResult.data));
+      await createStack(orgId, defaultTeamName, convertFormStackToApiStack(validationResult.data));
       setIsLoading(false);
       toast({
         title: 'Stack Created',

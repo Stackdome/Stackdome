@@ -65,7 +65,7 @@ export function SignupForm() {
       };
       const response: UserSignupResponse = await signup(payload);
       if (response && response.jwt_token && response.user) {
-        setAuthSession(response.jwt_token, response.user);
+        setAuthSession(response.jwt_token, response.user, response.refresh_token);
       }
       navigate("/dashboard");
     } catch (err) {

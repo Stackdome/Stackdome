@@ -15,6 +15,8 @@ import {
 } from "@/api/addons";
 import { triggerPostgresBackup } from "@/api/postgres-backups";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useResourceTeams } from "@/hooks/use-resource-teams";
 import { useObjectStores } from "@/pages/object-stores/hooks/use-object-stores";
 import { detectPlan } from "./lib/payload";
 import { PLAN_PRESETS } from "./lib/plan-presets";
@@ -43,6 +45,8 @@ export default function PostgresDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { canWrite } = useCurrentUser();
+  const { teamNameById } = useResourceTeams();
   const [addon, setAddon] = useState<PostgresAddon | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -171,10 +175,15 @@ export default function PostgresDetailPage() {
   async function handleDelete() {
     const orgId = getCurrentOrganizationId();
     if (!orgId || !addon?.id) return;
+    const teamName = teamNameById(addon.team_id);
+    if (!teamName) {
+      setDeleteError("Could not resolve the team for this addon.");
+      return;
+    }
     setDeleting(true);
     setDeleteError(null);
     try {
-      await deletePostgresAddon(orgId, addon.id);
+      await deletePostgresAddon(orgId, teamName, addon.id);
       toast({
         title: "Addon deleted",
         description: `"${addon.name}" is being torn down.`,
@@ -195,7 +204,11 @@ export default function PostgresDetailPage() {
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-6 p-6">
-        <PostgresDetailHeader addon={addon} onDelete={() => setDeleteOpen(true)} />
+        <PostgresDetailHeader
+          addon={addon}
+          canWrite={canWrite(addon.team_id ?? "")}
+          onDelete={() => setDeleteOpen(true)}
+        />
 
         <Panel title="Configuration">
           <div className="flex flex-col gap-6">

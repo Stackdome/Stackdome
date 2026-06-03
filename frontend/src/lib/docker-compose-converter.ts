@@ -337,10 +337,10 @@ function convertPorts(
   ports: DockerComposeService['ports'],
   serviceName: string,
   warnings: ConversionWarning[]
-): Array<{ number: number; protocol: 'tcp' | 'http'; exposed_to_public: boolean }> {
+): Array<{ name: string; number: number; protocol: 'tcp' | 'http'; exposed_to_public: boolean }> {
   if (!ports || !Array.isArray(ports)) return [];
 
-  const convertedPorts: Array<{ number: number; protocol: 'tcp' | 'http'; exposed_to_public: boolean }> = [];
+  const convertedPorts: Array<{ name: string; number: number; protocol: 'tcp' | 'http'; exposed_to_public: boolean }> = [];
 
   ports.forEach((port, index) => {
     try {
@@ -374,6 +374,7 @@ function convertPorts(
         }
 
         convertedPorts.push({
+          name: `${protocol}-${internalPort}`,
           number: internalPort,
           protocol,
           exposed_to_public: true,
@@ -382,6 +383,7 @@ function convertPorts(
       } else if (typeof port === 'number') {
         // Direct port number - treat as both external and internal
         convertedPorts.push({
+          name: `http-${port}`,
           number: port,
           protocol: 'http',
           exposed_to_public: true,
@@ -398,6 +400,7 @@ function convertPorts(
         }
 
         convertedPorts.push({
+          name: `http-${internalPort}`,
           number: internalPort,
           protocol: 'http', // Always use http
           exposed_to_public: true,

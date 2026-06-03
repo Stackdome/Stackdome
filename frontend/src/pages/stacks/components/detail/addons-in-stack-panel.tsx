@@ -12,13 +12,17 @@ import {
 } from "@/components/ui/select";
 import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
-import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 
 interface AddonsInStackPanelProps {
-  resources: Partial<FormStackResourceData>[];
+  // Kept for API compatibility with callers; env vars no longer derive addon
+  // links so this is unused.
+  resources?: Partial<FormStackResourceData>[];
   linkedAddonIds: Set<string>;
   onLinkAddon: (addonId: string) => void;
   onRemoveLinkedAddon?: (addonId: string) => void;
+  /** When true, hide all link/unlink affordances (Viewer read-only). */
+  readOnly?: boolean;
 }
 
 interface DerivedRow {
@@ -27,48 +31,24 @@ interface DerivedRow {
 }
 
 export default function AddonsInStackPanel({
-  resources,
   linkedAddonIds,
   onLinkAddon,
   onRemoveLinkedAddon,
+  readOnly = false,
 }: AddonsInStackPanelProps) {
   const { addons } = usePostgresAddons();
   // Each entry is a unique slot id for a not-yet-picked addon row.
   const [pendingSlots, setPendingSlots] = useState<string[]>([]);
 
-  const derived = useMemo<DerivedRow[]>(() => {
-    const resourceSet = new Map<string, Set<number>>();
-    resources.forEach((r, idx) => {
-      const envs = (r.execution_config?.environment_variables || []) as FormEnvVarData[];
-      for (const e of envs) {
-        if (e.from === "addon" && e.addonId) {
-          if (!resourceSet.has(e.addonId)) resourceSet.set(e.addonId, new Set());
-          resourceSet.get(e.addonId)!.add(idx);
-        }
-      }
-    });
-    return Array.from(resourceSet.entries()).map(([addonId, idxSet]) => ({
-      addonId,
-      resourceNames: Array.from(idxSet)
-        .map((i) => resources[i]?.name)
-        .filter((n): n is string => !!n),
-    }));
-  }, [resources]);
-
-  const derivedIds = useMemo(() => new Set(derived.map((d) => d.addonId)), [derived]);
-
-  const linkedOnly = useMemo(
-    () => Array.from(linkedAddonIds).filter((id) => !derivedIds.has(id)),
-    [linkedAddonIds, derivedIds],
+  // Env vars no longer carry addon-backed sources, so addon links come solely
+  // from the explicit `linkedAddonIds` set.
+  const allRows: DerivedRow[] = useMemo(
+    () => Array.from(linkedAddonIds).map((id) => ({ addonId: id, resourceNames: [] })),
+    [linkedAddonIds],
   );
 
-  const allRows: DerivedRow[] = [
-    ...derived,
-    ...linkedOnly.map((id) => ({ addonId: id, resourceNames: [] })),
-  ];
-
   const availablePostgres = addons.filter(
-    (a) => a.id && !derivedIds.has(a.id) && !linkedAddonIds.has(a.id),
+    (a) => a.id && !linkedAddonIds.has(a.id),
   );
 
   const findAddonName = (id: string) => addons.find((a) => a.id === id)?.name ?? id;
@@ -107,7 +87,7 @@ export default function AddonsInStackPanel({
               ? "You haven't created any addons yet. Create one in the Addons page, then come back to attach it here."
               : "Attach a managed Postgres, Redis, or other addon and bind its credentials into your services."}
           </p>
-          {noAddonsInSystem ? (
+          {readOnly ? null : noAddonsInSystem ? (
             <Button
               type="button"
               variant="outline"
@@ -164,7 +144,7 @@ export default function AddonsInStackPanel({
                 )}
               </div>
               <div className="grow" />
-              {isLinkedOnly && onRemoveLinkedAddon && (
+              {!readOnly && isLinkedOnly && onRemoveLinkedAddon && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -178,7 +158,7 @@ export default function AddonsInStackPanel({
             </div>
           );
         })}
-        {pendingSlots.map((slot) => (
+        {!readOnly && pendingSlots.map((slot) => (
           <div key={slot} className="flex items-center gap-3 px-5 py-3">
             <Select onValueChange={(v) => handlePick(slot, v)}>
               <SelectTrigger className="h-8 w-[280px] text-[13px]">
@@ -214,7 +194,7 @@ export default function AddonsInStackPanel({
           </div>
         ))}
       </div>
-      {totalRows > 0 && (
+      {totalRows > 0 && !readOnly && (
         <div className="flex justify-center mt-4">
           {(() => {
             const allLinked = !noAddonsInSystem && availablePostgres.length === 0;

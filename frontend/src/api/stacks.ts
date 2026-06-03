@@ -39,8 +39,9 @@ export async function getStacksByOrg(orgId: string): Promise<StackList> {
   return response.data;
 }
 
-export async function createStack(orgId: string, input: Stack): Promise<Stack> {
-  const response = await api.post(`/organizations/${orgId}/stacks`, input);
+// Writes go through team-scoped endpoints (the org-scoped paths are GET-only).
+export async function createStack(orgId: string, teamName: string, input: Stack): Promise<Stack> {
+  const response = await api.post(`/organizations/${orgId}/teams/${teamName}/stacks`, input);
   return response.data;
 }
 
@@ -49,8 +50,8 @@ export async function getStackById(orgId: string, stackId: string): Promise<Stac
   return response.data;
 }
 
-export async function updateStack(orgId: string, stackId: string, input: StackUpdateRequest): Promise<Stack> {
-  const response = await api.put<Stack>(`/organizations/${orgId}/stacks/${stackId}`, input);
+export async function updateStack(orgId: string, teamName: string, stackId: string, input: StackUpdateRequest): Promise<Stack> {
+  const response = await api.put<Stack>(`/organizations/${orgId}/teams/${teamName}/stacks/${stackId}`, input);
   return response.data;
 }
 
