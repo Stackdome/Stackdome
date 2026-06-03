@@ -167,6 +167,19 @@ export default function StackDetailPage() {
     [stackToShow],
   );
 
+  // addonId → the resources it binds to (a connection's `to` stack resource).
+  const addonResourceNames = useMemo<Map<string, string[]>>(() => {
+    const map = new Map<string, string[]>();
+    for (const c of stackToShow?.spec?.connections ?? []) {
+      if (c.from?.type === "addon/postgres" && c.from?.id && c.to?.name) {
+        const arr = map.get(c.from.id) ?? [];
+        if (!arr.includes(c.to.name)) arr.push(c.to.name);
+        map.set(c.from.id, arr);
+      }
+    }
+    return map;
+  }, [stackToShow]);
+
   const activateEdit = (opts?: { resourceIdx?: number; volumeIdx?: number; openTab?: EditSessionTab }) => {
     session.start(
       { resources: baselineResources, volumes: baselineVolumes },
@@ -644,6 +657,7 @@ export default function StackDetailPage() {
                 readOnly={!canWriteStack}
                 resources={(session.isActive ? session.draft.resources : baselineResources) as Partial<FormStackResourceData>[]}
                 linkedAddonIds={session.isActive ? session.linkedAddonIds : connectionAddonIds}
+                addonResourceNames={addonResourceNames}
                 onLinkAddon={(addonId) => {
                   ensureActive();
                   session.setLinkedAddonIds((prev) => {
