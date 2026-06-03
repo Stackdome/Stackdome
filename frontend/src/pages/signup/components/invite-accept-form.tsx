@@ -73,7 +73,7 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
     ).then(
       (response) => {
         if (response?.jwt_token && response?.user) {
-          setAuthSession(response.jwt_token, response.user);
+          setAuthSession(response.jwt_token, response.user, response.refresh_token);
         }
         setPhase("accepted");
         navTimerRef.current = setTimeout(() => navigate("/"), 1200);

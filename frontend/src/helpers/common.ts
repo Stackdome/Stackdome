@@ -20,14 +20,22 @@ export function getCurrentOrganizationId(): string | null {
   return user?.organisation_id ?? null;
 }
 
-export function setAuthSession(token: string, user: User) {
+export function getRefreshToken(): string | null {
+  return localStorage.getItem('refreshToken');
+}
+
+export function setAuthSession(token: string, user: User, refreshToken?: string) {
   localStorage.setItem('authToken', token);
   localStorage.setItem('currentUser', JSON.stringify(user));
+  if (refreshToken) {
+    localStorage.setItem('refreshToken', refreshToken);
+  }
 }
 
 export function clearAuthSession() {
   localStorage.removeItem('authToken');
   localStorage.removeItem('currentUser');
+  localStorage.removeItem('refreshToken');
 }
 
 export function logoutAndRedirect(redirectTo: string = "/sign-in") {

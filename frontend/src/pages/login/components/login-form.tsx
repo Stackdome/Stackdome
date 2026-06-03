@@ -53,7 +53,7 @@ export function LoginForm() {
     try {
       const response = await login(formData);
       if (response && response.token && response.user) {
-        setAuthSession(response.token, response.user);
+        setAuthSession(response.token, response.user, response.refresh_token);
       }
       // Reload the current-user context with the freshly-authenticated user so
       // role-gated nav (Settings, Clusters, Domains) reflects this session
