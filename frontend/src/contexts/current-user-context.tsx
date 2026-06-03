@@ -2,6 +2,7 @@ import * as React from "react";
 import type { User } from "@/api/users";
 import { getCurrentUser as getStoredUser } from "@/helpers/common";
 import { getCurrentUser as fetchCurrentUser } from "@/api/users";
+import { AUTH_SESSION_CHANGED } from "@/helpers/auth-events";
 
 type TeamRole = "Developer" | "Viewer";
 
@@ -39,6 +40,18 @@ export function CurrentUserProvider({ children }: { children: React.ReactNode })
 
   React.useEffect(() => {
     void refresh();
+  }, [refresh]);
+
+  // Re-hydrate after login/signup/logout. The provider mounts once (on /sign-in,
+  // before a token exists), and client-side navigation after auth does not remount
+  // it — so without this the gate stays stuck on the pre-auth (null) user.
+  React.useEffect(() => {
+    const onAuthChange = () => {
+      setUser(getStoredUser());
+      void refresh();
+    };
+    window.addEventListener(AUTH_SESSION_CHANGED, onAuthChange);
+    return () => window.removeEventListener(AUTH_SESSION_CHANGED, onAuthChange);
   }, [refresh]);
 
   const value = React.useMemo<CurrentUserValue>(() => {
