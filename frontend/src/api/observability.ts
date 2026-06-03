@@ -1,19 +1,15 @@
 import api from "./client";
 
+// Logs and metrics (including SSE streams) are served from the team-scoped stack
+// endpoints; the UI scopes everything to the org's default team.
+
 interface LogStreamParams {
   follow?: boolean;
   since?: string;
   tail?: number;
 }
 
-export function buildStackLogStreamUrl(
-  organizationId: string,
-  stackId: string,
-  params?: LogStreamParams
-): string {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-  const path = `${baseUrl}/organizations/${organizationId}/stacks/${stackId}/logs`;
-
+function withLogParams(path: string, params?: LogStreamParams): string {
   const searchParams = new URLSearchParams();
 
   if (params?.follow !== undefined) {
@@ -32,65 +28,64 @@ export function buildStackLogStreamUrl(
   return queryString ? `${path}?${queryString}` : path;
 }
 
+export function buildStackLogStreamUrl(
+  organizationId: string,
+  teamName: string,
+  stackId: string,
+  params?: LogStreamParams
+): string {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+  const path = `${baseUrl}/organizations/${organizationId}/teams/${teamName}/stacks/${stackId}/logs`;
+  return withLogParams(path, params);
+}
+
 export function buildStackResourceLogStreamUrl(
   organizationId: string,
+  teamName: string,
   stackId: string,
   resourceName: string,
   params?: LogStreamParams
 ): string {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-  const path = `${baseUrl}/organizations/${organizationId}/stacks/${stackId}/resources/${resourceName}/logs`;
-
-  const searchParams = new URLSearchParams();
-
-  if (params?.follow !== undefined) {
-    searchParams.set('follow', params.follow.toString());
-  }
-
-  if (params?.since) {
-    searchParams.set('since', params.since);
-  }
-
-  if (params?.tail !== undefined) {
-    searchParams.set('tail', params.tail.toString());
-  }
-
-  const queryString = searchParams.toString();
-  return queryString ? `${path}?${queryString}` : path;
+  const path = `${baseUrl}/organizations/${organizationId}/teams/${teamName}/stacks/${stackId}/resources/${resourceName}/logs`;
+  return withLogParams(path, params);
 }
 
-export async function getStackLogs(organizationId: string, stackId: string) {
-  const res = await api.get(`/organizations/${organizationId}/stacks/${stackId}/logs`);
+export async function getStackLogs(organizationId: string, teamName: string, stackId: string) {
+  const res = await api.get(`/organizations/${organizationId}/teams/${teamName}/stacks/${stackId}/logs`);
   return res.data;
 }
 
-export async function getStackMetrics(organizationId: string, stackId: string) {
-  const res = await api.get(`/organizations/${organizationId}/stacks/${stackId}/metrics`);
+export async function getStackMetrics(organizationId: string, teamName: string, stackId: string) {
+  const res = await api.get(`/organizations/${organizationId}/teams/${teamName}/stacks/${stackId}/metrics`);
   return res.data;
 }
 
 export function buildStackMetricsStreamUrl(
   organizationId: string,
+  teamName: string,
   stackId: string
 ): string {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-  return `${baseUrl}/organizations/${organizationId}/stacks/${stackId}/metrics?stream=true`;
+  return `${baseUrl}/organizations/${organizationId}/teams/${teamName}/stacks/${stackId}/metrics?stream=true`;
 }
 
 export async function getStackResourceMetrics(
   organizationId: string,
+  teamName: string,
   stackId: string,
   resourceId: string
 ) {
-  const res = await api.get(`/organizations/${organizationId}/stacks/${stackId}/resources/${resourceId}/metrics`);
+  const res = await api.get(`/organizations/${organizationId}/teams/${teamName}/stacks/${stackId}/resources/${resourceId}/metrics`);
   return res.data;
 }
 
 export function buildStackResourceMetricsStreamUrl(
   organizationId: string,
+  teamName: string,
   stackId: string,
   resourceName: string
 ): string {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-  return `${baseUrl}/organizations/${organizationId}/stacks/${stackId}/resources/${resourceName}/metrics?stream=true`;
+  return `${baseUrl}/organizations/${organizationId}/teams/${teamName}/stacks/${stackId}/resources/${resourceName}/metrics?stream=true`;
 }
