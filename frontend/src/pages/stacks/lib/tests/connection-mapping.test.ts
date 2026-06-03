@@ -5,7 +5,6 @@ import {
   splitEnvRows,
   connectionsToEnvRows,
   buildDesiredConnections,
-  diffConnections,
 } from "../connection-mapping";
 import type { FormEnvRow } from "../connection-mapping";
 import type { StackConnection } from "@/api/connections";
@@ -260,55 +259,3 @@ describe("buildDesiredConnections", () => {
   });
 });
 
-describe("diffConnections", () => {
-  const secretConn = (id: string | undefined, names: string[]): StackConnection => ({
-    id, kind: "env",
-    from: { type: "secret", id: "s1" },
-    to: { type: "stack_resource", name: "web" },
-    mappings: names.map((n) => ({ target: { type: "env", name: n }, value: { output: `key.${n}` } })),
-  });
-
-  it("creates a desired connection with no loaded match", () => {
-    const { creates, updates, deletes } = diffConnections([], [secretConn(undefined, ["A"])]);
-    expect(creates).toHaveLength(1);
-    expect(updates).toEqual([]);
-    expect(deletes).toEqual([]);
-  });
-
-  it("deletes a loaded connection with no desired match", () => {
-    const { creates, updates, deletes } = diffConnections([secretConn("c1", ["A"])], []);
-    expect(deletes).toEqual(["c1"]);
-    expect(creates).toEqual([]);
-    expect(updates).toEqual([]);
-  });
-
-  it("updates when mappings change within the same source group, carrying the loaded id", () => {
-    const { creates, updates, deletes } = diffConnections(
-      [secretConn("c1", ["A"])],
-      [secretConn(undefined, ["A", "B"])],
-    );
-    expect(creates).toEqual([]);
-    expect(deletes).toEqual([]);
-    expect(updates).toHaveLength(1);
-    expect(updates[0].id).toBe("c1");
-    expect(updates[0].mappings).toHaveLength(2);
-  });
-
-  it("emits nothing when desired equals loaded", () => {
-    const { creates, updates, deletes } = diffConnections([secretConn("c1", ["A"])], [secretConn(undefined, ["A"])]);
-    expect(creates).toEqual([]);
-    expect(updates).toEqual([]);
-    expect(deletes).toEqual([]);
-  });
-
-  it("treats different addon databases as distinct groups", () => {
-    const a = (db: string): StackConnection => ({
-      kind: "env", from: { type: "addon/postgres", id: "a1" },
-      to: { type: "stack_resource", name: "web" }, config: { database: db, superuser: false },
-      mappings: [{ target: { type: "env", name: "H" }, value: { output: "host" } }],
-    });
-    const { creates, deletes } = diffConnections([{ ...a("db1"), id: "c1" }], [a("db2")]);
-    expect(creates).toHaveLength(1);
-    expect(deletes).toEqual(["c1"]);
-  });
-});

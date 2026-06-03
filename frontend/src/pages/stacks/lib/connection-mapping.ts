@@ -120,26 +120,6 @@ const ADDON_FIELD_SET = new Set<string>(ADDON_OUTPUT_FIELDS);
 
 type AddonConfig = { database?: string; superuser?: boolean };
 
-// Identity of a connection source-group: same identity => same edge, diffed by
-// mappings. Mirrors the backend discriminator (from + to + config db/superuser).
-function connectionIdentity(c: StackConnection): string {
-  const from = c.from?.type === "stack_resource"
-    ? `stack_resource:${c.from.name ?? ""}`
-    : `${c.from?.type}:${c.from?.id ?? ""}`;
-  const to = `${c.to?.type}:${c.to?.name ?? ""}`;
-  const cfg = c.config as AddonConfig | undefined;
-  const config = cfg ? `${cfg.database ?? ""}:${cfg.superuser ?? false}` : "";
-  return `${from}->${to}|${config}`;
-}
-
-// Stable signature of a connection's mappings, for change detection.
-function mappingsSignature(c: StackConnection): string {
-  return (c.mappings ?? [])
-    .map((m) => `${m.target?.name ?? ""}=${m.value?.output ?? ""}`)
-    .sort()
-    .join("|");
-}
-
 // Expand the stack's connections into form rows for one resource (the rows whose
 // `to` is this resource). Literal/self rows come from env vars, added separately.
 export function connectionsToEnvRows(
@@ -182,35 +162,4 @@ export function buildDesiredConnections(
   resources: { name: string; rows: FormEnvRow[] }[],
 ): StackConnection[] {
   return resources.flatMap((r) => splitEnvRows(r.name, r.rows).connections);
-}
-
-// Diff desired vs loaded connections at source-group granularity.
-export function diffConnections(
-  loaded: StackConnection[],
-  desired: StackConnection[],
-): { creates: StackConnection[]; updates: StackConnection[]; deletes: string[] } {
-  const loadedByIdentity = new Map<string, StackConnection>();
-  for (const c of loaded) loadedByIdentity.set(connectionIdentity(c), c);
-
-  const creates: StackConnection[] = [];
-  const updates: StackConnection[] = [];
-  const seen = new Set<string>();
-
-  for (const d of desired) {
-    const identity = connectionIdentity(d);
-    seen.add(identity);
-    const match = loadedByIdentity.get(identity);
-    if (!match) {
-      creates.push(d);
-    } else if (mappingsSignature(match) !== mappingsSignature(d)) {
-      updates.push({ ...d, id: match.id });
-    }
-  }
-
-  const deletes: string[] = [];
-  for (const c of loaded) {
-    if (!seen.has(connectionIdentity(c)) && c.id) deletes.push(c.id);
-  }
-
-  return { creates, updates, deletes };
 }
