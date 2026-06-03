@@ -1,6 +1,6 @@
 import type { StackConnection, ConnectionMapping } from "@/api/connections";
 import type { components } from "@/api/types/openapi";
-import type { AddonOutputField } from "@/pages/stacks/lib/addon-presets";
+import { ADDON_OUTPUT_FIELDS, type AddonOutputField } from "@/pages/stacks/lib/addon-presets";
 
 const SIMPLE_KEY = /^[A-Za-z0-9_]+$/;
 
@@ -114,4 +114,103 @@ export function splitEnvRows(
 
   const connections = [...groups.values()].filter((c) => (c.mappings?.length ?? 0) > 0);
   return { envVars, connections };
+}
+
+const ADDON_FIELD_SET = new Set<string>(ADDON_OUTPUT_FIELDS);
+
+type AddonConfig = { database?: string; superuser?: boolean };
+
+// Identity of a connection source-group: same identity => same edge, diffed by
+// mappings. Mirrors the backend discriminator (from + to + config db/superuser).
+function connectionIdentity(c: StackConnection): string {
+  const from = c.from?.type === "stack_resource"
+    ? `stack_resource:${c.from.name ?? ""}`
+    : `${c.from?.type}:${c.from?.id ?? ""}`;
+  const to = `${c.to?.type}:${c.to?.name ?? ""}`;
+  const cfg = c.config as AddonConfig | undefined;
+  const config = cfg ? `${cfg.database ?? ""}:${cfg.superuser ?? false}` : "";
+  return `${from}->${to}|${config}`;
+}
+
+// Stable signature of a connection's mappings, for change detection.
+function mappingsSignature(c: StackConnection): string {
+  return (c.mappings ?? [])
+    .map((m) => `${m.target?.name ?? ""}=${m.value?.output ?? ""}`)
+    .sort()
+    .join("|");
+}
+
+// Expand the stack's connections into form rows for one resource (the rows whose
+// `to` is this resource). Literal/self rows come from env vars, added separately.
+export function connectionsToEnvRows(
+  resourceName: string,
+  connections: StackConnection[],
+): FormEnvRow[] {
+  const rows: FormEnvRow[] = [];
+  for (const c of connections) {
+    if (c.kind !== "env") continue;
+    if (c.to?.type !== "stack_resource" || c.to?.name !== resourceName) continue;
+    const cfg = c.config as AddonConfig | undefined;
+    for (const m of c.mappings ?? []) {
+      const envName = m.target?.name ?? "";
+      const output = m.value?.output ?? "";
+      // unknown source types are silently skipped (consistent with splitEnvRows)
+      if (c.from?.type === "secret" && c.from?.id) {
+        const key = parseSecretOutput(output);
+        if (key === null) continue;
+        rows.push({ from: "secret", name: envName, secretId: c.from.id, secretKey: key });
+      } else if (c.from?.type === "addon/postgres" && c.from?.id) {
+        if (!ADDON_FIELD_SET.has(output)) continue;
+        rows.push({
+          from: "addon",
+          name: envName,
+          addonId: c.from.id,
+          database: cfg?.superuser ? undefined : cfg?.database,
+          superuser: cfg?.superuser ?? false,
+          credField: output as AddonOutputField,
+        });
+      } else if (c.from?.type === "stack_resource" && c.from?.name) {
+        rows.push({ from: "resource", name: envName, resourceName: c.from.name, output });
+      }
+    }
+  }
+  return rows;
+}
+
+// Build the full desired connection set from every resource's rows.
+export function buildDesiredConnections(
+  resources: { name: string; rows: FormEnvRow[] }[],
+): StackConnection[] {
+  return resources.flatMap((r) => splitEnvRows(r.name, r.rows).connections);
+}
+
+// Diff desired vs loaded connections at source-group granularity.
+export function diffConnections(
+  loaded: StackConnection[],
+  desired: StackConnection[],
+): { creates: StackConnection[]; updates: StackConnection[]; deletes: string[] } {
+  const loadedByIdentity = new Map<string, StackConnection>();
+  for (const c of loaded) loadedByIdentity.set(connectionIdentity(c), c);
+
+  const creates: StackConnection[] = [];
+  const updates: StackConnection[] = [];
+  const seen = new Set<string>();
+
+  for (const d of desired) {
+    const identity = connectionIdentity(d);
+    seen.add(identity);
+    const match = loadedByIdentity.get(identity);
+    if (!match) {
+      creates.push(d);
+    } else if (mappingsSignature(match) !== mappingsSignature(d)) {
+      updates.push({ ...d, id: match.id });
+    }
+  }
+
+  const deletes: string[] = [];
+  for (const c of loaded) {
+    if (!seen.has(connectionIdentity(c)) && c.id) deletes.push(c.id);
+  }
+
+  return { creates, updates, deletes };
 }
