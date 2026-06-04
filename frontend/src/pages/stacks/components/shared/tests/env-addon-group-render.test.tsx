@@ -84,6 +84,17 @@ describe("StackResourceEnvironmentTab addon grouping", () => {
     expect(group).not.toContainElement(plainRow);
   });
 
+  it("renders the plain row BEFORE the addon group even though it comes later in the array", () => {
+    // PLAIN (idx 2) sits after the two addon rows in the env array, but plain
+    // rows render first, so it must precede the dashed addon group in the DOM.
+    renderTab(envVars);
+    const plainRow = screen.getByTestId("env-row-0-2");
+    const group = screen.getByTestId("env-addon-group");
+    expect(
+      plainRow.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("has an Add binding button inside the group", () => {
     renderTab(envVars);
     const group = screen.getByTestId("env-addon-group");

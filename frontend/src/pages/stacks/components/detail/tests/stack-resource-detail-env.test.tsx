@@ -29,6 +29,9 @@ const envVars: FormEnvVarData[] = [
   { from: "self", name: "SELF_VAR", selfOutput: "endpoint" },
   { from: "addon", name: "PG_HOST", addonId: "a1", database: "tooljet", superuser: false, credField: "host" },
   { from: "addon", name: "PG_PORT", addonId: "a1", database: "tooljet", superuser: false, credField: "port" },
+  // A plain row positioned AFTER the addon rows: it must still render above the
+  // dashed addon group, since all ungrouped rows render first.
+  { from: "resource", name: "SMTP_DOMAIN", resourceName: "mail", output: "domain" },
 ];
 
 const resource: Partial<FormStackResourceData> = {
@@ -91,5 +94,22 @@ describe("StackResourceDetail read-mode environment tab", () => {
     renderDetail();
     const group = screen.getByTestId("env-addon-group");
     expect(group).not.toContainElement(screen.getByText("PLAIN"));
+  });
+
+  it("renders ungrouped rows (incl. one positioned after the addon rows) ABOVE the addon group", () => {
+    renderDetail();
+    const group = screen.getByTestId("env-addon-group");
+    // SMTP_DOMAIN sits after the addon rows in the array but is ungrouped, so it
+    // must render above the dashed addon group in document order.
+    const smtp = screen.getByText("SMTP_DOMAIN");
+    expect(group).not.toContainElement(smtp);
+    expect(
+      smtp.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // The plain bordered container also precedes the dashed group.
+    const plain = screen.getByText("PLAIN");
+    expect(
+      plain.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

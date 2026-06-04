@@ -350,20 +350,20 @@ function StackResourceEnvironmentTabImpl({
             );
           }
 
-          // Partition rows into groups (in their existing order):
-          //  - consecutive non-addon rows => a "plain" group (rendered flat).
-          //  - addon rows sharing (addonId, database) => an "addon" group
-          //    (rendered inside a dashed-border wrapper with a group-level
-          //    addon + database picker and an "Add binding" button).
-          type PlainGroup = { kind: "plain"; items: { env: FormEnvVarData; envIdx: number }[] };
+          // Partition rows so all ungrouped (non-addon) rows render FIRST (in
+          // their original order), then addon groups render LAST:
+          //  - plain list => every non-addon row, keeping its true envIdx.
+          //  - addon groups => addon rows sharing (addonId, database), in
+          //    first-appearance order, each rendered inside a dashed-border
+          //    wrapper with a group-level addon + database picker and an
+          //    "Add binding" button.
           type AddonGroup = {
-            kind: "addon";
             addonId: string;
             database: string;
             items: { env: FormEnvVarData; envIdx: number }[];
           };
-          type Group = PlainGroup | AddonGroup;
-          const groups: Group[] = [];
+          const plainItems: { env: FormEnvVarData; envIdx: number }[] = [];
+          const addonGroups: AddonGroup[] = [];
           const addonGroupByKey = new Map<string, AddonGroup>();
           envVars.forEach((env, envIdx) => {
             if (env.from === "addon") {
@@ -372,18 +372,13 @@ function StackResourceEnvironmentTabImpl({
               const key = `${aid}|${db}`;
               let g = addonGroupByKey.get(key);
               if (!g) {
-                g = { kind: "addon", addonId: aid, database: db, items: [] };
+                g = { addonId: aid, database: db, items: [] };
                 addonGroupByKey.set(key, g);
-                groups.push(g);
+                addonGroups.push(g);
               }
               g.items.push({ env, envIdx });
             } else {
-              const last = groups[groups.length - 1];
-              if (last && last.kind === "plain") {
-                last.items.push({ env, envIdx });
-              } else {
-                groups.push({ kind: "plain", items: [{ env, envIdx }] });
-              }
+              plainItems.push({ env, envIdx });
             }
           });
 
@@ -423,166 +418,168 @@ function StackResourceEnvironmentTabImpl({
             />
           );
 
-          return groups.map((g, gIdx) => {
-            if (g.kind === "plain") {
-              return <div key={`p-${gIdx}`}>{g.items.map(renderRow)}</div>;
-            }
-            const aid = g.addonId;
-            const db = g.database;
-            const selectedAddon = addons.find((a) => a.id === aid);
-            const databases = ((selectedAddon?.spec as unknown as { databases?: { name?: string }[] })
-              ?.databases ?? []) as { name?: string }[];
-            const name = aid ? (addonNameById?.get(aid) ?? aid) : null;
+          return (
+            <>
+              {plainItems.length > 0 && <div>{plainItems.map(renderRow)}</div>}
+              {addonGroups.map((g, gIdx) => {
+                const aid = g.addonId;
+                const db = g.database;
+                const selectedAddon = addons.find((a) => a.id === aid);
+                const databases = ((selectedAddon?.spec as unknown as { databases?: { name?: string }[] })
+                  ?.databases ?? []) as { name?: string }[];
+                const name = aid ? (addonNameById?.get(aid) ?? aid) : null;
 
-            const updateAllInGroup = (patch: { addonId?: string; database?: string | undefined }) => {
-              const next = (envVars || []).map((e, i) => {
-                if (g.items.some((it) => it.envIdx === i) && e.from === "addon") {
-                  return { ...e, ...patch };
+                const updateAllInGroup = (patch: { addonId?: string; database?: string | undefined }) => {
+                  const next = (envVars || []).map((e, i) => {
+                    if (g.items.some((it) => it.envIdx === i) && e.from === "addon") {
+                      return { ...e, ...patch };
+                    }
+                    return e;
+                  });
+                  onChangeEnvVars(next);
+                };
+
+                // Disallow picking an (addon, db) combo that already has its own group.
+                const usedDbsByAddon = new Map<string, Set<string>>();
+                const usedAddonsByDb = new Map<string, Set<string>>();
+                for (const og of addonGroups) {
+                  if (og === g) continue;
+                  if (og.addonId) {
+                    if (!usedDbsByAddon.has(og.addonId)) usedDbsByAddon.set(og.addonId, new Set());
+                    if (og.database) usedDbsByAddon.get(og.addonId)!.add(og.database);
+                  }
+                  if (og.database) {
+                    if (!usedAddonsByDb.has(og.database)) usedAddonsByDb.set(og.database, new Set());
+                    if (og.addonId) usedAddonsByDb.get(og.database)!.add(og.addonId);
+                  }
                 }
-                return e;
-              });
-              onChangeEnvVars(next);
-            };
+                const dbBlocked = (dbName: string) =>
+                  aid !== "" && (usedDbsByAddon.get(aid)?.has(dbName) ?? false);
+                const addonBlocked = (addonId: string) =>
+                  db !== "" && (usedAddonsByDb.get(db)?.has(addonId) ?? false);
 
-            // Disallow picking an (addon, db) combo that already has its own group.
-            const usedDbsByAddon = new Map<string, Set<string>>();
-            const usedAddonsByDb = new Map<string, Set<string>>();
-            for (const og of groups) {
-              if (og.kind !== "addon" || og === g) continue;
-              if (og.addonId) {
-                if (!usedDbsByAddon.has(og.addonId)) usedDbsByAddon.set(og.addonId, new Set());
-                if (og.database) usedDbsByAddon.get(og.addonId)!.add(og.database);
-              }
-              if (og.database) {
-                if (!usedAddonsByDb.has(og.database)) usedAddonsByDb.set(og.database, new Set());
-                if (og.addonId) usedAddonsByDb.get(og.database)!.add(og.addonId);
-              }
-            }
-            const dbBlocked = (dbName: string) =>
-              aid !== "" && (usedDbsByAddon.get(aid)?.has(dbName) ?? false);
-            const addonBlocked = (addonId: string) =>
-              db !== "" && (usedAddonsByDb.get(db)?.has(addonId) ?? false);
-
-            const handleAddonChange = (newAid: string) => {
-              const a = addons.find((x) => x.id === newAid);
-              const dbs = ((a?.spec as unknown as { databases?: { name?: string }[] })?.databases ??
+                const handleAddonChange = (newAid: string) => {
+                  const a = addons.find((x) => x.id === newAid);
+                  const dbs = ((a?.spec as unknown as { databases?: { name?: string }[] })?.databases ??
                 []) as { name?: string }[];
-              const usedDbs = usedDbsByAddon.get(newAid) ?? new Set();
-              const firstFreeDb = dbs.find((d) => d.name && !usedDbs.has(d.name))?.name;
-              const newDb = dbs.length === 1 ? dbs[0].name : firstFreeDb;
-              updateAllInGroup({ addonId: newAid, database: newDb });
-            };
-            const handleDbChange = (newDb: string) => {
-              updateAllInGroup({ database: newDb });
-            };
-            const handleAddBinding = () => {
-              addEnvVar({
-                from: "addon",
-                name: "",
-                addonId: aid,
-                database: db || undefined,
-                superuser: false,
-                credField: undefined,
-              });
-            };
+                  const usedDbs = usedDbsByAddon.get(newAid) ?? new Set();
+                  const firstFreeDb = dbs.find((d) => d.name && !usedDbs.has(d.name))?.name;
+                  const newDb = dbs.length === 1 ? dbs[0].name : firstFreeDb;
+                  updateAllInGroup({ addonId: newAid, database: newDb });
+                };
+                const handleDbChange = (newDb: string) => {
+                  updateAllInGroup({ database: newDb });
+                };
+                const handleAddBinding = () => {
+                  addEnvVar({
+                    from: "addon",
+                    name: "",
+                    addonId: aid,
+                    database: db || undefined,
+                    superuser: false,
+                    credField: undefined,
+                  });
+                };
 
-            return (
-              <div
-                key={`a-${gIdx}-${aid}-${db}`}
-                className="rounded-md border border-dashed border-foreground/25 my-2"
-                data-testid="env-addon-group"
-              >
-                <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                  <Select value={aid || undefined} onValueChange={handleAddonChange}>
-                    <SelectTrigger
-                      className="h-7 w-[200px] text-[12.5px] font-semibold gap-2"
-                      data-testid="addon-picker-trigger"
-                    >
-                      <span className="flex items-center gap-2 min-w-0">
-                        {aid && <AddonTypeIcon type="postgres" size={14} />}
-                        <SelectValue placeholder="Pick addon">
-                          {aid ? name : undefined}
-                        </SelectValue>
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {addons.length === 0 ? (
-                        <div className="px-3 py-2 text-xs text-muted-foreground">
+                return (
+                  <div
+                    key={`a-${gIdx}-${aid}-${db}`}
+                    className="rounded-md border border-dashed border-foreground/25 my-2"
+                    data-testid="env-addon-group"
+                  >
+                    <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+                      <Select value={aid || undefined} onValueChange={handleAddonChange}>
+                        <SelectTrigger
+                          className="h-7 w-[200px] text-[12.5px] font-semibold gap-2"
+                          data-testid="addon-picker-trigger"
+                        >
+                          <span className="flex items-center gap-2 min-w-0">
+                            {aid && <AddonTypeIcon type="postgres" size={14} />}
+                            <SelectValue placeholder="Pick addon">
+                              {aid ? name : undefined}
+                            </SelectValue>
+                          </span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {addons.length === 0 ? (
+                            <div className="px-3 py-2 text-xs text-muted-foreground">
                           No addons linked. Add one from the bottom panel.
-                        </div>
-                      ) : (
-                        addons.map((a) => (
-                          <SelectItem
-                            key={a.id}
-                            value={a.id!}
-                            disabled={a.id !== aid && addonBlocked(a.id!)}
-                          >
-                            <span className="flex items-center gap-2">
-                              <AddonTypeIcon type="postgres" size={14} />
-                              <span>{a.name}</span>
-                              {a.id !== aid && addonBlocked(a.id!) && (
-                                <span className="ml-1 text-[10px] text-muted-foreground">
+                            </div>
+                          ) : (
+                            addons.map((a) => (
+                              <SelectItem
+                                key={a.id}
+                                value={a.id!}
+                                disabled={a.id !== aid && addonBlocked(a.id!)}
+                              >
+                                <span className="flex items-center gap-2">
+                                  <AddonTypeIcon type="postgres" size={14} />
+                                  <span>{a.name}</span>
+                                  {a.id !== aid && addonBlocked(a.id!) && (
+                                    <span className="ml-1 text-[10px] text-muted-foreground">
                                   in use
-                                </span>
-                              )}
-                            </span>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {aid && (
-                    <>
-                      <span className="text-muted-foreground/60">·</span>
-                      {databases.length > 1 ? (
-                        <Select value={db || undefined} onValueChange={handleDbChange}>
-                          <SelectTrigger
-                            className="h-7 w-[160px] text-[12.5px]"
-                            data-testid="database-picker-trigger"
-                          >
-                            <SelectValue placeholder="Pick database" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {databases.map((d) =>
-                              d.name ? (
-                                <SelectItem
-                                  key={d.name}
-                                  value={d.name}
-                                  disabled={d.name !== db && dbBlocked(d.name)}
-                                >
-                                  {d.name}
-                                  {d.name !== db && dbBlocked(d.name) && (
-                                    <span className="ml-2 text-[10px] text-muted-foreground">
-                                      in use
                                     </span>
                                   )}
-                                </SelectItem>
-                              ) : null,
-                            )}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span className="text-[12px] text-muted-foreground">
+                                </span>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      {aid && (
+                        <>
+                          <span className="text-muted-foreground/60">·</span>
+                          {databases.length > 1 ? (
+                            <Select value={db || undefined} onValueChange={handleDbChange}>
+                              <SelectTrigger
+                                className="h-7 w-[160px] text-[12.5px]"
+                                data-testid="database-picker-trigger"
+                              >
+                                <SelectValue placeholder="Pick database" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {databases.map((d) =>
+                                  d.name ? (
+                                    <SelectItem
+                                      key={d.name}
+                                      value={d.name}
+                                      disabled={d.name !== db && dbBlocked(d.name)}
+                                    >
+                                      {d.name}
+                                      {d.name !== db && dbBlocked(d.name) && (
+                                        <span className="ml-2 text-[10px] text-muted-foreground">
+                                      in use
+                                        </span>
+                                      )}
+                                    </SelectItem>
+                                  ) : null,
+                                )}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-[12px] text-muted-foreground">
                           db: {db || databases[0]?.name || "—"}
-                        </span>
+                            </span>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                </div>
-                {g.items.map(renderRow)}
-                <div className="px-3 py-1.5 flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleAddBinding}
-                    className="h-7 text-[12.5px]"
-                  >
-                    <PlusCircle className="h-3 w-3 mr-1" /> Add binding
-                  </Button>
-                </div>
-              </div>
-            );
-          });
+                    </div>
+                    {g.items.map(renderRow)}
+                    <div className="px-3 py-1.5 flex justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleAddBinding}
+                        className="h-7 text-[12.5px]"
+                      >
+                        <PlusCircle className="h-3 w-3 mr-1" /> Add binding
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          );
         })()}
       </div>
       {/* Add a literal row; the row's own "From" selector switches the source. */}

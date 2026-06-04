@@ -495,17 +495,17 @@ export default function StackResourceDetail({
                     );
                   };
 
-                  // Partition rows (in their existing order) into plain groups and
-                  // addon groups keyed by (addonId, database), mirroring edit mode.
-                  type PlainGroup = { kind: "plain"; items: { env: FormEnvVarData; idx: number }[] };
+                  // Partition rows so all ungrouped (non-addon) rows render
+                  // FIRST (original order, in a single bordered container), then
+                  // addon groups keyed by (addonId, database) render LAST (in
+                  // first-appearance order), mirroring edit mode.
                   type AddonGroup = {
-                    kind: "addon";
                     addonId: string;
                     database: string;
                     items: { env: FormEnvVarData; idx: number }[];
                   };
-                  type Group = PlainGroup | AddonGroup;
-                  const groups: Group[] = [];
+                  const plainItems: { env: FormEnvVarData; idx: number }[] = [];
+                  const addonGroups: AddonGroup[] = [];
                   const addonGroupByKey = new Map<string, AddonGroup>();
                   envs.forEach((env, idx) => {
                     if (env.from === "addon") {
@@ -514,34 +514,24 @@ export default function StackResourceDetail({
                       const key = `${aid}|${db}`;
                       let g = addonGroupByKey.get(key);
                       if (!g) {
-                        g = { kind: "addon", addonId: aid, database: db, items: [] };
+                        g = { addonId: aid, database: db, items: [] };
                         addonGroupByKey.set(key, g);
-                        groups.push(g);
+                        addonGroups.push(g);
                       }
                       g.items.push({ env, idx });
                     } else {
-                      const last = groups[groups.length - 1];
-                      if (last && last.kind === "plain") {
-                        last.items.push({ env, idx });
-                      } else {
-                        groups.push({ kind: "plain", items: [{ env, idx }] });
-                      }
+                      plainItems.push({ env, idx });
                     }
                   });
 
                   return (
                     <div className="space-y-0">
-                      {groups.map((g, gIdx) => {
-                        if (g.kind === "plain") {
-                          return (
-                            <div
-                              key={`p-${gIdx}`}
-                              className="rounded-md border border-border bg-background"
-                            >
-                              {g.items.map(renderRow)}
-                            </div>
-                          );
-                        }
+                      {plainItems.length > 0 && (
+                        <div className="rounded-md border border-border bg-background">
+                          {plainItems.map(renderRow)}
+                        </div>
+                      )}
+                      {addonGroups.map((g, gIdx) => {
                         const name = g.addonId
                           ? (addonNameById?.get(g.addonId) ?? g.addonId)
                           : g.addonId;
