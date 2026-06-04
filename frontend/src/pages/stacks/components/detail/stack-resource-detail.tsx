@@ -24,6 +24,8 @@ interface StackResourceDetailProps {
   onDiscard?: () => void;
   /** Map of `${resourceIdx}::${envName}` → provenance for converted env rows. */
   detachedProvenance?: Map<string, { addonName: string; credField?: string }>;
+  /** addonId → display name, for read-mode addon group headers. */
+  addonNameById?: Map<string, string>;
 }
 
 export default function StackResourceDetail({
@@ -35,6 +37,7 @@ export default function StackResourceDetail({
   onEdit,
   onDiscard,
   detachedProvenance,
+  addonNameById,
 }: StackResourceDetailProps) {
   const { toast } = useToast();
   const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
@@ -434,6 +437,41 @@ export default function StackResourceDetail({
                       <div className="text-sm text-muted-foreground">No environment variables configured</div>
                     );
                   }
+
+                  // Render the read-only value/source binding for a single env row.
+                  const renderSource = (env: FormEnvVarData) => {
+                    switch (env.from) {
+                      case "stack":
+                        return <span>{env.value}</span>;
+                      case "secret":
+                        return (
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-[11px] text-muted-foreground shrink-0">Secret ·</span>
+                            <span className="truncate">{env.secretKey}</span>
+                          </span>
+                        );
+                      case "resource":
+                        return (
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <span className="truncate">{env.resourceName}</span>
+                            <span className="text-[11px] text-muted-foreground shrink-0">·</span>
+                            <span className="truncate">{env.output}</span>
+                          </span>
+                        );
+                      case "self":
+                        return (
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-[11px] text-muted-foreground shrink-0">Self ·</span>
+                            <span className="truncate">{env.selfOutput}</span>
+                          </span>
+                        );
+                      case "addon":
+                        return <span className="truncate">{env.credField}</span>;
+                      default:
+                        return null;
+                    }
+                  };
+
                   const renderRow = ({ env, idx }: { env: FormEnvVarData; idx: number }) => {
                     const prov = env.name
                       ? detachedProvenance?.get(`${index}::${env.name}`)
@@ -445,7 +483,7 @@ export default function StackResourceDetail({
                       >
                         <div className="text-sm font-mono truncate">{env.name}</div>
                         <div className="text-sm font-mono truncate">
-                          {(env as { value?: string }).value}
+                          {renderSource(env)}
                           {prov && (
                             <div className="mt-1 text-[11px] font-sans text-muted-foreground not-italic">
                               ↶ was bound to {prov.addonName}
@@ -456,9 +494,78 @@ export default function StackResourceDetail({
                       </div>
                     );
                   };
+
+                  // Partition rows (in their existing order) into plain groups and
+                  // addon groups keyed by (addonId, database), mirroring edit mode.
+                  type PlainGroup = { kind: "plain"; items: { env: FormEnvVarData; idx: number }[] };
+                  type AddonGroup = {
+                    kind: "addon";
+                    addonId: string;
+                    database: string;
+                    items: { env: FormEnvVarData; idx: number }[];
+                  };
+                  type Group = PlainGroup | AddonGroup;
+                  const groups: Group[] = [];
+                  const addonGroupByKey = new Map<string, AddonGroup>();
+                  envs.forEach((env, idx) => {
+                    if (env.from === "addon") {
+                      const aid = env.addonId || "";
+                      const db = env.database || "";
+                      const key = `${aid}|${db}`;
+                      let g = addonGroupByKey.get(key);
+                      if (!g) {
+                        g = { kind: "addon", addonId: aid, database: db, items: [] };
+                        addonGroupByKey.set(key, g);
+                        groups.push(g);
+                      }
+                      g.items.push({ env, idx });
+                    } else {
+                      const last = groups[groups.length - 1];
+                      if (last && last.kind === "plain") {
+                        last.items.push({ env, idx });
+                      } else {
+                        groups.push({ kind: "plain", items: [{ env, idx }] });
+                      }
+                    }
+                  });
+
                   return (
-                    <div className="rounded-md border border-border bg-background">
-                      {envs.map((env, idx) => renderRow({ env, idx }))}
+                    <div className="space-y-0">
+                      {groups.map((g, gIdx) => {
+                        if (g.kind === "plain") {
+                          return (
+                            <div
+                              key={`p-${gIdx}`}
+                              className="rounded-md border border-border bg-background"
+                            >
+                              {g.items.map(renderRow)}
+                            </div>
+                          );
+                        }
+                        const name = g.addonId
+                          ? (addonNameById?.get(g.addonId) ?? g.addonId)
+                          : g.addonId;
+                        return (
+                          <div
+                            key={`a-${gIdx}-${g.addonId}-${g.database}`}
+                            className="rounded-md border border-dashed border-foreground/25 my-2"
+                            data-testid="env-addon-group"
+                          >
+                            <div className="flex items-center gap-2 px-3 pt-2 pb-1 text-[12.5px] font-semibold">
+                              <span className="truncate">{name}</span>
+                              {g.database && (
+                                <>
+                                  <span className="text-muted-foreground/60">·</span>
+                                  <span className="text-[12px] font-normal text-muted-foreground">
+                                    db: {g.database}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            {g.items.map(renderRow)}
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })()}

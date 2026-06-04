@@ -17,6 +17,8 @@ import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resourc
 import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
 import StickyActionBar, { type StickyActionBarSegment } from "@/pages/stacks/components/shared/sticky-action-bar";
 import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
+import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import type { PostgresAddon } from "@/api/addons";
 import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import {
   AlertDialog,
@@ -174,6 +176,18 @@ export default function StackDetailPage() {
   // Addons bound to the saved stack come from its connections (from.type
   // "addon/postgres"), not from the env vars — so this is the source of truth
   // for the "Stack Addons" panel in display mode.
+  const { addons: allAddons } = usePostgresAddons();
+  // addonId → display name, for read-mode addon group headers.
+  const addonNameById = useMemo(
+    () =>
+      new Map(
+        allAddons
+          .filter((a: PostgresAddon) => a.id && a.name)
+          .map((a: PostgresAddon) => [a.id!, a.name!] as [string, string]),
+      ),
+    [allAddons],
+  );
+
   const connectionAddonIds = useMemo<Set<string>>(
     () =>
       new Set(
@@ -623,6 +637,7 @@ export default function StackDetailPage() {
                     : undefined
                 }
                 detachedProvenance={detachedProvenance}
+                addonNameById={addonNameById}
               />
             )}
           </Panel>
