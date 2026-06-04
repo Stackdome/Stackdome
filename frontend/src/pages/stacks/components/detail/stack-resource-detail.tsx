@@ -97,9 +97,9 @@ export default function StackResourceDetail({
   };
 
   return (
-    <AccordionItem value={String(index)} className="border-t border-border first:border-t-0">
+    <AccordionItem value={String(index)} className="relative group/row border-t border-border first:border-t-0">
       <AccordionTrigger
-        className="group/row px-4 py-3 hover:bg-muted/40 data-[state=open]:bg-muted/30 rounded-t-md [&[data-state=open]]:rounded-b-none"
+        className="px-4 py-3 hover:bg-muted/40 data-[state=open]:bg-muted/30 rounded-t-md [&[data-state=open]]:rounded-b-none"
       >
         <div className="flex items-center gap-3 text-left flex-grow">
           <Tooltip delayDuration={300}>
@@ -156,44 +156,47 @@ export default function StackResourceDetail({
               )}
             </span>
           </div>
-          <div className="flex items-center gap-3 shrink-0 mr-2">
-            {!isSessionActive && onEdit && (
+        </div>
+      </AccordionTrigger>
+      {/* Row actions sit OUTSIDE the AccordionTrigger button — nesting an
+          interactive <button> inside the trigger's <button> is invalid HTML
+          and throws a hydration warning. */}
+      <div className="absolute right-11 top-[18px] flex items-center gap-3">
+        {!isSessionActive && onEdit && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-muted-foreground border border-border opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+          >
+            <Pencil className="h-3 w-3" />
+            Edit
+          </Button>
+        )}
+        {isSessionActive && isDirty && (
+          <>
+            <span className="text-[11.5px] font-medium text-foreground bg-brand-bg px-2 py-0.5 rounded-sm">
+              {dirtyCount} changed
+            </span>
+            {onDiscard && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs text-muted-foreground border border-border opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
+                className="h-7 px-2 text-xs hover:bg-danger-bg hover:text-danger hover:border-danger border border-transparent"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEdit();
+                  onDiscard();
                 }}
               >
-                <Pencil className="h-3 w-3" />
-                Edit
+                Discard
               </Button>
             )}
-            {isSessionActive && isDirty && (
-              <>
-                <span className="text-[11.5px] font-medium text-foreground bg-brand-bg px-2 py-0.5 rounded-sm">
-                  {dirtyCount} changed
-                </span>
-                {onDiscard && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs hover:bg-danger-bg hover:text-danger hover:border-danger border border-transparent"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDiscard();
-                    }}
-                  >
-                    Discard
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </AccordionTrigger>
+          </>
+        )}
+      </div>
       <AccordionContent className="bg-background dark:bg-secondary border-t border-border pb-4 pt-4 px-1">
         <div className="px-4 space-y-4">
           <Tabs defaultValue="configuration" className="w-full">
