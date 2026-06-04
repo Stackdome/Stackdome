@@ -340,15 +340,11 @@ function StackResourceEnvironmentTabImpl({
           ));
         })()}
       </div>
-      {/* Add Variable buttons — one per source type */}
-      <div className="mt-2 flex flex-wrap gap-2">
+      {/* Add a literal row; the row's own "From" selector switches the source. */}
+      <div className="mt-2">
         <Button variant="ghost" size="sm" onClick={() => addEnvVar({ from: "stack", name: "", value: "" })}>
           <PlusCircle className="h-4 w-4 mr-2" />Add variable
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => addEnvVar({ from: "secret", name: "", secretId: "", secretKey: "" })}>From secret</Button>
-        <Button variant="ghost" size="sm" onClick={() => addEnvVar({ from: "addon", name: "", addonId: "", superuser: false })}>From addon</Button>
-        <Button variant="ghost" size="sm" onClick={() => addEnvVar({ from: "resource", name: "", resourceName: "", output: "" })}>From resource</Button>
-        <Button variant="ghost" size="sm" onClick={() => addEnvVar({ from: "self", name: "", selfOutput: "" })}>From self output</Button>
       </div>
     </TabsContent>
   );
