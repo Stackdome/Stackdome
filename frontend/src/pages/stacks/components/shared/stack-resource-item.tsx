@@ -64,6 +64,7 @@ function StackResourceItemImpl({
   volumes = [],
   allResources,
   secrets,
+  addons,
   addonNameById,
   baselineResource,
   onDiscardEnvRow,
@@ -307,6 +308,7 @@ function StackResourceItemImpl({
                 selfOutputs={selfOutputs}
                 secrets={secrets.secrets}
                 secretsLoading={secrets.isLoading}
+                addons={addons}
                 addonNameById={addonNameById}
                 onChangeEnvVars={onChangeEnvVars}
                 onDiscardEnvRow={onDiscardEnvRow}

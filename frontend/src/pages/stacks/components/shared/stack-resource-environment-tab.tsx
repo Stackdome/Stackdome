@@ -2,6 +2,13 @@ import React, { useMemo, useState } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -15,7 +22,9 @@ import { toast } from "@/components/ui/use-toast";
 import { envRowsDiff } from "@/pages/stacks/lib/stack-diff";
 
 import type { FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
-import { EnvRow, type EnvRowErrors } from "./env-row";
+import { EnvRow, type EnvFrom, type EnvRowErrors, type AddonBindingPatch } from "./env-row";
+import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
+import type { PostgresAddon } from "@/api/addons";
 
 interface StackResourceEnvironmentTabProps {
   index: number;
@@ -28,6 +37,7 @@ interface StackResourceEnvironmentTabProps {
   selfOutputs: string[];
   secrets: import("@/api/secrets").Secret[];
   secretsLoading: boolean;
+  addons: PostgresAddon[];
   addonNameById: Map<string, string>;
   /** Replace the entire environment_variables array. Identity must be stable. */
   onChangeEnvVars: (next: FormEnvVarData[]) => void;
@@ -44,6 +54,7 @@ function StackResourceEnvironmentTabImpl({
   selfOutputs,
   secrets,
   secretsLoading,
+  addons,
   addonNameById,
   onChangeEnvVars,
   onDiscardEnvRow,
@@ -103,28 +114,54 @@ function StackResourceEnvironmentTabImpl({
     });
   };
 
-  const freshRowForSource = (from: FormEnvVarData["from"], name: string): FormEnvVarData => {
-    switch (from) {
-      case "secret": return { from: "secret", name, secretId: "", secretKey: "" };
-      case "addon": return { from: "addon", name, addonId: "", superuser: false };
-      case "resource": return { from: "resource", name, resourceName: "", output: "" };
-      case "self": return { from: "self", name, selfOutput: "" };
-      default: return { from: "stack", name, value: "" };
+  // Produce a fresh env row for a chosen source, preserving the row's name.
+  // Covers all five FormEnvVarData arms.
+  const switchRowFrom = (envIdx: number, from: EnvFrom) => {
+    const current = envVars?.[envIdx];
+    if (!current) return;
+    const name = current.name;
+    if (from === "stack") {
+      replaceEnvVar(envIdx, { from: "stack", name, value: "" });
+    } else if (from === "secret") {
+      replaceEnvVar(envIdx, { from: "secret", name, secretId: "", secretKey: "" });
+    } else if (from === "addon") {
+      replaceEnvVar(envIdx, {
+        from: "addon",
+        name,
+        addonId: "",
+        database: undefined,
+        superuser: false,
+        credField: undefined,
+      });
+    } else if (from === "resource") {
+      replaceEnvVar(envIdx, { from: "resource", name, resourceName: "", output: "" });
+    } else if (from === "self") {
+      replaceEnvVar(envIdx, { from: "self", name, selfOutput: "" });
     }
   };
 
-  const applyAddonPatch = (
-    env: FormEnvVarData,
-    patch: import("./env-row").AddonBindingPatch,
-  ): FormEnvVarData => {
-    const base = env.from === "addon" ? env : { from: "addon" as const, name: env.name, addonId: "", superuser: false };
-    return {
+  // Per-row addon patch (credField / addonId / database / superuser).
+  const onChangeAddonForRow = (envIdx: number, patch: AddonBindingPatch) => {
+    const current = envVars?.[envIdx];
+    if (!current) return;
+    const base =
+      current.from === "addon"
+        ? current
+        : { from: "addon" as const, name: current.name, addonId: "", superuser: false };
+    const nextDatabase =
+      patch.database === null
+        ? undefined
+        : patch.database === undefined
+          ? base.database
+          : patch.database;
+    replaceEnvVar(envIdx, {
       ...base,
       addonId: patch.addonId ?? base.addonId,
-      database: patch.database === null ? undefined : patch.database ?? base.database,
+      database: nextDatabase,
       superuser: patch.superuser ?? base.superuser,
       credField: patch.credField ?? base.credField,
-    };
+    });
+    markEnvRowDirty(envIdx);
   };
 
   const parseEnvContent = (content: string): Array<{ name: string; value: string }> =>
@@ -270,8 +307,9 @@ function StackResourceEnvironmentTabImpl({
       <div className="border border-muted rounded-md">
         {/* Header Row */}
         <div className="grid grid-cols-12 gap-2 p-3 border-b bg-muted/30 text-sm font-medium">
-          <div className="col-span-4">Key</div>
-          <div className="col-span-7">Value</div>
+          <div className="col-span-3">Key</div>
+          <div className="col-span-6">Value</div>
+          <div className="col-span-2 text-center">From</div>
           <div className="col-span-1"></div>
         </div>
 
@@ -294,6 +332,12 @@ function StackResourceEnvironmentTabImpl({
             const dirty = dirtyEnvRows.has(envIdx);
             const errPath = (field: string) =>
               errors[`execution_config.environment_variables.${envIdx}.${field}`];
+            if (r.from === "addon") {
+              if ((dirty || errPath("addonId")) && !r.addonId) out.addonId = "Pick an addon";
+              if ((dirty || errPath("database")) && !r.superuser && !r.database)
+                out.database = "Pick a database";
+              if ((dirty || errPath("credField")) && !r.credField) out.credField = "Pick a field";
+            }
             if ((dirty || errPath("name")) && !r.name) out.name = "Required";
             return Object.keys(out).length === 0 ? undefined : out;
           };
@@ -306,7 +350,44 @@ function StackResourceEnvironmentTabImpl({
             );
           }
 
-          return envVars.map((env, envIdx) => (
+          // Partition rows into groups (in their existing order):
+          //  - consecutive non-addon rows => a "plain" group (rendered flat).
+          //  - addon rows sharing (addonId, database) => an "addon" group
+          //    (rendered inside a dashed-border wrapper with a group-level
+          //    addon + database picker and an "Add binding" button).
+          type PlainGroup = { kind: "plain"; items: { env: FormEnvVarData; envIdx: number }[] };
+          type AddonGroup = {
+            kind: "addon";
+            addonId: string;
+            database: string;
+            items: { env: FormEnvVarData; envIdx: number }[];
+          };
+          type Group = PlainGroup | AddonGroup;
+          const groups: Group[] = [];
+          const addonGroupByKey = new Map<string, AddonGroup>();
+          envVars.forEach((env, envIdx) => {
+            if (env.from === "addon") {
+              const aid = env.addonId || "";
+              const db = env.database || "";
+              const key = `${aid}|${db}`;
+              let g = addonGroupByKey.get(key);
+              if (!g) {
+                g = { kind: "addon", addonId: aid, database: db, items: [] };
+                addonGroupByKey.set(key, g);
+                groups.push(g);
+              }
+              g.items.push({ env, envIdx });
+            } else {
+              const last = groups[groups.length - 1];
+              if (last && last.kind === "plain") {
+                last.items.push({ env, envIdx });
+              } else {
+                groups.push({ kind: "plain", items: [{ env, envIdx }] });
+              }
+            }
+          });
+
+          const renderRow = ({ env, envIdx }: { env: FormEnvVarData; envIdx: number }) => (
             <EnvRow
               key={envIdx}
               row={env}
@@ -326,10 +407,13 @@ function StackResourceEnvironmentTabImpl({
               onChangeValue={(value) => {
                 replaceEnvVar(envIdx, { from: "stack", name: env.name, value });
               }}
-              onChangeFrom={(from) => replaceEnvVar(envIdx, freshRowForSource(from, env.name))}
+              onChangeFrom={(from) => {
+                switchRowFrom(envIdx, from);
+                markEnvRowDirty(envIdx);
+              }}
               onChangeSecret={(secretId, secretKey) =>
                 replaceEnvVar(envIdx, { from: "secret", name: env.name, secretId, secretKey })}
-              onChangeAddon={(patch) => replaceEnvVar(envIdx, applyAddonPatch(env, patch))}
+              onChangeAddon={(patch) => onChangeAddonForRow(envIdx, patch)}
               onChangeResource={(resourceName, output) =>
                 replaceEnvVar(envIdx, { from: "resource", name: env.name, resourceName, output })}
               onChangeSelf={(selfOutput) =>
@@ -337,7 +421,168 @@ function StackResourceEnvironmentTabImpl({
               onBlur={() => markEnvRowDirty(envIdx)}
               onRemove={() => removeEnvVar(envIdx)}
             />
-          ));
+          );
+
+          return groups.map((g, gIdx) => {
+            if (g.kind === "plain") {
+              return <div key={`p-${gIdx}`}>{g.items.map(renderRow)}</div>;
+            }
+            const aid = g.addonId;
+            const db = g.database;
+            const selectedAddon = addons.find((a) => a.id === aid);
+            const databases = ((selectedAddon?.spec as unknown as { databases?: { name?: string }[] })
+              ?.databases ?? []) as { name?: string }[];
+            const name = aid ? (addonNameById?.get(aid) ?? aid) : null;
+
+            const updateAllInGroup = (patch: { addonId?: string; database?: string | undefined }) => {
+              const next = (envVars || []).map((e, i) => {
+                if (g.items.some((it) => it.envIdx === i) && e.from === "addon") {
+                  return { ...e, ...patch };
+                }
+                return e;
+              });
+              onChangeEnvVars(next);
+            };
+
+            // Disallow picking an (addon, db) combo that already has its own group.
+            const usedDbsByAddon = new Map<string, Set<string>>();
+            const usedAddonsByDb = new Map<string, Set<string>>();
+            for (const og of groups) {
+              if (og.kind !== "addon" || og === g) continue;
+              if (og.addonId) {
+                if (!usedDbsByAddon.has(og.addonId)) usedDbsByAddon.set(og.addonId, new Set());
+                if (og.database) usedDbsByAddon.get(og.addonId)!.add(og.database);
+              }
+              if (og.database) {
+                if (!usedAddonsByDb.has(og.database)) usedAddonsByDb.set(og.database, new Set());
+                if (og.addonId) usedAddonsByDb.get(og.database)!.add(og.addonId);
+              }
+            }
+            const dbBlocked = (dbName: string) =>
+              aid !== "" && (usedDbsByAddon.get(aid)?.has(dbName) ?? false);
+            const addonBlocked = (addonId: string) =>
+              db !== "" && (usedAddonsByDb.get(db)?.has(addonId) ?? false);
+
+            const handleAddonChange = (newAid: string) => {
+              const a = addons.find((x) => x.id === newAid);
+              const dbs = ((a?.spec as unknown as { databases?: { name?: string }[] })?.databases ??
+                []) as { name?: string }[];
+              const usedDbs = usedDbsByAddon.get(newAid) ?? new Set();
+              const firstFreeDb = dbs.find((d) => d.name && !usedDbs.has(d.name))?.name;
+              const newDb = dbs.length === 1 ? dbs[0].name : firstFreeDb;
+              updateAllInGroup({ addonId: newAid, database: newDb });
+            };
+            const handleDbChange = (newDb: string) => {
+              updateAllInGroup({ database: newDb });
+            };
+            const handleAddBinding = () => {
+              addEnvVar({
+                from: "addon",
+                name: "",
+                addonId: aid,
+                database: db || undefined,
+                superuser: false,
+                credField: undefined,
+              });
+            };
+
+            return (
+              <div
+                key={`a-${gIdx}-${aid}-${db}`}
+                className="rounded-md border border-dashed border-foreground/25 my-2"
+                data-testid="env-addon-group"
+              >
+                <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+                  <Select value={aid || undefined} onValueChange={handleAddonChange}>
+                    <SelectTrigger
+                      className="h-7 w-[200px] text-[12.5px] font-semibold gap-2"
+                      data-testid="addon-picker-trigger"
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        {aid && <AddonTypeIcon type="postgres" size={14} />}
+                        <SelectValue placeholder="Pick addon">
+                          {aid ? name : undefined}
+                        </SelectValue>
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {addons.length === 0 ? (
+                        <div className="px-3 py-2 text-xs text-muted-foreground">
+                          No addons linked. Add one from the bottom panel.
+                        </div>
+                      ) : (
+                        addons.map((a) => (
+                          <SelectItem
+                            key={a.id}
+                            value={a.id!}
+                            disabled={a.id !== aid && addonBlocked(a.id!)}
+                          >
+                            <span className="flex items-center gap-2">
+                              <AddonTypeIcon type="postgres" size={14} />
+                              <span>{a.name}</span>
+                              {a.id !== aid && addonBlocked(a.id!) && (
+                                <span className="ml-1 text-[10px] text-muted-foreground">
+                                  in use
+                                </span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {aid && (
+                    <>
+                      <span className="text-muted-foreground/60">·</span>
+                      {databases.length > 1 ? (
+                        <Select value={db || undefined} onValueChange={handleDbChange}>
+                          <SelectTrigger
+                            className="h-7 w-[160px] text-[12.5px]"
+                            data-testid="database-picker-trigger"
+                          >
+                            <SelectValue placeholder="Pick database" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {databases.map((d) =>
+                              d.name ? (
+                                <SelectItem
+                                  key={d.name}
+                                  value={d.name}
+                                  disabled={d.name !== db && dbBlocked(d.name)}
+                                >
+                                  {d.name}
+                                  {d.name !== db && dbBlocked(d.name) && (
+                                    <span className="ml-2 text-[10px] text-muted-foreground">
+                                      in use
+                                    </span>
+                                  )}
+                                </SelectItem>
+                              ) : null,
+                            )}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-[12px] text-muted-foreground">
+                          db: {db || databases[0]?.name || "—"}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+                {g.items.map(renderRow)}
+                <div className="px-3 py-1.5 flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleAddBinding}
+                    className="h-7 text-[12.5px]"
+                  >
+                    <PlusCircle className="h-3 w-3 mr-1" /> Add binding
+                  </Button>
+                </div>
+              </div>
+            );
+          });
         })()}
       </div>
       {/* Add a literal row; the row's own "From" selector switches the source. */}
