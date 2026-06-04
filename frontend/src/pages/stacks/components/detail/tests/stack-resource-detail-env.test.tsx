@@ -58,36 +58,44 @@ const renderDetail = () => {
 };
 
 describe("StackResourceDetail read-mode environment tab", () => {
-  it("shows the plain stack row value", () => {
+  it("shows the plain stack row value with a Plain text From pill", () => {
     renderDetail();
     expect(screen.getByText("PLAIN")).toBeInTheDocument();
     expect(screen.getByText("plain-value")).toBeInTheDocument();
+    // stack source renders as a "Plain text" From pill.
+    expect(screen.getByText("Plain text")).toBeInTheDocument();
   });
 
-  it("shows secret/resource/self source bindings instead of blank", () => {
+  it("shows secret/resource/self source bindings with masked values + From pills", () => {
     renderDetail();
-    // secret → key shown
-    expect(screen.getByText("API_KEY")).toBeInTheDocument();
+    // secret → masked value carries its key, plus a "Secret" From pill.
+    expect(screen.getByText(/master_key|API_KEY/)).toBeInTheDocument();
+    expect(screen.getByText("Secret")).toBeInTheDocument();
     // resource → resourceName · output ("web" also appears as the resource
-    // title, so assert on the unique output token).
-    expect(screen.getByText("url")).toBeInTheDocument();
-    // self → selfOutput
+    // title, so assert on the unique output token) + "Resource" pill.
+    expect(screen.getByText(/web · url/)).toBeInTheDocument();
+    expect(screen.getAllByText("Resource").length).toBeGreaterThan(0);
+    // self → selfOutput + "Self" pill.
     expect(screen.getByText("endpoint")).toBeInTheDocument();
+    expect(screen.getByText("Self")).toBeInTheDocument();
   });
 
-  it("groups the two addon rows inside one dashed group titled by addon name", () => {
+  it("groups the two addon rows inside one dashed group with a notched legend", () => {
     renderDetail();
     const groups = screen.getAllByTestId("env-addon-group");
     expect(groups).toHaveLength(1);
     const group = groups[0];
     expect(group).toHaveClass("border-dashed");
+    // notched legend header shows the addon name + Postgres + db.
     expect(group).toHaveTextContent("tooljet-db");
+    expect(group).toHaveTextContent("Postgres");
     expect(group).toHaveTextContent("db: tooljet");
-    // both addon rows + their credFields live inside the group
+    // both addon rows + their credFields live inside the group, each with an
+    // "Addon · <field>" From pill.
     expect(within(group).getByText("PG_HOST")).toBeInTheDocument();
     expect(within(group).getByText("PG_PORT")).toBeInTheDocument();
-    expect(within(group).getByText("host")).toBeInTheDocument();
-    expect(within(group).getByText("port")).toBeInTheDocument();
+    expect(within(group).getByText("Addon · host")).toBeInTheDocument();
+    expect(within(group).getByText("Addon · port")).toBeInTheDocument();
   });
 
   it("keeps the plain row outside the addon group", () => {

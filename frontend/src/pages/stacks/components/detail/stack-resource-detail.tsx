@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { Box, GitBranch, ExternalLink, Copy, Pencil } from "lucide-react";
+import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { z } from "zod";
 import type { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
@@ -438,37 +439,52 @@ export default function StackResourceDetail({
                     );
                   }
 
-                  // Render the read-only value/source binding for a single env row.
-                  const renderSource = (env: FormEnvVarData) => {
+                  // Render the read-only (masked) value for a single env row.
+                  // Reference values are masked; literal stack values are shown.
+                  const renderValue = (env: FormEnvVarData) => {
                     switch (env.from) {
                       case "stack":
-                        return <span>{env.value}</span>;
+                        return <span className="text-foreground">{env.value}</span>;
                       case "secret":
                         return (
-                          <span className="flex items-center gap-1.5 min-w-0">
-                            <span className="text-[11px] text-muted-foreground shrink-0">Secret ·</span>
-                            <span className="truncate">{env.secretKey}</span>
+                          <span className="text-muted-foreground">
+                            ●●●●●●●● · {env.secretKey}
+                          </span>
+                        );
+                      case "addon":
+                        return (
+                          <span className="text-muted-foreground">
+                            ●●● · {env.credField}
                           </span>
                         );
                       case "resource":
                         return (
-                          <span className="flex items-center gap-1.5 min-w-0">
-                            <span className="truncate">{env.resourceName}</span>
-                            <span className="text-[11px] text-muted-foreground shrink-0">·</span>
-                            <span className="truncate">{env.output}</span>
+                          <span className="text-foreground">
+                            {env.resourceName} · {env.output}
                           </span>
                         );
                       case "self":
-                        return (
-                          <span className="flex items-center gap-1.5 min-w-0">
-                            <span className="text-[11px] text-muted-foreground shrink-0">Self ·</span>
-                            <span className="truncate">{env.selfOutput}</span>
-                          </span>
-                        );
-                      case "addon":
-                        return <span className="truncate">{env.credField}</span>;
+                        return <span className="text-foreground">{env.selfOutput}</span>;
                       default:
                         return null;
+                    }
+                  };
+
+                  // Compact "From" source pill label per arm.
+                  const fromPillLabel = (env: FormEnvVarData): string => {
+                    switch (env.from) {
+                      case "stack":
+                        return "Plain text";
+                      case "secret":
+                        return "Secret";
+                      case "resource":
+                        return "Resource";
+                      case "self":
+                        return "Self";
+                      case "addon":
+                        return `Addon · ${env.credField}`;
+                      default:
+                        return "";
                     }
                   };
 
@@ -479,11 +495,11 @@ export default function StackResourceDetail({
                     return (
                       <div
                         key={idx}
-                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 px-3 py-2 border-t border-border first:border-t-0"
+                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-4 items-center px-3 py-2 border-t border-border first:border-t-0"
                       >
-                        <div className="text-sm font-mono truncate">{env.name}</div>
+                        <div className="text-sm font-mono truncate text-foreground">{env.name}</div>
                         <div className="text-sm font-mono truncate">
-                          {renderSource(env)}
+                          {renderValue(env)}
                           {prov && (
                             <div className="mt-1 text-[11px] font-sans text-muted-foreground not-italic">
                               ↶ was bound to {prov.addonName}
@@ -491,6 +507,9 @@ export default function StackResourceDetail({
                             </div>
                           )}
                         </div>
+                        <span className="inline-flex items-center gap-1 w-fit text-[12px] text-muted-foreground bg-secondary border border-border rounded px-2 py-[3px] whitespace-nowrap">
+                          {fromPillLabel(env)}
+                        </span>
                       </div>
                     );
                   };
@@ -525,7 +544,7 @@ export default function StackResourceDetail({
                   });
 
                   return (
-                    <div className="rounded-md border border-border bg-background overflow-hidden">
+                    <div className="rounded-md border border-border bg-background">
                       {plainItems.map(renderRow)}
                       {addonGroups.map((g, gIdx) => {
                         const name = g.addonId
@@ -534,18 +553,15 @@ export default function StackResourceDetail({
                         return (
                           <div
                             key={`a-${gIdx}-${g.addonId}-${g.database}`}
-                            className="border-t border-dashed border-foreground/30"
+                            className="relative border border-dashed border-border-strong rounded mx-3 mt-3.5 mb-1.5 px-2.5 pt-2 pb-1"
                             data-testid="env-addon-group"
                           >
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/20 text-[12px] font-semibold">
-                              <span className="truncate">{name}</span>
+                            <div className="absolute -top-2.5 left-3 inline-flex items-center gap-1.5 bg-background px-2 text-[11.5px]">
+                              <AddonTypeIcon type="postgres" size={14} />
+                              <span className="font-medium text-foreground truncate">{name}</span>
+                              <span className="text-muted-foreground">· Postgres</span>
                               {g.database && (
-                                <>
-                                  <span className="text-muted-foreground/60">·</span>
-                                  <span className="text-[12px] font-normal text-muted-foreground">
-                                    db: {g.database}
-                                  </span>
-                                </>
+                                <span className="text-muted-foreground">· db: {g.database}</span>
                               )}
                             </div>
                             {g.items.map(renderRow)}
