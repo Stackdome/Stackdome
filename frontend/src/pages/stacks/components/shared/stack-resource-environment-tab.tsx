@@ -484,10 +484,10 @@ function StackResourceEnvironmentTabImpl({
                 return (
                   <div
                     key={`a-${gIdx}-${aid}-${db}`}
-                    className="rounded-md border border-dashed border-foreground/25 my-2"
+                    className="border-t border-dashed border-foreground/30"
                     data-testid="env-addon-group"
                   >
-                    <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/20">
                       <Select value={aid || undefined} onValueChange={handleAddonChange}>
                         <SelectTrigger
                           className="h-7 w-[200px] text-[12.5px] font-semibold gap-2"

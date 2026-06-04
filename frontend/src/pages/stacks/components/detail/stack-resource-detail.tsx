@@ -525,12 +525,8 @@ export default function StackResourceDetail({
                   });
 
                   return (
-                    <div className="space-y-0">
-                      {plainItems.length > 0 && (
-                        <div className="rounded-md border border-border bg-background">
-                          {plainItems.map(renderRow)}
-                        </div>
-                      )}
+                    <div className="rounded-md border border-border bg-background overflow-hidden">
+                      {plainItems.map(renderRow)}
                       {addonGroups.map((g, gIdx) => {
                         const name = g.addonId
                           ? (addonNameById?.get(g.addonId) ?? g.addonId)
@@ -538,10 +534,10 @@ export default function StackResourceDetail({
                         return (
                           <div
                             key={`a-${gIdx}-${g.addonId}-${g.database}`}
-                            className="rounded-md border border-dashed border-foreground/25 my-2"
+                            className="border-t border-dashed border-foreground/30"
                             data-testid="env-addon-group"
                           >
-                            <div className="flex items-center gap-2 px-3 pt-2 pb-1 text-[12.5px] font-semibold">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/20 text-[12px] font-semibold">
                               <span className="truncate">{name}</span>
                               {g.database && (
                                 <>
