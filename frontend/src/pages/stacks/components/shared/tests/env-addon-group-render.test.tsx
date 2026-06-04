@@ -100,4 +100,16 @@ describe("StackResourceEnvironmentTab addon grouping", () => {
     const group = screen.getByTestId("env-addon-group");
     expect(within(group).getByRole("button", { name: /add binding/i })).toBeInTheDocument();
   });
+
+  it("renders the Add variable button before the addon group", () => {
+    // Add variable sits directly below the plain rows, above the addon
+    // fieldset, so a newly-added plain var appears at the click point.
+    renderTab(envVars);
+    const addVar = screen.getByRole("button", { name: /add variable/i });
+    const group = screen.getByTestId("env-addon-group");
+    expect(group).not.toContainElement(addVar);
+    expect(
+      addVar.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });
