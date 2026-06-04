@@ -495,7 +495,7 @@ function StackResourceEnvironmentTabImpl({
                 return (
                   <div
                     key={`a-${gIdx}-${aid}-${db}`}
-                    className="relative border border-dashed border-border-strong rounded mx-3 mt-3.5 mb-1.5 px-2.5 pt-3 pb-1"
+                    className="relative border border-dashed border-border-strong rounded mx-3 mt-5 mb-1.5 px-2.5 pt-7 pb-1"
                     data-testid="env-addon-group"
                   >
                     <div className="absolute -top-3.5 left-3 inline-flex items-center gap-2 bg-background px-2 py-0.5">
