@@ -184,7 +184,7 @@ export function EnvRow({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="stack">Stack</SelectItem>
+              <SelectItem value="stack">Plain text</SelectItem>
               <SelectItem value="secret">Secret</SelectItem>
               <SelectItem value="addon">Addon</SelectItem>
               <SelectItem value="resource">Resource</SelectItem>
