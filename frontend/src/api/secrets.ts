@@ -11,8 +11,9 @@ export async function getSecrets(orgId: string): Promise<SecretList> {
   return res.data as SecretList;
 }
 
-export async function getSecret(orgId: string, secretId: string): Promise<Secret> {
-  const res = await api.get(`/organizations/${orgId}/secrets/${secretId}`);
+// Single-secret read is team-scoped (only the org-level list is aggregated).
+export async function getSecret(orgId: string, teamName: string, secretId: string): Promise<Secret> {
+  const res = await api.get(`/organizations/${orgId}/teams/${teamName}/secrets/${secretId}`);
   return res.data as Secret;
 }
 

@@ -17,8 +17,9 @@ export async function getObjectStores(orgId: string): Promise<ObjectStoreList> {
   return res.data as ObjectStoreList;
 }
 
-export async function getObjectStore(orgId: string, id: string): Promise<ObjectStore> {
-  const res = await api.get(`/organizations/${orgId}/object-stores/${id}`);
+// Single object-store read is team-scoped (only the org-level list is aggregated).
+export async function getObjectStore(orgId: string, teamName: string, id: string): Promise<ObjectStore> {
+  const res = await api.get(`/organizations/${orgId}/teams/${teamName}/object-stores/${id}`);
   return res.data as ObjectStore;
 }
 

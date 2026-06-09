@@ -46,7 +46,7 @@ export default function PostgresDetailPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { canWrite } = useCurrentUser();
-  const { teamNameById } = useResourceTeams();
+  const { teamNameById, defaultTeamName } = useResourceTeams();
   const [addon, setAddon] = useState<PostgresAddon | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,18 +71,18 @@ export default function PostgresDetailPage() {
 
   const refetch = useCallback(async () => {
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !id) return;
+    if (!orgId || !id || !defaultTeamName) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await getPostgresAddon(orgId, id);
+      const data = await getPostgresAddon(orgId, defaultTeamName, id);
       setAddon(data);
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, defaultTeamName]);
 
   useEffect(() => {
     void refetch();

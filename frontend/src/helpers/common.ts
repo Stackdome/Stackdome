@@ -1,4 +1,11 @@
 import type { User } from "@/api/users";
+import { AUTH_SESSION_CHANGED } from "@/helpers/auth-events";
+
+function notifyAuthSessionChanged() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_SESSION_CHANGED));
+  }
+}
 
 export function isUserLoggedIn(): boolean {
   return Boolean(localStorage.getItem('authToken'));
@@ -30,12 +37,14 @@ export function setAuthSession(token: string, user: User, refreshToken?: string)
   if (refreshToken) {
     localStorage.setItem('refreshToken', refreshToken);
   }
+  notifyAuthSessionChanged();
 }
 
 export function clearAuthSession() {
   localStorage.removeItem('authToken');
   localStorage.removeItem('currentUser');
   localStorage.removeItem('refreshToken');
+  notifyAuthSessionChanged();
 }
 
 export function logoutAndRedirect(redirectTo: string = "/sign-in") {

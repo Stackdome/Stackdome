@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { Box, GitBranch, ExternalLink, Copy, Pencil } from "lucide-react";
+import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { z } from "zod";
 import type { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
@@ -24,6 +25,8 @@ interface StackResourceDetailProps {
   onDiscard?: () => void;
   /** Map of `${resourceIdx}::${envName}` → provenance for converted env rows. */
   detachedProvenance?: Map<string, { addonName: string; credField?: string }>;
+  /** addonId → display name, for read-mode addon group headers. */
+  addonNameById?: Map<string, string>;
 }
 
 export default function StackResourceDetail({
@@ -35,6 +38,7 @@ export default function StackResourceDetail({
   onEdit,
   onDiscard,
   detachedProvenance,
+  addonNameById,
 }: StackResourceDetailProps) {
   const { toast } = useToast();
   const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
@@ -93,9 +97,9 @@ export default function StackResourceDetail({
   };
 
   return (
-    <AccordionItem value={String(index)} className="border-t border-border first:border-t-0">
+    <AccordionItem value={String(index)} className="relative group/row border-t border-border first:border-t-0">
       <AccordionTrigger
-        className="group/row px-4 py-3 hover:bg-muted/40 data-[state=open]:bg-muted/30 rounded-t-md [&[data-state=open]]:rounded-b-none"
+        className="px-4 py-3 hover:bg-muted/40 data-[state=open]:bg-muted/30 rounded-t-md [&[data-state=open]]:rounded-b-none"
       >
         <div className="flex items-center gap-3 text-left flex-grow">
           <Tooltip delayDuration={300}>
@@ -152,44 +156,47 @@ export default function StackResourceDetail({
               )}
             </span>
           </div>
-          <div className="flex items-center gap-3 shrink-0 mr-2">
-            {!isSessionActive && onEdit && (
+        </div>
+      </AccordionTrigger>
+      {/* Row actions sit OUTSIDE the AccordionTrigger button — nesting an
+          interactive <button> inside the trigger's <button> is invalid HTML
+          and throws a hydration warning. */}
+      <div className="absolute right-11 top-[18px] flex items-center gap-3">
+        {!isSessionActive && onEdit && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-muted-foreground border border-border opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+          >
+            <Pencil className="h-3 w-3" />
+            Edit
+          </Button>
+        )}
+        {isSessionActive && isDirty && (
+          <>
+            <span className="text-[11.5px] font-medium text-foreground bg-brand-bg px-2 py-0.5 rounded-sm">
+              {dirtyCount} changed
+            </span>
+            {onDiscard && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs text-muted-foreground border border-border opacity-0 group-hover/row:opacity-100 focus:opacity-100 transition-opacity"
+                className="h-7 px-2 text-xs hover:bg-danger-bg hover:text-danger hover:border-danger border border-transparent"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEdit();
+                  onDiscard();
                 }}
               >
-                <Pencil className="h-3 w-3" />
-                Edit
+                Discard
               </Button>
             )}
-            {isSessionActive && isDirty && (
-              <>
-                <span className="text-[11.5px] font-medium text-foreground bg-brand-bg px-2 py-0.5 rounded-sm">
-                  {dirtyCount} changed
-                </span>
-                {onDiscard && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs hover:bg-danger-bg hover:text-danger hover:border-danger border border-transparent"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDiscard();
-                    }}
-                  >
-                    Discard
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </AccordionTrigger>
+          </>
+        )}
+      </div>
       <AccordionContent className="bg-background dark:bg-secondary border-t border-border pb-4 pt-4 px-1">
         <div className="px-4 space-y-4">
           <Tabs defaultValue="configuration" className="w-full">
@@ -434,6 +441,56 @@ export default function StackResourceDetail({
                       <div className="text-sm text-muted-foreground">No environment variables configured</div>
                     );
                   }
+
+                  // Render the read-only (masked) value for a single env row.
+                  // Reference values are masked; literal stack values are shown.
+                  const renderValue = (env: FormEnvVarData) => {
+                    switch (env.from) {
+                      case "stack":
+                        return <span className="text-foreground">{env.value}</span>;
+                      case "secret":
+                        return (
+                          <span className="text-muted-foreground">
+                            ●●●●●●●● · {env.secretKey}
+                          </span>
+                        );
+                      case "addon":
+                        return (
+                          <span className="text-foreground">
+                            {addonNameById?.get(env.addonId) ?? env.addonId} · {env.credField}
+                          </span>
+                        );
+                      case "resource":
+                        return (
+                          <span className="text-foreground">
+                            {env.resourceName} · {env.output}
+                          </span>
+                        );
+                      case "self":
+                        return <span className="text-foreground">{env.selfOutput}</span>;
+                      default:
+                        return null;
+                    }
+                  };
+
+                  // Compact "From" source pill label per arm.
+                  const fromPillLabel = (env: FormEnvVarData): string => {
+                    switch (env.from) {
+                      case "stack":
+                        return "Plain text";
+                      case "secret":
+                        return "Secret";
+                      case "resource":
+                        return "Resource";
+                      case "self":
+                        return "Self";
+                      case "addon":
+                        return "Addon";
+                      default:
+                        return "";
+                    }
+                  };
+
                   const renderRow = ({ env, idx }: { env: FormEnvVarData; idx: number }) => {
                     const prov = env.name
                       ? detachedProvenance?.get(`${index}::${env.name}`)
@@ -441,11 +498,11 @@ export default function StackResourceDetail({
                     return (
                       <div
                         key={idx}
-                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 px-3 py-2 border-t border-border first:border-t-0"
+                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_7rem] gap-4 items-center px-3 py-2 border-t border-border first:border-t-0"
                       >
-                        <div className="text-sm font-mono truncate">{env.name}</div>
+                        <div className="text-sm font-mono truncate text-foreground">{env.name}</div>
                         <div className="text-sm font-mono truncate">
-                          {(env as { value?: string }).value}
+                          {renderValue(env)}
                           {prov && (
                             <div className="mt-1 text-[11px] font-sans text-muted-foreground not-italic">
                               ↶ was bound to {prov.addonName}
@@ -453,12 +510,67 @@ export default function StackResourceDetail({
                             </div>
                           )}
                         </div>
+                        <span className="justify-self-end inline-flex items-center gap-1 w-fit text-[12px] text-muted-foreground bg-secondary border border-border rounded px-2 py-[3px] whitespace-nowrap">
+                          {fromPillLabel(env)}
+                        </span>
                       </div>
                     );
                   };
+
+                  // Partition rows so all ungrouped (non-addon) rows render
+                  // FIRST (original order, in a single bordered container), then
+                  // addon groups keyed by (addonId, database) render LAST (in
+                  // first-appearance order), mirroring edit mode.
+                  type AddonGroup = {
+                    addonId: string;
+                    database: string;
+                    items: { env: FormEnvVarData; idx: number }[];
+                  };
+                  const plainItems: { env: FormEnvVarData; idx: number }[] = [];
+                  const addonGroups: AddonGroup[] = [];
+                  const addonGroupByKey = new Map<string, AddonGroup>();
+                  envs.forEach((env, idx) => {
+                    if (env.from === "addon") {
+                      const aid = env.addonId || "";
+                      const db = env.database || "";
+                      const key = `${aid}|${db}`;
+                      let g = addonGroupByKey.get(key);
+                      if (!g) {
+                        g = { addonId: aid, database: db, items: [] };
+                        addonGroupByKey.set(key, g);
+                        addonGroups.push(g);
+                      }
+                      g.items.push({ env, idx });
+                    } else {
+                      plainItems.push({ env, idx });
+                    }
+                  });
+
                   return (
                     <div className="rounded-md border border-border bg-background">
-                      {envs.map((env, idx) => renderRow({ env, idx }))}
+                      {plainItems.map(renderRow)}
+                      {addonGroups.map((g, gIdx) => {
+                        const name = g.addonId
+                          ? (addonNameById?.get(g.addonId) ?? g.addonId)
+                          : g.addonId;
+                        return (
+                          <div
+                            key={`a-${gIdx}-${g.addonId}-${g.database}`}
+                            className="relative border border-dashed border-border-strong rounded mx-3 mt-3.5 mb-1.5 px-2.5 pt-2 pb-1"
+                            data-testid="env-addon-group"
+                          >
+                            <div className="absolute -top-2.5 left-3 inline-flex items-center gap-1.5 bg-background px-2 text-[11.5px]">
+                              <AddonTypeIcon type="postgres" size={14} />
+                              <span className="font-medium text-foreground truncate">{name}</span>
+                              <span className="text-muted-foreground">· Postgres</span>
+                              {g.database && (
+                                <span className="text-muted-foreground">· db: {g.database}</span>
+                              )}
+                            </div>
+                            {g.items.map(renderRow)}
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })()}

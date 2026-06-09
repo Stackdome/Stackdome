@@ -19,6 +19,9 @@ interface AddonsInStackPanelProps {
   // links so this is unused.
   resources?: Partial<FormStackResourceData>[];
   linkedAddonIds: Set<string>;
+  /** Resources each addon binds to, derived from the stack's saved connections
+   *  (addonId → resource names). Drives the "Linked with: …" label. */
+  addonResourceNames?: Map<string, string[]>;
   onLinkAddon: (addonId: string) => void;
   onRemoveLinkedAddon?: (addonId: string) => void;
   /** When true, hide all link/unlink affordances (Viewer read-only). */
@@ -32,6 +35,7 @@ interface DerivedRow {
 
 export default function AddonsInStackPanel({
   linkedAddonIds,
+  addonResourceNames,
   onLinkAddon,
   onRemoveLinkedAddon,
   readOnly = false,
@@ -40,11 +44,15 @@ export default function AddonsInStackPanel({
   // Each entry is a unique slot id for a not-yet-picked addon row.
   const [pendingSlots, setPendingSlots] = useState<string[]>([]);
 
-  // Env vars no longer carry addon-backed sources, so addon links come solely
-  // from the explicit `linkedAddonIds` set.
+  // The addon set comes from the explicit `linkedAddonIds`; the resources each
+  // one binds to come from the stack's saved connections (passed in).
   const allRows: DerivedRow[] = useMemo(
-    () => Array.from(linkedAddonIds).map((id) => ({ addonId: id, resourceNames: [] })),
-    [linkedAddonIds],
+    () =>
+      Array.from(linkedAddonIds).map((id) => ({
+        addonId: id,
+        resourceNames: addonResourceNames?.get(id) ?? [],
+      })),
+    [linkedAddonIds, addonResourceNames],
   );
 
   const availablePostgres = addons.filter(

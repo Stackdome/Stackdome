@@ -14,6 +14,8 @@ interface StackResourcesDetailProps {
   onAddResource?: () => void;
   /** Map of `${resourceIdx}::${envName}` → provenance for converted env rows. */
   detachedProvenance?: Map<string, { addonName: string; credField?: string }>;
+  /** addonId → display name, for read-mode addon group headers. */
+  addonNameById?: Map<string, string>;
 }
 
 export default function StackResourcesDetail({
@@ -25,6 +27,7 @@ export default function StackResourcesDetail({
   onDiscardResource,
   onAddResource,
   detachedProvenance,
+  addonNameById,
 }: StackResourcesDetailProps) {
   return (
     <div>
@@ -45,6 +48,7 @@ export default function StackResourcesDetail({
               onEdit={onEditResource ? () => onEditResource(index) : undefined}
               onDiscard={onDiscardResource ? () => onDiscardResource(index) : undefined}
               detachedProvenance={detachedProvenance}
+              addonNameById={addonNameById}
             />
           );
         }}

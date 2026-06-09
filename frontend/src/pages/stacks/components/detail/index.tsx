@@ -17,6 +17,8 @@ import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resourc
 import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
 import StickyActionBar, { type StickyActionBarSegment } from "@/pages/stacks/components/shared/sticky-action-bar";
 import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
+import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import type { PostgresAddon } from "@/api/addons";
 import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import {
   AlertDialog,
@@ -31,9 +33,12 @@ import {
 import type { AddonGroupStateMap } from "@/pages/stacks/components/shared/stack-resource-item";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
-import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById, updateStack } from "@/api/stacks";
+import {
+  connectionsToEnvRows,
+} from "@/pages/stacks/lib/connection-mapping";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
@@ -92,7 +97,7 @@ export default function StackDetailPage() {
 
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const { toast } = useToast();
-  const { teamNameById } = useResourceTeams();
+  const { teamNameById, defaultTeamName } = useResourceTeams();
   const { canWrite } = useCurrentUser();
 
   // Find the current stack in context
@@ -122,7 +127,12 @@ export default function StackDetailPage() {
 
       setLoading(true);
       setError(null);
-      getStackById(orgId, id)
+      // Single-stack read is team-scoped; wait for the default team to resolve
+      // (this effect re-runs once it does).
+      if (!defaultTeamName) {
+        return;
+      }
+      getStackById(orgId, defaultTeamName, id)
         .then((data) => {
           setFetchedStack(data);
           setLoading(false);
@@ -136,18 +146,70 @@ export default function StackDetailPage() {
           setPathLoading(path, false);
         });
     }
-  }, [currentStack, id, setCustomLabel, setPathLoading]);
+  }, [currentStack, id, defaultTeamName, setCustomLabel, setPathLoading]);
 
   const stackToShow = currentStack || fetchedStack;
 
-  const baselineResources = useMemo<FormStackResourceData[]>(
-    () => (stackToShow?.spec.stack_resources || []).map(mapStackResourceToFormData),
-    [stackToShow],
-  );
+  const baselineResources = useMemo<FormStackResourceData[]>(() => {
+    const connections = stackToShow?.spec?.connections ?? [];
+    return (stackToShow?.spec?.stack_resources || []).map((r) => {
+      const form = mapStackResourceToFormData(r);
+      const connRows = connectionsToEnvRows(form.name ?? "", connections) as FormEnvVarData[];
+      if (connRows.length === 0) return form;
+      return {
+        ...form,
+        execution_config: {
+          ...(form.execution_config ?? {}),
+          environment_variables: [
+            ...((form.execution_config?.environment_variables ?? []) as FormEnvVarData[]),
+            ...connRows,
+          ],
+        },
+      };
+    });
+  }, [stackToShow]);
   const baselineVolumes = useMemo<VolumeFormData[]>(
     () => (stackToShow?.spec?.volumes || []).map(mapVolumeToFormData),
     [stackToShow],
   );
+
+  // Addons bound to the saved stack come from its connections (from.type
+  // "addon/postgres"), not from the env vars — so this is the source of truth
+  // for the "Stack Addons" panel in display mode.
+  const { addons: allAddons } = usePostgresAddons();
+  // addonId → display name, for read-mode addon group headers.
+  const addonNameById = useMemo(
+    () =>
+      new Map(
+        allAddons
+          .filter((a: PostgresAddon) => a.id && a.name)
+          .map((a: PostgresAddon) => [a.id!, a.name!] as [string, string]),
+      ),
+    [allAddons],
+  );
+
+  const connectionAddonIds = useMemo<Set<string>>(
+    () =>
+      new Set(
+        (stackToShow?.spec?.connections ?? [])
+          .filter((c) => c.from?.type === "addon/postgres" && c.from?.id)
+          .map((c) => c.from!.id as string),
+      ),
+    [stackToShow],
+  );
+
+  // addonId → the resources it binds to (a connection's `to` stack resource).
+  const addonResourceNames = useMemo<Map<string, string[]>>(() => {
+    const map = new Map<string, string[]>();
+    for (const c of stackToShow?.spec?.connections ?? []) {
+      if (c.from?.type === "addon/postgres" && c.from?.id && c.to?.name) {
+        const arr = map.get(c.from.id) ?? [];
+        if (!arr.includes(c.to.name)) arr.push(c.to.name);
+        map.set(c.from.id, arr);
+      }
+    }
+    return map;
+  }, [stackToShow]);
 
   const activateEdit = (opts?: { resourceIdx?: number; volumeIdx?: number; openTab?: EditSessionTab }) => {
     session.start(
@@ -156,6 +218,7 @@ export default function StackDetailPage() {
         openResourceIdx: opts?.resourceIdx ?? null,
         openVolumeIdx: opts?.volumeIdx ?? null,
         openTab: opts?.openTab ?? null,
+        linkedAddonIds: connectionAddonIds,
       },
     );
     setEditingBindingIds(new Set());
@@ -273,10 +336,13 @@ export default function StackDetailPage() {
         return;
       }
 
+      // The stack PUT carries the full desired connection set in spec.connections;
+      // the backend replaces the connection set atomically (upsert-by-id) and
+      // returns the stack with its reconciled connections. No separate diff.
       const apiData = convertFormStackToApiStack(formStackData);
       const updatedStack = await updateStack(orgId, teamName, id, apiData);
-
       setFetchedStack(updatedStack);
+
       if (detachResult) setDetachedProvenance(detachResult.provenance);
       else setDetachedProvenance(new Map());
       session.discard();
@@ -353,8 +419,8 @@ export default function StackDetailPage() {
   // breaking memo on every StackResourceItem child via the addons →
   // availableAddonIds → addons.filter chain.
   const availableAddonIds = useMemo(
-    () => new Set(session.linkedAddonIds),
-    [session.linkedAddonIds],
+    () => (session.isActive ? new Set(session.linkedAddonIds) : connectionAddonIds),
+    [session.isActive, session.linkedAddonIds, connectionAddonIds],
   );
 
   if (loading) {
@@ -564,13 +630,14 @@ export default function StackDetailPage() {
                           resources: [...baselineResources, getDefaultResource() as FormStackResourceData],
                           volumes: baselineVolumes,
                         },
-                        { openResourceIdx: nextIdx, openTab: "configuration" },
+                        { openResourceIdx: nextIdx, openTab: "configuration", linkedAddonIds: connectionAddonIds },
                       );
                       setEditingBindingIds(new Set());
                     }
                     : undefined
                 }
                 detachedProvenance={detachedProvenance}
+                addonNameById={addonNameById}
               />
             )}
           </Panel>
@@ -605,7 +672,7 @@ export default function StackDetailPage() {
                           resources: baselineResources,
                           volumes: [...baselineVolumes, getDefaultVolume() as VolumeFormData],
                         },
-                        { openVolumeIdx: nextIdx },
+                        { openVolumeIdx: nextIdx, linkedAddonIds: connectionAddonIds },
                       );
                       setEditingBindingIds(new Set());
                     }
@@ -618,13 +685,14 @@ export default function StackDetailPage() {
           {(() => {
             const baseline = { resources: baselineResources, volumes: baselineVolumes };
             const ensureActive = () => {
-              if (!session.isActive) session.start(baseline);
+              if (!session.isActive) session.start(baseline, { linkedAddonIds: connectionAddonIds });
             };
             return (
               <AddonsInStackPanel
                 readOnly={!canWriteStack}
                 resources={(session.isActive ? session.draft.resources : baselineResources) as Partial<FormStackResourceData>[]}
-                linkedAddonIds={session.linkedAddonIds}
+                linkedAddonIds={session.isActive ? session.linkedAddonIds : connectionAddonIds}
+                addonResourceNames={addonResourceNames}
                 onLinkAddon={(addonId) => {
                   ensureActive();
                   session.setLinkedAddonIds((prev) => {

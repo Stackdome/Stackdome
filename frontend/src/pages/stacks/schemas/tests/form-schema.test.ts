@@ -1,15 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
   convertApiResourceToFormResource,
+  convertFormResourceToApiResource,
   convertFormStackToApiStack,
 } from "../form-schema";
-import type { FormStackData } from "../form-schema";
-import type { StackResource } from "@/api/stacks";
 
 type ApiResourceArg = Parameters<typeof convertApiResourceToFormResource>[0];
 type Loose = Record<string, unknown>;
 
-const baseResource = (extras: Partial<StackResource["execution_config"]> = {}) => ({
+const baseResource = (extras: Record<string, unknown> = {}) => ({
   id: "r-1",
   stack_id: "s-1",
   name: "tooljet",
@@ -32,97 +31,177 @@ describe("env round-trip", () => {
     expect((row as Loose).value).toBe("80");
   });
 
-  it("loads multiple literal env vars preserving order", () => {
-    const r = baseResource({
-      environment_variables: [
-        { name: "NODE_ENV", value: "production" },
-        { name: "PORT", value: "80" },
-      ],
-    });
-    const form = convertApiResourceToFormResource(r as unknown as ApiResourceArg);
-    const rows = form.execution_config!.environment_variables!;
-    expect(rows.map((r) => r.from)).toEqual(["stack", "stack"]);
-    expect(rows.map((r) => r.name)).toEqual(["NODE_ENV", "PORT"]);
-  });
-
   it("defaults a missing value to an empty string on load", () => {
-    const r = baseResource({ environment_variables: [{ name: "FLAG" }] as never });
-    const form = convertApiResourceToFormResource(r as unknown as ApiResourceArg);
-    const row = form.execution_config!.environment_variables![0];
-    expect((row as Loose).value).toBe("");
+    const api = { name: "web", execution_config: { environment_variables: [{ name: "EMPTY" }] } };
+    const form = convertApiResourceToFormResource(api as never);
+    expect(form.execution_config?.environment_variables).toEqual([
+      { from: "stack", name: "EMPTY", value: "" },
+    ]);
   });
 
-  it("emits only literal environment_variables on save", () => {
-    const formStack = {
-      name: "s",
+  it("round-trips a literal env var through serialize + deserialize", () => {
+    const form = {
+      name: "web",
+      sourceType: "image" as const,
+      image_spec: { image: "nginx" },
+      execution_config: {
+        environment_variables: [{ from: "stack" as const, name: "PORT", value: "80" }],
+      },
+    };
+    const api = convertFormResourceToApiResource(form as never);
+    expect(api.execution_config?.environment_variables).toEqual([
+      { name: "PORT", value: "80" },
+    ]);
+    const back = convertApiResourceToFormResource(api as never);
+    expect(back.execution_config?.environment_variables).toEqual([
+      { from: "stack", name: "PORT", value: "80" },
+    ]);
+  });
+
+  it("serializes a self row into a self_output env var and back", () => {
+    const form = {
+      name: "web",
+      sourceType: "image" as const,
+      image_spec: { image: "nginx" },
+      execution_config: {
+        environment_variables: [{ from: "self" as const, name: "URL", selfOutput: "public.http.url" }],
+      },
+    };
+    const api = convertFormResourceToApiResource(form as never);
+    expect(api.execution_config?.environment_variables).toEqual([
+      { name: "URL", self_output: "public.http.url" },
+    ]);
+    const back = convertApiResourceToFormResource(api as never);
+    expect(back.execution_config?.environment_variables).toEqual([
+      { from: "self", name: "URL", selfOutput: "public.http.url" },
+    ]);
+  });
+
+  it("drops secret/addon/resource rows from the resource payload", () => {
+    const form = {
+      name: "web",
+      sourceType: "image" as const,
+      image_spec: { image: "nginx" },
+      execution_config: {
+        environment_variables: [
+          { from: "stack" as const, name: "A", value: "1" },
+          { from: "secret" as const, name: "B", secretId: "s1", secretKey: "B" },
+          { from: "addon" as const, name: "C", addonId: "a1", database: "d", superuser: false, credField: "host" as const },
+          { from: "resource" as const, name: "D", resourceName: "other", output: "host" },
+        ],
+      },
+    };
+    const api = convertFormResourceToApiResource(form as never);
+    expect(api.execution_config?.environment_variables).toEqual([{ name: "A", value: "1" }]);
+  });
+});
+
+describe("convertFormStackToApiStack — spec.connections", () => {
+  it("emits spec.connections built from secret/addon/resource rows on convertFormStackToApiStack", () => {
+    const form = {
+      name: "tooljet",
       labels: [],
-      annotations: [],
       spec: {
         stack_resources: [
           {
-            ...baseResource(),
+            name: "web",
+            sourceType: "image" as const,
+            image_spec: { image: "nginx" },
             execution_config: {
               environment_variables: [
-                { from: "stack", name: "NODE_ENV", value: "production" },
-                { from: "stack", name: "PORT", value: "80" },
+                { from: "stack" as const, name: "A", value: "1" },
+                { from: "secret" as const, name: "B", secretId: "s1", secretKey: "B" },
+                { from: "resource" as const, name: "C", resourceName: "mailhog", output: "host" },
               ],
             },
           },
         ],
-        volumes: [],
       },
     };
-    const api = convertFormStackToApiStack(formStack as unknown as FormStackData);
-    const ec = api.spec.stack_resources[0].execution_config! as Loose;
-    expect(ec.environment_variables).toEqual([
-      { name: "NODE_ENV", value: "production" },
-      { name: "PORT", value: "80" },
-    ]);
-    // Removed feature — no secret/addon arrays are emitted anymore.
-    expect(ec.environment_variables_from_secret).toBeUndefined();
-    expect(ec.env_from_addons).toBeUndefined();
+    const api = convertFormStackToApiStack(form as never);
+    // literal stays an env var:
+    expect(api.spec.stack_resources[0].execution_config?.environment_variables).toEqual([{ name: "A", value: "1" }]);
+    // secret + resource become connections (2 groups, to web):
+    expect(api.spec.connections).toBeDefined();
+    expect(api.spec.connections!.map((c) => c.from)).toEqual(
+      expect.arrayContaining([{ type: "secret", id: "s1" }, { type: "stack_resource", name: "mailhog" }]),
+    );
+    api.spec.connections!.forEach((c) => expect(c.to).toEqual({ type: "stack_resource", name: "web" }));
+  });
+
+  it("omits spec.connections when there are no secret/addon/resource rows", () => {
+    const form = {
+      name: "s", labels: [],
+      spec: { stack_resources: [{ name: "web", sourceType: "image" as const, image_spec: { image: "nginx" },
+        execution_config: { environment_variables: [{ from: "stack" as const, name: "A", value: "1" }] } }] },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    expect(api.spec.connections).toBeUndefined();
   });
 });
 
-describe("FormEnvVarSchema — literal rows", () => {
-  it("accepts a literal stack row", async () => {
-    const { FormEnvVarSchema } = await import("../form-schema");
-    const result = FormEnvVarSchema.safeParse({ from: "stack", name: "PORT", value: "80" });
-    expect(result.success).toBe(true);
-  });
-
-  it("requires a non-empty name", async () => {
-    const { FormEnvVarSchema } = await import("../form-schema");
-    const result = FormEnvVarSchema.safeParse({ from: "stack", name: "", value: "80" });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues.some((i) => i.path.includes("name"))).toBe(true);
-    }
-  });
-
-  it("rejects the removed secret variant", async () => {
-    const { FormEnvVarSchema } = await import("../form-schema");
-    const result = FormEnvVarSchema.safeParse({
-      from: "secret",
-      name: "STRIPE",
-      secretId: "sec-1",
-      secretKey: "live",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects the removed addon variant", async () => {
+describe("FormEnvVarSchema (addon variant) — refines", () => {
+  it("requires database when superuser is false", async () => {
     const { FormEnvVarSchema } = await import("../form-schema");
     const result = FormEnvVarSchema.safeParse({
       from: "addon",
       name: "PG_HOST",
-      addonType: "postgres",
       addonId: "addon-1",
+      database: undefined,
+      superuser: false,
+      credField: "host",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes("database"))).toBe(true);
+    }
+  });
+
+  it("allows missing database when superuser is true", async () => {
+    const { FormEnvVarSchema } = await import("../form-schema");
+    const result = FormEnvVarSchema.safeParse({
+      from: "addon",
+      name: "PG_HOST",
+      addonId: "addon-1",
+      database: undefined,
+      superuser: true,
+      credField: "host",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("requires credField on addon rows", async () => {
+    const { FormEnvVarSchema } = await import("../form-schema");
+    const result = FormEnvVarSchema.safeParse({
+      from: "addon",
+      name: "PG_HOST",
+      addonId: "addon-1",
+      database: "tooljet",
+      superuser: false,
+      credField: undefined,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes("credField"))).toBe(true);
+    }
+  });
+
+  it("uses 'Pick an addon' message on empty addonId", async () => {
+    const { FormEnvVarSchema } = await import("../form-schema");
+    const result = FormEnvVarSchema.safeParse({
+      from: "addon",
+      name: "PG_HOST",
+      addonId: "",
       database: "tooljet",
       superuser: false,
       credField: "host",
     });
     expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.find((i) => i.path.includes("addonId"))?.message,
+      ).toMatch(/pick an addon/i);
+    }
   });
 });
 

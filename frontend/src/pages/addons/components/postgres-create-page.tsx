@@ -124,10 +124,12 @@ export default function PostgresFormPage() {
       setLoadingAddon(false);
       return;
     }
+    // Single-addon read is team-scoped; wait for the default team (effect re-runs).
+    if (!defaultTeamName) return;
     let cancelled = false;
     setLoadingAddon(true);
     addonsApi
-      .getPostgresAddon(orgId, editId)
+      .getPostgresAddon(orgId, defaultTeamName, editId)
       .then((addon) => {
         if (cancelled) return;
         // Initialization is create-only and hidden on edit; the backend
@@ -154,7 +156,7 @@ export default function PostgresFormPage() {
     return () => {
       cancelled = true;
     };
-  }, [isEdit, editId]);
+  }, [isEdit, editId, defaultTeamName]);
 
   const update = <K extends keyof PostgresAddonFormValues>(
     key: K,

@@ -36,7 +36,7 @@ interface StackResourceItemProps {
   onRemove: (index: number) => void;
   errors: { [field: string]: string | undefined };
   volumes?: Partial<VolumeFormData>[];
-  allResources?: { name: string; index: number }[];
+  allResources?: { name: string; index: number; outputs: string[] }[];
   secrets: UseSecretsReturn;
   addons: PostgresAddon[];
   addonNameById: Map<string, string>;
@@ -64,6 +64,8 @@ function StackResourceItemImpl({
   volumes = [],
   allResources,
   secrets,
+  addons,
+  addonNameById,
   baselineResource,
   onDiscardEnvRow,
   onDiscardResource,
@@ -173,11 +175,25 @@ function StackResourceItemImpl({
   const envVars = (resource.execution_config?.environment_variables || []) as FormEnvVarData[];
   const baselineEnvVars = baselineResource?.execution_config?.environment_variables as FormEnvVarData[] | undefined;
 
+  // Picker data for env-row source bindings.
+  const thisResourceName = resource.name ?? `Resource ${index + 1}`;
+  const resourceOptions = useMemo(
+    () =>
+      (allResources ?? [])
+        .filter((r) => r.name !== thisResourceName)
+        .map((r) => ({ name: r.name, outputs: r.outputs })),
+    [allResources, thisResourceName],
+  );
+  const selfOutputs = useMemo(
+    () => (resource.outputs ?? []).map((o) => o.name),
+    [resource.outputs],
+  );
+
   return (
     <TooltipProvider>
       <AccordionItem
         value={String(index)}
-        className="border-t border-border first:border-t-0"
+        className="relative border-t border-border first:border-t-0"
         style={isDirty ? { boxShadow: "inset 3px 0 0 var(--brand)" } : undefined}
       >
         <AccordionTrigger
@@ -224,24 +240,30 @@ function StackResourceItemImpl({
                 <span className="text-xs text-danger mt-0.5 pl-6">{errors._form}</span>
               )}
             </div>
-            {isDirty && onDiscardResource && (
-              <div className="ml-auto flex items-center shrink-0 mr-2" onClick={(e) => e.stopPropagation()}>
-                <span className="inline-flex items-center gap-1.5 rounded-md border border-brand-border bg-brand-bg pl-2 pr-1 py-0.5 text-[11px] font-medium text-brand">
-                  Modified
-                  <button
-                    type="button"
-                    onClick={onDiscardResource}
-                    aria-label="Discard changes to this resource"
-                    title="Discard changes to this resource"
-                    className="inline-flex h-4 w-4 items-center justify-center rounded hover:bg-brand/15"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              </div>
-            )}
           </div>
         </AccordionTrigger>
+        {/* "Modified" badge + discard sits OUTSIDE the AccordionTrigger button —
+            a nested interactive <button> inside the trigger's <button> is invalid
+            HTML and throws a hydration warning. */}
+        {isDirty && onDiscardResource && (
+          <div
+            className="absolute right-11 top-[18px] flex items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-brand-border bg-brand-bg pl-2 pr-1 py-0.5 text-[11px] font-medium text-brand">
+              Modified
+              <button
+                type="button"
+                onClick={onDiscardResource}
+                aria-label="Discard changes to this resource"
+                title="Discard changes to this resource"
+                className="inline-flex h-4 w-4 items-center justify-center rounded hover:bg-brand/15"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          </div>
+        )}
         <AccordionContent className="bg-background dark:bg-secondary border-t border-border pb-4 pt-4 px-1">
           <div className="px-4 space-y-4">
             <Tabs defaultValue="general" className="w-full">
@@ -288,6 +310,12 @@ function StackResourceItemImpl({
                 envVars={envVars}
                 baselineEnvVars={baselineEnvVars}
                 errors={errors}
+                resourceOptions={resourceOptions}
+                selfOutputs={selfOutputs}
+                secrets={secrets.secrets}
+                secretsLoading={secrets.isLoading}
+                addons={addons}
+                addonNameById={addonNameById}
                 onChangeEnvVars={onChangeEnvVars}
                 onDiscardEnvRow={onDiscardEnvRow}
               />

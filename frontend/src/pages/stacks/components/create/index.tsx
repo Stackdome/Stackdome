@@ -380,7 +380,10 @@ export default function StackCreatePage() {
     }
 
     try {
-      await createStack(orgId, defaultTeamName, convertFormStackToApiStack(validationResult.data));
+      // convertFormStackToApiStack builds spec.connections from the
+      // secret/addon/resource env rows, so the create payload carries them.
+      const apiStack = convertFormStackToApiStack(validationResult.data);
+      await createStack(orgId, defaultTeamName, apiStack);
       setIsLoading(false);
       toast({
         title: 'Stack Created',

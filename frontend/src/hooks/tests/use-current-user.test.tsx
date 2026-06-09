@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor, cleanup } from "@testing-library/react";
+import { renderHook, waitFor, cleanup, act } from "@testing-library/react";
 import React from "react";
+import { AUTH_SESSION_CHANGED } from "@/helpers/auth-events";
 
 vi.mock("@/helpers/common", () => ({
   getCurrentUser: vi.fn(),
@@ -53,6 +54,26 @@ describe("useCurrentUser", () => {
     expect(result.current.isOrgAdmin).toBe(true);
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.isOrgAdmin).toBe(true);
+    expect(result.current.organisationId).toBe("org-1");
+  });
+
+  it("re-hydrates on AUTH_SESSION_CHANGED (post-login/signup without a reload)", async () => {
+    // Initial mount mimics landing on /sign-in: no stored user, fetch unauthenticated.
+    vi.mocked(getStoredUser).mockReturnValue(null as never);
+    vi.mocked(fetchCurrentUser).mockRejectedValue(new Error("401"));
+    const { result } = renderHook(() => useCurrentUser(), { wrapper });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.isOrgAdmin).toBe(false);
+    expect(result.current.organisationId).toBeNull();
+
+    // User logs in: session is now stored and the token is valid.
+    vi.mocked(getStoredUser).mockReturnValue({ id: "u5", role: "OrgAdmin", organisation_id: "org-1" } as never);
+    vi.mocked(fetchCurrentUser).mockResolvedValue({ id: "u5", role: "OrgAdmin", organisation_id: "org-1" } as never);
+    act(() => {
+      window.dispatchEvent(new Event(AUTH_SESSION_CHANGED));
+    });
+
+    await waitFor(() => expect(result.current.isOrgAdmin).toBe(true));
     expect(result.current.organisationId).toBe("org-1");
   });
 });

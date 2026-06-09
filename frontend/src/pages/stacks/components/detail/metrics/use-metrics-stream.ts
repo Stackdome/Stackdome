@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { ResourceMetrics } from './types';
+import { useResourceTeams } from '@/hooks/use-resource-teams';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -37,6 +38,7 @@ export function useMetricsStream({
   const eventSourcesRef = useRef<EventSource[]>([]);
   const resourcesRef = useRef<string[]>([]);
   const enabledRef = useRef(enabled);
+  const { defaultTeamName } = useResourceTeams();
 
   // Update enabled ref when prop changes
   useEffect(() => {
@@ -45,13 +47,13 @@ export function useMetricsStream({
 
   const buildStackMetricsStreamUrl = useCallback(() => {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-    return `${baseUrl}/organizations/${organizationId}/stacks/${stackId}/metrics?stream=true`;
-  }, [organizationId, stackId]);
+    return `${baseUrl}/organizations/${organizationId}/teams/${defaultTeamName}/stacks/${stackId}/metrics?stream=true`;
+  }, [organizationId, defaultTeamName, stackId]);
 
   const buildResourceMetricsStreamUrl = useCallback((resourceName: string) => {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-    return `${baseUrl}/organizations/${organizationId}/stacks/${stackId}/resources/${resourceName}/metrics?stream=true`;
-  }, [organizationId, stackId]);
+    return `${baseUrl}/organizations/${organizationId}/teams/${defaultTeamName}/stacks/${stackId}/resources/${resourceName}/metrics?stream=true`;
+  }, [organizationId, defaultTeamName, stackId]);
 
   const parseMetricsData = useCallback((data: string): ResourceMetrics | null => {
     try {
@@ -86,6 +88,9 @@ export function useMetricsStream({
 
   const startStreaming = useCallback(() => {
     if (isStreaming) {
+      return;
+    }
+    if (!defaultTeamName) {
       return;
     }
 
@@ -155,7 +160,7 @@ export function useMetricsStream({
         handleConnectionError();
       };
     });
-  }, [isStreaming, buildStackMetricsStreamUrl, buildResourceMetricsStreamUrl, parseMetricsData, handleConnectionError]);
+  }, [isStreaming, defaultTeamName, buildStackMetricsStreamUrl, buildResourceMetricsStreamUrl, parseMetricsData, handleConnectionError]);
 
   // Update resources list - simplified to avoid infinite loops
   const updateResources = useCallback((resources: string[]) => {
