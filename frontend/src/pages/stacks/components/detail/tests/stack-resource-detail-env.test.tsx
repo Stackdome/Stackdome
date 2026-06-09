@@ -90,12 +90,13 @@ describe("StackResourceDetail read-mode environment tab", () => {
     expect(group).toHaveTextContent("tooljet-db");
     expect(group).toHaveTextContent("Postgres");
     expect(group).toHaveTextContent("db: tooljet");
-    // both addon rows + their credFields live inside the group, each with an
-    // "Addon · <field>" From pill.
+    // both addon rows live inside the group; value reads "<addon-name> · <field>"
+    // (no masking dots) and the From pill reads just "Addon".
     expect(within(group).getByText("PG_HOST")).toBeInTheDocument();
     expect(within(group).getByText("PG_PORT")).toBeInTheDocument();
-    expect(within(group).getByText("Addon · host")).toBeInTheDocument();
-    expect(within(group).getByText("Addon · port")).toBeInTheDocument();
+    expect(within(group).getByText("tooljet-db · host")).toBeInTheDocument();
+    expect(within(group).getByText("tooljet-db · port")).toBeInTheDocument();
+    expect(within(group).getAllByText("Addon").length).toBeGreaterThanOrEqual(2);
   });
 
   it("keeps the plain row outside the addon group", () => {

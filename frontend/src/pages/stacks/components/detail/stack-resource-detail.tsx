@@ -456,8 +456,8 @@ export default function StackResourceDetail({
                         );
                       case "addon":
                         return (
-                          <span className="text-muted-foreground">
-                            ●●● · {env.credField}
+                          <span className="text-foreground">
+                            {addonNameById?.get(env.addonId) ?? env.addonId} · {env.credField}
                           </span>
                         );
                       case "resource":
@@ -485,7 +485,7 @@ export default function StackResourceDetail({
                       case "self":
                         return "Self";
                       case "addon":
-                        return `Addon · ${env.credField}`;
+                        return "Addon";
                       default:
                         return "";
                     }
@@ -498,7 +498,7 @@ export default function StackResourceDetail({
                     return (
                       <div
                         key={idx}
-                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-4 items-center px-3 py-2 border-t border-border first:border-t-0"
+                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_7rem] gap-4 items-center px-3 py-2 border-t border-border first:border-t-0"
                       >
                         <div className="text-sm font-mono truncate text-foreground">{env.name}</div>
                         <div className="text-sm font-mono truncate">
@@ -510,7 +510,7 @@ export default function StackResourceDetail({
                             </div>
                           )}
                         </div>
-                        <span className="inline-flex items-center gap-1 w-fit text-[12px] text-muted-foreground bg-secondary border border-border rounded px-2 py-[3px] whitespace-nowrap">
+                        <span className="justify-self-end inline-flex items-center gap-1 w-fit text-[12px] text-muted-foreground bg-secondary border border-border rounded px-2 py-[3px] whitespace-nowrap">
                           {fromPillLabel(env)}
                         </span>
                       </div>

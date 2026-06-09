@@ -423,13 +423,14 @@ function StackResourceEnvironmentTabImpl({
               {plainItems.length > 0 && <div>{plainItems.map(renderRow)}</div>}
               {/* Add a literal row; the row's own "From" selector switches the source.
                   Sits directly below the plain rows so a new var appears at the click point. */}
-              <div className="px-3 py-2 border-t border-border first:border-t-0">
+              <div className="px-3 py-1.5 flex justify-end border-t border-border first:border-t-0">
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="h-7 text-[12.5px]"
                   onClick={() => addEnvVar({ from: "stack", name: "", value: "" })}
                 >
-                  <PlusCircle className="h-4 w-4 mr-2" />Add variable
+                  <PlusCircle className="h-3 w-3 mr-1" />Add variable
                 </Button>
               </div>
               {addonGroups.map((g, gIdx) => {
@@ -495,7 +496,7 @@ function StackResourceEnvironmentTabImpl({
                 return (
                   <div
                     key={`a-${gIdx}-${aid}-${db}`}
-                    className="relative border border-dashed border-border-strong rounded mx-3 mt-5 mb-1.5 px-2.5 pt-7 pb-1"
+                    className="relative border-y border-dashed border-border-strong mt-4 mb-1 pt-7 pb-1"
                     data-testid="env-addon-group"
                   >
                     <div className="absolute -top-3.5 left-3 inline-flex items-center gap-2 bg-background px-2 py-0.5">
@@ -576,7 +577,7 @@ function StackResourceEnvironmentTabImpl({
                       )}
                     </div>
                     {g.items.map(renderRow)}
-                    <div className="px-0 py-1.5 flex justify-end">
+                    <div className="px-3 py-1.5 flex justify-end">
                       <Button
                         variant="ghost"
                         size="sm"

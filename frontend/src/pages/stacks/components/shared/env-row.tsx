@@ -103,7 +103,7 @@ export function EnvRow({
       data-testid={`env-row-${resourceIndex}-${index}`}
       onBlur={onBlur}
     >
-      <div className="grid grid-cols-12 gap-2 p-3 items-start">
+      <div className="grid grid-cols-12 gap-2 p-3 items-center">
         {/* Key */}
         <div className="col-span-3">
           <Input
@@ -175,7 +175,7 @@ export function EnvRow({
         </div>
 
         {/* From select (Stack | Secret | Addon) */}
-        <div className="col-span-2 flex justify-center items-start pt-1">
+        <div className="col-span-2 flex justify-center">
           <Select
             value={row.from}
             onValueChange={(v) => onChangeFrom(v as EnvFrom)}
@@ -193,16 +193,16 @@ export function EnvRow({
           </Select>
         </div>
 
-        {/* Reset (when dirty — restore baseline, removes added rows) or Remove (when clean) */}
-        <div className="col-span-1 flex justify-center items-start pt-1">
-          {isDirty && onReset ? (
+        {/* Reset (modified existing row — restore baseline) or Remove (added/clean rows) */}
+        <div className="col-span-1 flex justify-center">
+          {isModified && onReset ? (
             <Button
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-brand hover:bg-brand-bg hover:text-brand-press"
               onClick={onReset}
-              aria-label={isAdded ? "Remove this newly added env var" : "Reset env var to original value"}
-              title={isAdded ? "Remove (newly added)" : "Reset to original value"}
+              aria-label="Reset env var to original value"
+              title="Reset to original value"
             >
               <RotateCcw className="h-4 w-4" />
             </Button>
