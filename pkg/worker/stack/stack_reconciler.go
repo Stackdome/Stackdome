@@ -42,11 +42,10 @@ func (r *stackReconciler) Reconcile(ctx context.Context, stack *models.Stack) (s
 		return resultNil, err
 	}
 
-	// Ensure the stack CR has the revision annotation set
 	if desiredStackCR.Annotations == nil {
 		desiredStackCR.Annotations = make(map[string]string)
-		desiredStackCR.Annotations[corev1alpha1.StackdomeServerObjectRevisionAnnotationKey] = stack.CrRevision
 	}
+	desiredStackCR.Annotations[corev1alpha1.StackdomeServerObjectRevisionAnnotationKey] = stack.CrRevision
 
 	existingStackCR := corev1alpha1.Stack{}
 	if err := clusterClient.Get(ctx, client.ObjectKey{Name: desiredStackCR.Name, Namespace: desiredStackCR.Namespace}, &existingStackCR); err != nil {

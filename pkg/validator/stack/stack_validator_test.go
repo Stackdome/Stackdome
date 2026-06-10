@@ -403,7 +403,7 @@ func TestValidateForCreateAllowsSecretConnectionUsingBracketAccessor(t *testing.
 					Name: "TLS_CERT",
 				},
 				Value: models.ValueRef{
-					Output: "key['tls.crt']",
+					Output: "tls.crt",
 				},
 			},
 		},

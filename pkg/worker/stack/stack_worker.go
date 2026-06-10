@@ -53,11 +53,19 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 				ClusterManager:       spec.ClusterManager,
 				ResourceUsageService: spec.ResourceUsageService,
 			}),
-			NewValidationReconciler(ValidationReconcilerSpec{
-				Logger:         logger.NewLoggerWithPrefix(context.Background(), "stack-validation-reconciler"),
-				StackCRBuilder: spec.CRBuilder,
-				SecretService:  spec.SecretService,
+			NewDeployResolverReconciler(DeployResolverReconcilerSpec{
+				VolumeService:        spec.VolumeService,
+				PostgresAddonService: spec.PostgresAddonService,
+				SecretService:        spec.SecretService,
+			}),
+			NewRevisionReconciler(RevisionReconcilerSpec{
 				StackService:   spec.StackService,
+				StackCRBuilder: spec.CRBuilder,
+			}),
+			NewValidationReconciler(ValidationReconcilerSpec{
+				Logger:        logger.NewLoggerWithPrefix(context.Background(), "stack-validation-reconciler"),
+				SecretService: spec.SecretService,
+				StackService:  spec.StackService,
 			}),
 			NewNamespaceReconciler(NamespaceReconcilerSpec{
 				ClusterManager:   spec.ClusterManager,
@@ -68,11 +76,6 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 				SecretService:        spec.SecretService,
 				ResourceUsageService: spec.ResourceUsageService,
 				Logger:               logger.NewLoggerWithPrefix(context.Background(), "stack-secret-reconciler"),
-			}),
-			NewConnectionReconciler(ConnectionReconcilerSpec{
-				VolumeService:        spec.VolumeService,
-				PostgresAddonService: spec.PostgresAddonService,
-				SecretService:        spec.SecretService,
 			}),
 			NewVolumeReconciler(VolumeReconcilerSpec{
 				ClusterManager:  spec.ClusterManager,

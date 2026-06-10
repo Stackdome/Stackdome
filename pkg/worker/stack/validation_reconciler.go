@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clients"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
@@ -24,24 +23,21 @@ type validator interface {
 
 // Runs the validation for stack with talks to external apis like git repos, image registries, etc.
 type valiationReconciler struct {
-	logger         logger.Logger
-	stackCRbuilder builders.ClusterResourceBuilder
-	stackService   stackService
-	validators     []validator
+	logger       logger.Logger
+	stackService stackService
+	validators   []validator
 }
 
 type ValidationReconcilerSpec struct {
-	Logger         logger.Logger
-	SecretService  secretService
-	StackService   stackService
-	StackCRBuilder builders.ClusterResourceBuilder
+	Logger        logger.Logger
+	SecretService secretService
+	StackService  stackService
 }
 
 func NewValidationReconciler(spec ValidationReconcilerSpec) *valiationReconciler {
 	return &valiationReconciler{
-		logger:         spec.Logger,
-		stackCRbuilder: spec.StackCRBuilder,
-		stackService:   spec.StackService,
+		logger:       spec.Logger,
+		stackService: spec.StackService,
 		validators: []validator{
 			&gitRepoExistsValidation{
 				secretService: spec.SecretService,
@@ -54,10 +50,7 @@ func NewValidationReconciler(spec ValidationReconcilerSpec) *valiationReconciler
 }
 
 func (v *valiationReconciler) Reconcile(ctx context.Context, stack *models.Stack) (subReconcilerResult, error) {
-	stackCRHash, err := v.stackCRbuilder.GetStackCRHash(stack)
-	if err != nil {
-		return resultNil, fmt.Errorf("failed to get stack CR hash for stack '%s': %s", stack.ID, err.Error())
-	}
+	stackCRHash := stack.CrRevision
 	if v.shouldRunValidations(stack, stackCRHash) {
 		currentValidationTypes := lo.Map(v.validators, func(v validator, _ int) string {
 			return v.Name()

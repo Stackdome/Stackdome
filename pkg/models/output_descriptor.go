@@ -2,9 +2,7 @@ package models
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
-	"strings"
 )
 
 type OutputValueType string
@@ -20,8 +18,6 @@ type OutputDescriptor struct {
 	Type      OutputValueType `json:"type"`
 	Sensitive bool            `json:"sensitive"`
 }
-
-var simpleSecretOutputKeyPattern = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
 
 func (r *StackResource) EnsureDeclaredOutputs() []OutputDescriptor {
 	if len(r.Outputs) > 0 {
@@ -85,7 +81,7 @@ func (r *StackResource) InternalServiceHost() string {
 func (s *Secret) ToOutputMap() map[string]string {
 	outputs := make(map[string]string, len(s.Data))
 	for key, value := range s.Data {
-		outputs[secretOutputAccessor(key)] = value
+		outputs[key] = value
 	}
 	return outputs
 }
@@ -136,7 +132,7 @@ func SecretOutputDescriptors(secret *Secret) []OutputDescriptor {
 	outputs := make([]OutputDescriptor, 0, len(secret.Keys))
 	for _, key := range secret.Keys {
 		outputs = append(outputs, OutputDescriptor{
-			Name:      secretOutputAccessor(key),
+			Name:      key,
 			Type:      OutputValueTypeString,
 			Sensitive: true,
 		})
@@ -157,17 +153,3 @@ func PostgresAddonOutputDescriptors(_ *PostgresAddon) []OutputDescriptor {
 	}
 }
 
-func secretOutputAccessor(key string) string {
-	if isSimpleSecretOutputKey(key) {
-		return "key." + key
-	}
-	escaped := strings.ReplaceAll(key, "\\", "\\\\")
-	escaped = strings.ReplaceAll(escaped, "'", "\\'")
-	return "key['" + escaped + "']"
-}
-
-func isSimpleSecretOutputKey(key string) bool {
-	// Simple identifiers use dot syntax; everything else falls back to quoted
-	// bracket syntax so keys like tls.crt remain addressable without ambiguity.
-	return simpleSecretOutputKeyPattern.MatchString(key)
-}
