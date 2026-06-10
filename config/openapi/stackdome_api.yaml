@@ -1434,6 +1434,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/actions/restart:
+    post:
+      summary: Restart a stack resource
+      description: Triggers a rolling restart of the stack resource by setting a new restart request timestamp.
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/resource_name'
+      responses:
+        '202':
+          description: Restart initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackResource'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Stack resource not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds:
     get:
       summary: List all builds under a stack

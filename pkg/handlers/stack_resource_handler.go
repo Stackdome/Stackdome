@@ -121,3 +121,19 @@ func (h *stackResourceHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	handleList(w, r, cfg)
 }
+
+func (h *stackResourceHandler) Restart(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			ctx := r.Context()
+			stackID := mux.Vars(r)["id"]
+			resourceName := mux.Vars(r)["resource_name"]
+			resource, err := h.stackResourceService.Restart(ctx, stackID, resourceName)
+			if err != nil {
+				return nil, err
+			}
+			return presenters.PresentStackResource(resource), nil
+		},
+	}
+	handle(w, r, cfg, http.StatusAccepted)
+}

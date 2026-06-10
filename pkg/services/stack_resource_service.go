@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
@@ -12,7 +13,10 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 )
 
+//go:generate mockgen -source=stack_resource_service.go -destination=stack_resource_service_mock.go -package=services
+
 type StackResourceService interface {
+	BackgroundJobEnqueuerInjectable
 	Create(ctx context.Context, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
 	GetByStackID(ctx context.Context, stackID string) ([]*models.StackResource, *errors.ServiceError)
 	GetByID(ctx context.Context, ID string) (*models.StackResource, *errors.ServiceError)
@@ -20,6 +24,7 @@ type StackResourceService interface {
 	InternalGetByStackIDAndResourceName(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, resourceID string, status *models.StackResourceStatus) *errors.ServiceError
 	InternalUpdateExposedPortDomainsWithTx(ctx context.Context, resourceID string, stackResource *models.StackResource) *errors.ServiceError
+	Restart(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError)
 }
 
 type StackResourceServiceSpec struct {
@@ -32,6 +37,7 @@ type StackResourceServiceSpec struct {
 }
 
 type stackResourceService struct {
+	BackgroundJobEnqueuerDep
 	stackResourceStore   stores.StackResourceStore
 	stackStore           stores.StackStore
 	logger               logger.Logger
@@ -116,4 +122,36 @@ func (s *stackResourceService) InternalUpdateExposedPortDomainsWithTx(ctx contex
 		}
 	}
 	return nil
+}
+
+func (s *stackResourceService) Restart(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError) {
+	stack, stackErr := s.stackStore.GetByID(ctx, stackID)
+	if stackErr != nil {
+		return nil, stackErr
+	}
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
+		return nil, permErr
+	}
+
+	resource, err := s.stackResourceStore.GetByStackIDAndResourceName(ctx, stackID, resourceName)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	if resource.LifecycleConfig == nil {
+		resource.LifecycleConfig = &models.LifecycleConfig{}
+	}
+	resource.LifecycleConfig.RestartRequestTime = &now
+
+	updated, updateErr := s.stackResourceStore.Update(ctx, resource.ID, resource, stack)
+	if updateErr != nil {
+		return nil, updateErr
+	}
+
+	if enqueueErr := s.BackgroundJobEnqueuer.Enqueue(&models.Stack{ID: stackID}); enqueueErr != nil {
+		return nil, errors.GeneralError("failed to enqueue restart job for stack '%s': %s", stackID, enqueueErr.Error())
+	}
+
+	return updated, nil
 }

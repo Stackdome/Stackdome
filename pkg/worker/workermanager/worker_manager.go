@@ -24,6 +24,8 @@ type WorkerManager interface {
 	BackgroundJobEnqueuer
 }
 
+//go:generate mockgen -source=worker_manager.go -destination=../../mocks/mock_background_job_enqueuer.go -package=mocks
+
 type BackgroundJobEnqueuer interface {
 	Enqueue(operand interface{}) error
 	EnqueueAfter(operand interface{}, after time.Duration) error

@@ -603,6 +603,7 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 	d.Services.MetricsService.InjectClusterResourceServiceDeps(deps)
 	d.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	d.Services.StackService.InjectBackgroundJobEnqueuer(dep)
+	d.Services.StackResourceService.InjectBackgroundJobEnqueuer(dep)
 	d.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
 	d.Services.OrgInviteService.InjectBackgroundJobEnqueuer(dep)
 	return nil

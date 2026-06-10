@@ -660,6 +660,7 @@ func (te *testEnvironment) injectClusterResourceServices(ctx context.Context) er
 	te.Services.MetricsService.InjectClusterResourceServiceDeps(deps)
 	te.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	te.Services.StackService.InjectBackgroundJobEnqueuer(dep)
+	te.Services.StackResourceService.InjectBackgroundJobEnqueuer(dep)
 	te.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
 	te.Services.OrgInviteService.InjectBackgroundJobEnqueuer(dep)
 	return nil
