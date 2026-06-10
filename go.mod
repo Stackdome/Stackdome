@@ -35,6 +35,7 @@ require (
 	github.com/samber/lo v1.51.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.10.2
+	github.com/stretchr/testify v1.11.1
 	github.com/thejerf/suture/v4 v4.0.5
 	go.uber.org/mock v0.6.0
 	golang.org/x/crypto v0.49.0

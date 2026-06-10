@@ -7,6 +7,8 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
+//go:generate mockgen -source=stack_store.go -destination=../mocks/mock_stack_store.go -package=mocks
+
 type StackStore interface {
 	Create(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError)
