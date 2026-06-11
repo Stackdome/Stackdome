@@ -22,7 +22,7 @@ type validator interface {
 }
 
 // Runs the validation for stack with talks to external apis like git repos, image registries, etc.
-type valiationReconciler struct {
+type validationReconciler struct {
 	logger       logger.Logger
 	stackService stackService
 	validators   []validator
@@ -34,8 +34,8 @@ type ValidationReconcilerSpec struct {
 	StackService  stackService
 }
 
-func NewValidationReconciler(spec ValidationReconcilerSpec) *valiationReconciler {
-	return &valiationReconciler{
+func NewValidationReconciler(spec ValidationReconcilerSpec) *validationReconciler {
+	return &validationReconciler{
 		logger:       spec.Logger,
 		stackService: spec.StackService,
 		validators: []validator{
@@ -49,7 +49,7 @@ func NewValidationReconciler(spec ValidationReconcilerSpec) *valiationReconciler
 	}
 }
 
-func (v *valiationReconciler) Reconcile(ctx context.Context, stack *models.Stack) (subReconcilerResult, error) {
+func (v *validationReconciler) Reconcile(ctx context.Context, stack *models.Stack) (subReconcilerResult, error) {
 	stackCRHash := stack.CrRevision
 	if v.shouldRunValidations(stack, stackCRHash) {
 		currentValidationTypes := lo.Map(v.validators, func(v validator, _ int) string {
@@ -89,11 +89,11 @@ func (v *valiationReconciler) Reconcile(ctx context.Context, stack *models.Stack
 	return resultNil, nil
 }
 
-func (v *valiationReconciler) Name() string {
+func (v *validationReconciler) Name() string {
 	return validationReconcilerName
 }
 
-func (v *valiationReconciler) shouldRunValidations(stack *models.Stack, stackCRHash string) bool {
+func (v *validationReconciler) shouldRunValidations(stack *models.Stack, stackCRHash string) bool {
 	if stack.Status == nil {
 		return true
 	}

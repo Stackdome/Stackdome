@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	deployResolverReconcilerName         = "deploy-resolver-reconciler"
-	dependencyNotReadyRequeueInterval    = 30 * time.Second
+	deployResolverReconcilerName      = "deploy-resolver-reconciler"
+	dependencyNotReadyRequeueInterval = 30 * time.Second
 )
 
 type deployResolverReconciler struct {

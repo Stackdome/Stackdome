@@ -54,7 +54,10 @@ func (r *stackReconciler) Reconcile(ctx context.Context, stack *models.Stack) (s
 		}
 		return resultNil, err
 	}
-	if !equality.Semantic.DeepEqual(existingStackCR.Spec, desiredStackCR.Spec) {
+	specChanged := !equality.Semantic.DeepEqual(existingStackCR.Spec, desiredStackCR.Spec)
+	annotationsChanged := !equality.Semantic.DeepEqual(existingStackCR.Annotations, desiredStackCR.Annotations)
+	labelsChanged := !equality.Semantic.DeepEqual(existingStackCR.Labels, desiredStackCR.Labels)
+	if specChanged || annotationsChanged || labelsChanged {
 		desiredStackCR.ResourceVersion = existingStackCR.ResourceVersion
 		return resultNil, clusterClient.Update(ctx, desiredStackCR)
 	}
