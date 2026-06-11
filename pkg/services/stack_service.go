@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -70,7 +69,6 @@ type stackService struct {
 	stackValidator         validator.StackValidator
 	domainNameService      StackDomainsService
 	stackResourceService   StackResourceService
-	clusterResourceBuidler builders.ClusterResourceBuilder
 	namespaceService       NamespaceService
 	clusterService         ClusterService
 	secretService          SecretService
@@ -113,12 +111,9 @@ func NewStackService(spec StackServiceSpec) StackService {
 		domainNameService:      stackDomainNameService,
 		secretService:          spec.SecretService,
 		postgresAddonService:   spec.PostgresAddonService,
-		clusterResourceBuidler: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
-			SecretService: spec.SecretService,
-		}),
-		defaultingService: NewStackDefaultingService(),
-		teamService:       spec.TeamService,
-		permissions:       spec.Permissions,
+		defaultingService:      NewStackDefaultingService(),
+		teamService:            spec.TeamService,
+		permissions:            spec.Permissions,
 	}
 }
 
@@ -236,17 +231,6 @@ func (s *stackService) createStackAndDepsInDbWithTx(ctx context.Context, spec *m
 	if err != nil {
 		return nil, errors.GeneralError("failed to get created stack '%s': %s", createdStack.Name, err.Error())
 	}
-
-	// Step 7: Build and update the CR hash for the stack
-	crHash, cerr := s.clusterResourceBuidler.GetStackCRHash(stack)
-	if cerr != nil {
-		return nil, errors.GeneralError("failed to build stack CR hash for stack '%s': %s", stack.Name, cerr.Error())
-	}
-
-	stack.CrRevision = crHash
-	if err := s.UpdateStackCrRevision(ctx, stack.ID, crHash); err != nil {
-		return nil, errors.GeneralError("failed to update stack CR revision for stack '%s': %s", stack.Name, err.Error())
-	}
 	return stack, nil
 }
 
@@ -347,17 +331,6 @@ func (s *stackService) updateStackAndDepsInDbWithTx(ctx context.Context, spec *m
 	stack, err := s.GetStack(ctx, updatedStack.ID)
 	if err != nil {
 		return nil, errors.GeneralError("failed to get updated stack '%s': %s", updatedStack.Name, err.Error())
-	}
-
-	// Step 6: Build and update the CR hash for the stack
-	crHash, cerr := s.clusterResourceBuidler.GetStackCRHash(stack)
-	if cerr != nil {
-		return nil, errors.GeneralError("failed to build stack CR hash for stack '%s': %s", stack.Name, cerr.Error())
-	}
-
-	stack.CrRevision = crHash
-	if err := s.UpdateStackCrRevision(ctx, stack.ID, crHash); err != nil {
-		return nil, errors.GeneralError("failed to update stack CR revision for stack '%s': %s", stack.Name, err.Error())
 	}
 	return stack, nil
 }
@@ -504,7 +477,7 @@ func (s *stackService) createStackConnection(ctx context.Context, existingStack 
 		return nil, err
 	}
 
-	if _, err := s.refreshStackRevisionAndEnqueue(ctx, existingStack); err != nil {
+	if _, err := s.enqueueStack(ctx, existingStack); err != nil {
 		return nil, err
 	}
 	return createdConnection, nil
@@ -520,7 +493,7 @@ func (s *stackService) updateSingleStackConnection(ctx context.Context, existing
 		return nil, err
 	}
 
-	if _, err := s.refreshStackRevisionAndEnqueue(ctx, existingStack); err != nil {
+	if _, err := s.enqueueStack(ctx, existingStack); err != nil {
 		return nil, err
 	}
 	return updatedConnection, nil
@@ -533,22 +506,14 @@ func (s *stackService) deleteSingleStackConnection(ctx context.Context, existing
 		return err
 	}
 
-	_, err := s.refreshStackRevisionAndEnqueue(ctx, existingStack)
+	_, err := s.enqueueStack(ctx, existingStack)
 	return err
 }
 
-func (s *stackService) refreshStackRevisionAndEnqueue(ctx context.Context, existingStack *models.Stack) (*models.Stack, *errors.ServiceError) {
+func (s *stackService) enqueueStack(ctx context.Context, existingStack *models.Stack) (*models.Stack, *errors.ServiceError) {
 	updatedStack, err := s.GetStack(ctx, existingStack.ID)
 	if err != nil {
 		return nil, errors.GeneralError("failed to get updated stack '%s': %s", existingStack.Name, err.Error())
-	}
-	crHash, cerr := s.clusterResourceBuidler.GetStackCRHash(updatedStack)
-	if cerr != nil {
-		return nil, errors.GeneralError("failed to build stack CR hash for stack '%s': %s", updatedStack.Name, cerr.Error())
-	}
-	updatedStack.CrRevision = crHash
-	if err := s.UpdateStackCrRevision(ctx, updatedStack.ID, crHash); err != nil {
-		return nil, errors.GeneralError("failed to update stack CR revision for stack '%s': %s", updatedStack.Name, err.Error())
 	}
 	if err := s.BackgroundJobEnqueuer.Enqueue(&models.Stack{ID: updatedStack.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", updatedStack.Name, err.Error())

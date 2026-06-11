@@ -2,25 +2,6 @@ import type { StackConnection, ConnectionMapping } from "@/api/connections";
 import type { components } from "@/api/types/openapi";
 import { ADDON_OUTPUT_FIELDS, type AddonOutputField } from "@/pages/stacks/lib/addon-presets";
 
-const SIMPLE_KEY = /^[A-Za-z0-9_]+$/;
-
-// Mirror of pkg/models/output_descriptor.go secretOutputAccessor: simple keys
-// get a dot accessor; anything else is bracket-quoted with ' and \ escaped.
-export function secretOutputAccessor(key: string): string {
-  if (SIMPLE_KEY.test(key)) return `key.${key}`;
-  const escaped = key.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-  return `key['${escaped}']`;
-}
-
-// Reverse secretOutputAccessor. Returns the key, or null if the accessor is not
-// a secret-key accessor.
-export function parseSecretOutput(output: string): string | null {
-  if (output.startsWith("key.") && output.length > 4) return output.slice(4);
-  const m = output.match(/^key\['(.*)'\]$/s);
-  if (!m) return null;
-  return m[1].replace(/\\(['\\])/g, "$1");
-}
-
 export type EnvVar = components["schemas"]["EnvVar"];
 
 // The form-side env-row union. Re-exported from form-schema as FormEnvVarData.
@@ -80,7 +61,7 @@ export function splitEnvRows(
           from: { type: "secret", id: row.secretId },
           to: { type: "stack_resource", name: resourceName },
         }));
-        g.mappings.push(envMapping(row.name, secretOutputAccessor(row.secretKey)));
+        g.mappings.push(envMapping(row.name, row.secretKey));
         break;
       }
       case "addon": {
@@ -136,9 +117,7 @@ export function connectionsToEnvRows(
       const output = m.value?.output ?? "";
       // unknown source types are silently skipped (consistent with splitEnvRows)
       if (c.from?.type === "secret" && c.from?.id) {
-        const key = parseSecretOutput(output);
-        if (key === null) continue;
-        rows.push({ from: "secret", name: envName, secretId: c.from.id, secretKey: key });
+        rows.push({ from: "secret", name: envName, secretId: c.from.id, secretKey: output });
       } else if (c.from?.type === "addon/postgres" && c.from?.id) {
         if (!ADDON_FIELD_SET.has(output)) continue;
         rows.push({

@@ -60,10 +60,10 @@ const (
 	FullStackSecretName = "tls-certs"
 )
 
-// FullStackSecretEnvMapping maps secret output accessors to env var names.
+// FullStackSecretEnvMapping maps secret output keys to env var names.
 var FullStackSecretEnvMapping = map[string]string{
-	"key.tls_cert": "TLS_CERT",
-	"key.tls_key":  "TLS_KEY",
+	"tls_cert": "TLS_CERT",
+	"tls_key":  "TLS_KEY",
 }
 
 // Crash detection fixture values

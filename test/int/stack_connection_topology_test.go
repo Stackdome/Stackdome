@@ -61,7 +61,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			target := openapi.NewConnectionTarget("env")
 			target.SetName("API_KEY")
 			value := openapi.NewValueRef()
-			value.SetOutput("key.api_key")
+			value.SetOutput("api_key")
 			mapping := *openapi.NewConnectionMapping(*target, *value)
 
 			conn := shared.EnvConnectionWithID("secret", secretID, "stack_resource", "api", []openapi.ConnectionMapping{mapping})
@@ -70,7 +70,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			Expect(created.GetId()).NotTo(BeEmpty())
 			Expect(created.From.GetType()).To(Equal("secret"))
 			Expect(created.From.GetId()).To(Equal(secretID))
-			Expect(created.GetMappings()[0].Value.GetOutput()).To(Equal("key.api_key"))
+			Expect(created.GetMappings()[0].Value.GetOutput()).To(Equal("api_key"))
 		})
 
 		It("should create a volume mount connection", func() {
@@ -117,7 +117,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			secretTarget := openapi.NewConnectionTarget("env")
 			secretTarget.SetName("SECRET_KEY")
 			secretValue := openapi.NewValueRef()
-			secretValue.SetOutput("key.k")
+			secretValue.SetOutput("k")
 			conn2 = shared.EnvConnectionWithID("secret", createdSecret.GetId(), "stack_resource", "web", []openapi.ConnectionMapping{
 				*openapi.NewConnectionMapping(*secretTarget, *secretValue),
 			})
@@ -610,7 +610,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			secretTarget := openapi.NewConnectionTarget("env")
 			secretTarget.SetName("KEY")
 			secretValue := openapi.NewValueRef()
-			secretValue.SetOutput("key.k")
+			secretValue.SetOutput("k")
 			secretMapping := *openapi.NewConnectionMapping(*secretTarget, *secretValue)
 
 			conn1 := shared.EnvConnection("stack_resource", "api", "stack_resource", "web", []openapi.ConnectionMapping{shared.HostMapping()})
@@ -704,7 +704,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			secretTarget := openapi.NewConnectionTarget("env")
 			secretTarget.SetName("AUTH_TOKEN")
 			secretValue := openapi.NewValueRef()
-			secretValue.SetOutput("key.token")
+			secretValue.SetOutput("token")
 			secretConn := shared.EnvConnectionWithID("secret", createdSecret.GetId(), "stack_resource", "web", []openapi.ConnectionMapping{
 				*openapi.NewConnectionMapping(*secretTarget, *secretValue),
 			})

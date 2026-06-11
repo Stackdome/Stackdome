@@ -7,6 +7,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/clients"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stackdeploy"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
 )
 
@@ -479,6 +480,12 @@ func validateValueRef(label string, source models.TopologyNodeRef, valueRef mode
 	if hasOutput {
 		if _, ok := allowedOutputs[valueRef.Output]; !ok {
 			return errors.BadRequest("connection '%s' references unsupported output '%s' for source '%s'", label, valueRef.Output, topologyNodeRefLabel(source))
+		}
+	}
+
+	if hasTemplate {
+		if err := stackdeploy.ValidateTemplateKeys(valueRef.Template, valueRef.Values); err != nil {
+			return errors.BadRequest("connection '%s' has invalid template: %s", label, err.Error())
 		}
 	}
 

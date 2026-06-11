@@ -48,7 +48,7 @@ func TestNodesAndEdgesFromConnectionsDrivesTopology(t *testing.T) {
 				Mappings: []models.ConnectionMapping{
 					{
 						Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "TLS_CERT"},
-						Value:  models.ValueRef{Output: "key['tls.crt']"},
+						Value:  models.ValueRef{Output: "tls.crt"},
 					},
 				},
 			},
