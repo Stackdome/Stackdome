@@ -90,7 +90,7 @@ func (b *postgresClusterBuilder) BuildPostgresClusterCR(addon *models.PostgresAd
 		},
 		Spec: addonsv1alpha1.PostgresClusterSpec{
 			Instances: addon.Instances.Count,
-			ReplicasSpec: addonsv1alpha1.ReplicasSpec{
+			ReplicasSpec: &addonsv1alpha1.ReplicasSpec{
 				SynchronousReplicaDataDurability: addonsv1alpha1.PreferredDataDurability,
 			},
 			PostgreSQLSpec: &addonsv1alpha1.PostgreSQLSpec{

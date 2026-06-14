@@ -353,6 +353,14 @@ func GetStackCR(ctx context.Context, clusterClient client.Client, name, namespac
 	return &cr, nil
 }
 
+func GetStackResourceCR(ctx context.Context, clusterClient client.Client, name, namespace string) (*corev1alpha1.StackResource, error) {
+	var cr corev1alpha1.StackResource
+	if err := clusterClient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, &cr); err != nil {
+		return nil, err
+	}
+	return &cr, nil
+}
+
 func VerifyStackCRLabel(cr *corev1alpha1.Stack, stackID string) {
 	labels := cr.GetLabels()
 	Expect(labels).To(HaveKeyWithValue(models.StackIDLabel, stackID), "Stack CR should have stack ID label")
@@ -393,8 +401,8 @@ func DumpCrashDetectionDebugInfo(ctx context.Context, clusterClient client.Clien
 	if err := clusterClient.Get(ctx, client.ObjectKey{Name: resourceName, Namespace: namespace}, &sr); err != nil {
 		fmt.Printf("[StackResource CR] error fetching: %v\n", err)
 	} else {
-		fmt.Printf("[StackResource CR] phase=%s statusHash=%s lastFailureRevision=%q\n",
-			sr.Status.Phase, sr.Status.StatusHash, sr.Status.LastFailureRevision)
+		fmt.Printf("[StackResource CR] phase=%s statusHash=%s lastFailureDeploymentRevision=%q\n",
+			sr.Status.Phase, sr.Status.StatusHash, sr.Status.LastFailureDeploymentRevision)
 		fmt.Printf("[StackResource CR] lastFailureDetails count=%d\n", len(sr.Status.LastFailureDetails))
 		for i, d := range sr.Status.LastFailureDetails {
 			fmt.Printf("  [%d] container=%s restarts=%d reason=%q exitCode=%v message=%q\n",

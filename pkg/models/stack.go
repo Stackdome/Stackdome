@@ -25,12 +25,48 @@ const (
 type StackState string
 
 const (
-	StackReady    StackState = "Ready"
-	StackDeleting StackState = "Deleting"
-	StackPending  StackState = "Pending"
-	StackFailed   StackState = "Failed"
-	StackError    StackState = "Error"
+	StackReady       StackState = "Ready"
+	StackDeleting    StackState = "Deleting"
+	StackPending     StackState = "Pending"
+	StackFailed      StackState = "Failed"
+	StackError       StackState = "Error"
+	StackDegraded    StackState = "Degraded"
+	StackProgressing StackState = "Progressing"
 )
+
+type StackConditionType string
+
+const (
+	StackConditionAvailable      StackConditionType = "Available"
+	StackConditionResourcesReady StackConditionType = "ResourcesReady"
+	StackConditionStalled        StackConditionType = "Stalled"
+	StackConditionDegraded       StackConditionType = "Degraded"
+	StackConditionProgressing    StackConditionType = "Progressing"
+)
+
+type StackConvergenceRecord struct {
+	Revision  string    `json:"revision"`
+	ReleaseID string    `json:"release_id,omitempty"`
+	At        time.Time `json:"at"`
+}
+
+type StackResourceSummary struct {
+	Name              string                          `json:"name"`
+	Phase             StackResourcePhase              `json:"phase,omitempty"`
+	ObservedRevision  string                          `json:"observed_revision,omitempty"`
+	ConvergedRevision string                          `json:"converged_revision,omitempty"`
+	LastConverged     *StackResourceConvergenceRecord `json:"last_converged,omitempty"`
+	AvailableReplicas int32                           `json:"available_replicas,omitempty"`
+	UpdatedReplicas   int32                           `json:"updated_replicas,omitempty"`
+	Replicas          int32                           `json:"replicas,omitempty"`
+	Missing           bool                            `json:"missing,omitempty"`
+	Message           string                          `json:"message,omitempty"`
+}
+
+type StackResourceConvergenceRecord struct {
+	Revision string    `json:"revision"`
+	At       time.Time `json:"at"`
+}
 
 type Stack struct {
 	ID                string      `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
@@ -64,12 +100,22 @@ func (s *Stack) HasImageBuilds() bool {
 }
 
 type StackStatus struct {
-	State                  StackState     `json:"state"`
-	Message                string         `json:"message"`
-	ObservedCrRevision     string         `json:"observed_cr_revision"`
-	Conditions             []Condition    `json:"conditions"`
-	LastObservedStatusHash string         `json:"last_observed_status_hash"`
-	LastValidationRun      *ValidationRun `json:"last_validation_run"`
+	State                  StackState              `json:"state"`
+	Message                string                  `json:"message"`
+	ObservedCrRevision     string                  `json:"observed_cr_revision"`
+	Conditions             []Condition              `json:"conditions"`
+	LastObservedStatusHash string                  `json:"last_observed_status_hash"`
+	LastValidationRun      *ValidationRun          `json:"last_validation_run"`
+	TargetRevision         string                  `json:"target_revision,omitempty"`
+	LastConverged          *StackConvergenceRecord  `json:"last_converged,omitempty"`
+	Resources              []StackResourceSummary   `json:"resources,omitempty"`
+}
+
+func (s *StackStatus) GetLastConverged() *StackConvergenceRecord {
+	if s == nil {
+		return nil
+	}
+	return s.LastConverged
 }
 
 type ValidationRun struct {

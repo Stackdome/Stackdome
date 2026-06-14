@@ -86,7 +86,7 @@ func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	stackID, ok := stackResourceCr.Labels[models.StackIDLabel]
+	stackID, ok := stackResourceCr.Labels[corev1alpha1.LabelStackID]
 	if !ok {
 		// How are we here? The predicate should have prevented this.
 		w.logger.Errorf("StackResource %s does not have a stack id label", stackResourceCr.Name)
@@ -118,7 +118,7 @@ func mapClusterStatusToServerStatus(clusterInstance *corev1alpha1.StackResource)
 		State:                  mapStackResourceState(clusterInstance.Status.Phase),
 		Conditions:             models.ConvertConditions(clusterInstance.Status.Conditions),
 		PublicIngresses:        mapToPublicIngresses(clusterInstance.Status.ExternalAddress),
-		ObservedCrRevision:     clusterInstance.Status.ObservedStackdomeServerObjectRevision,
+		ObservedCrRevision:     clusterInstance.Status.ObservedRevision,
 		InternalServiceName:    clusterInstance.Status.InternalAddress,
 		LastFailure:            controllers.MapLastFailureDetails(clusterInstance.Name, clusterInstance.Status.LastFailureDetails),
 	}

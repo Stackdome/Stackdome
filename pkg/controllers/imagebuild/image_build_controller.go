@@ -84,7 +84,7 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	r.Logger.Infof("reconciling image build: %v", req.NamespacedName)
 
-	stackID, ok := imageBuild.Labels[models.StackIDLabel]
+	stackID, ok := imageBuild.Labels[corev1alpha1.LabelStackID]
 	if !ok {
 		r.Logger.Errorf("imageBuild %v does not have stack ID label", req.NamespacedName)
 		return ctrl.Result{}, nil

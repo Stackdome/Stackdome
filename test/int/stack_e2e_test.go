@@ -290,20 +290,19 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			updateStack.Spec.StackResources[0].SetExecutionConfig(*exec)
 			shared.UpdateStack(client, orgID, teamName, stackID, updateStack)
 
-			By("Waiting for the CR to reflect the update")
+			By("Waiting for the StackResource CR to reflect the update")
 			Eventually(func(g Gomega) {
-				cr, err := shared.GetStackCR(ctx, clusterClient, stackName, namespace)
+				srCR, err := shared.GetStackResourceCR(ctx, clusterClient, "web", namespace)
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(cr.Spec.StackResources).To(HaveLen(1))
 
 				foundEnv := false
-				for _, env := range cr.Spec.StackResources[0].Spec.EnvironmentVariables {
+				for _, env := range srCR.Spec.EnvironmentVariables {
 					if env.Name == "UPDATED" && env.Value == "true" {
 						foundEnv = true
 						break
 					}
 				}
-				g.Expect(foundEnv).To(BeTrue(), "Stack CR should have UPDATED=true env var")
+				g.Expect(foundEnv).To(BeTrue(), "StackResource CR should have UPDATED=true env var")
 			}, 2*time.Minute, 5*time.Second).Should(Succeed())
 
 			By("Waiting for stack to return to Ready state")
@@ -664,10 +663,14 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			By("Waiting for the Stack CR to appear in the cluster")
 			cr := shared.WaitForStackCRExists(ctx, clusterClient, stackName, namespace, 2*time.Minute)
 
-			By("Verifying Stack CR has build spec with git repo URL")
-			Expect(cr.Spec.StackResources).To(HaveLen(1))
-			buildSpec := cr.Spec.StackResources[0].Spec.BuildSpec
-			Expect(buildSpec).NotTo(BeNil(), "Stack CR resource should have a BuildSpec")
+			By("Verifying Stack CR has the resource name listed")
+			Expect(cr.Spec.ResourceNames).To(ContainElement(shared.BuildSourceResourceName))
+
+			By("Verifying StackResource CR has build spec with git repo URL")
+			srCR, err := shared.GetStackResourceCR(ctx, clusterClient, shared.BuildSourceResourceName, namespace)
+			Expect(err).NotTo(HaveOccurred())
+			buildSpec := srCR.Spec.BuildSpec
+			Expect(buildSpec).NotTo(BeNil(), "StackResource CR should have a BuildSpec")
 			Expect(buildSpec.SourceContext.Git).NotTo(BeNil(), "BuildSpec should have a Git source context")
 			Expect(buildSpec.SourceContext.Git.RepoUrl).To(Equal(shared.BuildSourceRepoURL))
 

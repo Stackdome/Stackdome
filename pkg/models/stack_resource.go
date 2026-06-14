@@ -65,6 +65,33 @@ const (
 	StackResourcePhaseUnknown StackResourceState = "Error"
 )
 
+type StackResourcePhase string
+
+const (
+	StackResourcePhasePendingV2 StackResourcePhase = "Pending"
+	StackResourcePhaseReadyV2   StackResourcePhase = "Ready"
+	StackResourcePhaseFailedV2  StackResourcePhase = "Failed"
+)
+
+type StackResourceConditionType string
+
+const (
+	StackResourceConditionAvailable   StackResourceConditionType = "Available"
+	StackResourceConditionProgressing StackResourceConditionType = "Progressing"
+	StackResourceConditionConverged   StackResourceConditionType = "StackResourceConverged"
+	StackResourceConditionBuildReady  StackResourceConditionType = "BuildReady"
+)
+
+type WorkloadType string
+
+const (
+	WorkloadTypeService         WorkloadType = "Service"
+	WorkloadTypeStatefulService WorkloadType = "StatefulService"
+	WorkloadTypeWorker          WorkloadType = "Worker"
+	WorkloadTypeJob             WorkloadType = "Job"
+	WorkloadTypeCronJob         WorkloadType = "CronJob"
+)
+
 type Dependencies []string
 
 type Ports []Port
@@ -147,9 +174,15 @@ type ExecutionConfig struct {
 }
 
 type EnvVar struct {
-	Name       string `json:"name"`
-	Value      string `json:"value,omitempty"`
-	SelfOutput string `json:"self_output,omitempty"`
+	Name         string        `json:"name"`
+	Value        string        `json:"value,omitempty"`
+	SelfOutput   string        `json:"self_output,omitempty"`
+	SecretKeyRef *EnvSecretRef `json:"secret_key_ref,omitempty"`
+}
+
+type EnvSecretRef struct {
+	SecretName string `json:"secret_name"`
+	Key        string `json:"key"`
 }
 
 func (v *StackResource) VolumeMountMap() map[string]*VolumeMount {

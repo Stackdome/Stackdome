@@ -109,7 +109,7 @@ func TestBuildStackCR_AnnotationMerge(t *testing.T) {
 			t.Fatalf("BuildStackCR() error = %v", err)
 		}
 
-		val, ok := cr.Annotations[corev1alpha1.StackdomeClusterIssuerAnnotationKey]
+		val, ok := cr.Annotations[corev1alpha1.ClusterIssuerAnnotation]
 		if !ok {
 			t.Fatal("expected cluster issuer annotation to be set")
 		}
@@ -182,7 +182,7 @@ func TestBuildStackResourceCR_AnnotationMerge(t *testing.T) {
 			t.Fatalf("BuildStackResourceCR() error = %v", err)
 		}
 
-		val, ok := cr.Annotations[corev1alpha1.StackdomeClusterIssuerAnnotationKey]
+		val, ok := cr.Annotations[corev1alpha1.ClusterIssuerAnnotation]
 		if !ok {
 			t.Fatal("expected cluster issuer annotation to be set")
 		}
@@ -207,10 +207,10 @@ func TestBuildStackResourceCR_AnnotationMerge(t *testing.T) {
 			t.Fatalf("BuildStackResourceCR() error = %v", err)
 		}
 
-		if cr.Labels[models.StackIDLabel] != "stack-1" {
-			t.Errorf("StackIDLabel = %q, want %q", cr.Labels[models.StackIDLabel], "stack-1")
+		if cr.Labels[corev1alpha1.LabelStackID] != "stack-1" {
+			t.Errorf("LabelStackID = %q, want %q", cr.Labels[corev1alpha1.LabelStackID], "stack-1")
 		}
-		if _, ok := cr.Annotations[corev1alpha1.StackdomeClusterIssuerAnnotationKey]; !ok {
+		if _, ok := cr.Annotations[corev1alpha1.ClusterIssuerAnnotation]; !ok {
 			t.Fatal("expected cluster issuer annotation to be set")
 		}
 	})
