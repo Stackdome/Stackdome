@@ -1,0 +1,40 @@
+package stores
+
+import (
+	"context"
+
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+)
+
+type StackReleaseStore interface {
+	// CreateSuperseding atomically supersedes any Pending/Rendering releases for this
+	// stack and inserts a new release with sequence = max(sequence)+1.
+	CreateSuperseding(ctx context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError)
+
+	GetByID(ctx context.Context, id string) (*models.StackRelease, *errors.ServiceError)
+
+	ListByStackID(ctx context.Context, stackID string) ([]*models.StackRelease, *errors.ServiceError)
+
+	// ListActive returns all non-terminal releases across all stacks.
+	ListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
+
+	// GetActiveByStackID returns the single active (non-terminal) release for a stack,
+	// or (nil, nil) if none exists.
+	GetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
+
+	// CAS state transitions. The bool return indicates whether THIS caller won
+	// the compare-and-swap (i.e., the row was in the expected state).
+
+	MarkRendering(ctx context.Context, id string) (bool, *errors.ServiceError)
+	MarkApplyingDirect(ctx context.Context, id string) (bool, *errors.ServiceError)
+	SaveManifest(ctx context.Context, id string, m *models.ReleaseManifest, rev string, pins models.ReleasePins, rendererVersion string) (bool, *errors.ServiceError)
+	MarkReleased(ctx context.Context, id string, outcome models.ReleaseOutcome) (bool, *errors.ServiceError)
+	MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError)
+	Cancel(ctx context.Context, id string) (bool, *errors.ServiceError)
+
+	// AppendImageDigests merges image digests into the release pins.
+	AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError
+
+	AtomicExecutor
+}
