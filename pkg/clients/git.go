@@ -16,6 +16,7 @@ import (
 type GitClient interface {
 	CheckAccess(ctx context.Context, repoURL string) (bool, error)
 	GetBranchHeadSHA(ctx context.Context, repoURL, branch string) (*RepoResult, error)
+	GetTagSHA(ctx context.Context, repoURL, tag string) (string, error)
 	CheckTagExists(ctx context.Context, repoURL, tag string) (bool, error)
 }
 
@@ -118,7 +119,27 @@ func (g *gitClient) GetBranchHeadSHA(ctx context.Context, repoURL, branch string
 	return nil, fmt.Errorf("branch '%s' not found in repository", branch)
 }
 
-// check if a tag exists in the repository
+func (g *gitClient) GetTagSHA(ctx context.Context, repoURL, tag string) (string, error) {
+	rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{repoURL},
+	})
+	refs, err := rem.List(&git.ListOptions{
+		Auth: g.auth,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	tagRefName := plumbing.NewTagReferenceName(tag)
+	for _, r := range refs {
+		if r.Name() == tagRefName {
+			return r.Hash().String(), nil
+		}
+	}
+	return "", fmt.Errorf("tag '%s' not found in repository", tag)
+}
+
 func (g *gitClient) CheckTagExists(ctx context.Context, repoURL, tag string) (bool, error) {
 	rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: "origin",

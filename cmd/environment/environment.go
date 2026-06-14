@@ -77,4 +77,5 @@ type Services struct {
 	TeamService                 services.TeamService
 	OrgInviteService            services.OrgInviteService
 	SignupService               services.SignupService
+	StackReleaseService         services.StackReleaseService
 }
