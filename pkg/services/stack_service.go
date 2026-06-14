@@ -29,6 +29,7 @@ type StackService interface {
 	UpdateStackCrRevision(ctx context.Context, ID string, revision string) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError)
 	InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError
+	SetReleaseService(rs releaseServiceForStack)
 	ClusterResourceServiceInjectable
 	BackgroundJobEnqueuerInjectable
 	StackQueryService
@@ -43,6 +44,11 @@ type StackQueryService interface {
 	GetStacksByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError)
 	ListStacksForCurrentUser(ctx context.Context, orgID string) ([]*models.Stack, *errors.ServiceError)
+}
+
+type releaseServiceForStack interface {
+	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
+	MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError)
 }
 
 type StackServiceSpec struct {
@@ -77,6 +83,7 @@ type stackService struct {
 	defaultingService      DefaultingService[*models.Stack]
 	teamService            TeamService
 	permissions            auth.PermissionService
+	releaseService         releaseServiceForStack
 	ClusterResourceServiceDeps
 	BackgroundJobEnqueuerDep
 }
@@ -115,6 +122,10 @@ func NewStackService(spec StackServiceSpec) StackService {
 		teamService:            spec.TeamService,
 		permissions:            spec.Permissions,
 	}
+}
+
+func (s *stackService) SetReleaseService(rs releaseServiceForStack) {
+	s.releaseService = rs
 }
 
 func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
@@ -178,6 +189,9 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 		ID: createdStack.ID,
 	}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", spec.Name, err.Error())
+	}
+	for _, v := range createdStack.Volumes {
+		_ = s.BackgroundJobEnqueuer.Enqueue(&models.Volume{ID: v.ID})
 	}
 	return createdStack, nil
 }
@@ -274,12 +288,6 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.Stack{
-		ID: updatedStack.ID,
-	}); err != nil {
-		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", spec.Name, err.Error())
 	}
 
 	return updatedStack, nil
@@ -477,9 +485,6 @@ func (s *stackService) createStackConnection(ctx context.Context, existingStack 
 		return nil, err
 	}
 
-	if _, err := s.enqueueStack(ctx, existingStack); err != nil {
-		return nil, err
-	}
 	return createdConnection, nil
 }
 
@@ -493,32 +498,13 @@ func (s *stackService) updateSingleStackConnection(ctx context.Context, existing
 		return nil, err
 	}
 
-	if _, err := s.enqueueStack(ctx, existingStack); err != nil {
-		return nil, err
-	}
 	return updatedConnection, nil
 }
 
 func (s *stackService) deleteSingleStackConnection(ctx context.Context, existingStack *models.Stack, connectionID string) *errors.ServiceError {
-	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+	return s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 		return s.stackStore.DeleteConnectionWithTx(txCtx, existingStack.ID, connectionID)
-	}); err != nil {
-		return err
-	}
-
-	_, err := s.enqueueStack(ctx, existingStack)
-	return err
-}
-
-func (s *stackService) enqueueStack(ctx context.Context, existingStack *models.Stack) (*models.Stack, *errors.ServiceError) {
-	updatedStack, err := s.GetStack(ctx, existingStack.ID)
-	if err != nil {
-		return nil, errors.GeneralError("failed to get updated stack '%s': %s", existingStack.Name, err.Error())
-	}
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.Stack{ID: updatedStack.ID}); err != nil {
-		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", updatedStack.Name, err.Error())
-	}
-	return updatedStack, nil
+	})
 }
 
 func (s *stackService) GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError) {
@@ -605,6 +591,11 @@ func (s *stackService) DeleteStack(ctx context.Context, ID string) (*models.Stac
 	}
 	if stack.Status.State == models.StackDeleting {
 		return stack, nil
+	}
+	if s.releaseService != nil {
+		if active, _ := s.releaseService.InternalGetActiveByStackID(ctx, ID); active != nil {
+			s.releaseService.MarkFailed(ctx, active.ID, "stack deleted", nil)
+		}
 	}
 	stack.DeletionTimestamp = ptr.To(time.Now().UTC())
 	stack.Status.State = models.StackDeleting

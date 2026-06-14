@@ -229,6 +229,15 @@ func (s apiServer) routes() *mux.Router {
 	teamResourceRouter.HandleFunc("/stacks/{id}/builds", imageBuildHandler.ListByStackID).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/builds/{build_id}", imageBuildHandler.GetByID).Methods(http.MethodGet)
 
+	// Stack releases (team-scoped)
+	stackReleaseHandler := handlers.NewStackReleaseHandler(handlers.StackReleaseHandlerSpec{
+		StackReleaseService: services.StackReleaseService,
+	})
+	teamResourceRouter.HandleFunc("/stacks/{id}/releases", stackReleaseHandler.Create).Methods(http.MethodPost)
+	teamResourceRouter.HandleFunc("/stacks/{id}/releases", stackReleaseHandler.List).Methods(http.MethodGet)
+	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}", stackReleaseHandler.GetByID).Methods(http.MethodGet)
+	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/cancel", stackReleaseHandler.Cancel).Methods(http.MethodPost)
+
 	// Secrets (team-scoped)
 	teamResourceRouter.HandleFunc("/secrets", secretHandler.Create).Methods(http.MethodPost)
 	teamResourceRouter.HandleFunc("/secrets", secretHandler.ListByTeamID).Methods(http.MethodGet)

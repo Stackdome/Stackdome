@@ -3,7 +3,6 @@ package stack
 import (
 	"context"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -18,7 +17,6 @@ const (
 type stackWorker struct {
 	stackService   stackService
 	clusterManager clustermanager.ClusterManager
-	secretService  secretService
 	env            string
 	subReconcilers []subReconciler
 	worker.BaseWorker
@@ -28,10 +26,7 @@ type StackWorkerSpec struct {
 	StackService         stackService
 	SecretService        secretService
 	VolumeService        volumeService
-	CRBuilder            builders.ClusterResourceBuilder
-	SecretBuilder        builders.SecretBuilder
 	NamespaceService     namespaceService
-	PostgresAddonService postgresAddonService
 	ResourceUsageService resourceUsageService
 	Env                  string
 	ClusterManager       clustermanager.ClusterManager
@@ -41,7 +36,6 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 	return &stackWorker{
 		stackService:   spec.StackService,
 		clusterManager: spec.ClusterManager,
-		secretService:  spec.SecretService,
 		BaseWorker:     worker.NewBaseWorker(StackWorkerName, spec.Env),
 		subReconcilers: []subReconciler{
 			NewDeprovisionReconciler(DeprovisionReconcilerSpec{
@@ -53,39 +47,9 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 				ClusterManager:       spec.ClusterManager,
 				ResourceUsageService: spec.ResourceUsageService,
 			}),
-			NewDeployResolverReconciler(DeployResolverReconcilerSpec{
-				VolumeService:        spec.VolumeService,
-				PostgresAddonService: spec.PostgresAddonService,
-				SecretService:        spec.SecretService,
-			}),
-			NewRevisionReconciler(RevisionReconcilerSpec{
-				StackService:   spec.StackService,
-				StackCRBuilder: spec.CRBuilder,
-			}),
-			NewValidationReconciler(ValidationReconcilerSpec{
-				Logger:        logger.NewLoggerWithPrefix(context.Background(), "stack-validation-reconciler"),
-				SecretService: spec.SecretService,
-				StackService:  spec.StackService,
-			}),
 			NewNamespaceReconciler(NamespaceReconcilerSpec{
 				ClusterManager:   spec.ClusterManager,
 				NamespaceService: spec.NamespaceService,
-			}),
-			NewSecretReconciler(SecretReconcilerSpec{
-				ClusterManager:       spec.ClusterManager,
-				SecretService:        spec.SecretService,
-				ResourceUsageService: spec.ResourceUsageService,
-				Logger:               logger.NewLoggerWithPrefix(context.Background(), "stack-secret-reconciler"),
-			}),
-			NewVolumeReconciler(VolumeReconcilerSpec{
-				ClusterManager:  spec.ClusterManager,
-				VolumeService:   spec.VolumeService,
-				VolumeCrBuilder: spec.CRBuilder,
-			}),
-			NewStackReconciler(StackReconcilerSpec{
-				ClusterManager: spec.ClusterManager,
-				StackService:   spec.StackService,
-				StackCRBuilder: spec.CRBuilder,
 			}),
 		},
 	}
@@ -142,11 +106,11 @@ func (w *stackWorker) reconcile(ctx context.Context, stack *models.Stack) (worke
 }
 
 func (w *stackWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
-	res, err := w.stackService.InternalList(ctx, "status->>'state' IN ?", []models.StackState{
-		models.StackPending,
-		models.StackError,
-		models.StackDeleting,
-	})
+	res, err := w.stackService.InternalList(ctx, "status->>'state' IN ? OR deletion_timestamp IS NOT NULL",
+		[]models.StackState{
+			models.StackPending,
+			models.StackDeleting,
+		})
 	if err != nil {
 		return nil, w.WorkerError.NewError("failed to list pending stacks: %v", err)
 	}

@@ -17,9 +17,12 @@ import (
 	stackcontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stack"
 	stackresourcecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/stackresource"
 	emailpkg "github.com/ashishmax31/stackdome-api-server/pkg/email"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stackdeploy"
 	inviteworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/invite"
 	postgresaddonworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/postgresaddon"
+	releaseworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/release"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/stack"
+	volumeworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/volume"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
 
 	volumecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/volume"
@@ -99,18 +102,47 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		ClusterManager:       d.ClusterManager,
 		VolumeService:        d.Services.VolumeService,
 		NamespaceService:     d.Services.NamespaceService,
-		PostgresAddonService: d.Services.PostgresAddonService,
 		ResourceUsageService: d.Services.ResourceUsageService,
 		Env:                  d.Env.Name,
+	})
+
+	d.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
+
+	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
+		ReleaseService:       d.Services.StackReleaseService,
+		StackService:         d.Services.StackService,
+		ClusterManager:       d.ClusterManager,
+		SecretService:        d.Services.SecretService,
+		PostgresAddonService: d.Services.PostgresAddonService,
+		VolumeService:        d.Services.VolumeService,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			SecretService: d.Services.SecretService,
 		}),
 		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{
 			SecretFetcher: d.Services.SecretService,
 		}),
+		Resolver: stackdeploy.NewResolver(stackdeploy.ResolverSpec{
+			VolumeService:        d.Services.VolumeService,
+			PostgresAddonService: d.Services.PostgresAddonService,
+			SecretService:        d.Services.SecretService,
+		}),
+		Env: d.Env.Name,
 	})
+	d.WorkerManager.RegisterWorker(releaseWorker, &models.StackRelease{})
 
-	d.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
+	volumeWorker := volumeworker.NewVolumeWorker(volumeworker.VolumeWorkerSpec{
+		VolumeService:  d.Services.VolumeService,
+		StackService:   d.Services.StackService,
+		ClusterManager: d.ClusterManager,
+		StackVolumeStore: pgstore.NewStackVolumeStore(pgstore.StackVolumeStoreSpec{
+			SessionFactory: d.DBSession,
+		}),
+		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
+			SecretService: d.Services.SecretService,
+		}),
+		Env: d.Env.Name,
+	})
+	d.WorkerManager.RegisterWorker(volumeWorker, &models.Volume{})
 
 	pgAddonWorker := postgresaddonworker.NewPostgresAddonWorker(postgresaddonworker.PostgresAddonWorkerSpec{
 		PostgresAddonService:   d.Services.PostgresAddonService,
@@ -210,9 +242,11 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 			},
 			func() clustermanager.Controller {
 				return stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
-					Log:          applogger.NewLoggerWithPrefix(ctx, "stack-controller").SetLevel(d.Logger.GetLevel()),
-					StackService: d.Services.StackService,
-					Env:          d.Env.Name,
+					Log:            applogger.NewLoggerWithPrefix(ctx, "stack-controller").SetLevel(d.Logger.GetLevel()),
+					StackService:   d.Services.StackService,
+					Env:            d.Env.Name,
+					ReleaseChecker: d.Services.StackReleaseService,
+					Enqueuer:       d.WorkerManager,
 				})
 			},
 			func() clustermanager.Controller {
@@ -506,6 +540,19 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SessionFactory: d.DBSession,
 	})
 
+	stackReleaseStore := pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+
+	stackReleaseService := services.NewStackReleaseService(services.StackReleaseServiceSpec{
+		Store:         stackReleaseStore,
+		StackService:  stackService,
+		SecretService: secretService,
+		Permissions:   d.PermissionService,
+	})
+
+	stackService.SetReleaseService(stackReleaseService)
+
 	d.Services = Services{
 		UserService:                 userService,
 		WorkspaceUserService:        workspaceUserService,
@@ -532,6 +579,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		TeamService:                 teamService,
 		OrgInviteService:            orgInviteService,
 		SignupService:               signupService,
+		StackReleaseService:         stackReleaseService,
 	}
 
 	return nil
@@ -606,6 +654,7 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 	d.Services.StackResourceService.InjectBackgroundJobEnqueuer(dep)
 	d.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
 	d.Services.OrgInviteService.InjectBackgroundJobEnqueuer(dep)
+	d.Services.StackReleaseService.InjectBackgroundJobEnqueuer(dep)
 	return nil
 }
 
