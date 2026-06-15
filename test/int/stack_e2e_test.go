@@ -46,7 +46,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(stackID).NotTo(BeEmpty())
 			Expect(namespace).NotTo(BeEmpty())
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
@@ -119,7 +119,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
@@ -159,7 +159,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
@@ -191,7 +191,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
@@ -242,7 +242,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
@@ -272,7 +272,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			stackName := created.GetName()
 			namespace := created.GetNamespace()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
@@ -322,7 +322,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 			addonID := createdAddon.GetId()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
@@ -335,7 +335,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
@@ -382,7 +382,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			addonName := createdAddon.GetName()
 			addonNamespace := createdAddon.GetNamespace()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
@@ -398,7 +398,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
@@ -493,7 +493,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			createdAddon := shared.CreatePostgresAddon(client, orgID, teamName, addon)
 			addonID := createdAddon.GetId()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeletePostgresAddon(client, orgID, teamName, addonID)
 			})
 
@@ -508,7 +508,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			createdSecret := shared.CreateSecret(client, orgID, teamName, secret)
 			secretID := createdSecret.GetId()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteSecret(client, orgID, teamName, secretID)
 			})
 
@@ -518,7 +518,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
@@ -587,7 +587,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
 			})
@@ -639,7 +639,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			createdSecret := shared.CreateSecret(client, orgID, teamName, gitSecret)
 			secretID := createdSecret.GetId()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteSecret(client, orgID, teamName, secretID)
 			})
 
@@ -656,6 +656,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			DeferCleanup(func() {
 				if CurrentSpecReport().Failed() {
 					shared.DumpBuildSourceDebugInfo(ctx, client, clusterClient, clientset, orgID, teamName, stackID, namespace)
+				}
+				if shared.ShouldSkipCleanup() {
+					return
 				}
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
@@ -733,7 +736,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			createdSecret := shared.CreateSecret(client, orgID, teamName, gitSecret)
 			secretID := createdSecret.GetId()
 
-			DeferCleanup(func() {
+			shared.DeferResourceCleanup(func() {
 				shared.DeleteSecret(client, orgID, teamName, secretID)
 			})
 
@@ -748,6 +751,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 				if CurrentSpecReport().Failed() {
 					kubeClient, _ := testEnv.Cluster.GetKubeClient()
 					shared.DumpBuildSourceDebugInfo(ctx, client, clusterClient, kubeClient, orgID, teamName, stackID, namespace)
+				}
+				if shared.ShouldSkipCleanup() {
+					return
 				}
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)

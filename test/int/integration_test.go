@@ -2,6 +2,7 @@ package int
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -13,12 +14,25 @@ import (
 
 var env = &bootstrap.Environment{}
 
+// specFailed tracks whether any spec has failed, used with KEEP_RESOURCES_ON_FAILURE
+// to skip data clearing and abort remaining specs so cluster state is preserved.
+var specFailed bool
+
+var _ = ReportAfterEach(func(report SpecReport) {
+	if report.Failed() && os.Getenv("KEEP_RESOURCES_ON_FAILURE") == "true" {
+		specFailed = true
+	}
+})
+
 func TestIntegration(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Integration Test Suite")
 }
 
 var _ = BeforeEach(func() {
+	if specFailed {
+		Skip("Previous spec failed with KEEP_RESOURCES_ON_FAILURE=true — skipping remaining specs to preserve cluster state")
+	}
 	By("Clearing test data")
 	Expect(env.Database.ClearData(context.Background())).To(Succeed())
 })
