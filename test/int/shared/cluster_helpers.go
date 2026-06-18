@@ -494,6 +494,36 @@ func GetContainerEnvVar(deploy *appsv1.Deployment, envName string) (string, bool
 	return "", false
 }
 
+func GetContainerEnvVarSecretRef(deploy *appsv1.Deployment, envName string) (*corev1.SecretKeySelector, bool) {
+	for _, container := range deploy.Spec.Template.Spec.Containers {
+		for _, env := range container.Env {
+			if env.Name == envName && env.ValueFrom != nil && env.ValueFrom.SecretKeyRef != nil {
+				return env.ValueFrom.SecretKeyRef, true
+			}
+		}
+	}
+	return nil, false
+}
+
+func ResolveContainerEnvVar(ctx context.Context, clusterClient client.Client, deploy *appsv1.Deployment, namespace, envName string) (string, bool) {
+	if val, found := GetContainerEnvVar(deploy, envName); found && val != "" {
+		return val, true
+	}
+	ref, found := GetContainerEnvVarSecretRef(deploy, envName)
+	if !found {
+		return "", false
+	}
+	secret := &corev1.Secret{}
+	if err := clusterClient.Get(ctx, client.ObjectKey{Name: ref.Name, Namespace: namespace}, secret); err != nil {
+		return "", false
+	}
+	val, ok := secret.Data[ref.Key]
+	if !ok {
+		return "", false
+	}
+	return string(val), true
+}
+
 func GetContainerVolumeMount(deploy *appsv1.Deployment, mountPath string) (*corev1.VolumeMount, bool) {
 	for _, container := range deploy.Spec.Template.Spec.Containers {
 		for i, vm := range container.VolumeMounts {

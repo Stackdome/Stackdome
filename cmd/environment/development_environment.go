@@ -414,11 +414,13 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	stackStore := pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: d.DBSession})
 
 	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
-		SessionFactory:       d.DBSession,
-		Logger:               d.Logger,
-		WorkspaceUserService: workspaceUserService,
-		Permissions:          d.PermissionService,
-		StackStore:           stackStore,
+		SessionFactory:         d.DBSession,
+		Logger:                 d.Logger,
+		WorkspaceUserService:   workspaceUserService,
+		Permissions:            d.PermissionService,
+		StackStore:             stackStore,
+		ClusterRegistryService: imageRegistryService,
+		StackDomainService:     stackDomainService,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
@@ -468,18 +470,17 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	stackService := services.NewStackService(services.StackServiceSpec{
-		SessionFactory:         d.DBSession,
-		Logger:                 d.Logger,
-		VolumeService:          volumeService,
-		OrganisationService:    organisationService,
-		StackResourceService:   stackResourceService,
-		ClusterService:         clusterService,
-		ClusterRegistryService: imageRegistryService,
-		NamespaceService:       namespaceService,
-		SecretService:          secretService,
-		PostgresAddonService:   postgresAddonService,
-		TeamService:            teamService,
-		Permissions:            d.PermissionService,
+		SessionFactory:       d.DBSession,
+		Logger:               d.Logger,
+		VolumeService:        volumeService,
+		OrganisationService:  organisationService,
+		StackResourceService: stackResourceService,
+		ClusterService:       clusterService,
+		NamespaceService:     namespaceService,
+		SecretService:        secretService,
+		PostgresAddonService: postgresAddonService,
+		TeamService:          teamService,
+		Permissions:          d.PermissionService,
 	})
 
 	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
@@ -651,7 +652,7 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 	d.Services.MetricsService.InjectClusterResourceServiceDeps(deps)
 	d.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	d.Services.StackService.InjectBackgroundJobEnqueuer(dep)
-	d.Services.StackResourceService.InjectBackgroundJobEnqueuer(dep)
+	d.Services.StackResourceService.InjectClusterManager(d.ClusterManager)
 	d.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
 	d.Services.OrgInviteService.InjectBackgroundJobEnqueuer(dep)
 	d.Services.StackReleaseService.InjectBackgroundJobEnqueuer(dep)

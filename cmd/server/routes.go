@@ -220,8 +220,11 @@ func (s apiServer) routes() *mux.Router {
 	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Delete).Methods(http.MethodDelete)
 	teamResourceRouter.HandleFunc("/stacks/{id}/logs", stackHandler.StreamLogs).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/metrics", stackHandler.GetMetrics).Methods(http.MethodGet)
+	teamResourceRouter.HandleFunc("/stacks/{id}/resources", stackResourceHandler.Create).Methods(http.MethodPost)
 	teamResourceRouter.HandleFunc("/stacks/{id}/resources", stackResourceHandler.List).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}", stackResourceHandler.GetByResourceName).Methods(http.MethodGet)
+	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}", stackResourceHandler.Update).Methods(http.MethodPut)
+	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}", stackResourceHandler.Delete).Methods(http.MethodDelete)
 	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/logs", stackResourceHandler.StreamLogs).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/metrics", stackResourceHandler.GetMetrics).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/builds", imageBuildHandler.ListByResourceName).Methods(http.MethodGet)
@@ -244,6 +247,9 @@ func (s apiServer) routes() *mux.Router {
 	teamResourceRouter.HandleFunc("/secrets/{id}", secretHandler.GetByID).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/secrets/{id}", secretHandler.Update).Methods(http.MethodPut)
 	teamResourceRouter.HandleFunc("/secrets/{id}", secretHandler.Delete).Methods(http.MethodDelete)
+
+	// Stack-scoped volumes
+	teamResourceRouter.HandleFunc("/stacks/{id}/volumes", volumeHandler.ListByStackID).Methods(http.MethodGet)
 
 	// Volumes (team-scoped)
 	teamResourceRouter.HandleFunc("/volumes", volumeHandler.Create).Methods(http.MethodPost)

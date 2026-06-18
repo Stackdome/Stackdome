@@ -35,9 +35,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			clusterClient := testEnv.Cluster.GetClient()
 			ctx := context.Background()
 
-			By("Creating a stack via API")
+			By("Creating a stack via API and deploying")
 			stack := shared.CreateSimpleStack("test-lifecycle")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 
 			stackID := created.GetId()
 			stackName := created.GetName()
@@ -85,9 +85,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			clusterClient := testEnv.Cluster.GetClient()
 			ctx := context.Background()
 
-			By("Creating a stack")
+			By("Creating a stack and deploying")
 			stack := shared.CreateSimpleStack("test-delete-e2e")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()
 			namespace := created.GetNamespace()
@@ -113,9 +113,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			clusterClient := testEnv.Cluster.GetClient()
 			ctx := context.Background()
 
-			By("Creating a multi-resource stack")
+			By("Creating a multi-resource stack and deploying")
 			stack := shared.CreateMultiResourceStack("test-multi")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
@@ -153,9 +153,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			clusterClient := testEnv.Cluster.GetClient()
 			ctx := context.Background()
 
-			By("Creating a stack with dependencies")
+			By("Creating a stack with dependencies and deploying")
 			stack := shared.CreateStackWithDependencies("test-deps")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
@@ -185,9 +185,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			clusterClient := testEnv.Cluster.GetClient()
 			ctx := context.Background()
 
-			By("Creating a stack with env vars and ports")
+			By("Creating a stack with env vars and ports and deploying")
 			stack := shared.CreateStackWithEnvAndPorts("test-env-ports")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
@@ -236,9 +236,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			clusterClient := testEnv.Cluster.GetClient()
 			ctx := context.Background()
 
-			By("Creating a stack with init container")
+			By("Creating a stack with init container and deploying")
 			stack := shared.CreateStackWithInitContainer("test-init")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
@@ -265,9 +265,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			clusterClient := testEnv.Cluster.GetClient()
 			ctx := context.Background()
 
-			By("Creating a stack")
+			By("Creating a stack and deploying")
 			stack := shared.CreateSimpleStack("test-update-e2e")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()
 			namespace := created.GetNamespace()
@@ -289,6 +289,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			})
 			updateStack.Spec.StackResources[0].SetExecutionConfig(*exec)
 			shared.UpdateStack(client, orgID, teamName, stackID, updateStack)
+
+			By("Creating a release for the update")
+			shared.CreateRelease(client, orgID, teamName, stackID)
 
 			By("Waiting for the StackResource CR to reflect the update")
 			Eventually(func(g Gomega) {
@@ -328,9 +331,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			By("Waiting for the postgres addon to become Ready")
 			shared.WaitForAddonReady(client, orgID, teamName, addonID, 10*time.Minute)
 
-			By("Creating a stack that references the postgres addon")
+			By("Creating a stack that references the postgres addon and deploying")
 			stack := shared.CreateStackWithPostgresAddon("test-pg-stack", addonID, "testdb")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
@@ -347,22 +350,22 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			for credField, envName := range shared.PostgresEnvMapping {
-				val, found := shared.GetContainerEnvVar(deploy, envName)
+				val, found := shared.ResolveContainerEnvVar(ctx, clusterClient, deploy, namespace, envName)
 				Expect(found).To(BeTrue(), "env var %s (mapped from %s) should be injected", envName, credField)
 				Expect(val).NotTo(BeEmpty(), "env var %s should have a non-empty value", envName)
 			}
 
 			By("Verifying postgres credential values are structurally valid")
-			pgHost, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["host"])
+			pgHost, _ := shared.ResolveContainerEnvVar(ctx, clusterClient, deploy, namespace, shared.PostgresEnvMapping["host"])
 			Expect(pgHost).To(ContainSubstring(".svc.cluster.local"), "PG_HOST should be a fully-qualified K8s service DNS name")
 
-			pgPort, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["port"])
+			pgPort, _ := shared.ResolveContainerEnvVar(ctx, clusterClient, deploy, namespace, shared.PostgresEnvMapping["port"])
 			Expect(pgPort).To(Equal("5432"), "PG_PORT should be the default postgres port")
 
-			pgUser, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["username"])
+			pgUser, _ := shared.ResolveContainerEnvVar(ctx, clusterClient, deploy, namespace, shared.PostgresEnvMapping["username"])
 			Expect(pgUser).NotTo(BeEmpty(), "PG_USER should be a valid database username")
 
-			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["url"])
+			dbURL, _ := shared.ResolveContainerEnvVar(ctx, clusterClient, deploy, namespace, shared.PostgresEnvMapping["url"])
 			Expect(dbURL).To(HavePrefix("postgresql://"), "DATABASE_URL should be a postgresql:// connection string")
 			Expect(dbURL).To(ContainSubstring("testdb"), "DATABASE_URL should reference the requested database")
 		})
@@ -391,9 +394,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			By("Waiting for databases to be applied")
 			shared.WaitForConditionTrue(client, orgID, teamName, addonID, string(models.PostgresAddonConditionDatabasesApplied), 2*time.Minute)
 
-			By("Creating a stack that references the addon with superuser mode")
+			By("Creating a stack that references the addon with superuser mode and deploying")
 			stack := shared.CreateStackWithPostgresAddonSuperuser("test-su-stack", addonID)
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
@@ -410,16 +413,16 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			for credField, envName := range shared.PostgresEnvMapping {
-				val, found := shared.GetContainerEnvVar(deploy, envName)
+				val, found := shared.ResolveContainerEnvVar(ctx, clusterClient, deploy, namespace, envName)
 				Expect(found).To(BeTrue(), "env var %s (mapped from %s) should be injected", envName, credField)
 				Expect(val).NotTo(BeEmpty(), "env var %s should have a non-empty value", envName)
 			}
 
 			By("Verifying superuser credential values on deployment")
-			pgUser, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["username"])
+			pgUser, _ := shared.ResolveContainerEnvVar(ctx, clusterClient, deploy, namespace, shared.PostgresEnvMapping["username"])
 			Expect(pgUser).To(Equal("postgres"), "superuser username should be 'postgres'")
 
-			dbURL, _ := shared.GetContainerEnvVar(deploy, shared.PostgresEnvMapping["url"])
+			dbURL, _ := shared.ResolveContainerEnvVar(ctx, clusterClient, deploy, namespace, shared.PostgresEnvMapping["url"])
 			Expect(dbURL).To(HavePrefix("postgresql://"), "DATABASE_URL should be a postgresql:// connection string")
 
 			By("Fetching superuser credentials via API")
@@ -511,9 +514,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 				shared.DeleteSecret(client, orgID, teamName, secretID)
 			})
 
-			By("Creating the full stack")
+			By("Creating the full stack and deploying")
 			stack := shared.CreateFullStack("test-full", addonID, "testdb", secretID)
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			namespace := created.GetNamespace()
 
@@ -534,14 +537,14 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			for credField, envName := range shared.PostgresEnvMapping {
-				val, found := shared.GetContainerEnvVar(apiDeploy, envName)
+				val, found := shared.ResolveContainerEnvVar(ctx, clusterClient, apiDeploy, namespace, envName)
 				Expect(found).To(BeTrue(), "api: env var %s (mapped from %s) should be injected", envName, credField)
 				Expect(val).NotTo(BeEmpty(), "api: env var %s should have a non-empty value", envName)
 			}
 
 			By("Verifying API deployment has secret env vars")
 			for _, envName := range shared.FullStackSecretEnvMapping {
-				val, found := shared.GetContainerEnvVar(apiDeploy, envName)
+				val, found := shared.ResolveContainerEnvVar(ctx, clusterClient, apiDeploy, namespace, envName)
 				Expect(found).To(BeTrue(), "api: env var %s should be injected from secret", envName)
 				Expect(val).NotTo(BeEmpty(), "api: env var %s should have a non-empty value", envName)
 			}
@@ -555,7 +558,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			workerDeploy, err := shared.GetDeploymentForStackResource(ctx, clusterClient, namespace, shared.FullStackWorkerName)
 			Expect(err).NotTo(HaveOccurred())
 
-			dbURL, found := shared.GetContainerEnvVar(workerDeploy, shared.PostgresEnvMapping["url"])
+			dbURL, found := shared.ResolveContainerEnvVar(ctx, clusterClient, workerDeploy, namespace, shared.PostgresEnvMapping["url"])
 			Expect(found).To(BeTrue(), "worker: DATABASE_URL should be injected")
 			Expect(dbURL).To(HavePrefix("postgresql://"), "worker: DATABASE_URL should be a postgresql:// connection string")
 
@@ -581,9 +584,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 	Context("Crash Detection", func() {
 		It("should populate last_failure when a container crashes", func() {
-			By("Creating a stack whose container immediately exits with error")
+			By("Creating a stack whose container immediately exits with error and deploying")
 			stack := shared.CreateCrashingStack("test-crash-detection")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 
 			DeferCleanup(func() {
@@ -642,9 +645,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 				shared.DeleteSecret(client, orgID, teamName, secretID)
 			})
 
-			By("Creating a stack with build source and exposed port")
+			By("Creating a stack with build source and exposed port, then deploying")
 			stack := shared.CreateStackWithBuildSource("test-build-source", shared.BuildSourceRepoURL, secretID)
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()
 			namespace := created.GetNamespace()
@@ -740,9 +743,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 				shared.DeleteSecret(client, orgID, teamName, secretID)
 			})
 
-			By("Creating a stack with a build source pointing to a branch with a broken Dockerfile")
+			By("Creating a stack with a build source pointing to a branch with a broken Dockerfile and deploying")
 			stack := shared.CreateStackWithBrokenBuildSource("test-build-fail", shared.BuildSourceRepoURL, secretID)
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()
 			namespace := created.GetNamespace()
