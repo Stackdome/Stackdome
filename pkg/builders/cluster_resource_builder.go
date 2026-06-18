@@ -19,7 +19,7 @@ import (
 type ClusterResourceBuilder interface {
 	BuildStackCR(stack *models.Stack) (*corev1alpha1.Stack, error)
 	GetStackCRHash(stack *models.Stack) (string, error)
-	BuildStackResourceCR(stackResource *models.StackResource) (*corev1alpha1.StackResource, error)
+	BuildStackResourceCR(stackResource *models.StackResource, stackName string) (*corev1alpha1.StackResource, error)
 	BuildVolumeCR(ctx context.Context, volume *models.Volume) (*storagev1alpha1.Volume, error)
 }
 
@@ -53,7 +53,7 @@ func (b *clusterResourceBuilder) GetStackCRHash(stack *models.Stack) (string, er
 	printer.Fprintf(hasher, "%#v", stackCR)
 
 	for _, sr := range stack.StackResources {
-		srCR, err := b.BuildStackResourceCR(sr)
+		srCR, err := b.BuildStackResourceCR(sr, stack.Name)
 		if err != nil {
 			return "", fmt.Errorf("failed to build stack resource CR for '%s': %w", sr.Name, err)
 		}
@@ -132,6 +132,7 @@ func (b *clusterResourceBuilder) BuildVolumeCR(ctx context.Context, volume *mode
 			}
 		}
 	}
+	res.SetGroupVersionKind(storagev1alpha1.GroupVersion.WithKind("Volume"))
 	return &res, nil
 }
 
@@ -156,24 +157,12 @@ func (b *clusterResourceBuilder) BuildStackCR(stack *models.Stack) (*corev1alpha
 		},
 	}
 
-	for _, sr := range stack.StackResources {
-		spec, err := b.buildStackResourceSpec(sr)
-		if err != nil {
-			return nil, err
-		}
-		if hasTLSPorts(spec) {
-			if stackCR.Annotations == nil {
-				stackCR.Annotations = map[string]string{}
-			}
-			stackCR.Annotations[corev1alpha1.ClusterIssuerAnnotation] = models.DefaultClusterIssuerName
-			break
-		}
-	}
+	stackCR.SetGroupVersionKind(corev1alpha1.GroupVersion.WithKind("Stack"))
 
 	return stackCR, nil
 }
 
-func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.StackResource) (*corev1alpha1.StackResource, error) {
+func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.StackResource, stackName string) (*corev1alpha1.StackResource, error) {
 	stackResourceSpec, err := b.buildStackResourceSpec(stackResource)
 	if err != nil {
 		return nil, err
@@ -185,6 +174,7 @@ func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.Stac
 			Namespace: stackResource.Namespace,
 			Labels: map[string]string{
 				corev1alpha1.LabelStackID:      stackResource.StackID,
+				corev1alpha1.LabelStackName:    stackName,
 				corev1alpha1.LabelResourceName: stackResource.Name,
 				corev1alpha1.LabelResourceID:   stackResource.ID,
 				corev1alpha1.LabelManagedBy:    corev1alpha1.ManagedByStackdome,
@@ -200,6 +190,7 @@ func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.Stac
 		stackResourceCR.Annotations[corev1alpha1.ClusterIssuerAnnotation] = models.DefaultClusterIssuerName
 	}
 
+	stackResourceCR.SetGroupVersionKind(corev1alpha1.GroupVersion.WithKind("StackResource"))
 	return stackResourceCR, nil
 }
 

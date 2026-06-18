@@ -4,14 +4,13 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/samber/lo"
 )
 
 const (
-	StackIDLabel       = "stack.stackdome.io/id"
+	StackIDLabel       = "core.stackdome.io/stack-id"
 	StackIDAnnotation  = "stack.stackdome.io/id"
 	StackRevisionLabel = "stack.stackdome.io/revision"
 )
@@ -32,6 +31,17 @@ const (
 	StackError       StackState = "Error"
 	StackDegraded    StackState = "Degraded"
 	StackProgressing StackState = "Progressing"
+)
+
+// StackPhase mirrors the cluster-agent's phase vocabulary for API-facing typed enums.
+type StackPhase string
+
+const (
+	StackPhaseReady       StackPhase = "Ready"
+	StackPhasePending     StackPhase = "Pending"
+	StackPhaseFailed      StackPhase = "Failed"
+	StackPhaseDegraded    StackPhase = "Degraded"
+	StackPhaseProgressing StackPhase = "Progressing"
 )
 
 type StackConditionType string
@@ -103,12 +113,12 @@ type StackStatus struct {
 	State                  StackState              `json:"state"`
 	Message                string                  `json:"message"`
 	ObservedCrRevision     string                  `json:"observed_cr_revision"`
-	Conditions             []Condition              `json:"conditions"`
+	Conditions             []Condition             `json:"conditions"`
 	LastObservedStatusHash string                  `json:"last_observed_status_hash"`
 	LastValidationRun      *ValidationRun          `json:"last_validation_run"`
 	TargetRevision         string                  `json:"target_revision,omitempty"`
-	LastConverged          *StackConvergenceRecord  `json:"last_converged,omitempty"`
-	Resources              []StackResourceSummary   `json:"resources,omitempty"`
+	LastConverged          *StackConvergenceRecord `json:"last_converged,omitempty"`
+	Resources              []StackResourceSummary  `json:"resources,omitempty"`
 }
 
 func (s *StackStatus) GetLastConverged() *StackConvergenceRecord {
@@ -210,25 +220,6 @@ func (ws *Stack) HasVolumeMounts() bool {
 		}
 	}
 	return false
-}
-
-func (ws *Stack) UsesInClusterRegistry() bool {
-	for _, resource := range ws.StackResources {
-		if resource.BuildConfig != nil && resource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
-			return true
-		}
-	}
-	return false
-}
-
-func (ws *Stack) PopulateInternalImageRegistryUrlsForResources(registryUrl string) {
-	for i := range ws.StackResources {
-		curr := ws.StackResources[i]
-		if curr.BuildConfig != nil && curr.BuildConfig.BuildImageRepository.UseInClusterRegistry {
-			curr.BuildConfig.ImageRepositoryUrl = fmt.Sprintf(
-				"%s/%s/%s/%s", registryUrl, ws.OrganisationID, ws.Name, curr.Name)
-		}
-	}
 }
 
 func (ws *Stack) VolumeMountIds() []string {

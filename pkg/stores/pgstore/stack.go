@@ -46,14 +46,6 @@ func (w *stackStore) Create(ctx context.Context, spec *models.Stack) (*models.St
 		tx.Rollback()
 		return nil, errors.GeneralError("failed to create stack: %s", err.Error())
 	}
-	for _, resource := range spec.StackResources {
-		resource.StackID = spec.ID
-		resource.UserID = spec.UserID
-		if _, err := w.stackResourceStore.CreateWithTx(ctx, resource, spec); err != nil {
-			tx.Rollback()
-			return nil, errors.GeneralError("failed to create stack: errored creating stack resource '%s': %v", resource.Name, err)
-		}
-	}
 	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(ctx, spec.ID, spec.Connections); err != nil {
 		tx.Rollback()
 		return nil, errors.GeneralError("failed to create stack connections: %v", err)
@@ -103,12 +95,6 @@ func (w *stackStore) CreateWithTx(ctx context.Context, spec *models.Stack) (*mod
 
 	if err := tx.Model(&models.Stack{}).Omit(clause.Associations).Create(spec).Error; err != nil {
 		return nil, errors.GeneralError("failed to create stack: %s", err.Error())
-	}
-	for _, resource := range spec.StackResources {
-		resource.StackID = spec.ID
-		if _, err := w.stackResourceStore.CreateWithTx(ctx, resource, spec); err != nil {
-			return nil, errors.GeneralError("failed to create stack: create stack resource: %v", err)
-		}
 	}
 	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(ctx, spec.ID, spec.Connections); err != nil {
 		return nil, errors.GeneralError("failed to create stack connections: %v", err)
@@ -279,7 +265,7 @@ func (w *stackStore) GetByName(ctx context.Context, name string, userID string) 
 }
 
 func (w *stackStore) Update(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
-	existingStack, err := w.GetByID(ctx, id)
+	_, err := w.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -289,35 +275,6 @@ func (w *stackStore) Update(ctx context.Context, id string, spec *models.Stack) 
 	if err := tx.Model(&models.Stack{}).Omit(clause.Associations).Where("id = ?", id).Updates(spec).Error; err != nil {
 		tx.Rollback()
 		return nil, errors.GeneralError("failed to update stack: %s", err.Error())
-	}
-	existingResourceMap := existingStack.ResourcesMap()
-
-	for _, resource := range spec.StackResources {
-		resource.StackID = existingStack.ID
-		resource.UserID = existingStack.UserID
-		if currentResource, ok := existingResourceMap[resource.Name]; ok {
-			if _, err := w.stackResourceStore.UpdateWithTx(txCtx, currentResource.ID, resource, spec); err != nil {
-				tx.Rollback()
-				return nil, err
-			}
-		} else {
-			if _, err := w.stackResourceStore.CreateWithTx(txCtx, resource, spec); err != nil {
-				tx.Rollback()
-				return nil, err
-			}
-		}
-	}
-
-	patchResourceMap := spec.ResourcesMap()
-
-	// Delete resources that are not in the new spec
-	for _, resource := range existingStack.StackResources {
-		if _, ok := patchResourceMap[resource.Name]; !ok {
-			if err := w.stackResourceStore.DeleteWithTx(txCtx, resource.ID); err != nil {
-				tx.Rollback()
-				return nil, errors.GeneralError("failed to update stack. error deleting stack resource '%s': %v", resource.Name, err)
-			}
-		}
 	}
 	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(txCtx, id, spec.Connections); err != nil {
 		tx.Rollback()
@@ -340,7 +297,7 @@ func (w *stackStore) UpdateForDelete(ctx context.Context, id string, spec *model
 }
 
 func (w *stackStore) UpdateWithTx(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
-	existingStack, err := w.GetByID(ctx, id)
+	_, err := w.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -351,31 +308,6 @@ func (w *stackStore) UpdateWithTx(ctx context.Context, id string, spec *models.S
 	spec.Status = nil
 	if err := tx.Model(&models.Stack{}).Omit(clause.Associations).Where("id = ?", id).Updates(spec).Error; err != nil {
 		return nil, errors.GeneralError("failed to update stack: %s", err.Error())
-	}
-	existingResourceMap := existingStack.ResourcesMap()
-	for _, patchResource := range spec.StackResources {
-		patchResource.StackID = existingStack.ID
-		patchResource.UserID = existingStack.UserID
-		if existingResource, ok := existingResourceMap[patchResource.Name]; ok {
-			if _, err := w.stackResourceStore.UpdateWithTx(ctx, existingResource.ID, patchResource, spec); err != nil {
-				return nil, errors.GeneralError("failed to update stack resource: %v", err)
-			}
-		} else {
-			if _, err := w.stackResourceStore.CreateWithTx(ctx, patchResource, spec); err != nil {
-				return nil, errors.GeneralError("failed to create stack resource: %v", err)
-			}
-		}
-	}
-
-	patchResourceMap := spec.ResourcesMap()
-
-	// Delete resources that are not in the new spec
-	for _, resource := range existingStack.StackResources {
-		if _, ok := patchResourceMap[resource.Name]; !ok {
-			if err := w.stackResourceStore.DeleteWithTx(ctx, resource.ID); err != nil {
-				return nil, errors.GeneralError("failed to update stack: error deleting stack resource '%s': %v", resource.Name, err)
-			}
-		}
 	}
 	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(ctx, id, spec.Connections); err != nil {
 		return nil, errors.GeneralError("failed to update stack connections: %v", err)
