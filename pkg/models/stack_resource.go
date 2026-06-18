@@ -67,12 +67,6 @@ const (
 
 type StackResourcePhase string
 
-const (
-	StackResourcePhasePendingV2 StackResourcePhase = "Pending"
-	StackResourcePhaseReadyV2   StackResourcePhase = "Ready"
-	StackResourcePhaseFailedV2  StackResourcePhase = "Failed"
-)
-
 type StackResourceConditionType string
 
 const (

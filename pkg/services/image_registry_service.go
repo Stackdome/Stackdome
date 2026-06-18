@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
@@ -24,7 +25,7 @@ type ImageRegistryService interface {
 	CreateWithTx(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.ClusterImageRegistryStatus) *errors.ServiceError
 	InjectClusterResourceService(registryClusterService clusterresource.ClusterImageRegistryService)
-	PopulateInClusterRegistryUrlsForStack(ctx context.Context, stack *models.Stack) *errors.ServiceError
+	PopulateInClusterRegistryUrlForResource(ctx context.Context, orgID, stackName string, resource *models.StackResource) *errors.ServiceError
 	Delete(ctx context.Context, orgID, ID string) *errors.ServiceError
 }
 
@@ -87,30 +88,33 @@ func (s *clusterImageRegistryService) ListByClusterID(ctx context.Context, orgID
 	return registries, nil
 }
 
-func (s *clusterImageRegistryService) PopulateInClusterRegistryUrlsForStack(ctx context.Context, stack *models.Stack) *errors.ServiceError {
-	if !stack.UsesInClusterRegistry() {
+func (s *clusterImageRegistryService) PopulateInClusterRegistryUrlForResource(ctx context.Context, orgID, stackName string, resource *models.StackResource) *errors.ServiceError {
+	if resource.BuildConfig == nil || !resource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
 		return nil
 	}
-	clusterRegistry, err := s.GetForOrg(ctx, stack.OrganisationID)
+
+	clusterRegistry, err := s.GetForOrg(ctx, orgID)
 	if err != nil {
 		if err.Code == errors.ErrorNotFound {
-			return errors.BadRequest("no cluster registry found for organisation '%s'", stack.OrganisationID)
+			return errors.BadRequest("no cluster registry found for organisation '%s'", orgID)
 		}
-		return errors.GeneralError("failed to get cluster registry for organisation '%s': %s", stack.OrganisationID, err.Error())
+		return errors.GeneralError("failed to get cluster registry for organisation '%s': %s", orgID, err.Error())
 	}
 	if clusterRegistry.Status.State != models.RegistryStateRunning {
 		return errors.BadRequest("cluster registry '%s' is not running", clusterRegistry.Name)
 	}
-	registryUrl := clusterRegistry.Status.RegistryUrl
-	if len(registryUrl) == 0 {
+	registryURL := clusterRegistry.Status.RegistryUrl
+	if len(registryURL) == 0 {
 		return errors.BadRequest("cluster registry '%s' has no registry URL", clusterRegistry.Name)
 	}
 
-	urlObj, perr := url.Parse(registryUrl)
+	urlObj, perr := url.Parse(registryURL)
 	if perr != nil {
-		return errors.BadRequest("invalid cluster registry URL '%s': %s", registryUrl, perr.Error())
+		return errors.BadRequest("invalid cluster registry URL '%s': %s", registryURL, perr.Error())
 	}
-	stack.PopulateInternalImageRegistryUrlsForResources(urlObj.Hostname())
+
+	resource.BuildConfig.ImageRepositoryUrl = fmt.Sprintf(
+		"%s/%s/%s/%s", urlObj.Hostname(), orgID, stackName, resource.Name)
 	return nil
 }
 

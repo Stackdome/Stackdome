@@ -5,64 +5,250 @@ import (
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
+	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
 
 //go:generate mockgen -source=stack_resource_service.go -destination=stack_resource_service_mock.go -package=services
 
 type StackResourceService interface {
-	BackgroundJobEnqueuerInjectable
+	InjectClusterManager(clusterManager clustermanager.ClusterManager)
 	Create(ctx context.Context, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
 	GetByStackID(ctx context.Context, stackID string) ([]*models.StackResource, *errors.ServiceError)
 	GetByID(ctx context.Context, ID string) (*models.StackResource, *errors.ServiceError)
 	GetByStackIDAndResourceName(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError)
 	InternalGetByStackIDAndResourceName(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError)
+	Update(ctx context.Context, stackID, resourceName string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
+	Delete(ctx context.Context, stackID, resourceName string) *errors.ServiceError
 	UpdateStatus(ctx context.Context, resourceID string, status *models.StackResourceStatus) *errors.ServiceError
-	InternalUpdateExposedPortDomainsWithTx(ctx context.Context, resourceID string, stackResource *models.StackResource) *errors.ServiceError
+	InternalCreateWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
+	InternalUpdateWithTx(ctx context.Context, stack *models.Stack, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
+	InternalDeleteWithTx(ctx context.Context, resourceID string) *errors.ServiceError
+	InternalSyncResourcesWithTx(ctx context.Context, stack *models.Stack, existingStack *models.Stack, desired []*models.StackResource) *errors.ServiceError
 	Restart(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError)
 }
 
 type StackResourceServiceSpec struct {
-	SessionFactory       db.SessionFactory
-	WorkspaceUserService WorkspaceUserService
-	StorageService       StackStorageService
-	Logger               logger.Logger
-	Permissions          auth.PermissionService
-	StackStore           stores.StackStore
+	SessionFactory         db.SessionFactory
+	WorkspaceUserService   WorkspaceUserService
+	StorageService         StackStorageService
+	Logger                 logger.Logger
+	Permissions            auth.PermissionService
+	StackStore             stores.StackStore
+	StackResourceStore     stores.StackResourceStore
+	ClusterRegistryService ImageRegistryService
+	StackDomainService     StackDomainsService
 }
 
 type stackResourceService struct {
-	BackgroundJobEnqueuerDep
-	stackResourceStore   stores.StackResourceStore
-	stackStore           stores.StackStore
-	logger               logger.Logger
-	sessionFactory       db.SessionFactory
-	workspaceUserService WorkspaceUserService
-	storageService       StackStorageService
-	permissions          auth.PermissionService
+	stackResourceStore     stores.StackResourceStore
+	stackStore             stores.StackStore
+	clusterManager         clustermanager.ClusterManager
+	logger                 logger.Logger
+	sessionFactory         db.SessionFactory
+	workspaceUserService   WorkspaceUserService
+	storageService         StackStorageService
+	permissions            auth.PermissionService
+	clusterRegistryService ImageRegistryService
+	domainNameService      StackDomainsService
 }
 
 func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService {
-	return &stackResourceService{
-		stackResourceStore: pgstore.NewStackResourceStore(pgstore.StackResourceStoreSpec{
+	stackResourceStore := spec.StackResourceStore
+	if stackResourceStore == nil {
+		stackResourceStore = pgstore.NewStackResourceStore(pgstore.StackResourceStoreSpec{
 			SessionFactory: spec.SessionFactory,
-		}),
-		stackStore:           spec.StackStore,
-		workspaceUserService: spec.WorkspaceUserService,
-		storageService:       spec.StorageService,
-		logger:               spec.Logger,
-		sessionFactory:       spec.SessionFactory,
-		permissions:          spec.Permissions,
+		})
+	}
+	return &stackResourceService{
+		stackResourceStore:     stackResourceStore,
+		stackStore:             spec.StackStore,
+		workspaceUserService:   spec.WorkspaceUserService,
+		storageService:         spec.StorageService,
+		logger:                 spec.Logger,
+		sessionFactory:         spec.SessionFactory,
+		permissions:            spec.Permissions,
+		clusterRegistryService: spec.ClusterRegistryService,
+		domainNameService:      spec.StackDomainService,
 	}
 }
 
+func (s *stackResourceService) InjectClusterManager(clusterManager clustermanager.ClusterManager) {
+	s.clusterManager = clusterManager
+}
+
 func (s *stackResourceService) Create(ctx context.Context, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
-	return s.stackResourceStore.Create(ctx, resource)
+	stack, stackErr := s.stackStore.GetByID(ctx, resource.StackID)
+	if stackErr != nil {
+		return nil, stackErr
+	}
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, resource.StackID, auth.ActionWrite); permErr != nil {
+		return nil, permErr
+	}
+
+	var created *models.StackResource
+	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		var createErr *errors.ServiceError
+		created, createErr = s.InternalCreateWithTx(txCtx, stack, resource)
+		return createErr
+	}); err != nil {
+		return nil, err
+	}
+
+	return s.stackResourceStore.GetByID(ctx, created.ID)
+}
+
+func (s *stackResourceService) Update(ctx context.Context, stackID, resourceName string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
+	stack, stackErr := s.stackStore.GetByID(ctx, stackID)
+	if stackErr != nil {
+		return nil, stackErr
+	}
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
+		return nil, permErr
+	}
+
+	existing, err := s.stackResourceStore.GetByStackIDAndResourceName(ctx, stackID, resourceName)
+	if err != nil {
+		return nil, err
+	}
+
+	resource.StackID = stackID
+	resource.ID = existing.ID
+	resource.Name = resourceName
+
+	var updated *models.StackResource
+	if txErr := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		var updateErr *errors.ServiceError
+		updated, updateErr = s.InternalUpdateWithTx(txCtx, stack, existing.ID, resource)
+		return updateErr
+	}); txErr != nil {
+		return nil, txErr
+	}
+
+	return s.stackResourceStore.GetByID(ctx, updated.ID)
+}
+
+// prepareResource applies defaults and external lookups before persisting a resource.
+func (s *stackResourceService) prepareResource(ctx context.Context, stack *models.Stack, resource *models.StackResource) *errors.ServiceError {
+	resource.StackID = stack.ID
+	resource.UserID = stack.UserID
+	resource.Namespace = stack.Namespace
+	applyStackResourcePortDefaults(resource)
+	return s.populateRegistryUrlForResource(ctx, stack, resource)
+}
+
+func (s *stackResourceService) populateRegistryUrlForResource(ctx context.Context, stack *models.Stack, resource *models.StackResource) *errors.ServiceError {
+	if resource.BuildConfig == nil || !resource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
+		return nil
+	}
+	if s.clusterRegistryService == nil {
+		return errors.GeneralError("cluster registry service is not configured")
+	}
+	return s.clusterRegistryService.PopulateInClusterRegistryUrlForResource(
+		ctx, stack.OrganisationID, stack.Name, resource)
+}
+
+func (s *stackResourceService) InternalCreateWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
+	if err := s.prepareResource(ctx, stack, resource); err != nil {
+		return nil, err
+	}
+	created, err := s.stackResourceStore.CreateWithTx(ctx, resource, stack)
+	if err != nil {
+		return nil, err
+	}
+	return s.finalizeExposedPortsForResourceWithTx(ctx, stack, created)
+}
+
+func (s *stackResourceService) InternalUpdateWithTx(ctx context.Context, stack *models.Stack, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
+	resource.ID = resourceID
+	if err := s.prepareResource(ctx, stack, resource); err != nil {
+		return nil, err
+	}
+	updated, err := s.stackResourceStore.UpdateWithTx(ctx, resourceID, resource, stack)
+	if err != nil {
+		return nil, err
+	}
+	return s.finalizeExposedPortsForResourceWithTx(ctx, stack, updated)
+}
+
+func (s *stackResourceService) InternalDeleteWithTx(ctx context.Context, resourceID string) *errors.ServiceError {
+	if s.domainNameService != nil {
+		if err := s.domainNameService.InternalDeleteDomainsForResourceWithTx(ctx, resourceID); err != nil {
+			return err
+		}
+	}
+	return s.stackResourceStore.DeleteWithTx(ctx, resourceID)
+}
+
+func (s *stackResourceService) InternalSyncResourcesWithTx(ctx context.Context, stack *models.Stack, existingStack *models.Stack, desired []*models.StackResource) *errors.ServiceError {
+	existingMap := existingStack.ResourcesMap()
+	desiredMap := make(map[string]*models.StackResource, len(desired))
+
+	for _, resource := range desired {
+		desiredMap[resource.Name] = resource
+		if existing, ok := existingMap[resource.Name]; ok {
+			resource.Name = existing.Name
+			if _, err := s.InternalUpdateWithTx(ctx, stack, existing.ID, resource); err != nil {
+				return err
+			}
+		} else {
+			if _, err := s.InternalCreateWithTx(ctx, stack, resource); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, existing := range existingStack.StackResources {
+		if _, ok := desiredMap[existing.Name]; !ok {
+			if err := s.InternalDeleteWithTx(ctx, existing.ID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *stackResourceService) finalizeExposedPortsForResourceWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
+	if s.domainNameService == nil {
+		return resource, nil
+	}
+	if err := s.domainNameService.PopulateAndSaveExposedPortDomainsForResourceWithTx(ctx, stack, resource); err != nil {
+		return nil, err
+	}
+	if !stackResourceHasExposedPorts(resource.Ports) {
+		return resource, nil
+	}
+	if err := s.stackResourceStore.UpdatePortsWithTx(ctx, resource.ID, resource); err != nil {
+		return nil, err
+	}
+	return resource, nil
+}
+
+func (s *stackResourceService) Delete(ctx context.Context, stackID, resourceName string) *errors.ServiceError {
+	stack, stackErr := s.stackStore.GetByID(ctx, stackID)
+	if stackErr != nil {
+		return stackErr
+	}
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
+		return permErr
+	}
+
+	existing, err := s.stackResourceStore.GetByStackIDAndResourceName(ctx, stackID, resourceName)
+	if err != nil {
+		return err
+	}
+
+	return s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		return s.InternalDeleteWithTx(txCtx, existing.ID)
+	})
 }
 
 func (s *stackResourceService) GetByStackID(ctx context.Context, stackID string) ([]*models.StackResource, *errors.ServiceError) {
@@ -110,20 +296,6 @@ func (s *stackResourceService) UpdateStatus(ctx context.Context, resourceID stri
 	return s.stackResourceStore.UpdateStatus(ctx, resourceID, status)
 }
 
-func (s *stackResourceService) InternalUpdateExposedPortDomainsWithTx(ctx context.Context, resourceID string, stackResource *models.StackResource) *errors.ServiceError {
-	for _, port := range stackResource.Ports {
-		if port.ExposedToPublic {
-			if port.ExposedFqdn == "" {
-				return errors.GeneralError("port exposed to public but fqdn is empty")
-			}
-			if err := s.stackResourceStore.UpdatePortsWithTx(ctx, resourceID, stackResource); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 func (s *stackResourceService) Restart(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError) {
 	stack, stackErr := s.stackStore.GetByID(ctx, stackID)
 	if stackErr != nil {
@@ -149,9 +321,34 @@ func (s *stackResourceService) Restart(ctx context.Context, stackID, resourceNam
 		return nil, updateErr
 	}
 
-	if enqueueErr := s.BackgroundJobEnqueuer.Enqueue(&models.Stack{ID: stackID}); enqueueErr != nil {
-		return nil, errors.GeneralError("failed to enqueue restart job for stack '%s': %s", stackID, enqueueErr.Error())
+	// Patch the StackResource CR in the cluster directly with the new restart timestamp.
+	// Best-effort: if the cluster is unreachable, the DB is already updated and the
+	// next release apply will set the correct restart time on the CR.
+	if s.clusterManager != nil {
+		s.patchRestartRequestInCluster(ctx, stack, resource, now)
 	}
 
 	return updated, nil
+}
+
+func (s *stackResourceService) patchRestartRequestInCluster(ctx context.Context, stack *models.Stack, resource *models.StackResource, restartTime time.Time) {
+	clusterClient, err := s.clusterManager.GetClient(stack.ClusterID)
+	if err != nil {
+		s.logger.Warn(ctx, "restart: failed to get cluster client for cluster '%s': %v", stack.ClusterID, err)
+		return
+	}
+
+	existing := &corev1alpha1.StackResource{}
+	if err := clusterClient.Get(ctx, client.ObjectKey{
+		Name:      resource.Name,
+		Namespace: resource.Namespace,
+	}, existing); err != nil {
+		s.logger.Warn(ctx, "restart: failed to get StackResource CR '%s/%s': %v", resource.Namespace, resource.Name, err)
+		return
+	}
+
+	existing.Spec.RestartRequest = &metav1.Time{Time: restartTime}
+	if err := clusterClient.Update(ctx, existing); err != nil {
+		s.logger.Warn(ctx, "restart: failed to update StackResource CR '%s/%s': %v", resource.Namespace, resource.Name, err)
+	}
 }

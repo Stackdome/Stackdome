@@ -32,9 +32,8 @@ type VolumeService interface {
 	InternalDeleteVolumesUsedByStackFromDB(ctx context.Context, stackID string) *errors.ServiceError
 	DeleteWithTx(ctx context.Context, ID string) *errors.ServiceError
 	ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError)
-	UpdateVolumeInUseByStackWithTx(ctx context.Context, volumeID string, stackID string) *errors.ServiceError
-	CreateVolumesInDBForStackWithTx(ctx context.Context, stack *models.Stack) ([]*models.Volume, *errors.ServiceError)
-	UpdateVolumesInDBForStackWithTx(ctx context.Context, patch *models.Stack, existingStack *models.Stack) ([]*models.Volume, *errors.ServiceError)
+	InternalCreateWithTx(ctx context.Context, stack *models.Stack, volume *models.Volume) (*models.Volume, *errors.ServiceError)
+	InternalSyncVolumesWithTx(ctx context.Context, stack *models.Stack, existingStack *models.Stack, desired []*models.Volume) *errors.ServiceError
 }
 
 type VolumeServiceSpec struct {
@@ -96,48 +95,37 @@ func (s *volumeService) ListVolumesUsedByStack(ctx context.Context, stackID stri
 	return volumes, nil
 }
 
-func (s *volumeService) CreateVolumesInDBForStackWithTx(ctx context.Context, stack *models.Stack) ([]*models.Volume, *errors.ServiceError) {
-	createdVolumes := make([]*models.Volume, 0)
-	for _, volume := range stack.Volumes {
-		volume.NamespaceID = stack.NamespaceID
-		volume.OrganisationID = stack.OrganisationID
-		volume.TeamID = stack.TeamID
-		volume.UserID = stack.UserID
-		volume.Namespace = stack.Namespace
+func (s *volumeService) InternalCreateWithTx(ctx context.Context, stack *models.Stack, volume *models.Volume) (*models.Volume, *errors.ServiceError) {
+	volume.NamespaceID = stack.NamespaceID
+	volume.OrganisationID = stack.OrganisationID
+	volume.TeamID = stack.TeamID
+	volume.UserID = stack.UserID
+	volume.Namespace = stack.Namespace
 
-		createdVolume, err := s.CreateInDbWithTx(ctx, volume)
-		if err != nil {
-			return nil, errors.GeneralError("failed to create volume '%s': %s", volume.Name, err.Error())
-		}
-		createdVolumes = append(createdVolumes, createdVolume)
+	createdVolume, err := s.CreateInDbWithTx(ctx, volume)
+	if err != nil {
+		return nil, errors.GeneralError("failed to create volume '%s': %s", volume.Name, err.Error())
 	}
-	return createdVolumes, nil
+	if err := s.associateVolumeWithStackWithTx(ctx, createdVolume.ID, stack.ID); err != nil {
+		return nil, err
+	}
+	return createdVolume, nil
 }
 
-func (s *volumeService) UpdateVolumesInDBForStackWithTx(ctx context.Context, patch *models.Stack, existingStack *models.Stack) ([]*models.Volume, *errors.ServiceError) {
+func (s *volumeService) InternalSyncVolumesWithTx(ctx context.Context, stack *models.Stack, existingStack *models.Stack, desired []*models.Volume) *errors.ServiceError {
 	existingVolumesMap := existingStack.VolumesMap()
-	newlyCreatedVolumes := make([]*models.Volume, 0)
-	for _, volume := range patch.Volumes {
-		volume.NamespaceID = existingStack.NamespaceID
-		volume.OrganisationID = existingStack.OrganisationID
-		volume.TeamID = existingStack.TeamID
-		volume.UserID = existingStack.UserID
-		volume.Namespace = existingStack.Namespace
+	for _, volume := range desired {
 		if _, found := existingVolumesMap[volume.Name]; found {
-			// Updating existing volumes currently not implemented.
-			// NOOP
-		} else {
-			createdVolume, err := s.CreateInDbWithTx(ctx, volume)
-			if err != nil {
-				return nil, errors.GeneralError("failed to create volume '%s': %s", volume.Name, err.Error())
-			}
-			newlyCreatedVolumes = append(newlyCreatedVolumes, createdVolume)
+			continue
+		}
+		if _, err := s.InternalCreateWithTx(ctx, stack, volume); err != nil {
+			return err
 		}
 	}
-	return newlyCreatedVolumes, nil
+	return nil
 }
 
-func (s *volumeService) UpdateVolumeInUseByStackWithTx(ctx context.Context, volumeID string, stackID string) *errors.ServiceError {
+func (s *volumeService) associateVolumeWithStackWithTx(ctx context.Context, volumeID, stackID string) *errors.ServiceError {
 	return s.stackVolumeStore.CreateWithTx(ctx, &models.StackVolume{
 		VolumeID: volumeID,
 		StackID:  stackID,

@@ -52,48 +52,39 @@ type releaseServiceForStack interface {
 }
 
 type StackServiceSpec struct {
-	SessionFactory         db.SessionFactory
-	VolumeService          VolumeService
-	ClusterService         ClusterService
-	OrganisationService    OrganisationService
-	StackResourceService   StackResourceService
-	ClusterRegistryService ImageRegistryService
-	NamespaceService       NamespaceService
-	SecretService          SecretService
-	PostgresAddonService   PostgresAddonService
-	TeamService            TeamService
-	Permissions            auth.PermissionService
-	Logger                 logger.Logger
+	SessionFactory       db.SessionFactory
+	VolumeService        VolumeService
+	ClusterService       ClusterService
+	OrganisationService  OrganisationService
+	StackResourceService StackResourceService
+	NamespaceService     NamespaceService
+	SecretService        SecretService
+	PostgresAddonService PostgresAddonService
+	TeamService          TeamService
+	Permissions          auth.PermissionService
+	Logger               logger.Logger
 }
 
 type stackService struct {
-	stackStore             stores.StackStore
-	logger                 logger.Logger
-	sessionFactory         db.SessionFactory
-	volumeService          VolumeService
-	organisationService    OrganisationService
-	stackValidator         validator.StackValidator
-	domainNameService      StackDomainsService
-	stackResourceService   StackResourceService
-	namespaceService       NamespaceService
-	clusterService         ClusterService
-	secretService          SecretService
-	postgresAddonService   PostgresAddonService
-	clusterRegistryService ImageRegistryService
-	defaultingService      DefaultingService[*models.Stack]
-	teamService            TeamService
-	permissions            auth.PermissionService
-	releaseService         releaseServiceForStack
+	stackStore           stores.StackStore
+	logger               logger.Logger
+	sessionFactory       db.SessionFactory
+	volumeService        VolumeService
+	organisationService  OrganisationService
+	stackValidator       validator.StackValidator
+	stackResourceService StackResourceService
+	namespaceService     NamespaceService
+	clusterService       ClusterService
+	secretService        SecretService
+	postgresAddonService PostgresAddonService
+	teamService          TeamService
+	permissions          auth.PermissionService
+	releaseService       releaseServiceForStack
 	ClusterResourceServiceDeps
 	BackgroundJobEnqueuerDep
 }
 
 func NewStackService(spec StackServiceSpec) StackService {
-	stackDomainNameService := NewStackDomainsService(StackDomainsServiceSpec{
-		SessionFactory: spec.SessionFactory,
-		Logger:         spec.Logger,
-	})
-
 	organisationDomainService := NewOrganisationDomainsService(OrganisationDomainsServiceSpec{
 		SessionFactory: spec.SessionFactory,
 		Logger:         spec.Logger,
@@ -112,15 +103,12 @@ func NewStackService(spec StackServiceSpec) StackService {
 			SecretService:        spec.SecretService,
 			PostgresAddonService: spec.PostgresAddonService,
 		}),
-		stackResourceService:   spec.StackResourceService,
-		clusterRegistryService: spec.ClusterRegistryService,
-		namespaceService:       spec.NamespaceService,
-		domainNameService:      stackDomainNameService,
-		secretService:          spec.SecretService,
-		postgresAddonService:   spec.PostgresAddonService,
-		defaultingService:      NewStackDefaultingService(),
-		teamService:            spec.TeamService,
-		permissions:            spec.Permissions,
+		stackResourceService: spec.StackResourceService,
+		namespaceService:     spec.NamespaceService,
+		secretService:        spec.SecretService,
+		postgresAddonService: spec.PostgresAddonService,
+		teamService:          spec.TeamService,
+		permissions:          spec.Permissions,
 	}
 }
 
@@ -154,20 +142,6 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 	}
 	spec.ClusterID = cluster.ID
 
-	// Set default values
-	spec, dErr := s.defaultingService.PopulateDefaultValues(spec)
-	if dErr != nil {
-		return nil, errors.GeneralError("failed to populate default values for stack '%s': %s", spec.Name, dErr.Error())
-	}
-
-	// Populate associations
-	s.populateAssociations(ctx, spec)
-
-	// Set registry urls for stack resources.
-	if err := s.clusterRegistryService.PopulateInClusterRegistryUrlsForStack(ctx, spec); err != nil {
-		return nil, errors.GeneralError("failed to populate in-cluster registry URLs for stack '%s': %s", spec.Name, err.Error())
-	}
-
 	spec.Status = &models.StackStatus{
 		State:   models.StackPending,
 		Message: "Stack is being created",
@@ -175,8 +149,7 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 
 	var createdStack *models.Stack
 	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		// Step 1: Create stack and dependencies in DB
-		createdStack, err = s.createStackAndDepsInDbWithTx(ctx, spec, namespaceForStack)
+		createdStack, err = s.InternalCreateWithTx(ctx, spec, namespaceForStack)
 		if err != nil {
 			return err
 		}
@@ -196,52 +169,41 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 	return createdStack, nil
 }
 
-// Creates stack and all its dependencies in DB wrapped in a transaction. (ctx should be a transaction context)
-func (s *stackService) createStackAndDepsInDbWithTx(ctx context.Context, spec *models.Stack, namespaceForStack *models.Namespace) (*models.Stack, *errors.ServiceError) {
-	// step 1: Create namespace in db
+func (s *stackService) InternalCreateWithTx(ctx context.Context, spec *models.Stack, namespaceForStack *models.Namespace) (*models.Stack, *errors.ServiceError) {
 	namespace, err := s.namespaceService.CreateInDBWithTx(ctx, namespaceForStack)
 	if err != nil {
 		return nil, err
 	}
 	spec.NamespaceID = namespace.ID
 
-	// Step 2: create volumes in db
-	createdVolumes, err := s.volumeService.CreateVolumesInDBForStackWithTx(ctx, spec)
-	if err != nil {
-		return nil, errors.GeneralError("failed to create volumes for stack '%s': %s", spec.Name, err.Error())
-	}
-	spec.Volumes = createdVolumes
+	desiredVolumes := spec.Volumes
+	desiredResources := spec.StackResources
+	shellSpec := stackShellFrom(spec)
 
-	// Step 3: Create the stack to get real IDs
-	var createErr *errors.ServiceError
-	createdStack, createErr := s.stackStore.CreateWithTx(ctx, spec)
+	createdStack, createErr := s.stackStore.CreateWithTx(ctx, &shellSpec)
 	if createErr != nil {
 		return nil, createErr
 	}
 
-	// Step 4: Associate the created stack with the created volumes
-	for _, volume := range createdVolumes {
-		if err := s.volumeService.UpdateVolumeInUseByStackWithTx(ctx, volume.ID, createdStack.ID); err != nil {
-			return nil, errors.GeneralError("failed to update volume '%s' with stack ID '%s': %s", volume.Name, createdStack.ID, err.Error())
+	for _, volume := range desiredVolumes {
+		if _, err := s.volumeService.InternalCreateWithTx(ctx, createdStack, volume); err != nil {
+			return nil, err
 		}
 	}
 
-	createdStack.Volumes = createdVolumes
-	// Step 5: Populate and save the domans for the stack resources with exposed ports.
-	if err := s.domainNameService.PopulateAndSaveExposedPortDomainsForStackWithTx(ctx, createdStack); err != nil {
-		return nil, err
+	volumesForStack, err := s.volumeService.ListVolumesUsedByStack(ctx, createdStack.ID)
+	if err != nil {
+		return nil, errors.GeneralError("failed to list volumes for stack '%s': %s", createdStack.ID, err.Error())
 	}
+	createdStack.Volumes = volumesForStack
 
-	// Step 6: Update stack resources with subdomain prefixes from step 5.
-	for _, stackResource := range createdStack.StackResources {
-		err := s.stackResourceService.InternalUpdateExposedPortDomainsWithTx(ctx, stackResource.ID, stackResource)
-		if err != nil {
-			return nil, errors.GeneralError(
-				"failed to update stack resource '%s' with generated subdomain prefix: %s",
-				stackResource.Name, err.Error())
+	for _, resource := range desiredResources {
+		if _, err := s.stackResourceService.InternalCreateWithTx(ctx, createdStack, resource); err != nil {
+			return nil, err
 		}
 	}
-	stack, err := s.GetStack(ctx, createdStack.ID)
+
+	stack, err := s.stackStore.GetByID(ctx, createdStack.ID)
 	if err != nil {
 		return nil, errors.GeneralError("failed to get created stack '%s': %s", createdStack.Name, err.Error())
 	}
@@ -268,19 +230,10 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 	spec.TeamID = existingStack.TeamID
 	spec.UserID = existingStack.UserID
 
-	// Set default values and populate fields
-	spec, derr := s.defaultingService.PopulateDefaultValues(spec)
-	if derr != nil {
-		return nil, errors.GeneralError("failed to populate default values for stack '%s': %s", spec.Name, derr.Error())
-	}
-
-	s.populateAssociations(ctx, spec)
-
 	// Update stack and domains within transaction
 	var updatedStack *models.Stack
 	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		// Step 5: Get updated stack and update in cluster
-		updatedStack, err = s.updateStackAndDepsInDbWithTx(ctx, spec, existingStack)
+		updatedStack, err = s.InternalUpdateWithTx(ctx, spec, existingStack)
 		if err != nil {
 			return err
 		}
@@ -293,50 +246,31 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 	return updatedStack, nil
 }
 
-func (s *stackService) updateStackAndDepsInDbWithTx(ctx context.Context, spec *models.Stack, existingStack *models.Stack) (*models.Stack, *errors.ServiceError) {
-	// Step 1: Update volumes in db
-	newlyCreatedVolumesInPatch, err := s.volumeService.UpdateVolumesInDBForStackWithTx(ctx, spec, existingStack)
-	if err != nil {
-		return nil, err
+func (s *stackService) InternalUpdateWithTx(ctx context.Context, spec *models.Stack, existingStack *models.Stack) (*models.Stack, *errors.ServiceError) {
+	desiredVolumes := spec.Volumes
+	desiredResources := spec.StackResources
+	shellSpec := stackShellFrom(spec)
+
+	updatedStack, updateErr := s.stackStore.UpdateWithTx(ctx, existingStack.ID, &shellSpec)
+	if updateErr != nil {
+		return nil, updateErr
 	}
 
-	// Step 2: Associate the newly created volumes with the stack.
-	for _, volume := range newlyCreatedVolumesInPatch {
-		if err := s.volumeService.UpdateVolumeInUseByStackWithTx(ctx, volume.ID, existingStack.ID); err != nil {
-			return nil, errors.GeneralError("failed to update volume '%s' with stack ID '%s': %s", volume.Name, existingStack.ID, err.Error())
-		}
+	if err := s.volumeService.InternalSyncVolumesWithTx(ctx, updatedStack, existingStack, desiredVolumes); err != nil {
+		return nil, err
 	}
 
 	volumesForStack, err := s.volumeService.ListVolumesUsedByStack(ctx, existingStack.ID)
 	if err != nil {
 		return nil, errors.GeneralError("failed to list volumes used by stack '%s': %s", existingStack.ID, err.Error())
 	}
-	spec.Volumes = volumesForStack
-
-	updatedStack, updateErr := s.stackStore.UpdateWithTx(ctx, existingStack.ID, spec)
-	if updateErr != nil {
-		return nil, updateErr
-	}
-
 	updatedStack.Volumes = volumesForStack
 
-	// Step 4: Populate and save the domains for the stack resources with exposed ports.
-	if err := s.domainNameService.PopulateAndSaveExposedPortDomainsForStackWithTx(ctx, updatedStack); err != nil {
+	if err := s.stackResourceService.InternalSyncResourcesWithTx(ctx, updatedStack, existingStack, desiredResources); err != nil {
 		return nil, err
 	}
 
-	// Step 5: Update stack resources with subdomain prefixes from step 5.
-	for _, stackResource := range updatedStack.StackResources {
-		err = s.stackResourceService.InternalUpdateExposedPortDomainsWithTx(ctx, stackResource.ID, stackResource)
-		if err != nil {
-			return nil, errors.GeneralError(
-				"failed to update stack resource '%s' with domain information: %s",
-				stackResource.Name, err.Error())
-		}
-	}
-
-	// Step 5: Get updated stack and update in cluster
-	stack, err := s.GetStack(ctx, updatedStack.ID)
+	stack, err := s.stackStore.GetByID(ctx, updatedStack.ID)
 	if err != nil {
 		return nil, errors.GeneralError("failed to get updated stack '%s': %s", updatedStack.Name, err.Error())
 	}
@@ -637,14 +571,6 @@ func (s *stackService) UpdateStackCrRevision(ctx context.Context, ID string, rev
 		return err
 	}
 	return nil
-}
-
-func (s *stackService) populateAssociations(ctx context.Context, spec *models.Stack) {
-	// Populate the stack resources with the user ID and namespace
-	for i := range spec.StackResources {
-		spec.StackResources[i].UserID = spec.UserID
-		spec.StackResources[i].Namespace = spec.Namespace
-	}
 }
 
 func connectionNodeLabel(ref models.TopologyNodeRef) string {

@@ -21,14 +21,12 @@ func TestStackResourceService_Restart(t *testing.T) {
 		mockStackStore := mocks.NewMockStackStore(ctrl)
 		mockResourceStore := mocks.NewMockStackResourceStore(ctrl)
 		mockPermissions := mocks.NewMockPermissionService(ctrl)
-		mockEnqueuer := mocks.NewMockBackgroundJobEnqueuer(ctrl)
 
 		svc := &stackResourceService{
 			stackStore:         mockStackStore,
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
 		}
-		svc.BackgroundJobEnqueuer = mockEnqueuer
 
 		ctx := context.Background()
 		stackID := "stack-123"
@@ -41,9 +39,9 @@ func TestStackResourceService_Restart(t *testing.T) {
 		}
 
 		resource := &models.StackResource{
-			ID:             "resource-789",
-			StackID:        stackID,
-			Name:           resourceName,
+			ID:              "resource-789",
+			StackID:         stackID,
+			Name:            resourceName,
 			LifecycleConfig: nil,
 		}
 
@@ -76,10 +74,6 @@ func TestStackResourceService_Restart(t *testing.T) {
 				return updatedResource, nil
 			})
 
-		mockEnqueuer.EXPECT().
-			Enqueue(&models.Stack{ID: stackID}).
-			Return(nil)
-
 		result, err := svc.Restart(ctx, stackID, resourceName)
 
 		assert.Nil(t, err)
@@ -96,14 +90,12 @@ func TestStackResourceService_Restart(t *testing.T) {
 		mockStackStore := mocks.NewMockStackStore(ctrl)
 		mockResourceStore := mocks.NewMockStackResourceStore(ctrl)
 		mockPermissions := mocks.NewMockPermissionService(ctrl)
-		mockEnqueuer := mocks.NewMockBackgroundJobEnqueuer(ctrl)
 
 		svc := &stackResourceService{
 			stackStore:         mockStackStore,
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
 		}
-		svc.BackgroundJobEnqueuer = mockEnqueuer
 
 		ctx := context.Background()
 		stackID := "stack-123"
@@ -137,14 +129,12 @@ func TestStackResourceService_Restart(t *testing.T) {
 		mockStackStore := mocks.NewMockStackStore(ctrl)
 		mockResourceStore := mocks.NewMockStackResourceStore(ctrl)
 		mockPermissions := mocks.NewMockPermissionService(ctrl)
-		mockEnqueuer := mocks.NewMockBackgroundJobEnqueuer(ctrl)
 
 		svc := &stackResourceService{
 			stackStore:         mockStackStore,
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
 		}
-		svc.BackgroundJobEnqueuer = mockEnqueuer
 
 		ctx := context.Background()
 		stackID := "stack-123"

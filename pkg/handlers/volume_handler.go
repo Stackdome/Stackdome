@@ -96,6 +96,25 @@ func (h *volumeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	handle(w, r, cfg, http.StatusCreated)
 }
 
+func (h *volumeHandler) ListByStackID(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			ctx := r.Context()
+			stackID := mux.Vars(r)["id"]
+			objs, err := h.volumeService.ListVolumesUsedByStack(ctx, stackID)
+			if err != nil {
+				return nil, err
+			}
+			listResp := openapi.VolumeList{
+				Items: presenters.PresentVolumeList(objs, true),
+				Total: ptr.To(int32(len(objs))),
+			}
+			return listResp, nil
+		},
+	}
+	handleList(w, r, cfg)
+}
+
 func (h *volumeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {

@@ -353,16 +353,28 @@ func (s *clusterStackService) setImageSpec(spec *corev1alpha1.StackResourceSpec,
 }
 
 func (s *clusterStackService) setEnvVars(spec *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) error {
-	if stackResource.ExecutionConfig != nil && len(stackResource.ExecutionConfig.Env) > 0 {
-		spec.EnvironmentVariables = make([]corev1alpha1.EnvironmentVariable, len(stackResource.ExecutionConfig.Env))
-		for i, envVar := range stackResource.ExecutionConfig.Env {
-			spec.EnvironmentVariables[i] = corev1alpha1.EnvironmentVariable{
-				Name:  envVar.Name,
-				Value: envVar.Value,
-			}
-		}
+	if stackResource.ExecutionConfig == nil || len(stackResource.ExecutionConfig.Env) == 0 {
+		return nil
 	}
-
+	spec.EnvironmentVariables = make([]corev1alpha1.EnvironmentVariable, len(stackResource.ExecutionConfig.Env))
+	for i, envVar := range stackResource.ExecutionConfig.Env {
+		ev := corev1alpha1.EnvironmentVariable{
+			Name: envVar.Name,
+		}
+		if envVar.SecretKeyRef != nil {
+			ev.ValueFrom = &corev1alpha1.EnvVarSource{
+				SecretKeyRef: corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: envVar.SecretKeyRef.SecretName,
+					},
+					Key: envVar.SecretKeyRef.Key,
+				},
+			}
+		} else {
+			ev.Value = envVar.Value
+		}
+		spec.EnvironmentVariables[i] = ev
+	}
 	return nil
 }
 
