@@ -32,15 +32,8 @@ type ReleaseWorkerSpec struct {
 }
 
 type releaseWorker struct {
-	releaseService       releaseService
-	stackService         stackService
-	clusterManager       clustermanager.ClusterManager
-	crBuilder            builders.ClusterResourceBuilder
-	secretBuilder        builders.SecretBuilder
-	secretService        secretService
-	postgresAddonService postgresAddonService
-	volumeService        volumeService
-	resolver             *stackdeploy.Resolver
+	releaseService releaseService
+	subReconcilers []subReconciler
 	worker.BaseWorker
 }
 
@@ -48,16 +41,14 @@ var _ worker.Worker = (*releaseWorker)(nil)
 
 func NewReleaseWorker(spec ReleaseWorkerSpec) worker.Worker {
 	return &releaseWorker{
-		releaseService:       spec.ReleaseService,
-		stackService:         spec.StackService,
-		clusterManager:       spec.ClusterManager,
-		crBuilder:            spec.CRBuilder,
-		secretBuilder:        spec.SecretBuilder,
-		secretService:        spec.SecretService,
-		postgresAddonService: spec.PostgresAddonService,
-		volumeService:        spec.VolumeService,
-		resolver:             spec.Resolver,
-		BaseWorker:           worker.NewBaseWorker(ReleaseWorkerName, spec.Env),
+		releaseService: spec.ReleaseService,
+		subReconcilers: []subReconciler{
+			newFreshnessReconciler(spec),
+			newRenderReconciler(spec),
+			newApplyReconciler(spec),
+			newConvergeReconciler(spec),
+		},
+		BaseWorker: worker.NewBaseWorker(ReleaseWorkerName, spec.Env),
 	}
 }
 
@@ -86,14 +77,30 @@ func (w *releaseWorker) Execute(ctx context.Context, operand worker.Operand) (wo
 
 	w.Logger().Infof("processing release %s (stack=%s, state=%s)", release.ID, release.StackID, release.State)
 
-	switch release.State {
-	case models.ReleaseStatePending, models.ReleaseStateRendering:
-		return w.render(ctx, release)
-	case models.ReleaseStateApplying:
-		return w.applyAndConverge(ctx, release)
-	default:
-		return worker.Result{}, nil
+	res, reconcileErr := w.reconcile(ctx, release)
+	if reconcileErr != nil {
+		w.Logger().Errorf("failed to reconcile release %s: %v", release.ID, reconcileErr)
+		return worker.Result{}, w.WorkerError.NewError("failed to reconcile release %s: %v", release.ID, reconcileErr)
 	}
+	return res, nil
+}
+
+func (w *releaseWorker) reconcile(ctx context.Context, release *models.StackRelease) (worker.Result, error) {
+	for _, sr := range w.subReconcilers {
+		w.Logger().Infof("running sub-reconciler: %s for release: %s", sr.Name(), release.ID)
+		result, err := sr.Reconcile(ctx, release)
+		switch {
+		case err != nil:
+			return worker.Result{}, err
+		case result.resultStop:
+			return worker.Result{}, nil
+		case result.resultRequeue:
+			return worker.Result{Requeue: true}, nil
+		case result.resultRequeueAfter != nil:
+			return worker.Result{RequeueAfter: *result.resultRequeueAfter}, nil
+		}
+	}
+	return worker.Result{}, nil
 }
 
 func (w *releaseWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
@@ -106,11 +113,4 @@ func (w *releaseWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors
 		operands = append(operands, &models.StackRelease{ID: r.ID})
 	}
 	return operands, nil
-}
-
-func (w *releaseWorker) fail(ctx context.Context, release *models.StackRelease, msg string) {
-	w.Logger().Errorf("release %s failed: %s", release.ID, msg)
-	if _, err := w.releaseService.MarkFailed(ctx, release.ID, msg, nil); err != nil {
-		w.Logger().Errorf("failed to mark release %s as failed: %v", release.ID, err)
-	}
 }

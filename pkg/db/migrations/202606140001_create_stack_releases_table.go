@@ -13,8 +13,8 @@ func createStackReleasesTable() *gormigrate.Migration {
 		Migrate: func(tx *gorm.DB) error {
 			sql := `
 CREATE TABLE stack_releases (
-    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    stack_id          UUID NOT NULL REFERENCES stacks(id) ON DELETE CASCADE,
+    id                TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    stack_id          TEXT NOT NULL REFERENCES stacks(id) ON DELETE CASCADE,
     sequence          INT  NOT NULL,
     state             TEXT NOT NULL,
     message           TEXT,
@@ -26,7 +26,7 @@ CREATE TABLE stack_releases (
     pins              JSONB,
     renderer_version  TEXT,
     outcome           JSONB,
-    created_by        UUID,
+    created_by        TEXT,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     rendered_at       TIMESTAMPTZ,

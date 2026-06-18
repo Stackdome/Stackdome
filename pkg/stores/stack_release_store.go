@@ -8,9 +8,8 @@ import (
 )
 
 type StackReleaseStore interface {
-	// CreateSuperseding atomically supersedes any Pending/Rendering releases for this
-	// stack and inserts a new release with sequence = max(sequence)+1.
-	CreateSuperseding(ctx context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError)
+	// Create inserts a new release with sequence = max(sequence)+1.
+	Create(ctx context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError)
 
 	GetByID(ctx context.Context, id string) (*models.StackRelease, *errors.ServiceError)
 
@@ -26,12 +25,13 @@ type StackReleaseStore interface {
 	// CAS state transitions. The bool return indicates whether THIS caller won
 	// the compare-and-swap (i.e., the row was in the expected state).
 
-	MarkRendering(ctx context.Context, id string) (bool, *errors.ServiceError)
-	MarkApplyingDirect(ctx context.Context, id string) (bool, *errors.ServiceError)
+	MarkInProgress(ctx context.Context, id string) (bool, *errors.ServiceError)
 	SaveManifest(ctx context.Context, id string, m *models.ReleaseManifest, rev string, pins models.ReleasePins, rendererVersion string) (bool, *errors.ServiceError)
 	MarkReleased(ctx context.Context, id string, outcome models.ReleaseOutcome) (bool, *errors.ServiceError)
 	MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError)
 	Cancel(ctx context.Context, id string) (bool, *errors.ServiceError)
+	MarkCancelled(ctx context.Context, id string, reason string) (bool, *errors.ServiceError)
+	MarkSuperseded(ctx context.Context, id string, reason string) (bool, *errors.ServiceError)
 
 	// AppendImageDigests merges image digests into the release pins.
 	AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError

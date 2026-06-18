@@ -7,15 +7,18 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
+	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
+	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/worker"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
+
+var errReleaseSuperseded = stderrors.New("release superseded by cluster annotation")
 
 type transientApplyError struct {
 	err error
@@ -42,7 +45,8 @@ func isTransientClusterError(err error) bool {
 		k8sapierrors.IsServiceUnavailable(err) ||
 		k8sapierrors.IsTooManyRequests(err) ||
 		k8sapierrors.IsInternalError(err) ||
-		k8sapierrors.IsTimeout(err) {
+		k8sapierrors.IsTimeout(err) ||
+		k8sapierrors.IsNotFound(err) {
 		return true
 	}
 	var netErr *net.OpError
@@ -52,91 +56,138 @@ func isTransientClusterError(err error) bool {
 	return false
 }
 
-func (w *releaseWorker) applyAndConverge(ctx context.Context, release *models.StackRelease) (worker.Result, *errors.ServiceError) {
+type applyReconciler struct {
+	releaseService       releaseService
+	stackService         stackService
+	clusterManager       clustermanager.ClusterManager
+	secretBuilder        builders.SecretBuilder
+	secretService        secretService
+	postgresAddonService postgresAddonService
+	volumeService        volumeService
+	logger               logger.Logger
+}
+
+func newApplyReconciler(spec ReleaseWorkerSpec) *applyReconciler {
+	return &applyReconciler{
+		releaseService:       spec.ReleaseService,
+		stackService:         spec.StackService,
+		clusterManager:       spec.ClusterManager,
+		secretBuilder:        spec.SecretBuilder,
+		secretService:        spec.SecretService,
+		postgresAddonService: spec.PostgresAddonService,
+		volumeService:        spec.VolumeService,
+		logger:               logger.NewLoggerWithPrefix(context.Background(), "release-apply"),
+	}
+}
+
+func (r *applyReconciler) Name() string { return "apply" }
+
+func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRelease) (subReconcilerResult, error) {
 	if release.Manifest == nil {
-		w.fail(ctx, release, "apply called with nil manifest")
-		return worker.Result{}, nil
+		return resultNil, nil
 	}
 
-	// Load live stack for cluster info and deletion check.
-	stack, serr := w.stackService.InternalGetStack(ctx, release.StackID)
+	stack, serr := r.stackService.InternalGetStack(ctx, release.StackID)
 	if serr != nil {
 		if serr.Is404() {
-			w.fail(ctx, release, "stack not found")
-			return worker.Result{}, nil
+			failRelease(ctx, r.releaseService, r.logger, release, "stack not found")
+			return resultStop, nil
 		}
-		return worker.Result{}, serr
+		return resultNil, fmt.Errorf("failed to get stack: %w", serr)
 	}
 
 	if stack.DeletionTimestamp != nil {
-		w.fail(ctx, release, "stack is being deleted")
-		return worker.Result{}, nil
+		failRelease(ctx, r.releaseService, r.logger, release, "stack is being deleted")
+		return resultStop, nil
 	}
 
-	clusterClient, cerr := w.clusterManager.GetClient(stack.ClusterID)
+	clusterClient, cerr := r.clusterManager.GetClient(stack.ClusterID)
 	if cerr != nil {
-		return worker.Result{}, w.WorkerError.NewError("failed to get cluster client: %v", cerr)
+		return resultNil, fmt.Errorf("failed to get cluster client: %w", cerr)
 	}
 
-	// Preconditions: sync secrets.
-	// Reconstruct the effective stack from snapshot for secret methods.
 	effectiveStack := release.Snapshot.ToStack()
 
-	if err := w.syncHubSecrets(ctx, clusterClient, effectiveStack); err != nil {
+	if err := r.syncHubSecrets(ctx, clusterClient, effectiveStack); err != nil {
 		if isTransientClusterError(err) {
-			w.Logger().Warnf("release %s: transient error syncing hub secrets, requeueing: %v", release.ID, err)
-			return worker.Result{RequeueAfter: convergencePollInterval}, nil
+			r.logger.Warnf("release %s: transient error syncing hub secrets, requeueing: %v", release.ID, err)
+			return resultRequeueAfter(convergencePollInterval), nil
 		}
-		return worker.Result{}, w.WorkerError.NewError("failed to sync hub secrets: %v", err)
+		return resultNil, fmt.Errorf("failed to sync hub secrets: %w", err)
 	}
 
-	if err := w.syncPostgresCredentialSecrets(ctx, clusterClient, effectiveStack); err != nil {
+	if err := r.syncPostgresCredentialSecrets(ctx, clusterClient, effectiveStack); err != nil {
 		if isTransientClusterError(err) {
-			w.Logger().Warnf("release %s: transient error syncing postgres secrets, requeueing: %v", release.ID, err)
-			return worker.Result{RequeueAfter: convergencePollInterval}, nil
+			r.logger.Warnf("release %s: transient error syncing postgres secrets, requeueing: %v", release.ID, err)
+			return resultRequeueAfter(convergencePollInterval), nil
 		}
-		return worker.Result{}, w.WorkerError.NewError("failed to sync postgres credential secrets: %v", err)
+		return resultNil, fmt.Errorf("failed to sync postgres credential secrets: %w", err)
 	}
 
-	// Check volume readiness.
-	if ready, err := w.volumesReady(ctx, release.StackID); err != nil {
-		return worker.Result{}, w.WorkerError.NewError("failed to check volume readiness: %v", err)
-	} else if !ready {
-		w.Logger().Infof("release %s: volumes not ready, requeueing", release.ID)
-		return worker.Result{RequeueAfter: convergencePollInterval}, nil
-	}
-
-	// Apply Stack CR.
-	stackCR, err := w.applyStackCR(ctx, clusterClient, release)
+	ready, err := r.volumesReady(ctx, release.StackID)
 	if err != nil {
-		if isTransient(err) {
-			w.Logger().Warnf("release %s: transient error applying stack CR, requeueing: %v", release.ID, err)
-			return worker.Result{RequeueAfter: convergencePollInterval}, nil
+		return resultNil, fmt.Errorf("failed to check volume readiness: %w", err)
+	}
+	if !ready {
+		r.logger.Infof("release %s: volumes not ready, requeueing", release.ID)
+		return resultRequeueAfter(convergencePollInterval), nil
+	}
+
+	stackCR, err := r.applyStackCR(ctx, clusterClient, release)
+	if err != nil {
+		if stderrors.Is(err, errReleaseSuperseded) {
+			return resultStop, nil
 		}
-		w.fail(ctx, release, fmt.Sprintf("failed to apply stack CR: %v", err))
-		return worker.Result{}, nil
-	}
-
-	// Apply StackResource CRs.
-	if err := w.applyStackResourceCRs(ctx, clusterClient, release, stackCR); err != nil {
 		if isTransient(err) {
-			w.Logger().Warnf("release %s: transient error applying resource CRs, requeueing: %v", release.ID, err)
-			return worker.Result{RequeueAfter: convergencePollInterval}, nil
+			r.logger.Warnf("release %s: transient error applying stack CR, requeueing: %v", release.ID, err)
+			return resultRequeueAfter(convergencePollInterval), nil
 		}
-		w.fail(ctx, release, fmt.Sprintf("failed to apply stack resource CRs: %v", err))
-		return worker.Result{}, nil
+		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to apply stack CR: %v", err))
+		return resultStop, nil
+	}
+	if err := r.applyStackResourceCRs(ctx, clusterClient, release, stackCR); err != nil {
+		if isTransient(err) {
+			r.logger.Warnf("release %s: transient error applying resource CRs, requeueing: %v", release.ID, err)
+			return resultRequeueAfter(convergencePollInterval), nil
+		}
+		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to apply stack resource CRs: %v", err))
+		return resultStop, nil
 	}
 
-	// Prune orphaned StackResource CRs.
-	if err := w.pruneStackResources(ctx, clusterClient, stack, release.Manifest.ResourceNames); err != nil {
-		w.Logger().Errorf("release %s: prune error (non-fatal): %v", release.ID, err)
+	if err := r.pruneStackResources(ctx, clusterClient, stack, release.Manifest.ResourceNames); err != nil {
+		r.logger.Errorf("release %s: prune error (non-fatal): %v", release.ID, err)
 	}
 
-	// Check convergence.
-	return w.checkConverged(ctx, release, stack)
+	return resultNil, nil
 }
 
-func (w *releaseWorker) applyStackCR(ctx context.Context, clusterClient client.Client, release *models.StackRelease) (*corev1alpha1.Stack, error) {
+func (r *applyReconciler) supersededByClusterCR(ctx context.Context, existing *corev1alpha1.Stack, release *models.StackRelease) (bool, error) {
+	appliedReleaseID := existing.GetAnnotations()[corev1alpha1.ReleaseIDAnnotation]
+	if appliedReleaseID == "" {
+		return false, nil
+	}
+
+	appliedRelease, serr := r.releaseService.InternalGet(ctx, appliedReleaseID)
+	if serr != nil {
+		if serr.Is404() {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get applied release: %w", serr)
+	}
+
+	if appliedRelease.Sequence <= release.Sequence {
+		return false, nil
+	}
+
+	reason := fmt.Sprintf("superseded by release #%d already applied to cluster", appliedRelease.Sequence)
+	if _, err := r.releaseService.MarkSuperseded(ctx, release.ID, reason); err != nil {
+		return false, fmt.Errorf("failed to mark release superseded: %w", err)
+	}
+	r.logger.Infof("release %s: %s", release.ID, reason)
+	return true, nil
+}
+
+func (r *applyReconciler) applyStackCR(ctx context.Context, clusterClient client.Client, release *models.StackRelease) (*corev1alpha1.Stack, error) {
 	desired := &corev1alpha1.Stack{}
 	if err := json.Unmarshal(release.Manifest.StackCR, desired); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal stack CR: %w", err)
@@ -159,21 +210,29 @@ func (w *releaseWorker) applyStackCR(ctx context.Context, clusterClient client.C
 		return nil, wrapIfTransient(fmt.Errorf("failed to get stack CR: %w", err))
 	}
 
-	specChanged := !equality.Semantic.DeepEqual(existing.Spec, desired.Spec)
-	annotationsChanged := !equality.Semantic.DeepEqual(existing.Annotations, desired.Annotations)
-	labelsChanged := !equality.Semantic.DeepEqual(existing.Labels, desired.Labels)
-	if specChanged || annotationsChanged || labelsChanged {
-		desired.ResourceVersion = existing.ResourceVersion
-		if err := clusterClient.Update(ctx, desired); err != nil {
-			return nil, wrapIfTransient(fmt.Errorf("failed to update stack CR: %w", err))
-		}
+	if superseded, err := r.supersededByClusterCR(ctx, existing, release); err != nil {
+		return nil, err
+	} else if superseded {
+		return nil, errReleaseSuperseded
 	}
-	// Use existing UID for owner references.
+
+	if equality.Semantic.DeepDerivative(desired.Spec, existing.Spec) &&
+		equality.Semantic.DeepDerivative(desired.Annotations, existing.Annotations) &&
+		equality.Semantic.DeepDerivative(desired.Labels, existing.Labels) {
+		desired.UID = existing.UID
+		return desired, nil
+	}
+
+	r.logger.Infof("stack CR '%s': updating", desired.Name)
+	desired.ResourceVersion = existing.ResourceVersion
+	if err := clusterClient.Update(ctx, desired); err != nil {
+		return nil, wrapIfTransient(fmt.Errorf("failed to update stack CR: %w", err))
+	}
 	desired.UID = existing.UID
 	return desired, nil
 }
 
-func (w *releaseWorker) applyStackResourceCRs(ctx context.Context, clusterClient client.Client, release *models.StackRelease, stackCR *corev1alpha1.Stack) error {
+func (r *applyReconciler) applyStackResourceCRs(ctx context.Context, clusterClient client.Client, release *models.StackRelease, stackCR *corev1alpha1.Stack) error {
 	for _, name := range release.Manifest.ResourceNames {
 		crBytes, ok := release.Manifest.StackResourceCRs[name]
 		if !ok {
@@ -206,26 +265,28 @@ func (w *releaseWorker) applyStackResourceCRs(ctx context.Context, clusterClient
 				if err := clusterClient.Create(ctx, desired); err != nil {
 					return wrapIfTransient(fmt.Errorf("failed to create StackResource CR '%s': %w", name, err))
 				}
+				r.logger.Infof("resource '%s': created", name)
 				continue
 			}
 			return wrapIfTransient(fmt.Errorf("failed to get StackResource CR '%s': %w", name, err))
 		}
 
-		specChanged := !equality.Semantic.DeepEqual(existing.Spec, desired.Spec)
-		annotationsChanged := !equality.Semantic.DeepEqual(existing.Annotations, desired.Annotations)
-		labelsChanged := !equality.Semantic.DeepEqual(existing.Labels, desired.Labels)
-		ownerRefsChanged := !equality.Semantic.DeepEqual(existing.OwnerReferences, desired.OwnerReferences)
-		if specChanged || annotationsChanged || labelsChanged || ownerRefsChanged {
-			desired.ResourceVersion = existing.ResourceVersion
-			if err := clusterClient.Update(ctx, desired); err != nil {
-				return wrapIfTransient(fmt.Errorf("failed to update StackResource CR '%s': %w", name, err))
-			}
+		if equality.Semantic.DeepDerivative(desired.Spec, existing.Spec) &&
+			equality.Semantic.DeepDerivative(desired.Annotations, existing.Annotations) &&
+			equality.Semantic.DeepDerivative(desired.Labels, existing.Labels) {
+			continue
+		}
+
+		r.logger.Infof("resource '%s': updating", name)
+		desired.ResourceVersion = existing.ResourceVersion
+		if err := clusterClient.Update(ctx, desired); err != nil {
+			return wrapIfTransient(fmt.Errorf("failed to update StackResource CR '%s': %w", name, err))
 		}
 	}
 	return nil
 }
 
-func (w *releaseWorker) pruneStackResources(ctx context.Context, clusterClient client.Client, stack *models.Stack, activeNames []string) error {
+func (r *applyReconciler) pruneStackResources(ctx context.Context, clusterClient client.Client, stack *models.Stack, activeNames []string) error {
 	activeSet := make(map[string]struct{}, len(activeNames))
 	for _, n := range activeNames {
 		activeSet[n] = struct{}{}
@@ -241,7 +302,7 @@ func (w *releaseWorker) pruneStackResources(ctx context.Context, clusterClient c
 	for i := range srList.Items {
 		resourceName := srList.Items[i].Labels[corev1alpha1.LabelResourceName]
 		if _, keep := activeSet[resourceName]; !keep {
-			w.Logger().Infof("pruning orphaned StackResource CR '%s'", srList.Items[i].Name)
+			r.logger.Infof("pruning orphaned StackResource CR '%s'", srList.Items[i].Name)
 			if err := clusterClient.Delete(ctx, &srList.Items[i], client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
 				if k8sapierrors.IsNotFound(err) {
 					continue
@@ -253,8 +314,8 @@ func (w *releaseWorker) pruneStackResources(ctx context.Context, clusterClient c
 	return nil
 }
 
-func (w *releaseWorker) volumesReady(ctx context.Context, stackID string) (bool, error) {
-	volumes, serr := w.volumeService.ListVolumesUsedByStack(ctx, stackID)
+func (r *applyReconciler) volumesReady(ctx context.Context, stackID string) (bool, error) {
+	volumes, serr := r.volumeService.ListVolumesUsedByStack(ctx, stackID)
 	if serr != nil {
 		return false, serr
 	}

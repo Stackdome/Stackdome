@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
@@ -23,19 +24,15 @@ func NewStackReleaseHandler(spec StackReleaseHandlerSpec) *stackReleaseHandler {
 	return &stackReleaseHandler{releaseService: spec.StackReleaseService}
 }
 
-type createReleaseRequest struct {
-	FromReleaseID string `json:"from_release_id,omitempty"`
-}
-
 func (h *stackReleaseHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var req createReleaseRequest
+	var req openapi.CreateReleaseRequest
 	cfg := &handlerConfig{
 		MarshalInto: &req,
 		Action: func() (interface{}, *errors.ServiceError) {
 			stackID := mux.Vars(r)["id"]
 
-			if req.FromReleaseID != "" {
-				release, err := h.releaseService.RollbackRelease(r.Context(), stackID, req.FromReleaseID)
+			if req.GetFromReleaseId() != "" {
+				release, err := h.releaseService.RollbackRelease(r.Context(), stackID, req.GetFromReleaseId())
 				if err != nil {
 					return nil, err
 				}

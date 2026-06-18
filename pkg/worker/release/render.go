@@ -6,64 +6,61 @@ import (
 	stderrors "errors"
 	"fmt"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
+	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stackdeploy"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stackrelease"
-	"github.com/ashishmax31/stackdome-api-server/pkg/worker"
 )
 
-func (w *releaseWorker) render(ctx context.Context, release *models.StackRelease) (worker.Result, *errors.ServiceError) {
-	// Rollback releases carry a pre-rendered manifest; skip render.
+type renderReconciler struct {
+	releaseService releaseService
+	stackService   stackService
+	crBuilder      builders.ClusterResourceBuilder
+	resolver       *stackdeploy.Resolver
+	logger         logger.Logger
+}
+
+func newRenderReconciler(spec ReleaseWorkerSpec) *renderReconciler {
+	return &renderReconciler{
+		releaseService: spec.ReleaseService,
+		stackService:   spec.StackService,
+		crBuilder:      spec.CRBuilder,
+		resolver:       spec.Resolver,
+		logger:         logger.NewLoggerWithPrefix(context.Background(), "release-render"),
+	}
+}
+
+func (r *renderReconciler) Name() string { return "render" }
+
+func (r *renderReconciler) Reconcile(ctx context.Context, release *models.StackRelease) (subReconcilerResult, error) {
 	if release.Manifest != nil {
-		ok, serr := w.releaseService.MarkApplyingDirect(ctx, release.ID)
-		if serr != nil {
-			return worker.Result{}, serr
-		}
-		if !ok {
-			return worker.Result{Requeue: true}, nil
-		}
-		release.State = models.ReleaseStateApplying
-		return w.applyAndConverge(ctx, release)
+		return resultNil, nil
 	}
 
-	// CAS transition Pending -> Rendering
-	if release.State == models.ReleaseStatePending {
-		ok, serr := w.releaseService.MarkRendering(ctx, release.ID)
-		if serr != nil {
-			return worker.Result{}, serr
-		}
-		if !ok {
-			return worker.Result{Requeue: true}, nil
-		}
-	}
-
-	// Reconstruct draft from snapshot.
 	draft := release.Snapshot.ToStack()
 
-	// Resolve connections to produce the effective stack.
-	effective, err := w.resolver.Resolve(ctx, draft)
+	effective, err := r.resolver.Resolve(ctx, draft)
 	if err != nil {
 		var depErr stackdeploy.DependencyNotReadyError
 		if isNotReady(err, &depErr) {
-			w.Logger().Infof("release %s: dependency not ready, requeueing: %s", release.ID, depErr.Message)
-			return worker.Result{RequeueAfter: convergencePollInterval}, nil
+			r.logger.Infof("release %s: dependency not ready, requeueing: %s", release.ID, depErr.Message)
+			return resultRequeueAfter(convergencePollInterval), nil
 		}
-		w.fail(ctx, release, fmt.Sprintf("render failed: %v", err))
-		return worker.Result{}, nil
+		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("render failed: %v", err))
+		return resultStop, nil
 	}
 
-	// Build CRs.
-	stackCR, err := w.crBuilder.BuildStackCR(effective)
+	stackCR, err := r.crBuilder.BuildStackCR(effective)
 	if err != nil {
-		w.fail(ctx, release, fmt.Sprintf("failed to build stack CR: %v", err))
-		return worker.Result{}, nil
+		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to build stack CR: %v", err))
+		return resultStop, nil
 	}
 
 	stackCRBytes, err := json.Marshal(stackCR)
 	if err != nil {
-		w.fail(ctx, release, fmt.Sprintf("failed to marshal stack CR: %v", err))
-		return worker.Result{}, nil
+		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to marshal stack CR: %v", err))
+		return resultStop, nil
 	}
 
 	resourceCRs := make(map[string]json.RawMessage)
@@ -71,16 +68,16 @@ func (w *releaseWorker) render(ctx context.Context, release *models.StackRelease
 	resourceRevisions := make(map[string]string)
 
 	for _, sr := range effective.StackResources {
-		srCR, buildErr := w.crBuilder.BuildStackResourceCR(sr)
+		srCR, buildErr := r.crBuilder.BuildStackResourceCR(sr, effective.Name)
 		if buildErr != nil {
-			w.fail(ctx, release, fmt.Sprintf("failed to build CR for resource '%s': %v", sr.Name, buildErr))
-			return worker.Result{}, nil
+			failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to build CR for resource '%s': %v", sr.Name, buildErr))
+			return resultStop, nil
 		}
 
 		srBytes, marshalErr := json.Marshal(srCR)
 		if marshalErr != nil {
-			w.fail(ctx, release, fmt.Sprintf("failed to marshal CR for resource '%s': %v", sr.Name, marshalErr))
-			return worker.Result{}, nil
+			failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to marshal CR for resource '%s': %v", sr.Name, marshalErr))
+			return resultStop, nil
 		}
 
 		resourceCRs[sr.Name] = srBytes
@@ -105,24 +102,20 @@ func (w *releaseWorker) render(ctx context.Context, release *models.StackRelease
 
 	manifestRevision := stackrelease.ComputeManifestRevision(manifest)
 
-	// CAS transition Rendering -> Applying and persist manifest.
-	ok, serr := w.releaseService.SaveManifest(ctx, release.ID, manifest, manifestRevision, release.Pins, stackrelease.RendererVersion)
+	ok, serr := r.releaseService.SaveManifest(ctx, release.ID, manifest, manifestRevision, release.Pins, stackrelease.RendererVersion)
 	if serr != nil {
-		return worker.Result{}, serr
+		return resultNil, fmt.Errorf("failed to save manifest: %w", serr)
 	}
 	if !ok {
-		return worker.Result{Requeue: true}, nil
+		r.logger.Infof("release %s: SaveManifest CAS failed", release.ID)
+		return resultStop, nil
 	}
 
-	// Update the stack's CrRevision so the stack controller knows the target.
-	if sErr := w.stackService.UpdateStackCrRevision(ctx, release.StackID, manifestRevision); sErr != nil {
-		w.Logger().Errorf("failed to update stack CrRevision: %v", sErr)
+	if sErr := r.stackService.UpdateStackCrRevision(ctx, release.StackID, manifestRevision); sErr != nil {
+		r.logger.Errorf("failed to update stack CrRevision: %v", sErr)
 	}
 
-	release.Manifest = manifest
-	release.ManifestRevision = manifestRevision
-	release.State = models.ReleaseStateApplying
-	return w.applyAndConverge(ctx, release)
+	return resultRequeue, nil
 }
 
 func isNotReady(err error, target *stackdeploy.DependencyNotReadyError) bool {

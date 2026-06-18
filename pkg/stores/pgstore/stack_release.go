@@ -27,32 +27,19 @@ func NewStackReleaseStore(spec StackReleaseStoreSpec) stores.StackReleaseStore {
 	}
 }
 
-// CreateSuperseding atomically supersedes Pending/Rendering releases, assigns the
+var activeReleaseStates = []models.StackReleaseState{
+	models.ReleaseStatePending,
+	models.ReleaseStateInProgress,
+}
+
+// CreateSuperseding atomically supersedes Pending releases, assigns the
 // next sequence number, and inserts the new release.
-func (s *stackReleaseStore) CreateSuperseding(ctx context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError) {
+func (s *stackReleaseStore) Create(ctx context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError) {
 	var result *models.StackRelease
 
 	if err := s.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 		tx := db.TxFromContext(txCtx)
 
-		// Supersede any Pending or Rendering releases for this stack.
-		// Never supersede Applying — that release owns the cluster.
-		now := time.Now().UTC()
-		if err := tx.Model(&models.StackRelease{}).
-			Where("stack_id = ? AND state IN ?", release.StackID, []models.StackReleaseState{
-				models.ReleaseStatePending,
-				models.ReleaseStateRendering,
-			}).
-			Updates(map[string]interface{}{
-				"state":        models.ReleaseStateSuperseded,
-				"message":      "superseded by newer release",
-				"updated_at":   now,
-				"completed_at": now,
-			}).Error; err != nil {
-			return errors.GeneralError("failed to supersede existing releases: %s", err.Error())
-		}
-
-		// Get the next sequence number.
 		var maxSeq *int
 		if err := tx.Model(&models.StackRelease{}).
 			Where("stack_id = ?", release.StackID).
@@ -107,13 +94,8 @@ func (s *stackReleaseStore) ListByStackID(ctx context.Context, stackID string) (
 // ListActive returns all non-terminal releases across all stacks.
 func (s *stackReleaseStore) ListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError) {
 	var releases []*models.StackRelease
-	activeStates := []models.StackReleaseState{
-		models.ReleaseStatePending,
-		models.ReleaseStateRendering,
-		models.ReleaseStateApplying,
-	}
 	if err := s.sessionFactory.New(ctx).
-		Where("state IN ?", activeStates).
+		Where("state IN ?", activeReleaseStates).
 		Order("created_at ASC").
 		Find(&releases).Error; err != nil {
 		return nil, errors.GeneralError("failed to list active releases: %s", err.Error())
@@ -121,16 +103,11 @@ func (s *stackReleaseStore) ListActive(ctx context.Context) ([]*models.StackRele
 	return releases, nil
 }
 
-// GetActiveByStackID returns the single active release for a stack, or (nil, nil) if none.
+// GetActiveByStackID returns the highest-sequence active release for a stack, or (nil, nil) if none.
 func (s *stackReleaseStore) GetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
 	var release models.StackRelease
-	activeStates := []models.StackReleaseState{
-		models.ReleaseStatePending,
-		models.ReleaseStateRendering,
-		models.ReleaseStateApplying,
-	}
 	if err := s.sessionFactory.New(ctx).
-		Where("stack_id = ? AND state IN ?", stackID, activeStates).
+		Where("stack_id = ? AND state IN ?", stackID, activeReleaseStates).
 		Order("sequence DESC").
 		First(&release).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -141,46 +118,29 @@ func (s *stackReleaseStore) GetActiveByStackID(ctx context.Context, stackID stri
 	return &release, nil
 }
 
-// MarkRendering transitions Pending -> Rendering via conditional UPDATE.
-func (s *stackReleaseStore) MarkRendering(ctx context.Context, id string) (bool, *errors.ServiceError) {
+// MarkInProgress transitions Pending -> InProgress via conditional UPDATE.
+func (s *stackReleaseStore) MarkInProgress(ctx context.Context, id string) (bool, *errors.ServiceError) {
 	result := s.sessionFactory.New(ctx).
 		Model(&models.StackRelease{}).
-		Where("id = ? AND state = ? AND manifest IS NULL", id, models.ReleaseStatePending).
+		Where("id = ? AND state = ?", id, models.ReleaseStatePending).
 		Updates(map[string]interface{}{
-			"state":      models.ReleaseStateRendering,
+			"state":      models.ReleaseStateInProgress,
 			"updated_at": time.Now().UTC(),
 		})
 
 	if result.Error != nil {
-		return false, errors.GeneralError("failed to mark rendering: %s", result.Error.Error())
+		return false, errors.GeneralError("failed to mark in progress: %s", result.Error.Error())
 	}
 	return result.RowsAffected > 0, nil
 }
 
-// MarkApplyingDirect transitions Pending -> Applying (for releases that skip rendering).
-func (s *stackReleaseStore) MarkApplyingDirect(ctx context.Context, id string) (bool, *errors.ServiceError) {
-	result := s.sessionFactory.New(ctx).
-		Model(&models.StackRelease{}).
-		Where("id = ? AND state = ? AND manifest IS NOT NULL", id, models.ReleaseStatePending).
-		Updates(map[string]interface{}{
-			"state":      models.ReleaseStateApplying,
-			"updated_at": time.Now().UTC(),
-		})
-
-	if result.Error != nil {
-		return false, errors.GeneralError("failed to mark applying: %s", result.Error.Error())
-	}
-	return result.RowsAffected > 0, nil
-}
-
-// SaveManifest writes the rendered manifest and transitions Rendering -> Applying.
+// SaveManifest writes the rendered manifest while the release is InProgress and manifest is unset.
 func (s *stackReleaseStore) SaveManifest(ctx context.Context, id string, m *models.ReleaseManifest, rev string, pins models.ReleasePins, rendererVersion string) (bool, *errors.ServiceError) {
 	now := time.Now().UTC()
 	result := s.sessionFactory.New(ctx).
 		Model(&models.StackRelease{}).
-		Where("id = ? AND state = ? AND manifest IS NULL", id, models.ReleaseStateRendering).
+		Where("id = ? AND state = ? AND manifest IS NULL", id, models.ReleaseStateInProgress).
 		Updates(map[string]interface{}{
-			"state":             models.ReleaseStateApplying,
 			"manifest":          m,
 			"manifest_revision": rev,
 			"pins":              pins,
@@ -195,12 +155,45 @@ func (s *stackReleaseStore) SaveManifest(ctx context.Context, id string, m *mode
 	return result.RowsAffected > 0, nil
 }
 
-// MarkReleased transitions Applying -> Released.
+func (s *stackReleaseStore) MarkCancelled(ctx context.Context, id string, reason string) (bool, *errors.ServiceError) {
+	result := s.sessionFactory.New(ctx).
+		Model(&models.StackRelease{}).
+		Where("id = ? AND state = ?", id, models.ReleaseStatePending).
+		Updates(map[string]interface{}{
+			"state":      models.ReleaseStateCancelled,
+			"message":    reason,
+			"updated_at": time.Now().UTC(),
+		})
+	if result.Error != nil {
+		return false, errors.GeneralError("failed to mark cancelled: %s", result.Error.Error())
+	}
+	return result.RowsAffected > 0, nil
+}
+
+// MarkSuperseded transitions any active state -> Superseded (worker self-superseding).
+func (s *stackReleaseStore) MarkSuperseded(ctx context.Context, id string, reason string) (bool, *errors.ServiceError) {
+	now := time.Now().UTC()
+	result := s.sessionFactory.New(ctx).
+		Model(&models.StackRelease{}).
+		Where("id = ? AND state IN ?", id, activeReleaseStates).
+		Updates(map[string]interface{}{
+			"state":        models.ReleaseStateSuperseded,
+			"message":      reason,
+			"completed_at": now,
+			"updated_at":   now,
+		})
+	if result.Error != nil {
+		return false, errors.GeneralError("failed to mark superseded: %s", result.Error.Error())
+	}
+	return result.RowsAffected > 0, nil
+}
+
+// MarkReleased transitions InProgress -> Released.
 func (s *stackReleaseStore) MarkReleased(ctx context.Context, id string, outcome models.ReleaseOutcome) (bool, *errors.ServiceError) {
 	now := time.Now().UTC()
 	result := s.sessionFactory.New(ctx).
 		Model(&models.StackRelease{}).
-		Where("id = ? AND state = ?", id, models.ReleaseStateApplying).
+		Where("id = ? AND state = ?", id, models.ReleaseStateInProgress).
 		Updates(map[string]interface{}{
 			"state":        models.ReleaseStateReleased,
 			"outcome":      outcome,
@@ -214,14 +207,9 @@ func (s *stackReleaseStore) MarkReleased(ctx context.Context, id string, outcome
 	return result.RowsAffected > 0, nil
 }
 
-// MarkFailed transitions any active state -> Failed.
+// MarkFailed transitions InProgress -> Failed.
 func (s *stackReleaseStore) MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError) {
 	now := time.Now().UTC()
-	activeStates := []models.StackReleaseState{
-		models.ReleaseStatePending,
-		models.ReleaseStateRendering,
-		models.ReleaseStateApplying,
-	}
 
 	updates := map[string]interface{}{
 		"state":        models.ReleaseStateFailed,
@@ -235,7 +223,7 @@ func (s *stackReleaseStore) MarkFailed(ctx context.Context, id string, message s
 
 	result := s.sessionFactory.New(ctx).
 		Model(&models.StackRelease{}).
-		Where("id = ? AND state IN ?", id, activeStates).
+		Where("id = ? AND state = ?", id, models.ReleaseStateInProgress).
 		Updates(updates)
 
 	if result.Error != nil {
@@ -244,17 +232,13 @@ func (s *stackReleaseStore) MarkFailed(ctx context.Context, id string, message s
 	return result.RowsAffected > 0, nil
 }
 
-// Cancel transitions Pending or Rendering -> Cancelled.
+// Cancel transitions Pending -> Cancelled (user-initiated).
 func (s *stackReleaseStore) Cancel(ctx context.Context, id string) (bool, *errors.ServiceError) {
 	now := time.Now().UTC()
-	cancellableStates := []models.StackReleaseState{
-		models.ReleaseStatePending,
-		models.ReleaseStateRendering,
-	}
 
 	result := s.sessionFactory.New(ctx).
 		Model(&models.StackRelease{}).
-		Where("id = ? AND state IN ?", id, cancellableStates).
+		Where("id = ? AND state = ?", id, models.ReleaseStatePending).
 		Updates(map[string]interface{}{
 			"state":        models.ReleaseStateCancelled,
 			"completed_at": now,

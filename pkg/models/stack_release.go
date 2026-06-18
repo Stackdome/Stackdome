@@ -13,8 +13,7 @@ type StackReleaseState string
 
 const (
 	ReleaseStatePending    StackReleaseState = "Pending"
-	ReleaseStateRendering  StackReleaseState = "Rendering"
-	ReleaseStateApplying   StackReleaseState = "Applying"
+	ReleaseStateInProgress StackReleaseState = "InProgress"
 	ReleaseStateReleased   StackReleaseState = "Released"
 	ReleaseStateFailed     StackReleaseState = "Failed"
 	ReleaseStateSuperseded StackReleaseState = "Superseded"
@@ -221,7 +220,7 @@ func (m ReleaseManifest) Value() (driver.Value, error) {
 
 func (m *ReleaseManifest) Scan(value interface{}) error {
 	if value == nil {
-		m = nil
+		*m = ReleaseManifest{}
 		return nil
 	}
 	b, ok := value.([]byte)

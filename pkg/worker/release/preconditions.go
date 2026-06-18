@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stackdeploy"
 	corev1 "k8s.io/api/core/v1"
@@ -14,14 +15,14 @@ import (
 
 // syncHubSecrets ensures image pull, image push, and git credential secrets
 // are synced to the target cluster namespace before the stack CR is applied.
-func (w *releaseWorker) syncHubSecrets(ctx context.Context, clusterClient client.Client, stack *models.Stack) error {
+func (r *applyReconciler) syncHubSecrets(ctx context.Context, clusterClient client.Client, stack *models.Stack) error {
 	if stack.HasImagePullSecrets() {
 		for imageUrl, secretID := range stack.GetImagePullSecretIDMap() {
-			secret, serr := w.secretService.InternalGetByID(ctx, secretID)
+			secret, serr := r.secretService.InternalGetByID(ctx, secretID)
 			if serr != nil {
 				return fmt.Errorf("failed to get image pull secret '%s': %w", secretID, serr)
 			}
-			clusterSecret, err := w.secretBuilder.BuildDockerConfigJsonSecretForImage(ctx, secret, imageUrl)
+			clusterSecret, err := r.secretBuilder.BuildDockerConfigJsonSecretForImage(ctx, secret, imageUrl)
 			if err != nil {
 				return fmt.Errorf("failed to build docker config for image '%s': %w", imageUrl, err)
 			}
@@ -37,11 +38,11 @@ func (w *releaseWorker) syncHubSecrets(ctx context.Context, clusterClient client
 
 	if stack.HasImagePushSecrets() {
 		for repoUrl, secretID := range stack.GetImagePushSecretIDMap() {
-			secret, serr := w.secretService.InternalGetByID(ctx, secretID)
+			secret, serr := r.secretService.InternalGetByID(ctx, secretID)
 			if serr != nil {
 				return fmt.Errorf("failed to get image push secret '%s': %w", secretID, serr)
 			}
-			clusterSecret, err := w.secretBuilder.BuildDockerConfigJsonSecretForRepository(ctx, secret, repoUrl)
+			clusterSecret, err := r.secretBuilder.BuildDockerConfigJsonSecretForRepository(ctx, secret, repoUrl)
 			if err != nil {
 				return fmt.Errorf("failed to build docker config for repo '%s': %w", repoUrl, err)
 			}
@@ -57,11 +58,11 @@ func (w *releaseWorker) syncHubSecrets(ctx context.Context, clusterClient client
 
 	if stack.HasGitCredentials() {
 		for repoUrl, secretID := range stack.GetGitCredentialsMap() {
-			secret, serr := w.secretService.InternalGetByID(ctx, secretID)
+			secret, serr := r.secretService.InternalGetByID(ctx, secretID)
 			if serr != nil {
 				return fmt.Errorf("failed to get git credential secret '%s': %w", secretID, serr)
 			}
-			clusterSecret, err := w.secretBuilder.BuildGitCredentialsSecret(ctx, secret, repoUrl)
+			clusterSecret, err := r.secretBuilder.BuildGitCredentialsSecret(ctx, secret, repoUrl)
 			if err != nil {
 				return fmt.Errorf("failed to build git credential secret for repo '%s': %w", repoUrl, err)
 			}
@@ -79,9 +80,8 @@ func (w *releaseWorker) syncHubSecrets(ctx context.Context, clusterClient client
 }
 
 // syncPostgresCredentialSecrets ensures postgres connection credentials are
-// available as K8s secrets in the stack namespace. Each connected postgres
-// addon/database pair gets its own secret.
-func (w *releaseWorker) syncPostgresCredentialSecrets(ctx context.Context, clusterClient client.Client, stack *models.Stack) error {
+// available as K8s secrets in the stack namespace.
+func (r *applyReconciler) syncPostgresCredentialSecrets(ctx context.Context, clusterClient client.Client, stack *models.Stack) error {
 	pgConnections := stack.Connections.FromType(models.TopologyNodeTypePostgresAddon)
 	if len(pgConnections) == 0 {
 		return nil
@@ -94,7 +94,7 @@ func (w *releaseWorker) syncPostgresCredentialSecrets(ctx context.Context, clust
 			return fmt.Errorf("failed to parse postgres connection config: %w", err)
 		}
 
-		creds, credErr := w.postgresAddonService.InternalGetCredentials(ctx, addonID, database, superuser)
+		creds, credErr := r.postgresAddonService.InternalGetCredentials(ctx, addonID, database, superuser)
 		if credErr != nil {
 			return fmt.Errorf("failed to get postgres credentials for addon '%s' db '%s': %w", addonID, database, credErr)
 		}
@@ -135,4 +135,11 @@ func createOrUpdateSecret(ctx context.Context, clusterClient client.Client, desi
 	}
 	desired.ResourceVersion = existing.ResourceVersion
 	return clusterClient.Update(ctx, desired)
+}
+
+func failRelease(ctx context.Context, svc releaseService, log logger.Logger, release *models.StackRelease, msg string) {
+	log.Errorf("release %s failed: %s", release.ID, msg)
+	if _, err := svc.MarkFailed(ctx, release.ID, msg, nil); err != nil {
+		log.Errorf("failed to mark release %s as failed: %v", release.ID, err)
+	}
 }

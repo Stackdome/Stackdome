@@ -24,10 +24,11 @@ type StackReleaseService interface {
 	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
 	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
 	InternalListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
-	MarkRendering(ctx context.Context, id string) (bool, *errors.ServiceError)
-	MarkApplyingDirect(ctx context.Context, id string) (bool, *errors.ServiceError)
+	MarkInProgress(ctx context.Context, id string) (bool, *errors.ServiceError)
 	SaveManifest(ctx context.Context, id string, m *models.ReleaseManifest, rev string, pins models.ReleasePins, rendererVersion string) (bool, *errors.ServiceError)
 	MarkReleased(ctx context.Context, id string, outcome models.ReleaseOutcome) (bool, *errors.ServiceError)
+	MarkCancelled(ctx context.Context, id string, reasons string) (bool, *errors.ServiceError)
+	MarkSuperseded(ctx context.Context, id string, reason string) (bool, *errors.ServiceError)
 	MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError)
 	AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError
 
@@ -101,7 +102,7 @@ func (s *stackReleaseService) CreateRelease(ctx context.Context, stackID string,
 		CreatedBy:        createdBy,
 	}
 
-	created, sErr := s.store.CreateSuperseding(ctx, release)
+	created, sErr := s.store.Create(ctx, release)
 	if sErr != nil {
 		return nil, sErr
 	}
@@ -161,7 +162,7 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 		CreatedBy:        createdBy,
 	}
 
-	created, sErr := s.store.CreateSuperseding(ctx, release)
+	created, sErr := s.store.Create(ctx, release)
 	if sErr != nil {
 		return nil, sErr
 	}
@@ -218,6 +219,13 @@ func (s *stackReleaseService) CancelRelease(ctx context.Context, releaseID strin
 		return permErr
 	}
 
+	if rel.State == models.ReleaseStateInProgress {
+		return errors.BadRequest("cannot cancel release #%d: it is already in progress", rel.Sequence)
+	}
+	if rel.State.Terminal() {
+		return errors.BadRequest("cannot cancel release #%d: it is already %s", rel.Sequence, rel.State)
+	}
+
 	_, sErr = s.store.Cancel(ctx, releaseID)
 	return sErr
 }
@@ -236,16 +244,20 @@ func (s *stackReleaseService) InternalListActive(ctx context.Context) ([]*models
 	return s.store.ListActive(ctx)
 }
 
-func (s *stackReleaseService) MarkRendering(ctx context.Context, id string) (bool, *errors.ServiceError) {
-	return s.store.MarkRendering(ctx, id)
-}
-
-func (s *stackReleaseService) MarkApplyingDirect(ctx context.Context, id string) (bool, *errors.ServiceError) {
-	return s.store.MarkApplyingDirect(ctx, id)
+func (s *stackReleaseService) MarkInProgress(ctx context.Context, id string) (bool, *errors.ServiceError) {
+	return s.store.MarkInProgress(ctx, id)
 }
 
 func (s *stackReleaseService) SaveManifest(ctx context.Context, id string, m *models.ReleaseManifest, rev string, pins models.ReleasePins, rendererVersion string) (bool, *errors.ServiceError) {
 	return s.store.SaveManifest(ctx, id, m, rev, pins, rendererVersion)
+}
+
+func (s *stackReleaseService) MarkCancelled(ctx context.Context, id string, reason string) (bool, *errors.ServiceError) {
+	return s.store.MarkCancelled(ctx, id, reason)
+}
+
+func (s *stackReleaseService) MarkSuperseded(ctx context.Context, id string, reason string) (bool, *errors.ServiceError) {
+	return s.store.MarkSuperseded(ctx, id, reason)
 }
 
 func (s *stackReleaseService) MarkReleased(ctx context.Context, id string, outcome models.ReleaseOutcome) (bool, *errors.ServiceError) {
