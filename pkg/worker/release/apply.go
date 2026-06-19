@@ -124,6 +124,14 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 		return resultNil, fmt.Errorf("failed to sync postgres credential secrets: %w", err)
 	}
 
+	if err := r.syncGenericSecrets(ctx, clusterClient, effectiveStack); err != nil {
+		if isTransientClusterError(err) {
+			r.logger.Warnf("release %s: transient error syncing generic secrets, requeueing: %v", release.ID, err)
+			return resultRequeueAfter(convergencePollInterval), nil
+		}
+		return resultNil, fmt.Errorf("failed to sync generic secrets: %w", err)
+	}
+
 	ready, err := r.volumesReady(ctx, release.StackID)
 	if err != nil {
 		return resultNil, fmt.Errorf("failed to check volume readiness: %w", err)

@@ -1,3 +1,4 @@
+//go:generate mockgen -source=types.go -destination=types_mock_test.go -package=release
 package release
 
 import (

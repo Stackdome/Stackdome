@@ -243,6 +243,18 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 		return nil, err
 	}
 
+	existingVolumeIDs := make(map[string]struct{}, len(existingStack.Volumes))
+	for _, v := range existingStack.Volumes {
+		existingVolumeIDs[v.ID] = struct{}{}
+	}
+	for _, v := range updatedStack.Volumes {
+		if _, existed := existingVolumeIDs[v.ID]; !existed {
+			if enqErr := s.BackgroundJobEnqueuer.Enqueue(&models.Volume{ID: v.ID}); enqErr != nil {
+				return nil, errors.GeneralError("failed to enqueue volume '%s': %s", v.ID, enqErr.Error())
+			}
+		}
+	}
+
 	return updatedStack, nil
 }
 

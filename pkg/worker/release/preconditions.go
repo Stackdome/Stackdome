@@ -124,6 +124,54 @@ func (r *applyReconciler) syncPostgresCredentialSecrets(ctx context.Context, clu
 	return nil
 }
 
+// syncGenericSecrets ensures user-created secrets (Generic, Token, etc.) connected
+// to the stack are available as K8s Opaque secrets in the namespace.
+func (r *applyReconciler) syncGenericSecrets(ctx context.Context, clusterClient client.Client, stack *models.Stack) error {
+	secretConnections := stack.Connections.FromType(models.TopologyNodeTypeSecret)
+	if len(secretConnections) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{})
+	for _, connection := range secretConnections {
+		secretID := connection.From.Id
+		if _, ok := seen[secretID]; ok {
+			continue
+		}
+		seen[secretID] = struct{}{}
+
+		secret, serr := r.secretService.InternalGetByID(ctx, secretID)
+		if serr != nil {
+			return fmt.Errorf("failed to get secret '%s': %w", secretID, serr)
+		}
+
+		secretData := make(map[string][]byte, len(secret.Data))
+		for k, v := range secret.Data {
+			secretData[k] = []byte(v)
+		}
+
+		desired := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secret.ClusterSecretName(),
+				Namespace: stack.Namespace,
+				Labels: map[string]string{
+					models.StackIDLabel: stack.ID,
+				},
+				Annotations: map[string]string{
+					models.SecretDataHashAnnotation: secret.DataHash,
+					models.SecretIDAnnotation:       secret.ID,
+				},
+			},
+			Data: secretData,
+		}
+		if err := createOrUpdateSecret(ctx, clusterClient, desired); err != nil {
+			return fmt.Errorf("failed to sync generic secret '%s': %w", secret.Name, err)
+		}
+	}
+
+	return nil
+}
+
 func createOrUpdateSecret(ctx context.Context, clusterClient client.Client, desired *corev1.Secret) error {
 	existing := &corev1.Secret{}
 	err := clusterClient.Get(ctx, client.ObjectKey{Name: desired.Name, Namespace: desired.Namespace}, existing)

@@ -78,16 +78,16 @@ func (s *stackReleaseService) CreateRelease(ctx context.Context, stackID string,
 		return nil, errors.GeneralError("failed to create stack snapshot: %s", err.Error())
 	}
 
-	snapshotRev, err := stackrelease.HashJSON(snapshot)
-	if err != nil {
-		return nil, errors.GeneralError("failed to compute snapshot revision: %s", err.Error())
-	}
-
 	pins, pinErr := s.resolvePins(ctx, stack)
 	if pinErr != nil {
 		return nil, pinErr
 	}
 	applyPinsToSnapshot(&snapshot, pins)
+
+	snapshotRev, err := stackrelease.HashJSON(snapshot)
+	if err != nil {
+		return nil, errors.GeneralError("failed to compute snapshot revision: %s", err.Error())
+	}
 
 	identity := auth.GetIdentityFromCtx(ctx)
 	createdBy := identity.UserID
@@ -226,8 +226,14 @@ func (s *stackReleaseService) CancelRelease(ctx context.Context, releaseID strin
 		return errors.BadRequest("cannot cancel release #%d: it is already %s", rel.Sequence, rel.State)
 	}
 
-	_, sErr = s.store.Cancel(ctx, releaseID)
-	return sErr
+	won, sErr := s.store.Cancel(ctx, releaseID)
+	if sErr != nil {
+		return sErr
+	}
+	if !won {
+		return errors.Conflict("release #%d is no longer pending (it may have already started processing)", rel.Sequence)
+	}
+	return nil
 }
 
 // --- Internal methods (no permission checks, called by workers/controllers) ---

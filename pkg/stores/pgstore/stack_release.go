@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
@@ -32,8 +33,8 @@ var activeReleaseStates = []models.StackReleaseState{
 	models.ReleaseStateInProgress,
 }
 
-// CreateSuperseding atomically supersedes Pending releases, assigns the
-// next sequence number, and inserts the new release.
+// Create assigns the next sequence number and inserts the new release.
+// Supersession of older active releases is handled by the freshness reconciler.
 func (s *stackReleaseStore) Create(ctx context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError) {
 	var result *models.StackRelease
 
@@ -55,6 +56,9 @@ func (s *stackReleaseStore) Create(ctx context.Context, release *models.StackRel
 		}
 
 		if err := tx.Create(release).Error; err != nil {
+			if stderrors.Is(err, gorm.ErrDuplicatedKey) {
+				return errors.Conflict("a concurrent deploy is already in progress for this stack, please retry")
+			}
 			return errors.GeneralError("failed to create release: %s", err.Error())
 		}
 

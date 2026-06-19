@@ -63,6 +63,7 @@ func (f *Session) Init(config *config.DatabaseConfig) {
 	conf := &gorm.Config{
 		PrepareStmt:          false,
 		FullSaveAssociations: false,
+		TranslateError:       true,
 	}
 	g2, err = gorm.Open(postgres.New(postgres.Config{
 		Conn: dbx,
