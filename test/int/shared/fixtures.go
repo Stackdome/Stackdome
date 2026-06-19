@@ -86,7 +86,7 @@ const (
 	// BrokenBuildResourceName is the resource name for the broken-build fixture.
 	// It points to a branch that contains a Dockerfile with an invalid command so the build fails.
 	BrokenBuildResourceName     = "broken-app"
-	BrokenBuildSourceBranch     = "broken-dockerfile"
+	BrokenBuildSourceBranch     = "bad-build"
 	BrokenBuildSourceDockerfile = "Dockerfile-nonexistent"
 )
 
