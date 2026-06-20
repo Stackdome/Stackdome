@@ -38,4 +38,21 @@ describe("useReleases", () => {
     await vi.advanceTimersByTimeAsync(5000);
     expect(listReleases).toHaveBeenCalledTimes(2);
   });
+
+  it("stops polling once the active release becomes terminal", async () => {
+    vi.useFakeTimers();
+    const mock = listReleases as ReturnType<typeof vi.fn>;
+    mock.mockResolvedValueOnce({ items: [{ id: "r1", sequence: 1, state: "InProgress" }] });
+    renderHook(() => useReleases(ARGS));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mock).toHaveBeenCalledTimes(1);
+    // next poll returns a terminal state
+    mock.mockResolvedValueOnce({ items: [{ id: "r1", sequence: 1, state: "Released" }] });
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(mock).toHaveBeenCalledTimes(2);
+    // now terminal — further ticks must NOT fetch
+    await vi.advanceTimersByTimeAsync(5000);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(mock).toHaveBeenCalledTimes(2);
+  });
 });
