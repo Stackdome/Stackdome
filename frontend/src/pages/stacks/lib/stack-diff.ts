@@ -46,7 +46,7 @@ function isStructurallyEmpty(v: unknown): boolean {
   return false;
 }
 
-function deepEqual(a: unknown, b: unknown): boolean {
+export function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (isStructurallyEmpty(a) && isStructurallyEmpty(b)) return true;
   if (a === null || b === null) return a === b;
