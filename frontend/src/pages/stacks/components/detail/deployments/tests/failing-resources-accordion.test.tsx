@@ -29,7 +29,15 @@ describe("FailingResourcesAccordion", () => {
   it("expands one resource to show its failure detail", () => {
     render(<FailingResourcesAccordion failing={failing} />);
     fireEvent.click(screen.getByText("tooljet"));
-    expect(screen.getByText(/CrashLoopBackOff/)).toBeInTheDocument();
+    expect(screen.getByText("exit 1")).toBeInTheDocument();
+  });
+
+  it("keeps only one item open at a time", () => {
+    render(<FailingResourcesAccordion failing={failing} />);
+    fireEvent.click(screen.getByText("tooljet"));
+    expect(screen.getByText("exit 1")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("worker"));
+    expect(screen.queryByText("exit 1")).toBeNull();
   });
 
   it("renders a release-level banner when releaseMessage is set and no per-resource failures", () => {

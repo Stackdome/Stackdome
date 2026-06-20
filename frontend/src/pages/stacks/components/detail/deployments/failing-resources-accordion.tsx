@@ -22,7 +22,10 @@ export function FailingResourcesAccordion({ failing, releaseMessage }: FailingRe
           {failing.map((f) => (
             <AccordionItem key={f.name} value={f.name} className="rounded-md border border-danger-border">
               <AccordionTrigger className="px-3 py-2 text-[13px]">
-                <span className="font-medium text-foreground">{f.name}</span>
+                <span className="flex items-center gap-2">
+                  <span className="font-medium text-foreground">{f.name}</span>
+                  <span className="text-danger">{f.reason}</span>
+                </span>
               </AccordionTrigger>
               <AccordionContent className="px-3 pb-3">
                 <FailureCard
