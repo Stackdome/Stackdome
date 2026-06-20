@@ -58,4 +58,27 @@ describe("ReleaseRow", () => {
     render(<ReleaseRow release={row({ state: "Failed", message: "render error: bad template" })} onViewDetails={vi.fn()} onRollback={vi.fn()} onCancel={vi.fn()} />);
     expect(screen.getByText(/render error: bad template/)).toBeInTheDocument();
   });
+
+  it("does not offer Cancel for a Released release", async () => {
+    const user = userEvent.setup();
+    render(<ReleaseRow release={row({})} onViewDetails={vi.fn()} onRollback={vi.fn()} onCancel={vi.fn()} />);
+    await user.click(screen.getByLabelText("Release actions"));
+    expect(screen.queryByText("Cancel")).toBeNull();
+  });
+
+  it("does not offer Rollback for a Pending release", async () => {
+    const user = userEvent.setup();
+    render(<ReleaseRow release={row({ state: "Pending" })} onViewDetails={vi.fn()} onRollback={vi.fn()} onCancel={vi.fn()} />);
+    await user.click(screen.getByLabelText("Release actions"));
+    expect(screen.queryByText("Rollback to this")).toBeNull();
+  });
+
+  it("View details calls onViewDetails with the id", async () => {
+    const user = userEvent.setup();
+    const onViewDetails = vi.fn();
+    render(<ReleaseRow release={row({})} onViewDetails={onViewDetails} onRollback={vi.fn()} onCancel={vi.fn()} />);
+    await user.click(screen.getByLabelText("Release actions"));
+    await user.click(screen.getByText("View details"));
+    expect(onViewDetails).toHaveBeenCalledWith("r1");
+  });
 });

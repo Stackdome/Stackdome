@@ -50,11 +50,11 @@ export function ReleaseRow({ release, onViewDetails, onRollback, onCancel }: Rel
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[180px]">
           <DropdownMenuItem onClick={() => onViewDetails(id)}>View details</DropdownMenuItem>
-          {state === "Released" && (
-            <DropdownMenuItem onClick={() => onRollback(id)}>Rollback to this</DropdownMenuItem>
+          {state === "Released" && release.id && (
+            <DropdownMenuItem onClick={() => onRollback(release.id!)}>Rollback to this</DropdownMenuItem>
           )}
-          {state === "Pending" && (
-            <DropdownMenuItem variant="destructive" onClick={() => onCancel(id)}>
+          {state === "Pending" && release.id && (
+            <DropdownMenuItem variant="destructive" onClick={() => onCancel(release.id!)}>
               Cancel
             </DropdownMenuItem>
           )}
