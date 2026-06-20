@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
-import { Loader2, MoreHorizontal, Pencil, Rocket, Trash2 } from "lucide-react";
+import { Loader2, MoreHorizontal, Pencil, Save, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +33,7 @@ import {
 import type { AddonGroupStateMap } from "@/pages/stacks/components/shared/stack-resource-item";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
+import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById, updateStack } from "@/api/stacks";
@@ -517,9 +518,9 @@ export default function StackDetailPage() {
             leadLabel="Draft"
             segments={segments}
             primary={{
-              label: "Deploy",
-              loadingLabel: "Deploying",
-              icon: <Rocket className="h-3.5 w-3.5" />,
+              label: "Save",
+              loadingLabel: "Saving",
+              icon: <Save className="h-3.5 w-3.5" />,
               isLoading: isSaving,
               onClick: handleSave,
             }}
@@ -572,6 +573,12 @@ export default function StackDetailPage() {
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
           >
             Configuration
+          </TabsTrigger>
+          <TabsTrigger
+            value="deployments"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
+          >
+            Deployments
           </TabsTrigger>
           <TabsTrigger
             value="logs"
@@ -711,6 +718,21 @@ export default function StackDetailPage() {
               />
             );
           })()}
+        </TabsContent>
+
+        {/* Deployments Tab */}
+        <TabsContent value="deployments">
+          {stackToShow.id ? (
+            <DeploymentsTab
+              orgId={stackToShow.organisation_id || getCurrentOrganizationId() || ""}
+              teamName={teamNameById(stackToShow.team_id) || defaultTeamName || ""}
+              stackId={stackToShow.id}
+              stack={stackToShow}
+              canDeploy={canWriteStack}
+            />
+          ) : (
+            <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
+          )}
         </TabsContent>
 
         {/* Logs Tab */}
