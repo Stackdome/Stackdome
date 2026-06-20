@@ -33,8 +33,8 @@ export function CurrentDeploymentCard({ release, stack }: CurrentDeploymentCardP
       <div className="px-4 pb-3"><StageTracker stages={stages} /></div>
 
       <div className="divide-y divide-border border-t border-border">
-        {summaries.map((r) => (
-          <div key={r.name} className="flex items-center justify-between px-4 py-2 text-[13px]">
+        {summaries.map((r, idx) => (
+          <div key={r.name ?? idx} className="flex items-center justify-between px-4 py-2 text-[13px]">
             <span className="font-medium">{r.name}</span>
             <span className="font-mono text-muted-foreground">
               {r.phase} · {r.available_replicas ?? 0}/{r.replicas ?? 0}
@@ -48,7 +48,7 @@ export function CurrentDeploymentCard({ release, stack }: CurrentDeploymentCardP
           {recovered.map((r) => (
             <div key={r.name}>
               <span className="font-medium text-foreground">{r.name}</span>{" "}
-              recovered{r.restartCount != null ? ` after ${r.restartCount} restarts` : ""} — last failure{" "}
+              recovered{r.restartCount != null ? ` after ${r.restartCount} ${r.restartCount === 1 ? "restart" : "restarts"}` : ""} — last failure{" "}
               <span className="text-warn">{r.reason}</span>
             </div>
           ))}

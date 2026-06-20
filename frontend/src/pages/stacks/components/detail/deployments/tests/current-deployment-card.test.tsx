@@ -30,4 +30,9 @@ describe("CurrentDeploymentCard", () => {
     expect(screen.getByText(/recovered/i)).toBeInTheDocument();
     expect(screen.getByText(/CrashLoopBackOff/)).toBeInTheDocument();
   });
+
+  it("renders the live resource row with phase and replica count", () => {
+    render(<CurrentDeploymentCard release={release} stack={stack} />);
+    expect(screen.getByText(/Ready · 1\/1/)).toBeInTheDocument();
+  });
 });
