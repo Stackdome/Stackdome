@@ -6,3 +6,8 @@ export { EmptyState } from "./empty-state";
 export { FieldError } from "./field-error";
 export { FieldShell } from "./field-shell";
 export { StackdomeMark, StackdomeWordmark } from "./stackdome-mark";
+export { StageBadge, type FailureStage } from "./stage-badge";
+export { FailureCard, type FailureCardProps } from "./failure-card";
+export { AlertBanner, type AlertBannerProps } from "./alert-banner";
+export { EventRow, type EventRowProps } from "./event-row";
+export { LogSnapshot, type LogSnapshotProps } from "./log-snapshot";
