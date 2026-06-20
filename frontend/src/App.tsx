@@ -1,6 +1,7 @@
 import { Navigate, Route, RouterProvider, createBrowserRouter, createRoutesFromElements } from "react-router-dom"
 import Login from "@/pages/login"
 import Signup from "@/pages/signup"
+import GithubCallbackPage from "@/pages/auth/github-callback"
 import StacksPage from "@/pages/stacks/components/list"
 import StackCreatePage from "@/pages/stacks/components/create"
 import StackDetailPage from "@/pages/stacks/components/detail"
@@ -63,6 +64,7 @@ const router = createBrowserRouter(
       </Route>
       <Route path="/sign-in" element={<Login />} />
       <Route path="/sign-up" element={<Signup />} />
+      <Route path="/auth/github/callback" element={<GithubCallbackPage />} />
       <Route path="/logout" element={<Logout />} />
       <Route path="*" element={<NotFoundPage />} />
     </>
