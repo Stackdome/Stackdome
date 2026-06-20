@@ -131,7 +131,20 @@ describe("deriveStages", () => {
   it("image-only stack (no build pins) starts at Deploy", () => {
     const stack = { status: {} } as unknown as import("../derive").Stack;
     expect(deriveStages(stack, release({ state: "InProgress", pins: { resources: { api: { image_digest: "sha256:..." } } } }), []))
-      .toMatchObject({ build: "todo", deploy: "active" });
+      .toEqual({ build: "todo", deploy: "active", ready: "todo" });
+  });
+
+  it("Superseded returns all todo", () => {
+    const stack = { status: {} } as unknown as import("../derive").Stack;
+    expect(deriveStages(stack, release({ state: "Superseded", pins: imagePins }), []))
+      .toEqual({ build: "todo", deploy: "todo", ready: "todo" });
+  });
+
+  it("build failed even while Pending", () => {
+    const stack = { status: {} } as unknown as import("../derive").Stack;
+    const failing = [{ name: "api", type: "build_failure" as const, stage: "build" as const, reason: "x" }];
+    expect(deriveStages(stack, release({ state: "Pending", pins: imagePins }), failing))
+      .toEqual({ build: "failed", deploy: "todo", ready: "todo" });
   });
 });
 

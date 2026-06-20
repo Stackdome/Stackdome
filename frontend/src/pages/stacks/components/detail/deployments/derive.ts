@@ -106,6 +106,7 @@ export function formatDuration(start?: string, end?: string): string {
 
 export function releaseGitSha(release: StackRelease): string | undefined {
   const map = release.pins?.resources ?? {};
+  // First non-empty git_sha wins; multi-service stacks normally share one source repo.
   for (const p of Object.values(map)) {
     if (p?.git_sha) return p.git_sha;
   }
@@ -117,6 +118,12 @@ function hasBuildResources(release: StackRelease): boolean {
   return releaseGitSha(release) !== undefined;
 }
 
+/**
+ * Derives the Build→Deploy→Ready tracker state.
+ * `failing` MUST be the live, currently-unhealthy failure set from
+ * deriveFailingResources(stack) — healthy/recovered resources are already
+ * excluded, so a buildFailed/runtimeFailed here always reflects a CURRENT failure.
+ */
 export function deriveStages(stack: Stack, release: StackRelease, failing: FailingResource[]): Stages {
   const converged = stack.status?.last_converged?.release_id != null
     && stack.status?.last_converged?.release_id === release.id;
