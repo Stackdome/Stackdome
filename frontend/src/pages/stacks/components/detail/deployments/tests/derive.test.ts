@@ -25,6 +25,14 @@ describe("deriveFailingResources", () => {
     ]);
     expect(deriveFailingResources(stack)[0]).toMatchObject({ name: "api", type: "build_failure", stage: "build", reason: "ErrImagePull" });
   });
+
+  it("classifies an init-container failure to the init stage", () => {
+    const stack = stackWith([
+      { name: "migrate", status: { state: "Error", last_failure: {
+        type: "runtime_crash", init_container: { failure_type: "exit_error", reason: "InitFailed", exit_code: 2 } } } },
+    ]);
+    expect(deriveFailingResources(stack)[0]).toMatchObject({ name: "migrate", stage: "init", reason: "InitFailed", exitCode: 2 });
+  });
 });
 
 describe("deriveRecovered", () => {
@@ -61,6 +69,9 @@ describe("causeLabel", () => {
     expect(causeLabel({ kind: "rollback", detail: "12" })).toBe("Rollback to #12");
     expect(causeLabel({ kind: "webhook_push" })).toBe("Webhook push");
   });
+  it("labels a rollback with no detail as plain Rollback", () => {
+    expect(causeLabel({ kind: "rollback" })).toBe("Rollback");
+  });
 });
 
 describe("formatDuration", () => {
@@ -70,5 +81,8 @@ describe("formatDuration", () => {
   });
   it("returns dash when missing", () => {
     expect(formatDuration(undefined, undefined)).toBe("—");
+  });
+  it("returns dash for a negative interval", () => {
+    expect(formatDuration("2026-06-21T12:00:32Z", "2026-06-21T12:00:00Z")).toBe("—");
   });
 });
