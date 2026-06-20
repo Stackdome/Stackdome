@@ -9,6 +9,7 @@ import { useReleases } from "./use-releases";
 import { CurrentDeploymentCard } from "./current-deployment-card";
 import { ReleaseHistory } from "./release-history";
 import { ReleaseDetailDrawer } from "./release-detail-drawer";
+import { UnreleasedChangesBanner } from "./unreleased-changes-banner";
 
 export interface DeploymentsTabProps {
   orgId: string;
@@ -35,6 +36,13 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, canDeploy }: D
   const onRollback = (id: string) => run(() => rollbackRelease(orgId, teamName, stackId, id), "Rollback started");
   const onCancel = (id: string) => run(() => cancelRelease(orgId, teamName, stackId, id), "Release cancelled");
 
+  // Drift is heuristic: list releases carry no snapshot, so compare the stack's
+  // updated_at against the active release's completed_at. Precise drift needs the
+  // backend to expose the current snapshot_revision (filed follow-up §12.4).
+  const stackUpdated = (stack as unknown as { updated_at?: string }).updated_at;
+  const hasDrift = !!activeRelease && !!stackUpdated && !!activeRelease.completed_at
+    && new Date(stackUpdated) > new Date(activeRelease.completed_at);
+
   if (error) return <EmptyState title="Could not load deployments" description={error} />;
 
   return (
@@ -48,6 +56,7 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, canDeploy }: D
         )}
       </div>
 
+      <UnreleasedChangesBanner hasDrift={hasDrift} onDeploy={onDeploy} busy={busy} />
       {activeRelease && <CurrentDeploymentCard release={activeRelease} stack={stack} logContext={{ orgId, teamName, stackId }} />}
 
       <ReleaseHistory
