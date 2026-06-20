@@ -1,4 +1,6 @@
 import type { components } from "@/api/types/openapi";
+import type { StackRelease } from "@/api/releases";
+import type { Stages } from "@/components/branded";
 
 export type Stack = components["schemas"]["Stack"];
 export type StackResourceFailure = components["schemas"]["StackResourceFailure"];
@@ -100,4 +102,51 @@ export function formatDuration(start?: string, end?: string): string {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m}m ${s}s`;
+}
+
+export function releaseGitSha(release: StackRelease): string | undefined {
+  const map = release.pins?.resources ?? {};
+  for (const p of Object.values(map)) {
+    if (p?.git_sha) return p.git_sha;
+  }
+  return undefined;
+}
+
+/** True if the release pins any resource with a git_sha (i.e. a build happened). */
+function hasBuildResources(release: StackRelease): boolean {
+  return releaseGitSha(release) !== undefined;
+}
+
+export function deriveStages(stack: Stack, release: StackRelease, failing: FailingResource[]): Stages {
+  const converged = stack.status?.last_converged?.release_id != null
+    && stack.status?.last_converged?.release_id === release.id;
+  const buildFailed = failing.some((f) => f.type === "build_failure");
+  const runtimeFailed = failing.some((f) => f.type === "runtime_crash");
+  const hasBuild = hasBuildResources(release);
+  const state = release.state;
+
+  if (converged || state === "Released") {
+    return { build: hasBuild ? "done" : "todo", deploy: "done", ready: "done" };
+  }
+  if (buildFailed) return { build: "failed", deploy: "todo", ready: "todo" };
+
+  if (state === "Pending") {
+    return hasBuild
+      ? { build: "active", deploy: "todo", ready: "todo" }
+      : { build: "todo", deploy: "active", ready: "todo" };
+  }
+  if (state === "InProgress") {
+    return {
+      build: hasBuild ? "done" : "todo",
+      deploy: runtimeFailed ? "failed" : "active",
+      ready: "todo",
+    };
+  }
+  if (state === "Failed") {
+    if (runtimeFailed) return { build: hasBuild ? "done" : "todo", deploy: "failed", ready: "todo" };
+    // Pre-cluster (render/apply/timeout) → map to first node per spec.
+    return { build: "failed", deploy: "todo", ready: "todo" };
+  }
+  // Superseded / Cancelled → neutral.
+  return { build: "todo", deploy: "todo", ready: "todo" };
 }

@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import type { Stack } from "@/api/stacks";
 import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration } from "../derive";
+import { deriveStages, releaseGitSha } from "../derive";
+import type { StackRelease } from "@/api/releases";
+
+function release(partial: Partial<StackRelease>): StackRelease {
+  return { id: "r1", ...partial } as StackRelease;
+}
 
 function stackWith(resources: Array<Record<string, unknown>>): Stack {
   return { spec: { stack_resources: resources } } as unknown as Stack;
@@ -84,5 +90,56 @@ describe("formatDuration", () => {
   });
   it("returns dash for a negative interval", () => {
     expect(formatDuration("2026-06-21T12:00:32Z", "2026-06-21T12:00:00Z")).toBe("—");
+  });
+});
+
+describe("deriveStages", () => {
+  const imagePins = { resources: { api: { git_sha: "9c69af2" } } };
+
+  it("all done when converged to the active release", () => {
+    const stack = { status: { last_converged: { release_id: "r1" } } } as unknown as import("../derive").Stack;
+    expect(deriveStages(stack, release({ id: "r1", state: "Released", pins: imagePins }), []))
+      .toEqual({ build: "done", deploy: "done", ready: "done" });
+  });
+
+  it("build active while Pending with build pins", () => {
+    const stack = { status: {} } as unknown as import("../derive").Stack;
+    expect(deriveStages(stack, release({ state: "Pending", pins: imagePins }), []))
+      .toEqual({ build: "active", deploy: "todo", ready: "todo" });
+  });
+
+  it("build failed when a resource reports build_failure", () => {
+    const stack = { status: {} } as unknown as import("../derive").Stack;
+    const failing = [{ name: "api", type: "build_failure" as const, stage: "build" as const, reason: "x" }];
+    expect(deriveStages(stack, release({ state: "InProgress", pins: imagePins }), failing))
+      .toEqual({ build: "failed", deploy: "todo", ready: "todo" });
+  });
+
+  it("deploy failed when a runtime crash occurs (build already done)", () => {
+    const stack = { status: {} } as unknown as import("../derive").Stack;
+    const failing = [{ name: "api", type: "runtime_crash" as const, stage: "runtime" as const, reason: "x" }];
+    expect(deriveStages(stack, release({ state: "InProgress", pins: imagePins }), failing))
+      .toEqual({ build: "done", deploy: "failed", ready: "todo" });
+  });
+
+  it("pre-cluster Failed with no resource failure maps to Build ✕", () => {
+    const stack = { status: {} } as unknown as import("../derive").Stack;
+    expect(deriveStages(stack, release({ state: "Failed", pins: imagePins }), []))
+      .toEqual({ build: "failed", deploy: "todo", ready: "todo" });
+  });
+
+  it("image-only stack (no build pins) starts at Deploy", () => {
+    const stack = { status: {} } as unknown as import("../derive").Stack;
+    expect(deriveStages(stack, release({ state: "InProgress", pins: { resources: { api: { image_digest: "sha256:..." } } } }), []))
+      .toMatchObject({ build: "todo", deploy: "active" });
+  });
+});
+
+describe("releaseGitSha", () => {
+  it("returns the first non-empty git_sha from pins", () => {
+    expect(releaseGitSha(release({ pins: { resources: { api: { git_sha: "abc1234" } } } }))).toBe("abc1234");
+  });
+  it("returns undefined when no git pins", () => {
+    expect(releaseGitSha(release({ pins: { resources: { api: { image_digest: "x" } } } }))).toBeUndefined();
   });
 });
