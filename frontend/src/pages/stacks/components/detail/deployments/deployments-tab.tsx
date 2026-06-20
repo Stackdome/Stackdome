@@ -61,14 +61,19 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, canDeploy }: D
         <EmptyState title="No deployments yet" description="Deploy this stack to create your first release." />
       )}
 
-      {openReleaseId && (
-        <ReleaseDetailDrawer
-          orgId={orgId} teamName={teamName} stackId={stackId}
-          releaseId={openReleaseId}
-          previousRelease={releases.find((_r, i) => releases[i - 1]?.id === openReleaseId)}
-          onClose={() => setOpenReleaseId(null)}
-        />
-      )}
+      {openReleaseId && (() => {
+        // releases is newest-first; the "previous" release is the next-older one (index + 1).
+        const openIdx = releases.findIndex((r) => r.id === openReleaseId);
+        const previousRelease = openIdx >= 0 ? releases[openIdx + 1] : undefined;
+        return (
+          <ReleaseDetailDrawer
+            orgId={orgId} teamName={teamName} stackId={stackId}
+            releaseId={openReleaseId}
+            previousRelease={previousRelease}
+            onClose={() => setOpenReleaseId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
