@@ -11,3 +11,4 @@ export { FailureCard, type FailureCardProps } from "./failure-card";
 export { AlertBanner, type AlertBannerProps } from "./alert-banner";
 export { EventRow, type EventRowProps } from "./event-row";
 export { LogSnapshot, type LogSnapshotProps } from "./log-snapshot";
+export { StageTracker, type StageStatus, type Stages } from "./stage-tracker";
