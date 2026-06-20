@@ -2,7 +2,6 @@ package int
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -23,10 +22,6 @@ var _ = BeforeEach(func() {
 	By("Clearing test data")
 	Expect(env.Database.ClearData(context.Background())).To(Succeed())
 })
-
-func keepOnFailure() bool {
-	return os.Getenv("KEEP_DATA") != "" && CurrentSpecReport().Failed()
-}
 
 var _ = BeforeSuite(func() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*15)
