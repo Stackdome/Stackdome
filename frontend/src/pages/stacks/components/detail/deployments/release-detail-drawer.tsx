@@ -20,6 +20,8 @@ export function ReleaseDetailDrawer({ orgId, teamName, stackId, releaseId, previ
 
   useEffect(() => {
     let alive = true;
+    setRelease(null);
+    setError(null);
     getRelease(orgId, teamName, stackId, releaseId)
       .then((r) => { if (alive) setRelease(r); })
       .catch((e) => { if (alive) setError(e instanceof Error ? e.message : "Failed to load release"); });
@@ -47,6 +49,8 @@ export function ReleaseDetailDrawer({ orgId, teamName, stackId, releaseId, previ
 
         {error && <p className="mt-4 text-[13px] text-danger">{error}</p>}
 
+        {!release && !error && <p className="mt-4 text-[13px] text-muted-foreground">Loading…</p>}
+
         {release && (
           <div className="mt-4 space-y-6 text-[13px]">
             <section className="space-y-1">
@@ -68,10 +72,13 @@ export function ReleaseDetailDrawer({ orgId, teamName, stackId, releaseId, previ
                 <h3 className="mb-2 font-medium">Resource outcomes</h3>
                 <div className="divide-y divide-border rounded-md border border-border">
                   {outcomes.map(([name, o]) => (
-                    <div key={name} className="flex items-center justify-between px-3 py-2">
-                      <span className="font-medium">{name}</span>
-                      <span className="text-muted-foreground">{o?.phase}</span>
-                      <span className="font-mono text-muted-foreground">{o?.ready_replicas ?? 0}/{o?.replicas ?? 0}</span>
+                    <div key={name} className="px-3 py-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{name}</span>
+                        <span className="text-muted-foreground">{o?.phase}</span>
+                        <span className="font-mono text-muted-foreground">{o?.ready_replicas ?? 0}/{o?.replicas ?? 0}</span>
+                      </div>
+                      {o?.message && <div className="mt-0.5 text-[12px] text-muted-foreground">{o.message}</div>}
                     </div>
                   ))}
                 </div>

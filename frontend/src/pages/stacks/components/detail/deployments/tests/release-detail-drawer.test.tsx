@@ -38,4 +38,17 @@ describe("ReleaseDetailDrawer", () => {
     await waitFor(() => expect(screen.getByText(/Config changes/i)).toBeInTheDocument());
     expect(screen.getByText("spec.replicas")).toBeInTheDocument();
   });
+
+  it("shows an error when the release fails to load", async () => {
+    (getRelease as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("boom"));
+    render(<ReleaseDetailDrawer orgId="o" teamName="t" stackId="s" releaseId="r1" onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText(/boom/)).toBeInTheDocument());
+  });
+
+  it("hides 'Why it failed' for a non-failed release", async () => {
+    (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "r1", sequence: 14, state: "Released", message: "" });
+    render(<ReleaseDetailDrawer orgId="o" teamName="t" stackId="s" releaseId="r1" onClose={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText(/Release #14/)).toBeInTheDocument());
+    expect(screen.queryByText(/Why it failed/)).toBeNull();
+  });
 });
