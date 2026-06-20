@@ -7,6 +7,9 @@ Name | Type | Description | Notes
 **State** | Pointer to **string** |  | [optional] 
 **Message** | Pointer to **string** |  | [optional] 
 **ObservedRevision** | Pointer to **string** |  | [optional] 
+**TargetRevision** | Pointer to **string** |  | [optional] 
+**LastConverged** | Pointer to [**StackConvergenceRecord**](StackConvergenceRecord.md) |  | [optional] 
+**Resources** | Pointer to [**[]StackResourceSummary**](StackResourceSummary.md) |  | [optional] 
 **Conditions** | Pointer to [**[]Condition**](Condition.md) |  | [optional] 
 
 ## Methods
@@ -102,6 +105,81 @@ SetObservedRevision sets ObservedRevision field to given value.
 `func (o *StackStatus) HasObservedRevision() bool`
 
 HasObservedRevision returns a boolean if a field has been set.
+
+### GetTargetRevision
+
+`func (o *StackStatus) GetTargetRevision() string`
+
+GetTargetRevision returns the TargetRevision field if non-nil, zero value otherwise.
+
+### GetTargetRevisionOk
+
+`func (o *StackStatus) GetTargetRevisionOk() (*string, bool)`
+
+GetTargetRevisionOk returns a tuple with the TargetRevision field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTargetRevision
+
+`func (o *StackStatus) SetTargetRevision(v string)`
+
+SetTargetRevision sets TargetRevision field to given value.
+
+### HasTargetRevision
+
+`func (o *StackStatus) HasTargetRevision() bool`
+
+HasTargetRevision returns a boolean if a field has been set.
+
+### GetLastConverged
+
+`func (o *StackStatus) GetLastConverged() StackConvergenceRecord`
+
+GetLastConverged returns the LastConverged field if non-nil, zero value otherwise.
+
+### GetLastConvergedOk
+
+`func (o *StackStatus) GetLastConvergedOk() (*StackConvergenceRecord, bool)`
+
+GetLastConvergedOk returns a tuple with the LastConverged field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetLastConverged
+
+`func (o *StackStatus) SetLastConverged(v StackConvergenceRecord)`
+
+SetLastConverged sets LastConverged field to given value.
+
+### HasLastConverged
+
+`func (o *StackStatus) HasLastConverged() bool`
+
+HasLastConverged returns a boolean if a field has been set.
+
+### GetResources
+
+`func (o *StackStatus) GetResources() []StackResourceSummary`
+
+GetResources returns the Resources field if non-nil, zero value otherwise.
+
+### GetResourcesOk
+
+`func (o *StackStatus) GetResourcesOk() (*[]StackResourceSummary, bool)`
+
+GetResourcesOk returns a tuple with the Resources field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetResources
+
+`func (o *StackStatus) SetResources(v []StackResourceSummary)`
+
+SetResources sets Resources field to given value.
+
+### HasResources
+
+`func (o *StackStatus) HasResources() bool`
+
+HasResources returns a boolean if a field has been set.
 
 ### GetConditions
 

@@ -25,10 +25,13 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services/clusterresource"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stackdeploy"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	inviteworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/invite"
 	postgresaddonworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/postgresaddon"
+	releaseworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/release"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/stack"
+	volumeworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/volume"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
 	"github.com/google/uuid"
 	"github.com/openshift-online/ocm-sdk-go/leadership"
@@ -315,11 +318,13 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	stackStore := pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: te.DBSession})
 
 	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
-		SessionFactory:       te.DBSession,
-		Logger:               te.Logger,
-		WorkspaceUserService: workspaceUserService,
-		Permissions:          te.PermissionService,
-		StackStore:           stackStore,
+		SessionFactory:         te.DBSession,
+		Logger:                 te.Logger,
+		WorkspaceUserService:   workspaceUserService,
+		Permissions:            te.PermissionService,
+		StackStore:             stackStore,
+		ClusterRegistryService: imageRegistryService,
+		StackDomainService:     stackDomainService,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
@@ -370,18 +375,17 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	stackService := services.NewStackService(services.StackServiceSpec{
-		SessionFactory:         te.DBSession,
-		Logger:                 te.Logger,
-		VolumeService:          volumeService,
-		OrganisationService:    organisationService,
-		StackResourceService:   stackResourceService,
-		ClusterService:         clusterService,
-		ClusterRegistryService: imageRegistryService,
-		NamespaceService:       namespaceService,
-		SecretService:          secretService,
-		PostgresAddonService:   postgresAddonService,
-		TeamService:            teamService,
-		Permissions:            te.PermissionService,
+		SessionFactory:       te.DBSession,
+		Logger:               te.Logger,
+		VolumeService:        volumeService,
+		OrganisationService:  organisationService,
+		StackResourceService: stackResourceService,
+		ClusterService:       clusterService,
+		NamespaceService:     namespaceService,
+		SecretService:        secretService,
+		PostgresAddonService: postgresAddonService,
+		TeamService:          teamService,
+		Permissions:          te.PermissionService,
 	})
 
 	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
@@ -426,6 +430,19 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SessionFactory: te.DBSession,
 	})
 
+	stackReleaseStore := pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+
+	stackReleaseService := services.NewStackReleaseService(services.StackReleaseServiceSpec{
+		Store:         stackReleaseStore,
+		StackService:  stackService,
+		SecretService: secretService,
+		Permissions:   te.PermissionService,
+	})
+
+	stackService.SetReleaseService(stackReleaseService)
+
 	te.Services = Services{
 		UserService:                 userService,
 		WorkspaceUserService:        workspaceUserService,
@@ -452,6 +469,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		TeamService:                 teamService,
 		OrgInviteService:            orgInviteService,
 		SignupService:               signupService,
+		StackReleaseService:         stackReleaseService,
 	}
 
 	return nil
@@ -493,9 +511,11 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 			},
 			func() clustermanager.Controller {
 				return stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
-					Log:          applogger.NewLoggerWithPrefix(ctx, "test-stack-controller").SetLevel(te.Logger.GetLevel()),
-					StackService: te.Services.StackService,
-					Env:          te.Env.Name,
+					Log:            applogger.NewLoggerWithPrefix(ctx, "test-stack-controller").SetLevel(te.Logger.GetLevel()),
+					StackService:   te.Services.StackService,
+					Env:            te.Env.Name,
+					ReleaseChecker: te.Services.StackReleaseService,
+					Enqueuer:       te.WorkerManager,
 				})
 			},
 			func() clustermanager.Controller {
@@ -551,18 +571,47 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 		ClusterManager:       te.ClusterManager,
 		VolumeService:        te.Services.VolumeService,
 		NamespaceService:     te.Services.NamespaceService,
-		PostgresAddonService: te.Services.PostgresAddonService,
 		ResourceUsageService: te.Services.ResourceUsageService,
 		Env:                  te.Env.Name,
+	})
+
+	te.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
+
+	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
+		ReleaseService:       te.Services.StackReleaseService,
+		StackService:         te.Services.StackService,
+		ClusterManager:       te.ClusterManager,
+		SecretService:        te.Services.SecretService,
+		PostgresAddonService: te.Services.PostgresAddonService,
+		VolumeService:        te.Services.VolumeService,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			SecretService: te.Services.SecretService,
 		}),
 		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{
 			SecretFetcher: te.Services.SecretService,
 		}),
+		Resolver: stackdeploy.NewResolver(stackdeploy.ResolverSpec{
+			VolumeService:        te.Services.VolumeService,
+			PostgresAddonService: te.Services.PostgresAddonService,
+			SecretService:        te.Services.SecretService,
+		}),
+		Env: te.Env.Name,
 	})
+	te.WorkerManager.RegisterWorker(releaseWorker, &models.StackRelease{})
 
-	te.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
+	volumeWorker := volumeworker.NewVolumeWorker(volumeworker.VolumeWorkerSpec{
+		VolumeService:  te.Services.VolumeService,
+		StackService:   te.Services.StackService,
+		ClusterManager: te.ClusterManager,
+		StackVolumeStore: pgstore.NewStackVolumeStore(pgstore.StackVolumeStoreSpec{
+			SessionFactory: te.DBSession,
+		}),
+		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
+			SecretService: te.Services.SecretService,
+		}),
+		Env: te.Env.Name,
+	})
+	te.WorkerManager.RegisterWorker(volumeWorker, &models.Volume{})
 
 	pgAddonWorker := postgresaddonworker.NewPostgresAddonWorker(postgresaddonworker.PostgresAddonWorkerSpec{
 		PostgresAddonService:   te.Services.PostgresAddonService,
@@ -660,9 +709,10 @@ func (te *testEnvironment) injectClusterResourceServices(ctx context.Context) er
 	te.Services.MetricsService.InjectClusterResourceServiceDeps(deps)
 	te.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
 	te.Services.StackService.InjectBackgroundJobEnqueuer(dep)
-	te.Services.StackResourceService.InjectBackgroundJobEnqueuer(dep)
+	te.Services.StackResourceService.InjectClusterManager(te.ClusterManager)
 	te.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
 	te.Services.OrgInviteService.InjectBackgroundJobEnqueuer(dep)
+	te.Services.StackReleaseService.InjectBackgroundJobEnqueuer(dep)
 	return nil
 }
 

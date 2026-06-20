@@ -66,12 +66,15 @@ func TestResolveSecretEnvConnection(t *testing.T) {
 	g := NewWithT(t)
 	ctrl := gomock.NewController(t)
 	secretService := NewMockSecretService(ctrl)
+	secret := &models.Secret{
+		ID:   "sec-1",
+		Name: "my-tls-cert",
+		Type: models.SecretTypeGeneric,
+		Data: map[string]string{"tls.crt": "cert-data"},
+	}
 	secretService.EXPECT().
 		InternalGetByID(gomock.Any(), "sec-1").
-		Return(&models.Secret{
-			ID:   "sec-1",
-			Data: map[string]string{"tls.crt": "cert-data"},
-		}, nil)
+		Return(secret, nil)
 
 	stack := &models.Stack{
 		ID: "stack-1",
@@ -102,7 +105,12 @@ func TestResolveSecretEnvConnection(t *testing.T) {
 	effective, err := resolver.Resolve(context.Background(), stack)
 
 	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(envValue(effective, "web", "TLS_CERT")).To(Equal("cert-data"))
+	env := envEntry(effective, "web", "TLS_CERT")
+	g.Expect(env).NotTo(BeNil())
+	g.Expect(env.Value).To(Equal(""))
+	g.Expect(env.SecretKeyRef).NotTo(BeNil())
+	g.Expect(env.SecretKeyRef.SecretName).To(Equal(secret.ClusterSecretName()))
+	g.Expect(env.SecretKeyRef.Key).To(Equal("tls.crt"))
 	g.Expect(len(stack.StackResources[0].ExecutionConfig.Env)).To(Equal(0))
 }
 
@@ -223,9 +231,22 @@ func TestResolvePostgresEnvConnection(t *testing.T) {
 	resolver := NewResolver(ResolverSpec{PostgresAddonService: addonService})
 	effective, err := resolver.Resolve(context.Background(), stack)
 
+	expectedSecretName := PostgresCredentialSecretName("pg-1", "app")
 	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(envValue(effective, "web", "DATABASE_URL")).To(Equal("postgresql://app_user:secret@pg-rw.default.svc.cluster.local:5432/app"))
-	g.Expect(envValue(effective, "web", "PGHOST")).To(Equal("pg-rw.default.svc.cluster.local"))
+
+	dbURL := envEntry(effective, "web", "DATABASE_URL")
+	g.Expect(dbURL).NotTo(BeNil())
+	g.Expect(dbURL.Value).To(Equal(""))
+	g.Expect(dbURL.SecretKeyRef).NotTo(BeNil())
+	g.Expect(dbURL.SecretKeyRef.SecretName).To(Equal(expectedSecretName))
+	g.Expect(dbURL.SecretKeyRef.Key).To(Equal("url"))
+
+	pgHost := envEntry(effective, "web", "PGHOST")
+	g.Expect(pgHost).NotTo(BeNil())
+	g.Expect(pgHost.SecretKeyRef).NotTo(BeNil())
+	g.Expect(pgHost.SecretKeyRef.SecretName).To(Equal(expectedSecretName))
+	g.Expect(pgHost.SecretKeyRef.Key).To(Equal("host"))
+
 	g.Expect(len(stack.StackResources[0].ExecutionConfig.Env)).To(Equal(1))
 }
 
@@ -456,21 +477,116 @@ func TestResolveVolumeMountUnknownResourceFails(t *testing.T) {
 	g.Expect(err.Error()).To(ContainSubstring("missing-resource"))
 }
 
+func TestResolveSecretConnectionUnknownOutputFails(t *testing.T) {
+	g := NewWithT(t)
+	ctrl := gomock.NewController(t)
+	secretService := NewMockSecretService(ctrl)
+	secretService.EXPECT().
+		InternalGetByID(gomock.Any(), "sec-1").
+		Return(&models.Secret{
+			ID:   "sec-1",
+			Name: "my-secret",
+			Type: models.SecretTypeGeneric,
+			Data: map[string]string{"real_key": "value"},
+		}, nil)
+
+	stack := &models.Stack{
+		ID: "stack-1",
+		StackResources: []*models.StackResource{
+			{ID: "res-1", Name: "web"},
+		},
+		Connections: models.StackConnections{
+			{
+				ID:   "sec-web",
+				Kind: models.ConnectionKindEnv,
+				From: models.TopologyNodeRef{Type: models.TopologyNodeTypeSecret, Id: "sec-1"},
+				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+				Mappings: []models.ConnectionMapping{
+					{
+						Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "MISSING"},
+						Value:  models.ValueRef{Output: "nonexistent_key"},
+					},
+				},
+			},
+		},
+	}
+
+	resolver := NewResolver(ResolverSpec{SecretService: secretService})
+	_, err := resolver.Resolve(context.Background(), stack)
+
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(err.Error()).To(ContainSubstring("nonexistent_key"))
+}
+
+func TestResolveResourceToResourceConnectionStillInlinesValues(t *testing.T) {
+	g := NewWithT(t)
+
+	stack := &models.Stack{
+		ID: "stack-1",
+		StackResources: []*models.StackResource{
+			{
+				ID:        "res-api",
+				Name:      "api",
+				Namespace: "default",
+				Ports: models.Ports{
+					{Name: "http", Number: 8080, Protocol: "http"},
+				},
+			},
+			{
+				ID:              "res-worker",
+				Name:            "worker",
+				ExecutionConfig: &models.ExecutionConfig{},
+			},
+		},
+		Connections: models.StackConnections{
+			{
+				ID:   "api-worker",
+				Kind: models.ConnectionKindEnv,
+				From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
+				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "worker"},
+				Mappings: []models.ConnectionMapping{
+					{
+						Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "API_HOST"},
+						Value:  models.ValueRef{Output: "host"},
+					},
+				},
+			},
+		},
+	}
+
+	resolver := NewResolver(ResolverSpec{})
+	effective, err := resolver.Resolve(context.Background(), stack)
+
+	g.Expect(err).NotTo(HaveOccurred())
+	env := envEntry(effective, "worker", "API_HOST")
+	g.Expect(env).NotTo(BeNil())
+	g.Expect(env.Value).To(Equal("api.default.svc"))
+	g.Expect(env.SecretKeyRef).To(BeNil())
+}
+
 // --- test helpers ---
 
-func envValue(stack *models.Stack, resourceName, envName string) string {
+func envEntry(stack *models.Stack, resourceName, envName string) *models.EnvVar {
 	for _, resource := range stack.StackResources {
 		if resource.Name != resourceName {
 			continue
 		}
 		if resource.ExecutionConfig == nil {
-			return ""
+			return nil
 		}
-		for _, env := range resource.ExecutionConfig.Env {
+		for i, env := range resource.ExecutionConfig.Env {
 			if env.Name == envName {
-				return env.Value
+				return &resource.ExecutionConfig.Env[i]
 			}
 		}
 	}
-	return ""
+	return nil
+}
+
+func envValue(stack *models.Stack, resourceName, envName string) string {
+	entry := envEntry(stack, resourceName, envName)
+	if entry == nil {
+		return ""
+	}
+	return entry.Value
 }

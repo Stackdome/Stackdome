@@ -2480,6 +2480,180 @@ paths:
       security:
       - Bearer: []
       summary: Update stack connection
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases:
+    get:
+      operationId: listReleases
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackReleaseList'
+          description: List of releases
+      security:
+      - Bearer: []
+      summary: List releases for a stack
+      tags:
+      - Releases
+    post:
+      operationId: createRelease
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReleaseRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackRelease'
+          description: Release created
+      security:
+      - Bearer: []
+      summary: Create a new release (deploy)
+      tags:
+      - Releases
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}:
+    get:
+      operationId: getRelease
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: release_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackRelease'
+          description: Release details
+      security:
+      - Bearer: []
+      summary: Get a release by ID
+      tags:
+      - Releases
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel:
+    post:
+      operationId: cancelRelease
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: release_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          description: Release cancelled
+      security:
+      - Bearer: []
+      summary: Cancel a pending or rendering release
+      tags:
+      - Releases
   /api/v1/organizations/{org_id}/teams/{team_name}/secrets:
     get:
       parameters:
@@ -5790,6 +5964,30 @@ components:
         namespace: namespace
         id: id
         status:
+          last_converged:
+            release_id: release_id
+            at: 2000-01-23T04:56:07.000+00:00
+            revision: revision
+          resources:
+          - phase: phase
+            updated_replicas: 3
+            available_replicas: 9
+            replicas: 2
+            name: name
+            missing: true
+            converged_revision: converged_revision
+            message: message
+            observed_revision: observed_revision
+          - phase: phase
+            updated_replicas: 3
+            available_replicas: 9
+            replicas: 2
+            name: name
+            missing: true
+            converged_revision: converged_revision
+            message: message
+            observed_revision: observed_revision
+          target_revision: target_revision
           state: state
           message: message
           conditions:
@@ -5853,7 +6051,7 @@ components:
       type: object
     StackList:
       example:
-        total: 9
+        total: 4
         items:
         - annotations:
           - value: value
@@ -6359,6 +6557,30 @@ components:
           namespace: namespace
           id: id
           status:
+            last_converged:
+              release_id: release_id
+              at: 2000-01-23T04:56:07.000+00:00
+              revision: revision
+            resources:
+            - phase: phase
+              updated_replicas: 3
+              available_replicas: 9
+              replicas: 2
+              name: name
+              missing: true
+              converged_revision: converged_revision
+              message: message
+              observed_revision: observed_revision
+            - phase: phase
+              updated_replicas: 3
+              available_replicas: 9
+              replicas: 2
+              name: name
+              missing: true
+              converged_revision: converged_revision
+              message: message
+              observed_revision: observed_revision
+            target_revision: target_revision
             state: state
             message: message
             conditions:
@@ -6879,6 +7101,30 @@ components:
           namespace: namespace
           id: id
           status:
+            last_converged:
+              release_id: release_id
+              at: 2000-01-23T04:56:07.000+00:00
+              revision: revision
+            resources:
+            - phase: phase
+              updated_replicas: 3
+              available_replicas: 9
+              replicas: 2
+              name: name
+              missing: true
+              converged_revision: converged_revision
+              message: message
+              observed_revision: observed_revision
+            - phase: phase
+              updated_replicas: 3
+              available_replicas: 9
+              replicas: 2
+              name: name
+              missing: true
+              converged_revision: converged_revision
+              message: message
+              observed_revision: observed_revision
+            target_revision: target_revision
             state: state
             message: message
             conditions:
@@ -7482,6 +7728,30 @@ components:
       type: object
     StackStatus:
       example:
+        last_converged:
+          release_id: release_id
+          at: 2000-01-23T04:56:07.000+00:00
+          revision: revision
+        resources:
+        - phase: phase
+          updated_replicas: 3
+          available_replicas: 9
+          replicas: 2
+          name: name
+          missing: true
+          converged_revision: converged_revision
+          message: message
+          observed_revision: observed_revision
+        - phase: phase
+          updated_replicas: 3
+          available_replicas: 9
+          replicas: 2
+          name: name
+          missing: true
+          converged_revision: converged_revision
+          message: message
+          observed_revision: observed_revision
+        target_revision: target_revision
         state: state
         message: message
         conditions:
@@ -7505,6 +7775,14 @@ components:
           type: string
         observed_revision:
           type: string
+        target_revision:
+          type: string
+        last_converged:
+          $ref: '#/components/schemas/StackConvergenceRecord'
+        resources:
+          items:
+            $ref: '#/components/schemas/StackResourceSummary'
+          type: array
         conditions:
           items:
             $ref: '#/components/schemas/Condition'
@@ -11179,6 +11457,297 @@ components:
           type: string
         expires_at:
           format: date-time
+          type: string
+      type: object
+    StackReleaseState:
+      enum:
+      - Pending
+      - InProgress
+      - Released
+      - Failed
+      - Superseded
+      - Cancelled
+      type: string
+      x-enum-varnames:
+      - RELEASE_STATE_PENDING
+      - RELEASE_STATE_IN_PROGRESS
+      - RELEASE_STATE_RELEASED
+      - RELEASE_STATE_FAILED
+      - RELEASE_STATE_SUPERSEDED
+      - RELEASE_STATE_CANCELLED
+    ReleaseCauseKind:
+      enum:
+      - manual
+      - rollback
+      - webhook_push
+      type: string
+      x-enum-varnames:
+      - RELEASE_CAUSE_MANUAL
+      - RELEASE_CAUSE_ROLLBACK
+      - RELEASE_CAUSE_WEBHOOK_PUSH
+    CreateReleaseRequest:
+      example:
+        from_release_id: from_release_id
+      properties:
+        from_release_id:
+          description: "If set, creates a rollback release copying this release's\
+            \ manifest"
+          type: string
+      type: object
+    StackRelease:
+      example:
+        cause:
+          kind: null
+          detail: detail
+        created_at: 2000-01-23T04:56:07.000+00:00
+        pins:
+          resources:
+            key:
+              git_sha: git_sha
+              image_digest: image_digest
+              volume_hash: volume_hash
+        manifest_revision: manifest_revision
+        message: message
+        created_by: created_by
+        snapshot_revision: snapshot_revision
+        sequence: 0
+        completed_at: 2000-01-23T04:56:07.000+00:00
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        stack_id: stack_id
+        rendered_at: 2000-01-23T04:56:07.000+00:00
+        renderer_version: renderer_version
+        id: id
+        state: null
+        outcome:
+          duration: duration
+          resources:
+            key:
+              phase: phase
+              ready_replicas: 6
+              replicas: 1
+              message: message
+      properties:
+        id:
+          type: string
+        stack_id:
+          type: string
+        sequence:
+          type: integer
+        state:
+          $ref: '#/components/schemas/StackReleaseState'
+        message:
+          type: string
+        cause:
+          $ref: '#/components/schemas/ReleaseCause'
+        snapshot_revision:
+          type: string
+        manifest_revision:
+          type: string
+        renderer_version:
+          type: string
+        pins:
+          $ref: '#/components/schemas/ReleasePins'
+        outcome:
+          $ref: '#/components/schemas/ReleaseOutcome'
+        created_by:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+        rendered_at:
+          format: date-time
+          type: string
+        completed_at:
+          format: date-time
+          type: string
+      type: object
+    StackReleaseList:
+      example:
+        total: 5
+        items:
+        - cause:
+            kind: null
+            detail: detail
+          created_at: 2000-01-23T04:56:07.000+00:00
+          pins:
+            resources:
+              key:
+                git_sha: git_sha
+                image_digest: image_digest
+                volume_hash: volume_hash
+          manifest_revision: manifest_revision
+          message: message
+          created_by: created_by
+          snapshot_revision: snapshot_revision
+          sequence: 0
+          completed_at: 2000-01-23T04:56:07.000+00:00
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          stack_id: stack_id
+          rendered_at: 2000-01-23T04:56:07.000+00:00
+          renderer_version: renderer_version
+          id: id
+          state: null
+          outcome:
+            duration: duration
+            resources:
+              key:
+                phase: phase
+                ready_replicas: 6
+                replicas: 1
+                message: message
+        - cause:
+            kind: null
+            detail: detail
+          created_at: 2000-01-23T04:56:07.000+00:00
+          pins:
+            resources:
+              key:
+                git_sha: git_sha
+                image_digest: image_digest
+                volume_hash: volume_hash
+          manifest_revision: manifest_revision
+          message: message
+          created_by: created_by
+          snapshot_revision: snapshot_revision
+          sequence: 0
+          completed_at: 2000-01-23T04:56:07.000+00:00
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          stack_id: stack_id
+          rendered_at: 2000-01-23T04:56:07.000+00:00
+          renderer_version: renderer_version
+          id: id
+          state: null
+          outcome:
+            duration: duration
+            resources:
+              key:
+                phase: phase
+                ready_replicas: 6
+                replicas: 1
+                message: message
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/StackRelease'
+          type: array
+        total:
+          type: integer
+      type: object
+    ReleaseCause:
+      example:
+        kind: null
+        detail: detail
+      properties:
+        kind:
+          $ref: '#/components/schemas/ReleaseCauseKind'
+        detail:
+          type: string
+      type: object
+    ReleasePins:
+      example:
+        resources:
+          key:
+            git_sha: git_sha
+            image_digest: image_digest
+            volume_hash: volume_hash
+      properties:
+        resources:
+          additionalProperties:
+            $ref: '#/components/schemas/ResourcePins'
+          type: object
+      type: object
+    ResourcePins:
+      example:
+        git_sha: git_sha
+        image_digest: image_digest
+        volume_hash: volume_hash
+      properties:
+        git_sha:
+          type: string
+        volume_hash:
+          type: string
+        image_digest:
+          type: string
+      type: object
+    ReleaseOutcome:
+      example:
+        duration: duration
+        resources:
+          key:
+            phase: phase
+            ready_replicas: 6
+            replicas: 1
+            message: message
+      properties:
+        resources:
+          additionalProperties:
+            $ref: '#/components/schemas/ResourceOutcome'
+          type: object
+        duration:
+          type: string
+      type: object
+    ResourceOutcome:
+      example:
+        phase: phase
+        ready_replicas: 6
+        replicas: 1
+        message: message
+      properties:
+        phase:
+          type: string
+        ready_replicas:
+          type: integer
+        replicas:
+          type: integer
+        message:
+          type: string
+      type: object
+    StackConvergenceRecord:
+      example:
+        release_id: release_id
+        at: 2000-01-23T04:56:07.000+00:00
+        revision: revision
+      properties:
+        revision:
+          type: string
+        release_id:
+          type: string
+        at:
+          format: date-time
+          type: string
+      type: object
+    StackResourceSummary:
+      example:
+        phase: phase
+        updated_replicas: 3
+        available_replicas: 9
+        replicas: 2
+        name: name
+        missing: true
+        converged_revision: converged_revision
+        message: message
+        observed_revision: observed_revision
+      properties:
+        name:
+          type: string
+        phase:
+          type: string
+        observed_revision:
+          type: string
+        converged_revision:
+          type: string
+        available_replicas:
+          type: integer
+        updated_replicas:
+          type: integer
+        replicas:
+          type: integer
+        missing:
+          type: boolean
+        message:
           type: string
       type: object
     _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_backup_post_request:

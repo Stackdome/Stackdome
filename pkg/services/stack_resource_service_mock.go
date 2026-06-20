@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	clustermanager "github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	errors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	models "github.com/ashishmax31/stackdome-api-server/pkg/models"
 	gomock "go.uber.org/mock/gomock"
@@ -55,6 +56,20 @@ func (m *MockStackResourceService) Create(ctx context.Context, resource *models.
 func (mr *MockStackResourceServiceMockRecorder) Create(ctx, resource any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockStackResourceService)(nil).Create), ctx, resource)
+}
+
+// Delete mocks base method.
+func (m *MockStackResourceService) Delete(ctx context.Context, stackID, resourceName string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, stackID, resourceName)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockStackResourceServiceMockRecorder) Delete(ctx, stackID, resourceName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockStackResourceService)(nil).Delete), ctx, stackID, resourceName)
 }
 
 // GetByID mocks base method.
@@ -102,16 +117,45 @@ func (mr *MockStackResourceServiceMockRecorder) GetByStackIDAndResourceName(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByStackIDAndResourceName", reflect.TypeOf((*MockStackResourceService)(nil).GetByStackIDAndResourceName), ctx, stackID, resourceName)
 }
 
-// InjectBackgroundJobEnqueuer mocks base method.
-func (m *MockStackResourceService) InjectBackgroundJobEnqueuer(dep BackgroundJobEnqueuerDep) {
+// InjectClusterManager mocks base method.
+func (m *MockStackResourceService) InjectClusterManager(clusterManager clustermanager.ClusterManager) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "InjectBackgroundJobEnqueuer", dep)
+	m.ctrl.Call(m, "InjectClusterManager", clusterManager)
 }
 
-// InjectBackgroundJobEnqueuer indicates an expected call of InjectBackgroundJobEnqueuer.
-func (mr *MockStackResourceServiceMockRecorder) InjectBackgroundJobEnqueuer(dep any) *gomock.Call {
+// InjectClusterManager indicates an expected call of InjectClusterManager.
+func (mr *MockStackResourceServiceMockRecorder) InjectClusterManager(clusterManager any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InjectBackgroundJobEnqueuer", reflect.TypeOf((*MockStackResourceService)(nil).InjectBackgroundJobEnqueuer), dep)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InjectClusterManager", reflect.TypeOf((*MockStackResourceService)(nil).InjectClusterManager), clusterManager)
+}
+
+// InternalCreateWithTx mocks base method.
+func (m *MockStackResourceService) InternalCreateWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalCreateWithTx", ctx, stack, resource)
+	ret0, _ := ret[0].(*models.StackResource)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalCreateWithTx indicates an expected call of InternalCreateWithTx.
+func (mr *MockStackResourceServiceMockRecorder) InternalCreateWithTx(ctx, stack, resource any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalCreateWithTx", reflect.TypeOf((*MockStackResourceService)(nil).InternalCreateWithTx), ctx, stack, resource)
+}
+
+// InternalDeleteWithTx mocks base method.
+func (m *MockStackResourceService) InternalDeleteWithTx(ctx context.Context, resourceID string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalDeleteWithTx", ctx, resourceID)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// InternalDeleteWithTx indicates an expected call of InternalDeleteWithTx.
+func (mr *MockStackResourceServiceMockRecorder) InternalDeleteWithTx(ctx, resourceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalDeleteWithTx", reflect.TypeOf((*MockStackResourceService)(nil).InternalDeleteWithTx), ctx, resourceID)
 }
 
 // InternalGetByStackIDAndResourceName mocks base method.
@@ -129,18 +173,33 @@ func (mr *MockStackResourceServiceMockRecorder) InternalGetByStackIDAndResourceN
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetByStackIDAndResourceName", reflect.TypeOf((*MockStackResourceService)(nil).InternalGetByStackIDAndResourceName), ctx, stackID, resourceName)
 }
 
-// InternalUpdateExposedPortDomainsWithTx mocks base method.
-func (m *MockStackResourceService) InternalUpdateExposedPortDomainsWithTx(ctx context.Context, resourceID string, stackResource *models.StackResource) *errors.ServiceError {
+// InternalSyncResourcesWithTx mocks base method.
+func (m *MockStackResourceService) InternalSyncResourcesWithTx(ctx context.Context, stack, existingStack *models.Stack, desired []*models.StackResource) *errors.ServiceError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalUpdateExposedPortDomainsWithTx", ctx, resourceID, stackResource)
+	ret := m.ctrl.Call(m, "InternalSyncResourcesWithTx", ctx, stack, existingStack, desired)
 	ret0, _ := ret[0].(*errors.ServiceError)
 	return ret0
 }
 
-// InternalUpdateExposedPortDomainsWithTx indicates an expected call of InternalUpdateExposedPortDomainsWithTx.
-func (mr *MockStackResourceServiceMockRecorder) InternalUpdateExposedPortDomainsWithTx(ctx, resourceID, stackResource any) *gomock.Call {
+// InternalSyncResourcesWithTx indicates an expected call of InternalSyncResourcesWithTx.
+func (mr *MockStackResourceServiceMockRecorder) InternalSyncResourcesWithTx(ctx, stack, existingStack, desired any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpdateExposedPortDomainsWithTx", reflect.TypeOf((*MockStackResourceService)(nil).InternalUpdateExposedPortDomainsWithTx), ctx, resourceID, stackResource)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalSyncResourcesWithTx", reflect.TypeOf((*MockStackResourceService)(nil).InternalSyncResourcesWithTx), ctx, stack, existingStack, desired)
+}
+
+// InternalUpdateWithTx mocks base method.
+func (m *MockStackResourceService) InternalUpdateWithTx(ctx context.Context, stack *models.Stack, resourceID string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalUpdateWithTx", ctx, stack, resourceID, resource)
+	ret0, _ := ret[0].(*models.StackResource)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalUpdateWithTx indicates an expected call of InternalUpdateWithTx.
+func (mr *MockStackResourceServiceMockRecorder) InternalUpdateWithTx(ctx, stack, resourceID, resource any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpdateWithTx", reflect.TypeOf((*MockStackResourceService)(nil).InternalUpdateWithTx), ctx, stack, resourceID, resource)
 }
 
 // Restart mocks base method.
@@ -156,6 +215,21 @@ func (m *MockStackResourceService) Restart(ctx context.Context, stackID, resourc
 func (mr *MockStackResourceServiceMockRecorder) Restart(ctx, stackID, resourceName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockStackResourceService)(nil).Restart), ctx, stackID, resourceName)
+}
+
+// Update mocks base method.
+func (m *MockStackResourceService) Update(ctx context.Context, stackID, resourceName string, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, stackID, resourceName, resource)
+	ret0, _ := ret[0].(*models.StackResource)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockStackResourceServiceMockRecorder) Update(ctx, stackID, resourceName, resource any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockStackResourceService)(nil).Update), ctx, stackID, resourceName, resource)
 }
 
 // UpdateStatus mocks base method.

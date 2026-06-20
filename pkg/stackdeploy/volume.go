@@ -25,6 +25,9 @@ func (r *Resolver) resolveVolumeConnections(ctx context.Context, stack *models.S
 }
 
 func (r *Resolver) loadVolumes(ctx context.Context, stack *models.Stack) error {
+	if stack.Volumes != nil {
+		return nil // snapshot already provides volumes, skip DB query
+	}
 	volumes, serr := r.volumeService.ListVolumesUsedByStack(ctx, stack.ID)
 	if serr != nil {
 		return fmt.Errorf("failed to list volumes for stack '%s': %w", stack.ID, serr)

@@ -93,7 +93,7 @@ func (r *Resolver) resolveConnectionEnvVars(
 		if serviceErr != nil {
 			return nil, fmt.Errorf("failed to fetch secret '%s' for connection '%s': %w", connection.From.Id, connection.ID, serviceErr)
 		}
-		resolved, err := resolveConnectionMappings(connection, secret.ToOutputMap())
+		resolved, err := resolveSecretConnectionMappings(connection, secret)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +108,7 @@ func (r *Resolver) resolvePostgresConnectionEnvVars(
 	connection models.StackConnection,
 ) ([]models.EnvVar, error) {
 	addonID := connection.From.Id
-	database, superuser, err := postgresConnectionConfig(connection)
+	database, superuser, err := PostgresConnectionConfig(connection)
 	if err != nil {
 		return nil, err
 	}
@@ -123,10 +123,11 @@ func (r *Resolver) resolvePostgresConnectionEnvVars(
 		}
 	}
 
-	return resolveConnectionMappings(connection, creds.ToOutputMap())
+	secretName := PostgresCredentialSecretName(addonID, database)
+	return resolvePostgresSecretRefMappings(connection, secretName, creds.ToOutputMap())
 }
 
-func postgresConnectionConfig(connection models.StackConnection) (database string, superuser bool, err error) {
+func PostgresConnectionConfig(connection models.StackConnection) (database string, superuser bool, err error) {
 	if value, ok, err := connection.ConfigString(string(models.ConnectionConfigKeyDatabase)); err != nil {
 		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.ID, err)
 	} else if ok {
@@ -145,6 +146,53 @@ func postgresConnectionConfig(connection models.StackConnection) (database strin
 	}
 
 	return database, superuser, nil
+}
+
+func resolveSecretConnectionMappings(connection models.StackConnection, secret *models.Secret) ([]models.EnvVar, error) {
+	outputs := secret.ToOutputMap()
+	envVars := make([]models.EnvVar, 0, len(connection.Mappings))
+	for _, mapping := range connection.Mappings {
+		if mapping.Target.Type != models.ConnectionTargetTypeEnv {
+			return nil, fmt.Errorf("connection '%s' target type '%s' is not supported for env resolution", connection.ID, mapping.Target.Type)
+		}
+		if mapping.Value.Output == "" {
+			return nil, fmt.Errorf("connection '%s' mapping for env '%s': secret connections require a direct output key, not a template", connection.ID, mapping.Target.Name)
+		}
+		if _, ok := outputs[mapping.Value.Output]; !ok {
+			return nil, fmt.Errorf("connection '%s' mapping for env '%s': unknown output '%s'", connection.ID, mapping.Target.Name, mapping.Value.Output)
+		}
+		envVars = append(envVars, models.EnvVar{
+			Name: mapping.Target.Name,
+			SecretKeyRef: &models.EnvSecretRef{
+				SecretName: secret.ClusterSecretName(),
+				Key:        mapping.Value.Output,
+			},
+		})
+	}
+	return envVars, nil
+}
+
+func resolvePostgresSecretRefMappings(connection models.StackConnection, secretName string, outputs map[string]string) ([]models.EnvVar, error) {
+	envVars := make([]models.EnvVar, 0, len(connection.Mappings))
+	for _, mapping := range connection.Mappings {
+		if mapping.Target.Type != models.ConnectionTargetTypeEnv {
+			return nil, fmt.Errorf("connection '%s' target type '%s' is not supported for env resolution", connection.ID, mapping.Target.Type)
+		}
+		if mapping.Value.Output == "" {
+			return nil, fmt.Errorf("connection '%s' mapping for env '%s': postgres connections require a direct output key, not a template", connection.ID, mapping.Target.Name)
+		}
+		if _, ok := outputs[mapping.Value.Output]; !ok {
+			return nil, fmt.Errorf("connection '%s' mapping for env '%s': unknown output '%s'", connection.ID, mapping.Target.Name, mapping.Value.Output)
+		}
+		envVars = append(envVars, models.EnvVar{
+			Name: mapping.Target.Name,
+			SecretKeyRef: &models.EnvSecretRef{
+				SecretName: secretName,
+				Key:        mapping.Value.Output,
+			},
+		})
+	}
+	return envVars, nil
 }
 
 func resolveConnectionMappings(connection models.StackConnection, outputs map[string]string) ([]models.EnvVar, error) {

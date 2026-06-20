@@ -1672,6 +1672,95 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases:
+    post:
+      summary: Create a new release (deploy)
+      operationId: createRelease
+      security:
+        - Bearer: []
+      tags:
+        - Releases
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReleaseRequest'
+      responses:
+        '201':
+          description: Release created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackRelease'
+    get:
+      summary: List releases for a stack
+      operationId: listReleases
+      security:
+        - Bearer: []
+      tags:
+        - Releases
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: List of releases
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackReleaseList'
+
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}:
+    get:
+      summary: Get a release by ID
+      operationId: getRelease
+      security:
+        - Bearer: []
+      tags:
+        - Releases
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - name: release_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Release details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackRelease'
+
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel:
+    post:
+      summary: Cancel a pending or rendering release
+      operationId: cancelRelease
+      security:
+        - Bearer: []
+      tags:
+        - Releases
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - name: release_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Release cancelled
+
   # Team-scoped secret routes
   /api/v1/organizations/{org_id}/teams/{team_name}/secrets:
     post:
@@ -3432,6 +3521,14 @@ components:
           type: string
         observed_revision:
           type: string
+        target_revision:
+          type: string
+        last_converged:
+          $ref: '#/components/schemas/StackConvergenceRecord'
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/StackResourceSummary'
         conditions:
           type: array
           items:
@@ -5180,3 +5277,160 @@ components:
         expires_at:
           type: string
           format: date-time
+
+    StackReleaseState:
+      type: string
+      enum: [Pending, InProgress, Released, Failed, Superseded, Cancelled]
+      x-enum-varnames:
+        - RELEASE_STATE_PENDING
+        - RELEASE_STATE_IN_PROGRESS
+        - RELEASE_STATE_RELEASED
+        - RELEASE_STATE_FAILED
+        - RELEASE_STATE_SUPERSEDED
+        - RELEASE_STATE_CANCELLED
+
+    ReleaseCauseKind:
+      type: string
+      enum: [manual, rollback, webhook_push]
+      x-enum-varnames:
+        - RELEASE_CAUSE_MANUAL
+        - RELEASE_CAUSE_ROLLBACK
+        - RELEASE_CAUSE_WEBHOOK_PUSH
+
+    CreateReleaseRequest:
+      type: object
+      properties:
+        from_release_id:
+          type: string
+          description: If set, creates a rollback release copying this release's manifest
+
+    StackRelease:
+      type: object
+      properties:
+        id:
+          type: string
+        stack_id:
+          type: string
+        sequence:
+          type: integer
+        state:
+          $ref: '#/components/schemas/StackReleaseState'
+        message:
+          type: string
+        cause:
+          $ref: '#/components/schemas/ReleaseCause'
+        snapshot_revision:
+          type: string
+        manifest_revision:
+          type: string
+        renderer_version:
+          type: string
+        pins:
+          $ref: '#/components/schemas/ReleasePins'
+        outcome:
+          $ref: '#/components/schemas/ReleaseOutcome'
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        rendered_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    StackReleaseList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StackRelease'
+        total:
+          type: integer
+
+    ReleaseCause:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/ReleaseCauseKind'
+        detail:
+          type: string
+
+    ReleasePins:
+      type: object
+      properties:
+        resources:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ResourcePins'
+
+    ResourcePins:
+      type: object
+      properties:
+        git_sha:
+          type: string
+        volume_hash:
+          type: string
+        image_digest:
+          type: string
+
+    ReleaseOutcome:
+      type: object
+      properties:
+        resources:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ResourceOutcome'
+        duration:
+          type: string
+
+    ResourceOutcome:
+      type: object
+      properties:
+        phase:
+          type: string
+        ready_replicas:
+          type: integer
+        replicas:
+          type: integer
+        message:
+          type: string
+
+    StackConvergenceRecord:
+      type: object
+      properties:
+        revision:
+          type: string
+        release_id:
+          type: string
+        at:
+          type: string
+          format: date-time
+
+    StackResourceSummary:
+      type: object
+      properties:
+        name:
+          type: string
+        phase:
+          type: string
+        observed_revision:
+          type: string
+        converged_revision:
+          type: string
+        available_replicas:
+          type: integer
+        updated_replicas:
+          type: integer
+        replicas:
+          type: integer
+        missing:
+          type: boolean
+        message:
+          type: string

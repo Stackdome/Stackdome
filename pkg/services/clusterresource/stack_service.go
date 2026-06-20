@@ -3,6 +3,7 @@ package clusterresource
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
@@ -105,7 +106,7 @@ func (s *clusterStackService) DeleteStackInCluster(ctx context.Context, stack *m
 			return nil
 		}
 		s.logger.Errorf("failed to delete stackCR in cluster: %v", err)
-		return newError("failed to delete stackCR`1 in cluster", err)
+		return newError("failed to delete stackCR in cluster", err)
 	}
 	return nil
 }
@@ -143,71 +144,94 @@ func (s *clusterStackService) UpdateStackInCluster(ctx context.Context, stack *m
 }
 
 func (s *clusterStackService) desiredObjectInCluster(stack *models.Stack) (*corev1alpha1.Stack, error) {
+	resourceNames := make([]string, len(stack.StackResources))
+	for i, sr := range stack.StackResources {
+		resourceNames[i] = sr.Name
+	}
+	sort.Strings(resourceNames)
+
 	stackCR := &corev1alpha1.Stack{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      stack.Name,
 			Namespace: stack.Namespace,
 			Labels: map[string]string{
-				models.StackIDLabel:           stack.ID,
-				models.ObjectServerGeneration: stack.CrRevision,
+				corev1alpha1.LabelStackID:   stack.ID,
+				corev1alpha1.LabelManagedBy: corev1alpha1.ManagedByStackdome,
 			},
 		},
-		Spec: corev1alpha1.StackSpec{},
+		Spec: corev1alpha1.StackSpec{
+			ResourceNames: resourceNames,
+		},
 	}
 
-	stackResources, err := s.desiredStackResources(stack)
-	if err != nil {
-		return nil, err
+	for _, sr := range stack.StackResources {
+		spec, err := s.buildStackResourceSpec(sr)
+		if err != nil {
+			return nil, err
+		}
+		if hasTLSPorts(spec) {
+			if stackCR.Annotations == nil {
+				stackCR.Annotations = map[string]string{}
+			}
+			stackCR.Annotations[corev1alpha1.ClusterIssuerAnnotation] = models.DefaultClusterIssuerName
+			break
+		}
 	}
-	stackCR.Spec.StackResources = stackResources
+
 	return stackCR, nil
 }
 
-func (s *clusterStackService) desiredStackResources(stack *models.Stack) ([]corev1alpha1.StackResourceTemplate, error) {
-	var resources []corev1alpha1.StackResourceTemplate
-	for _, stackResource := range stack.StackResources {
-		resource := corev1alpha1.StackResourceTemplate{
-			Name: stackResource.Name,
-			Spec: corev1alpha1.StackResourceSpec{
-				StateFul:  stackResource.StateFul,
-				DependsOn: stackResource.DependsOn,
-			},
-		}
-
-		if stackResource.ExecutionConfig != nil {
-			resource.Spec.Command = stackResource.ExecutionConfig.Command
-			resource.Spec.Args = stackResource.ExecutionConfig.Args
-		}
-
-		if stackResource.LifecycleConfig != nil && stackResource.LifecycleConfig.RestartRequestTime != nil {
-			resource.Spec.RestartRequest = &metav1.Time{Time: stackResource.LifecycleConfig.RestartRequestTime.UTC()}
-		}
-
-		if err := s.setBuildSpec(&resource, stackResource); err != nil {
-			return nil, err
-		}
-		if err := s.setImageSpec(&resource, stackResource); err != nil {
-			return nil, err
-		}
-		setInitSpec(&resource, stackResource)
-		setVolumeMounts(&resource, stackResource)
-		setPorts(&resource, stackResource)
-		if err := s.setEnvVars(&resource, stackResource); err != nil {
-			return nil, err
-		}
-		resources = append(resources, resource)
+func (s *clusterStackService) buildStackResourceSpec(stackResource *models.StackResource) (*corev1alpha1.StackResourceSpec, error) {
+	workloadType := corev1alpha1.WorkloadTypeService
+	if stackResource.StateFul {
+		workloadType = corev1alpha1.WorkloadTypeStatefulService
 	}
-	return resources, nil
+	spec := &corev1alpha1.StackResourceSpec{
+		WorkloadType: workloadType,
+		DependsOn:    stackResource.DependsOn,
+	}
+
+	if stackResource.ExecutionConfig != nil {
+		spec.Command = stackResource.ExecutionConfig.Command
+		spec.Args = stackResource.ExecutionConfig.Args
+	}
+
+	if stackResource.LifecycleConfig != nil && stackResource.LifecycleConfig.RestartRequestTime != nil {
+		spec.RestartRequest = &metav1.Time{Time: stackResource.LifecycleConfig.RestartRequestTime.UTC()}
+	}
+
+	if err := s.setBuildSpec(spec, stackResource); err != nil {
+		return nil, err
+	}
+	if err := s.setImageSpec(spec, stackResource); err != nil {
+		return nil, err
+	}
+	setInitSpec(spec, stackResource)
+	setVolumeMounts(spec, stackResource)
+	setPorts(spec, stackResource)
+	if err := s.setEnvVars(spec, stackResource); err != nil {
+		return nil, err
+	}
+	return spec, nil
 }
 
-func (s *clusterStackService) setBuildSpec(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) error {
+func hasTLSPorts(spec *corev1alpha1.StackResourceSpec) bool {
+	for _, port := range spec.Ports {
+		if port.TLS {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *clusterStackService) setBuildSpec(spec *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) error {
 	if stackResource.BuildConfig != nil {
 		buildSourceCtx, err := s.buildBuildSourceContext(stackResource.BuildConfig.SourceContext)
 		if err != nil {
 			return err
 		}
 
-		resourceTemplateCr.Spec.BuildSpec = &corev1alpha1.StackResourceBuildSpec{
+		spec.BuildSpec = &corev1alpha1.StackResourceBuildSpec{
 			SourceContext:  *buildSourceCtx,
 			SourceRevision: buildBuildSourceRevision(stackResource.BuildConfig.SourceRevision),
 			BuildContext:   stackResource.BuildConfig.ContextPathWithinSource,
@@ -217,14 +241,14 @@ func (s *clusterStackService) setBuildSpec(resourceTemplateCr *corev1alpha1.Stac
 			},
 		}
 		if stackResource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
-			resourceTemplateCr.Spec.BuildSpec.Registry.Insecure = true
+			spec.BuildSpec.Registry.Insecure = true
 		}
 		if stackResource.BuildConfig.RegistrySecretRef != nil {
 			secret, err := s.secretService.InternalGetByID(context.Background(), stackResource.BuildConfig.RegistrySecretRef.SecretID)
 			if err != nil {
 				return fmt.Errorf("failed to get registry secret: %w", err)
 			}
-			resourceTemplateCr.Spec.BuildSpec.Registry.Auth = &corev1alpha1.RegistryAuth{
+			spec.BuildSpec.Registry.Auth = &corev1alpha1.RegistryAuth{
 				DockerConfigAuth: &corev1alpha1.DockerConfigAuth{
 					SecretKey: corev1.DockerConfigJsonKey,
 					SecretRef: &corev1.SecretReference{
@@ -304,9 +328,9 @@ func (s *clusterStackService) buildBuildSourceContext(sourceContext models.Build
 	return nil, nil
 }
 
-func (s *clusterStackService) setImageSpec(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) error {
+func (s *clusterStackService) setImageSpec(spec *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) error {
 	if stackResource.ImageConfig != nil {
-		resourceTemplateCr.Spec.ImageSpec = &corev1alpha1.ImageSpec{
+		spec.ImageSpec = &corev1alpha1.ImageSpec{
 			Image: stackResource.ImageConfig.Image,
 		}
 
@@ -315,7 +339,7 @@ func (s *clusterStackService) setImageSpec(resourceTemplateCr *corev1alpha1.Stac
 			if err != nil {
 				return fmt.Errorf("failed to get image pull secret: %w", err)
 			}
-			resourceTemplateCr.Spec.ImageSpec.PullAuth = &corev1alpha1.RegistryAuth{
+			spec.ImageSpec.PullAuth = &corev1alpha1.RegistryAuth{
 				DockerConfigAuth: &corev1alpha1.DockerConfigAuth{
 					SecretKey: corev1.DockerConfigJsonKey,
 					SecretRef: &corev1.SecretReference{
@@ -328,34 +352,46 @@ func (s *clusterStackService) setImageSpec(resourceTemplateCr *corev1alpha1.Stac
 	return nil
 }
 
-func (s *clusterStackService) setEnvVars(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) error {
-	if stackResource.ExecutionConfig != nil && len(stackResource.ExecutionConfig.Env) > 0 {
-		resourceTemplateCr.Spec.EnvironmentVariables = make([]corev1alpha1.EnvironmentVariables, len(stackResource.ExecutionConfig.Env))
-		for i, envVar := range stackResource.ExecutionConfig.Env {
-			resourceTemplateCr.Spec.EnvironmentVariables[i] = corev1alpha1.EnvironmentVariables{
-				Name:  envVar.Name,
-				Value: envVar.Value,
-			}
-		}
+func (s *clusterStackService) setEnvVars(spec *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) error {
+	if stackResource.ExecutionConfig == nil || len(stackResource.ExecutionConfig.Env) == 0 {
+		return nil
 	}
-
+	spec.EnvironmentVariables = make([]corev1alpha1.EnvironmentVariable, len(stackResource.ExecutionConfig.Env))
+	for i, envVar := range stackResource.ExecutionConfig.Env {
+		ev := corev1alpha1.EnvironmentVariable{
+			Name: envVar.Name,
+		}
+		if envVar.SecretKeyRef != nil {
+			ev.ValueFrom = &corev1alpha1.EnvVarSource{
+				SecretKeyRef: corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: envVar.SecretKeyRef.SecretName,
+					},
+					Key: envVar.SecretKeyRef.Key,
+				},
+			}
+		} else {
+			ev.Value = envVar.Value
+		}
+		spec.EnvironmentVariables[i] = ev
+	}
 	return nil
 }
 
-func setInitSpec(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) {
+func setInitSpec(spec *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) {
 	if stackResource.Init != nil {
-		resourceTemplateCr.Spec.Init = &corev1alpha1.InitSpec{
+		spec.Init = &corev1alpha1.InitSpec{
 			Command: stackResource.Init.Command,
 			Args:    stackResource.Init.Args,
 		}
 	}
 }
 
-func setVolumeMounts(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) {
+func setVolumeMounts(spec *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) {
 	if len(stackResource.VolumeMounts) > 0 {
-		resourceTemplateCr.Spec.VolumeMounts = make([]corev1alpha1.VolumeMount, len(stackResource.VolumeMounts))
+		spec.VolumeMounts = make([]corev1alpha1.VolumeMount, len(stackResource.VolumeMounts))
 		for i, volumeMount := range stackResource.VolumeMounts {
-			resourceTemplateCr.Spec.VolumeMounts[i] = corev1alpha1.VolumeMount{
+			spec.VolumeMounts[i] = corev1alpha1.VolumeMount{
 				SourceVolume:  volumeMount.SourceVolumeName,
 				SourceSubPath: volumeMount.SourceSubPath,
 				Destination:   volumeMount.TargetPath,
@@ -364,17 +400,18 @@ func setVolumeMounts(resourceTemplateCr *corev1alpha1.StackResourceTemplate, sta
 	}
 }
 
-func setPorts(resourceTemplateCr *corev1alpha1.StackResourceTemplate, stackResource *models.StackResource) {
+func setPorts(spec *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) {
 	if len(stackResource.Ports) > 0 {
-		resourceTemplateCr.Spec.Ports = make([]corev1alpha1.Port, len(stackResource.Ports))
+		spec.Ports = make([]corev1alpha1.Port, len(stackResource.Ports))
 		for i, port := range stackResource.Ports {
-			resourceTemplateCr.Spec.Ports[i] = corev1alpha1.Port{
+			spec.Ports[i] = corev1alpha1.Port{
+				Name:           port.Name,
 				Number:         int32(port.Number),
+				Protocol:       strings.ToLower(port.Protocol),
 				ExposeToPublic: port.ExposedToPublic,
-				IsHttp:         strings.ToLower(port.Protocol) == "http",
 			}
 			if port.ExposedToPublic {
-				resourceTemplateCr.Spec.Ports[i].FQDN = port.ExposedFqdn
+				spec.Ports[i].FQDN = port.ExposedFqdn
 			}
 		}
 	}

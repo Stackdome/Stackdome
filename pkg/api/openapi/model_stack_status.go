@@ -16,10 +16,13 @@ import (
 
 // StackStatus struct for StackStatus
 type StackStatus struct {
-	State            *string     `json:"state,omitempty"`
-	Message          *string     `json:"message,omitempty"`
-	ObservedRevision *string     `json:"observed_revision,omitempty"`
-	Conditions       []Condition `json:"conditions,omitempty"`
+	State            *string                 `json:"state,omitempty"`
+	Message          *string                 `json:"message,omitempty"`
+	ObservedRevision *string                 `json:"observed_revision,omitempty"`
+	TargetRevision   *string                 `json:"target_revision,omitempty"`
+	LastConverged    *StackConvergenceRecord `json:"last_converged,omitempty"`
+	Resources        []StackResourceSummary  `json:"resources,omitempty"`
+	Conditions       []Condition             `json:"conditions,omitempty"`
 }
 
 // NewStackStatus instantiates a new StackStatus object
@@ -135,6 +138,102 @@ func (o *StackStatus) SetObservedRevision(v string) {
 	o.ObservedRevision = &v
 }
 
+// GetTargetRevision returns the TargetRevision field value if set, zero value otherwise.
+func (o *StackStatus) GetTargetRevision() string {
+	if o == nil || o.TargetRevision == nil {
+		var ret string
+		return ret
+	}
+	return *o.TargetRevision
+}
+
+// GetTargetRevisionOk returns a tuple with the TargetRevision field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackStatus) GetTargetRevisionOk() (*string, bool) {
+	if o == nil || o.TargetRevision == nil {
+		return nil, false
+	}
+	return o.TargetRevision, true
+}
+
+// HasTargetRevision returns a boolean if a field has been set.
+func (o *StackStatus) HasTargetRevision() bool {
+	if o != nil && o.TargetRevision != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetTargetRevision gets a reference to the given string and assigns it to the TargetRevision field.
+func (o *StackStatus) SetTargetRevision(v string) {
+	o.TargetRevision = &v
+}
+
+// GetLastConverged returns the LastConverged field value if set, zero value otherwise.
+func (o *StackStatus) GetLastConverged() StackConvergenceRecord {
+	if o == nil || o.LastConverged == nil {
+		var ret StackConvergenceRecord
+		return ret
+	}
+	return *o.LastConverged
+}
+
+// GetLastConvergedOk returns a tuple with the LastConverged field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackStatus) GetLastConvergedOk() (*StackConvergenceRecord, bool) {
+	if o == nil || o.LastConverged == nil {
+		return nil, false
+	}
+	return o.LastConverged, true
+}
+
+// HasLastConverged returns a boolean if a field has been set.
+func (o *StackStatus) HasLastConverged() bool {
+	if o != nil && o.LastConverged != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLastConverged gets a reference to the given StackConvergenceRecord and assigns it to the LastConverged field.
+func (o *StackStatus) SetLastConverged(v StackConvergenceRecord) {
+	o.LastConverged = &v
+}
+
+// GetResources returns the Resources field value if set, zero value otherwise.
+func (o *StackStatus) GetResources() []StackResourceSummary {
+	if o == nil || o.Resources == nil {
+		var ret []StackResourceSummary
+		return ret
+	}
+	return o.Resources
+}
+
+// GetResourcesOk returns a tuple with the Resources field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackStatus) GetResourcesOk() ([]StackResourceSummary, bool) {
+	if o == nil || o.Resources == nil {
+		return nil, false
+	}
+	return o.Resources, true
+}
+
+// HasResources returns a boolean if a field has been set.
+func (o *StackStatus) HasResources() bool {
+	if o != nil && o.Resources != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetResources gets a reference to the given []StackResourceSummary and assigns it to the Resources field.
+func (o *StackStatus) SetResources(v []StackResourceSummary) {
+	o.Resources = v
+}
+
 // GetConditions returns the Conditions field value if set, zero value otherwise.
 func (o *StackStatus) GetConditions() []Condition {
 	if o == nil || o.Conditions == nil {
@@ -177,6 +276,15 @@ func (o StackStatus) MarshalJSON() ([]byte, error) {
 	}
 	if o.ObservedRevision != nil {
 		toSerialize["observed_revision"] = o.ObservedRevision
+	}
+	if o.TargetRevision != nil {
+		toSerialize["target_revision"] = o.TargetRevision
+	}
+	if o.LastConverged != nil {
+		toSerialize["last_converged"] = o.LastConverged
+	}
+	if o.Resources != nil {
+		toSerialize["resources"] = o.Resources
 	}
 	if o.Conditions != nil {
 		toSerialize["conditions"] = o.Conditions

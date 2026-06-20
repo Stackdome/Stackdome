@@ -36,6 +36,53 @@ func NewStackResourceHandler(spec StackResourceHandlerSpec) *stackResourceHandle
 	}
 }
 
+func (h *stackResourceHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var resource openapi.StackResource
+	cfg := &handlerConfig{
+		MarshalInto: &resource,
+		Action: func() (interface{}, *errors.ServiceError) {
+			stackID := mux.Vars(r)["id"]
+			modelResource := presenters.ConvertStackResource(&resource)
+			modelResource.StackID = stackID
+			created, err := h.stackResourceService.Create(r.Context(), modelResource)
+			if err != nil {
+				return nil, err
+			}
+			return presenters.PresentStackResource(created), nil
+		},
+	}
+	handle(w, r, cfg, http.StatusCreated)
+}
+
+func (h *stackResourceHandler) Update(w http.ResponseWriter, r *http.Request) {
+	var resource openapi.StackResource
+	cfg := &handlerConfig{
+		MarshalInto: &resource,
+		Action: func() (interface{}, *errors.ServiceError) {
+			stackID := mux.Vars(r)["id"]
+			resourceName := mux.Vars(r)["resource_name"]
+			modelResource := presenters.ConvertStackResource(&resource)
+			updated, err := h.stackResourceService.Update(r.Context(), stackID, resourceName, modelResource)
+			if err != nil {
+				return nil, err
+			}
+			return presenters.PresentStackResource(updated), nil
+		},
+	}
+	handle(w, r, cfg, http.StatusOK)
+}
+
+func (h *stackResourceHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			stackID := mux.Vars(r)["id"]
+			resourceName := mux.Vars(r)["resource_name"]
+			return nil, h.stackResourceService.Delete(r.Context(), stackID, resourceName)
+		},
+	}
+	handle(w, r, cfg, http.StatusOK)
+}
+
 func (h *stackResourceHandler) GetByResourceName(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {

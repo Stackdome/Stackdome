@@ -172,6 +172,10 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1UsersCurrentGet**](docs/DefaultApi.md#apiv1userscurrentget) | **Get** /api/v1/users/current | Get the current authenticated user
 *DefaultApi* | [**ApiV1UsersCurrentTeamsGet**](docs/DefaultApi.md#apiv1userscurrentteamsget) | **Get** /api/v1/users/current/teams | List teams for the current authenticated user
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
+*ReleasesApi* | [**CancelRelease**](docs/ReleasesApi.md#cancelrelease) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel | Cancel a pending or rendering release
+*ReleasesApi* | [**CreateRelease**](docs/ReleasesApi.md#createrelease) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases | Create a new release (deploy)
+*ReleasesApi* | [**GetRelease**](docs/ReleasesApi.md#getrelease) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id} | Get a release by ID
+*ReleasesApi* | [**ListReleases**](docs/ReleasesApi.md#listreleases) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases | List releases for a stack
 
 
 ## Documentation For Models
@@ -209,6 +213,7 @@ Class | Method | HTTP request | Description
  - [ConnectionMapping](docs/ConnectionMapping.md)
  - [ConnectionTarget](docs/ConnectionTarget.md)
  - [ContainerFailureDetail](docs/ContainerFailureDetail.md)
+ - [CreateReleaseRequest](docs/CreateReleaseRequest.md)
  - [DemoteAdminRequest](docs/DemoteAdminRequest.md)
  - [DomainName](docs/DomainName.md)
  - [EnvVar](docs/EnvVar.md)
@@ -278,9 +283,15 @@ Class | Method | HTTP request | Description
  - [PromoteAdminRequest](docs/PromoteAdminRequest.md)
  - [RefreshTokenRequest](docs/RefreshTokenRequest.md)
  - [RefreshTokenResponse](docs/RefreshTokenResponse.md)
+ - [ReleaseCause](docs/ReleaseCause.md)
+ - [ReleaseCauseKind](docs/ReleaseCauseKind.md)
+ - [ReleaseOutcome](docs/ReleaseOutcome.md)
+ - [ReleasePins](docs/ReleasePins.md)
  - [RemoteSource](docs/RemoteSource.md)
  - [ResourceMetrics](docs/ResourceMetrics.md)
  - [ResourceMetricsNodeCapacitiesInner](docs/ResourceMetricsNodeCapacitiesInner.md)
+ - [ResourceOutcome](docs/ResourceOutcome.md)
+ - [ResourcePins](docs/ResourcePins.md)
  - [S3Credentials](docs/S3Credentials.md)
  - [SSHConfig](docs/SSHConfig.md)
  - [ScopeList](docs/ScopeList.md)
@@ -295,12 +306,17 @@ Class | Method | HTTP request | Description
  - [StackConnection](docs/StackConnection.md)
  - [StackConnectionConfig](docs/StackConnectionConfig.md)
  - [StackConnectionList](docs/StackConnectionList.md)
+ - [StackConvergenceRecord](docs/StackConvergenceRecord.md)
  - [StackList](docs/StackList.md)
+ - [StackRelease](docs/StackRelease.md)
+ - [StackReleaseList](docs/StackReleaseList.md)
+ - [StackReleaseState](docs/StackReleaseState.md)
  - [StackResource](docs/StackResource.md)
  - [StackResourceBuildSpec](docs/StackResourceBuildSpec.md)
  - [StackResourceFailure](docs/StackResourceFailure.md)
  - [StackResourceList](docs/StackResourceList.md)
  - [StackResourceStatus](docs/StackResourceStatus.md)
+ - [StackResourceSummary](docs/StackResourceSummary.md)
  - [StackSpec](docs/StackSpec.md)
  - [StackStatus](docs/StackStatus.md)
  - [StackTopology](docs/StackTopology.md)

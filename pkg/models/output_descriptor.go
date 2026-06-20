@@ -152,4 +152,3 @@ func PostgresAddonOutputDescriptors(_ *PostgresAddon) []OutputDescriptor {
 		{Name: "url", Type: OutputValueTypeString, Sensitive: true},
 	}
 }
-

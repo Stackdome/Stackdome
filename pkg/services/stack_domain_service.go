@@ -2,12 +2,7 @@ package services
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/base32"
-	"fmt"
 	"regexp"
-	"strconv"
-	"strings"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -19,6 +14,8 @@ import (
 
 var domainRegex = regexp.MustCompile(`^(?i:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$`)
 
+//go:generate mockgen -source=stack_domain_service.go -destination=../mocks/mock_stack_domains_service.go -package=mocks
+
 type StackDomainsService interface {
 	Create(ctx context.Context, spec *models.StackDomain) (*models.StackDomain, *errors.ServiceError)
 	InternalCreateWithTx(ctx context.Context, spec *models.StackDomain) (*models.StackDomain, *errors.ServiceError)
@@ -28,7 +25,8 @@ type StackDomainsService interface {
 	GetByFqdn(ctx context.Context, fqdn string) (*models.StackDomain, *errors.ServiceError)
 	ListByFqdnPrefix(ctx context.Context, prefix string) ([]*models.StackDomain, *errors.ServiceError)
 	DomainToUseForStack(ctx context.Context, stack *models.Stack) (*models.OrganisationDomain, *errors.ServiceError)
-	PopulateAndSaveExposedPortDomainsForStackWithTx(ctx context.Context, stack *models.Stack) *errors.ServiceError
+	PopulateAndSaveExposedPortDomainsForResourceWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) *errors.ServiceError
+	InternalDeleteDomainsForResourceWithTx(ctx context.Context, resourceID string) *errors.ServiceError
 }
 
 type stackDomainService struct {
@@ -111,97 +109,84 @@ func (s *stackDomainService) DomainToUseForStack(ctx context.Context, stack *mod
 	return domains[0], nil
 }
 
-func (s *stackDomainService) PopulateAndSaveExposedPortDomainsForStackWithTx(ctx context.Context, stack *models.Stack) *errors.ServiceError {
-	if !stack.HasExposedPorts() {
-		return nil
+func (s *stackDomainService) PopulateAndSaveExposedPortDomainsForResourceWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) *errors.ServiceError {
+	if !stackResourceHasExposedPorts(resource.Ports) {
+		return s.deleteStaleDomainsForResourceWithTx(ctx, resource)
 	}
 
-	// Get the domain to use for the stack
 	domainToUse, err := s.DomainToUseForStack(ctx, stack)
 	if err != nil {
 		return err
 	}
 
-	for i := range stack.StackResources {
-		curr := stack.StackResources[i]
-		if len(curr.Ports) == 0 {
+	AssignExposedPortFQDNs(stack.ID, resource.Name, domainToUse.Domain, resource.Ports)
+
+	for j := range resource.Ports {
+		if !resource.Ports[j].ExposedToPublic {
 			continue
 		}
-		for j := range curr.Ports {
-			if curr.Ports[j].ExposedToPublic {
-				// If the exposed port does not have a subdomain prefix, set it to the
-				// encoded stack resource ID and port number.
-				if curr.Ports[j].SubdomainPrefix == "" {
-					curr.Ports[j].GeneratedSubdomainPrefix = encodeStackResourceIDAndPort(curr.ID, curr.Ports[j].Number)
-					// Set the exposed port's FQDN using the subdomain prefix and the domain to use.
-					curr.Ports[j].ExposedFqdn = fmt.Sprintf(
-						"%s.%s.%s", curr.Ports[j].GeneratedSubdomainPrefix, curr.Name, domainToUse.Domain)
-				} else {
-					curr.Ports[j].ExposedFqdn = fmt.Sprintf(
-						"%s.%s", curr.Ports[j].SubdomainPrefix, domainToUse.Domain)
-				}
-				// Create the domain object for the exposed port.
-				domain := &models.StackDomain{
-					Fqdn:              curr.Ports[j].ExposedFqdn,
-					OrganisationID:    stack.OrganisationID,
-					StackID:           stack.ID,
-					StackResourceID:   curr.ID,
-					StackResourceName: curr.Name,
-					TargetPort:        curr.Ports[j].Number,
-				}
 
-				present, err := s.domainPresentForStackResourceAndPort(ctx, curr.ID, curr.Ports[j].Number)
-				if err != nil {
-					return err
-				}
-				if present {
-					// If the domain already exists, skip creating it.
-					// TODO: Check if the existing domain matches the new one.
-					// If it doesn't, we might need to update it.
-					continue
-				}
-				if _, cerr := s.InternalCreateWithTx(ctx, domain); cerr != nil {
-					if cerr.Code == errors.ErrorConflict {
-						existing, _ := s.GetByFqdn(ctx, curr.Ports[j].ExposedFqdn)
-						if existing != nil {
-							return errors.Conflict(
-								"domain '%s' is already in use by resource '%s' in another stack (id: %s)",
-								curr.Ports[j].ExposedFqdn, existing.StackResourceName, existing.StackID)
-						}
-						return errors.Conflict(
-							"domain '%s' is already in use", curr.Ports[j].ExposedFqdn)
-					} else {
-						return errors.GeneralError(
-							"failed to create domain for stack resource '%s': %s", curr.Name, cerr.Error())
-					}
-				}
-			}
+		domain := &models.StackDomain{
+			Fqdn:              resource.Ports[j].ExposedFqdn,
+			OrganisationID:    stack.OrganisationID,
+			StackID:           stack.ID,
+			StackResourceID:   resource.ID,
+			StackResourceName: resource.Name,
+			TargetPort:        resource.Ports[j].Number,
 		}
-	}
 
-	// Delete any existing domains that are not in the current stack resource's ports.
-	for i := range stack.StackResources {
-		curr := stack.StackResources[i]
-		existingDomains, err := s.domainsStore.ListByStackResourceID(ctx, curr.ID)
+		present, err := s.domainPresentForStackResourceAndPort(ctx, resource.ID, resource.Ports[j].Number)
 		if err != nil {
 			return err
 		}
-		if len(existingDomains) == 0 {
+		if present {
 			continue
 		}
-
-		currentPortDomainMap := make(map[int]struct{})
-		for _, port := range curr.Ports {
-			if port.ExposedToPublic {
-				currentPortDomainMap[port.Number] = struct{}{}
-			}
-		}
-		for _, existingDomain := range existingDomains {
-			if _, ok := currentPortDomainMap[existingDomain.TargetPort]; !ok {
-				// If the domain is not in the current stack resource's ports, delete it.
-				if err := s.domainsStore.DeleteWithTx(ctx, existingDomain.ID); err != nil {
-					return err
+		if _, cerr := s.InternalCreateWithTx(ctx, domain); cerr != nil {
+			if cerr.Code == errors.ErrorConflict {
+				existing, _ := s.GetByFqdn(ctx, resource.Ports[j].ExposedFqdn)
+				if existing != nil {
+					return errors.Conflict(
+						"domain '%s' is already in use by resource '%s' in another stack (id: %s)",
+						resource.Ports[j].ExposedFqdn, existing.StackResourceName, existing.StackID)
 				}
+				return errors.Conflict("domain '%s' is already in use", resource.Ports[j].ExposedFqdn)
+			}
+			return errors.GeneralError(
+				"failed to create domain for stack resource '%s': %s", resource.Name, cerr.Error())
+		}
+	}
+
+	return s.deleteStaleDomainsForResourceWithTx(ctx, resource)
+}
+
+func (s *stackDomainService) InternalDeleteDomainsForResourceWithTx(ctx context.Context, resourceID string) *errors.ServiceError {
+	existingDomains, err := s.domainsStore.ListByStackResourceID(ctx, resourceID)
+	if err != nil {
+		return err
+	}
+	for _, existingDomain := range existingDomains {
+		if err := s.domainsStore.DeleteWithTx(ctx, existingDomain.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *stackDomainService) deleteStaleDomainsForResourceWithTx(ctx context.Context, resource *models.StackResource) *errors.ServiceError {
+	existingDomains, err := s.domainsStore.ListByStackResourceID(ctx, resource.ID)
+	if err != nil {
+		return err
+	}
+	if len(existingDomains) == 0 {
+		return nil
+	}
+
+	currentPortDomainMap := exposedPortNumberSet(resource.Ports)
+	for _, existingDomain := range existingDomains {
+		if _, ok := currentPortDomainMap[existingDomain.TargetPort]; !ok {
+			if err := s.domainsStore.DeleteWithTx(ctx, existingDomain.ID); err != nil {
+				return err
 			}
 		}
 	}
@@ -275,23 +260,4 @@ func (s *stackDomainService) ListByFqdnPrefix(ctx context.Context, prefix string
 
 func isValidDomain(domain string) bool {
 	return domainRegex.MatchString(domain)
-}
-
-func encodeStackResourceIDAndPort(uuid string, port int) string {
-	// Combine UUID and port into a single string
-	input := uuid + ":" + strconv.Itoa(port)
-
-	hasher := md5.New()
-	hasher.Write([]byte(input))
-	hash := hasher.Sum(nil)
-
-	// Encode the hash using Base32 (URL-safe) and trim padding
-	base32Encoded := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(hash)
-
-	// Truncate the result to 16 characters for a shorter subdomain
-	if len(base32Encoded) > 16 {
-		base32Encoded = base32Encoded[:16]
-	}
-
-	return strings.ToLower(base32Encoded)
 }

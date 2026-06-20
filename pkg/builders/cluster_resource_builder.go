@@ -2,11 +2,9 @@ package builders
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/base32"
 	"fmt"
 	"hash/fnv"
-	"strconv"
+	"sort"
 	"strings"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
@@ -21,7 +19,7 @@ import (
 type ClusterResourceBuilder interface {
 	BuildStackCR(stack *models.Stack) (*corev1alpha1.Stack, error)
 	GetStackCRHash(stack *models.Stack) (string, error)
-	BuildStackResourceCR(stackResource *models.StackResource) (*corev1alpha1.StackResource, error)
+	BuildStackResourceCR(stackResource *models.StackResource, stackName string) (*corev1alpha1.StackResource, error)
 	BuildVolumeCR(ctx context.Context, volume *models.Volume) (*storagev1alpha1.Volume, error)
 }
 
@@ -44,8 +42,8 @@ func (b *clusterResourceBuilder) GetStackCRHash(stack *models.Stack) (string, er
 	if err != nil {
 		return "", fmt.Errorf("failed to build stack CR: %w", err)
 	}
+
 	hasher := fnv.New32a()
-	hasher.Reset()
 	printer := spew.ConfigState{
 		Indent:         " ",
 		SortKeys:       true,
@@ -53,6 +51,15 @@ func (b *clusterResourceBuilder) GetStackCRHash(stack *models.Stack) (string, er
 		SpewKeys:       true,
 	}
 	printer.Fprintf(hasher, "%#v", stackCR)
+
+	for _, sr := range stack.StackResources {
+		srCR, err := b.BuildStackResourceCR(sr, stack.Name)
+		if err != nil {
+			return "", fmt.Errorf("failed to build stack resource CR for '%s': %w", sr.Name, err)
+		}
+		printer.Fprintf(hasher, "%#v", srCR)
+	}
+
 	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32())), nil
 }
 
@@ -125,48 +132,37 @@ func (b *clusterResourceBuilder) BuildVolumeCR(ctx context.Context, volume *mode
 			}
 		}
 	}
+	res.SetGroupVersionKind(storagev1alpha1.GroupVersion.WithKind("Volume"))
 	return &res, nil
 }
 
 func (b *clusterResourceBuilder) BuildStackCR(stack *models.Stack) (*corev1alpha1.Stack, error) {
+	resourceNames := make([]string, len(stack.StackResources))
+	for i, sr := range stack.StackResources {
+		resourceNames[i] = sr.Name
+	}
+	sort.Strings(resourceNames)
+
 	stackCR := &corev1alpha1.Stack{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      stack.Name,
 			Namespace: stack.Namespace,
 			Labels: map[string]string{
-				models.StackIDLabel: stack.ID,
+				corev1alpha1.LabelStackID:   stack.ID,
+				corev1alpha1.LabelManagedBy: corev1alpha1.ManagedByStackdome,
 			},
 		},
-		Spec: corev1alpha1.StackSpec{},
+		Spec: corev1alpha1.StackSpec{
+			ResourceNames: resourceNames,
+		},
 	}
 
-	stackResourcesTemplates := make([]corev1alpha1.StackResourceTemplate, len(stack.StackResources))
-	for i, stackResource := range stack.StackResources {
-		stackresourceSpec, err := b.buildStackResourceSpec(stackResource)
-		if err != nil {
-			return nil, err
-		}
-		stackResourcesTemplates[i] = corev1alpha1.StackResourceTemplate{
-			Name: stackResource.Name,
-			Spec: *stackresourceSpec,
-		}
-	}
-	stackCR.Spec.StackResources = stackResourcesTemplates
-
-	for _, tmpl := range stackResourcesTemplates {
-		if hasTLSPorts(&tmpl.Spec) {
-			if stackCR.Annotations == nil {
-				stackCR.Annotations = map[string]string{}
-			}
-			stackCR.Annotations[corev1alpha1.StackdomeClusterIssuerAnnotationKey] = models.DefaultClusterIssuerName
-			break
-		}
-	}
+	stackCR.SetGroupVersionKind(corev1alpha1.GroupVersion.WithKind("Stack"))
 
 	return stackCR, nil
 }
 
-func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.StackResource) (*corev1alpha1.StackResource, error) {
+func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.StackResource, stackName string) (*corev1alpha1.StackResource, error) {
 	stackResourceSpec, err := b.buildStackResourceSpec(stackResource)
 	if err != nil {
 		return nil, err
@@ -177,8 +173,11 @@ func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.Stac
 			Name:      stackResource.Name,
 			Namespace: stackResource.Namespace,
 			Labels: map[string]string{
-				models.StackIDLabel:           stackResource.StackID,
-				models.ObjectServerGeneration: fmt.Sprintf("%d", stackResource.Version),
+				corev1alpha1.LabelStackID:      stackResource.StackID,
+				corev1alpha1.LabelStackName:    stackName,
+				corev1alpha1.LabelResourceName: stackResource.Name,
+				corev1alpha1.LabelResourceID:   stackResource.ID,
+				corev1alpha1.LabelManagedBy:    corev1alpha1.ManagedByStackdome,
 			},
 		},
 		Spec: *stackResourceSpec,
@@ -188,9 +187,10 @@ func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.Stac
 		if stackResourceCR.Annotations == nil {
 			stackResourceCR.Annotations = map[string]string{}
 		}
-		stackResourceCR.Annotations[corev1alpha1.StackdomeClusterIssuerAnnotationKey] = models.DefaultClusterIssuerName
+		stackResourceCR.Annotations[corev1alpha1.ClusterIssuerAnnotation] = models.DefaultClusterIssuerName
 	}
 
+	stackResourceCR.SetGroupVersionKind(corev1alpha1.GroupVersion.WithKind("StackResource"))
 	return stackResourceCR, nil
 }
 
@@ -204,9 +204,13 @@ func hasTLSPorts(spec *corev1alpha1.StackResourceSpec) bool {
 }
 
 func (b *clusterResourceBuilder) buildStackResourceSpec(stackResource *models.StackResource) (*corev1alpha1.StackResourceSpec, error) {
+	workloadType := corev1alpha1.WorkloadTypeService
+	if stackResource.StateFul {
+		workloadType = corev1alpha1.WorkloadTypeStatefulService
+	}
 	resourceSpec := corev1alpha1.StackResourceSpec{
-		StateFul:  stackResource.StateFul,
-		DependsOn: stackResource.DependsOn,
+		WorkloadType: workloadType,
+		DependsOn:    stackResource.DependsOn,
 	}
 
 	if stackResource.ExecutionConfig != nil {
@@ -405,9 +409,10 @@ func setPorts(resourceSpecCr *corev1alpha1.StackResourceSpec, stackResource *mod
 		resourceSpecCr.Ports = make([]corev1alpha1.Port, len(stackResource.Ports))
 		for i, port := range stackResource.Ports {
 			resourceSpecCr.Ports[i] = corev1alpha1.Port{
+				Name:           port.Name,
 				Number:         int32(port.Number),
+				Protocol:       strings.ToLower(port.Protocol),
 				ExposeToPublic: port.ExposedToPublic,
-				IsHttp:         strings.ToLower(port.Protocol) == "http",
 				TLS:            port.ExposedToPublic && shouldEnableTLS(port.ExposedFqdn),
 			}
 			if port.ExposedToPublic {
@@ -431,33 +436,26 @@ func shouldEnableTLS(fqdn string) bool {
 }
 
 func setEnvVars(resourceSpecCr *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) {
-	if stackResource.ExecutionConfig != nil && len(stackResource.ExecutionConfig.Env) > 0 {
-		resourceSpecCr.EnvironmentVariables = make([]corev1alpha1.EnvironmentVariables, len(stackResource.ExecutionConfig.Env))
-		for i, envVar := range stackResource.ExecutionConfig.Env {
-			resourceSpecCr.EnvironmentVariables[i] = corev1alpha1.EnvironmentVariables{
-				Name:  envVar.Name,
-				Value: envVar.Value,
-			}
+	if stackResource.ExecutionConfig == nil || len(stackResource.ExecutionConfig.Env) == 0 {
+		return
+	}
+	resourceSpecCr.EnvironmentVariables = make([]corev1alpha1.EnvironmentVariable, len(stackResource.ExecutionConfig.Env))
+	for i, envVar := range stackResource.ExecutionConfig.Env {
+		ev := corev1alpha1.EnvironmentVariable{
+			Name: envVar.Name,
 		}
+		if envVar.SecretKeyRef != nil {
+			ev.ValueFrom = &corev1alpha1.EnvVarSource{
+				SecretKeyRef: corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: envVar.SecretKeyRef.SecretName,
+					},
+					Key: envVar.SecretKeyRef.Key,
+				},
+			}
+		} else {
+			ev.Value = envVar.Value
+		}
+		resourceSpecCr.EnvironmentVariables[i] = ev
 	}
-}
-
-func encodeUUIDAndPort(uuid string, port int) string {
-	// Combine UUID and port into a single string
-	input := uuid + ":" + strconv.Itoa(port)
-
-	// Hash the combined string using MD5 (128-bit hash)
-	hasher := md5.New()
-	hasher.Write([]byte(input))
-	hash := hasher.Sum(nil)
-
-	// Encode the hash using Base32 (URL-safe) and trim padding
-	base32Encoded := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(hash)
-
-	// Truncate the result to 16 characters for a shorter subdomain
-	if len(base32Encoded) > 16 {
-		base32Encoded = base32Encoded[:16]
-	}
-
-	return strings.ToLower(base32Encoded)
 }

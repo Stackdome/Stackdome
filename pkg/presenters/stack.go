@@ -60,6 +60,33 @@ func presentStackStatus(status *models.StackStatus) *openapi.StackStatus {
 		ObservedRevision: &status.ObservedCrRevision,
 		Conditions:       presentConditions(status.Conditions),
 	}
+	if status.TargetRevision != "" {
+		res.TargetRevision = &status.TargetRevision
+	}
+	if status.LastConverged != nil {
+		res.LastConverged = &openapi.StackConvergenceRecord{
+			Revision:  &status.LastConverged.Revision,
+			ReleaseId: &status.LastConverged.ReleaseID,
+			At:        &status.LastConverged.At,
+		}
+	}
+	if len(status.Resources) > 0 {
+		summaries := make([]openapi.StackResourceSummary, len(status.Resources))
+		for i, r := range status.Resources {
+			summaries[i] = openapi.StackResourceSummary{
+				Name:              &r.Name,
+				Phase:             ptr.To(string(r.Phase)),
+				ObservedRevision:  &r.ObservedRevision,
+				ConvergedRevision: &r.ConvergedRevision,
+				AvailableReplicas: &r.AvailableReplicas,
+				UpdatedReplicas:   &r.UpdatedReplicas,
+				Replicas:          &r.Replicas,
+				Missing:           &r.Missing,
+				Message:           &r.Message,
+			}
+		}
+		res.Resources = summaries
+	}
 	if status.LastValidationRun != nil && !status.LastValidationRun.Passed {
 		res.Message = &status.LastValidationRun.Message
 	}
@@ -384,6 +411,10 @@ func convertStackResources(resources []openapi.StackResource) []*models.StackRes
 		result[i] = convertStackResource(&r)
 	}
 	return result
+}
+
+func ConvertStackResource(r *openapi.StackResource) *models.StackResource {
+	return convertStackResource(r)
 }
 
 func convertStackResource(r *openapi.StackResource) *models.StackResource {

@@ -3,6 +3,7 @@ package shared
 import (
 	"context"
 	"net/http"
+	"time"
 
 	. "github.com/onsi/gomega"
 
@@ -445,4 +446,70 @@ func ListStackConnectionsExpectError(client *openapi.APIClient, orgID, teamName,
 	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsGet(ctx, orgID, teamName, stackID).Execute()
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+}
+
+// Release CRUD operations for Ginkgo tests
+
+func CreateRelease(client *openapi.APIClient, orgID, teamName, stackID string) *openapi.StackRelease {
+	release, httpResp, err := client.ReleasesApi.CreateRelease(
+		context.Background(), orgID, teamName, stackID,
+	).CreateReleaseRequest(openapi.CreateReleaseRequest{}).Execute()
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "failed to create release, status: %d", httpResp.StatusCode)
+	return release
+}
+
+func RollbackRelease(client *openapi.APIClient, orgID, teamName, stackID, fromReleaseID string) *openapi.StackRelease {
+	release, httpResp, err := client.ReleasesApi.CreateRelease(
+		context.Background(), orgID, teamName, stackID,
+	).CreateReleaseRequest(openapi.CreateReleaseRequest{
+		FromReleaseId: openapi.PtrString(fromReleaseID),
+	}).Execute()
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "failed to rollback release, status: %d", httpResp.StatusCode)
+	return release
+}
+
+func ListReleases(client *openapi.APIClient, orgID, teamName, stackID string) *openapi.StackReleaseList {
+	list, httpResp, err := client.ReleasesApi.ListReleases(
+		context.Background(), orgID, teamName, stackID,
+	).Execute()
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "failed to list releases, status: %d", httpResp.StatusCode)
+	return list
+}
+
+func GetRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseID string) *openapi.StackRelease {
+	release, httpResp, err := client.ReleasesApi.GetRelease(
+		context.Background(), orgID, teamName, stackID, releaseID,
+	).Execute()
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "failed to get release, status: %d", httpResp.StatusCode)
+	return release
+}
+
+func CancelRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseID string) {
+	httpResp, err := client.ReleasesApi.CancelRelease(
+		context.Background(), orgID, teamName, stackID, releaseID,
+	).Execute()
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "failed to cancel release, status: %d", httpResp.StatusCode)
+}
+
+func WaitForReleaseState(client *openapi.APIClient, orgID, teamName, stackID, releaseID, expectedState string, timeout time.Duration) *openapi.StackRelease {
+	var result *openapi.StackRelease
+	Eventually(func(g Gomega) {
+		release := GetRelease(client, orgID, teamName, stackID, releaseID)
+		g.Expect(string(release.GetState())).To(Equal(expectedState),
+			"release state should be %s, got %s (message: %s)", expectedState, release.GetState(), release.GetMessage())
+		result = release
+	}, timeout, 5*time.Second).Should(Succeed())
+	return result
+}
+
+func WaitForReleaseReleased(client *openapi.APIClient, orgID, teamName, stackID, releaseID string, timeout time.Duration) *openapi.StackRelease {
+	return WaitForReleaseState(client, orgID, teamName, stackID, releaseID, "Released", timeout)
+}
+
+// CreateStackAndDeploy creates a stack and immediately creates a release to deploy it.
+// Use this instead of CreateStack when the test expects the stack to reach Ready state.
+func CreateStackAndDeploy(client *openapi.APIClient, orgID, teamName string, stack *openapi.Stack) (*openapi.Stack, *openapi.StackRelease) {
+	created := CreateStack(client, orgID, teamName, stack)
+	release := CreateRelease(client, orgID, teamName, created.GetId())
+	return created, release
 }

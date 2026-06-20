@@ -86,8 +86,8 @@ const (
 	// BrokenBuildResourceName is the resource name for the broken-build fixture.
 	// It points to a branch that contains a Dockerfile with an invalid command so the build fails.
 	BrokenBuildResourceName     = "broken-app"
-	BrokenBuildSourceBranch     = "broken-dockerfile"
-	BrokenBuildSourceDockerfile = "Dockerfile"
+	BrokenBuildSourceBranch     = "bad-build"
+	BrokenBuildSourceDockerfile = "Dockerfile-nonexistent"
 )
 
 // PostgreSQL addon factory functions using OpenAPI models

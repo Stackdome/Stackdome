@@ -34,7 +34,7 @@ Build system is **Mage** (`magefile.go`, namespaced targets); `Makefile` wraps s
 | Integration tests (needs Docker/Kind) | `mage test:integration` |
 | Lint Go | `golangci-lint run ./...` (or `mage lint`) |
 | Format Go | `mage fmt` |
-| Regenerate mocks | `make mocks` (mockgen via `go:generate`) |
+| Regenerate mocks | `make mocks` (mockgen via `go:generate`; add new packages to the target) |
 | Regenerate OpenAPI Go client | `make generate` |
 | Build frontend only | `make frontend` |
 | Frontend dev / test / lint | `pnpm --prefix frontend dev` / `test` / `lint` |
@@ -46,6 +46,7 @@ Notes:
 - Integration tests need `TEST_KUBECONFIG` pointing at a Mage-created Kind cluster (`mage cluster:create` / `cluster:delete`); state cached in `~/.cache/stackdome-api-server/clusters/`.
 - New DB migration: scaffold with `hack/create_migration.sh`; ordered files live in `pkg/db/migrations/`.
 - Full end-to-end demo env: `hack/run_local.sh [stack.json]`.
+- **Mocks:** Always use `go.uber.org/mock/gomock` + `mockgen`. Never hand-roll mock structs. For package-private interfaces, generate mocks in-package with `mockgen -source=<file>.go -destination=<file>_mock_test.go -package=<pkg>` and add a `//go:generate` directive to the source file. Existing generated mocks live in `pkg/mocks/` (for exported interfaces) and `*_mock_test.go` files (for unexported interfaces).
 
 ## Agent skills
 

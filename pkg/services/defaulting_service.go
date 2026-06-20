@@ -16,13 +16,18 @@ func NewStackDefaultingService() DefaultingService[*models.Stack] {
 
 func (s *stackDefaultingService) PopulateDefaultValues(resource *models.Stack) (*models.Stack, error) {
 	for i := range resource.StackResources {
-		if len(resource.StackResources[i].Ports) > 0 {
-			for j := range resource.StackResources[i].Ports {
-				if resource.StackResources[i].Ports[j].ExposedToPublic {
-					resource.StackResources[i].Ports[j].Protocol = "http"
-				}
-			}
-		}
+		applyStackResourcePortDefaults(resource.StackResources[i])
 	}
 	return resource, nil
+}
+
+func applyStackResourcePortDefaults(resource *models.StackResource) {
+	if resource == nil || len(resource.Ports) == 0 {
+		return
+	}
+	for i := range resource.Ports {
+		if resource.Ports[i].ExposedToPublic && resource.Ports[i].Protocol == "" {
+			resource.Ports[i].Protocol = "http"
+		}
+	}
 }
