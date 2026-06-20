@@ -48,7 +48,7 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, canDeploy }: D
         )}
       </div>
 
-      {activeRelease && <CurrentDeploymentCard release={activeRelease} stack={stack} />}
+      {activeRelease && <CurrentDeploymentCard release={activeRelease} stack={stack} logContext={{ orgId, teamName, stackId }} />}
 
       <ReleaseHistory
         releases={releases}

@@ -3,13 +3,15 @@ import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 import { deriveStages, deriveFailingResources, deriveRecovered, formatDuration } from "./derive";
 import { FailingResourcesAccordion } from "./failing-resources-accordion";
+import type { LogContext } from "./failing-resources-accordion";
 
 export interface CurrentDeploymentCardProps {
   release: StackRelease;
   stack: Stack;
+  logContext?: LogContext;
 }
 
-export function CurrentDeploymentCard({ release, stack }: CurrentDeploymentCardProps) {
+export function CurrentDeploymentCard({ release, stack, logContext }: CurrentDeploymentCardProps) {
   const failing = deriveFailingResources(stack);
   const recovered = deriveRecovered(stack);
   const stages = deriveStages(stack, release, failing);
@@ -57,7 +59,7 @@ export function CurrentDeploymentCard({ release, stack }: CurrentDeploymentCardP
 
       {failing.length > 0 && (
         <div className="border-t border-border p-4">
-          <FailingResourcesAccordion failing={failing} releaseMessage={release.message} />
+          <FailingResourcesAccordion failing={failing} releaseMessage={release.message} logContext={logContext} />
         </div>
       )}
     </Panel>

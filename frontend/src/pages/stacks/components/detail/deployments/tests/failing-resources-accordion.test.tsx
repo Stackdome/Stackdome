@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach, beforeAll } from "vitest";
+import { describe, it, expect, afterEach, beforeAll, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { FailingResourcesAccordion } from "../failing-resources-accordion";
 import type { FailingResource } from "../derive";
+
+vi.mock("@/api/observability", () => ({
+  fetchLogSnapshot: vi.fn().mockResolvedValue(["panic: boom", "exit status 1"]),
+}));
 
 // Radix needs these jsdom stubs (same pattern as release-row.test.tsx)
 beforeAll(() => {
@@ -43,5 +47,11 @@ describe("FailingResourcesAccordion", () => {
   it("renders a release-level banner when releaseMessage is set and no per-resource failures", () => {
     render(<FailingResourcesAccordion failing={[]} releaseMessage="apply error: forbidden" />);
     expect(screen.getByText(/apply error: forbidden/)).toBeInTheDocument();
+  });
+
+  it("shows a log snapshot when the fetch returns lines", async () => {
+    render(<FailingResourcesAccordion failing={failing} logContext={{ orgId: "o", teamName: "t", stackId: "s" }} />);
+    fireEvent.click(screen.getByText("tooljet"));
+    await waitFor(() => expect(screen.getByText(/panic: boom/)).toBeInTheDocument());
   });
 });

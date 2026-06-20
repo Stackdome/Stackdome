@@ -1,17 +1,34 @@
-import { AlertBanner, FailureCard } from "@/components/branded";
+import { useEffect, useState } from "react";
+import { AlertBanner, FailureCard, LogSnapshot } from "@/components/branded";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { fetchLogSnapshot } from "@/api/observability";
 import type { FailingResource } from "./derive";
+
+export interface LogContext { orgId: string; teamName: string; stackId: string; }
 
 export interface FailingResourcesAccordionProps {
   failing: FailingResource[];
   releaseMessage?: string;
+  logContext?: LogContext;
 }
 
 function stageForCard(stage: FailingResource["stage"]): "build" | "runtime" | "init" {
   return stage === "validation" ? "runtime" : stage;
 }
 
-export function FailingResourcesAccordion({ failing, releaseMessage }: FailingResourcesAccordionProps) {
+function CrashLog({ ctx, resourceName }: { ctx: LogContext; resourceName: string }) {
+  const [lines, setLines] = useState<string[]>([]);
+  useEffect(() => {
+    let alive = true;
+    void fetchLogSnapshot(ctx.orgId, ctx.teamName, ctx.stackId, resourceName, 50)
+      .then((l) => { if (alive) setLines(l); });
+    return () => { alive = false; };
+  }, [ctx, resourceName]);
+  if (lines.length === 0) return null; // best-effort; pod may be unreachable (#98)
+  return <LogSnapshot lines={lines} />;
+}
+
+export function FailingResourcesAccordion({ failing, releaseMessage, logContext }: FailingResourcesAccordionProps) {
   return (
     <div className="space-y-3">
       {releaseMessage && failing.length === 0 && (
@@ -36,6 +53,7 @@ export function FailingResourcesAccordion({ failing, releaseMessage }: FailingRe
                   exitCode={f.exitCode}
                   restartCount={f.restartCount}
                 />
+                {logContext && f.type === "runtime_crash" && <CrashLog ctx={logContext} resourceName={f.name} />}
               </AccordionContent>
             </AccordionItem>
           ))}
