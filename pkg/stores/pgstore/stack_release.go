@@ -34,7 +34,7 @@ var activeReleaseStates = []models.StackReleaseState{
 }
 
 // Create assigns the next sequence number and inserts the new release.
-// Supersession of older active releases is handled by the freshness reconciler.
+// Supersession of older active releases is handled by the gatekeeper reconciler.
 func (s *stackReleaseStore) Create(ctx context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError) {
 	var result *models.StackRelease
 

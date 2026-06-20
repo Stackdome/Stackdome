@@ -43,7 +43,7 @@ func NewReleaseWorker(spec ReleaseWorkerSpec) worker.Worker {
 	return &releaseWorker{
 		releaseService: spec.ReleaseService,
 		subReconcilers: []subReconciler{
-			newFreshnessReconciler(spec),
+			newGatekeeperReconciler(spec),
 			newRenderReconciler(spec),
 			newApplyReconciler(spec),
 			newConvergeReconciler(spec),
@@ -104,6 +104,7 @@ func (w *releaseWorker) reconcile(ctx context.Context, release *models.StackRele
 }
 
 func (w *releaseWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
+	// TODO: Add pagination..
 	releases, serr := w.releaseService.InternalListActive(ctx)
 	if serr != nil {
 		return nil, w.WorkerError.NewError("failed to list active releases: %v", serr)

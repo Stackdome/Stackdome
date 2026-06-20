@@ -40,7 +40,7 @@ func (h *stackReleaseHandler) Create(w http.ResponseWriter, r *http.Request) {
 			}
 
 			identity := auth.GetIdentityFromCtx(r.Context())
-			detail := ""
+			var detail string
 			if identity != nil {
 				detail = "triggered by " + identity.UserID
 			}

@@ -234,6 +234,7 @@ func (m *ReleaseManifest) Scan(value interface{}) error {
 
 // ReleasePins captures the resolved artifact coordinates for each resource.
 type ReleasePins struct {
+	// Resource Name -> Resolved artifiact src.
 	Resources map[string]ResourcePins `json:"resources,omitempty"`
 }
 
