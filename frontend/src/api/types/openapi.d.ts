@@ -3023,6 +3023,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/actions/restart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restart a stack resource
+         * @description Triggers a rolling restart of the stack resource by setting a new restart request timestamp.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    /** @description The name of the stack resource */
+                    resource_name: components["parameters"]["resource_name"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Restart initiated */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StackResource"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Stack resource not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds": {
         parameters: {
             query?: never;
@@ -3480,6 +3558,58 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List releases for a stack */
+        get: operations["listReleases"];
+        put?: never;
+        /** Create a new release (deploy) */
+        post: operations["createRelease"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a release by ID */
+        get: operations["getRelease"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a pending or rendering release */
+        post: operations["cancelRelease"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6014,6 +6144,9 @@ export interface components {
             state?: string;
             message?: string;
             observed_revision?: string;
+            target_revision?: string;
+            last_converged?: components["schemas"]["StackConvergenceRecord"];
+            resources?: components["schemas"]["StackResourceSummary"][];
             conditions?: components["schemas"]["Condition"][];
         };
         StackResource: {
@@ -6875,6 +7008,83 @@ export interface components {
             /** Format: date-time */
             expires_at?: string;
         };
+        /** @enum {string} */
+        StackReleaseState: "Pending" | "InProgress" | "Released" | "Failed" | "Superseded" | "Cancelled";
+        /** @enum {string} */
+        ReleaseCauseKind: "manual" | "rollback" | "webhook_push";
+        CreateReleaseRequest: {
+            /** @description If set, creates a rollback release copying this release's manifest */
+            from_release_id?: string;
+        };
+        StackRelease: {
+            id?: string;
+            stack_id?: string;
+            sequence?: number;
+            state?: components["schemas"]["StackReleaseState"];
+            message?: string;
+            cause?: components["schemas"]["ReleaseCause"];
+            snapshot_revision?: string;
+            manifest_revision?: string;
+            renderer_version?: string;
+            pins?: components["schemas"]["ReleasePins"];
+            outcome?: components["schemas"]["ReleaseOutcome"];
+            created_by?: string;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: date-time */
+            rendered_at?: string;
+            /** Format: date-time */
+            completed_at?: string;
+        };
+        StackReleaseList: {
+            items?: components["schemas"]["StackRelease"][];
+            total?: number;
+        };
+        ReleaseCause: {
+            kind?: components["schemas"]["ReleaseCauseKind"];
+            detail?: string;
+        };
+        ReleasePins: {
+            resources?: {
+                [key: string]: components["schemas"]["ResourcePins"];
+            };
+        };
+        ResourcePins: {
+            git_sha?: string;
+            volume_hash?: string;
+            image_digest?: string;
+        };
+        ReleaseOutcome: {
+            resources?: {
+                [key: string]: components["schemas"]["ResourceOutcome"];
+            };
+            duration?: string;
+        };
+        ResourceOutcome: {
+            phase?: string;
+            ready_replicas?: number;
+            replicas?: number;
+            message?: string;
+        };
+        StackConvergenceRecord: {
+            revision?: string;
+            release_id?: string;
+            /** Format: date-time */
+            at?: string;
+        };
+        StackResourceSummary: {
+            name?: string;
+            phase?: string;
+            observed_revision?: string;
+            converged_revision?: string;
+            available_replicas?: number;
+            updated_replicas?: number;
+            replicas?: number;
+            missing?: boolean;
+            message?: string;
+        };
     };
     responses: never;
     parameters: {
@@ -6902,4 +7112,117 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export type operations = Record<string, never>;
+export interface operations {
+    listReleases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of releases */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackReleaseList"];
+                };
+            };
+        };
+    };
+    createRelease: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateReleaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Release created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackRelease"];
+                };
+            };
+        };
+    };
+    getRelease: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+                release_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Release details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackRelease"];
+                };
+            };
+        };
+    };
+    cancelRelease: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+                release_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Release cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+}
