@@ -23,7 +23,7 @@ function CrashLog({ ctx, resourceName }: { ctx: LogContext; resourceName: string
     void fetchLogSnapshot(ctx.orgId, ctx.teamName, ctx.stackId, resourceName, 50)
       .then((l) => { if (alive) setLines(l); });
     return () => { alive = false; };
-  }, [ctx, resourceName]);
+  }, [ctx.orgId, ctx.teamName, ctx.stackId, resourceName]);
   if (lines.length === 0) return null; // best-effort; pod may be unreachable (#98)
   return <LogSnapshot lines={lines} />;
 }
