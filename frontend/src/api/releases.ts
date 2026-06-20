@@ -19,11 +19,13 @@ export async function getRelease(orgId: string, teamName: string, stackId: strin
   return response.data;
 }
 
+// POST with no from_release_id triggers a fresh deploy of the current saved config.
 export async function createRelease(orgId: string, teamName: string, stackId: string): Promise<StackRelease> {
   const response = await api.post<StackRelease>(releasesPath(orgId, teamName, stackId), {});
   return response.data;
 }
 
+// POST with from_release_id re-deploys that release's snapshot+pins (rollback).
 export async function rollbackRelease(orgId: string, teamName: string, stackId: string, fromReleaseId: string): Promise<StackRelease> {
   const body: CreateReleaseRequest = { from_release_id: fromReleaseId };
   const response = await api.post<StackRelease>(releasesPath(orgId, teamName, stackId), body);
@@ -31,5 +33,5 @@ export async function rollbackRelease(orgId: string, teamName: string, stackId: 
 }
 
 export async function cancelRelease(orgId: string, teamName: string, stackId: string, releaseId: string): Promise<void> {
-  await api.post(`${releasesPath(orgId, teamName, stackId)}/${releaseId}/cancel`);
+  await api.post<void>(`${releasesPath(orgId, teamName, stackId)}/${releaseId}/cancel`);
 }

@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/api/client", () => ({
@@ -8,7 +7,9 @@ vi.mock("@/api/client", () => ({
 import api from "@/api/client";
 import { listReleases, getRelease, createRelease, rollbackRelease, cancelRelease } from "../releases";
 
-const ORG = "org1", TEAM = "team1", STACK = "s1";
+const ORG = "org1";
+const TEAM = "team1";
+const STACK = "s1";
 const BASE = `/organizations/${ORG}/teams/${TEAM}/stacks/${STACK}/releases`;
 
 beforeEach(() => vi.clearAllMocks());
@@ -23,8 +24,9 @@ describe("releases api", () => {
 
   it("gets one release", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "r1" } });
-    await getRelease(ORG, TEAM, STACK, "r1");
+    const out = await getRelease(ORG, TEAM, STACK, "r1");
     expect(api.get).toHaveBeenCalledWith(`${BASE}/r1`);
+    expect(out.id).toBe("r1");
   });
 
   it("creates a deploy release with empty body", async () => {
