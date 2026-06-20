@@ -39,6 +39,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/config:
+    get:
+      summary: Get public application configuration
+      description: Returns feature flags the web client needs before authentication, such as whether GitHub OAuth is enabled.
+      responses:
+        '200':
+          description: Application configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppConfigResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/users/{id}:
     get:
       security:
@@ -2836,6 +2853,12 @@ components:
         type: string
       description: The name of the database
   schemas:
+    AppConfigResponse:
+      type: object
+      properties:
+        github_oauth:
+          type: boolean
+          description: True when GitHub OAuth login is configured on the server.
     Organisation:
       type: object
       properties:
