@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Stack } from "@/api/stacks";
 import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration } from "../derive";
-import { deriveStages, releaseGitSha } from "../derive";
+import { deriveStages, releaseGitSha, phaseTone, toneTextClass, toneDotClass } from "../derive";
 import type { StackRelease } from "@/api/releases";
 
 function release(partial: Partial<StackRelease>): StackRelease {
@@ -154,5 +154,23 @@ describe("releaseGitSha", () => {
   });
   it("returns undefined when no git pins", () => {
     expect(releaseGitSha(release({ pins: { resources: { api: { image_digest: "x" } } } }))).toBeUndefined();
+  });
+});
+
+describe("phaseTone", () => {
+  it("maps phases to tones", () => {
+    expect(phaseTone("Ready")).toBe("ok");
+    expect(phaseTone("Progressing")).toBe("amber");
+    expect(phaseTone("Building")).toBe("amber");
+    expect(phaseTone("CrashLoopBackOff")).toBe("err");
+    expect(phaseTone("OOMKilled")).toBe("err");
+    expect(phaseTone("ImagePullBackOff")).toBe("err");
+    expect(phaseTone("Pending")).toBe("muted");
+  });
+  it("maps tones to brand token classes", () => {
+    expect(toneTextClass("ok")).toBe("text-success");
+    expect(toneTextClass("err")).toBe("text-danger");
+    expect(toneTextClass("amber")).toBe("text-warn");
+    expect(toneDotClass("muted")).toBe("bg-fg-muted");
   });
 });

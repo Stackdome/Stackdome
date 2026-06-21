@@ -157,3 +157,20 @@ export function deriveStages(stack: Stack, release: StackRelease, failing: Faili
   // Superseded / Cancelled → neutral.
   return { build: "todo", deploy: "todo", ready: "todo" };
 }
+
+export type Tone = "ok" | "amber" | "err" | "muted";
+
+export function phaseTone(phase: string): Tone {
+  if (/ready|available|running|healthy/i.test(phase)) return "ok";
+  if (/progress|building|deploying|pending.*build/i.test(phase)) return "amber";
+  if (/crash|oom|error|failed|imagepull|backoff/i.test(phase)) return "err";
+  return "muted";
+}
+
+export function toneTextClass(t: Tone): string {
+  return { ok: "text-success", amber: "text-warn", err: "text-danger", muted: "text-fg-muted" }[t];
+}
+
+export function toneDotClass(t: Tone): string {
+  return { ok: "bg-success", amber: "bg-warn", err: "bg-danger", muted: "bg-fg-muted" }[t];
+}
