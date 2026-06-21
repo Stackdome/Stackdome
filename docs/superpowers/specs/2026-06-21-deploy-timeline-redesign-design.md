@@ -85,12 +85,12 @@ DeploymentsTab                      (container — unchanged props/wiring in det
 
 The mock duplicates the active release in some scenarios (shown as both the current node *and* the first "Earlier release") but not others. Production rule chosen here = **no duplication**:
 
-- Current node = the active release (live status), **lifted out** of the Earlier-releases list.
-- "Earlier releases" = `releases` excluding the active release.
-- The active release's own changelog (config diff vs previous + outcomes) stays reachable: the **current node is itself expandable** into the same `ReleasePostMortem` (a "View changelog" affordance), so nothing is lost and nothing is shown twice.
-- When `activeRelease` is null (no live deploy — scenarios 11/12), every release renders in the Earlier-releases / history list.
+- Current node = **`releases[0]`** (newest by sequence) — **always**, whether non-terminal (deploying) or terminal (Released/Failed). `useReleases` already computes this as `activeRelease`; it is `undefined` **only** when there are zero releases.
+- "Earlier releases" = **`releases.slice(1)`** (everything below the newest).
+- The newest release's own changelog (config diff vs previous + outcomes) stays reachable: the **current node is itself expandable** into the same `ReleasePostMortem` (a "View changelog" affordance), so nothing is lost and nothing is shown twice.
+- Empty list (zero releases) → `EmptyState`, no current node.
 
-This is a deliberate, reviewable deviation from the mock's literal duplication.
+Note: the mock's separate "history" view (`current: null`, a flat list) is a **demo-only artifact** of the scenario switcher — production always renders the newest release as the current node when any release exists. We do not replicate the `current: null` mode. This is a deliberate, reviewable deviation from the mock's literal behavior.
 
 ---
 
@@ -100,12 +100,12 @@ This is a deliberate, reviewable deviation from the mock's literal duplication.
 
 1. Key `prev.resources` and `cur.resources` by resource name.
 2. Classify each name: **added** (cur only), **removed** (prev only), **modified** (in both, fields differ), unchanged (omit).
-3. For modified/added resources, split fields into two sections:
-   - **configuration** — non-env scalar fields (e.g. `image_spec.image`, `ports[].number`, `command`, `replicas`).
-   - **environment** — env var map; each var is added / removed / changed.
+3. For modified/added resources, split fields into two sections. **Real `StackResource` field paths** (verified against `pkg/models/stack_resource.go`):
+   - **configuration** — non-env scalar fields: `image_config.image` (under `ImageConfigSpec`, **not** `image_spec`), `ports[].number`, `execution_config.command`, `execution_config.args`. **There is no resource-level `replicas`** field in the snapshot (replicas live only on `ResourceOutcome`/stack status), so no replicas diff row.
+   - **environment** — `execution_config.env[]` (array of `{name, value | secret_key_ref}`); diff by env name → added / removed / changed.
 4. Each leaf row carries `{ key, from?, to?, kind: added|removed|changed }`.
 
-`ConfigDiff` renders per-resource cards: header (dot + name + `ADDED`/`REMOVED` tag + optional note), then sections with `from → to` (strikethrough old in danger, new in success), `— → new` for added, removal note for removed resources. Exact snapshot field paths are pinned during implementation against a real release snapshot (TDD fixture).
+`ConfigDiff` renders per-resource cards: header (dot + name + `ADDED`/`REMOVED` tag + optional note), then sections with `from → to` (strikethrough old in danger, new in success), `— → new` for added, removal note for removed resources. The local `SnapshotShape` interface mirrors the above paths; a real release snapshot fixture anchors the TDD tests. The mock's `image_spec.image`/`replicas` labels are illustrative only — use the real paths above.
 
 Edge: first release (no previous) → "Initial release — nothing to compare." Missing/oversized snapshot → graceful "Diff unavailable."
 
@@ -129,7 +129,7 @@ Edge: first release (no previous) → "Initial release — nothing to compare." 
 
 Backend `GET /releases` has **no** pagination today: `ListByStackID` returns every release `ORDER BY sequence DESC`, `StackReleaseList = {items, total}`, no cursor. So:
 
-- **Now:** render all returned releases; show the first window (e.g. 15) of *history* rows with a **"Show more"** button revealing +15 each click. No extra requests.
+- **Now:** render all returned releases; show the first window (e.g. 15) of *history* rows with a **"Show more"** button revealing +15 each click. No extra requests. The window count is **component-local state** in `TimelineRail` (a `useState` counter), independent of the `releases` array — so the 5s `useReleases` poll replacing the array does **not** reset the window.
 - **Later (filed as a backend issue):** add `limit` + cursor (e.g. `before_sequence`) to `listReleases` (OpenAPI + handler + service + store), regenerate clients, and swap the client window for fetch-more / IntersectionObserver infinite scroll. `TimelineRail` is built so only the "load more" source changes.
 
 ---
@@ -148,8 +148,8 @@ Backend `GET /releases` has **no** pagination today: `ListByStackID` returns eve
 | 8 | crash_multi | FAILED, Ready **✗**, 2 failing (Crash + OOMKilled, with log snapshot) + top error banner | 2 rows | Rollback + Redeploy actions |
 | 9 | release_err | FAILED, Build✗, **ReleaseErrorBlock** (apply: unknown postgres addon) | minimal | no per-resource status |
 | 10 | pre_cluster | FAILED, Build✗, **ReleaseErrorBlock** (render: unresolved DATABASE_URL) | row w/ err meta | failed before cluster |
-| 11 | history | no current node; "Release history · N" | all states + causes + ⋮; #9 expands → why-failed (apply quota) | View/Rollback/Cancel/Copy gated by state |
-| 12 | empty | none | EmptyState rail node | |
+| 11 | history | newest terminal release (e.g. #12 Released) as the current node — **not** suppressed | `releases.slice(1)` = all earlier states + causes + ⋮; #9 expands → why-failed (apply quota) | exercises every state pill/cause + ⋮ gating; current node always present when ≥1 release (the mock's `current:null` flat list is demo-only) |
+| 12 | empty | none (zero releases) | EmptyState rail node | only case with no current node |
 
 ---
 
@@ -158,7 +158,7 @@ Backend `GET /releases` has **no** pagination today: `ListByStackID` returns eve
 | design token | ours (`index.css` / Tailwind) |
 |---|---|
 | `--amber`, `--amber-soft`, `--amber-hover` | `--primary` (amber), `--warn-bg`, primary hover; classes `text-primary`/`bg-warn-bg` |
-| `--ok` / `--ok-soft` (green) | existing success/`ready` token used by `StatusPill`'s `ready` variant — reuse the variant; for bare text use that token (verify exact name in impl) |
+| `--ok` / `--ok-soft` (green) | **`--success` / `--success-bg` / `--success-border`** (exist in `index.css`, light + dark; `--color-success` for Tailwind → `text-success`/`bg-success-bg`/`border-success-border`). `StatusPill`'s `ready` variant already uses these. |
 | `--err` / `--err-soft` | `--danger` / `--danger-bg` / `--danger-border` |
 | `--warn` / `--warn-soft` | `--warn` / `--warn-bg` |
 | `--fg1/2/3`, `--fg-muted` | `--foreground`, `--fg-2`, `--muted-foreground`, `--fg-muted` |
@@ -174,7 +174,7 @@ Status/stage/failure/log/banner visuals come from the **branded primitives** (al
 ## 9. Testing (Vitest + RTL)
 
 - `release-snapshot-diff.test.ts` — added/removed/modified, config vs env split, no-previous, malformed snapshot.
-- `use-release-detail.test.tsx` — fetch + cache hit + error.
+- `use-release-detail.test.tsx` — fetch + cache hit + error + **prev-release cache reuse across rows** (expanding row N then row N+1 reuses the already-fetched release as the other's "previous").
 - `current-release-node.test.tsx` — stages per state, resource expand (failing only), recovered note, release-error block.
 - `resource-row.test.tsx` — expand gated on failing; FailureCard + LogSnapshot; replica display.
 - `history-row.test.tsx` — toggle post-mortem; ⋮ items gated by state; copy id.
