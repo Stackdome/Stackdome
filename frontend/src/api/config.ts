@@ -12,10 +12,18 @@ let configValue: AppConfigResponse | null = null;
 
 export function getAppConfig(): Promise<AppConfigResponse> {
   if (!configPromise) {
-    configPromise = api.get("/config").then((res) => {
-      configValue = res.data;
-      return res.data;
-    });
+    configPromise = api
+      .get("/config")
+      .then((res) => {
+        configValue = res.data;
+        return res.data;
+      })
+      .catch((err) => {
+        // Don't cache a rejection — a transient failure must stay retryable,
+        // otherwise the gate would hide the button for the whole session.
+        configPromise = null;
+        throw err;
+      });
   }
   return configPromise;
 }
