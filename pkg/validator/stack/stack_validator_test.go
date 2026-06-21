@@ -451,6 +451,91 @@ func TestValidateForUpdateAllowsVolumeMountConnectionUsingExistingDBVolume(t *te
 	}
 }
 
+func TestValidateForCreateRejectsRetentionLimitAboveMax(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.Settings = &models.StackSettings{ReleaseRetentionLimit: models.MaxReleaseRetentionLimit + 1}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected retention limit above max to be rejected")
+	}
+	if got, want := err.Error(), "error: release_retention_limit must be at most 50"; got != want {
+		t.Fatalf("unexpected error: got %q want %q", got, want)
+	}
+}
+
+func TestValidateForCreateRejectsMinSuccessfulAboveMax(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.Settings = &models.StackSettings{MinSuccessfulReleases: models.MaxMinSuccessfulReleases + 1}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected min_successful_releases above max to be rejected")
+	}
+	if got, want := err.Error(), "error: min_successful_releases must be at most 20"; got != want {
+		t.Fatalf("unexpected error: got %q want %q", got, want)
+	}
+}
+
+func TestValidateForCreateRejectsDeployTimeoutAboveMax(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.Settings = &models.StackSettings{DeployTimeoutMinutes: models.MaxDeployTimeoutMinutes + 1}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected deploy_timeout_minutes above max to be rejected")
+	}
+	if got, want := err.Error(), "error: deploy_timeout_minutes must be at most 120"; got != want {
+		t.Fatalf("unexpected error: got %q want %q", got, want)
+	}
+}
+
+func TestValidateForCreateRejectsMinSuccessfulExceedingRetention(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.Settings = &models.StackSettings{
+		ReleaseRetentionLimit: 5,
+		MinSuccessfulReleases: 10,
+	}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected min_successful_releases > release_retention_limit to be rejected")
+	}
+	if got, want := err.Error(), "error: min_successful_releases (10) must not exceed release_retention_limit (5)"; got != want {
+		t.Fatalf("unexpected error: got %q want %q", got, want)
+	}
+}
+
+func TestValidateForCreateAcceptsValidSettings(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.Settings = &models.StackSettings{
+		ReleaseRetentionLimit: 20,
+		MinSuccessfulReleases: 10,
+		DeployTimeoutMinutes:  30,
+	}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err != nil {
+		t.Fatalf("expected valid settings to pass, got %v", err)
+	}
+}
+
+func TestValidateForCreateAcceptsNilSettings(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.Settings = nil
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err != nil {
+		t.Fatalf("expected nil settings to pass, got %v", err)
+	}
+}
+
 func stackWithPorts(ports ...models.Port) *models.Stack {
 	return &models.Stack{
 		Name:           "test-stack",

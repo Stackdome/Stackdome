@@ -24,6 +24,10 @@ const (
 	DefaultReleaseRetentionLimit = 10
 	DefaultMinSuccessfulReleases = 5
 	DefaultDeployTimeoutMinutes  = 15
+
+	MaxReleaseRetentionLimit = 50
+	MaxMinSuccessfulReleases = 20
+	MaxDeployTimeoutMinutes  = 120
 )
 
 type StackSettings struct {
@@ -33,6 +37,9 @@ type StackSettings struct {
 }
 
 func (s *StackSettings) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
 	bytes, ok := value.([]byte)
 	if !ok {
 		return errors.New("type assertion to []byte failed")
