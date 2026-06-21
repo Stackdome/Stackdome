@@ -134,8 +134,6 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
       />
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        <GitHubSignInButton inviteToken={token} />
-
         {serverError && (
           <div className="rounded-sm border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}
@@ -205,6 +203,8 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
             "Create account and join"
           )}
         </Button>
+
+        <GitHubSignInButton inviteToken={token} />
       </form>
     </div>
   );

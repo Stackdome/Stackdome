@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
-import { getAppConfig } from "@/api/config";
+import { getAppConfig, getCachedAppConfig } from "@/api/config";
 
 export function useAppConfig() {
-  const [githubOAuth, setGithubOAuth] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // Seed from the session cache so a warm config resolves on first paint
+  // (no loading flash) — the fetch is warmed at app entry (main.tsx).
+  const cached = getCachedAppConfig();
+  const [githubOAuth, setGithubOAuth] = useState(Boolean(cached?.github_oauth));
+  const [loading, setLoading] = useState(cached === null);
 
   useEffect(() => {
     let active = true;
