@@ -1,6 +1,11 @@
 package handlers
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+)
 
 type ConfigHandlerSpec struct {
 	GitHubOAuthEnabled bool
@@ -14,11 +19,11 @@ func NewConfigHandler(spec ConfigHandlerSpec) *configHandler {
 	return &configHandler{githubOAuthEnabled: spec.GitHubOAuthEnabled}
 }
 
-// appConfigResponse mirrors the AppConfigResponse schema in the OpenAPI spec.
-type appConfigResponse struct {
-	GithubOauth bool `json:"github_oauth"`
-}
-
 func (h *configHandler) Get(w http.ResponseWriter, r *http.Request) {
-	writeJSONResponse(w, http.StatusOK, appConfigResponse{GithubOauth: h.githubOAuthEnabled})
+	cfg := &handlerConfig{
+		Action: func() (any, *errors.ServiceError) {
+			return openapi.AppConfigResponse{GithubOauth: openapi.PtrBool(h.githubOAuthEnabled)}, nil
+		},
+	}
+	handleGet(w, r, cfg)
 }

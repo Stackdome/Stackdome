@@ -41,6 +41,24 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: Internal server error
       summary: Create new user
+  /api/v1/config:
+    get:
+      description: "Returns feature flags the web client needs before authentication,\
+        \ such as whether GitHub OAuth is enabled."
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppConfigResponse'
+          description: Application configuration
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      summary: Get public application configuration
   /api/v1/users/{id}:
     get:
       description: Get a user
@@ -4295,6 +4313,14 @@ components:
         type: string
       style: simple
   schemas:
+    AppConfigResponse:
+      example:
+        github_oauth: true
+      properties:
+        github_oauth:
+          description: True when GitHub OAuth login is configured on the server.
+          type: boolean
+      type: object
     Organisation:
       example:
         updated_at: 2000-01-23T04:56:07.000+00:00

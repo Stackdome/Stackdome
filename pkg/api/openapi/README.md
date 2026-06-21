@@ -87,6 +87,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1AuthGithubGet**](docs/DefaultApi.md#apiv1authgithubget) | **Get** /api/v1/auth/github | Initiate GitHub OAuth flow
 *DefaultApi* | [**ApiV1AuthLoginPost**](docs/DefaultApi.md#apiv1authloginpost) | **Post** /api/v1/auth/login | User login
 *DefaultApi* | [**ApiV1AuthRefreshPost**](docs/DefaultApi.md#apiv1authrefreshpost) | **Post** /api/v1/auth/refresh | Refresh JWT token
+*DefaultApi* | [**ApiV1ConfigGet**](docs/DefaultApi.md#apiv1configget) | **Get** /api/v1/config | Get public application configuration
 *DefaultApi* | [**ApiV1InvitesTokenInfoGet**](docs/DefaultApi.md#apiv1invitestokeninfoget) | **Get** /api/v1/invites/{token}/info | Get public invite info (unauthenticated)
 *DefaultApi* | [**ApiV1OrganizationsIdGet**](docs/DefaultApi.md#apiv1organizationsidget) | **Get** /api/v1/organizations/{id} | Get an organization
 *DefaultApi* | [**ApiV1OrganizationsIdPut**](docs/DefaultApi.md#apiv1organizationsidput) | **Put** /api/v1/organizations/{id} | Update an organization
@@ -192,6 +193,7 @@ Class | Method | HTTP request | Description
  - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest.md)
  - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost200Response](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost200Response.md)
  - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest.md)
+ - [AppConfigResponse](docs/AppConfigResponse.md)
  - [AzureCredentials](docs/AzureCredentials.md)
  - [BuildArtifact](docs/BuildArtifact.md)
  - [BuildArtifactSourceConfig](docs/BuildArtifactSourceConfig.md)

@@ -62,6 +62,10 @@ const Error = ObjectReference.and(
     .partial()
     .passthrough()
 );
+const AppConfigResponse = z
+  .object({ github_oauth: z.boolean() })
+  .partial()
+  .passthrough();
 const Team = z
   .object({
     id: z.string().optional(),
@@ -567,11 +571,36 @@ const StackSpec = z
     connections: z.array(StackConnection).optional(),
   })
   .passthrough();
+const StackConvergenceRecord = z
+  .object({
+    revision: z.string(),
+    release_id: z.string(),
+    at: z.string().datetime({ offset: true }),
+  })
+  .partial()
+  .passthrough();
+const StackResourceSummary = z
+  .object({
+    name: z.string(),
+    phase: z.string(),
+    observed_revision: z.string(),
+    converged_revision: z.string(),
+    available_replicas: z.number().int(),
+    updated_replicas: z.number().int(),
+    replicas: z.number().int(),
+    missing: z.boolean(),
+    message: z.string(),
+  })
+  .partial()
+  .passthrough();
 const StackStatus = z
   .object({
     state: z.string(),
     message: z.string(),
     observed_revision: z.string(),
+    target_revision: z.string(),
+    last_converged: StackConvergenceRecord,
+    resources: z.array(StackResourceSummary),
     conditions: z.array(Condition),
   })
   .partial()
@@ -763,6 +792,73 @@ const StackTopology = z
   .passthrough();
 const StackConnectionList = z
   .object({ items: z.array(StackConnection), total: z.number().int() })
+  .partial()
+  .passthrough();
+const CreateReleaseRequest = z
+  .object({ from_release_id: z.string() })
+  .partial()
+  .passthrough();
+const StackReleaseState = z.enum([
+  "Pending",
+  "InProgress",
+  "Released",
+  "Failed",
+  "Superseded",
+  "Cancelled",
+]);
+const ReleaseCauseKind = z.enum(["manual", "rollback", "webhook_push"]);
+const ReleaseCause = z
+  .object({ kind: ReleaseCauseKind, detail: z.string() })
+  .partial()
+  .passthrough();
+const ResourcePins = z
+  .object({
+    git_sha: z.string(),
+    volume_hash: z.string(),
+    image_digest: z.string(),
+  })
+  .partial()
+  .passthrough();
+const ReleasePins = z
+  .object({ resources: z.record(ResourcePins) })
+  .partial()
+  .passthrough();
+const ResourceOutcome = z
+  .object({
+    phase: z.string(),
+    ready_replicas: z.number().int(),
+    replicas: z.number().int(),
+    message: z.string(),
+  })
+  .partial()
+  .passthrough();
+const ReleaseOutcome = z
+  .object({ resources: z.record(ResourceOutcome), duration: z.string() })
+  .partial()
+  .passthrough();
+const StackRelease = z
+  .object({
+    id: z.string(),
+    stack_id: z.string(),
+    sequence: z.number().int(),
+    state: StackReleaseState,
+    message: z.string(),
+    cause: ReleaseCause,
+    snapshot_revision: z.string(),
+    manifest_revision: z.string(),
+    renderer_version: z.string(),
+    pins: ReleasePins,
+    outcome: ReleaseOutcome,
+    created_by: z.string(),
+    created_at: z.string().datetime({ offset: true }),
+    updated_at: z.string().datetime({ offset: true }),
+    rendered_at: z.string().datetime({ offset: true }),
+    completed_at: z.string().datetime({ offset: true }),
+  })
+  .partial()
+  .passthrough();
+const StackReleaseList = z
+  .object({ items: z.array(StackRelease), total: z.number().int() })
   .partial()
   .passthrough();
 const PostgresVersion = z
@@ -1112,6 +1208,7 @@ export const schemas = {
   UserSignupResponse,
   ObjectReference,
   Error,
+  AppConfigResponse,
   Team,
   TeamList,
   LoginRequest,
@@ -1183,6 +1280,8 @@ export const schemas = {
   StackConnectionConfig,
   StackConnection,
   StackSpec,
+  StackConvergenceRecord,
+  StackResourceSummary,
   StackStatus,
   Stack,
   StackList,
@@ -1212,6 +1311,16 @@ export const schemas = {
   TopologyEdge,
   StackTopology,
   StackConnectionList,
+  CreateReleaseRequest,
+  StackReleaseState,
+  ReleaseCauseKind,
+  ReleaseCause,
+  ResourcePins,
+  ReleasePins,
+  ResourceOutcome,
+  ReleaseOutcome,
+  StackRelease,
+  StackReleaseList,
   PostgresVersion,
   PostgresInstances,
   PostgresStorage,
@@ -1431,6 +1540,21 @@ const endpoints = makeApi([
         description: `Invalid or expired refresh token`,
         schema: Error,
       },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/config",
+    alias: "getApiv1config",
+    description: `Returns feature flags the web client needs before authentication, such as whether GitHub OAuth is enabled.`,
+    requestFormat: "json",
+    response: z.object({ github_oauth: z.boolean() }).partial().passthrough(),
+    errors: [
       {
         status: 500,
         description: `Internal server error`,
@@ -4157,6 +4281,120 @@ const endpoints = makeApi([
     ],
   },
   {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/releases",
+    alias: "createRelease",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z
+          .object({ from_release_id: z.string() })
+          .partial()
+          .passthrough(),
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackRelease,
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/releases",
+    alias: "listReleases",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackReleaseList,
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/releases/:release_id",
+    alias: "getRelease",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "release_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackRelease,
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/releases/:release_id/cancel",
+    alias: "cancelRelease",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "release_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
     method: "get",
     path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources",
     alias: "getApiv1organizationsOrg_idteamsTeam_namestacksIdresources",
@@ -4225,6 +4463,59 @@ const endpoints = makeApi([
       {
         status: 401,
         description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name/actions/restart",
+    alias:
+      "postApiv1organizationsOrg_idteamsTeam_namestacksIdresourcesResource_nameactionsrestart",
+    description: `Triggers a rolling restart of the stack resource by setting a new restart request timestamp.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "resource_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackResource,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack resource not found`,
         schema: z.void(),
       },
       {
