@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 )
 
 func TestConfigHandler_Get(t *testing.T) {
@@ -26,14 +28,15 @@ func TestConfigHandler_Get(t *testing.T) {
 			if rec.Code != http.StatusOK {
 				t.Fatalf("expected 200, got %d", rec.Code)
 			}
-			var body struct {
-				GithubOauth bool `json:"github_oauth"`
-			}
+			var body openapi.AppConfigResponse
 			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 				t.Fatalf("unmarshal: %v", err)
 			}
-			if body.GithubOauth != tc.enabled {
-				t.Fatalf("expected github_oauth=%v, got %v", tc.enabled, body.GithubOauth)
+			if body.GithubOauth == nil {
+				t.Fatal("expected github_oauth to be present")
+			}
+			if *body.GithubOauth != tc.enabled {
+				t.Fatalf("expected github_oauth=%v, got %v", tc.enabled, *body.GithubOauth)
 			}
 		})
 	}
