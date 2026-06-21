@@ -171,34 +171,30 @@ export default function SecretsPage() {
           }
         />
 
-        <Panel
-          title="Organization Secrets"
-          count={secrets.length}
-          bodyClassName={secrets.length === 0 ? "p-5" : "p-0"}
-        >
-          {secrets.length === 0 ? (
-            <EmptyState
-              icon={<KeyRound className="h-8 w-8" />}
-              title="No secrets yet"
-              description="Create your first secret to securely store sensitive data."
-              action={
-                canWriteAnyTeam ? (
-                  <Button onClick={() => setShowAddDialog(true)} variant="outline">
-                    <PlusCircle className="h-4 w-4" />
-                    Create Secret
-                  </Button>
-                ) : undefined
-              }
-            />
-          ) : (
+        {secrets.length === 0 ? (
+          <EmptyState
+            icon={<KeyRound className="h-8 w-8" />}
+            title="No secrets yet"
+            description="Create your first secret to securely store sensitive data."
+            action={
+              canWriteAnyTeam ? (
+                <Button onClick={() => setShowAddDialog(true)}>
+                  <PlusCircle className="h-4 w-4" />
+                  Create Secret
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <Panel title="Organization Secrets" count={secrets.length} bodyClassName="p-0">
             <SecretList
               secrets={secrets}
               onEdit={handleEdit}
               onDelete={handleDelete}
               canWrite={(teamId?: string) => canWrite(teamId ?? "")}
             />
-          )}
-        </Panel>
+          </Panel>
+        )}
 
         <SecretFormDialog
           open={showAddDialog}

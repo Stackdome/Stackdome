@@ -141,27 +141,23 @@ export default function ClustersPage() {
           }
         />
 
-        <Panel
-          title="All Clusters"
-          count={clusters.length}
-          bodyClassName={clusters.length === 0 ? "p-5" : "p-0"}
-        >
-          {clusters.length === 0 ? (
-            <EmptyState
-              icon={<Boxes className="h-8 w-8" />}
-              title="No clusters configured"
-              description="Link to your cluster to get started."
-              action={
-                <Button onClick={() => setShowAddDialog(true)} variant="outline">
-                  <PlusCircle className="h-4 w-4" />
-                  Add Cluster
-                </Button>
-              }
-            />
-          ) : (
+        {clusters.length === 0 ? (
+          <EmptyState
+            icon={<Boxes className="h-8 w-8" />}
+            title="No clusters configured"
+            description="Link to your cluster to get started."
+            action={
+              <Button onClick={() => setShowAddDialog(true)}>
+                <PlusCircle className="h-4 w-4" />
+                Add Cluster
+              </Button>
+            }
+          />
+        ) : (
+          <Panel title="All Clusters" count={clusters.length} bodyClassName="p-0">
             <ClusterList clusters={clusters} onEdit={handleEdit} onDelete={handleDelete} />
-          )}
-        </Panel>
+          </Panel>
+        )}
 
         <AddClusterDialog
           open={showAddDialog}
