@@ -1,8 +1,9 @@
 import axios from "axios";
 import { getRefreshToken } from "@/helpers/common";
+import { API_BASE_URL } from "./base-url";
 
 // Bare axios (not the shared `api` instance) so refresh bypasses the interceptors.
-const REFRESH_URL = `${import.meta.env.VITE_API_BASE_URL || "/api/v1"}/auth/refresh`;
+const REFRESH_URL = `${API_BASE_URL}/auth/refresh`;
 
 // Single-flight: concurrent callers share one refresh request.
 let refreshPromise: Promise<string> | null = null;

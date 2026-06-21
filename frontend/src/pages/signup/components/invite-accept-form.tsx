@@ -10,6 +10,7 @@ import type { OrgInviteInfo } from "@/api/invites";
 import { setAuthSession } from "@/helpers/common";
 import { isErrorStatus, getErrorMessage } from "@/api/client";
 import { FormHead, FieldLabel } from "@/pages/auth/components/auth-shell";
+import { GitHubSignInButton } from "@/components/auth/github-sign-in-button";
 import { format, parseISO } from "date-fns";
 
 type Phase = "form" | "accepting" | "accepted" | "existing-user";
@@ -202,6 +203,8 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
             "Create account and join"
           )}
         </Button>
+
+        <GitHubSignInButton inviteToken={token} />
       </form>
     </div>
   );

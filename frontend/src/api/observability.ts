@@ -1,4 +1,5 @@
 import api from "./client";
+import { API_BASE_URL } from "./base-url";
 
 // Logs and metrics (including SSE streams) are served from the team-scoped stack
 // endpoints; the UI scopes everything to the org's default team.
@@ -34,7 +35,7 @@ export function buildStackLogStreamUrl(
   stackId: string,
   params?: LogStreamParams
 ): string {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+  const baseUrl = API_BASE_URL;
   const path = `${baseUrl}/organizations/${organizationId}/teams/${teamName}/stacks/${stackId}/logs`;
   return withLogParams(path, params);
 }
@@ -46,7 +47,7 @@ export function buildStackResourceLogStreamUrl(
   resourceName: string,
   params?: LogStreamParams
 ): string {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+  const baseUrl = API_BASE_URL;
   const path = `${baseUrl}/organizations/${organizationId}/teams/${teamName}/stacks/${stackId}/resources/${resourceName}/logs`;
   return withLogParams(path, params);
 }
@@ -66,7 +67,7 @@ export function buildStackMetricsStreamUrl(
   teamName: string,
   stackId: string
 ): string {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+  const baseUrl = API_BASE_URL;
   return `${baseUrl}/organizations/${organizationId}/teams/${teamName}/stacks/${stackId}/metrics?stream=true`;
 }
 
@@ -86,6 +87,6 @@ export function buildStackResourceMetricsStreamUrl(
   stackId: string,
   resourceName: string
 ): string {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+  const baseUrl = API_BASE_URL;
   return `${baseUrl}/organizations/${organizationId}/teams/${teamName}/stacks/${stackId}/resources/${resourceName}/metrics?stream=true`;
 }

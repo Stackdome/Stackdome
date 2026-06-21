@@ -19,6 +19,7 @@ docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost200Resp
 docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest.md
 docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost200Response.md
 docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest.md
+docs/AppConfigResponse.md
 docs/AzureCredentials.md
 docs/BuildArtifact.md
 docs/BuildArtifactSourceConfig.md
@@ -198,6 +199,7 @@ model_api_token.go
 model_api_token_create_request.go
 model_api_token_create_response.go
 model_api_token_list.go
+model_app_config_response.go
 model_azure_credentials.go
 model_build_artifact.go
 model_build_artifact_source_config.go
