@@ -26,9 +26,19 @@ func PresentStack(s *models.Stack) openapi.Stack {
 		Revision:       &s.CrRevision,
 		Annotations:    presentAnnotations(s.Annotations),
 		Spec:           presentStackSpec(s),
+		Settings:       presentStackSettings(s),
 		Status:         presentStackStatus(s.Status),
 		CreatedAt:      &s.CreatedAt,
 		UpdatedAt:      &s.UpdatedAt,
+	}
+}
+
+func presentStackSettings(s *models.Stack) *openapi.StackSettings {
+	effective := s.EffectiveSettings()
+	return &openapi.StackSettings{
+		ReleaseRetentionLimit: ptr.To(int32(effective.ReleaseRetentionLimit)),
+		MinSuccessfulReleases: ptr.To(int32(effective.MinSuccessfulReleases)),
+		DeployTimeoutMinutes:  ptr.To(int32(effective.DeployTimeoutMinutes)),
 	}
 }
 
@@ -312,7 +322,25 @@ func ConvertStack(w *openapi.Stack) *models.Stack {
 		Connections:    convertConnections(w.Spec.Connections),
 		StackResources: convertStackResources(w.Spec.StackResources),
 		Volumes:        convertVolumes(w.Spec.Volumes),
+		Settings:       convertStackSettings(w.Settings),
 	}
+}
+
+func convertStackSettings(s *openapi.StackSettings) *models.StackSettings {
+	if s == nil {
+		return nil
+	}
+	result := &models.StackSettings{}
+	if s.ReleaseRetentionLimit != nil {
+		result.ReleaseRetentionLimit = int(*s.ReleaseRetentionLimit)
+	}
+	if s.MinSuccessfulReleases != nil {
+		result.MinSuccessfulReleases = int(*s.MinSuccessfulReleases)
+	}
+	if s.DeployTimeoutMinutes != nil {
+		result.DeployTimeoutMinutes = int(*s.DeployTimeoutMinutes)
+	}
+	return result
 }
 
 func ConvertStackConnection(connection *openapi.StackConnection) *models.StackConnection {

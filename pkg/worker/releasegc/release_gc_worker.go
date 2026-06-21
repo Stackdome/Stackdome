@@ -11,10 +11,8 @@ import (
 )
 
 const (
-	WorkerName                   = "release-gc-worker"
-	releaseRetentionCap          = 10
-	releaseConvergedFloorMinimum = 5
-	gcPollInterval               = 1 * time.Hour
+	WorkerName     = "release-gc-worker"
+	gcPollInterval = 1 * time.Hour
 )
 
 type ReleaseGCRequest struct {
@@ -27,13 +25,19 @@ type releaseStore interface {
 	ListStackIDsExceedingRetention(ctx context.Context, cap int) ([]string, *errors.ServiceError)
 }
 
+type stackStore interface {
+	GetByID(ctx context.Context, id string) (*models.Stack, *errors.ServiceError)
+}
+
 type ReleaseGCWorkerSpec struct {
 	ReleaseStore releaseStore
+	StackStore   stackStore
 	Env          string
 }
 
 type releaseGCWorker struct {
 	releaseStore releaseStore
+	stackStore   stackStore
 	worker.BaseWorker
 }
 
@@ -42,6 +46,7 @@ var _ worker.Worker = (*releaseGCWorker)(nil)
 func NewReleaseGCWorker(spec ReleaseGCWorkerSpec) worker.Worker {
 	return &releaseGCWorker{
 		releaseStore: spec.ReleaseStore,
+		stackStore:   spec.StackStore,
 		BaseWorker:   worker.NewBaseWorker(WorkerName, spec.Env),
 	}
 }
@@ -56,12 +61,21 @@ func (w *releaseGCWorker) Execute(ctx context.Context, operand worker.Operand) (
 		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *ReleaseGCRequest")
 	}
 
+	stack, stackErr := w.stackStore.GetByID(ctx, req.StackID)
+	if stackErr != nil {
+		if stackErr.Is404() {
+			return worker.Result{}, nil
+		}
+		return worker.Result{}, w.WorkerError.NewError("failed to get stack %s: %v", req.StackID, stackErr)
+	}
+	settings := stack.EffectiveSettings()
+
 	candidates, err := w.releaseStore.ListTerminalSummariesByStackID(ctx, req.StackID)
 	if err != nil {
 		return worker.Result{}, w.WorkerError.NewError("failed to list releases for stack %s: %v", req.StackID, err)
 	}
 
-	toDelete := releaseIDsToGC(candidates)
+	toDelete := releaseIDsToGC(candidates, settings.ReleaseRetentionLimit, settings.MinSuccessfulReleases)
 	if len(toDelete) == 0 {
 		return worker.Result{}, nil
 	}
@@ -75,7 +89,7 @@ func (w *releaseGCWorker) Execute(ctx context.Context, operand worker.Operand) (
 }
 
 func (w *releaseGCWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
-	stackIDs, err := w.releaseStore.ListStackIDsExceedingRetention(ctx, releaseRetentionCap)
+	stackIDs, err := w.releaseStore.ListStackIDsExceedingRetention(ctx, models.DefaultReleaseRetentionLimit)
 	if err != nil {
 		return nil, w.WorkerError.NewError("failed to poll for GC candidates: %v", err)
 	}
@@ -87,10 +101,10 @@ func (w *releaseGCWorker) GetInput(ctx context.Context) ([]worker.Operand, *erro
 }
 
 // releaseIDsToGC returns the release IDs to delete, retaining the
-// releaseConvergedFloorMinimum most-recent Released releases unconditionally,
-// then filling up to releaseRetentionCap total with the most-recent releases of
+// minSuccessful most-recent Released releases unconditionally,
+// then filling up to retentionLimit total with the most-recent releases of
 // any state.
-func releaseIDsToGC(candidates []models.ReleaseSummary) []string {
+func releaseIDsToGC(candidates []models.ReleaseSummary, retentionLimit, minSuccessful int) []string {
 	bySeqDesc := make([]models.ReleaseSummary, len(candidates))
 	copy(bySeqDesc, candidates)
 	sort.Slice(bySeqDesc, func(i, j int) bool { return bySeqDesc[i].Sequence > bySeqDesc[j].Sequence })
@@ -98,14 +112,14 @@ func releaseIDsToGC(candidates []models.ReleaseSummary) []string {
 	keep := make(map[string]struct{})
 	releasedSeen := 0
 	for _, s := range bySeqDesc {
-		if s.State == models.ReleaseStateReleased && releasedSeen < releaseConvergedFloorMinimum {
+		if s.State == models.ReleaseStateReleased && releasedSeen < minSuccessful {
 			keep[s.ID] = struct{}{}
 			releasedSeen++
 		}
 	}
 
 	for _, s := range bySeqDesc {
-		if len(keep) >= releaseRetentionCap {
+		if len(keep) >= retentionLimit {
 			break
 		}
 		keep[s.ID] = struct{}{}

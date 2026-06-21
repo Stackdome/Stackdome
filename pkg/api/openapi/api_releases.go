@@ -362,6 +362,27 @@ type ApiListReleasesRequest struct {
 	orgId      string
 	teamName   string
 	id         string
+	state      *StackReleaseState
+	page       *int32
+	pageSize   *int32
+}
+
+// Filter by release state
+func (r ApiListReleasesRequest) State(state StackReleaseState) ApiListReleasesRequest {
+	r.state = &state
+	return r
+}
+
+// Page number
+func (r ApiListReleasesRequest) Page(page int32) ApiListReleasesRequest {
+	r.page = &page
+	return r
+}
+
+// Number of items per page
+func (r ApiListReleasesRequest) PageSize(pageSize int32) ApiListReleasesRequest {
+	r.pageSize = &pageSize
+	return r
 }
 
 func (r ApiListReleasesRequest) Execute() (*StackReleaseList, *http.Response, error) {
@@ -412,6 +433,15 @@ func (a *ReleasesApiService) ListReleasesExecute(r ApiListReleasesRequest) (*Sta
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 
+	if r.state != nil {
+		localVarQueryParams.Add("state", parameterToString(*r.state, ""))
+	}
+	if r.page != nil {
+		localVarQueryParams.Add("page", parameterToString(*r.page, ""))
+	}
+	if r.pageSize != nil {
+		localVarQueryParams.Add("page_size", parameterToString(*r.pageSize, ""))
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 

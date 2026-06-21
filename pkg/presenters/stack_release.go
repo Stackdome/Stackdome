@@ -5,6 +5,7 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"k8s.io/utils/ptr"
 )
 
@@ -80,13 +81,16 @@ func presentReleaseOutcome(o *models.ReleaseOutcome) *openapi.ReleaseOutcome {
 	return result
 }
 
-func PresentStackReleaseList(releases []*models.StackRelease) openapi.StackReleaseList {
-	items := make([]openapi.StackRelease, len(releases))
-	for i, r := range releases {
+func PresentStackReleaseList(result *stores.PaginatedResult[*models.StackRelease]) openapi.StackReleaseList {
+	items := make([]openapi.StackRelease, len(result.Items))
+	for i, r := range result.Items {
 		items[i] = PresentStackRelease(r)
 	}
 	return openapi.StackReleaseList{
-		Items: items,
-		Total: ptr.To(int32(len(releases))),
+		Items:      items,
+		Total:      ptr.To(int32(result.Total)),
+		Page:       ptr.To(int32(result.Page)),
+		PageSize:   ptr.To(int32(result.PageSize)),
+		TotalPages: ptr.To(int32(result.TotalPages)),
 	}
 }

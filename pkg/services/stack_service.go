@@ -82,6 +82,7 @@ type stackService struct {
 	permissions          auth.PermissionService
 	releaseService       releaseServiceForStack
 	referenceService     ReferenceService
+	defaultingService    DefaultingService[*models.Stack]
 	ClusterResourceServiceDeps
 	BackgroundJobEnqueuerDep
 }
@@ -112,6 +113,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 		teamService:          spec.TeamService,
 		permissions:          spec.Permissions,
 		referenceService:     spec.ReferenceService,
+		defaultingService:    NewStackDefaultingService(),
 	}
 }
 
@@ -132,6 +134,9 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 		return nil, err
 	}
 	s.logger.Infof("validation passed for stack creation: %s", spec.Name)
+
+	spec, _ = s.defaultingService.PopulateDefaultValues(spec)
+
 	// Setup namespace
 	namespaceForStack, err := s.namespaceService.PrepareNamespaceForStack(ctx, spec)
 	if err != nil {
@@ -230,6 +235,9 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
 		return nil, err
 	}
+
+	spec, _ = s.defaultingService.PopulateDefaultValues(spec)
+
 	// set namespace
 	spec.Namespace = existingStack.Namespace
 	spec.ClusterID = existingStack.ClusterID

@@ -17,7 +17,7 @@ type StackReleaseService interface {
 	CreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError)
 	RollbackRelease(ctx context.Context, stackID, fromReleaseID string) (*models.StackRelease, *errors.ServiceError)
 	GetRelease(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
-	ListReleases(ctx context.Context, stackID string) ([]*models.StackRelease, *errors.ServiceError)
+	ListReleases(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError)
 	CancelRelease(ctx context.Context, releaseID string) *errors.ServiceError
 
 	// Internal methods are called by workers and controllers; no permission checks.
@@ -208,7 +208,7 @@ func (s *stackReleaseService) GetRelease(ctx context.Context, releaseID string) 
 	return rel, nil
 }
 
-func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string) ([]*models.StackRelease, *errors.ServiceError) {
+func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError) {
 	stack, sErr := s.stackQuery.GetStack(ctx, stackID)
 	if sErr != nil {
 		return nil, sErr
@@ -218,7 +218,7 @@ func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string) 
 		return nil, permErr
 	}
 
-	return s.store.ListByStackID(ctx, stackID)
+	return s.store.ListByStackID(ctx, stackID, params)
 }
 
 func (s *stackReleaseService) CancelRelease(ctx context.Context, releaseID string) *errors.ServiceError {

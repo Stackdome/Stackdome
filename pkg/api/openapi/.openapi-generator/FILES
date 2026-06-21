@@ -147,6 +147,7 @@ docs/StackResourceFailure.md
 docs/StackResourceList.md
 docs/StackResourceStatus.md
 docs/StackResourceSummary.md
+docs/StackSettings.md
 docs/StackSpec.md
 docs/StackStatus.md
 docs/StackTopology.md
@@ -325,6 +326,7 @@ model_stack_resource_failure.go
 model_stack_resource_list.go
 model_stack_resource_status.go
 model_stack_resource_summary.go
+model_stack_settings.go
 model_stack_spec.go
 model_stack_status.go
 model_stack_topology.go

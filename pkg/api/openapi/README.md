@@ -319,6 +319,7 @@ Class | Method | HTTP request | Description
  - [StackResourceList](docs/StackResourceList.md)
  - [StackResourceStatus](docs/StackResourceStatus.md)
  - [StackResourceSummary](docs/StackResourceSummary.md)
+ - [StackSettings](docs/StackSettings.md)
  - [StackSpec](docs/StackSpec.md)
  - [StackStatus](docs/StackStatus.md)
  - [StackTopology](docs/StackTopology.md)

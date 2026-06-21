@@ -206,7 +206,7 @@ func TestConvergeReconciler_MarkReleasedCASFails(t *testing.T) {
 
 func TestConvergeReconciler_Timeout(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	past := time.Now().UTC().Add(-convergenceTimeout - time.Minute)
+	past := time.Now().UTC().Add(-time.Duration(models.DefaultDeployTimeoutMinutes)*time.Minute - time.Minute)
 
 	release := &models.StackRelease{
 		ID:               "rel-1",

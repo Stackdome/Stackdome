@@ -31,7 +31,7 @@ func TestReleaseIDsToGC_KeepsConvergedFloorAndCapsAtTen(t *testing.T) {
 	}
 	all := summaries(specs...)
 
-	del := releaseIDsToGC(all)
+	del := releaseIDsToGC(all, models.DefaultReleaseRetentionLimit, models.DefaultMinSuccessfulReleases)
 
 	if len(del) != 10 {
 		t.Fatalf("expected 10 deletions, got %d", len(del))
@@ -50,7 +50,7 @@ func TestReleaseIDsToGC_KeepsConvergedFloorAndCapsAtTen(t *testing.T) {
 
 func TestReleaseIDsToGC_NothingToDeleteUnderCap(t *testing.T) {
 	all := summaries([2]int{1, 1}, [2]int{2, 0}, [2]int{3, 1})
-	if del := releaseIDsToGC(all); len(del) != 0 {
+	if del := releaseIDsToGC(all, models.DefaultReleaseRetentionLimit, models.DefaultMinSuccessfulReleases); len(del) != 0 {
 		t.Fatalf("expected no deletions, got %v", ids(del))
 	}
 }

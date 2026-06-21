@@ -16,7 +16,6 @@ import (
 
 const (
 	ReleaseWorkerName       = "release-worker"
-	convergenceTimeout      = 15 * time.Minute
 	convergencePollInterval = 15 * time.Second
 )
 

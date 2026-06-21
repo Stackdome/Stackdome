@@ -80,6 +80,9 @@ func (v *stackValidator) ValidateForCreate(ctx context.Context, spec *models.Sta
 	if err := v.validateConnections(ctx, nil, spec); err != nil {
 		return err
 	}
+	if err := validateStackSettings(spec); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -119,6 +122,29 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 	}
 	if err := v.validateConnections(ctx, existing, spec); err != nil {
 		return err
+	}
+	if err := validateStackSettings(spec); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateStackSettings(spec *models.Stack) *errors.ServiceError {
+	if spec.Settings == nil {
+		return nil
+	}
+	s := spec.Settings
+	if s.ReleaseRetentionLimit > models.MaxReleaseRetentionLimit {
+		return errors.BadRequest("release_retention_limit must be at most %d", models.MaxReleaseRetentionLimit)
+	}
+	if s.MinSuccessfulReleases > models.MaxMinSuccessfulReleases {
+		return errors.BadRequest("min_successful_releases must be at most %d", models.MaxMinSuccessfulReleases)
+	}
+	if s.DeployTimeoutMinutes > models.MaxDeployTimeoutMinutes {
+		return errors.BadRequest("deploy_timeout_minutes must be at most %d", models.MaxDeployTimeoutMinutes)
+	}
+	if s.MinSuccessfulReleases > 0 && s.ReleaseRetentionLimit > 0 && s.MinSuccessfulReleases > s.ReleaseRetentionLimit {
+		return errors.BadRequest("min_successful_releases (%d) must not exceed release_retention_limit (%d)", s.MinSuccessfulReleases, s.ReleaseRetentionLimit)
 	}
 	return nil
 }

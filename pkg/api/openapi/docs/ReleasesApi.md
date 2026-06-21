@@ -241,7 +241,7 @@ Name | Type | Description  | Notes
 
 ## ListReleases
 
-> StackReleaseList ListReleases(ctx, orgId, teamName, id).Execute()
+> StackReleaseList ListReleases(ctx, orgId, teamName, id).State(state).Page(page).PageSize(pageSize).Execute()
 
 List releases for a stack
 
@@ -261,10 +261,13 @@ func main() {
     orgId := "orgId_example" // string | The ID of the organization
     teamName := "teamName_example" // string | The name of the team
     id := "id_example" // string | The id of record
+    state := openapiclient.StackReleaseState("Pending") // StackReleaseState | Filter by release state (optional)
+    page := int32(56) // int32 | Page number (optional) (default to 1)
+    pageSize := int32(56) // int32 | Number of items per page (optional) (default to 20)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.ReleasesApi.ListReleases(context.Background(), orgId, teamName, id).Execute()
+    resp, r, err := apiClient.ReleasesApi.ListReleases(context.Background(), orgId, teamName, id).State(state).Page(page).PageSize(pageSize).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `ReleasesApi.ListReleases``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -294,6 +297,9 @@ Name | Type | Description  | Notes
 
 
 
+ **state** | [**StackReleaseState**](StackReleaseState.md) | Filter by release state | 
+ **page** | **int32** | Page number | [default to 1]
+ **pageSize** | **int32** | Number of items per page | [default to 20]
 
 ### Return type
 

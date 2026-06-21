@@ -18,7 +18,23 @@ func (s *stackDefaultingService) PopulateDefaultValues(resource *models.Stack) (
 	for i := range resource.StackResources {
 		applyStackResourcePortDefaults(resource.StackResources[i])
 	}
+	applyStackSettingsDefaults(resource)
 	return resource, nil
+}
+
+func applyStackSettingsDefaults(stack *models.Stack) {
+	if stack.Settings == nil {
+		stack.Settings = &models.StackSettings{}
+	}
+	if stack.Settings.ReleaseRetentionLimit <= 0 {
+		stack.Settings.ReleaseRetentionLimit = models.DefaultReleaseRetentionLimit
+	}
+	if stack.Settings.MinSuccessfulReleases <= 0 {
+		stack.Settings.MinSuccessfulReleases = models.DefaultMinSuccessfulReleases
+	}
+	if stack.Settings.DeployTimeoutMinutes <= 0 {
+		stack.Settings.DeployTimeoutMinutes = models.DefaultDeployTimeoutMinutes
+	}
 }
 
 func applyStackResourcePortDefaults(resource *models.StackResource) {

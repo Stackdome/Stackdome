@@ -15,6 +15,7 @@ import (
 
 	errors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	models "github.com/ashishmax31/stackdome-api-server/pkg/models"
+	stores "github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -146,18 +147,18 @@ func (mr *MockStackReleaseStoreMockRecorder) ListActive(ctx any) *gomock.Call {
 }
 
 // ListByStackID mocks base method.
-func (m *MockStackReleaseStore) ListByStackID(ctx context.Context, stackID string) ([]*models.StackRelease, *errors.ServiceError) {
+func (m *MockStackReleaseStore) ListByStackID(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByStackID", ctx, stackID)
-	ret0, _ := ret[0].([]*models.StackRelease)
+	ret := m.ctrl.Call(m, "ListByStackID", ctx, stackID, params)
+	ret0, _ := ret[0].(*stores.PaginatedResult[*models.StackRelease])
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
 // ListByStackID indicates an expected call of ListByStackID.
-func (mr *MockStackReleaseStoreMockRecorder) ListByStackID(ctx, stackID any) *gomock.Call {
+func (mr *MockStackReleaseStoreMockRecorder) ListByStackID(ctx, stackID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByStackID", reflect.TypeOf((*MockStackReleaseStore)(nil).ListByStackID), ctx, stackID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByStackID", reflect.TypeOf((*MockStackReleaseStore)(nil).ListByStackID), ctx, stackID, params)
 }
 
 // ListStackIDsExceedingRetention mocks base method.

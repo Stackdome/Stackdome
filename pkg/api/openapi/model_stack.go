@@ -17,19 +17,20 @@ import (
 
 // Stack struct for Stack
 type Stack struct {
-	Id             *string      `json:"id,omitempty"`
-	OrganisationId *string      `json:"organisation_id,omitempty"`
-	TeamId         *string      `json:"team_id,omitempty"`
-	UserId         *string      `json:"user_id,omitempty"`
-	Name           string       `json:"name"`
-	Namespace      *string      `json:"namespace,omitempty"`
-	Labels         []Label      `json:"labels,omitempty"`
-	Annotations    []Annotation `json:"annotations,omitempty"`
-	Revision       *string      `json:"revision,omitempty"`
-	Spec           StackSpec    `json:"spec"`
-	Status         *StackStatus `json:"status,omitempty"`
-	CreatedAt      *time.Time   `json:"created_at,omitempty"`
-	UpdatedAt      *time.Time   `json:"updated_at,omitempty"`
+	Id             *string        `json:"id,omitempty"`
+	OrganisationId *string        `json:"organisation_id,omitempty"`
+	TeamId         *string        `json:"team_id,omitempty"`
+	UserId         *string        `json:"user_id,omitempty"`
+	Name           string         `json:"name"`
+	Namespace      *string        `json:"namespace,omitempty"`
+	Labels         []Label        `json:"labels,omitempty"`
+	Annotations    []Annotation   `json:"annotations,omitempty"`
+	Revision       *string        `json:"revision,omitempty"`
+	Spec           StackSpec      `json:"spec"`
+	Settings       *StackSettings `json:"settings,omitempty"`
+	Status         *StackStatus   `json:"status,omitempty"`
+	CreatedAt      *time.Time     `json:"created_at,omitempty"`
+	UpdatedAt      *time.Time     `json:"updated_at,omitempty"`
 }
 
 // NewStack instantiates a new Stack object
@@ -355,6 +356,38 @@ func (o *Stack) SetSpec(v StackSpec) {
 	o.Spec = v
 }
 
+// GetSettings returns the Settings field value if set, zero value otherwise.
+func (o *Stack) GetSettings() StackSettings {
+	if o == nil || o.Settings == nil {
+		var ret StackSettings
+		return ret
+	}
+	return *o.Settings
+}
+
+// GetSettingsOk returns a tuple with the Settings field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Stack) GetSettingsOk() (*StackSettings, bool) {
+	if o == nil || o.Settings == nil {
+		return nil, false
+	}
+	return o.Settings, true
+}
+
+// HasSettings returns a boolean if a field has been set.
+func (o *Stack) HasSettings() bool {
+	if o != nil && o.Settings != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetSettings gets a reference to the given StackSettings and assigns it to the Settings field.
+func (o *Stack) SetSettings(v StackSettings) {
+	o.Settings = &v
+}
+
 // GetStatus returns the Status field value if set, zero value otherwise.
 func (o *Stack) GetStatus() StackStatus {
 	if o == nil || o.Status == nil {
@@ -482,6 +515,9 @@ func (o Stack) MarshalJSON() ([]byte, error) {
 	}
 	if true {
 		toSerialize["spec"] = o.Spec
+	}
+	if o.Settings != nil {
+		toSerialize["settings"] = o.Settings
 	}
 	if o.Status != nil {
 		toSerialize["status"] = o.Status

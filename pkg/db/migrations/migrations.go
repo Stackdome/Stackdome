@@ -60,4 +60,5 @@ var MigrationList = []*gormigrate.Migration{
 	createStackReleasesTable(),
 	createResourceReferencesTable(),
 	dropResourceUsagesTable(),
+	addSettingsToStacks(),
 }

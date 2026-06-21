@@ -20,6 +20,58 @@ const (
 	SimulateReleaseStateAnnotation    = "stack.stackdome.io/simulate-release-state"
 )
 
+const (
+	DefaultReleaseRetentionLimit = 10
+	DefaultMinSuccessfulReleases = 5
+	DefaultDeployTimeoutMinutes  = 15
+
+	MaxReleaseRetentionLimit = 50
+	MaxMinSuccessfulReleases = 20
+	MaxDeployTimeoutMinutes  = 120
+)
+
+type StackSettings struct {
+	ReleaseRetentionLimit int `json:"release_retention_limit"`
+	MinSuccessfulReleases int `json:"min_successful_releases"`
+	DeployTimeoutMinutes  int `json:"deploy_timeout_minutes"`
+}
+
+func (s *StackSettings) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+	return json.Unmarshal(bytes, &s)
+}
+
+func (s StackSettings) Value() (driver.Value, error) {
+	return json.Marshal(s)
+}
+
+func (s *Stack) EffectiveSettings() StackSettings {
+	settings := StackSettings{
+		ReleaseRetentionLimit: DefaultReleaseRetentionLimit,
+		MinSuccessfulReleases: DefaultMinSuccessfulReleases,
+		DeployTimeoutMinutes:  DefaultDeployTimeoutMinutes,
+	}
+	if s.Settings == nil {
+		return settings
+	}
+	if s.Settings.ReleaseRetentionLimit > 0 {
+		settings.ReleaseRetentionLimit = s.Settings.ReleaseRetentionLimit
+	}
+	if s.Settings.MinSuccessfulReleases > 0 {
+		settings.MinSuccessfulReleases = s.Settings.MinSuccessfulReleases
+	}
+	if s.Settings.DeployTimeoutMinutes > 0 {
+		settings.DeployTimeoutMinutes = s.Settings.DeployTimeoutMinutes
+	}
+	return settings
+}
+
 type StackState string
 
 const (
@@ -93,6 +145,7 @@ type Stack struct {
 	StackResources    []*StackResource `gorm:"foreignKey:StackID"`
 	Volumes           []*Volume        `gorm:"-"`
 	Status            *StackStatus     `gorm:"type:jsonb"`
+	Settings          *StackSettings   `gorm:"type:jsonb"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 	DeletionTimestamp *time.Time `gorm:"default:NULL"`
