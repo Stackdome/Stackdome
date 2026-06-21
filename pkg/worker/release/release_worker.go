@@ -10,6 +10,8 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stackdeploy"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker"
+	"github.com/ashishmax31/stackdome-api-server/pkg/worker/releasegc"
+	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
 )
 
 const (
@@ -19,21 +21,23 @@ const (
 )
 
 type ReleaseWorkerSpec struct {
-	ReleaseService       releaseService
-	StackService         stackService
-	ClusterManager       clustermanager.ClusterManager
-	CRBuilder            builders.ClusterResourceBuilder
-	SecretBuilder        builders.SecretBuilder
-	SecretService        secretService
-	PostgresAddonService postgresAddonService
-	VolumeService        volumeService
-	Resolver             *stackdeploy.Resolver
-	Env                  string
+	ReleaseService        releaseService
+	StackService          stackService
+	ClusterManager        clustermanager.ClusterManager
+	CRBuilder             builders.ClusterResourceBuilder
+	SecretBuilder         builders.SecretBuilder
+	SecretService         secretService
+	PostgresAddonService  postgresAddonService
+	VolumeService         volumeService
+	Resolver              *stackdeploy.Resolver
+	ReleaseWorkerEnqueuer workermanager.BackgroundJobEnqueuer
+	Env                   string
 }
 
 type releaseWorker struct {
-	releaseService releaseService
-	subReconcilers []subReconciler
+	releaseService        releaseService
+	releaseWorkerEnqueuer workermanager.BackgroundJobEnqueuer
+	subReconcilers        []subReconciler
 	worker.BaseWorker
 }
 
@@ -41,9 +45,11 @@ var _ worker.Worker = (*releaseWorker)(nil)
 
 func NewReleaseWorker(spec ReleaseWorkerSpec) worker.Worker {
 	return &releaseWorker{
-		releaseService: spec.ReleaseService,
+		releaseService:        spec.ReleaseService,
+		releaseWorkerEnqueuer: spec.ReleaseWorkerEnqueuer,
 		subReconcilers: []subReconciler{
 			newGatekeeperReconciler(spec),
+			newSimulatorReconciler(spec),
 			newRenderReconciler(spec),
 			newApplyReconciler(spec),
 			newConvergeReconciler(spec),
@@ -82,6 +88,16 @@ func (w *releaseWorker) Execute(ctx context.Context, operand worker.Operand) (wo
 		w.Logger().Errorf("failed to reconcile release %s: %v", release.ID, reconcileErr)
 		return worker.Result{}, w.WorkerError.NewError("failed to reconcile release %s: %v", release.ID, reconcileErr)
 	}
+
+	if w.releaseWorkerEnqueuer != nil {
+		updated, _ := w.releaseService.InternalGet(ctx, releaseRef.ID)
+		if updated != nil && updated.State.Terminal() {
+			if err := w.releaseWorkerEnqueuer.Enqueue(&releasegc.ReleaseGCRequest{StackID: updated.StackID}); err != nil {
+				w.Logger().Errorf("failed to enqueue release GC for stack %s: %v", updated.StackID, err)
+			}
+		}
+	}
+
 	return res, nil
 }
 
