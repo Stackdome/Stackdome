@@ -83,16 +83,30 @@ func (s *stackReleaseStore) GetByID(ctx context.Context, id string) (*models.Sta
 }
 
 // ListByStackID returns releases for a stack, excluding heavy JSONB columns for performance.
-func (s *stackReleaseStore) ListByStackID(ctx context.Context, stackID string) ([]*models.StackRelease, *errors.ServiceError) {
+func (s *stackReleaseStore) ListByStackID(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError) {
+	session := s.sessionFactory.New(ctx)
+	params = params.WithDefaultOrder("sequence DESC")
+	selectCols := "id, stack_id, sequence, state, message, cause, snapshot_revision, manifest_revision, pins, renderer_version, created_by, created_at, updated_at, rendered_at, completed_at"
+
+	var total int64
+	baseQuery := session.Model(&models.StackRelease{}).Where("stack_id = ?", stackID)
+	if err := params.ApplyFiltersOnly(baseQuery).Count(&total).Error; err != nil {
+		return nil, errors.GeneralError("failed to count releases: %s", err.Error())
+	}
+
 	var releases []*models.StackRelease
-	if err := s.sessionFactory.New(ctx).
-		Select("id, stack_id, sequence, state, message, cause, snapshot_revision, manifest_revision, pins, renderer_version, created_by, created_at, updated_at, rendered_at, completed_at").
-		Where("stack_id = ?", stackID).
-		Order("sequence DESC").
-		Find(&releases).Error; err != nil {
+	query := s.sessionFactory.New(ctx).Select(selectCols).Where("stack_id = ?", stackID)
+	if err := params.Apply(query).Find(&releases).Error; err != nil {
 		return nil, errors.GeneralError("failed to list releases: %s", err.Error())
 	}
-	return releases, nil
+
+	return &stores.PaginatedResult[*models.StackRelease]{
+		Items:      releases,
+		Total:      total,
+		Page:       params.Page,
+		PageSize:   params.Limit(),
+		TotalPages: params.TotalPages(total),
+	}, nil
 }
 
 // ListActive returns all non-terminal releases across all stacks.

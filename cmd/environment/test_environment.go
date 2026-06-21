@@ -609,6 +609,7 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 
 	releaseGCWorker := releasegcworker.NewReleaseGCWorker(releasegcworker.ReleaseGCWorkerSpec{
 		ReleaseStore: pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{SessionFactory: te.DBSession}),
+		StackStore:   pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: te.DBSession}),
 		Env:          te.Env.Name,
 	})
 	te.WorkerManager.RegisterWorker(releaseGCWorker, &releasegcworker.ReleaseGCRequest{})

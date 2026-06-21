@@ -14,7 +14,7 @@ type StackReleaseStore interface {
 
 	GetByID(ctx context.Context, id string) (*models.StackRelease, *errors.ServiceError)
 
-	ListByStackID(ctx context.Context, stackID string) ([]*models.StackRelease, *errors.ServiceError)
+	ListByStackID(ctx context.Context, stackID string, params ListParams) (*PaginatedResult[*models.StackRelease], *errors.ServiceError)
 
 	// ListActive returns all non-terminal releases across all stacks.
 	ListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)

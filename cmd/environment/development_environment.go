@@ -133,6 +133,7 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 
 	releaseGCWorker := releasegcworker.NewReleaseGCWorker(releasegcworker.ReleaseGCWorkerSpec{
 		ReleaseStore: pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{SessionFactory: d.DBSession}),
+		StackStore:   pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: d.DBSession}),
 		Env:          d.Env.Name,
 	})
 	d.WorkerManager.RegisterWorker(releaseGCWorker, &releasegcworker.ReleaseGCRequest{})
