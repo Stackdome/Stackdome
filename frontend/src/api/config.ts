@@ -28,8 +28,6 @@ export function getAppConfig(): Promise<AppConfigResponse> {
   return configPromise;
 }
 
-// Synchronously returns the cached config if already resolved, else null.
-// Lets consumers render the correct state on first paint after a warm cache.
 export function getCachedAppConfig(): AppConfigResponse | null {
   return configValue;
 }
