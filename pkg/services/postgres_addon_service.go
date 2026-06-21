@@ -643,7 +643,7 @@ func (s *postgresAddonService) getCredentialsForAddon(ctx context.Context, addon
 			return d.Name == database
 		})
 		if !found {
-			return nil, errors.NotFound("database '%s' not applied", database)
+			return nil, errors.BadRequest("database '%s' not applied yet, awaiting operator reconciliation", database)
 		}
 	}
 

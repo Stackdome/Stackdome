@@ -116,10 +116,10 @@ func (r *Resolver) resolvePostgresConnectionEnvVars(
 	creds, credErr := r.postgresAddonService.InternalGetCredentials(ctx, addonID, database, superuser)
 	if credErr != nil {
 		if credErr.Is404() {
-			return nil, fmt.Errorf("postgres addon '%s' not found", addonID)
+			return nil, fmt.Errorf("postgres addon '%s' or database '%s' not found", addonID, database)
 		}
 		return nil, DependencyNotReadyError{
-			Message: fmt.Sprintf("postgres addon '%s' credentials are not ready", addonID),
+			Message: fmt.Sprintf("postgres addon '%s' credentials are not ready: %s", addonID, credErr.Error()),
 		}
 	}
 
