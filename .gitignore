@@ -1,6 +1,9 @@
 # IDEs
 .idea
 .vscode
+
+# Node compile cache (build artifact, never commit)
+node-compile-cache/
 cluster_config.yaml
 database.yaml
 bin/
