@@ -156,34 +156,30 @@ export default function DomainsPage() {
           }
         />
 
-        <Panel
-          title="All Domains"
-          count={domains.length}
-          bodyClassName={domains.length === 0 ? "p-5" : "p-0"}
-        >
-          {domains.length === 0 ? (
-            <EmptyState
-              icon={<Globe className="h-8 w-8" />}
-              title="No domain configured"
-              description="Configure a domain for your organization."
-              action={
-                <Button onClick={() => setShowAddDialog(true)} variant="outline">
-                  <PlusCircle className="h-4 w-4" />
-                  Add Domain
-                </Button>
-              }
-            />
-          ) : (
-            domains.map((domain, index) => (
+        {domains.length === 0 ? (
+          <EmptyState
+            icon={<Globe className="h-8 w-8" />}
+            title="No domain configured"
+            description="Configure a domain for your organization."
+            action={
+              <Button onClick={() => setShowAddDialog(true)}>
+                <PlusCircle className="h-4 w-4" />
+                Add Domain
+              </Button>
+            }
+          />
+        ) : (
+          <Panel title="All Domains" count={domains.length} bodyClassName="p-0">
+            {domains.map((domain, index) => (
               <DomainListItem
                 key={index}
                 domain={domain}
                 index={index}
                 onRemove={handleRemoveDomain}
               />
-            ))
-          )}
-        </Panel>
+            ))}
+          </Panel>
+        )}
 
         <AddDomainDialog
           open={showAddDialog}

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PlusCircle, Loader2, AlertCircle, Puzzle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { PageHeader, Panel, EmptyState } from "@/components/branded";
+import { PageHeader, EmptyState } from "@/components/branded";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePostgresAddons } from "./hooks/use-postgres-addons";
@@ -67,21 +67,19 @@ export default function AddonsPage() {
         />
 
         {addons.length === 0 ? (
-          <Panel title="All Addons" bodyClassName="p-5">
-            <EmptyState
-              icon={<Puzzle className="h-8 w-8" />}
-              title="No addons yet"
-              description="Add an addon to provision a managed Postgres for your stacks."
-              action={
-                canWriteAnyTeam ? (
-                  <Button onClick={() => setPickerOpen(true)} variant="outline">
-                    <PlusCircle className="h-4 w-4" />
-                    Add Addon
-                  </Button>
-                ) : undefined
-              }
-            />
-          </Panel>
+          <EmptyState
+            icon={<Puzzle className="h-8 w-8" />}
+            title="No addons yet"
+            description="Add an addon to provision a managed Postgres for your stacks."
+            action={
+              canWriteAnyTeam ? (
+                <Button onClick={() => setPickerOpen(true)}>
+                  <PlusCircle className="h-4 w-4" />
+                  Add Addon
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           <AddonList
             addons={addons}
