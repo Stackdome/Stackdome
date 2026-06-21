@@ -1,12 +1,11 @@
 import axios from "axios";
 import type { components } from "../api/types/openapi";
+import { API_BASE_URL } from "./base-url";
 
 export type RefreshTokenResponse = components["schemas"]["RefreshTokenResponse"];
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api/v1";
-
 export function githubOAuthUrl(inviteToken?: string): string {
-  const base = `${API_BASE}/auth/github`;
+  const base = `${API_BASE_URL}/auth/github`;
   return inviteToken ? `${base}?invite_token=${encodeURIComponent(inviteToken)}` : base;
 }
 
@@ -16,6 +15,6 @@ export async function completeGitHubOAuth(
   code: string,
   state: string,
 ): Promise<RefreshTokenResponse> {
-  const res = await axios.get(`${API_BASE}/auth/github/callback`, { params: { code, state } });
+  const res = await axios.get(`${API_BASE_URL}/auth/github/callback`, { params: { code, state } });
   return res.data;
 }

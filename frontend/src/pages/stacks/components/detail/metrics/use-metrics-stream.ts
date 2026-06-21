@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { ResourceMetrics } from './types';
 import { useResourceTeams } from '@/hooks/use-resource-teams';
+import { API_BASE_URL } from '@/api/base-url';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -46,12 +47,12 @@ export function useMetricsStream({
   }, [enabled]);
 
   const buildStackMetricsStreamUrl = useCallback(() => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    const baseUrl = API_BASE_URL;
     return `${baseUrl}/organizations/${organizationId}/teams/${defaultTeamName}/stacks/${stackId}/metrics?stream=true`;
   }, [organizationId, defaultTeamName, stackId]);
 
   const buildResourceMetricsStreamUrl = useCallback((resourceName: string) => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    const baseUrl = API_BASE_URL;
     return `${baseUrl}/organizations/${organizationId}/teams/${defaultTeamName}/stacks/${stackId}/resources/${resourceName}/metrics?stream=true`;
   }, [organizationId, defaultTeamName, stackId]);
 
