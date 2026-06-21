@@ -82,6 +82,7 @@ export default function StackDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const session = useStackEditSession();
+  const [activeTab, setActiveTab] = useState("configuration");
   const [isSaving, setIsSaving] = useState(false);
   const [editingBindingIds, setEditingBindingIds] = useState<Set<string>>(new Set());
   // Per-addonId provenance for converted env rows after a successful detach
@@ -566,7 +567,7 @@ export default function StackDetailPage() {
         actions={headerActions}
       />
 
-      <Tabs defaultValue="configuration" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-6 w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-6">
           <TabsTrigger
             value="configuration"
@@ -729,6 +730,7 @@ export default function StackDetailPage() {
               stackId={stackToShow.id}
               stack={stackToShow}
               canDeploy={canWriteStack}
+              onOpenLogs={() => setActiveTab("logs")}
             />
           ) : (
             <div className="text-center text-muted-foreground py-12">Stack ID not available</div>

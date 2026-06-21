@@ -6,22 +6,17 @@ import { useToast } from "@/components/ui/use-toast";
 import type { Stack } from "@/api/stacks";
 import { createRelease, rollbackRelease, cancelRelease } from "@/api/releases";
 import { useReleases } from "./use-releases";
-import { CurrentDeploymentCard } from "./current-deployment-card";
-import { ReleaseHistory } from "./release-history";
-import { ReleaseDetailDrawer } from "./release-detail-drawer";
-import { UnreleasedChangesBanner } from "./unreleased-changes-banner";
+import { deriveFailingResources } from "./derive";
+import { TimelineRail } from "./timeline/timeline-rail";
+import { DriftBanner, ReleaseErrorBanner } from "./timeline/banners";
 
 export interface DeploymentsTabProps {
-  orgId: string;
-  teamName: string;
-  stackId: string;
-  stack: Stack;
-  canDeploy: boolean;
+  orgId: string; teamName: string; stackId: string; stack: Stack; canDeploy: boolean;
+  onOpenLogs?: (resourceName?: string) => void;
 }
 
-export function DeploymentsTab({ orgId, teamName, stackId, stack, canDeploy }: DeploymentsTabProps) {
+export function DeploymentsTab({ orgId, teamName, stackId, stack, canDeploy, onOpenLogs }: DeploymentsTabProps) {
   const { releases, activeRelease, loading, error, refetch } = useReleases({ orgId, teamName, stackId, enabled: true });
-  const [openReleaseId, setOpenReleaseId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { toast } = useToast();
 
@@ -35,6 +30,7 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, canDeploy }: D
   const onDeploy = () => run(() => createRelease(orgId, teamName, stackId), "Deploy started");
   const onRollback = (id: string) => run(() => rollbackRelease(orgId, teamName, stackId, id), "Rollback started");
   const onCancel = (id: string) => run(() => cancelRelease(orgId, teamName, stackId, id), "Release cancelled");
+  const onCopyId = (id: string) => { void navigator.clipboard?.writeText(id); toast({ title: "Release ID copied" }); };
 
   // Drift is heuristic: list releases carry no snapshot, so compare the stack's
   // updated_at against the active release's completed_at. Precise drift needs the
@@ -42,6 +38,14 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, canDeploy }: D
   const stackUpdated = (stack as unknown as { updated_at?: string }).updated_at;
   const hasDrift = !!activeRelease && !!stackUpdated && !!activeRelease.completed_at
     && new Date(stackUpdated) > new Date(activeRelease.completed_at);
+
+  const failing = deriveFailingResources(stack);
+  let banner: React.ReactNode = null;
+  if (hasDrift) banner = <DriftBanner onDeploy={onDeploy} busy={busy} />;
+  else if (activeRelease && failing.length > 0) {
+    const total = stack.status?.resources?.length ?? failing.length;
+    banner = <ReleaseErrorBanner lead={`Deploy #${activeRelease.sequence} ${activeRelease.state === "Failed" ? "failed" : "failing"}`} text={`${failing.length} of ${total} resources failing`} />;
+  }
 
   if (error) return <EmptyState title="Could not load deployments" description={error} />;
 
@@ -56,33 +60,21 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, canDeploy }: D
         )}
       </div>
 
-      <UnreleasedChangesBanner hasDrift={hasDrift} onDeploy={onDeploy} busy={busy} />
-      {activeRelease && <CurrentDeploymentCard release={activeRelease} stack={stack} logContext={{ orgId, teamName, stackId }} />}
-
-      <ReleaseHistory
-        releases={releases}
-        onViewDetails={setOpenReleaseId}
-        onRollback={onRollback}
-        onCancel={onCancel}
-      />
-
-      {!loading && releases.length === 0 && !activeRelease && (
-        <EmptyState title="No deployments yet" description="Deploy this stack to create your first release." />
+      {loading && releases.length === 0 ? (
+        <p className="text-[13px] text-fg-muted">Loading deployments…</p>
+      ) : (
+        <TimelineRail
+          releases={releases}
+          activeRelease={activeRelease}
+          stack={stack}
+          logContext={{ orgId, teamName, stackId }}
+          onOpenLogs={onOpenLogs ? (name) => onOpenLogs(name) : undefined}
+          banner={banner}
+          onRollback={onRollback}
+          onCancel={onCancel}
+          onCopyId={onCopyId}
+        />
       )}
-
-      {openReleaseId && (() => {
-        // releases is newest-first; the "previous" release is the next-older one (index + 1).
-        const openIdx = releases.findIndex((r) => r.id === openReleaseId);
-        const previousRelease = openIdx >= 0 ? releases[openIdx + 1] : undefined;
-        return (
-          <ReleaseDetailDrawer
-            orgId={orgId} teamName={teamName} stackId={stackId}
-            releaseId={openReleaseId}
-            previousRelease={previousRelease}
-            onClose={() => setOpenReleaseId(null)}
-          />
-        );
-      })()}
     </div>
   );
 }
