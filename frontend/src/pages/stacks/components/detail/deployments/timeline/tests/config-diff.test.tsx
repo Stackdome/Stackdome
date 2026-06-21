@@ -8,8 +8,8 @@ import type { ResourceDiff } from "../../release-snapshot-diff";
 afterEach(cleanup);
 
 const diffs: ResourceDiff[] = [
-  { name: "web", change: "modified", sections: [{ kind: "configuration", rows: [{ key: "image_config.image", from: "web:1", to: "web:2", kind: "changed" }] }] },
-  { name: "worker", change: "added", sections: [{ kind: "configuration", rows: [{ key: "image_config.image", to: "worker:1", kind: "added" }] }] },
+  { name: "web", change: "modified", sections: [{ kind: "configuration", rows: [{ key: "image", from: "web:1", to: "web:2", kind: "changed" }] }] },
+  { name: "worker", change: "added", sections: [{ kind: "configuration", rows: [{ key: "image", to: "worker:1", kind: "added" }] }] },
   { name: "mailhog", change: "removed", sections: [], note: "Resource removed from this release — workload and config deleted from the stack." },
 ];
 

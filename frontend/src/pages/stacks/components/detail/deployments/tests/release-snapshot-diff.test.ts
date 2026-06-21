@@ -5,9 +5,9 @@ import { diffSnapshots } from "../release-snapshot-diff";
 const snap = (resources: unknown[]) => ({ resources });
 const web = (over: Record<string, unknown> = {}) => ({
   name: "web",
-  image_config: { image: "web:1" },
+  image_spec: { image: "web:1" },
   ports: [{ number: 3000 }],
-  execution_config: { command: ["node", "a.js"], env: [{ name: "LOG", value: "info" }] },
+  execution_config: { command: ["node", "a.js"], environment_variables: [{ name: "LOG", value: "info" }] },
   ...over,
 });
 
@@ -17,17 +17,17 @@ describe("diffSnapshots", () => {
   });
 
   it("flags a modified image as a changed configuration row", () => {
-    const out = diffSnapshots(snap([web()]), snap([web({ image_config: { image: "web:2" } })]));
+    const out = diffSnapshots(snap([web()]), snap([web({ image_spec: { image: "web:2" } })]));
     expect(out).toHaveLength(1);
     expect(out[0]).toMatchObject({ name: "web", change: "modified" });
     const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
-    expect(cfg.rows).toContainEqual({ key: "image_config.image", from: "web:1", to: "web:2", kind: "changed" });
+    expect(cfg.rows).toContainEqual({ key: "image", from: "web:1", to: "web:2", kind: "changed" });
   });
 
   it("splits env changes into an environment section", () => {
     const out = diffSnapshots(
       snap([web()]),
-      snap([web({ execution_config: { command: ["node", "a.js"], env: [{ name: "LOG", value: "debug" }, { name: "NEW", value: "1" }] } })]),
+      snap([web({ execution_config: { command: ["node", "a.js"], environment_variables: [{ name: "LOG", value: "debug" }, { name: "NEW", value: "1" }] } })]),
     );
     const env = out[0].sections.find((s) => s.kind === "environment")!;
     expect(env.rows).toContainEqual({ key: "LOG", from: "info", to: "debug", kind: "changed" });

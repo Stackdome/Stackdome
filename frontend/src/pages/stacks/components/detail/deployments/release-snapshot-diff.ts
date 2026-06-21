@@ -13,17 +13,17 @@ function resourcesOf(snap: unknown): SnapResource[] {
 
 function configScalars(r: SnapResource): Record<string, string | undefined> {
   return {
-    "image_config.image": r.image_config?.image,
+    "image": r.image_spec?.image,
     "ports": (r.ports ?? []).map((p) => p.number).join(", ") || undefined,
-    "execution_config.command": (r.execution_config?.command ?? []).join(" ") || undefined,
-    "execution_config.args": (r.execution_config?.args ?? []).join(" ") || undefined,
+    "command": (r.execution_config?.command ?? []).join(" ") || undefined,
+    "args": (r.execution_config?.args ?? []).join(" ") || undefined,
   };
 }
 
 function envMap(r: SnapResource): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const e of r.execution_config?.env ?? []) {
-    if (e?.name) out[e.name] = e.value ?? (e.secret_key_ref ? "(secret)" : "");
+  for (const e of r.execution_config?.environment_variables ?? []) {
+    if (e?.name) out[e.name] = e.value ?? (e.self_output ? "(output)" : "");
   }
   return out;
 }
