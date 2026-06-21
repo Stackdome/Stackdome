@@ -33,7 +33,7 @@ A Railway-style **Deployments** tab on the Stack detail page, on the Releases AP
 ## Known honest limitations (by design, labelled in-UI + tracked)
 - **Drift is heuristic** (`stack.updated_at` vs release `completed_at`) → brief false-positive right after a deploy. Labelled "(approximate)"; #107 fixes it precisely.
 - **Crash log snapshot is best-effort** (often empty for crashing pods, backend #98) — shown only when non-empty; the structured `last_failure` is the reliable signal.
-- **Post-mortem structured detail isn't durable yet** (#106) — live failures are full-detail; past failed releases show message + outcome summary.
+- **Post-mortem structured detail isn't durable yet** (#108) — live failures are full-detail; past failed releases show message + outcome summary.
 
 ## Your decision: how to integrate
 Nothing pushed, no PR opened (deliberately, for your review). Options:
