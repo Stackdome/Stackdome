@@ -3,6 +3,7 @@ package stack
 import (
 	"context"
 
+	"github.com/ashishmax31/stackdome-api-server/config"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -69,7 +70,7 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 	}
 	w.Logger().Infof("Processing stack: %s", stack.ID)
 
-	if stack.Annotations.ToMap()[models.SkipClusterProvisioningAnnotation] == "true" && stack.DeletionTimestamp == nil {
+	if stack.Annotations.ToMap()[models.SkipClusterProvisioningAnnotation] == "true" && stack.DeletionTimestamp == nil && w.Env == config.EnvironmentTest {
 		w.Logger().Infof("Skipping cluster provisioning for stack %s due to annotation", stack.ID)
 		return worker.Result{}, w.markAsReadyForSkippedClusterProvisioning(ctx, stack)
 	}
