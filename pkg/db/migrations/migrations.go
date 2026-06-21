@@ -58,4 +58,6 @@ var MigrationList = []*gormigrate.Migration{
 	addStackConnectionDiscriminator(),
 	addTimestampsToVolumesTable(),
 	createStackReleasesTable(),
+	createResourceReferencesTable(),
+	dropResourceUsagesTable(),
 }
