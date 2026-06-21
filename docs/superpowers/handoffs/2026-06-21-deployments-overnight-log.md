@@ -87,9 +87,9 @@
 
 ## Visual QA (Task 18)
 
-Built a throwaway demo harness (`__demo__/DeploymentsDemo.tsx` + a temporary unauthenticated `/__demo/deployments` route) rendering the REAL presentational components with fixtures for 8 states, served via `vite --port 5180`, screenshotted in **light and dark** via Playwright, reviewed, then **fully reverted** (route + harness + screenshots removed; `git status` clean; tsc still only the pre-existing error).
+Built a throwaway demo harness (`__demo__/DeploymentsDemo.tsx` + a temporary unauthenticated `/__demo/deployments` route) rendering the REAL presentational components with fixtures for 8 states, served via `vite` (port 5176), screenshotted via Playwright (light theme only — dark not captured), reviewed, then **fully reverted** (route + harness + screenshots removed; `git status` clean; tsc still only the pre-existing error).
 
-States verified rendering correctly + design-system faithful in both themes:
+States verified rendering correctly + design-system faithful (light theme):
 1. Drift banner (Unreleased changes, Deploy affordance)
 2. Healthy/Released — stage tracker Build✓→Deploy✓→Ready✓, 3 resources Ready 1/1
 3. Recovered — Ready resource + amber "recovered after 5 restarts — last failure CrashLoopBackOff" note

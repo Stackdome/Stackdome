@@ -19,14 +19,14 @@ A Railway-style **Deployments** tab on the Stack detail page, on the Releases AP
 - **383/383** frontend tests (49 files). Every task built TDD (test-first, fail→pass), each behind an independent **subprocess review** (spec + quality). Reviews caught **3 real bugs** before they landed — see log.
 - `tsc`: only the **pre-existing** unrelated `postgres-backups.ts` error (present on origin/main before this work).
 - Lint: new code clean (1 pre-existing-style react-refresh warning).
-- **Visual QA**: real components screenshotted across **8 success/error states in light + dark** via a throwaway harness (since reverted). All render correctly and design-system-faithful.
+- **Visual QA**: real components screenshotted across **8 success/error states (light theme)** via a throwaway harness (since reverted). All render correctly and design-system-faithful. (Dark theme not captured — quick follow-up.)
 
 ## 👀 Two things to look at
 1. **Backend follow-up issues I filed** (outward-facing, done per the approved plan — close any you don't want):
    - #105 converge fast-fail on terminal resource failure
-   - #106 snapshot `last_failure` into `release.outcome` (durable post-mortem)
+   - #106 missing-secret leaves release stuck `InProgress`
    - #107 expose current `snapshot_revision` (precise drift; kills the banner's post-deploy false-positive)
-   - #108 missing-secret stuck `InProgress`
+   - #108 snapshot `last_failure` into `release.outcome` (durable post-mortem)
    - comment on **#99** for the `last_validation_run` OpenAPI-hygiene point (folded in vs. a duplicate)
 2. **The detail drawer was visually QA'd via unit tests + mockup only**, not against a live backend (it fetches `getRelease`). Worth one real-data pass when you next have `mage run` + a stack with releases up. Everything else was verified with real rendered components.
 
