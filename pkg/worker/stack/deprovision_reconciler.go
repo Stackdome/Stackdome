@@ -20,34 +20,31 @@ const (
 )
 
 type deprovisionReconciler struct {
-	stackService         stackService
-	volumeService        volumeService
-	secretService        secretService
-	namespaceService     namespaceService
-	resourceUsageService resourceUsageService
-	logger               logger.Logger
-	clusterManager       clustermanager.ClusterManager
+	stackService     stackService
+	volumeService    volumeService
+	secretService    secretService
+	namespaceService namespaceService
+	logger           logger.Logger
+	clusterManager   clustermanager.ClusterManager
 }
 
 type DeprovisionReconcilerSpec struct {
-	StackService         stackService
-	NamespaceService     namespaceService
-	SecretService        secretService
-	Logger               logger.Logger
-	VolumeService        volumeService
-	ClusterManager       clustermanager.ClusterManager
-	ResourceUsageService resourceUsageService
+	StackService     stackService
+	NamespaceService namespaceService
+	SecretService    secretService
+	Logger           logger.Logger
+	VolumeService    volumeService
+	ClusterManager   clustermanager.ClusterManager
 }
 
 func NewDeprovisionReconciler(spec DeprovisionReconcilerSpec) *deprovisionReconciler {
 	return &deprovisionReconciler{
-		stackService:         spec.StackService,
-		secretService:        spec.SecretService,
-		namespaceService:     spec.NamespaceService,
-		logger:               spec.Logger,
-		volumeService:        spec.VolumeService,
-		clusterManager:       spec.ClusterManager,
-		resourceUsageService: spec.ResourceUsageService,
+		stackService:     spec.StackService,
+		secretService:    spec.SecretService,
+		namespaceService: spec.NamespaceService,
+		logger:           spec.Logger,
+		volumeService:    spec.VolumeService,
+		clusterManager:   spec.ClusterManager,
 	}
 }
 
@@ -83,10 +80,6 @@ func (r *deprovisionReconciler) deleteResourcesFromDB(ctx context.Context, stack
 
 	if err := r.namespaceService.InternalDeleteFromDB(ctx, stack.NamespaceID); err != nil {
 		return fmt.Errorf("failed to delete namespace '%s' from db: %w", stack.NamespaceID, err)
-	}
-
-	if err := r.resourceUsageService.DeleteByStackID(ctx, stack.ID); err != nil {
-		return fmt.Errorf("failed to delete resource usages for stack '%s' from db: %w", stack.ID, err)
 	}
 
 	return nil

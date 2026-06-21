@@ -54,4 +54,3 @@ func presentTopologyEdges(edges []models.TopologyEdge) []openapi.TopologyEdge {
 	}
 	return result
 }
-

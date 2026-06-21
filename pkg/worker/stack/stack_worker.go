@@ -23,13 +23,12 @@ type stackWorker struct {
 }
 
 type StackWorkerSpec struct {
-	StackService         stackService
-	SecretService        secretService
-	VolumeService        volumeService
-	NamespaceService     namespaceService
-	ResourceUsageService resourceUsageService
-	Env                  string
-	ClusterManager       clustermanager.ClusterManager
+	StackService     stackService
+	SecretService    secretService
+	VolumeService    volumeService
+	NamespaceService namespaceService
+	Env              string
+	ClusterManager   clustermanager.ClusterManager
 }
 
 func NewStackWorker(spec StackWorkerSpec) worker.Worker {
@@ -39,13 +38,12 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 		BaseWorker:     worker.NewBaseWorker(StackWorkerName, spec.Env),
 		subReconcilers: []subReconciler{
 			NewDeprovisionReconciler(DeprovisionReconcilerSpec{
-				StackService:         spec.StackService,
-				SecretService:        spec.SecretService,
-				NamespaceService:     spec.NamespaceService,
-				Logger:               logger.NewLoggerWithPrefix(context.Background(), "stack-deprovision-reconciler"),
-				VolumeService:        spec.VolumeService,
-				ClusterManager:       spec.ClusterManager,
-				ResourceUsageService: spec.ResourceUsageService,
+				StackService:     spec.StackService,
+				SecretService:    spec.SecretService,
+				NamespaceService: spec.NamespaceService,
+				Logger:           logger.NewLoggerWithPrefix(context.Background(), "stack-deprovision-reconciler"),
+				VolumeService:    spec.VolumeService,
+				ClusterManager:   spec.ClusterManager,
 			}),
 			NewNamespaceReconciler(NamespaceReconcilerSpec{
 				ClusterManager:   spec.ClusterManager,

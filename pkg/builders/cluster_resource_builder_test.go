@@ -87,7 +87,6 @@ func TestHasTLSPorts(t *testing.T) {
 	}
 }
 
-
 func TestBuildStackResourceCR_AnnotationMerge(t *testing.T) {
 	builder := &clusterResourceBuilder{}
 

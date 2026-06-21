@@ -149,7 +149,7 @@ func (dm *DatabaseManager) ClearData(ctx context.Context) error {
 		"stack_storages",
 		"stacks",
 		"volumes",
-		"resource_usages",
+		"resource_references",
 		"secrets",
 	}
 
