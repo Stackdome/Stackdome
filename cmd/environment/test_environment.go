@@ -74,7 +74,7 @@ func WithBootstrapConfig(cfg *config.BootstrapConfig) EnvConfigOption {
 func NewTestEnvironment(sessionFactory db.SessionFactory, dbConfig *config.DatabaseConfig, opts ...EnvConfigOption) EnvImpl {
 	res := &testEnvironment{
 		Env: &Env{
-			Name:            "test",
+			Name:            config.EnvironmentTest,
 			DBSession:       sessionFactory,
 			Config:          config.NewApplicationConfig(),
 			BootstrapConfig: config.NewBootstrapConfig(),

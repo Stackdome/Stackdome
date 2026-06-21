@@ -49,7 +49,7 @@ type developmentEnvironment struct {
 func NewDevelopmentEnvironment() EnvImpl {
 	return &developmentEnvironment{
 		Env: &Env{
-			Name:            "development",
+			Name:            config.EnvironmentDevelopment,
 			Config:          config.NewApplicationConfig(),
 			BootstrapConfig: config.NewBootstrapConfig(),
 		},

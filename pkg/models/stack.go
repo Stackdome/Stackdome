@@ -16,9 +16,8 @@ const (
 )
 
 const (
-	// SkipClusterProvisioningAnnotation can be set on a stack to indicate that cluster provisioning should be skipped for this stack.
-	// This is useful for testing purposes.
 	SkipClusterProvisioningAnnotation = "stack.stackdome.io/skip-cluster-provisioning"
+	SimulateReleaseStateAnnotation    = "stack.stackdome.io/simulate-release-state"
 )
 
 type StackState string

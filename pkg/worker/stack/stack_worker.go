@@ -69,7 +69,7 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 	}
 	w.Logger().Infof("Processing stack: %s", stack.ID)
 
-	if stack.Annotations.ToMap()[models.SkipClusterProvisioningAnnotation] == "true" {
+	if stack.Annotations.ToMap()[models.SkipClusterProvisioningAnnotation] == "true" && stack.DeletionTimestamp == nil {
 		w.Logger().Infof("Skipping cluster provisioning for stack %s due to annotation", stack.ID)
 		return worker.Result{}, w.markAsReadyForSkippedClusterProvisioning(ctx, stack)
 	}
