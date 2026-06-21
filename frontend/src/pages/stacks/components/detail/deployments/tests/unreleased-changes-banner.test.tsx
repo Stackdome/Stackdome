@@ -19,4 +19,9 @@ describe("UnreleasedChangesBanner", () => {
     fireEvent.click(screen.getByRole("button", { name: /Deploy/i }));
     expect(onDeploy).toHaveBeenCalled();
   });
+
+  it("disables the Deploy button while busy", () => {
+    render(<UnreleasedChangesBanner hasDrift onDeploy={vi.fn()} busy={true} />);
+    expect(screen.getByRole("button", { name: /Deploying/i })).toBeDisabled();
+  });
 });

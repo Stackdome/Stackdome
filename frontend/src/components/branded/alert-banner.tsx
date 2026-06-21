@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 export interface AlertBannerProps {
   children: ReactNode;
-  action?: { label: string; onClick: () => void };
+  action?: { label: string; onClick: () => void; disabled?: boolean };
   className?: string;
 }
 
@@ -26,7 +26,8 @@ export function AlertBanner({ children, action, className }: AlertBannerProps) {
         <button
           type="button"
           onClick={action.onClick}
-          className="flex-none whitespace-nowrap text-[13px] font-semibold text-danger hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger rounded"
+          disabled={action.disabled}
+          className="flex-none whitespace-nowrap text-[13px] font-semibold text-danger hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger rounded disabled:opacity-50 disabled:pointer-events-none"
         >
           {action.label}
         </button>
