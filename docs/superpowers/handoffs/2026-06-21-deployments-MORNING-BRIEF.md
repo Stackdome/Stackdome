@@ -8,7 +8,7 @@ Branch: `feat/stateful-deployments` (worktree), off `origin/main` @ `de222a8` (R
 
 ## What got built (Tier 1–3, all 18 plan tasks)
 
-A Railway-style **Deployments** tab on the Stack detail page, on the Releases API:
+A **Deployments** tab on the Stack detail page, on the Releases API:
 - **Current deployment card** — status pill + `#sequence` + `config <hash>` + duration, a **Build→Deploy→Ready** stage tracker, live per-resource table, and a "recovered" note for healthy-but-previously-failed resources.
 - **Release history** — newest-first list, state pills, cause labels (Manual / Rollback to #N / Webhook), git SHA + derived duration, state-aware ⋮ menu (View / Rollback to this / Cancel).
 - **Failure visibility** — click-through accordion (one open at a time) of failing resources with `FailureCard` detail; release-level render/apply errors as an `AlertBanner`; best-effort crash-log snapshot (rendered only when non-empty).

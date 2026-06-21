@@ -16,7 +16,7 @@ Two things changed since the parked Activity-tab work:
 1. **The Releases backend shipped (#100).** A deploy is now an immutable, versioned **release**: `POST /releases` renders a manifest, applies it, and drives convergence. Releases give us numbered history, rollback, cause/audit, per-resource outcome, and pinned artifacts — a real deploy timeline. This obsoletes the parked "builds-as-timeline" synthesis.
 2. **Deploy is now explicit and decoupled from Save.** `PUT /stacks/{id}` only persists the spec (intent); `POST /releases` deploys. The frontend currently has **no** release wiring, so the UI cannot deploy at all — wiring deploy is load-bearing in this work.
 
-This design replaces the parked **Activity** tab with a **Deployments** tab (Railway-style): a current-deployment surface + release history + per-release detail, with first-class failure visibility layered on top.
+This design replaces the parked **Activity** tab with a **Deployments** tab: a current-deployment surface + release history + per-release detail, with first-class failure visibility layered on top.
 
 ## 2. Goals / Non-goals
 
@@ -43,7 +43,7 @@ This design replaces the parked **Activity** tab with a **Deployments** tab (Rai
 
 ## 4. Architecture
 
-Two-zone tab (same shape as Railway's Deployments and the parked Activity), plus a right-side drawer:
+Two-zone tab (same shape as the parked Activity), plus a right-side drawer:
 
 ```
 Deployments tab

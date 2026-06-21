@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a Railway-style **Deployments** tab to the Stack detail page, backed by the Releases API (#100), with deploy history, rollback/cancel, a live current-deployment surface, honest build/runtime/config failure visibility, a per-release detail drawer, and a decoupled Save/Deploy flow.
+**Goal:** Add a **Deployments** tab to the Stack detail page, backed by the Releases API (#100), with deploy history, rollback/cancel, a live current-deployment surface, honest build/runtime/config failure visibility, a per-release detail drawer, and a decoupled Save/Deploy flow.
 
 **Architecture:** Frontend-only on `origin/main` (Releases backend already shipped). A new `deployments/` feature folder under `frontend/src/pages/stacks/components/detail/` holds a fetch+poll hook (`use-releases.ts`), a pure view-model (`derive.ts`), a generic snapshot diff (`release-diff.ts`), and presentational components. Six branded failure primitives are **salvaged verbatim** from the parked `feat/stack-activity-tab` branch via `git show`. Data comes from two endpoints joined by resource name: `GET/POST /stacks/{id}/releases` for the timeline, and live `GET /stacks/{id}` (`status.resources[]` for progress, `spec.stack_resources[].status.last_failure` for structured failures). No React Query — the codebase uses plain `useState`/`useEffect`.
 
