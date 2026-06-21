@@ -87,6 +87,8 @@ export function LoginForm() {
       />
 
       <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
+        <GitHubSignInButton />
+
         {serverError && (
           <div className="rounded-sm border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}
@@ -140,8 +142,6 @@ export function LoginForm() {
             </>
           )}
         </Button>
-
-        <GitHubSignInButton />
       </form>
     </div>
   );

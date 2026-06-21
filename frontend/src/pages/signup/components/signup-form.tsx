@@ -95,6 +95,8 @@ export function SignupForm() {
       />
 
       <form onSubmit={handleSubmit} className="space-y-3">
+        <GitHubSignInButton />
+
         {serverError && (
           <div className="rounded-sm border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
             {serverError}
@@ -194,8 +196,6 @@ export function SignupForm() {
             </>
           )}
         </Button>
-
-        <GitHubSignInButton />
       </form>
     </div>
   );
