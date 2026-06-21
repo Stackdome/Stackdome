@@ -22,7 +22,7 @@ export function GitHubSignInButton({ inviteToken }: GitHubSignInButtonProps) {
       </div>
       <Button
         type="button"
-        variant="inverse"
+        variant="outline"
         className="w-full"
         onClick={() => window.location.assign(githubOAuthUrl(inviteToken))}
       >
