@@ -38,9 +38,6 @@ var _ = Describe("Release E2E", Ordered, func() {
 			namespace := created.GetNamespace()
 
 			DeferCleanup(func() {
-				if keepOnFailure() {
-					return
-				}
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
 			})
@@ -81,9 +78,6 @@ var _ = Describe("Release E2E", Ordered, func() {
 			namespace := created.GetNamespace()
 
 			DeferCleanup(func() {
-				if keepOnFailure() {
-					return
-				}
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
 			})
@@ -126,9 +120,6 @@ var _ = Describe("Release E2E", Ordered, func() {
 			namespace := created.GetNamespace()
 
 			DeferCleanup(func() {
-				if keepOnFailure() {
-					return
-				}
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
 			})
@@ -174,9 +165,6 @@ var _ = Describe("Release E2E", Ordered, func() {
 			stackID := created.GetId()
 
 			DeferCleanup(func() {
-				if keepOnFailure() {
-					return
-				}
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
 			})

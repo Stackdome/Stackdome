@@ -63,6 +63,7 @@ type StackServiceSpec struct {
 	TeamService          TeamService
 	Permissions          auth.PermissionService
 	Logger               logger.Logger
+	ReferenceService     ReferenceService
 }
 
 type stackService struct {
@@ -80,6 +81,7 @@ type stackService struct {
 	teamService          TeamService
 	permissions          auth.PermissionService
 	releaseService       releaseServiceForStack
+	referenceService     ReferenceService
 	ClusterResourceServiceDeps
 	BackgroundJobEnqueuerDep
 }
@@ -109,6 +111,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 		postgresAddonService: spec.PostgresAddonService,
 		teamService:          spec.TeamService,
 		permissions:          spec.Permissions,
+		referenceService:     spec.ReferenceService,
 	}
 }
 
@@ -203,6 +206,10 @@ func (s *stackService) InternalCreateWithTx(ctx context.Context, spec *models.St
 		}
 	}
 
+	if err := s.referenceService.ReprojectSpec(ctx, createdStack.ID); err != nil {
+		return nil, err
+	}
+
 	stack, err := s.stackStore.GetByID(ctx, createdStack.ID)
 	if err != nil {
 		return nil, errors.GeneralError("failed to get created stack '%s': %s", createdStack.Name, err.Error())
@@ -281,7 +288,9 @@ func (s *stackService) InternalUpdateWithTx(ctx context.Context, spec *models.St
 	if err := s.stackResourceService.InternalSyncResourcesWithTx(ctx, updatedStack, existingStack, desiredResources); err != nil {
 		return nil, err
 	}
-
+	if err := s.referenceService.ReprojectSpec(ctx, updatedStack.ID); err != nil {
+		return nil, err
+	}
 	stack, err := s.stackStore.GetByID(ctx, updatedStack.ID)
 	if err != nil {
 		return nil, errors.GeneralError("failed to get updated stack '%s': %s", updatedStack.Name, err.Error())
@@ -409,6 +418,7 @@ func (s *stackService) prepareDesiredStackWithConnectionMutation(
 	}
 
 	desired := *stack
+	// Copy references to allow mutation
 	desired.Connections = append(models.StackConnections(nil), stack.Connections...)
 	nextConnections, _, serr := mutate(desired.Connections)
 	if serr != nil {
@@ -426,7 +436,10 @@ func (s *stackService) createStackConnection(ctx context.Context, existingStack 
 	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 		var serr *errors.ServiceError
 		createdConnection, serr = s.stackStore.CreateConnectionWithTx(txCtx, existingStack.ID, connection)
-		return serr
+		if serr != nil {
+			return serr
+		}
+		return s.referenceService.ReprojectSpec(txCtx, existingStack.ID)
 	}); err != nil {
 		return nil, err
 	}
@@ -439,7 +452,10 @@ func (s *stackService) updateSingleStackConnection(ctx context.Context, existing
 	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 		var serr *errors.ServiceError
 		updatedConnection, serr = s.stackStore.UpdateConnectionWithTx(txCtx, existingStack.ID, connectionID, connection)
-		return serr
+		if serr != nil {
+			return serr
+		}
+		return s.referenceService.ReprojectSpec(txCtx, existingStack.ID)
 	}); err != nil {
 		return nil, err
 	}
@@ -449,7 +465,10 @@ func (s *stackService) updateSingleStackConnection(ctx context.Context, existing
 
 func (s *stackService) deleteSingleStackConnection(ctx context.Context, existingStack *models.Stack, connectionID string) *errors.ServiceError {
 	return s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		return s.stackStore.DeleteConnectionWithTx(txCtx, existingStack.ID, connectionID)
+		if err := s.stackStore.DeleteConnectionWithTx(txCtx, existingStack.ID, connectionID); err != nil {
+			return err
+		}
+		return s.referenceService.ReprojectSpec(txCtx, existingStack.ID)
 	})
 }
 
@@ -463,17 +482,6 @@ func (s *stackService) GetStackByName(ctx context.Context, name string, userID s
 	}
 	return stack, nil
 }
-
-// func (s *stackService) GetStacksByUserID(ctx context.Context, teamID, orgID, userID string) ([]*models.Stack, *errors.ServiceError) {
-// 	if permErr := s.permissions.Check(ctx, teamID, auth.ResourceStacks, "", auth.ActionList); permErr != nil {
-// 		return nil, permErr
-// 	}
-// 	stacks, err := s.stackStore.ListByUserID(ctx, userID)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return stacks, nil
-// }
 
 func (s *stackService) InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError) {
 	stacks, err := s.stackStore.InternalList(ctx, query, args...)

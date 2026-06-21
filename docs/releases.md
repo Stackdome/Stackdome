@@ -42,7 +42,7 @@ Pending ──> Cancelled (user cancelled before worker picked it up)
 | InProgress | Worker is rendering, applying, or waiting for convergence | No |
 | Released | All resources converged on the target cluster | Yes |
 | Failed | Apply error or convergence timeout (15 min) | Yes |
-| Superseded | A newer release took over (detected by freshness check) | Yes |
+| Superseded | A newer release took over (detected by gatekeeper check) | Yes |
 | Cancelled | User cancelled via API (only from Pending) | Yes |
 
 ### Key timestamps
@@ -76,7 +76,7 @@ Pending ──> Cancelled (user cancelled before worker picked it up)
 
 The release worker runs four sub-reconcilers in order. Each observes the environment and decides whether to act, skip, or requeue.
 
-**Freshness** — Is this release still the latest?
+**Gatekeeper** — Is this release still the latest?
 - Query the DB for the highest-sequence active release for this stack.
 - If a newer release exists, mark self `Superseded` and stop.
 - If state is `Pending`, CAS transition to `InProgress`. If CAS fails (another worker won), stop.

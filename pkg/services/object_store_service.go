@@ -216,7 +216,7 @@ func (s *objectStoreService) Delete(ctx context.Context, ID string) *errors.Serv
 		return err
 	}
 	if inUse {
-		return errors.BadRequest("object store is in use by one or more PostgreSQL addons")
+		return errors.Conflict("object store is in use by one or more PostgreSQL addons and cannot be deleted")
 	}
 
 	for _, deployed := range objectStore.Status.DeployedClusters {

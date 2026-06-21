@@ -27,8 +27,6 @@ type secretService interface {
 	InternalGetByID(ctx context.Context, id string) (*models.Secret, *errors.ServiceError)
 }
 
-type connectionUsageChecker interface {
-	IsNodeReferenced(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
-	IsNodeReferencedAsSource(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
-	IsNodeReferencedAsTarget(ctx context.Context, stackID string, ref models.TopologyNodeRef) (bool, error)
+type referenceService interface {
+	IsReferentInUse(ctx context.Context, referentType models.ReferentType, referentID string) (bool, []models.ResourceReference, *errors.ServiceError)
 }

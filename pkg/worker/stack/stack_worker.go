@@ -3,6 +3,7 @@ package stack
 import (
 	"context"
 
+	"github.com/ashishmax31/stackdome-api-server/config"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -23,13 +24,12 @@ type stackWorker struct {
 }
 
 type StackWorkerSpec struct {
-	StackService         stackService
-	SecretService        secretService
-	VolumeService        volumeService
-	NamespaceService     namespaceService
-	ResourceUsageService resourceUsageService
-	Env                  string
-	ClusterManager       clustermanager.ClusterManager
+	StackService     stackService
+	SecretService    secretService
+	VolumeService    volumeService
+	NamespaceService namespaceService
+	Env              string
+	ClusterManager   clustermanager.ClusterManager
 }
 
 func NewStackWorker(spec StackWorkerSpec) worker.Worker {
@@ -39,13 +39,12 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 		BaseWorker:     worker.NewBaseWorker(StackWorkerName, spec.Env),
 		subReconcilers: []subReconciler{
 			NewDeprovisionReconciler(DeprovisionReconcilerSpec{
-				StackService:         spec.StackService,
-				SecretService:        spec.SecretService,
-				NamespaceService:     spec.NamespaceService,
-				Logger:               logger.NewLoggerWithPrefix(context.Background(), "stack-deprovision-reconciler"),
-				VolumeService:        spec.VolumeService,
-				ClusterManager:       spec.ClusterManager,
-				ResourceUsageService: spec.ResourceUsageService,
+				StackService:     spec.StackService,
+				SecretService:    spec.SecretService,
+				NamespaceService: spec.NamespaceService,
+				Logger:           logger.NewLoggerWithPrefix(context.Background(), "stack-deprovision-reconciler"),
+				VolumeService:    spec.VolumeService,
+				ClusterManager:   spec.ClusterManager,
 			}),
 			NewNamespaceReconciler(NamespaceReconcilerSpec{
 				ClusterManager:   spec.ClusterManager,
@@ -71,7 +70,7 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 	}
 	w.Logger().Infof("Processing stack: %s", stack.ID)
 
-	if stack.Annotations.ToMap()[models.SkipClusterProvisioningAnnotation] == "true" {
+	if stack.Annotations.ToMap()[models.SkipClusterProvisioningAnnotation] == "true" && stack.DeletionTimestamp == nil && w.Env == config.EnvironmentTest {
 		w.Logger().Infof("Skipping cluster provisioning for stack %s due to annotation", stack.ID)
 		return worker.Result{}, w.markAsReadyForSkippedClusterProvisioning(ctx, stack)
 	}

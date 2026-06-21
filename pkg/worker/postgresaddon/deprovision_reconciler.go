@@ -15,18 +15,18 @@ import (
 )
 
 type deprovisionReconciler struct {
-	postgresAddonService   postgresAddonService
-	connectionUsageChecker connectionUsageChecker
-	clusterManager         clustermanager.ClusterManager
-	logger                 logger.Logger
+	postgresAddonService postgresAddonService
+	referenceService     referenceService
+	clusterManager       clustermanager.ClusterManager
+	logger               logger.Logger
 }
 
 func newDeprovisionReconciler(spec PostgresAddonWorkerSpec) *deprovisionReconciler {
 	return &deprovisionReconciler{
-		postgresAddonService:   spec.PostgresAddonService,
-		connectionUsageChecker: spec.ConnectionUsageChecker,
-		clusterManager:         spec.ClusterManager,
-		logger:                 logger.NewLoggerWithPrefix(context.Background(), "postgres-addon-deprovision"),
+		postgresAddonService: spec.PostgresAddonService,
+		referenceService:     spec.ReferenceService,
+		clusterManager:       spec.ClusterManager,
+		logger:               logger.NewLoggerWithPrefix(context.Background(), "postgres-addon-deprovision"),
 	}
 }
 
@@ -39,10 +39,7 @@ func (r *deprovisionReconciler) Reconcile(ctx context.Context, addon *models.Pos
 		return resultNil, nil
 	}
 
-	inUse, err := r.connectionUsageChecker.IsNodeReferencedAsSource(ctx, "", models.TopologyNodeRef{
-		Type: models.TopologyNodeTypePostgresAddon,
-		Id:   addon.ID,
-	})
+	inUse, _, err := r.referenceService.IsReferentInUse(ctx, models.ReferentPostgresAddon, addon.ID)
 	if err != nil {
 		return resultNil, fmt.Errorf("failed to check addon usage: %w", err)
 	}

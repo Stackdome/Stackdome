@@ -47,6 +47,7 @@ Notes:
 - New DB migration: scaffold with `hack/create_migration.sh`; ordered files live in `pkg/db/migrations/`.
 - Full end-to-end demo env: `hack/run_local.sh [stack.json]`.
 - **Mocks:** Always use `go.uber.org/mock/gomock` + `mockgen`. Never hand-roll mock structs. For package-private interfaces, generate mocks in-package with `mockgen -source=<file>.go -destination=<file>_mock_test.go -package=<pkg>` and add a `//go:generate` directive to the source file. Existing generated mocks live in `pkg/mocks/` (for exported interfaces) and `*_mock_test.go` files (for unexported interfaces).
+- **No magic strings.** Always use defined constants (model enums, annotation keys, state values, error codes) instead of raw string literals. This applies to both production code and tests — e.g. use `models.ReleaseStateReleased` not `"Released"`, `models.SkipClusterProvisioningAnnotation` not `"stack.stackdome.io/skip-cluster-provisioning"`. If no constant exists and one is needed, define it first. If a raw string is truly unavoidable, get explicit approval before using it.
 
 ## Agent skills
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
 // Shared test image used across all stack fixtures
@@ -694,6 +695,44 @@ func CreateSkipProvisioningStackFull(name string, resources []openapi.StackResou
 	spec.SetConnections(connections)
 	stack := openapi.NewStack(name, *spec)
 	stack.SetAnnotations(skipProvisioningAnnotation())
+	return stack
+}
+
+const SimulateReleaseStateAnnotationKey = models.SimulateReleaseStateAnnotation
+
+func simulateReleaseAnnotations(state string) []openapi.Annotation {
+	return []openapi.Annotation{
+		*openapi.NewAnnotation(SkipProvisioningAnnotationKey, "true"),
+		*openapi.NewAnnotation(SimulateReleaseStateAnnotationKey, state),
+	}
+}
+
+func SecretEnvConnection(secretID, targetResource, envName, outputKey string) openapi.StackConnection {
+	from := openapi.NewTopologyNodeRef("secret")
+	from.SetId(secretID)
+	to := openapi.NewTopologyNodeRef("stack_resource")
+	to.SetName(targetResource)
+	conn := openapi.NewStackConnection("env", *from, *to)
+	target := openapi.NewConnectionTarget("env")
+	target.SetName(envName)
+	value := openapi.NewValueRef()
+	value.SetOutput(outputKey)
+	conn.SetMappings([]openapi.ConnectionMapping{*openapi.NewConnectionMapping(*target, *value)})
+	return *conn
+}
+
+func CreateSimulatedReleaseStack(name string, resources []openapi.StackResource, state string) *openapi.Stack {
+	spec := openapi.NewStackSpec(resources)
+	stack := openapi.NewStack(name, *spec)
+	stack.SetAnnotations(simulateReleaseAnnotations(state))
+	return stack
+}
+
+func CreateSimulatedReleaseStackWithConnections(name string, resources []openapi.StackResource, connections []openapi.StackConnection, state string) *openapi.Stack {
+	spec := openapi.NewStackSpec(resources)
+	spec.SetConnections(connections)
+	stack := openapi.NewStack(name, *spec)
+	stack.SetAnnotations(simulateReleaseAnnotations(state))
 	return stack
 }
 

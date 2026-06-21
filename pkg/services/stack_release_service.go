@@ -36,26 +36,29 @@ type StackReleaseService interface {
 }
 
 type StackReleaseServiceSpec struct {
-	Store         stores.StackReleaseStore
-	StackService  StackService
-	SecretService SecretService
-	Permissions   auth.PermissionService
+	Store            stores.StackReleaseStore
+	StackService     StackService
+	SecretService    SecretService
+	Permissions      auth.PermissionService
+	ReferenceService ReferenceService
 }
 
 type stackReleaseService struct {
-	store         stores.StackReleaseStore
-	stackQuery    StackService
-	secretService SecretService
-	permissions   auth.PermissionService
+	store            stores.StackReleaseStore
+	stackQuery       StackService
+	secretService    SecretService
+	permissions      auth.PermissionService
+	referenceService ReferenceService
 	BackgroundJobEnqueuerDep
 }
 
 func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
 	return &stackReleaseService{
-		store:         spec.Store,
-		stackQuery:    spec.StackService,
-		secretService: spec.SecretService,
-		permissions:   spec.Permissions,
+		store:            spec.Store,
+		stackQuery:       spec.StackService,
+		secretService:    spec.SecretService,
+		permissions:      spec.Permissions,
+		referenceService: spec.ReferenceService,
 	}
 }
 
@@ -102,9 +105,16 @@ func (s *stackReleaseService) CreateRelease(ctx context.Context, stackID string,
 		CreatedBy:        createdBy,
 	}
 
-	created, sErr := s.store.Create(ctx, release)
-	if sErr != nil {
-		return nil, sErr
+	var created *models.StackRelease
+	if txErr := s.store.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		var e *errors.ServiceError
+		created, e = s.store.Create(txCtx, release)
+		if e != nil {
+			return e
+		}
+		return s.referenceService.ProjectRelease(txCtx, created)
+	}); txErr != nil {
+		return nil, txErr
 	}
 
 	if err := s.BackgroundJobEnqueuer.Enqueue(&models.StackRelease{ID: created.ID}); err != nil {
@@ -123,8 +133,8 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 		return nil, errors.NotFound("release '%s' does not belong to stack '%s'", fromReleaseID, stackID)
 	}
 
-	if src.Manifest == nil {
-		return nil, errors.BadRequest("cannot roll back to release #%d: it was never rendered", src.Sequence)
+	if src.State != models.ReleaseStateReleased {
+		return nil, errors.BadRequest("can only roll back to a successfully released deployment (#%d is %s)", src.Sequence, src.State)
 	}
 
 	// Permission check via the stack's team.
@@ -162,9 +172,16 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 		CreatedBy:        createdBy,
 	}
 
-	created, sErr := s.store.Create(ctx, release)
-	if sErr != nil {
-		return nil, sErr
+	var created *models.StackRelease
+	if txErr := s.store.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		var e *errors.ServiceError
+		created, e = s.store.Create(txCtx, release)
+		if e != nil {
+			return e
+		}
+		return s.referenceService.ProjectRelease(txCtx, created)
+	}); txErr != nil {
+		return nil, txErr
 	}
 
 	if err := s.BackgroundJobEnqueuer.Enqueue(&models.StackRelease{ID: created.ID}); err != nil {

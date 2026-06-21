@@ -36,9 +36,6 @@ type SecretService interface {
 	ValidateSecretHasKeys(ctx context.Context, secretID string, requiredKeys []string) (bool, []string, *errors.ServiceError)
 	ValidateGitSecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError
 	ValidateImageRegistrySecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError
-	CreateResourceUsage(ctx context.Context, usage *models.ResourceUsage) *errors.ServiceError
-	GetResourceUsageByStackID(ctx context.Context, stackID string) ([]*models.ResourceUsage, *errors.ServiceError)
-	DeleteResourceUsage(ctx context.Context, resourceType, resourceID, stackID string) *errors.ServiceError
 }
 
 type ClusterClientGetter interface {
@@ -46,26 +43,24 @@ type ClusterClientGetter interface {
 }
 
 type SecretServiceSpec struct {
-	SessionFactory         db.SessionFactory
-	EncryptionService      EncryptionService
-	ConnectionUsageChecker connectionUsageChecker
-	ResourceUsageService   ResourceUsageService
-	ClusterClientGetter    ClusterClientGetter
-	TeamService            TeamService
-	Logger                 logger.Logger
-	Permissions            auth.PermissionService
+	SessionFactory      db.SessionFactory
+	EncryptionService   EncryptionService
+	ReferenceService    ReferenceService
+	ClusterClientGetter ClusterClientGetter
+	TeamService         TeamService
+	Logger              logger.Logger
+	Permissions         auth.PermissionService
 }
 
 type secretService struct {
-	secretStore            stores.SecretStore
-	connectionUsageChecker connectionUsageChecker
-	resourceUsageService   ResourceUsageService
-	encryptionService      EncryptionService
-	validator              validator.SecretValidator
-	clusterClientGetter    ClusterClientGetter
-	teamService            TeamService
-	logger                 logger.Logger
-	permissions            auth.PermissionService
+	secretStore         stores.SecretStore
+	referenceService    ReferenceService
+	encryptionService   EncryptionService
+	validator           validator.SecretValidator
+	clusterClientGetter ClusterClientGetter
+	teamService         TeamService
+	logger              logger.Logger
+	permissions         auth.PermissionService
 }
 
 func NewSecretService(spec SecretServiceSpec) SecretService {
@@ -73,14 +68,13 @@ func NewSecretService(spec SecretServiceSpec) SecretService {
 		secretStore: pgstore.NewSecretStore(pgstore.SecretStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		connectionUsageChecker: spec.ConnectionUsageChecker,
-		resourceUsageService:   spec.ResourceUsageService,
-		validator:              secret.NewSecretValidator(),
-		encryptionService:      spec.EncryptionService,
-		clusterClientGetter:    spec.ClusterClientGetter,
-		teamService:            spec.TeamService,
-		logger:                 spec.Logger,
-		permissions:            spec.Permissions,
+		referenceService:    spec.ReferenceService,
+		validator:           secret.NewSecretValidator(),
+		encryptionService:   spec.EncryptionService,
+		clusterClientGetter: spec.ClusterClientGetter,
+		teamService:         spec.TeamService,
+		logger:              spec.Logger,
+		permissions:         spec.Permissions,
 	}
 	return s
 }
@@ -135,28 +129,6 @@ func (s *secretService) InternalGetByID(ctx context.Context, ID string) (*models
 	}
 
 	return secret, nil
-}
-
-func (s *secretService) CreateResourceUsage(ctx context.Context, usage *models.ResourceUsage) *errors.ServiceError {
-	if err := s.resourceUsageService.Create(ctx, usage); err != nil {
-		return errors.GeneralError("failed to create resource usage: %s", err.Error())
-	}
-	return nil
-}
-
-func (s *secretService) GetResourceUsageByStackID(ctx context.Context, stackID string) ([]*models.ResourceUsage, *errors.ServiceError) {
-	usages, err := s.resourceUsageService.GetByStackID(ctx, stackID)
-	if err != nil {
-		return nil, errors.GeneralError("failed to get resource usages: %s", err.Error())
-	}
-	return usages, nil
-}
-
-func (s *secretService) DeleteResourceUsage(ctx context.Context, resourceType, resourceID, stackID string) *errors.ServiceError {
-	if err := s.resourceUsageService.Delete(ctx, resourceType, resourceID, stackID); err != nil {
-		return errors.GeneralError("failed to delete resource usage: %s", err.Error())
-	}
-	return nil
 }
 
 func (s *secretService) GetByName(ctx context.Context, organisationID, name string) (*models.Secret, *errors.ServiceError) {
@@ -219,22 +191,12 @@ func (s *secretService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 		return permErr
 	}
 
-	connInUse, connErr := s.connectionUsageChecker.IsNodeReferencedAsSource(ctx, "", models.TopologyNodeRef{
-		Type: models.TopologyNodeTypeSecret,
-		Id:   ID,
-	})
-	if connErr != nil {
-		return errors.GeneralError("failed to check connection usages for secret ID %s: %s", ID, connErr.Error())
+	inUse, refs, refErr := s.referenceService.IsReferentInUse(ctx, models.ReferentSecret, ID)
+	if refErr != nil {
+		return refErr
 	}
-	if connInUse {
-		return errors.BadRequest("secret with ID '%s' is in use by stack connections", ID)
-	}
-	directInUse, directErr := s.resourceUsageService.IsResourceInUse(ctx, "secret", ID)
-	if directErr != nil {
-		return errors.GeneralError("failed to check direct config usages for secret ID %s: %s", ID, directErr.Error())
-	}
-	if directInUse {
-		return errors.BadRequest("secret with ID '%s' is in use by stacks", ID)
+	if inUse {
+		return errors.Conflict("secret '%s' is in use by %s and cannot be deleted", ID, describeReferences(refs))
 	}
 
 	if err := s.secretStore.Delete(ctx, ID); err != nil {

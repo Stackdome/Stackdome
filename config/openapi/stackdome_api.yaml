@@ -1900,6 +1900,12 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+        '409':
+          description: Secret is in use and cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
 
@@ -1972,6 +1978,12 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+        '409':
+          description: Volume is in use and cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
 
@@ -2132,6 +2144,12 @@ paths:
           description: Forbidden
         '404':
           description: PostgresAddon not found
+        '409':
+          description: PostgreSQL addon is in use and cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:

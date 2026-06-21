@@ -15,7 +15,7 @@ func testLogger() logger.Logger {
 	return logger.NewLoggerWithPrefix(context.Background(), "release-test")
 }
 
-func TestFreshnessReconciler_OlderSequence(t *testing.T) {
+func TestGatekeeperReconciler_OlderSequence(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	svc := NewMockreleaseService(ctrl)
@@ -24,7 +24,7 @@ func TestFreshnessReconciler_OlderSequence(t *testing.T) {
 	svc.EXPECT().MarkSuperseded(gomock.Any(), "older", gomock.Any()).
 		Return(true, nil)
 
-	r := &freshnessReconciler{releaseService: svc, logger: testLogger()}
+	r := &gatekeeperReconciler{releaseService: svc, logger: testLogger()}
 
 	release := &models.StackRelease{ID: "older", StackID: "stack-1", Sequence: 1, State: models.ReleaseStateInProgress}
 	result, err := r.Reconcile(context.Background(), release)
@@ -36,7 +36,7 @@ func TestFreshnessReconciler_OlderSequence(t *testing.T) {
 	}
 }
 
-func TestFreshnessReconciler_LatestSequence(t *testing.T) {
+func TestGatekeeperReconciler_LatestSequence(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 2, State: models.ReleaseStateInProgress}
@@ -45,7 +45,7 @@ func TestFreshnessReconciler_LatestSequence(t *testing.T) {
 	svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
 		Return(release, nil)
 
-	r := &freshnessReconciler{releaseService: svc, logger: testLogger()}
+	r := &gatekeeperReconciler{releaseService: svc, logger: testLogger()}
 
 	result, err := r.Reconcile(context.Background(), release)
 	if err != nil {
@@ -56,7 +56,7 @@ func TestFreshnessReconciler_LatestSequence(t *testing.T) {
 	}
 }
 
-func TestFreshnessReconciler_PendingCASWon(t *testing.T) {
+func TestGatekeeperReconciler_PendingCASWon(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 1, State: models.ReleaseStatePending}
@@ -67,7 +67,7 @@ func TestFreshnessReconciler_PendingCASWon(t *testing.T) {
 	svc.EXPECT().MarkInProgress(gomock.Any(), "self").
 		Return(true, nil)
 
-	r := &freshnessReconciler{releaseService: svc, logger: testLogger()}
+	r := &gatekeeperReconciler{releaseService: svc, logger: testLogger()}
 
 	result, err := r.Reconcile(context.Background(), release)
 	if err != nil {
@@ -81,7 +81,7 @@ func TestFreshnessReconciler_PendingCASWon(t *testing.T) {
 	}
 }
 
-func TestFreshnessReconciler_PendingCASLost(t *testing.T) {
+func TestGatekeeperReconciler_PendingCASLost(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 1, State: models.ReleaseStatePending}
@@ -92,7 +92,7 @@ func TestFreshnessReconciler_PendingCASLost(t *testing.T) {
 	svc.EXPECT().MarkInProgress(gomock.Any(), "self").
 		Return(false, nil)
 
-	r := &freshnessReconciler{releaseService: svc, logger: testLogger()}
+	r := &gatekeeperReconciler{releaseService: svc, logger: testLogger()}
 
 	result, err := r.Reconcile(context.Background(), release)
 	if err != nil {

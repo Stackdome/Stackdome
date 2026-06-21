@@ -19,33 +19,40 @@ func NewAtomicExecutor(sf db.SessionFactory) stores.AtomicExecutor {
 
 func (a *atomicExecutor) WithTransaction(ctx context.Context, fn func(ctx context.Context) *errors.ServiceError) *errors.ServiceError {
 	var (
-		tx    *gorm.DB
-		txCtx context.Context
+		tx      *gorm.DB
+		txCtx   context.Context
+		isOwner bool
 	)
 	tx = db.TxFromContext(ctx)
 	if tx == nil {
 		tx = a.sessionFactory.New(ctx).Begin()
 		txCtx = db.CtxWithTransaction(ctx, tx)
+		isOwner = true
 	} else {
 		txCtx = ctx
 	}
 
-	// recover and rollback on panic
 	defer func() {
 		if r := recover(); r != nil {
-			tx.Rollback()
+			if isOwner {
+				tx.Rollback()
+			}
 			panic(r)
 		}
 	}()
 
 	if err := fn(txCtx); err != nil {
-		tx.Rollback()
+		if isOwner {
+			tx.Rollback()
+		}
 		return err
 	}
 
-	if err := tx.Commit().Error; err != nil {
-		tx.Rollback()
-		return errors.GeneralError("failed to commit transaction: %s", err.Error())
+	if isOwner {
+		if err := tx.Commit().Error; err != nil {
+			tx.Rollback()
+			return errors.GeneralError("failed to commit transaction: %s", err.Error())
+		}
 	}
 	return nil
 }

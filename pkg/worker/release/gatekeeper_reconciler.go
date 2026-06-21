@@ -8,21 +8,21 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
-type freshnessReconciler struct {
+type gatekeeperReconciler struct {
 	releaseService releaseService
 	logger         logger.Logger
 }
 
-func newFreshnessReconciler(spec ReleaseWorkerSpec) *freshnessReconciler {
-	return &freshnessReconciler{
+func newGatekeeperReconciler(spec ReleaseWorkerSpec) *gatekeeperReconciler {
+	return &gatekeeperReconciler{
 		releaseService: spec.ReleaseService,
-		logger:         logger.NewLoggerWithPrefix(context.Background(), "release-freshness"),
+		logger:         logger.NewLoggerWithPrefix(context.Background(), "release-gatekeeper"),
 	}
 }
 
-func (r *freshnessReconciler) Name() string { return "freshness" }
+func (r *gatekeeperReconciler) Name() string { return "gatekeeper" }
 
-func (r *freshnessReconciler) Reconcile(ctx context.Context, release *models.StackRelease) (subReconcilerResult, error) {
+func (r *gatekeeperReconciler) Reconcile(ctx context.Context, release *models.StackRelease) (subReconcilerResult, error) {
 	latest, serr := r.releaseService.InternalGetActiveByStackID(ctx, release.StackID)
 	if serr != nil {
 		return resultNil, fmt.Errorf("failed to get active release: %w", serr)

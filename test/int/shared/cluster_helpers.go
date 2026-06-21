@@ -337,9 +337,13 @@ func WaitForStackReady(apiClient *openapi.APIClient, orgID, teamName, stackID st
 }
 
 func WaitForStackDeleted(apiClient *openapi.APIClient, orgID, teamName, stackID string, timeout time.Duration) {
+	ctx := context.Background()
+	_, httpResp, _ := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(ctx, orgID, teamName, stackID).Execute()
+	if httpResp != nil && httpResp.StatusCode == 404 {
+		return
+	}
 	Eventually(func(g Gomega) {
-		ctx := context.Background()
-		_, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(ctx, orgID, teamName, stackID).Execute()
+		_, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(context.Background(), orgID, teamName, stackID).Execute()
 		g.Expect(err).To(HaveOccurred())
 		g.Expect(httpResp.StatusCode).To(Equal(404))
 	}, timeout, 2*time.Second).Should(Succeed())

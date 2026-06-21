@@ -20,6 +20,34 @@ const (
 	ReleaseStateCancelled  StackReleaseState = "Cancelled"
 )
 
+func TerminalStackReleaseStates() []StackReleaseState {
+	return []StackReleaseState{
+		ReleaseStateReleased,
+		ReleaseStateFailed,
+		ReleaseStateSuperseded,
+		ReleaseStateCancelled,
+	}
+}
+
+// NonGrippingReleaseStates lists release states that should NOT hold
+// delete-protection ("grip") on referenced resources.
+//
+// A release grips its referenced secrets/volumes/addons so that rolling back to
+// it remains safe — the resources it needs must still exist. Only Released
+// releases are valid rollback targets; Pending and InProgress releases may still
+// converge and become the live deployment. Failed, Superseded, and Cancelled
+// releases can never be redeployed, so their grip serves no purpose and would
+// only block resource deletion until GC ages them out of the retention window.
+//
+// Grip is derived at query time (LEFT JOIN on stack_releases.state) rather than
+// toggled by a write on state transition, so it tracks release lifecycle
+// automatically and cannot drift.
+var NonGrippingReleaseStates = []StackReleaseState{
+	ReleaseStateFailed,
+	ReleaseStateSuperseded,
+	ReleaseStateCancelled,
+}
+
 // Active returns true if the release is still in-flight (not terminal).
 func (s StackReleaseState) Active() bool {
 	return !s.Terminal()
@@ -234,6 +262,7 @@ func (m *ReleaseManifest) Scan(value interface{}) error {
 
 // ReleasePins captures the resolved artifact coordinates for each resource.
 type ReleasePins struct {
+	// Resource Name -> Resolved artifact src.
 	Resources map[string]ResourcePins `json:"resources,omitempty"`
 }
 
@@ -289,6 +318,13 @@ func (o *ReleaseOutcome) Scan(value interface{}) error {
 		return errors.New("type assertion to []byte failed for ReleaseOutcome")
 	}
 	return json.Unmarshal(b, o)
+}
+
+// ReleaseSummary is a lightweight projection used for release GC decisions.
+type ReleaseSummary struct {
+	ID       string
+	Sequence int
+	State    StackReleaseState
 }
 
 // --- generic deep-copy helpers ---
