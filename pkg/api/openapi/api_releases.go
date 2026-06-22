@@ -251,7 +251,7 @@ type ApiGetReleaseRequest struct {
 	releaseId  string
 }
 
-func (r ApiGetReleaseRequest) Execute() (*StackRelease, *http.Response, error) {
+func (r ApiGetReleaseRequest) Execute() (*StackReleaseDetail, *http.Response, error) {
 	return r.ApiService.GetReleaseExecute(r)
 }
 
@@ -278,13 +278,13 @@ func (a *ReleasesApiService) GetRelease(ctx context.Context, orgId string, teamN
 
 // Execute executes the request
 //
-//	@return StackRelease
-func (a *ReleasesApiService) GetReleaseExecute(r ApiGetReleaseRequest) (*StackRelease, *http.Response, error) {
+//	@return StackReleaseDetail
+func (a *ReleasesApiService) GetReleaseExecute(r ApiGetReleaseRequest) (*StackReleaseDetail, *http.Response, error) {
 	var (
 		localVarHTTPMethod  = http.MethodGet
 		localVarPostBody    interface{}
 		formFiles           []formFile
-		localVarReturnValue *StackRelease
+		localVarReturnValue *StackReleaseDetail
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ReleasesApiService.GetRelease")

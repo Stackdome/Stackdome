@@ -82,7 +82,7 @@ func (h *stackReleaseHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return nil, err
 			}
-			return presenters.PresentStackRelease(release), nil
+			return presenters.PresentStackReleaseDetail(release), nil
 		},
 	}
 	handleGet(w, r, cfg)

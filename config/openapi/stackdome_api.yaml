@@ -1772,7 +1772,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StackRelease'
+                $ref: '#/components/schemas/StackReleaseDetail'
 
   /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel:
     post:
@@ -5417,6 +5417,60 @@ components:
           type: string
           format: date-time
         completed_at:
+          type: string
+          format: date-time
+
+    StackReleaseDetail:
+      allOf:
+        - $ref: '#/components/schemas/StackRelease'
+        - type: object
+          properties:
+            snapshot:
+              $ref: '#/components/schemas/StackReleaseSnapshot'
+
+    StackReleaseSnapshot:
+      type: object
+      properties:
+        stack:
+          type: object
+          properties:
+            id:
+              type: string
+            organisation_id:
+              type: string
+            team_id:
+              type: string
+            cluster_id:
+              type: string
+            user_id:
+              type: string
+            name:
+              type: string
+            namespace_id:
+              type: string
+            namespace:
+              type: string
+            labels:
+              type: object
+              additionalProperties:
+                type: string
+            annotations:
+              type: object
+              additionalProperties:
+                type: string
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/StackResource'
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Volume'
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/StackConnection'
+        captured_at:
           type: string
           format: date-time
 

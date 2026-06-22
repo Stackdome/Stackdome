@@ -81,6 +81,57 @@ func presentReleaseOutcome(o *models.ReleaseOutcome) *openapi.ReleaseOutcome {
 	return result
 }
 
+func PresentStackReleaseDetail(r *models.StackRelease) openapi.StackReleaseDetail {
+	base := PresentStackRelease(r)
+	detail := openapi.StackReleaseDetail{
+		Id:               base.Id,
+		StackId:          base.StackId,
+		Sequence:         base.Sequence,
+		State:            base.State,
+		Message:          base.Message,
+		Cause:            base.Cause,
+		SnapshotRevision: base.SnapshotRevision,
+		ManifestRevision: base.ManifestRevision,
+		RendererVersion:  base.RendererVersion,
+		Pins:             base.Pins,
+		Outcome:          base.Outcome,
+		CreatedBy:        base.CreatedBy,
+		CreatedAt:        base.CreatedAt,
+		UpdatedAt:        base.UpdatedAt,
+		RenderedAt:       base.RenderedAt,
+		CompletedAt:      base.CompletedAt,
+		Snapshot:         presentStackReleaseSnapshot(&r.Snapshot),
+	}
+	return detail
+}
+
+func presentStackReleaseSnapshot(s *models.StackSnapshot) *openapi.StackReleaseSnapshot {
+	if s == nil {
+		return nil
+	}
+	labels := s.Stack.Labels.ToMap()
+	annotations := s.Stack.Annotations.ToMap()
+	snap := &openapi.StackReleaseSnapshot{
+		Stack: &openapi.StackReleaseSnapshotStack{
+			Id:             &s.Stack.ID,
+			OrganisationId: &s.Stack.OrganisationID,
+			TeamId:         &s.Stack.TeamID,
+			ClusterId:      &s.Stack.ClusterID,
+			UserId:         &s.Stack.UserID,
+			Name:           &s.Stack.Name,
+			NamespaceId:    &s.Stack.NamespaceID,
+			Namespace:      &s.Stack.Namespace,
+			Labels:         &labels,
+			Annotations:    &annotations,
+		},
+		Resources:   PresentStackResourceList(s.Resources),
+		Volumes:     PresentVolumeList(s.Volumes, false),
+		Connections: PresentStackConnections(s.Connections),
+		CapturedAt:  &s.CapturedAt,
+	}
+	return snap
+}
+
 func PresentStackReleaseList(result *stores.PaginatedResult[*models.StackRelease]) openapi.StackReleaseList {
 	items := make([]openapi.StackRelease, len(result.Items))
 	for i, r := range result.Items {

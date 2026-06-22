@@ -489,7 +489,7 @@ func ListReleases(client *openapi.APIClient, orgID, teamName, stackID string) *o
 	return list
 }
 
-func GetRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseID string) *openapi.StackRelease {
+func GetRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseID string) *openapi.StackReleaseDetail {
 	release, httpResp, err := client.ReleasesApi.GetRelease(
 		context.Background(), orgID, teamName, stackID, releaseID,
 	).Execute()
@@ -504,8 +504,8 @@ func CancelRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseI
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "failed to cancel release, status: %d", httpResp.StatusCode)
 }
 
-func WaitForReleaseState(client *openapi.APIClient, orgID, teamName, stackID, releaseID, expectedState string, timeout time.Duration) *openapi.StackRelease {
-	var result *openapi.StackRelease
+func WaitForReleaseState(client *openapi.APIClient, orgID, teamName, stackID, releaseID, expectedState string, timeout time.Duration) *openapi.StackReleaseDetail {
+	var result *openapi.StackReleaseDetail
 	Eventually(func(g Gomega) {
 		release := GetRelease(client, orgID, teamName, stackID, releaseID)
 		g.Expect(string(release.GetState())).To(Equal(expectedState),
@@ -515,7 +515,7 @@ func WaitForReleaseState(client *openapi.APIClient, orgID, teamName, stackID, re
 	return result
 }
 
-func WaitForReleaseReleased(client *openapi.APIClient, orgID, teamName, stackID, releaseID string, timeout time.Duration) *openapi.StackRelease {
+func WaitForReleaseReleased(client *openapi.APIClient, orgID, teamName, stackID, releaseID string, timeout time.Duration) *openapi.StackReleaseDetail {
 	return WaitForReleaseState(client, orgID, teamName, stackID, releaseID, string(models.ReleaseStateReleased), timeout)
 }
 
