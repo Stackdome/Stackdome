@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Stack } from "@/api/stacks";
 import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration } from "../derive";
-import { deriveStages, releaseGitSha, phaseTone, toneTextClass, toneDotClass } from "../derive";
+import { deriveStages, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone } from "../derive";
 import type { StackRelease } from "@/api/releases";
 
 function release(partial: Partial<StackRelease>): StackRelease {
@@ -77,6 +77,21 @@ describe("causeLabel", () => {
   });
   it("labels a rollback with no detail as plain Rollback", () => {
     expect(causeLabel({ kind: "rollback" })).toBe("Rollback");
+  });
+  it("extracts the sequence from the backend's sentence detail", () => {
+    // Backend sends detail as "rollback to release #1" — must not double-prefix.
+    expect(causeLabel({ kind: "rollback", detail: "rollback to release #1" })).toBe("Rollback to #1");
+  });
+});
+
+describe("stateTone", () => {
+  it("colors the rail dot by lifecycle state", () => {
+    expect(stateTone("Released")).toBe("ok");
+    expect(stateTone("Failed")).toBe("err");
+    expect(stateTone("Pending")).toBe("amber");
+    expect(stateTone("InProgress")).toBe("amber");
+    expect(stateTone("Superseded")).toBe("muted");
+    expect(stateTone("Cancelled")).toBe("muted");
   });
 });
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { EmptyState } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
+import { stateTone } from "../derive";
 import { useReleaseDetail } from "../use-release-detail";
 import { RailNode } from "./rail-node";
 import { CurrentReleaseNode } from "./current-release-node";
@@ -40,7 +41,7 @@ export function TimelineRail(props: TimelineRailProps) {
       {banner && <div className="mb-5">{banner}</div>}
 
       {activeRelease ? (
-        <RailNode tone="ok" big pulse={!TERMINAL.has(activeRelease.state ?? "")} isLast={earlier.length === 0}>
+        <RailNode tone={stateTone(activeRelease.state ?? "")} big pulse={!TERMINAL.has(activeRelease.state ?? "")} isLast={earlier.length === 0}>
           <CurrentReleaseNode
             release={activeRelease}
             stack={stack}
@@ -64,7 +65,7 @@ export function TimelineRail(props: TimelineRailProps) {
       {shown.map((r, i) => {
         const idx = i + 1; // position in `releases`
         return (
-          <RailNode key={r.id ?? idx} tone="muted" isLast={idx === releases.length - 1}>
+          <RailNode key={r.id ?? idx} tone={stateTone(r.state ?? "")} isLast={idx === releases.length - 1}>
             <HistoryRow
               release={r}
               prevReleaseId={prevIdFor(idx)}

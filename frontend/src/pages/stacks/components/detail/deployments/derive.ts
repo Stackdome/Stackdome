@@ -87,10 +87,28 @@ function isHealthyState(state: string): boolean {
 
 export function causeLabel(cause?: ReleaseCause): string {
   switch (cause?.kind) {
-    case "rollback": return cause.detail ? `Rollback to #${cause.detail}` : "Rollback";
+    case "rollback": {
+      // Backend sends detail as a sentence ("rollback to release #1"); pull the
+      // trailing sequence number so we render a clean "Rollback to #1".
+      const seq = cause.detail?.match(/(\d+)\s*$/);
+      return seq ? `Rollback to #${seq[1]}` : "Rollback";
+    }
     case "webhook_push": return "Webhook push";
     case "manual": default: return "Manual deploy";
   }
+}
+
+/** Short, day-relative timestamp for the history rail: "today 12:14", "yest 17:44", "Jun 3 09:02". */
+export function formatReleaseTime(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  const dayStart = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((dayStart(new Date()) - dayStart(d)) / 86_400_000);
+  if (days === 0) return `today ${time}`;
+  if (days === 1) return `yest ${time}`;
+  return `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${time}`;
 }
 
 export function formatDuration(start?: string, end?: string): string {
@@ -165,6 +183,17 @@ export function phaseTone(phase: string): Tone {
   if (/progress|building|deploying|pending.*build/i.test(phase)) return "amber";
   if (/crash|oom|error|failed|imagepull|backoff/i.test(phase)) return "err";
   return "muted";
+}
+
+/** Tone for a release's rail dot, keyed off its lifecycle state. */
+export function stateTone(state: string): Tone {
+  switch (state) {
+    case "Released": return "ok";
+    case "Failed": return "err";
+    case "Pending":
+    case "InProgress": return "amber";
+    default: return "muted"; // Superseded, Cancelled, unknown
+  }
 }
 
 export function toneTextClass(t: Tone): string {
