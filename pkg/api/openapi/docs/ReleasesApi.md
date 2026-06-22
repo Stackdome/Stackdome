@@ -164,7 +164,7 @@ Name | Type | Description  | Notes
 
 ## GetRelease
 
-> StackRelease GetRelease(ctx, orgId, teamName, id, releaseId).Execute()
+> StackReleaseDetail GetRelease(ctx, orgId, teamName, id, releaseId).Execute()
 
 Get a release by ID
 
@@ -193,7 +193,7 @@ func main() {
         fmt.Fprintf(os.Stderr, "Error when calling `ReleasesApi.GetRelease``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
     }
-    // response from `GetRelease`: StackRelease
+    // response from `GetRelease`: StackReleaseDetail
     fmt.Fprintf(os.Stdout, "Response from `ReleasesApi.GetRelease`: %v\n", resp)
 }
 ```
@@ -223,7 +223,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**StackRelease**](StackRelease.md)
+[**StackReleaseDetail**](StackReleaseDetail.md)
 
 ### Authorization
 

@@ -139,7 +139,11 @@ docs/StackConnectionList.md
 docs/StackConvergenceRecord.md
 docs/StackList.md
 docs/StackRelease.md
+docs/StackReleaseDetail.md
+docs/StackReleaseDetailAllOf.md
 docs/StackReleaseList.md
+docs/StackReleaseSnapshot.md
+docs/StackReleaseSnapshotStack.md
 docs/StackReleaseState.md
 docs/StackResource.md
 docs/StackResourceBuildSpec.md
@@ -318,7 +322,11 @@ model_stack_connection_list.go
 model_stack_convergence_record.go
 model_stack_list.go
 model_stack_release.go
+model_stack_release_detail.go
+model_stack_release_detail_all_of.go
 model_stack_release_list.go
+model_stack_release_snapshot.go
+model_stack_release_snapshot_stack.go
 model_stack_release_state.go
 model_stack_resource.go
 model_stack_resource_build_spec.go
