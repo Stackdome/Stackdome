@@ -169,7 +169,9 @@ export function deriveStages(stack: Stack, release: StackRelease, failing: Faili
     };
   }
   if (state === "Failed") {
-    if (runtimeFailed) return { build: hasBuild ? "done" : "skipped", deploy: "failed", ready: "todo" };
+    // A terminal crash means the workload was applied (Deploy done) but never
+    // became Ready — so the failure lands on the Ready node, not Deploy.
+    if (runtimeFailed) return { build: hasBuild ? "done" : "skipped", deploy: "done", ready: "failed" };
     // Pre-cluster (render/apply/timeout) → map to first node per spec.
     return { build: "failed", deploy: "todo", ready: "todo" };
   }

@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 vi.mock("@/api/observability", () => ({ fetchLogSnapshot: vi.fn().mockResolvedValue([]) }));
 import { CurrentReleaseNode } from "../current-release-node";
 import type { StackRelease } from "@/api/releases";
@@ -15,8 +16,8 @@ const stack = (over: Record<string, unknown> = {}) => ({
   ...over,
 }) as unknown as Stack;
 
-function Wrap({ release, st }: { release: StackRelease; st: Stack }) {
-  return <CurrentReleaseNode release={release} stack={st} logContext={{ orgId: "o", teamName: "t", stackId: "s" }} />;
+function Wrap({ release, st, onCancel }: { release: StackRelease; st: Stack; onCancel?: (id: string) => void }) {
+  return <CurrentReleaseNode release={release} stack={st} logContext={{ orgId: "o", teamName: "t", stackId: "s" }} onCancel={onCancel} />;
 }
 
 describe("CurrentReleaseNode", () => {
@@ -36,5 +37,17 @@ describe("CurrentReleaseNode", () => {
   it("does not render a changelog toggle (current node shows live status only)", () => {
     render(<Wrap release={{ id: "r1", sequence: 14, state: "Released" } as StackRelease} st={stack()} />);
     expect(screen.queryByRole("button", { name: /changelog/i })).not.toBeInTheDocument();
+  });
+
+  it("offers Cancel for a non-terminal release and fires onCancel", async () => {
+    const onCancel = vi.fn();
+    render(<Wrap release={{ id: "r9", sequence: 15, state: "Pending" } as StackRelease} st={stack()} onCancel={onCancel} />);
+    await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(onCancel).toHaveBeenCalledWith("r9");
+  });
+
+  it("hides Cancel once the release is terminal", () => {
+    render(<Wrap release={{ id: "r1", sequence: 14, state: "Released" } as StackRelease} st={stack()} onCancel={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /cancel/i })).not.toBeInTheDocument();
   });
 });

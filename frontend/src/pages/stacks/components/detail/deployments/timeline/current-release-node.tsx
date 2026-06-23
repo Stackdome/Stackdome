@@ -4,9 +4,12 @@ import type { Stack } from "@/api/stacks";
 import { deriveStages, deriveFailingResources, deriveRecovered, formatDuration, formatReleaseTime } from "../derive";
 import { ResourceRow, type LogContext } from "./resource-row";
 
+const NON_TERMINAL = new Set(["Pending", "InProgress"]);
+
 export interface CurrentReleaseNodeProps {
   release: StackRelease; stack: Stack; logContext?: LogContext;
   onOpenLogs?: (name: string) => void;
+  onCancel?: (id: string) => void;
 }
 
 function meta(release: StackRelease): string {
@@ -19,8 +22,9 @@ function meta(release: StackRelease): string {
   return parts.join(" · ");
 }
 
-export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs }: CurrentReleaseNodeProps) {
+export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onCancel }: CurrentReleaseNodeProps) {
   const failing = deriveFailingResources(stack);
+  const cancellable = NON_TERMINAL.has(release.state ?? "") && !!onCancel && !!release.id;
   const recovered = deriveRecovered(stack);
   const recoveredNames = new Set(recovered.map((r) => r.name));
   const failingByName = new Map(failing.map((f) => [f.name, f]));
@@ -35,7 +39,17 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs }: C
           <StatusPill variant={variantFromState(release.state ?? "")}>{release.state}</StatusPill>
           <span className="font-sans text-[16px] font-semibold text-foreground">#{release.sequence}</span>
         </div>
-        <span className="font-mono text-[11px] text-fg-muted">{meta(release)}</span>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[11px] text-fg-muted">{meta(release)}</span>
+          {cancellable && (
+            <button
+              onClick={() => onCancel?.(release.id ?? "")}
+              className="flex-none rounded border border-border px-3 py-1.5 font-sans text-[13px] font-medium text-foreground hover:border-primary hover:text-primary"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mt-3.5"><StageTracker stages={stages} /></div>

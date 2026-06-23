@@ -154,6 +154,13 @@ describe("deriveStages", () => {
       .toEqual({ build: "done", deploy: "failed", ready: "todo" });
   });
 
+  it("terminal Failed runtime crash maps to Deploy done / Ready ✕", () => {
+    const stack = { status: {} } as unknown as import("../derive").Stack;
+    const failing = [{ name: "api", type: "runtime_crash" as const, stage: "runtime" as const, reason: "CrashLoopBackOff" }];
+    expect(deriveStages(stack, release({ state: "Failed", pins: imagePins }), failing))
+      .toEqual({ build: "done", deploy: "done", ready: "failed" });
+  });
+
   it("pre-cluster Failed with no resource failure maps to Build ✕", () => {
     const stack = { status: {} } as unknown as import("../derive").Stack;
     expect(deriveStages(stack, release({ state: "Failed", pins: imagePins }), []))
