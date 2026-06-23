@@ -149,25 +149,27 @@ export function deriveStages(stack: Stack, release: StackRelease, failing: Faili
   const hasBuild = hasBuildResources(release);
   const state = release.state;
 
+  // An image-only stack has no build step, so Build is "skipped" (inert grey)
+  // rather than "todo" (pending) wherever it isn't an actual build.
   if (converged || state === "Released") {
-    return { build: hasBuild ? "done" : "todo", deploy: "done", ready: "done" };
+    return { build: hasBuild ? "done" : "skipped", deploy: "done", ready: "done" };
   }
   if (buildFailed) return { build: "failed", deploy: "todo", ready: "todo" };
 
   if (state === "Pending") {
     return hasBuild
       ? { build: "active", deploy: "todo", ready: "todo" }
-      : { build: "todo", deploy: "active", ready: "todo" };
+      : { build: "skipped", deploy: "active", ready: "todo" };
   }
   if (state === "InProgress") {
     return {
-      build: hasBuild ? "done" : "todo",
+      build: hasBuild ? "done" : "skipped",
       deploy: runtimeFailed ? "failed" : "active",
       ready: "todo",
     };
   }
   if (state === "Failed") {
-    if (runtimeFailed) return { build: hasBuild ? "done" : "todo", deploy: "failed", ready: "todo" };
+    if (runtimeFailed) return { build: hasBuild ? "done" : "skipped", deploy: "failed", ready: "todo" };
     // Pre-cluster (render/apply/timeout) → map to first node per spec.
     return { build: "failed", deploy: "todo", ready: "todo" };
   }

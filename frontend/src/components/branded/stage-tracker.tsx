@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-export type StageStatus = "done" | "active" | "failed" | "todo";
+export type StageStatus = "done" | "active" | "failed" | "todo" | "skipped";
 
 export interface Stages {
   build: StageStatus;
@@ -17,11 +17,14 @@ const ORDER: Array<{ key: keyof Stages; label: string }> = [
 
 // Per the Deploy Timeline design: done/failed are solid fills with a white
 // glyph; active is a small amber (brand) spinner inside a brand ring; todo is
-// a hollow muted ring. Circles are 15px and connectors flex to a 340px cap.
+// a hollow muted ring. `skipped` (e.g. no build step for an image-only stack)
+// is a solid muted fill so it reads as inert rather than pending. Circles are
+// 15px and connectors flex to a 340px cap.
 const RING: Record<StageStatus, string> = {
   done: "border-success bg-success",
   failed: "border-danger bg-danger",
   active: "border-brand",
+  skipped: "border-fg-muted bg-fg-muted",
   todo: "border-fg-muted",
 };
 
@@ -41,7 +44,7 @@ export function StageTracker({ stages, className }: { stages: Stages; className?
         <span className={cn("box-border flex h-[15px] w-[15px] flex-none items-center justify-center rounded-full border-[1.5px]", RING[status])}>
           {glyph(status)}
         </span>
-        <span className={cn("font-sans text-[12px] font-medium", status === "todo" ? "text-fg-muted" : "text-foreground")}>
+        <span className={cn("font-sans text-[12px] font-medium", status === "todo" || status === "skipped" ? "text-fg-muted" : "text-foreground")}>
           {stage.label}
         </span>
       </div>,
