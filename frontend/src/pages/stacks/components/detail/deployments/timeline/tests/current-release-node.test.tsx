@@ -2,10 +2,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 vi.mock("@/api/observability", () => ({ fetchLogSnapshot: vi.fn().mockResolvedValue([]) }));
-vi.mock("@/api/releases", () => ({ getRelease: vi.fn().mockResolvedValue({ id: "r1", sequence: 14, outcome: { resources: {} }, snapshot: { resources: [] } }) }));
-import { useReleaseDetail } from "../../use-release-detail";
 import { CurrentReleaseNode } from "../current-release-node";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
@@ -19,8 +16,7 @@ const stack = (over: Record<string, unknown> = {}) => ({
 }) as unknown as Stack;
 
 function Wrap({ release, st }: { release: StackRelease; st: Stack }) {
-  const detail = useReleaseDetail("o", "t", "s");
-  return <CurrentReleaseNode release={release} stack={st} detail={detail} logContext={{ orgId: "o", teamName: "t", stackId: "s" }} prevReleaseId="r0" prevSeq={13} />;
+  return <CurrentReleaseNode release={release} stack={st} logContext={{ orgId: "o", teamName: "t", stackId: "s" }} />;
 }
 
 describe("CurrentReleaseNode", () => {
@@ -37,9 +33,8 @@ describe("CurrentReleaseNode", () => {
     expect(screen.getByText(/apply error: unknown addon/)).toBeInTheDocument();
   });
 
-  it("toggles its own changelog", async () => {
+  it("does not render a changelog toggle (current node shows live status only)", () => {
     render(<Wrap release={{ id: "r1", sequence: 14, state: "Released" } as StackRelease} st={stack()} />);
-    await userEvent.click(screen.getByRole("button", { name: /view changelog/i }));
-    expect(await screen.findByText(/nothing to compare/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /changelog/i })).not.toBeInTheDocument();
   });
 });

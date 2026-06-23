@@ -1,16 +1,12 @@
-import { useState } from "react";
 import { StatusPill, StageTracker, variantFromState } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 import { deriveStages, deriveFailingResources, deriveRecovered, formatDuration } from "../derive";
-import type { ReleaseDetail } from "../use-release-detail";
 import { ResourceRow, type LogContext } from "./resource-row";
-import { ReleasePostMortem } from "./release-post-mortem";
 
 export interface CurrentReleaseNodeProps {
   release: StackRelease; stack: Stack; logContext?: LogContext;
   onOpenLogs?: (name: string) => void;
-  detail: ReleaseDetail; prevReleaseId?: string; prevSeq?: number;
 }
 
 function meta(release: StackRelease): string {
@@ -21,8 +17,7 @@ function meta(release: StackRelease): string {
   return parts.join(" · ");
 }
 
-export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, detail, prevReleaseId, prevSeq }: CurrentReleaseNodeProps) {
-  const [showChangelog, setShowChangelog] = useState(false);
+export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs }: CurrentReleaseNodeProps) {
   const failing = deriveFailingResources(stack);
   const recovered = deriveRecovered(stack);
   const recoveredNames = new Set(recovered.map((r) => r.name));
@@ -82,13 +77,6 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, det
             </div>
           ))}
         </div>
-      )}
-
-      <button onClick={() => setShowChangelog((v) => !v)} className="mt-4 font-sans text-[12.5px] font-medium text-primary">
-        {showChangelog ? "Hide changelog" : "View changelog"}
-      </button>
-      {showChangelog && (
-        <ReleasePostMortem detail={detail} release={release} prevReleaseId={prevReleaseId} prevSeq={prevSeq} />
       )}
     </div>
   );
