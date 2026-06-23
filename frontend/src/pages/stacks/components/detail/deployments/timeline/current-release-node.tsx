@@ -1,7 +1,7 @@
 import { StatusPill, StageTracker, variantFromState } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
-import { deriveStages, deriveFailingResources, deriveRecovered, formatDuration } from "../derive";
+import { deriveStages, deriveFailingResources, deriveRecovered, formatDuration, formatReleaseTime } from "../derive";
 import { ResourceRow, type LogContext } from "./resource-row";
 
 export interface CurrentReleaseNodeProps {
@@ -11,9 +11,11 @@ export interface CurrentReleaseNodeProps {
 
 function meta(release: StackRelease): string {
   const parts: string[] = [];
-  if (release.snapshot_revision) parts.push(`config ${release.snapshot_revision.slice(0, 7)}`);
+  const when = formatReleaseTime(release.completed_at);
+  if (when) parts.push(`deployed ${when}`);
   const dur = formatDuration(release.rendered_at, release.completed_at);
   if (dur !== "—") parts.push(`took ${dur}`);
+  if (release.snapshot_revision) parts.push(`config ${release.snapshot_revision.slice(0, 7)}`);
   return parts.join(" · ");
 }
 
