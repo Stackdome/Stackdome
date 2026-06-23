@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import type { Stack } from "@/api/stacks";
-import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration } from "../derive";
+import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime } from "../derive";
 import { deriveStages, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone } from "../derive";
 import type { StackRelease } from "@/api/releases";
 
@@ -92,6 +92,23 @@ describe("stateTone", () => {
     expect(stateTone("InProgress")).toBe("amber");
     expect(stateTone("Superseded")).toBe("muted");
     expect(stateTone("Cancelled")).toBe("muted");
+  });
+});
+
+describe("formatReleaseTime", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("buckets by day with full 'today' / 'yesterday' words", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-22T10:00:00"));
+    expect(formatReleaseTime("2026-06-22T00:33:00")).toBe("today 00:33");
+    expect(formatReleaseTime("2026-06-21T23:56:00")).toBe("yesterday 23:56");
+    expect(formatReleaseTime("2026-06-03T09:02:00")).toBe("Jun 3 09:02");
+  });
+
+  it("returns empty for missing or invalid input", () => {
+    expect(formatReleaseTime(undefined)).toBe("");
+    expect(formatReleaseTime("not-a-date")).toBe("");
   });
 });
 

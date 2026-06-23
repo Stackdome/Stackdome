@@ -1,3 +1,4 @@
+import { format, isToday, isYesterday } from "date-fns";
 import type { components } from "@/api/types/openapi";
 import type { StackRelease } from "@/api/releases";
 import type { Stages } from "@/components/branded";
@@ -98,17 +99,15 @@ export function causeLabel(cause?: ReleaseCause): string {
   }
 }
 
-/** Short, day-relative timestamp for the history rail: "today 12:14", "yest 17:44", "Jun 3 09:02". */
+/** Short, day-relative timestamp for the history rail: "today 12:14", "yesterday 17:44", "Jun 3 09:02". */
 export function formatReleaseTime(iso?: string): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-  const dayStart = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-  const days = Math.round((dayStart(new Date()) - dayStart(d)) / 86_400_000);
-  if (days === 0) return `today ${time}`;
-  if (days === 1) return `yest ${time}`;
-  return `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${time}`;
+  const time = format(d, "HH:mm");
+  if (isToday(d)) return `today ${time}`;
+  if (isYesterday(d)) return `yesterday ${time}`;
+  return `${format(d, "MMM d")} ${time}`;
 }
 
 export function formatDuration(start?: string, end?: string): string {
