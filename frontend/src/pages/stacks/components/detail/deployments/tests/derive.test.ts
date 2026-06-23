@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { Stack } from "@/api/stacks";
 import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime } from "../derive";
-import { deriveStages, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone } from "../derive";
+import { deriveStages, deriveReleaseTitle, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone } from "../derive";
+import type { FailingResource } from "../derive";
 import type { StackRelease } from "@/api/releases";
 
 function release(partial: Partial<StackRelease>): StackRelease {
@@ -184,6 +185,25 @@ describe("deriveStages", () => {
     const failing = [{ name: "api", type: "build_failure" as const, stage: "build" as const, reason: "x" }];
     expect(deriveStages(stack, release({ state: "Pending", pins: imagePins }), failing))
       .toEqual({ build: "failed", deploy: "todo", ready: "todo" });
+  });
+});
+
+describe("deriveReleaseTitle", () => {
+  const buildFail: FailingResource = { name: "api", type: "build_failure", stage: "build", reason: "x" };
+  const crash: FailingResource = { name: "tooljet", type: "runtime_crash", stage: "runtime", reason: "x" };
+  const stages = { build: "done", deploy: "done", ready: "done" } as const;
+
+  it("names the failing resource for build / runtime crashes", () => {
+    expect(deriveReleaseTitle(release({ state: "InProgress" }), [buildFail], stages)).toBe("Build failed — api");
+    expect(deriveReleaseTitle(release({ state: "InProgress" }), [crash], stages)).toBe("Runtime crash — tooljet");
+  });
+  it("a terminal crash reads as Deploy failed", () => {
+    expect(deriveReleaseTitle(release({ state: "Failed" }), [crash], stages)).toBe("Deploy failed");
+  });
+  it("labels lifecycle states with no failures", () => {
+    expect(deriveReleaseTitle(release({ state: "Released" }), [], stages)).toBe("Released");
+    expect(deriveReleaseTitle(release({ state: "Pending" }), [], { build: "active", deploy: "todo", ready: "todo" })).toBe("Build queued");
+    expect(deriveReleaseTitle(release({ state: "Pending" }), [], { build: "skipped", deploy: "active", ready: "todo" })).toBe("Deploying");
   });
 });
 

@@ -179,6 +179,29 @@ export function deriveStages(stack: Stack, release: StackRelease, failing: Faili
   return { build: "todo", deploy: "todo", ready: "todo" };
 }
 
+/**
+ * Short human title shown after the sequence on the live release card, e.g.
+ * "Runtime crash — tooljet", "Build failed — api", "Deploy failed", "Build queued".
+ * Mirrors the Deploy Timeline design's per-scenario kind labels.
+ */
+export function deriveReleaseTitle(release: StackRelease, failing: FailingResource[], stages: Stages): string {
+  const state = release.state ?? "";
+  const build = failing.find((f) => f.type === "build_failure");
+  const crash = failing.find((f) => f.type === "runtime_crash");
+  if (build) return `Build failed — ${build.name}`;
+  // A terminal Failed crash reads as "Deploy failed"; an in-flight one names the resource.
+  if (crash && state !== "Failed") return `Runtime crash — ${crash.name}`;
+  switch (state) {
+    case "Pending": return stages.build === "active" ? "Build queued" : "Deploying";
+    case "InProgress": return "Deploying";
+    case "Failed": return "Deploy failed";
+    case "Released": return "Released";
+    case "Superseded": return "Superseded";
+    case "Cancelled": return "Cancelled";
+    default: return state;
+  }
+}
+
 export type Tone = "ok" | "amber" | "err" | "muted";
 
 export function phaseTone(phase: string): Tone {

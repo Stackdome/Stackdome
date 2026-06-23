@@ -1,7 +1,7 @@
 import { StatusPill, StageTracker, variantFromState } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
-import { deriveStages, deriveFailingResources, deriveRecovered, formatDuration, formatReleaseTime } from "../derive";
+import { deriveStages, deriveFailingResources, deriveRecovered, deriveReleaseTitle, formatDuration, formatReleaseTime } from "../derive";
 import { ResourceRow, type LogContext } from "./resource-row";
 
 const NON_TERMINAL = new Set(["Pending", "InProgress"]);
@@ -29,6 +29,7 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onC
   const recoveredNames = new Set(recovered.map((r) => r.name));
   const failingByName = new Map(failing.map((f) => [f.name, f]));
   const stages = deriveStages(stack, release, failing);
+  const title = deriveReleaseTitle(release, failing, stages);
   const summaries = stack.status?.resources ?? [];
   const releaseLevelError = release.state === "Failed" && failing.length === 0 && release.message;
 
@@ -37,7 +38,8 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onC
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <StatusPill variant={variantFromState(release.state ?? "")}>{release.state}</StatusPill>
-          <span className="font-sans text-[16px] font-semibold text-foreground">#{release.sequence}</span>
+          <span className="flex-none font-sans text-[16px] font-semibold text-foreground">#{release.sequence}</span>
+          <span className="min-w-0 truncate font-sans text-[14px] text-fg-muted">{title}</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="font-mono text-[11px] text-fg-muted">{meta(release)}</span>

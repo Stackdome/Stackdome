@@ -23,7 +23,8 @@ function Wrap({ release, st, onCancel }: { release: StackRelease; st: Stack; onC
 describe("CurrentReleaseNode", () => {
   it("renders status, sequence and a Ready resource row", () => {
     render(<Wrap release={{ id: "r1", sequence: 14, state: "Released", snapshot_revision: "abcdef1234" } as StackRelease} st={stack()} />);
-    expect(screen.getByText("Released")).toBeInTheDocument();
+    // "Released" appears twice: the state pill and the derived kind-title.
+    expect(screen.getAllByText("Released").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("#14")).toBeInTheDocument();
     expect(screen.getByText("web")).toBeInTheDocument();
   });
