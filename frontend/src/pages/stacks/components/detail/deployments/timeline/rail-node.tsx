@@ -12,8 +12,8 @@ export function RailNode({ tone, big, pulse, isLast, children }: RailNodeProps) 
           className={[
             "flex-none rounded-full",
             // Align the dot with the first line of content: the big card header
-            // sits ~2px down; a single-line history row's text centers ~9px down.
-            big ? "mt-0.5 h-[15px] w-[15px] border-2 border-current bg-background" : "mt-[9px] h-2.5 w-2.5",
+            // sits ~2px down; a single-line history row's text centers ~15px down.
+            big ? "mt-0.5 h-[15px] w-[15px] border-2 border-current bg-background" : "mt-[15px] h-2.5 w-2.5",
             big ? toneDotClass(tone).replace("bg-", "text-") : toneDotClass(tone),
             pulse ? "animate-pulse" : "",
           ].join(" ")}
