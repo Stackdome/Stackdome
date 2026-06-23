@@ -3958,6 +3958,15 @@ export interface paths {
                     };
                     content?: never;
                 };
+                /** @description Secret is in use and cannot be deleted */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
                 /** @description Internal server error */
                 500: {
                     headers: {
@@ -4147,6 +4156,15 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+                /** @description Volume is in use and cannot be deleted */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
                 };
                 /** @description Internal server error */
                 500: {
@@ -4482,6 +4500,15 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+                /** @description PostgreSQL addon is in use and cannot be deleted */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
                 };
                 /** @description Internal server error */
                 500: {
@@ -6173,11 +6200,29 @@ export interface components {
             annotations?: components["schemas"]["Annotation"][];
             readonly revision?: string;
             spec: components["schemas"]["StackSpec"];
+            settings?: components["schemas"]["StackSettings"];
             readonly status?: components["schemas"]["StackStatus"];
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
             readonly updated_at?: string;
+        };
+        StackSettings: {
+            /**
+             * @description Maximum total releases to retain per stack
+             * @default 10
+             */
+            release_retention_limit: number;
+            /**
+             * @description Minimum number of successful releases to always keep
+             * @default 5
+             */
+            min_successful_releases: number;
+            /**
+             * @description Minutes to wait for a deploy to converge before marking it failed
+             * @default 15
+             */
+            deploy_timeout_minutes: number;
         };
         StackList: {
             items?: components["schemas"]["Stack"][];
@@ -7090,9 +7135,42 @@ export interface components {
             /** Format: date-time */
             completed_at?: string;
         };
+        StackReleaseDetail: components["schemas"]["StackRelease"] & {
+            snapshot?: components["schemas"]["StackReleaseSnapshot"];
+        };
+        StackReleaseSnapshot: {
+            stack?: {
+                id?: string;
+                organisation_id?: string;
+                team_id?: string;
+                cluster_id?: string;
+                user_id?: string;
+                name?: string;
+                namespace_id?: string;
+                namespace?: string;
+                labels?: {
+                    [key: string]: string;
+                };
+                annotations?: {
+                    [key: string]: string;
+                };
+            };
+            resources?: components["schemas"]["StackResource"][];
+            volumes?: components["schemas"]["Volume"][];
+            connections?: components["schemas"]["StackConnection"][];
+            /** Format: date-time */
+            captured_at?: string;
+        };
         StackReleaseList: {
             items?: components["schemas"]["StackRelease"][];
+            /** @description Total number of records */
             total?: number;
+            /** @description Current page number */
+            page?: number;
+            /** @description Number of items per page */
+            page_size?: number;
+            /** @description Total number of pages */
+            total_pages?: number;
         };
         ReleaseCause: {
             kind?: components["schemas"]["ReleaseCauseKind"];
@@ -7167,7 +7245,14 @@ export type $defs = Record<string, never>;
 export interface operations {
     listReleases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter by release state */
+                state?: components["schemas"]["StackReleaseState"];
+                /** @description Page number */
+                page?: number;
+                /** @description Number of items per page */
+                page_size?: number;
+            };
             header?: never;
             path: {
                 /** @description The ID of the organization */
@@ -7246,7 +7331,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StackRelease"];
+                    "application/json": components["schemas"]["StackReleaseDetail"];
                 };
             };
         };

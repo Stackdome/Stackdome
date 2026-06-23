@@ -571,6 +571,14 @@ const StackSpec = z
     connections: z.array(StackConnection).optional(),
   })
   .passthrough();
+const StackSettings = z
+  .object({
+    release_retention_limit: z.number().int().default(10),
+    min_successful_releases: z.number().int().default(5),
+    deploy_timeout_minutes: z.number().int().default(15),
+  })
+  .partial()
+  .passthrough();
 const StackConvergenceRecord = z
   .object({
     revision: z.string(),
@@ -617,6 +625,7 @@ const Stack = z
     annotations: z.array(Annotation).optional(),
     revision: z.string().optional(),
     spec: StackSpec,
+    settings: StackSettings.optional(),
     status: StackStatus.optional(),
     created_at: z.string().datetime({ offset: true }).optional(),
     updated_at: z.string().datetime({ offset: true }).optional(),
@@ -858,9 +867,42 @@ const StackRelease = z
   .partial()
   .passthrough();
 const StackReleaseList = z
-  .object({ items: z.array(StackRelease), total: z.number().int() })
+  .object({
+    items: z.array(StackRelease),
+    total: z.number().int(),
+    page: z.number().int(),
+    page_size: z.number().int(),
+    total_pages: z.number().int(),
+  })
   .partial()
   .passthrough();
+const StackReleaseSnapshot = z
+  .object({
+    stack: z
+      .object({
+        id: z.string(),
+        organisation_id: z.string(),
+        team_id: z.string(),
+        cluster_id: z.string(),
+        user_id: z.string(),
+        name: z.string(),
+        namespace_id: z.string(),
+        namespace: z.string(),
+        labels: z.record(z.string()),
+        annotations: z.record(z.string()),
+      })
+      .partial()
+      .passthrough(),
+    resources: z.array(StackResource),
+    volumes: z.array(Volume),
+    connections: z.array(StackConnection),
+    captured_at: z.string().datetime({ offset: true }),
+  })
+  .partial()
+  .passthrough();
+const StackReleaseDetail = StackRelease.and(
+  z.object({ snapshot: StackReleaseSnapshot }).partial().passthrough()
+);
 const PostgresVersion = z
   .object({
     major: z.number().int().gte(13).lte(17),
@@ -1280,6 +1322,7 @@ export const schemas = {
   StackConnectionConfig,
   StackConnection,
   StackSpec,
+  StackSettings,
   StackConvergenceRecord,
   StackResourceSummary,
   StackStatus,
@@ -1321,6 +1364,8 @@ export const schemas = {
   ReleaseOutcome,
   StackRelease,
   StackReleaseList,
+  StackReleaseSnapshot,
+  StackReleaseDetail,
   PostgresVersion,
   PostgresInstances,
   PostgresStorage,
@@ -2788,6 +2833,11 @@ const endpoints = makeApi([
         schema: z.void(),
       },
       {
+        status: 409,
+        description: `PostgreSQL addon is in use and cannot be deleted`,
+        schema: Error,
+      },
+      {
         status: 500,
         description: `Internal server error`,
         schema: Error,
@@ -3692,6 +3742,11 @@ const endpoints = makeApi([
         schema: z.void(),
       },
       {
+        status: 409,
+        description: `Secret is in use and cannot be deleted`,
+        schema: Error,
+      },
+      {
         status: 500,
         description: `Internal server error`,
         schema: z.void(),
@@ -4333,6 +4388,30 @@ const endpoints = makeApi([
         type: "Path",
         schema: z.string(),
       },
+      {
+        name: "state",
+        type: "Query",
+        schema: z
+          .enum([
+            "Pending",
+            "InProgress",
+            "Released",
+            "Failed",
+            "Superseded",
+            "Cancelled",
+          ])
+          .optional(),
+      },
+      {
+        name: "page",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "page_size",
+        type: "Query",
+        schema: z.number().int().optional().default(20),
+      },
     ],
     response: StackReleaseList,
   },
@@ -4363,7 +4442,7 @@ const endpoints = makeApi([
         schema: z.string(),
       },
     ],
-    response: StackRelease,
+    response: StackReleaseDetail,
   },
   {
     method: "post",
@@ -4839,6 +4918,11 @@ const endpoints = makeApi([
         status: 404,
         description: `Volume not found`,
         schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Volume is in use and cannot be deleted`,
+        schema: Error,
       },
       {
         status: 500,
