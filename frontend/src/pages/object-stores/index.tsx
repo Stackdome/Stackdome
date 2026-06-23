@@ -69,32 +69,27 @@ export default function ObjectStoresPage() {
           }
         />
 
-        <Panel
-          title="Organization Object Stores"
-          count={objectStores.length}
-          bodyClassName={objectStores.length === 0 ? "p-5" : "p-0"}
-        >
-          {objectStores.length === 0 ? (
-            <EmptyState
-              icon={<Cloud className="h-8 w-8" />}
-              title="No Object Stores yet"
-              description="Add an S3-compatible bucket, Azure container, or GCS bucket to use as a backup destination."
-              action={
-                canWriteAnyTeam ? (
-                  <Button
-                    onClick={() => {
-                      setEditingStore(null);
-                      setShowAddDialog(true);
-                    }}
-                    variant="outline"
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                    New Object Store
-                  </Button>
-                ) : undefined
-              }
-            />
-          ) : (
+        {objectStores.length === 0 ? (
+          <EmptyState
+            icon={<Cloud className="h-8 w-8" />}
+            title="No Object Stores yet"
+            description="Add an S3-compatible bucket, Azure container, or GCS bucket to use as a backup destination."
+            action={
+              canWriteAnyTeam ? (
+                <Button
+                  onClick={() => {
+                    setEditingStore(null);
+                    setShowAddDialog(true);
+                  }}
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  New Object Store
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <Panel title="Organization Object Stores" count={objectStores.length} bodyClassName="p-0">
             <ObjectStoreList
               objectStores={objectStores}
               onEdit={(store) => {
@@ -104,8 +99,8 @@ export default function ObjectStoresPage() {
               onDelete={(store) => setDeletingStore(store)}
               canWrite={(teamId?: string) => canWrite(teamId ?? "")}
             />
-          )}
-        </Panel>
+          </Panel>
+        )}
 
         <ObjectStoreFormDialog
           open={showAddDialog}

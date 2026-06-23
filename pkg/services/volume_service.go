@@ -37,10 +37,10 @@ type VolumeService interface {
 }
 
 type VolumeServiceSpec struct {
-	SessionFactory         db.SessionFactory
-	ConnectionUsageChecker connectionUsageChecker
-	Logger                 logger.Logger
-	Permissions            auth.PermissionService
+	SessionFactory   db.SessionFactory
+	ReferenceService ReferenceService
+	Logger           logger.Logger
+	Permissions      auth.PermissionService
 }
 
 func NewVolumeService(spec VolumeServiceSpec) VolumeService {
@@ -51,16 +51,16 @@ func NewVolumeService(spec VolumeServiceSpec) VolumeService {
 		stackVolumeStore: pgstore.NewStackVolumeStore(pgstore.StackVolumeStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		connectionUsageChecker: spec.ConnectionUsageChecker,
-		logger:                 spec.Logger,
-		permissions:            spec.Permissions,
+		referenceService: spec.ReferenceService,
+		logger:           spec.Logger,
+		permissions:      spec.Permissions,
 	}
 }
 
 type volumeService struct {
 	volumeStore            stores.VolumeStore
 	stackVolumeStore       stores.StackVolumeStore
-	connectionUsageChecker connectionUsageChecker
+	referenceService       ReferenceService
 	clusterResourceService clusterresource.VolumeClusterResourceService
 	logger                 logger.Logger
 	permissions            auth.PermissionService
@@ -310,8 +310,12 @@ func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 	if permErr := s.permissions.Check(ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
-	if err := s.validateVolumeNotReferencedByConnections(ctx, volume); err != nil {
-		return err
+	inUse, refs, refErr := s.referenceService.IsReferentInUse(ctx, models.ReferentVolume, volume.ID)
+	if refErr != nil {
+		return refErr
+	}
+	if inUse {
+		return errors.Conflict("volume '%s' is in use by %s and cannot be deleted", volume.ID, describeReferences(refs))
 	}
 
 	deleteErr := s.volumeStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
@@ -340,8 +344,12 @@ func (s *volumeService) InternalDeleteFromDB(ctx context.Context, ID string) *er
 	if err != nil {
 		return err
 	}
-	if err := s.validateVolumeNotReferencedByConnections(ctx, volume); err != nil {
-		return err
+	inUse, refs, refErr := s.referenceService.IsReferentInUse(ctx, models.ReferentVolume, volume.ID)
+	if refErr != nil {
+		return refErr
+	}
+	if inUse {
+		return errors.Conflict("volume '%s' is in use by %s and cannot be deleted", volume.ID, describeReferences(refs))
 	}
 	if err := s.volumeStore.Delete(ctx, ID); err != nil {
 		return err
@@ -371,8 +379,12 @@ func (s *volumeService) DeleteWithTx(ctx context.Context, ID string) *errors.Ser
 		s.logger.Errorf("failed to get volume for deletion: %v", err)
 		return err
 	}
-	if err := s.validateVolumeNotReferencedByConnections(ctx, volume); err != nil {
-		return err
+	inUse, refs, refErr := s.referenceService.IsReferentInUse(ctx, models.ReferentVolume, volume.ID)
+	if refErr != nil {
+		return refErr
+	}
+	if inUse {
+		return errors.Conflict("volume '%s' is in use by %s and cannot be deleted", volume.ID, describeReferences(refs))
 	}
 
 	cErr := s.clusterResourceService.DeleteVolumeInCluster(ctx, volume)
@@ -384,28 +396,6 @@ func (s *volumeService) DeleteWithTx(ctx context.Context, ID string) *errors.Ser
 	if err != nil {
 		s.logger.Errorf("failed to delete volume: %v", err)
 		return err
-	}
-	return nil
-}
-
-func (s *volumeService) validateVolumeNotReferencedByConnections(ctx context.Context, volume *models.Volume) *errors.ServiceError {
-	stackVolume, err := s.stackVolumeStore.GetByVolumeID(ctx, volume.ID)
-	if err != nil {
-		if err.Is404() {
-			return nil
-		}
-		return err
-	}
-
-	inUse, usageErr := s.connectionUsageChecker.IsNodeReferenced(ctx, stackVolume.StackID, models.TopologyNodeRef{
-		Type: models.TopologyNodeTypeVolume,
-		Name: volume.Name,
-	})
-	if usageErr != nil {
-		return errors.GeneralError("failed to check connection usages for volume ID %s: %s", volume.ID, usageErr.Error())
-	}
-	if inUse {
-		return errors.BadRequest("volume is in use by one or more stack connections")
 	}
 	return nil
 }

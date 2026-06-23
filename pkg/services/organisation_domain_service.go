@@ -88,7 +88,7 @@ func (s *organisationDomainService) InternalDeleteWithTx(ctx context.Context, id
 		return err
 	}
 	if len(domainsInUse) > 0 {
-		return errors.BadRequest("cannot delete domain '%s' as it is in use by stacks", domain.Domain)
+		return errors.Conflict("cannot delete domain '%s' as it is in use by stacks", domain.Domain)
 	}
 	return s.organisationDomainStore.DeleteWithTx(ctx, id)
 }
@@ -133,7 +133,7 @@ func (s *organisationDomainService) Delete(ctx context.Context, id string) *erro
 		return err
 	}
 	if len(domainsInUse) > 0 {
-		return errors.BadRequest("cannot delete domain '%s' as it is in use by stacks", domain.Domain)
+		return errors.Conflict("cannot delete domain '%s' as it is in use by stacks", domain.Domain)
 	}
 
 	return s.organisationDomainStore.Delete(ctx, id)

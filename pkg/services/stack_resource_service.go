@@ -17,8 +17,6 @@ import (
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
 
-//go:generate mockgen -source=stack_resource_service.go -destination=stack_resource_service_mock.go -package=services
-
 type StackResourceService interface {
 	InjectClusterManager(clusterManager clustermanager.ClusterManager)
 	Create(ctx context.Context, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
@@ -46,6 +44,7 @@ type StackResourceServiceSpec struct {
 	StackResourceStore     stores.StackResourceStore
 	ClusterRegistryService ImageRegistryService
 	StackDomainService     StackDomainsService
+	ReferenceService       ReferenceService
 }
 
 type stackResourceService struct {
@@ -59,6 +58,7 @@ type stackResourceService struct {
 	permissions            auth.PermissionService
 	clusterRegistryService ImageRegistryService
 	domainNameService      StackDomainsService
+	referenceService       ReferenceService
 }
 
 func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService {
@@ -78,6 +78,7 @@ func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService
 		permissions:            spec.Permissions,
 		clusterRegistryService: spec.ClusterRegistryService,
 		domainNameService:      spec.StackDomainService,
+		referenceService:       spec.ReferenceService,
 	}
 }
 
@@ -98,7 +99,10 @@ func (s *stackResourceService) Create(ctx context.Context, resource *models.Stac
 	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 		var createErr *errors.ServiceError
 		created, createErr = s.InternalCreateWithTx(txCtx, stack, resource)
-		return createErr
+		if createErr != nil {
+			return createErr
+		}
+		return s.referenceService.ReprojectSpec(txCtx, stack.ID)
 	}); err != nil {
 		return nil, err
 	}
@@ -128,7 +132,10 @@ func (s *stackResourceService) Update(ctx context.Context, stackID, resourceName
 	if txErr := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 		var updateErr *errors.ServiceError
 		updated, updateErr = s.InternalUpdateWithTx(txCtx, stack, existing.ID, resource)
-		return updateErr
+		if updateErr != nil {
+			return updateErr
+		}
+		return s.referenceService.ReprojectSpec(txCtx, stackID)
 	}); txErr != nil {
 		return nil, txErr
 	}
@@ -247,7 +254,10 @@ func (s *stackResourceService) Delete(ctx context.Context, stackID, resourceName
 	}
 
 	return s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		return s.InternalDeleteWithTx(txCtx, existing.ID)
+		if err := s.InternalDeleteWithTx(txCtx, existing.ID); err != nil {
+			return err
+		}
+		return s.referenceService.ReprojectSpec(txCtx, stackID)
 	})
 }
 

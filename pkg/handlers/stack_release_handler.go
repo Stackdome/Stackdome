@@ -40,7 +40,7 @@ func (h *stackReleaseHandler) Create(w http.ResponseWriter, r *http.Request) {
 			}
 
 			identity := auth.GetIdentityFromCtx(r.Context())
-			detail := ""
+			var detail string
 			if identity != nil {
 				detail = "triggered by " + identity.UserID
 			}
@@ -63,11 +63,12 @@ func (h *stackReleaseHandler) List(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
 			stackID := mux.Vars(r)["id"]
-			releases, err := h.releaseService.ListReleases(r.Context(), stackID)
+			params := parseListParams(r, []string{"state"})
+			result, err := h.releaseService.ListReleases(r.Context(), stackID, params)
 			if err != nil {
 				return nil, err
 			}
-			return presenters.PresentStackReleaseList(releases), nil
+			return presenters.PresentStackReleaseList(result), nil
 		},
 	}
 	handleList(w, r, cfg)
@@ -81,7 +82,7 @@ func (h *stackReleaseHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return nil, err
 			}
-			return presenters.PresentStackRelease(release), nil
+			return presenters.PresentStackReleaseDetail(release), nil
 		},
 	}
 	handleGet(w, r, cfg)

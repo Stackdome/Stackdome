@@ -7,13 +7,14 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
+//go:generate mockgen -source=stack_release_store.go -destination=../mocks/mock_stack_release_store.go -package=mocks
 type StackReleaseStore interface {
 	// Create inserts a new release with sequence = max(sequence)+1.
 	Create(ctx context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError)
 
 	GetByID(ctx context.Context, id string) (*models.StackRelease, *errors.ServiceError)
 
-	ListByStackID(ctx context.Context, stackID string) ([]*models.StackRelease, *errors.ServiceError)
+	ListByStackID(ctx context.Context, stackID string, params ListParams) (*PaginatedResult[*models.StackRelease], *errors.ServiceError)
 
 	// ListActive returns all non-terminal releases across all stacks.
 	ListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
@@ -35,6 +36,17 @@ type StackReleaseStore interface {
 
 	// AppendImageDigests merges image digests into the release pins.
 	AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError
+
+	// ListTerminalSummariesByStackID returns lightweight release summaries for GC decisions.
+	// Only terminal-state releases are returned — active releases are never GC candidates.
+	ListTerminalSummariesByStackID(ctx context.Context, stackID string) ([]models.ReleaseSummary, *errors.ServiceError)
+
+	// DeleteByIDs removes releases by their IDs.
+	DeleteByIDs(ctx context.Context, ids []string) *errors.ServiceError
+
+	// ListStackIDsExceedingRetention returns stack IDs that have more than `cap`
+	// terminal releases — candidates for periodic GC.
+	ListStackIDsExceedingRetention(ctx context.Context, cap int) ([]string, *errors.ServiceError)
 
 	AtomicExecutor
 }

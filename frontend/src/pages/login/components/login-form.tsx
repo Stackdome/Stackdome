@@ -11,6 +11,7 @@ import { setAuthSession } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { FormHead, FieldLabel } from "@/pages/auth/components/auth-shell";
+import { GitHubSignInButton } from "@/components/auth/github-sign-in-button";
 
 export function LoginForm() {
   const [formData, setFormData] = useState<LoginFormData>({ email: "", password: "" });
@@ -139,6 +140,8 @@ export function LoginForm() {
             </>
           )}
         </Button>
+
+        <GitHubSignInButton />
       </form>
     </div>
   );

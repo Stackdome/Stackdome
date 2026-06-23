@@ -41,6 +41,24 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: Internal server error
       summary: Create new user
+  /api/v1/config:
+    get:
+      description: "Returns feature flags the web client needs before authentication,\
+        \ such as whether GitHub OAuth is enabled."
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppConfigResponse'
+          description: Application configuration
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      summary: Get public application configuration
   /api/v1/users/{id}:
     get:
       description: Get a user
@@ -2508,6 +2526,32 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Filter by release state
+        explode: true
+        in: query
+        name: state
+        required: false
+        schema:
+          $ref: '#/components/schemas/StackReleaseState'
+        style: form
+      - description: Page number
+        explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          type: integer
+        style: form
+      - description: Number of items per page
+        explode: true
+        in: query
+        name: page_size
+        required: false
+        schema:
+          default: 20
+          type: integer
+        style: form
       responses:
         "200":
           content:
@@ -2604,7 +2648,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StackRelease'
+                $ref: '#/components/schemas/StackReleaseDetail'
           description: Release details
       security:
       - Bearer: []
@@ -2767,6 +2811,12 @@ paths:
           description: Unauthorized
         "403":
           description: Forbidden
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Secret is in use and cannot be deleted
         "500":
           description: Internal server error
       security:
@@ -2947,6 +2997,12 @@ paths:
           description: Unauthorized
         "403":
           description: Forbidden
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Volume is in use and cannot be deleted
         "500":
           description: Internal server error
       security:
@@ -3130,6 +3186,12 @@ paths:
           description: Forbidden
         "404":
           description: PostgresAddon not found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: PostgreSQL addon is in use and cannot be deleted
         "500":
           content:
             application/json:
@@ -4295,6 +4357,14 @@ components:
         type: string
       style: simple
   schemas:
+    AppConfigResponse:
+      example:
+        github_oauth: true
+      properties:
+        github_oauth:
+          description: True when GitHub OAuth login is configured on the server.
+          type: boolean
+      type: object
     Organisation:
       example:
         updated_at: 2000-01-23T04:56:07.000+00:00
@@ -5460,6 +5530,10 @@ components:
       type: object
     Stack:
       example:
+        settings:
+          deploy_timeout_minutes: 2
+          min_successful_releases: 3
+          release_retention_limit: 9
         annotations:
         - value: value
           key: key
@@ -5970,18 +6044,18 @@ components:
             revision: revision
           resources:
           - phase: phase
-            updated_replicas: 3
-            available_replicas: 9
-            replicas: 2
+            updated_replicas: 7
+            available_replicas: 4
+            replicas: 1
             name: name
             missing: true
             converged_revision: converged_revision
             message: message
             observed_revision: observed_revision
           - phase: phase
-            updated_replicas: 3
-            available_replicas: 9
-            replicas: 2
+            updated_replicas: 7
+            available_replicas: 4
+            replicas: 1
             name: name
             missing: true
             converged_revision: converged_revision
@@ -6035,6 +6109,8 @@ components:
           type: string
         spec:
           $ref: '#/components/schemas/StackSpec'
+        settings:
+          $ref: '#/components/schemas/StackSettings'
         status:
           $ref: '#/components/schemas/StackStatus'
         created_at:
@@ -6049,11 +6125,35 @@ components:
       - name
       - spec
       type: object
+    StackSettings:
+      example:
+        deploy_timeout_minutes: 2
+        min_successful_releases: 3
+        release_retention_limit: 9
+      properties:
+        release_retention_limit:
+          default: 10
+          description: Maximum total releases to retain per stack
+          type: integer
+        min_successful_releases:
+          default: 5
+          description: Minimum number of successful releases to always keep
+          type: integer
+        deploy_timeout_minutes:
+          default: 15
+          description: Minutes to wait for a deploy to converge before marking it
+            failed
+          type: integer
+      type: object
     StackList:
       example:
-        total: 4
+        total: 1
         items:
-        - annotations:
+        - settings:
+            deploy_timeout_minutes: 2
+            min_successful_releases: 3
+            release_retention_limit: 9
+          annotations:
           - value: value
             key: key
           - value: value
@@ -6563,18 +6663,18 @@ components:
               revision: revision
             resources:
             - phase: phase
-              updated_replicas: 3
-              available_replicas: 9
-              replicas: 2
+              updated_replicas: 7
+              available_replicas: 4
+              replicas: 1
               name: name
               missing: true
               converged_revision: converged_revision
               message: message
               observed_revision: observed_revision
             - phase: phase
-              updated_replicas: 3
-              available_replicas: 9
-              replicas: 2
+              updated_replicas: 7
+              available_replicas: 4
+              replicas: 1
               name: name
               missing: true
               converged_revision: converged_revision
@@ -6597,7 +6697,11 @@ components:
               observed_generation: 1
               status: status
             observed_revision: observed_revision
-        - annotations:
+        - settings:
+            deploy_timeout_minutes: 2
+            min_successful_releases: 3
+            release_retention_limit: 9
+          annotations:
           - value: value
             key: key
           - value: value
@@ -7107,18 +7211,18 @@ components:
               revision: revision
             resources:
             - phase: phase
-              updated_replicas: 3
-              available_replicas: 9
-              replicas: 2
+              updated_replicas: 7
+              available_replicas: 4
+              replicas: 1
               name: name
               missing: true
               converged_revision: converged_revision
               message: message
               observed_revision: observed_revision
             - phase: phase
-              updated_replicas: 3
-              available_replicas: 9
-              replicas: 2
+              updated_replicas: 7
+              available_replicas: 4
+              replicas: 1
               name: name
               missing: true
               converged_revision: converged_revision
@@ -7734,18 +7838,18 @@ components:
           revision: revision
         resources:
         - phase: phase
-          updated_replicas: 3
-          available_replicas: 9
-          replicas: 2
+          updated_replicas: 7
+          available_replicas: 4
+          replicas: 1
           name: name
           missing: true
           converged_revision: converged_revision
           message: message
           observed_revision: observed_revision
         - phase: phase
-          updated_replicas: 3
-          available_replicas: 9
-          replicas: 2
+          updated_replicas: 7
+          available_replicas: 4
+          replicas: 1
           name: name
           missing: true
           converged_revision: converged_revision
@@ -11564,9 +11668,35 @@ components:
           format: date-time
           type: string
       type: object
+    StackReleaseDetail:
+      allOf:
+      - $ref: '#/components/schemas/StackRelease'
+      - $ref: '#/components/schemas/StackReleaseDetail_allOf'
+    StackReleaseSnapshot:
+      properties:
+        stack:
+          $ref: '#/components/schemas/StackReleaseSnapshot_stack'
+        resources:
+          items:
+            $ref: '#/components/schemas/StackResource'
+          type: array
+        volumes:
+          items:
+            $ref: '#/components/schemas/Volume'
+          type: array
+        connections:
+          items:
+            $ref: '#/components/schemas/StackConnection'
+          type: array
+        captured_at:
+          format: date-time
+          type: string
+      type: object
     StackReleaseList:
       example:
         total: 5
+        page: 5
+        total_pages: 7
         items:
         - cause:
             kind: null
@@ -11628,12 +11758,23 @@ components:
                 ready_replicas: 6
                 replicas: 1
                 message: message
+        page_size: 2
       properties:
         items:
           items:
             $ref: '#/components/schemas/StackRelease'
           type: array
         total:
+          description: Total number of records
+          type: integer
+        page:
+          description: Current page number
+          type: integer
+        page_size:
+          description: Number of items per page
+          type: integer
+        total_pages:
+          description: Total number of pages
           type: integer
       type: object
     ReleaseCause:
@@ -11722,9 +11863,9 @@ components:
     StackResourceSummary:
       example:
         phase: phase
-        updated_replicas: 3
-        available_replicas: 9
-        replicas: 2
+        updated_replicas: 7
+        available_replicas: 4
+        replicas: 1
         name: name
         missing: true
         converged_revision: converged_revision
@@ -12061,6 +12202,38 @@ components:
         ca_certificate_secret_id:
           description: Secret containing CA certificate
           type: string
+      type: object
+    StackReleaseDetail_allOf:
+      properties:
+        snapshot:
+          $ref: '#/components/schemas/StackReleaseSnapshot'
+      type: object
+    StackReleaseSnapshot_stack:
+      properties:
+        id:
+          type: string
+        organisation_id:
+          type: string
+        team_id:
+          type: string
+        cluster_id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+        namespace_id:
+          type: string
+        namespace:
+          type: string
+        labels:
+          additionalProperties:
+            type: string
+          type: object
+        annotations:
+          additionalProperties:
+            type: string
+          type: object
       type: object
   securitySchemes:
     Bearer:

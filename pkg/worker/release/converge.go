@@ -54,8 +54,9 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, release *models.Stac
 		}
 	}
 
-	if release.RenderedAt != nil && time.Since(*release.RenderedAt) > convergenceTimeout {
-		msg := fmt.Sprintf("timed out waiting for convergence after %s", convergenceTimeout)
+	deployTimeout := time.Duration(latest.EffectiveSettings().DeployTimeoutMinutes) * time.Minute
+	if release.RenderedAt != nil && time.Since(*release.RenderedAt) > deployTimeout {
+		msg := fmt.Sprintf("timed out waiting for convergence after %s", deployTimeout)
 		outcome := buildOutcome(latest, release)
 		if _, markErr := r.releaseService.MarkFailed(ctx, release.ID, msg, &outcome); markErr != nil {
 			return resultNil, fmt.Errorf("failed to mark failed: %w", markErr)

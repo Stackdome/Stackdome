@@ -5,6 +5,7 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"k8s.io/utils/ptr"
 )
 
@@ -80,13 +81,67 @@ func presentReleaseOutcome(o *models.ReleaseOutcome) *openapi.ReleaseOutcome {
 	return result
 }
 
-func PresentStackReleaseList(releases []*models.StackRelease) openapi.StackReleaseList {
-	items := make([]openapi.StackRelease, len(releases))
-	for i, r := range releases {
+func PresentStackReleaseDetail(r *models.StackRelease) openapi.StackReleaseDetail {
+	base := PresentStackRelease(r)
+	detail := openapi.StackReleaseDetail{
+		Id:               base.Id,
+		StackId:          base.StackId,
+		Sequence:         base.Sequence,
+		State:            base.State,
+		Message:          base.Message,
+		Cause:            base.Cause,
+		SnapshotRevision: base.SnapshotRevision,
+		ManifestRevision: base.ManifestRevision,
+		RendererVersion:  base.RendererVersion,
+		Pins:             base.Pins,
+		Outcome:          base.Outcome,
+		CreatedBy:        base.CreatedBy,
+		CreatedAt:        base.CreatedAt,
+		UpdatedAt:        base.UpdatedAt,
+		RenderedAt:       base.RenderedAt,
+		CompletedAt:      base.CompletedAt,
+		Snapshot:         presentStackReleaseSnapshot(&r.Snapshot),
+	}
+	return detail
+}
+
+func presentStackReleaseSnapshot(s *models.StackSnapshot) *openapi.StackReleaseSnapshot {
+	if s == nil {
+		return nil
+	}
+	labels := s.Stack.Labels.ToMap()
+	annotations := s.Stack.Annotations.ToMap()
+	snap := &openapi.StackReleaseSnapshot{
+		Stack: &openapi.StackReleaseSnapshotStack{
+			Id:             &s.Stack.ID,
+			OrganisationId: &s.Stack.OrganisationID,
+			TeamId:         &s.Stack.TeamID,
+			ClusterId:      &s.Stack.ClusterID,
+			UserId:         &s.Stack.UserID,
+			Name:           &s.Stack.Name,
+			NamespaceId:    &s.Stack.NamespaceID,
+			Namespace:      &s.Stack.Namespace,
+			Labels:         &labels,
+			Annotations:    &annotations,
+		},
+		Resources:   PresentStackResourceList(s.Resources),
+		Volumes:     PresentVolumeList(s.Volumes, false),
+		Connections: PresentStackConnections(s.Connections),
+		CapturedAt:  &s.CapturedAt,
+	}
+	return snap
+}
+
+func PresentStackReleaseList(result *stores.PaginatedResult[*models.StackRelease]) openapi.StackReleaseList {
+	items := make([]openapi.StackRelease, len(result.Items))
+	for i, r := range result.Items {
 		items[i] = PresentStackRelease(r)
 	}
 	return openapi.StackReleaseList{
-		Items: items,
-		Total: ptr.To(int32(len(releases))),
+		Items:      items,
+		Total:      ptr.To(int32(result.Total)),
+		Page:       ptr.To(int32(result.Page)),
+		PageSize:   ptr.To(int32(result.PageSize)),
+		TotalPages: ptr.To(int32(result.TotalPages)),
 	}
 }

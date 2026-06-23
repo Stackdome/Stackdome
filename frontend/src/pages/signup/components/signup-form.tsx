@@ -11,6 +11,7 @@ import { signupSchema } from "../types";
 import { setAuthSession } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { FormHead, FieldLabel } from "@/pages/auth/components/auth-shell";
+import { GitHubSignInButton } from "@/components/auth/github-sign-in-button";
 
 export function SignupForm() {
   const [formData, setFormData] = useState<SignupFormData>({
@@ -193,6 +194,8 @@ export function SignupForm() {
             </>
           )}
         </Button>
+
+        <GitHubSignInButton />
       </form>
     </div>
   );

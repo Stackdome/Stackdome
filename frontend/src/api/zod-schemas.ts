@@ -62,6 +62,10 @@ const Error = ObjectReference.and(
     .partial()
     .passthrough()
 );
+const AppConfigResponse = z
+  .object({ github_oauth: z.boolean() })
+  .partial()
+  .passthrough();
 const Team = z
   .object({
     id: z.string().optional(),
@@ -1204,6 +1208,7 @@ export const schemas = {
   UserSignupResponse,
   ObjectReference,
   Error,
+  AppConfigResponse,
   Team,
   TeamList,
   LoginRequest,
@@ -1535,6 +1540,21 @@ const endpoints = makeApi([
         description: `Invalid or expired refresh token`,
         schema: Error,
       },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/config",
+    alias: "getApiv1config",
+    description: `Returns feature flags the web client needs before authentication, such as whether GitHub OAuth is enabled.`,
+    requestFormat: "json",
+    response: z.object({ github_oauth: z.boolean() }).partial().passthrough(),
+    errors: [
       {
         status: 500,
         description: `Internal server error`,

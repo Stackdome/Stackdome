@@ -17,7 +17,14 @@ import (
 // StackReleaseList struct for StackReleaseList
 type StackReleaseList struct {
 	Items []StackRelease `json:"items,omitempty"`
-	Total *int32         `json:"total,omitempty"`
+	// Total number of records
+	Total *int32 `json:"total,omitempty"`
+	// Current page number
+	Page *int32 `json:"page,omitempty"`
+	// Number of items per page
+	PageSize *int32 `json:"page_size,omitempty"`
+	// Total number of pages
+	TotalPages *int32 `json:"total_pages,omitempty"`
 }
 
 // NewStackReleaseList instantiates a new StackReleaseList object
@@ -101,6 +108,102 @@ func (o *StackReleaseList) SetTotal(v int32) {
 	o.Total = &v
 }
 
+// GetPage returns the Page field value if set, zero value otherwise.
+func (o *StackReleaseList) GetPage() int32 {
+	if o == nil || o.Page == nil {
+		var ret int32
+		return ret
+	}
+	return *o.Page
+}
+
+// GetPageOk returns a tuple with the Page field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackReleaseList) GetPageOk() (*int32, bool) {
+	if o == nil || o.Page == nil {
+		return nil, false
+	}
+	return o.Page, true
+}
+
+// HasPage returns a boolean if a field has been set.
+func (o *StackReleaseList) HasPage() bool {
+	if o != nil && o.Page != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetPage gets a reference to the given int32 and assigns it to the Page field.
+func (o *StackReleaseList) SetPage(v int32) {
+	o.Page = &v
+}
+
+// GetPageSize returns the PageSize field value if set, zero value otherwise.
+func (o *StackReleaseList) GetPageSize() int32 {
+	if o == nil || o.PageSize == nil {
+		var ret int32
+		return ret
+	}
+	return *o.PageSize
+}
+
+// GetPageSizeOk returns a tuple with the PageSize field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackReleaseList) GetPageSizeOk() (*int32, bool) {
+	if o == nil || o.PageSize == nil {
+		return nil, false
+	}
+	return o.PageSize, true
+}
+
+// HasPageSize returns a boolean if a field has been set.
+func (o *StackReleaseList) HasPageSize() bool {
+	if o != nil && o.PageSize != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetPageSize gets a reference to the given int32 and assigns it to the PageSize field.
+func (o *StackReleaseList) SetPageSize(v int32) {
+	o.PageSize = &v
+}
+
+// GetTotalPages returns the TotalPages field value if set, zero value otherwise.
+func (o *StackReleaseList) GetTotalPages() int32 {
+	if o == nil || o.TotalPages == nil {
+		var ret int32
+		return ret
+	}
+	return *o.TotalPages
+}
+
+// GetTotalPagesOk returns a tuple with the TotalPages field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackReleaseList) GetTotalPagesOk() (*int32, bool) {
+	if o == nil || o.TotalPages == nil {
+		return nil, false
+	}
+	return o.TotalPages, true
+}
+
+// HasTotalPages returns a boolean if a field has been set.
+func (o *StackReleaseList) HasTotalPages() bool {
+	if o != nil && o.TotalPages != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetTotalPages gets a reference to the given int32 and assigns it to the TotalPages field.
+func (o *StackReleaseList) SetTotalPages(v int32) {
+	o.TotalPages = &v
+}
+
 func (o StackReleaseList) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Items != nil {
@@ -108,6 +211,15 @@ func (o StackReleaseList) MarshalJSON() ([]byte, error) {
 	}
 	if o.Total != nil {
 		toSerialize["total"] = o.Total
+	}
+	if o.Page != nil {
+		toSerialize["page"] = o.Page
+	}
+	if o.PageSize != nil {
+		toSerialize["page_size"] = o.PageSize
+	}
+	if o.TotalPages != nil {
+		toSerialize["total_pages"] = o.TotalPages
 	}
 	return json.Marshal(toSerialize)
 }

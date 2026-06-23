@@ -144,6 +144,11 @@ func (s apiServer) routes() *mux.Router {
 
 	authenticationRouter.HandleFunc("/refresh", refreshHandler.HandleRefresh).Methods(http.MethodPost)
 
+	configHandler := handlers.NewConfigHandler(handlers.ConfigHandlerSpec{
+		GitHubOAuthEnabled: s.environment.Environment().Config.GitHubOAuth.Enabled(),
+	})
+	apiV1Router.HandleFunc("/config", configHandler.Get).Methods(http.MethodGet)
+
 	if s.environment.Environment().Config.GitHubOAuth.Enabled() {
 		githubAuthHandler := auth.NewGitHubOAuthHandler(auth.GitHubOAuthHandlerSpec{
 			ClientID:          s.environment.Environment().Config.GitHubOAuth.ClientID,

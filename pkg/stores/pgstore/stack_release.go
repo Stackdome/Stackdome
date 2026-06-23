@@ -34,7 +34,7 @@ var activeReleaseStates = []models.StackReleaseState{
 }
 
 // Create assigns the next sequence number and inserts the new release.
-// Supersession of older active releases is handled by the freshness reconciler.
+// Supersession of older active releases is handled by the gatekeeper reconciler.
 func (s *stackReleaseStore) Create(ctx context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError) {
 	var result *models.StackRelease
 
@@ -83,16 +83,29 @@ func (s *stackReleaseStore) GetByID(ctx context.Context, id string) (*models.Sta
 }
 
 // ListByStackID returns releases for a stack, excluding heavy JSONB columns for performance.
-func (s *stackReleaseStore) ListByStackID(ctx context.Context, stackID string) ([]*models.StackRelease, *errors.ServiceError) {
+func (s *stackReleaseStore) ListByStackID(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError) {
+	params = params.WithDefaultOrder("sequence DESC")
+	selectCols := "id, stack_id, sequence, state, message, cause, snapshot_revision, manifest_revision, pins, renderer_version, created_by, created_at, updated_at, rendered_at, completed_at"
+
+	var total int64
+	countQuery := s.sessionFactory.New(ctx).Model(&models.StackRelease{}).Where("stack_id = ?", stackID)
+	if err := params.ApplyFiltersOnly(countQuery).Count(&total).Error; err != nil {
+		return nil, errors.GeneralError("failed to count releases: %s", err.Error())
+	}
+
 	var releases []*models.StackRelease
-	if err := s.sessionFactory.New(ctx).
-		Select("id, stack_id, sequence, state, message, cause, snapshot_revision, manifest_revision, pins, renderer_version, created_by, created_at, updated_at, rendered_at, completed_at").
-		Where("stack_id = ?", stackID).
-		Order("sequence DESC").
-		Find(&releases).Error; err != nil {
+	dataQuery := s.sessionFactory.New(ctx).Select(selectCols).Where("stack_id = ?", stackID)
+	if err := params.Apply(dataQuery).Find(&releases).Error; err != nil {
 		return nil, errors.GeneralError("failed to list releases: %s", err.Error())
 	}
-	return releases, nil
+
+	return &stores.PaginatedResult[*models.StackRelease]{
+		Items:      releases,
+		Total:      total,
+		Page:       params.Page,
+		PageSize:   params.Limit(),
+		TotalPages: params.TotalPages(total),
+	}, nil
 }
 
 // ListActive returns all non-terminal releases across all stacks.
@@ -253,6 +266,48 @@ func (s *stackReleaseStore) Cancel(ctx context.Context, id string) (bool, *error
 		return false, errors.GeneralError("failed to cancel release: %s", result.Error.Error())
 	}
 	return result.RowsAffected > 0, nil
+}
+
+// ListTerminalSummariesByStackID returns lightweight release summaries for GC decisions.
+// Only terminal-state releases are returned — active releases are never GC candidates.
+func (s *stackReleaseStore) ListTerminalSummariesByStackID(ctx context.Context, stackID string) ([]models.ReleaseSummary, *errors.ServiceError) {
+	var out []models.ReleaseSummary
+	if err := s.sessionFactory.New(ctx).
+		Model(&models.StackRelease{}).
+		Select("id", "sequence", "state").
+		Where("stack_id = ? AND state IN ?", stackID, models.TerminalStackReleaseStates()).
+		Order("sequence DESC").
+		Scan(&out).Error; err != nil {
+		return nil, errors.GeneralError("failed to list terminal release summaries: %s", err.Error())
+	}
+	return out, nil
+}
+
+// DeleteByIDs removes releases by their IDs.
+func (s *stackReleaseStore) DeleteByIDs(ctx context.Context, ids []string) *errors.ServiceError {
+	if len(ids) == 0 {
+		return nil
+	}
+	if err := s.sessionFactory.New(ctx).
+		Where("id IN ?", ids).
+		Delete(&models.StackRelease{}).Error; err != nil {
+		return errors.GeneralError("failed to delete releases: %s", err.Error())
+	}
+	return nil
+}
+
+func (s *stackReleaseStore) ListStackIDsExceedingRetention(ctx context.Context, cap int) ([]string, *errors.ServiceError) {
+	var stackIDs []string
+	if err := s.sessionFactory.New(ctx).
+		Model(&models.StackRelease{}).
+		Select("stack_id").
+		Where("state IN ?", models.TerminalStackReleaseStates()).
+		Group("stack_id").
+		Having("COUNT(*) > ?", cap).
+		Pluck("stack_id", &stackIDs).Error; err != nil {
+		return nil, errors.GeneralError("failed to list stacks exceeding retention: %s", err.Error())
+	}
+	return stackIDs, nil
 }
 
 // AppendImageDigests merges image digests into the release's pins.

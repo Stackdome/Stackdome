@@ -39,6 +39,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/config:
+    get:
+      summary: Get public application configuration
+      description: Returns feature flags the web client needs before authentication, such as whether GitHub OAuth is enabled.
+      responses:
+        '200':
+          description: Application configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppConfigResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/users/{id}:
     get:
       security:
@@ -1707,6 +1724,23 @@ paths:
         - $ref: '#/components/parameters/org_id'
         - $ref: '#/components/parameters/team_name'
         - $ref: '#/components/parameters/id'
+        - in: query
+          name: state
+          schema:
+            $ref: '#/components/schemas/StackReleaseState'
+          description: Filter by release state
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            default: 20
+          description: Number of items per page
       responses:
         '200':
           description: List of releases
@@ -1738,7 +1772,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StackRelease'
+                $ref: '#/components/schemas/StackReleaseDetail'
 
   /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel:
     post:
@@ -1883,6 +1917,12 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+        '409':
+          description: Secret is in use and cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
 
@@ -1955,6 +1995,12 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+        '409':
+          description: Volume is in use and cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
 
@@ -2115,6 +2161,12 @@ paths:
           description: Forbidden
         '404':
           description: PostgresAddon not found
+        '409':
+          description: PostgreSQL addon is in use and cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -2836,6 +2888,12 @@ components:
         type: string
       description: The name of the database
   schemas:
+    AppConfigResponse:
+      type: object
+      properties:
+        github_oauth:
+          type: boolean
+          description: True when GitHub OAuth login is configured on the server.
     Organisation:
       type: object
       properties:
@@ -3459,6 +3517,8 @@ components:
           readOnly: true
         spec:
           $ref: '#/components/schemas/StackSpec'
+        settings:
+          $ref: '#/components/schemas/StackSettings'
         status:
           $ref: '#/components/schemas/StackStatus'
           readOnly: true
@@ -3473,6 +3533,22 @@ components:
       required:
         - name
         - spec
+
+    StackSettings:
+      type: object
+      properties:
+        release_retention_limit:
+          type: integer
+          default: 10
+          description: Maximum total releases to retain per stack
+        min_successful_releases:
+          type: integer
+          default: 5
+          description: Minimum number of successful releases to always keep
+        deploy_timeout_minutes:
+          type: integer
+          default: 15
+          description: Minutes to wait for a deploy to converge before marking it failed
 
     StackList:
       type: object
@@ -5344,6 +5420,60 @@ components:
           type: string
           format: date-time
 
+    StackReleaseDetail:
+      allOf:
+        - $ref: '#/components/schemas/StackRelease'
+        - type: object
+          properties:
+            snapshot:
+              $ref: '#/components/schemas/StackReleaseSnapshot'
+
+    StackReleaseSnapshot:
+      type: object
+      properties:
+        stack:
+          type: object
+          properties:
+            id:
+              type: string
+            organisation_id:
+              type: string
+            team_id:
+              type: string
+            cluster_id:
+              type: string
+            user_id:
+              type: string
+            name:
+              type: string
+            namespace_id:
+              type: string
+            namespace:
+              type: string
+            labels:
+              type: object
+              additionalProperties:
+                type: string
+            annotations:
+              type: object
+              additionalProperties:
+                type: string
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/StackResource'
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Volume'
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/StackConnection'
+        captured_at:
+          type: string
+          format: date-time
+
     StackReleaseList:
       type: object
       properties:
@@ -5353,6 +5483,16 @@ components:
             $ref: '#/components/schemas/StackRelease'
         total:
           type: integer
+          description: Total number of records
+        page:
+          type: integer
+          description: Current page number
+        page_size:
+          type: integer
+          description: Number of items per page
+        total_pages:
+          type: integer
+          description: Total number of pages
 
     ReleaseCause:
       type: object

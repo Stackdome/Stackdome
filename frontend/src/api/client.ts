@@ -1,6 +1,7 @@
 // Generic axios API client setup
 import axios, { AxiosError } from 'axios';
 import type { components } from './types/openapi';
+import { API_BASE_URL } from './base-url';
 import { refreshAccessToken } from './auth-refresh';
 import { clearAuthSession } from '@/helpers/common';
 
@@ -85,7 +86,7 @@ export function isServerError(error: unknown): boolean {
 }
 
 const api = axios.create({
-  baseURL: (import.meta.env.VITE_API_BASE_URL || '/api/v1'),
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },

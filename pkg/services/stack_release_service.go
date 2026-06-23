@@ -17,7 +17,7 @@ type StackReleaseService interface {
 	CreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError)
 	RollbackRelease(ctx context.Context, stackID, fromReleaseID string) (*models.StackRelease, *errors.ServiceError)
 	GetRelease(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
-	ListReleases(ctx context.Context, stackID string) ([]*models.StackRelease, *errors.ServiceError)
+	ListReleases(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError)
 	CancelRelease(ctx context.Context, releaseID string) *errors.ServiceError
 
 	// Internal methods are called by workers and controllers; no permission checks.
@@ -36,26 +36,29 @@ type StackReleaseService interface {
 }
 
 type StackReleaseServiceSpec struct {
-	Store         stores.StackReleaseStore
-	StackService  StackService
-	SecretService SecretService
-	Permissions   auth.PermissionService
+	Store            stores.StackReleaseStore
+	StackService     StackService
+	SecretService    SecretService
+	Permissions      auth.PermissionService
+	ReferenceService ReferenceService
 }
 
 type stackReleaseService struct {
-	store         stores.StackReleaseStore
-	stackQuery    StackService
-	secretService SecretService
-	permissions   auth.PermissionService
+	store            stores.StackReleaseStore
+	stackQuery       StackService
+	secretService    SecretService
+	permissions      auth.PermissionService
+	referenceService ReferenceService
 	BackgroundJobEnqueuerDep
 }
 
 func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
 	return &stackReleaseService{
-		store:         spec.Store,
-		stackQuery:    spec.StackService,
-		secretService: spec.SecretService,
-		permissions:   spec.Permissions,
+		store:            spec.Store,
+		stackQuery:       spec.StackService,
+		secretService:    spec.SecretService,
+		permissions:      spec.Permissions,
+		referenceService: spec.ReferenceService,
 	}
 }
 
@@ -102,9 +105,16 @@ func (s *stackReleaseService) CreateRelease(ctx context.Context, stackID string,
 		CreatedBy:        createdBy,
 	}
 
-	created, sErr := s.store.Create(ctx, release)
-	if sErr != nil {
-		return nil, sErr
+	var created *models.StackRelease
+	if txErr := s.store.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		var e *errors.ServiceError
+		created, e = s.store.Create(txCtx, release)
+		if e != nil {
+			return e
+		}
+		return s.referenceService.ProjectRelease(txCtx, created)
+	}); txErr != nil {
+		return nil, txErr
 	}
 
 	if err := s.BackgroundJobEnqueuer.Enqueue(&models.StackRelease{ID: created.ID}); err != nil {
@@ -123,8 +133,8 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 		return nil, errors.NotFound("release '%s' does not belong to stack '%s'", fromReleaseID, stackID)
 	}
 
-	if src.Manifest == nil {
-		return nil, errors.BadRequest("cannot roll back to release #%d: it was never rendered", src.Sequence)
+	if src.State != models.ReleaseStateReleased {
+		return nil, errors.BadRequest("can only roll back to a successfully released deployment (#%d is %s)", src.Sequence, src.State)
 	}
 
 	// Permission check via the stack's team.
@@ -162,9 +172,16 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 		CreatedBy:        createdBy,
 	}
 
-	created, sErr := s.store.Create(ctx, release)
-	if sErr != nil {
-		return nil, sErr
+	var created *models.StackRelease
+	if txErr := s.store.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		var e *errors.ServiceError
+		created, e = s.store.Create(txCtx, release)
+		if e != nil {
+			return e
+		}
+		return s.referenceService.ProjectRelease(txCtx, created)
+	}); txErr != nil {
+		return nil, txErr
 	}
 
 	if err := s.BackgroundJobEnqueuer.Enqueue(&models.StackRelease{ID: created.ID}); err != nil {
@@ -191,7 +208,7 @@ func (s *stackReleaseService) GetRelease(ctx context.Context, releaseID string) 
 	return rel, nil
 }
 
-func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string) ([]*models.StackRelease, *errors.ServiceError) {
+func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError) {
 	stack, sErr := s.stackQuery.GetStack(ctx, stackID)
 	if sErr != nil {
 		return nil, sErr
@@ -201,7 +218,7 @@ func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string) 
 		return nil, permErr
 	}
 
-	return s.store.ListByStackID(ctx, stackID)
+	return s.store.ListByStackID(ctx, stackID, params)
 }
 
 func (s *stackReleaseService) CancelRelease(ctx context.Context, releaseID string) *errors.ServiceError {

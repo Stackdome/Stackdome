@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
 // PostgreSQL addon CRUD operations for Ginkgo tests
@@ -120,8 +121,17 @@ func GetSecret(client *openapi.APIClient, orgID, teamName, secretID string) *ope
 func DeleteSecret(client *openapi.APIClient, orgID, teamName, secretID string) {
 	ctx := context.Background()
 	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdDelete(ctx, orgID, teamName, secretID).Execute()
+	if httpResp != nil && httpResp.StatusCode == http.StatusNotFound {
+		return
+	}
 	Expect(err).NotTo(HaveOccurred(), "failed to delete secret")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusNoContent), "unexpected status code")
+}
+
+func DeleteSecretRaw(client *openapi.APIClient, orgID, teamName, secretID string) (*http.Response, error) {
+	ctx := context.Background()
+	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsIdDelete(ctx, orgID, teamName, secretID).Execute()
+	return httpResp, err
 }
 
 // ObjectStore CRUD operations for Ginkgo tests
@@ -368,6 +378,9 @@ func UpdateStack(client *openapi.APIClient, orgID, teamName, stackID string, sta
 func DeleteStack(client *openapi.APIClient, orgID, teamName, stackID string) *openapi.Stack {
 	ctx := context.Background()
 	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdDelete(ctx, orgID, teamName, stackID).Execute()
+	if httpResp != nil && httpResp.StatusCode == http.StatusNotFound {
+		return nil
+	}
 	Expect(err).NotTo(HaveOccurred(), "failed to delete stack")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusAccepted), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected stack response")
@@ -476,7 +489,7 @@ func ListReleases(client *openapi.APIClient, orgID, teamName, stackID string) *o
 	return list
 }
 
-func GetRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseID string) *openapi.StackRelease {
+func GetRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseID string) *openapi.StackReleaseDetail {
 	release, httpResp, err := client.ReleasesApi.GetRelease(
 		context.Background(), orgID, teamName, stackID, releaseID,
 	).Execute()
@@ -491,8 +504,8 @@ func CancelRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseI
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "failed to cancel release, status: %d", httpResp.StatusCode)
 }
 
-func WaitForReleaseState(client *openapi.APIClient, orgID, teamName, stackID, releaseID, expectedState string, timeout time.Duration) *openapi.StackRelease {
-	var result *openapi.StackRelease
+func WaitForReleaseState(client *openapi.APIClient, orgID, teamName, stackID, releaseID, expectedState string, timeout time.Duration) *openapi.StackReleaseDetail {
+	var result *openapi.StackReleaseDetail
 	Eventually(func(g Gomega) {
 		release := GetRelease(client, orgID, teamName, stackID, releaseID)
 		g.Expect(string(release.GetState())).To(Equal(expectedState),
@@ -502,8 +515,8 @@ func WaitForReleaseState(client *openapi.APIClient, orgID, teamName, stackID, re
 	return result
 }
 
-func WaitForReleaseReleased(client *openapi.APIClient, orgID, teamName, stackID, releaseID string, timeout time.Duration) *openapi.StackRelease {
-	return WaitForReleaseState(client, orgID, teamName, stackID, releaseID, "Released", timeout)
+func WaitForReleaseReleased(client *openapi.APIClient, orgID, teamName, stackID, releaseID string, timeout time.Duration) *openapi.StackReleaseDetail {
+	return WaitForReleaseState(client, orgID, teamName, stackID, releaseID, string(models.ReleaseStateReleased), timeout)
 }
 
 // CreateStackAndDeploy creates a stack and immediately creates a release to deploy it.

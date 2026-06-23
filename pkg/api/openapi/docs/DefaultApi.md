@@ -13,6 +13,7 @@ Method | HTTP request | Description
 [**ApiV1AuthGithubGet**](DefaultApi.md#ApiV1AuthGithubGet) | **Get** /api/v1/auth/github | Initiate GitHub OAuth flow
 [**ApiV1AuthLoginPost**](DefaultApi.md#ApiV1AuthLoginPost) | **Post** /api/v1/auth/login | User login
 [**ApiV1AuthRefreshPost**](DefaultApi.md#ApiV1AuthRefreshPost) | **Post** /api/v1/auth/refresh | Refresh JWT token
+[**ApiV1ConfigGet**](DefaultApi.md#ApiV1ConfigGet) | **Get** /api/v1/config | Get public application configuration
 [**ApiV1InvitesTokenInfoGet**](DefaultApi.md#ApiV1InvitesTokenInfoGet) | **Get** /api/v1/invites/{token}/info | Get public invite info (unauthenticated)
 [**ApiV1OrganizationsIdGet**](DefaultApi.md#ApiV1OrganizationsIdGet) | **Get** /api/v1/organizations/{id} | Get an organization
 [**ApiV1OrganizationsIdPut**](DefaultApi.md#ApiV1OrganizationsIdPut) | **Put** /api/v1/organizations/{id} | Update an organization
@@ -671,6 +672,67 @@ No authorization required
 ### HTTP request headers
 
 - **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1ConfigGet
+
+> AppConfigResponse ApiV1ConfigGet(ctx).Execute()
+
+Get public application configuration
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1ConfigGet(context.Background()).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1ConfigGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1ConfigGet`: AppConfigResponse
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1ConfigGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+This endpoint does not need any parameter.
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1ConfigGetRequest struct via the builder pattern
+
+
+### Return type
+
+[**AppConfigResponse**](AppConfigResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -4122,7 +4184,7 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: Not defined
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
@@ -5947,7 +6009,7 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: Not defined
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
