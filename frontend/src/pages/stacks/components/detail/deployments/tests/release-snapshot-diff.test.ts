@@ -72,3 +72,27 @@ describe("diffSnapshots volumes", () => {
     expect(diffSnapshots(mk({ resources: [], volumes: v }), mk({ resources: [], volumes: v })).volumes).toEqual([]);
   });
 });
+
+describe("diffSnapshots connections", () => {
+  const conn = (env: string, output: string) => ({
+    kind: "env",
+    from: { type: "addon/postgres", name: "db" },
+    to: { type: "stack_resource", name: "api" },
+    mappings: [{ target: { type: "env", name: env }, value: { output } }],
+  });
+
+  it("flags a changed mapping value on an existing connection", () => {
+    const prev = mk({ resources: [], connections: [conn("DATABASE_URL", "url")] });
+    const cur = mk({ resources: [], connections: [conn("DATABASE_URL", "public.url")] });
+    expect(diffSnapshots(prev, cur).connections).toEqual([
+      { name: "env · db → api", change: "modified", rows: [{ key: "DATABASE_URL", from: "url", to: "public.url", kind: "changed" }] },
+    ]);
+  });
+
+  it("flags an added connection", () => {
+    const out = diffSnapshots(mk({ resources: [], connections: [] }), mk({ resources: [], connections: [conn("DATABASE_URL", "url")] }));
+    expect(out.connections).toEqual([
+      { name: "env · db → api", change: "added", rows: [{ key: "DATABASE_URL", to: "url", kind: "added" }] },
+    ]);
+  });
+});

@@ -120,9 +120,35 @@ function volumeScalars(v: SnapVolume): Record<string, string | undefined> {
   return { size: v.spec?.size, storage_class: v.spec?.storage_class, access_mode: v.spec?.access_mode };
 }
 
+type SnapConn = NonNullable<Snap["connections"]>[number];
+
+function nodeLabel(n?: { type?: string; name?: string; id?: string }): string {
+  return n?.name ?? n?.id ?? n?.type ?? "?";
+}
+
+/** Identity label for a connection: kind + endpoints (used as the diff key). */
+function connName(c: SnapConn): string {
+  return `${c.kind ?? "?"} · ${nodeLabel(c.from)} → ${nodeLabel(c.to)}`;
+}
+
+/** Snapshots store value references (output accessors / templates), never resolved secrets. */
+function valueLabel(v?: { output?: string; template?: string }): string {
+  return v?.output ?? v?.template ?? "(reference)";
+}
+
+function connScalars(c: SnapConn): Record<string, string | undefined> {
+  const out: Record<string, string | undefined> = {};
+  for (const m of c.mappings ?? []) {
+    const key = m.target?.name ?? m.target?.path ?? "(target)";
+    out[key] = valueLabel(m.value);
+  }
+  return out;
+}
+
 export function diffSnapshots(prev?: Snap, cur?: Snap): SnapshotDiff {
   if (prev == null) return { resources: [], volumes: [], connections: [] }; // no predecessor — caller distinguishes "initial"
   const resources = diffResources(prev, cur);
   const volumes = diffNamed(prev.volumes ?? [], cur?.volumes ?? [], (v) => v.name ?? "", volumeScalars, "Volume removed from this release.");
-  return { resources, volumes, connections: [] };
+  const connections = diffNamed(prev.connections ?? [], cur?.connections ?? [], connName, connScalars, "Connection removed from this release.");
+  return { resources, volumes, connections };
 }

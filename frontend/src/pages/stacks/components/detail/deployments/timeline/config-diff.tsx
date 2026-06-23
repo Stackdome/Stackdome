@@ -97,6 +97,7 @@ export function ConfigDiff({ diff, hasPrev, prevSeq }: ConfigDiffProps) {
     <div className="space-y-2.5">
       {diff.resources.map((d) => <ResourceCard key={d.name} d={d} />)}
       <Group label="Volumes" items={diff.volumes} />
+      <Group label="Connections" items={diff.connections} />
     </div>
   );
 }
