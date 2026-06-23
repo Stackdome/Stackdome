@@ -50,7 +50,9 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs }: C
       )}
 
       {summaries.length > 0 && (
-        <div className="mt-4 divide-y divide-border">
+        <div className="mt-4">
+          <div className="mb-0.5 font-mono text-[11px] uppercase tracking-wide text-fg-muted">Resources</div>
+          <div className="divide-y divide-border">
           {summaries.map((s, i) => (
             <ResourceRow
               key={s.name ?? i}
@@ -66,6 +68,7 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs }: C
               onOpenLogs={onOpenLogs}
             />
           ))}
+          </div>
         </div>
       )}
 
