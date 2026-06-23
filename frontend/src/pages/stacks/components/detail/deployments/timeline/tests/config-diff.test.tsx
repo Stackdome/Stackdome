@@ -38,4 +38,8 @@ describe("ConfigDiff", () => {
     render(<ConfigDiff diff={empty} hasPrev={false} />);
     expect(screen.getByText(/initial release/i)).toBeInTheDocument();
   });
+  it("shows the no-changes copy when a predecessor exists but nothing changed", () => {
+    render(<ConfigDiff diff={empty} hasPrev prevSeq={12} />);
+    expect(screen.getByText(/no configuration changes since #12/i)).toBeInTheDocument();
+  });
 });
