@@ -4,7 +4,12 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 vi.mock("@/api/observability", () => ({ fetchLogSnapshot: vi.fn().mockResolvedValue([]) }));
+vi.mock("@/api/releases", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/api/releases")>()),
+  getRelease: vi.fn().mockResolvedValue({ id: "r1", sequence: 14, snapshot: { resources: [], volumes: [], connections: [] } }),
+}));
 import { CurrentReleaseNode } from "../current-release-node";
+import { useReleaseDetail } from "../../use-release-detail";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 
@@ -18,6 +23,20 @@ const stack = (over: Record<string, unknown> = {}) => ({
 
 function Wrap({ release, st, onCancel }: { release: StackRelease; st: Stack; onCancel?: (id: string) => void }) {
   return <CurrentReleaseNode release={release} stack={st} logContext={{ orgId: "o", teamName: "t", stackId: "s" }} onCancel={onCancel} />;
+}
+
+function WrapDiff({ prevReleaseId, prevSeq }: { prevReleaseId?: string; prevSeq?: number }) {
+  const detail = useReleaseDetail("o", "t", "s");
+  return (
+    <CurrentReleaseNode
+      release={{ id: "r1", sequence: 14, state: "Released" } as StackRelease}
+      stack={stack()}
+      logContext={{ orgId: "o", teamName: "t", stackId: "s" }}
+      detail={detail}
+      prevReleaseId={prevReleaseId}
+      prevSeq={prevSeq}
+    />
+  );
 }
 
 describe("CurrentReleaseNode", () => {
@@ -50,5 +69,16 @@ describe("CurrentReleaseNode", () => {
   it("hides Cancel once the release is terminal", () => {
     render(<Wrap release={{ id: "r1", sequence: 14, state: "Released" } as StackRelease} st={stack()} onCancel={vi.fn()} />);
     expect(screen.queryByRole("button", { name: /cancel/i })).not.toBeInTheDocument();
+  });
+
+  it("toggles a config-changes diff for the active release", async () => {
+    render(<WrapDiff prevReleaseId="r0" prevSeq={13} />);
+    await userEvent.click(screen.getByRole("button", { name: /view config changes/i }));
+    expect(await screen.findByText(/no configuration changes since #13/i)).toBeInTheDocument();
+  });
+
+  it("hides the diff toggle when there is no predecessor", () => {
+    render(<WrapDiff />);
+    expect(screen.queryByRole("button", { name: /view config changes/i })).not.toBeInTheDocument();
   });
 });

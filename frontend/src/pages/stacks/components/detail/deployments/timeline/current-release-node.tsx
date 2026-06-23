@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { StatusPill, StageTracker, variantFromState } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 import { deriveStages, deriveFailingResources, deriveRecovered, deriveReleaseTitle, formatDuration, formatReleaseTime } from "../derive";
+import { diffSnapshots } from "../release-snapshot-diff";
+import type { ReleaseDetail } from "../use-release-detail";
 import { ResourceRow, type LogContext } from "./resource-row";
+import { ConfigDiff } from "./config-diff";
 
 const NON_TERMINAL = new Set(["Pending", "InProgress"]);
 
@@ -10,6 +14,7 @@ export interface CurrentReleaseNodeProps {
   release: StackRelease; stack: Stack; logContext?: LogContext;
   onOpenLogs?: (name: string) => void;
   onCancel?: (id: string) => void;
+  detail?: ReleaseDetail; prevReleaseId?: string; prevSeq?: number;
 }
 
 function meta(release: StackRelease): string {
@@ -22,9 +27,18 @@ function meta(release: StackRelease): string {
   return parts.join(" · ");
 }
 
-export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onCancel }: CurrentReleaseNodeProps) {
+export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onCancel, detail, prevReleaseId, prevSeq }: CurrentReleaseNodeProps) {
+  const [showDiff, setShowDiff] = useState(false);
   const failing = deriveFailingResources(stack);
   const cancellable = NON_TERMINAL.has(release.state ?? "") && !!onCancel && !!release.id;
+  const canDiff = !!prevReleaseId && !!detail;
+  const onToggleDiff = () => {
+    if (!detail || !prevReleaseId) return;
+    if (release.id) detail.ensure(release.id);
+    detail.ensure(prevReleaseId);
+    setShowDiff((v) => !v);
+  };
+  const diff = diffSnapshots(detail?.peek(prevReleaseId).data?.snapshot, detail?.peek(release.id).data?.snapshot);
   const recovered = deriveRecovered(stack);
   const recoveredNames = new Set(recovered.map((r) => r.name));
   const failingByName = new Map(failing.map((f) => [f.name, f]));
@@ -85,6 +99,15 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onC
             />
           ))}
           </div>
+        </div>
+      )}
+
+      {canDiff && (
+        <div className="mt-4">
+          <button onClick={onToggleDiff} className="font-sans text-[12.5px] font-medium text-primary">
+            {showDiff ? "Hide config changes" : `View config changes · vs #${prevSeq ?? "previous"}`}
+          </button>
+          {showDiff && <div className="mt-3"><ConfigDiff diff={diff} hasPrev prevSeq={prevSeq} /></div>}
         </div>
       )}
 

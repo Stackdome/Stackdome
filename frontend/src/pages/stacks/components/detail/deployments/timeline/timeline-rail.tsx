@@ -48,6 +48,9 @@ export function TimelineRail(props: TimelineRailProps) {
             logContext={logContext}
             onOpenLogs={onOpenLogs}
             onCancel={onCancel}
+            detail={detail}
+            prevReleaseId={prevIdFor(0)}
+            prevSeq={prevSeqFor(0)}
           />
         </RailNode>
       ) : releases.length === 0 ? (
