@@ -31,7 +31,8 @@ describe("HistoryRow", () => {
 
   it("renders the post-mortem when open", async () => {
     render(<Wrap release={{ id: "r1", sequence: 13, state: "Released" } as StackRelease} isOpen onToggle={vi.fn()} prevReleaseId="r0" />);
-    expect(await screen.findByText(/nothing to compare/i)).toBeInTheDocument();
+    // Predecessor present + identical snapshots → the no-changes copy (not "initial").
+    expect(await screen.findByText(/no configuration changes since #12/i)).toBeInTheDocument();
   });
 
   it("shows the failure message in danger for a Failed release", () => {

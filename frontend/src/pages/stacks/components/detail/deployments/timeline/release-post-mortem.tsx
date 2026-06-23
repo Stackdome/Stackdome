@@ -48,7 +48,7 @@ export function ReleasePostMortem({ detail, release, prevReleaseId, prevSeq }: R
         <div><Marker>Resource outcomes</Marker><OutcomesTable outcomes={outcomes} /></div>
       )}
       {prevReleaseId && (
-        <div><Marker>Config changes · vs #{prevSeq ?? "previous"}</Marker><ConfigDiff diffs={diffs} prevSeq={prevSeq} /></div>
+        <div><Marker>Config changes · vs #{prevSeq ?? "previous"}</Marker><ConfigDiff diff={diffs} hasPrev={!!prevReleaseId} prevSeq={prevSeq} /></div>
       )}
     </div>
   );

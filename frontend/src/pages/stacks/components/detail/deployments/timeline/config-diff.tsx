@@ -1,4 +1,4 @@
-import type { ResourceDiff, DiffRow } from "../release-snapshot-diff";
+import type { SnapshotDiff, ItemDiff, ResourceDiff, DiffRow } from "../release-snapshot-diff";
 
 function Row({ row }: { row: DiffRow }) {
   return (
@@ -19,63 +19,84 @@ function Row({ row }: { row: DiffRow }) {
   );
 }
 
+function CardHead({ name, change }: { name: string; change: "added" | "removed" | "modified" }) {
+  const dot = change === "added" ? "bg-success" : change === "removed" ? "bg-fg-muted" : "bg-warn";
+  return (
+    <div className="flex items-center gap-2.5 bg-muted px-3 py-2.5">
+      <span className={`h-[7px] w-[7px] flex-none rounded-full ${dot}`} />
+      <span className={`font-mono text-[12.5px] font-semibold text-foreground ${change === "removed" ? "line-through" : ""}`}>{name}</span>
+      {change === "added" && <span className="rounded border border-success px-1.5 py-0.5 font-mono text-[9px] text-success">ADDED</span>}
+      {change === "removed" && <span className="rounded border border-fg-muted px-1.5 py-0.5 font-mono text-[9px] text-fg-muted">REMOVED</span>}
+    </div>
+  );
+}
+
+function ResourceCard({ d }: { d: ResourceDiff }) {
+  return (
+    <div className={`overflow-hidden rounded-md border border-border ${d.change === "removed" ? "opacity-80" : ""}`}>
+      <CardHead name={d.name} change={d.change} />
+      {d.change === "removed" ? (
+        <div className="flex items-start gap-2.5 border-t border-border px-3 py-2.5 text-[12px] text-fg-muted">
+          <span className="flex-none">−</span>
+          <span>{d.note}</span>
+        </div>
+      ) : (
+        d.sections.map((sec, si) => (
+          <div key={si} className="border-t border-border">
+            <div className="px-3 pb-0.5 pt-2 font-mono text-[9px] uppercase tracking-wide text-fg-muted">{sec.kind}</div>
+            {sec.rows.map((row, ri) => <Row key={ri} row={row} />)}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function ItemCard({ item }: { item: ItemDiff }) {
+  return (
+    <div className={`overflow-hidden rounded-md border border-border ${item.change === "removed" ? "opacity-80" : ""}`}>
+      <CardHead name={item.name} change={item.change} />
+      {item.note ? (
+        <div className="flex items-start gap-2.5 border-t border-border px-3 py-2.5 text-[12px] text-fg-muted">
+          <span className="flex-none">−</span>
+          <span>{item.note}</span>
+        </div>
+      ) : (
+        <div className="border-t border-border py-1">{item.rows.map((row, ri) => <Row key={ri} row={row} />)}</div>
+      )}
+    </div>
+  );
+}
+
+function Group({ label, items }: { label: string; items: ItemDiff[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="space-y-2.5">
+      <div className="font-mono text-[9px] uppercase tracking-wide text-fg-muted">{label}</div>
+      {items.map((it) => <ItemCard key={it.name} item={it} />)}
+    </div>
+  );
+}
+
 export interface ConfigDiffProps {
-  diffs: ResourceDiff[];
+  diff: SnapshotDiff;
+  hasPrev: boolean;
   prevSeq?: number;
 }
 
-export function ConfigDiff({ diffs }: ConfigDiffProps) {
-  if (!diffs.length)
-    return <div className="text-[12.5px] text-fg-muted">Initial release — nothing to compare.</div>;
+export function ConfigDiff({ diff, hasPrev, prevSeq }: ConfigDiffProps) {
+  if (!diff.resources.length && !diff.volumes.length && !diff.connections.length) {
+    return (
+      <div className="text-[12.5px] text-fg-muted">
+        {hasPrev ? `No configuration changes since #${prevSeq ?? "previous"}.` : "Initial release — nothing to compare."}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2.5">
-      {diffs.map((d) => {
-        const dot =
-          d.change === "added" ? "bg-success" : d.change === "removed" ? "bg-fg-muted" : "bg-warn";
-        return (
-          <div
-            key={d.name}
-            className={`overflow-hidden rounded-md border border-border ${d.change === "removed" ? "opacity-80" : ""}`}
-          >
-            <div className="flex items-center gap-2.5 bg-muted px-3 py-2.5">
-              <span className={`h-[7px] w-[7px] flex-none rounded-full ${dot}`} />
-              <span
-                className={`font-mono text-[12.5px] font-semibold text-foreground ${d.change === "removed" ? "line-through" : ""}`}
-              >
-                {d.name}
-              </span>
-              {d.change === "added" && (
-                <span className="rounded border border-success px-1.5 py-0.5 font-mono text-[9px] text-success">
-                  ADDED
-                </span>
-              )}
-              {d.change === "removed" && (
-                <span className="rounded border border-fg-muted px-1.5 py-0.5 font-mono text-[9px] text-fg-muted">
-                  REMOVED
-                </span>
-              )}
-            </div>
-            {d.change === "removed" ? (
-              <div className="flex items-start gap-2.5 border-t border-border px-3 py-2.5 text-[12px] text-fg-muted">
-                <span className="flex-none">−</span>
-                <span>{d.note}</span>
-              </div>
-            ) : (
-              d.sections.map((sec, si) => (
-                <div key={si} className="border-t border-border">
-                  <div className="px-3 pb-0.5 pt-2 font-mono text-[9px] uppercase tracking-wide text-fg-muted">
-                    {sec.kind}
-                  </div>
-                  {sec.rows.map((row, ri) => (
-                    <Row key={ri} row={row} />
-                  ))}
-                </div>
-              ))
-            )}
-          </div>
-        );
-      })}
+      {diff.resources.map((d) => <ResourceCard key={d.name} d={d} />)}
+      <Group label="Volumes" items={diff.volumes} />
     </div>
   );
 }
