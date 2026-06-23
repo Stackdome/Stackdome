@@ -29,9 +29,9 @@ export function ReleasePostMortem({ detail, release, prevReleaseId, prevSeq }: R
   if (cur.error) return <div className="px-0.5 py-3 text-[12.5px] text-danger">Could not load detail: {cur.error}</div>;
 
   const data = cur.data;
-  const outcomes = (data as unknown as { outcome?: { resources?: Record<string, { phase?: string; ready_replicas?: number; replicas?: number; message?: string }> } })?.outcome?.resources ?? {};
-  const snap = (data as unknown as { snapshot?: unknown })?.snapshot;
-  const prevSnap = (prev.data as unknown as { snapshot?: unknown })?.snapshot;
+  const outcomes = data?.outcome?.resources ?? {};
+  const snap = data?.snapshot;
+  const prevSnap = prev.data?.snapshot;
   const diffs = diffSnapshots(prevSnap, snap);
 
   return (

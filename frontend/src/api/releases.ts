@@ -2,6 +2,8 @@ import api from "./client";
 import type { components } from "./types/openapi";
 
 export type StackRelease = components["schemas"]["StackRelease"];
+export type StackReleaseDetail = components["schemas"]["StackReleaseDetail"];
+export type StackReleaseSnapshot = components["schemas"]["StackReleaseSnapshot"];
 export type StackReleaseList = components["schemas"]["StackReleaseList"];
 export type CreateReleaseRequest = components["schemas"]["CreateReleaseRequest"];
 
@@ -14,8 +16,8 @@ export async function listReleases(orgId: string, teamName: string, stackId: str
   return response.data;
 }
 
-export async function getRelease(orgId: string, teamName: string, stackId: string, releaseId: string): Promise<StackRelease> {
-  const response = await api.get<StackRelease>(`${releasesPath(orgId, teamName, stackId)}/${releaseId}`);
+export async function getRelease(orgId: string, teamName: string, stackId: string, releaseId: string): Promise<StackReleaseDetail> {
+  const response = await api.get<StackReleaseDetail>(`${releasesPath(orgId, teamName, stackId)}/${releaseId}`);
   return response.data;
 }
 

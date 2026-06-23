@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
-import { getRelease, type StackRelease } from "@/api/releases";
+import { getRelease, type StackReleaseDetail } from "@/api/releases";
 
-export interface DetailState { data?: StackRelease; loading: boolean; error?: string; }
+export interface DetailState { data?: StackReleaseDetail; loading: boolean; error?: string; }
 export interface ReleaseDetail { ensure: (id: string) => void; peek: (id?: string) => DetailState; }
 
 const EMPTY: DetailState = { loading: false };
