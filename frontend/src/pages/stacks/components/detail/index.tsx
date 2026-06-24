@@ -37,7 +37,7 @@ import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/dep
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById, updateStack } from "@/api/stacks";
-import { createRelease, cancelRelease } from "@/api/releases";
+import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
 import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
 import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
@@ -328,6 +328,14 @@ export default function StackDetailPage() {
     (releaseId: string) => runDeploy(() => cancelRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId, releaseId), "Release cancelled"),
     [runDeploy, deployIds],
   );
+  const onRollback = useCallback(
+    (releaseId: string) => runDeploy(() => rollbackRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId, releaseId), "Rollback started"),
+    [runDeploy, deployIds],
+  );
+  const onCopyId = useCallback((releaseId: string) => {
+    void navigator.clipboard?.writeText(releaseId);
+    toast({ title: "Release ID copied" });
+  }, [toast]);
 
   const performSave = async () => {
     if (!stackToShow || !session.isActive || !id) return;
@@ -821,12 +829,19 @@ export default function StackDetailPage() {
         <TabsContent value="deployments">
           {stackToShow.id ? (
             <DeploymentsTab
-              orgId={stackToShow.organisation_id || getCurrentOrganizationId() || ""}
-              teamName={teamNameById(stackToShow.team_id) || defaultTeamName || ""}
+              orgId={deployIds.orgId}
+              teamName={deployIds.teamName}
               stackId={stackToShow.id}
               stack={stackToShow}
-              canDeploy={canWriteStack}
               onOpenLogs={() => setActiveTab("logs")}
+              releases={releasesResult.releases}
+              activeRelease={releasesResult.activeRelease}
+              loading={releasesResult.loading}
+              error={releasesResult.error}
+              lifecycle={lifecycle}
+              onRollback={onRollback}
+              onCancel={onCancelDeploy}
+              onCopyId={onCopyId}
             />
           ) : (
             <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
