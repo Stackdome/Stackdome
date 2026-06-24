@@ -1,0 +1,75 @@
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import type { SnapshotDiff } from "../release-snapshot-diff";
+import { RailNode } from "./rail-node";
+import { ConfigDiff } from "./config-diff";
+
+export interface DraftNodeProps {
+  /** editing = unsaved edits in flight; staged = saved draft, not deployed. */
+  phase: "editing" | "staged";
+  /** Saved spec vs the live release. Absent when it couldn't be diffed. */
+  diff?: SnapshotDiff;
+  /** Sequence of the live release the draft is compared against. */
+  liveSeq?: number;
+  /** Sequence the draft would ship as once deployed. */
+  nextSeq: number;
+  /** True when no release nodes follow (hides the rail connector). */
+  isLast?: boolean;
+  defaultOpen?: boolean;
+}
+
+function changedNames(diff?: SnapshotDiff): string[] {
+  if (!diff) return [];
+  return [...diff.resources.map((r) => r.name), ...diff.volumes.map((v) => v.name), ...diff.connections.map((c) => c.name)];
+}
+
+/**
+ * The draft node leads the rail whenever there are saved-but-undeployed changes.
+ * It mirrors the lean-row + card-below shape of a release node but uses a dashed
+ * amber ring + dashed-amber card border to read as "not deployed", and shows the
+ * staged config diff instead of a stage tracker / resource outcome.
+ */
+export function DraftNode({ phase, diff, liveSeq, nextSeq, isLast, defaultOpen = true }: DraftNodeProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  const names = changedNames(diff);
+  const hasChanges = names.length > 0;
+  const summary = hasChanges
+    ? `${names.slice(0, 2).join(", ")}${names.length > 2 ? ` +${names.length - 2}` : ""} modified`
+    : "changes staged";
+  const chipLabel = phase === "editing" ? "Unsaved" : "Draft";
+
+  return (
+    <RailNode tone="amber" shape="dashed" isLast={isLast}>
+      <div>
+        <div
+          className="-mx-2 flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted"
+          onClick={() => setOpen((o) => !o)}
+        >
+          <span className="flex-none rounded-full border border-brand-border bg-brand-bg px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-brand">
+            {chipLabel}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-[13px] text-fg-muted">
+            <span className="font-medium text-foreground">Staged changes</span>
+            <span> · {summary}</span>
+          </span>
+          {liveSeq != null && <span className="flex-none font-mono text-[11px] text-fg-muted">vs #{liveSeq}</span>}
+          <ChevronDown className={`h-3.5 w-3.5 flex-none text-fg-muted transition-transform ${open ? "rotate-180" : ""}`} />
+        </div>
+
+        {open && (
+          <div className="mb-1 mt-1.5 rounded-md border border-dashed border-brand bg-card p-4">
+            {hasChanges && diff ? (
+              <ConfigDiff diff={diff} hasPrev prevSeq={liveSeq} />
+            ) : (
+              <div className="text-[12.5px] text-fg-muted">Saved changes are staged for deploy.</div>
+            )}
+            <div className="mt-3.5 flex items-center gap-1.5 font-mono text-[11px] text-fg-muted">
+              <span className="text-brand">↑</span>
+              <span>Deploy from the bar above to ship as release #{nextSeq}.</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </RailNode>
+  );
+}
