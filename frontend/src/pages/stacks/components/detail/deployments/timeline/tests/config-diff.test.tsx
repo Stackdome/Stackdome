@@ -36,6 +36,11 @@ describe("ConfigDiff", () => {
     expect(screen.getByText("data")).toBeInTheDocument();
     expect(screen.getByText("2Gi")).toHaveClass("text-success");
   });
+  it("renders a renamed resource as old → new with a Renamed badge", () => {
+    render(<ConfigDiff diff={{ resources: [{ name: "web1", fromName: "web", change: "renamed", sections: [] }], volumes: [], connections: [] }} hasPrev prevSeq={12} />);
+    expect(screen.getByText("Renamed")).toBeInTheDocument();
+    expect(screen.getByText((_, el) => el?.tagName === "SPAN" && el.textContent === "web → web1")).toBeInTheDocument();
+  });
   it("shows the initial-release copy when there is no predecessor", () => {
     render(<ConfigDiff diff={empty} hasPrev={false} />);
     expect(screen.getByText(/initial release/i)).toBeInTheDocument();

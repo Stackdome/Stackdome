@@ -18,7 +18,7 @@ describe("DraftNode", () => {
   it("staged: shows the DRAFT chip, the staged diff, and the deploy note (open by default)", () => {
     render(<DraftNode phase="staged" diff={diff} liveSeq={7} nextSeq={8} />);
     expect(screen.getByText("Draft")).toBeInTheDocument();
-    expect(screen.getByText(/web-server modified/)).toBeInTheDocument();
+    expect(screen.getByText(/web-server changed/)).toBeInTheDocument();
     // The diff card renders the changed resource + values.
     expect(screen.getByText("web-server")).toBeInTheDocument();
     expect(screen.getByText(/ship as release #8/)).toBeInTheDocument();

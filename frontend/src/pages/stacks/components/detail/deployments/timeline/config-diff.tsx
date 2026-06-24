@@ -19,15 +19,18 @@ function Row({ row }: { row: DiffRow }) {
   );
 }
 
-function CardHead({ name, change }: { name: string; change: "added" | "removed" | "modified" }) {
+function CardHead({ name, change, fromName }: { name: string; change: "added" | "removed" | "modified" | "renamed"; fromName?: string }) {
   const dot = change === "added" ? "bg-success" : change === "removed" ? "bg-danger" : "bg-brand";
   return (
     <div className="flex items-center gap-2.5 bg-muted px-3 py-2.5">
       <span className={`h-[7px] w-[7px] flex-none rounded-full ${dot}`} />
-      <span className="font-mono text-[12.5px] font-semibold text-foreground">{name}</span>
+      <span className="font-mono text-[12.5px] font-semibold text-foreground">
+        {change === "renamed" && fromName ? <>{fromName} <span className="text-fg-muted">→</span> {name}</> : name}
+      </span>
       {change === "added" && <span className="inline-flex items-center rounded-md border border-success-border bg-success-bg px-2 py-0.5 text-[11px] font-medium text-success">Added</span>}
       {change === "removed" && <span className="inline-flex items-center rounded-md border border-danger-border bg-danger-bg px-2 py-0.5 text-[11px] font-medium text-danger">Removed</span>}
       {change === "modified" && <span className="inline-flex items-center rounded-md border border-brand-border bg-brand-bg px-2 py-0.5 text-[11px] font-medium text-brand">Modified</span>}
+      {change === "renamed" && <span className="inline-flex items-center rounded-md border border-brand-border bg-brand-bg px-2 py-0.5 text-[11px] font-medium text-brand">Renamed</span>}
     </div>
   );
 }
@@ -44,7 +47,7 @@ function Note({ children }: { children: React.ReactNode }) {
 function ResourceCard({ d }: { d: ResourceDiff }) {
   return (
     <div className={`overflow-hidden rounded-md border border-border ${d.change === "removed" ? "opacity-80" : ""}`}>
-      <CardHead name={d.name} change={d.change} />
+      <CardHead name={d.name} change={d.change} fromName={d.fromName} />
       {d.note && <Note>{d.note}</Note>}
       {d.sections.map((sec, si) => (
         <div key={si} className="border-t border-border">

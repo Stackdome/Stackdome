@@ -559,11 +559,20 @@ export default function StackDetailPage() {
   const deployBar = (() => {
     if (lifecycle.phase !== "staged") return null;
     const d = lifecycle.stagedDiff;
-    const n = d ? d.resources.length + d.volumes.length + d.connections.length : 0;
+    // Per-type counts; a rename collapses to one resource entry in the diff.
+    const segments: StickyActionBarSegment[] = [];
+    const addSeg = (count: number, singular: string) => {
+      if (count > 0) segments.push({ num: count, label: count === 1 ? `${singular} changed` : `${singular}s changed` });
+    };
+    if (d) {
+      addSeg(d.resources.length, "resource");
+      addSeg(d.volumes.length, "volume");
+      addSeg(d.connections.length, "connection");
+    }
     return (
       <StickyActionBar
         leadLabel="Draft saved"
-        segments={n > 0 ? [{ num: n, label: n === 1 ? "change staged — not deployed" : "changes staged — not deployed" }] : []}
+        segments={segments}
         primary={{
           label: "Deploy",
           loadingLabel: "Deploying",

@@ -52,6 +52,19 @@ describe("diffSnapshots", () => {
     expect(env.rows).toContainEqual({ key: "LOG", from: "info", kind: "removed" });
   });
 
+  it("collapses a removed + added pair with identical config into one rename", () => {
+    const out = diffSnapshots(snap([web()]), snap([web({ name: "web1" })])).resources;
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ name: "web1", fromName: "web", change: "renamed" });
+    expect(out[0].sections).toEqual([]);
+  });
+
+  it("does NOT pair a rename when the config also changed (stays remove + add)", () => {
+    const out = diffSnapshots(snap([web()]), snap([web({ name: "web1", image_spec: { image: "web:2" } })])).resources;
+    const changes = out.map((r) => r.change).sort();
+    expect(changes).toEqual(["added", "removed"]);
+  });
+
   it("returns [] when there is no previous snapshot", () => {
     expect(diffSnapshots(undefined, snap([web()])).resources).toEqual([]);
   });

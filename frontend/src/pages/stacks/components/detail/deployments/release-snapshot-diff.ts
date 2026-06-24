@@ -6,7 +6,7 @@ type SnapVolume = NonNullable<Snap["volumes"]>[number];
 
 export interface DiffRow { key: string; from?: string; to?: string; kind: "added" | "removed" | "changed"; }
 export interface DiffSection { kind: "configuration" | "environment"; rows: DiffRow[]; }
-export interface ResourceDiff { name: string; change: "added" | "removed" | "modified"; sections: DiffSection[]; note?: string; }
+export interface ResourceDiff { name: string; change: "added" | "removed" | "modified" | "renamed"; sections: DiffSection[]; note?: string; fromName?: string; }
 export interface ItemDiff { name: string; change: "added" | "removed" | "modified"; rows: DiffRow[]; note?: string; }
 export interface SnapshotDiff { resources: ResourceDiff[]; volumes: ItemDiff[]; connections: ItemDiff[]; }
 
@@ -71,18 +71,43 @@ function sectionsFor(prev: SnapResource | undefined, cur: SnapResource | undefin
   return sections;
 }
 
+/** Identity of a resource by its config + env, ignoring the name. A removed and an
+ *  added resource with the same fingerprint are the same resource renamed. */
+function resourceFingerprint(r: SnapResource): string {
+  return JSON.stringify({ cfg: configScalars(r), env: envMap(r) });
+}
+
 function diffResources(prev: unknown, cur: unknown): ResourceDiff[] {
   const prevByName = new Map(resourcesOf(prev).map((r) => [r.name ?? "", r]));
   const curByName = new Map(resourcesOf(cur).map((r) => [r.name ?? "", r]));
   const out: ResourceDiff[] = [];
+  const removed: SnapResource[] = [];
+  const added: SnapResource[] = [];
   for (const name of new Set([...prevByName.keys(), ...curByName.keys()])) {
     const p = prevByName.get(name);
     const c = curByName.get(name);
-    if (p && !c) { out.push({ name, change: "removed", sections: sectionsFor(p, undefined), note: "Resource removed from this release — workload and config deleted from the stack." }); continue; }
-    if (!p && c) { out.push({ name, change: "added", sections: sectionsFor(undefined, c) }); continue; }
+    if (p && !c) { removed.push(p); continue; }
+    if (!p && c) { added.push(c); continue; }
     const sections = sectionsFor(p, c);
     if (sections.length) out.push({ name, change: "modified", sections });
   }
+  // Collapse a removed + added pair with identical config into a single rename
+  // (the backend reconciles by name, so a rename is a delete + create).
+  const usedAdded = new Set<number>();
+  for (const r of removed) {
+    const fp = resourceFingerprint(r);
+    const matchIdx = added.findIndex((a, i) => !usedAdded.has(i) && resourceFingerprint(a) === fp);
+    if (matchIdx >= 0) {
+      usedAdded.add(matchIdx);
+      out.push({ name: added[matchIdx].name ?? "", fromName: r.name ?? "", change: "renamed", sections: [] });
+    } else {
+      out.push({ name: r.name ?? "", change: "removed", sections: sectionsFor(r, undefined), note: "Resource removed from this release — workload and config deleted from the stack." });
+    }
+  }
+  added.forEach((a, i) => {
+    if (usedAdded.has(i)) return;
+    out.push({ name: a.name ?? "", change: "added", sections: sectionsFor(undefined, a) });
+  });
   return out;
 }
 

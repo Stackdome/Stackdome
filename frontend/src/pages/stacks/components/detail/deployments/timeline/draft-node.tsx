@@ -20,7 +20,14 @@ export interface DraftNodeProps {
 
 function changedNames(diff?: SnapshotDiff): string[] {
   if (!diff) return [];
-  return [...diff.resources.map((r) => r.name), ...diff.volumes.map((v) => v.name), ...diff.connections.map((c) => c.name)];
+  const names: string[] = [];
+  for (const r of diff.resources) {
+    if (r.change === "renamed" && r.fromName) names.push(r.fromName, r.name);
+    else names.push(r.name);
+  }
+  for (const v of diff.volumes) names.push(v.name);
+  for (const c of diff.connections) names.push(c.name);
+  return names;
 }
 
 /**
@@ -34,7 +41,7 @@ export function DraftNode({ phase, diff, liveSeq, nextSeq, isLast, defaultOpen =
   const names = changedNames(diff);
   const hasChanges = names.length > 0;
   const namesLabel = hasChanges
-    ? `${names.slice(0, 2).join(", ")}${names.length > 2 ? ` +${names.length - 2}` : ""} modified`
+    ? `${names.slice(0, 2).join(", ")}${names.length > 2 ? ` +${names.length - 2}` : ""} changed`
     : "";
   const chipLabel = phase === "editing" ? "Unsaved" : "Draft";
 
