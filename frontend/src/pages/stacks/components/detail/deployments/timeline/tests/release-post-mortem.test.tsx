@@ -35,11 +35,12 @@ describe("ReleasePostMortem", () => {
     expect(toggle).toHaveClass("text-brand");
   });
 
-  it("shows why-it-failed for a failed release", async () => {
+  it("shows the red Deploy-failed banner for a failed release (uniform with the live body)", async () => {
     (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "r-cur", sequence: 9, outcome: { resources: {} }, snapshot: { resources: [] } });
     render(<Wrap release={{ id: "r-cur", sequence: 9, state: "Failed", message: "apply error: quota" } as StackRelease} />);
     await waitFor(() => expect(screen.getByText(/apply error: quota/)).toBeInTheDocument());
-    expect(screen.getByText("Why it failed")).toBeInTheDocument();
+    expect(screen.getByText("Deploy failed")).toBeInTheDocument();
+    expect(screen.queryByText("Why it failed")).not.toBeInTheDocument();
   });
 
   it("shows an error line if the fetch fails", async () => {

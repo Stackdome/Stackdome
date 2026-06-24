@@ -7,11 +7,8 @@ import { diffSnapshots } from "../release-snapshot-diff";
 import { resourceSource, replicaLabel, deriveStages } from "../derive";
 import { ResourceOutcomeList } from "./resource-outcome-list";
 import { ConfigChangesToggle } from "./config-changes-toggle";
+import { DeployFailedBanner } from "./deploy-failed-banner";
 import type { ResourceRowVM } from "./resource-row";
-
-const Marker = ({ children, tone }: { children: React.ReactNode; tone?: string }) => (
-  <div className={`mb-2.5 font-mono text-[11px] uppercase tracking-wide ${tone ?? "text-fg-muted"}`}>{children}</div>
-);
 
 export interface ReleasePostMortemProps {
   detail: ReleaseDetail;
@@ -58,14 +55,7 @@ export function ReleasePostMortem({ detail, release, stack, prevReleaseId, prevS
   return (
     <div className="px-0.5 pb-1.5 pt-3.5">
       <StageTracker stages={stages} />
-      {release.state === "Failed" && release.message && (
-        <div className="mt-4">
-          <Marker tone="text-danger">Why it failed</Marker>
-          <div className="flex items-start gap-2 font-mono text-[11.5px] leading-relaxed text-foreground">
-            <span className="flex-none text-danger">⊘</span><span>{release.message}</span>
-          </div>
-        </div>
-      )}
+      {release.state === "Failed" && release.message && <DeployFailedBanner message={release.message} />}
       <ResourceOutcomeList rows={rows} />
       {prevReleaseId && <ConfigChangesToggle diff={diffs} prevSeq={prevSeq} />}
     </div>

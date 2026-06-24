@@ -8,6 +8,7 @@ import type { ReleaseDetail } from "../use-release-detail";
 import { type ResourceRowVM, type LogContext } from "./resource-row";
 import { ResourceOutcomeList } from "./resource-outcome-list";
 import { ConfigChangesToggle } from "./config-changes-toggle";
+import { DeployFailedBanner } from "./deploy-failed-banner";
 
 export interface LiveReleaseBodyProps {
   release: StackRelease;
@@ -59,14 +60,7 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
     <div>
       <StageTracker stages={stages} />
 
-      {releaseLevelError && (
-        <div className="mt-4 rounded-md border border-danger-border bg-danger-bg p-3.5">
-          <div className="mb-1.5 flex items-center gap-2 font-sans text-[13px] font-semibold text-danger">
-            <span>⊘</span> Deploy failed
-          </div>
-          <div className="font-mono text-[11.5px] leading-relaxed text-foreground">{release.message}</div>
-        </div>
-      )}
+      {releaseLevelError && <DeployFailedBanner message={release.message!} />}
 
       <ResourceOutcomeList rows={rows} logContext={logContext} onOpenLogs={onOpenLogs} />
 
