@@ -12,11 +12,12 @@ const TERMINAL = new Set<string>(["Released", "Failed", "Superseded", "Cancelled
 
 export interface DeployLifecycle {
   phase: DeployPhase;
-  /** Per-field diff of the saved spec vs the live release — present only when staged
-   *  and the live snapshot was available to diff against. */
+  /** Per-field diff backing the staged draft — present only when staged and the
+   *  comparison snapshot was available to diff against. */
   stagedDiff?: SnapshotDiff;
-  /** Sequence of the release currently serving traffic (the live release). */
-  liveSeq?: number;
+  /** Sequence the staged diff is computed against: the in-flight release when the
+   *  draft would supersede it, otherwise the live release. Shown as "vs #N". */
+  vsSeq?: number;
   /** Sequence the next deploy would create. */
   nextSeq: number;
 }
@@ -61,38 +62,40 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
   const { stack, dirty, isActive, activeRelease, liveRelease, activeSnapshot, liveSnapshot } = args;
   const liveSeq = liveRelease?.sequence;
   const nextSeq = (activeRelease?.sequence ?? 0) + 1;
-  if (!stack) return { phase: "clean", liveSeq, nextSeq };
+  if (!stack) return { phase: "clean", nextSeq };
 
   if (isActive && dirtyCount(dirty) > 0) {
-    return { phase: "editing", liveSeq, nextSeq };
+    return { phase: "editing", nextSeq };
   }
 
   const spec = specToSnapshot(stack);
   const deploying = !!activeRelease && !TERMINAL.has(activeRelease.state ?? "");
 
-  // A deploy is in flight. If it is shipping exactly the saved spec there's nothing
-  // new to deploy — show the deploying status. If the snapshot hasn't loaded yet,
-  // assume it matches (show status) rather than flashing a Deploy action.
+  // A deploy is in flight. The draft is measured against the IN-FLIGHT release,
+  // not what's live: if the saved spec matches what's deploying there's nothing
+  // new (just a status); if it differs, it's a draft that would supersede the
+  // in-flight release — even when the saved spec happens to equal what's live.
   if (deploying) {
-    if (!activeSnapshot || diffIsEmpty(diffSnapshots(activeSnapshot, spec))) {
-      return { phase: "deploying", liveSeq, nextSeq };
-    }
-    // else: there are changes beyond the in-flight release — fall through to staged.
+    if (!activeSnapshot) return { phase: "deploying", nextSeq }; // snapshot loading
+    const d = diffSnapshots(activeSnapshot, spec);
+    return diffIsEmpty(d)
+      ? { phase: "deploying", nextSeq }
+      : { phase: "staged", stagedDiff: d, vsSeq: activeRelease!.sequence, nextSeq };
   }
 
-  // staged: the saved spec differs from what is live.
+  // Nothing in flight: the draft is measured against what's live.
   if (liveSnapshot) {
-    const stagedDiff = diffSnapshots(liveSnapshot, spec);
-    return diffIsEmpty(stagedDiff)
-      ? { phase: "clean", liveSeq, nextSeq }
-      : { phase: "staged", stagedDiff, liveSeq, nextSeq };
+    const d = diffSnapshots(liveSnapshot, spec);
+    return diffIsEmpty(d)
+      ? { phase: "clean", nextSeq }
+      : { phase: "staged", stagedDiff: d, vsSeq: liveSeq, nextSeq };
   }
 
   const liveReleaseId = stack.status?.last_converged?.release_id;
   if (!liveReleaseId) {
     // Never converged a release — any saved resources are staged for the first deploy.
     const hasSpec = (stack.spec?.stack_resources?.length ?? 0) > 0;
-    return { phase: hasSpec ? "staged" : "clean", liveSeq, nextSeq };
+    return { phase: hasSpec ? "staged" : "clean", vsSeq: liveSeq, nextSeq };
   }
 
   // Live snapshot not loaded yet. If the row is resolved fall back to a timestamp
@@ -101,9 +104,9 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
     const stackUpdated = (stack as { updated_at?: string }).updated_at;
     const drift = !!stackUpdated && !!liveRelease.completed_at
       && new Date(stackUpdated) > new Date(liveRelease.completed_at);
-    return { phase: drift ? "staged" : "clean", liveSeq, nextSeq };
+    return { phase: drift ? "staged" : "clean", vsSeq: liveSeq, nextSeq };
   }
-  return { phase: "clean", liveSeq, nextSeq };
+  return { phase: "clean", nextSeq };
 }
 
 export interface UseDeployLifecycleArgs {

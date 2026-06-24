@@ -16,7 +16,7 @@ const diff: SnapshotDiff = {
 
 describe("DraftNode", () => {
   it("staged: shows the DRAFT chip, the staged diff, and the deploy note (open by default)", () => {
-    render(<DraftNode phase="staged" diff={diff} liveSeq={7} nextSeq={8} />);
+    render(<DraftNode phase="staged" diff={diff} vsSeq={7} nextSeq={8} />);
     expect(screen.getByText("Draft")).toBeInTheDocument();
     expect(screen.getByText(/web-server changed/)).toBeInTheDocument();
     // The diff card renders the changed resource + values.
@@ -25,12 +25,12 @@ describe("DraftNode", () => {
   });
 
   it("editing: shows the UNSAVED chip", () => {
-    render(<DraftNode phase="editing" diff={diff} liveSeq={7} nextSeq={8} />);
+    render(<DraftNode phase="editing" diff={diff} vsSeq={7} nextSeq={8} />);
     expect(screen.getByText("Unsaved")).toBeInTheDocument();
   });
 
   it("collapses the card when the row is clicked", async () => {
-    render(<DraftNode phase="staged" diff={diff} liveSeq={7} nextSeq={8} />);
+    render(<DraftNode phase="staged" diff={diff} vsSeq={7} nextSeq={8} />);
     expect(screen.getByText(/ship as release #8/)).toBeInTheDocument();
     await userEvent.click(screen.getByText("Staged changes"));
     expect(screen.queryByText(/ship as release #8/)).not.toBeInTheDocument();

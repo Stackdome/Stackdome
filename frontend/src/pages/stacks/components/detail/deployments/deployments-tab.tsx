@@ -27,7 +27,7 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
   if (error) return <EmptyState title="Could not load deployments" description={error} />;
 
   const draftNode = lifecycle.phase === "editing" || lifecycle.phase === "staged"
-    ? <DraftNode phase={lifecycle.phase} diff={lifecycle.stagedDiff} liveSeq={lifecycle.liveSeq} nextSeq={lifecycle.nextSeq} isLast={releases.length === 0} />
+    ? <DraftNode phase={lifecycle.phase} diff={lifecycle.stagedDiff} vsSeq={lifecycle.vsSeq} nextSeq={lifecycle.nextSeq} isLast={releases.length === 0} />
     : undefined;
 
   return (

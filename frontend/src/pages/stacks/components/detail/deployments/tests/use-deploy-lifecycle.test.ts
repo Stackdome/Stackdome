@@ -52,21 +52,22 @@ describe("deriveDeployLifecycle", () => {
     });
     expect(r.phase).toBe("deploying");
     expect(r.nextSeq).toBe(9);
-    expect(r.liveSeq).toBe(7);
+    expect(r.vsSeq).toBeUndefined();
   });
 
-  it("staged — a fresh edit made mid-deploy supersedes the in-flight release", () => {
+  it("staged — a fresh edit made mid-deploy supersedes the in-flight release (diff vs the in-flight)", () => {
     const r = deriveDeployLifecycle({
-      stack: mkStack("nginx:1.28"), // newer than the in-flight #8
+      stack: mkStack("nginx:1.28"), // differs from the in-flight #8
       dirty: cleanDirty(),
       isActive: false,
       activeRelease: mkRelease({ sequence: 8, state: "InProgress" }),
       liveRelease: mkRelease({ id: "live-1", sequence: 7 }),
       activeSnapshot: snap("nginx:1.27"), // in-flight ships 1.27, saved is 1.28
-      liveSnapshot: snap("nginx:1.25"),
+      liveSnapshot: snap("nginx:1.28"), // even though saved == live, it differs from the in-flight
     });
     expect(r.phase).toBe("staged");
     expect(r.stagedDiff?.resources).toHaveLength(1);
+    expect(r.vsSeq).toBe(8); // diffed against the in-flight release, not live
   });
 
   it("staged — retrying a failed release whose spec still isn't live", () => {

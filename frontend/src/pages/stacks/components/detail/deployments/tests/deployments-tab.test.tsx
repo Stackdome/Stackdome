@@ -29,7 +29,7 @@ const stagedDiff: SnapshotDiff = {
 
 describe("DeploymentsTab", () => {
   it("renders the timeline with no in-tab Deploy button (deploy is owned by the status bar)", () => {
-    const lifecycle: DeployLifecycle = { phase: "clean", nextSeq: 15, liveSeq: 14 };
+    const lifecycle: DeployLifecycle = { phase: "clean", nextSeq: 15, vsSeq: 14 };
     render(<DeploymentsTab {...base} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
     expect(screen.getByText("#14")).toBeInTheDocument();
     expect(screen.getByText("Deploy timeline")).toBeInTheDocument();
@@ -37,14 +37,14 @@ describe("DeploymentsTab", () => {
   });
 
   it("leads the rail with a draft node when staged", () => {
-    const lifecycle: DeployLifecycle = { phase: "staged", stagedDiff, liveSeq: 14, nextSeq: 15 };
+    const lifecycle: DeployLifecycle = { phase: "staged", stagedDiff, vsSeq: 14, nextSeq: 15 };
     render(<DeploymentsTab {...base} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
     expect(screen.getByText("Draft")).toBeInTheDocument();
     expect(screen.getByText(/ship as release #15/)).toBeInTheDocument();
   });
 
   it("does not show a draft node when clean", () => {
-    const lifecycle: DeployLifecycle = { phase: "clean", nextSeq: 15, liveSeq: 14 };
+    const lifecycle: DeployLifecycle = { phase: "clean", nextSeq: 15, vsSeq: 14 };
     render(<DeploymentsTab {...base} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
     expect(screen.queryByText("Draft")).not.toBeInTheDocument();
   });

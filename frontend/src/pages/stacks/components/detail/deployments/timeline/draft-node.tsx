@@ -7,10 +7,10 @@ import { ConfigDiff } from "./config-diff";
 export interface DraftNodeProps {
   /** editing = unsaved edits in flight; staged = saved draft, not deployed. */
   phase: "editing" | "staged";
-  /** Saved spec vs the live release. Absent when it couldn't be diffed. */
+  /** Saved spec vs the comparison release. Absent when it couldn't be diffed. */
   diff?: SnapshotDiff;
-  /** Sequence of the live release the draft is compared against. */
-  liveSeq?: number;
+  /** Sequence the draft is diffed against — live, or the in-flight release when superseding it. */
+  vsSeq?: number;
   /** Sequence the draft would ship as once deployed. */
   nextSeq: number;
   /** True when no release nodes follow (hides the rail connector). */
@@ -36,7 +36,7 @@ function changedNames(diff?: SnapshotDiff): string[] {
  * amber ring + dashed-amber card border to read as "not deployed", and shows the
  * staged config diff instead of a stage tracker / resource outcome.
  */
-export function DraftNode({ phase, diff, liveSeq, nextSeq, isLast, defaultOpen = true }: DraftNodeProps) {
+export function DraftNode({ phase, diff, vsSeq, nextSeq, isLast, defaultOpen = true }: DraftNodeProps) {
   const [open, setOpen] = useState(defaultOpen);
   const names = changedNames(diff);
   const hasChanges = names.length > 0;
@@ -59,14 +59,14 @@ export function DraftNode({ phase, diff, liveSeq, nextSeq, isLast, defaultOpen =
             <span className="font-medium text-foreground">Staged changes</span>
             {namesLabel && <span className="text-fg-muted"> {namesLabel}</span>}
           </span>
-          {liveSeq != null && <span className="flex-none font-mono text-[11px] text-fg-muted">vs #{liveSeq}</span>}
+          {vsSeq != null && <span className="flex-none font-mono text-[11px] text-fg-muted">vs #{vsSeq}</span>}
           <ChevronDown className={`h-3.5 w-3.5 flex-none text-fg-muted transition-transform ${open ? "rotate-180" : ""}`} />
         </div>
 
         {open && (
           <div className="mb-1 mt-1.5 rounded-md border border-dashed border-brand bg-card p-4">
             {hasChanges && diff ? (
-              <ConfigDiff diff={diff} hasPrev prevSeq={liveSeq} />
+              <ConfigDiff diff={diff} hasPrev prevSeq={vsSeq} />
             ) : (
               <div className="text-[12.5px] text-fg-muted">Saved changes are staged for deploy.</div>
             )}
