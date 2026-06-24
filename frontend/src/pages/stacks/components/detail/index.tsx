@@ -41,6 +41,7 @@ import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
 import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
 import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
+import { deriveStages, deriveFailingResources } from "@/pages/stacks/components/detail/deployments/derive";
 import {
   connectionsToEnvRows,
 } from "@/pages/stacks/lib/connection-mapping";
@@ -556,12 +557,19 @@ export default function StackDetailPage() {
   // keeps using the live edit-session dirty counts). Persistent across tabs.
   const deployBar = (() => {
     if (lifecycle.phase === "deploying") {
-      const seq = releasesResult.activeRelease?.sequence;
+      const active = releasesResult.activeRelease;
+      const seq = active?.sequence;
+      // Reflect the actual in-flight stage rather than a hardcoded "building" —
+      // an image-only stack skips Build and is rolling out, not building.
+      const stages = active && stackToShow
+        ? deriveStages(stackToShow, active, deriveFailingResources(stackToShow))
+        : undefined;
+      const verb = stages?.build === "active" ? "building…" : stages?.deploy === "active" ? "rolling out…" : "deploying…";
       return (
         <StickyActionBar
           tone="deploying"
           leadLabel="Deploying"
-          segments={seq != null ? [{ num: seq, label: "building…" }] : []}
+          segments={seq != null ? [{ num: seq, label: verb }] : []}
           secondary={{
             label: "Cancel",
             onClick: () => {
