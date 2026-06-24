@@ -2,7 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { listReleases, type StackRelease } from "@/api/releases";
 
 const POLL_MS = 5000;
+// Slow background refresh so a deploy started elsewhere (webhook push, another
+// user) shows up while the page sits idle with everything terminal.
+const IDLE_POLL_MS = 30000;
 const TERMINAL = new Set<string>(["Released", "Failed", "Superseded", "Cancelled"]);
+
+function isVisible(): boolean {
+  return typeof document === "undefined" || document.visibilityState !== "hidden";
+}
 
 export interface UseReleasesArgs {
   orgId: string;
@@ -65,14 +72,21 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
     void fetchOnce();
   }, [enabled, fetchOnce]);
 
-  // Always register the interval while enabled; gate the actual fetch on the ref
-  // so we don't need an extra render cycle to start/stop polling.
+  // Two cadences, both paused while the tab is hidden:
+  //  - fast (POLL_MS): only while a release is still settling.
+  //  - slow (IDLE_POLL_MS): always, so external/idle changes still surface.
+  // Returning to a hidden tab refetches immediately rather than waiting a tick.
   useEffect(() => {
     if (!enabled) return;
-    const id = setInterval(() => {
-      if (hasPendingWork.current) void fetchOnce();
-    }, POLL_MS);
-    return () => clearInterval(id);
+    const fast = setInterval(() => { if (hasPendingWork.current && isVisible()) void fetchOnce(); }, POLL_MS);
+    const slow = setInterval(() => { if (isVisible()) void fetchOnce(); }, IDLE_POLL_MS);
+    const onVisible = () => { if (isVisible()) void fetchOnce(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(fast);
+      clearInterval(slow);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [enabled, fetchOnce]);
 
   const active = releases[0];
