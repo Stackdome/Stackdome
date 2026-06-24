@@ -23,9 +23,11 @@ describe("ConfigDiff", () => {
   it("renders changed, added and removed resources", () => {
     render(<ConfigDiff diff={diff} hasPrev prevSeq={12} />);
     expect(screen.getByText("web")).toBeInTheDocument();
-    expect(screen.getByText("web:1")).toHaveClass("line-through");
+    expect(screen.getByText("web:1")).toHaveClass("text-danger");
+    expect(screen.getByText("web:1")).not.toHaveClass("line-through");
     expect(screen.getByText("web:2")).toHaveClass("text-success");
-    expect(screen.getByText("ADDED")).toBeInTheDocument();
+    expect(screen.getByText("Added")).toBeInTheDocument();
+    expect(screen.getByText("Modified")).toBeInTheDocument();
     expect(screen.getByText(/removed from this release/i)).toBeInTheDocument();
   });
   it("renders a volumes group with resized/added volumes", () => {

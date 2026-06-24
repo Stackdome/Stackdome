@@ -78,7 +78,7 @@ function diffResources(prev: unknown, cur: unknown): ResourceDiff[] {
   for (const name of new Set([...prevByName.keys(), ...curByName.keys()])) {
     const p = prevByName.get(name);
     const c = curByName.get(name);
-    if (p && !c) { out.push({ name, change: "removed", sections: [], note: "Resource removed from this release — workload and config deleted from the stack." }); continue; }
+    if (p && !c) { out.push({ name, change: "removed", sections: sectionsFor(p, undefined), note: "Resource removed from this release — workload and config deleted from the stack." }); continue; }
     if (!p && c) { out.push({ name, change: "added", sections: sectionsFor(undefined, c) }); continue; }
     const sections = sectionsFor(p, c);
     if (sections.length) out.push({ name, change: "modified", sections });
@@ -108,7 +108,7 @@ function diffNamed<T>(prev: T[], cur: T[], nameOf: (t: T) => string, scalars: (t
   for (const name of new Set([...p.keys(), ...c.keys()])) {
     const a = p.get(name);
     const b = c.get(name);
-    if (a && !b) { out.push({ name, change: "removed", rows: [], note: removedNote }); continue; }
+    if (a && !b) { out.push({ name, change: "removed", rows: scalarRows(scalars(a as T), {}), note: removedNote }); continue; }
     if (!a && b) { out.push({ name, change: "added", rows: scalarRows({}, scalars(b)) }); continue; }
     const rows = scalarRows(scalars(a as T), scalars(b as T));
     if (rows.length) out.push({ name, change: "modified", rows });

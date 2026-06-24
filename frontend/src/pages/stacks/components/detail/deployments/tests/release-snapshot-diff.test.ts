@@ -42,10 +42,14 @@ describe("diffSnapshots", () => {
     expect(cfg.rows.every((r) => r.kind === "added")).toBe(true);
   });
 
-  it("marks a removed resource with a note and no sections", () => {
+  it("enumerates a removed resource's full config as removed rows", () => {
     const out = diffSnapshots(snap([web()]), snap([])).resources;
-    expect(out[0]).toMatchObject({ name: "web", change: "removed", sections: [] });
+    expect(out[0]).toMatchObject({ name: "web", change: "removed" });
     expect(out[0].note).toMatch(/removed/i);
+    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
+    expect(cfg.rows).toContainEqual({ key: "image", from: "web:1", kind: "removed" });
+    const env = out[0].sections.find((s) => s.kind === "environment")!;
+    expect(env.rows).toContainEqual({ key: "LOG", from: "info", kind: "removed" });
   });
 
   it("returns [] when there is no previous snapshot", () => {
@@ -62,7 +66,7 @@ describe("diffSnapshots volumes", () => {
     const out = diffSnapshots(prev, cur);
     expect(out.volumes).toEqual([
       { name: "data", change: "modified", rows: [{ key: "size", from: "1Gi", to: "2Gi", kind: "changed" }] },
-      { name: "cache", change: "removed", rows: [], note: "Volume removed from this release." },
+      { name: "cache", change: "removed", rows: [{ key: "size", from: "500Mi", kind: "removed" }, { key: "access_mode", from: "ReadWriteOnce", kind: "removed" }], note: "Volume removed from this release." },
       { name: "logs", change: "added", rows: [{ key: "size", to: "1Gi", kind: "added" }, { key: "access_mode", to: "ReadWriteOnce", kind: "added" }] },
     ]);
   });

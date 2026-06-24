@@ -15,6 +15,11 @@ describe("ResourceRow", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
+  it("renders the source line under the name when provided", () => {
+    render(<ResourceRow vm={{ name: "web", phase: "Ready", replicas: "1/1", source: { kind: "image", label: "nginx:alpine" } }} />);
+    expect(screen.getByText("nginx:alpine")).toBeInTheDocument();
+  });
+
   it("expands a failing row to show the FailureCard and Open in Logs", async () => {
     const onOpenLogs = vi.fn();
     render(<ResourceRow

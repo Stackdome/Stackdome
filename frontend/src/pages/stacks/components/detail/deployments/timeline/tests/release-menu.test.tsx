@@ -19,7 +19,7 @@ const rel = (over: Partial<StackRelease>) => ({ id: "r1", sequence: 5, state: "R
 describe("ReleaseMenu", () => {
   it("shows Rollback for Released and Copy id; hides Cancel", async () => {
     const onRollback = vi.fn();
-    render(<ReleaseMenu release={rel({ state: "Released" })} onView={vi.fn()} onRollback={onRollback} onCancel={vi.fn()} onCopyId={vi.fn()} />);
+    render(<ReleaseMenu release={rel({ state: "Released" })} onRollback={onRollback} onCancel={vi.fn()} onCopyId={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /release actions/i }));
     expect(screen.getByText("Rollback to this")).toBeInTheDocument();
     expect(screen.queryByText("Cancel release")).not.toBeInTheDocument();
@@ -28,7 +28,7 @@ describe("ReleaseMenu", () => {
   });
 
   it("shows Cancel for Pending", async () => {
-    render(<ReleaseMenu release={rel({ state: "Pending" })} onView={vi.fn()} onRollback={vi.fn()} onCancel={vi.fn()} onCopyId={vi.fn()} />);
+    render(<ReleaseMenu release={rel({ state: "Pending" })} onRollback={vi.fn()} onCancel={vi.fn()} onCopyId={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /release actions/i }));
     expect(screen.getByText("Cancel release")).toBeInTheDocument();
     expect(screen.queryByText("Rollback to this")).not.toBeInTheDocument();

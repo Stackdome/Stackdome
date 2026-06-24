@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { StatusPill, StageTracker, variantFromState } from "@/components/branded";
+import { StageTracker } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
-import { deriveStages, deriveFailingResources, deriveRecovered, deriveReleaseTitle, formatDuration, formatReleaseTime } from "../derive";
+import { deriveStages, deriveFailingResources, deriveRecovered, causeLabel, formatDuration, formatReleaseTime, resourceSource, replicaLabel } from "../derive";
 import { diffSnapshots } from "../release-snapshot-diff";
 import type { ReleaseDetail } from "../use-release-detail";
 import { ResourceRow, type LogContext } from "./resource-row";
@@ -21,8 +21,6 @@ function meta(release: StackRelease): string {
   const parts: string[] = [];
   const when = formatReleaseTime(release.completed_at);
   if (when) parts.push(`deployed ${when}`);
-  const dur = formatDuration(release.rendered_at, release.completed_at);
-  if (dur !== "—") parts.push(`took ${dur}`);
   if (release.snapshot_revision) parts.push(`config ${release.snapshot_revision.slice(0, 7)}`);
   return parts.join(" · ");
 }
@@ -43,17 +41,20 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onC
   const recoveredNames = new Set(recovered.map((r) => r.name));
   const failingByName = new Map(failing.map((f) => [f.name, f]));
   const stages = deriveStages(stack, release, failing);
-  const title = deriveReleaseTitle(release, failing, stages);
+  const dur = formatDuration(release.rendered_at, release.completed_at);
   const summaries = stack.status?.resources ?? [];
+  const specByName = new Map((stack.spec?.stack_resources ?? []).map((r) => [r.name, r]));
   const releaseLevelError = release.state === "Failed" && failing.length === 0 && release.message;
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <StatusPill variant={variantFromState(release.state ?? "")}>{release.state}</StatusPill>
           <span className="flex-none font-sans text-[16px] font-semibold text-foreground">#{release.sequence}</span>
-          <span className="min-w-0 truncate font-sans text-[14px] text-fg-muted">{title}</span>
+          <span className="min-w-0 truncate font-sans text-[14px] text-fg-muted">
+            {causeLabel(release.cause)}
+            {dur !== "—" ? ` · took ${dur}` : ""}
+          </span>
         </div>
         <div className="flex items-center gap-3">
           <span className="font-mono text-[11px] text-fg-muted">{meta(release)}</span>
@@ -73,7 +74,7 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onC
       {releaseLevelError && (
         <div className="mt-3.5 rounded-md border border-danger-border bg-danger-bg p-3.5">
           <div className="mb-1.5 flex items-center gap-2 font-sans text-[13px] font-semibold text-danger">
-            <span>⊘</span> Release failed
+            <span>⊘</span> Deploy failed
           </div>
           <div className="font-mono text-[11.5px] leading-relaxed text-foreground">{release.message}</div>
         </div>
@@ -83,28 +84,32 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onC
         <div className="mt-4">
           <div className="mb-0.5 font-mono text-[11px] uppercase tracking-wide text-fg-muted">Resources</div>
           <div className="divide-y divide-border">
-          {summaries.map((s, i) => (
-            <ResourceRow
-              key={s.name ?? i}
-              vm={{
-                name: s.name ?? "",
-                phase: s.phase ?? "",
-                replicas: `${s.available_replicas ?? 0}/${s.replicas ?? 0}`,
-                msg: s.message,
-                tag: recoveredNames.has(s.name ?? "") ? "RECOVERED" : undefined,
-                failure: failingByName.get(s.name ?? ""),
-              }}
-              logContext={logContext}
-              onOpenLogs={onOpenLogs}
-            />
-          ))}
+            {summaries.map((s, i) => (
+              <ResourceRow
+                key={s.name ?? i}
+                vm={{
+                  name: s.name ?? "",
+                  phase: s.phase ?? "",
+                  replicas: replicaLabel(s.available_replicas, s.replicas),
+                  msg: s.message,
+                  tag: recoveredNames.has(s.name ?? "") ? "RECOVERED" : undefined,
+                  failure: failingByName.get(s.name ?? ""),
+                  source: resourceSource(specByName.get(s.name ?? "")),
+                }}
+                logContext={logContext}
+                onOpenLogs={onOpenLogs}
+              />
+            ))}
           </div>
         </div>
       )}
 
       {canDiff && (
         <div className="mt-4">
-          <button onClick={onToggleDiff} className="font-sans text-[12.5px] font-medium text-primary">
+          <button
+            onClick={onToggleDiff}
+            className="font-mono text-[11px] uppercase tracking-wide text-fg-muted hover:text-foreground"
+          >
             {showDiff ? "Hide config changes" : `View config changes · vs #${prevSeq ?? "previous"}`}
           </button>
           {showDiff && <div className="mt-3"><ConfigDiff diff={diff} hasPrev prevSeq={prevSeq} /></div>}

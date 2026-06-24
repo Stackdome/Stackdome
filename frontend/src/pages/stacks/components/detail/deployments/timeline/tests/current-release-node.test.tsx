@@ -42,8 +42,8 @@ function WrapDiff({ prevReleaseId, prevSeq }: { prevReleaseId?: string; prevSeq?
 describe("CurrentReleaseNode", () => {
   it("renders status, sequence and a Ready resource row", () => {
     render(<Wrap release={{ id: "r1", sequence: 14, state: "Released", snapshot_revision: "abcdef1234" } as StackRelease} st={stack()} />);
-    // "Released" appears twice: the state pill and the derived kind-title.
-    expect(screen.getAllByText("Released").length).toBeGreaterThanOrEqual(1);
+    // No status pill — the rail dot conveys state; the header shows the cause like history rows.
+    expect(screen.getByText("Manual deploy")).toBeInTheDocument();
     expect(screen.getByText("#14")).toBeInTheDocument();
     expect(screen.getByText("web")).toBeInTheDocument();
   });

@@ -5,13 +5,12 @@ import type { StackRelease } from "@/api/releases";
 
 export interface ReleaseMenuProps {
   release: StackRelease;
-  onView: (id: string) => void;
   onRollback: (id: string) => void;
   onCancel: (id: string) => void;
   onCopyId: (id: string) => void;
 }
 
-export function ReleaseMenu({ release, onView, onRollback, onCancel, onCopyId }: ReleaseMenuProps) {
+export function ReleaseMenu({ release, onRollback, onCancel, onCopyId }: ReleaseMenuProps) {
   const id = release.id ?? "";
   const state = release.state ?? "";
   return (
@@ -22,7 +21,6 @@ export function ReleaseMenu({ release, onView, onRollback, onCancel, onCopyId }:
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[180px]">
-        <DropdownMenuItem onClick={() => onView(id)}>View details</DropdownMenuItem>
         {state === "Released" && release.id && <DropdownMenuItem onClick={() => onRollback(release.id!)}>Rollback to this</DropdownMenuItem>}
         {(state === "Pending" || state === "InProgress") && release.id && (
           <DropdownMenuItem variant="destructive" onClick={() => onCancel(release.id!)}>Cancel release</DropdownMenuItem>

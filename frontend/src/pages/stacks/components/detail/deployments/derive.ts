@@ -4,9 +4,33 @@ import type { StackRelease } from "@/api/releases";
 import type { Stages } from "@/components/branded";
 
 export type Stack = components["schemas"]["Stack"];
+export type StackResource = components["schemas"]["StackResource"];
 export type StackResourceFailure = components["schemas"]["StackResourceFailure"];
 export type ReleaseCause = components["schemas"]["ReleaseCause"];
 export type FailureStage = "build" | "runtime" | "init" | "validation";
+
+export interface ResourceSource {
+  kind: "image" | "git";
+  label: string;
+}
+
+// hide trivial "n/n" — surface only when not fully available.
+export function replicaLabel(ready?: number, desired?: number): string | undefined {
+  const r = ready ?? 0;
+  const d = desired ?? 0;
+  return r === d ? undefined : `${r}/${d}`;
+}
+
+// image resources → image ref; git resources → repo url. mirrors config page sourceType.
+export function resourceSource(r?: StackResource): ResourceSource | undefined {
+  if (!r) return undefined;
+  if (r.build_spec) {
+    const url = r.build_spec.source_context?.git_repo?.repo_url;
+    return url ? { kind: "git", label: url } : undefined;
+  }
+  const image = r.image_spec?.image;
+  return image ? { kind: "image", label: image } : undefined;
+}
 
 export interface FailingResource {
   name: string;

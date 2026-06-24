@@ -29,7 +29,8 @@ describe("TimelineRail", () => {
   it("renders current node + earlier releases", () => {
     const r = rels(3);
     render(<TimelineRail releases={r} activeRelease={r[0]} {...base} />);
-    expect(screen.getByText("Earlier releases")).toBeInTheDocument();
+    expect(screen.getByText("Current deployment")).toBeInTheDocument();
+    expect(screen.getByText("Earlier deployments")).toBeInTheDocument();
     expect(screen.getByText("#2")).toBeInTheDocument();
     expect(screen.getByText("#1")).toBeInTheDocument();
   });
@@ -40,5 +41,15 @@ describe("TimelineRail", () => {
     expect(screen.queryByText("#1")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /show more/i }));
     expect(screen.getByText("#1")).toBeInTheDocument();
+  });
+
+  it("keeps multiple release details open at once (not an accordion)", async () => {
+    const r = rels(4); // active #4, earlier #3 #2 #1
+    render(<TimelineRail releases={r} activeRelease={r[0]} {...base} />);
+    await userEvent.click(screen.getByText("#3"));
+    await userEvent.click(screen.getByText("#2"));
+    // Both post-mortems stay mounted — an accordion would have closed #3 on opening #2.
+    expect(await screen.findByText(/vs #2/i)).toBeInTheDocument();
+    expect(await screen.findByText(/vs #1/i)).toBeInTheDocument();
   });
 });

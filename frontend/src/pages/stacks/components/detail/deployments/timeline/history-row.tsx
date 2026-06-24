@@ -19,9 +19,10 @@ export function HistoryRow({ release, prevReleaseId, prevSeq, detail, isOpen, on
   const id = release.id ?? "";
   const state = release.state ?? "";
   const sha = releaseGitSha(release);
-  // Released → git sha · duration; everything else → its message (if any).
+  // Released → git sha · took <duration>; everything else → its message (if any).
+  const dur = formatDuration(release.rendered_at, release.completed_at);
   const subline = state === "Released"
-    ? [sha && `git ${sha}`, formatDuration(release.rendered_at, release.completed_at)].filter(Boolean).join(" · ")
+    ? [sha && `git ${sha}`, dur !== "—" && `took ${dur}`].filter(Boolean).join(" · ")
     : release.message || undefined;
   const ts = formatReleaseTime(release.completed_at ?? release.created_at);
 
@@ -34,7 +35,7 @@ export function HistoryRow({ release, prevReleaseId, prevSeq, detail, isOpen, on
           {subline ? <span className={state === "Failed" ? "text-danger" : "text-fg-muted"}> · {subline}</span> : null}
         </span>
         {ts && <span className="flex-none font-mono text-[11px] text-fg-muted">{ts}</span>}
-        <ReleaseMenu release={release} onView={() => onToggle(id)} onRollback={onRollback} onCancel={onCancel} onCopyId={onCopyId} />
+        <ReleaseMenu release={release} onRollback={onRollback} onCancel={onCancel} onCopyId={onCopyId} />
       </div>
       {isOpen && <ReleasePostMortem detail={detail} release={release} prevReleaseId={prevReleaseId} prevSeq={prevSeq} />}
     </div>

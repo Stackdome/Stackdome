@@ -27,9 +27,16 @@ export interface TimelineRailProps {
 export function TimelineRail(props: TimelineRailProps) {
   const { releases, activeRelease, stack, logContext, onOpenLogs, banner, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
   const detail = useReleaseDetail(logContext?.orgId ?? "", logContext?.teamName ?? "", logContext?.stackId ?? "");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set());
   const [windowN, setWindowN] = useState(initialWindow);
-  const toggle = (id: string) => setOpenId((cur) => (cur === id ? null : id));
+  // Multiple release details can be open at once — not an accordion.
+  const toggle = (id: string) =>
+    setOpenIds((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const earlier = releases.slice(1); // activeRelease = releases[0]
   const shown = earlier.slice(0, windowN);
@@ -39,6 +46,10 @@ export function TimelineRail(props: TimelineRailProps) {
   return (
     <div className="space-y-0">
       {banner && <div className="mb-5">{banner}</div>}
+
+      {activeRelease && (
+        <div className="ml-12 pb-2 font-mono text-[11px] uppercase tracking-wide text-fg-muted">Current deployment</div>
+      )}
 
       {activeRelease ? (
         <RailNode tone={stateTone(activeRelease.state ?? "")} big pulse={!TERMINAL.has(activeRelease.state ?? "")} isLast={earlier.length === 0}>
@@ -60,7 +71,7 @@ export function TimelineRail(props: TimelineRailProps) {
       ) : null}
 
       {earlier.length > 0 && (
-        <div className="ml-12 py-2 font-mono text-[11px] uppercase tracking-wide text-fg-muted">Earlier releases</div>
+        <div className="ml-12 py-2 font-mono text-[11px] uppercase tracking-wide text-fg-muted">Earlier deployments</div>
       )}
 
       {shown.map((r, i) => {
@@ -72,7 +83,7 @@ export function TimelineRail(props: TimelineRailProps) {
               prevReleaseId={prevIdFor(idx)}
               prevSeq={prevSeqFor(idx)}
               detail={detail}
-              isOpen={openId === r.id}
+              isOpen={openIds.has(r.id ?? "")}
               onToggle={toggle}
               onRollback={onRollback}
               onCancel={onCancel}
