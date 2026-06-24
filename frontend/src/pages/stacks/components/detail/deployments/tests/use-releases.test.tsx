@@ -39,6 +39,18 @@ describe("useReleases", () => {
     expect(listReleases).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps polling while an earlier release is still non-terminal, even after the latest is terminal", async () => {
+    vi.useFakeTimers();
+    const mock = listReleases as ReturnType<typeof vi.fn>;
+    // latest #2 already Released, but #1 is still InProgress (not yet superseded)
+    mock.mockResolvedValue({ items: [{ id: "r2", sequence: 2, state: "Released" }, { id: "r1", sequence: 1, state: "InProgress" }] });
+    renderHook(() => useReleases(ARGS));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(mock).toHaveBeenCalledTimes(2); // still polling because #1 hasn't settled
+  });
+
   it("stops polling once the active release becomes terminal", async () => {
     vi.useFakeTimers();
     const mock = listReleases as ReturnType<typeof vi.fn>;

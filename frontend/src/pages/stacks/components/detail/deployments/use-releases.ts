@@ -29,9 +29,12 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
   const mounted = useRef(true);
-  // Ref tracks whether the active release is non-terminal so the poll interval
-  // can check without depending on React state (avoids extra render cycle).
-  const activeIsNonTerminal = useRef(false);
+  // Ref tracks whether ANY release is still non-terminal so the poll keeps the
+  // list fresh until every release settles — this catches trailing supersessions
+  // of earlier releases after the latest one has already finished. Gating only on
+  // the latest would stop polling while an earlier Pending release is still
+  // resolving, leaving it stuck on a stale state until a manual refresh.
+  const hasPendingWork = useRef(false);
 
   const fetchOnce = useCallback(async () => {
     if (!enabled || inFlight.current) return;
@@ -41,8 +44,7 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
       const data = await listReleases(orgId, teamName, stackId);
       if (!mounted.current) return;
       const sorted = [...(data.items ?? [])].sort(bySequenceDesc);
-      const top = sorted[0];
-      activeIsNonTerminal.current = !!top && !TERMINAL.has(top.state ?? "");
+      hasPendingWork.current = sorted.some((r) => !TERMINAL.has(r.state ?? ""));
       setReleases(sorted);
       setError(null);
     } catch (e) {
@@ -68,7 +70,7 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
   useEffect(() => {
     if (!enabled) return;
     const id = setInterval(() => {
-      if (activeIsNonTerminal.current) void fetchOnce();
+      if (hasPendingWork.current) void fetchOnce();
     }, POLL_MS);
     return () => clearInterval(id);
   }, [enabled, fetchOnce]);
