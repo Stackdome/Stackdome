@@ -45,7 +45,7 @@ export function DraftNode({ phase, diff, liveSeq, nextSeq, isLast, defaultOpen =
           className="-mx-2 flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted"
           onClick={() => setOpen((o) => !o)}
         >
-          <span className="flex-none rounded-full border border-brand-border bg-brand-bg px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-brand">
+          <span className="flex-none rounded-full border border-brand-border bg-brand-bg px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-brand">
             {chipLabel}
           </span>
           <span className="min-w-0 flex-1 truncate text-[13px] text-fg-muted">

@@ -50,12 +50,14 @@ export function TimelineNode(props: TimelineNodeProps) {
     : release.message || (dur !== "—" ? `took ${dur}` : undefined);
   const ts = formatReleaseTime(release.completed_at ?? release.created_at);
 
+  // Lean chips per the design — tighter than the default StatusPill sizing.
+  const chipClass = "flex-none gap-1 px-2 py-0.5 text-[10px] tracking-[0.06em]";
   const chip = isLive
-    ? <StatusPill variant="ready">Live</StatusPill>
+    ? <StatusPill variant="ready" className={chipClass}>Live</StatusPill>
     : state === "Failed"
-      ? <StatusPill variant="error" withDot={false}>Failed</StatusPill>
+      ? <StatusPill variant="error" withDot={false} className={chipClass}>Failed</StatusPill>
       : deploying
-        ? <StatusPill variant="pending">Deploying</StatusPill>
+        ? <StatusPill variant="pending" className={chipClass}>Deploying</StatusPill>
         : null;
 
   const cardBorder = isLive ? "border-success-border" : deploying ? "border-brand-border" : "border-border";
