@@ -2,33 +2,31 @@ import { useState } from "react";
 import { StageTracker } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
-import { deriveStages, deriveFailingResources, deriveRecovered, causeLabel, formatDuration, formatReleaseTime, resourceSource, replicaLabel } from "../derive";
+import { deriveStages, deriveFailingResources, deriveRecovered, resourceSource, replicaLabel } from "../derive";
 import { diffSnapshots } from "../release-snapshot-diff";
 import type { ReleaseDetail } from "../use-release-detail";
 import { ResourceRow, type LogContext } from "./resource-row";
 import { ConfigDiff } from "./config-diff";
 
-const NON_TERMINAL = new Set(["Pending", "InProgress"]);
-
-export interface CurrentReleaseNodeProps {
-  release: StackRelease; stack: Stack; logContext?: LogContext;
+export interface LiveReleaseBodyProps {
+  release: StackRelease;
+  stack: Stack;
+  logContext?: LogContext;
   onOpenLogs?: (name: string) => void;
-  onCancel?: (id: string) => void;
-  detail?: ReleaseDetail; prevReleaseId?: string; prevSeq?: number;
+  detail?: ReleaseDetail;
+  prevReleaseId?: string;
+  prevSeq?: number;
 }
 
-function meta(release: StackRelease): string {
-  const parts: string[] = [];
-  const when = formatReleaseTime(release.completed_at);
-  if (when) parts.push(`deployed ${when}`);
-  if (release.snapshot_revision) parts.push(`config ${release.snapshot_revision.slice(0, 7)}`);
-  return parts.join(" · ");
-}
-
-export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onCancel, detail, prevReleaseId, prevSeq }: CurrentReleaseNodeProps) {
+/**
+ * The detail-card body for the latest deploy (releases[0]). Unlike a historical
+ * node — which reads its stored outcome — this renders LIVE progress from
+ * stack.status.resources plus the derived Build→Deploy→Ready tracker, so an
+ * in-flight or just-failed deploy reflects the current cluster state.
+ */
+export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail, prevReleaseId, prevSeq }: LiveReleaseBodyProps) {
   const [showDiff, setShowDiff] = useState(false);
   const failing = deriveFailingResources(stack);
-  const cancellable = NON_TERMINAL.has(release.state ?? "") && !!onCancel && !!release.id;
   const canDiff = !!prevReleaseId && !!detail;
   const onToggleDiff = () => {
     if (!detail || !prevReleaseId) return;
@@ -41,38 +39,16 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onC
   const recoveredNames = new Set(recovered.map((r) => r.name));
   const failingByName = new Map(failing.map((f) => [f.name, f]));
   const stages = deriveStages(stack, release, failing);
-  const dur = formatDuration(release.rendered_at, release.completed_at);
   const summaries = stack.status?.resources ?? [];
   const specByName = new Map((stack.spec?.stack_resources ?? []).map((r) => [r.name, r]));
   const releaseLevelError = release.state === "Failed" && failing.length === 0 && release.message;
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex-none font-sans text-[16px] font-semibold text-foreground">#{release.sequence}</span>
-          <span className="min-w-0 truncate font-sans text-[14px] text-fg-muted">
-            {causeLabel(release.cause)}
-            {dur !== "—" ? ` · took ${dur}` : ""}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-[11px] text-fg-muted">{meta(release)}</span>
-          {cancellable && (
-            <button
-              onClick={() => onCancel?.(release.id ?? "")}
-              className="flex-none rounded border border-border px-3 py-1.5 font-sans text-[13px] font-medium text-foreground hover:border-primary hover:text-primary"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-3.5"><StageTracker stages={stages} /></div>
+    <div>
+      <StageTracker stages={stages} />
 
       {releaseLevelError && (
-        <div className="mt-3.5 rounded-md border border-danger-border bg-danger-bg p-3.5">
+        <div className="mt-4 rounded-md border border-danger-border bg-danger-bg p-3.5">
           <div className="mb-1.5 flex items-center gap-2 font-sans text-[13px] font-semibold text-danger">
             <span>⊘</span> Deploy failed
           </div>
@@ -82,7 +58,7 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onC
 
       {summaries.length > 0 && (
         <div className="mt-4">
-          <div className="mb-0.5 font-mono text-[11px] uppercase tracking-wide text-fg-muted">Resources</div>
+          <div className="mb-0.5 font-mono text-[11px] uppercase tracking-wide text-fg-muted">Resource outcome</div>
           <div className="divide-y divide-border">
             {summaries.map((s, i) => (
               <ResourceRow
@@ -110,7 +86,7 @@ export function CurrentReleaseNode({ release, stack, logContext, onOpenLogs, onC
             onClick={onToggleDiff}
             className="font-mono text-[11px] uppercase tracking-wide text-fg-muted hover:text-foreground"
           >
-            {showDiff ? "Hide config changes" : `View config changes · vs #${prevSeq ?? "previous"}`}
+            {showDiff ? "Hide config changes" : `Config changes · vs #${prevSeq ?? "previous"}`}
           </button>
           {showDiff && <div className="mt-3"><ConfigDiff diff={diff} hasPrev prevSeq={prevSeq} /></div>}
         </div>

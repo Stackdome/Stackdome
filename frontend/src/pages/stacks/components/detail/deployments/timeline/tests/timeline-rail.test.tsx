@@ -26,13 +26,22 @@ describe("TimelineRail", () => {
     expect(screen.getByText("No deployments yet")).toBeInTheDocument();
   });
 
-  it("renders current node + earlier releases", () => {
+  it("renders one continuous list with no Current/Earlier headers", () => {
     const r = rels(3);
     render(<TimelineRail releases={r} activeRelease={r[0]} {...base} />);
-    expect(screen.getByText("Current deployment")).toBeInTheDocument();
-    expect(screen.getByText("Earlier deployments")).toBeInTheDocument();
+    expect(screen.queryByText("Current deployment")).not.toBeInTheDocument();
+    expect(screen.queryByText("Earlier deployments")).not.toBeInTheDocument();
+    expect(screen.getByText("#3")).toBeInTheDocument();
     expect(screen.getByText("#2")).toBeInTheDocument();
     expect(screen.getByText("#1")).toBeInTheDocument();
+  });
+
+  it("opens the latest deploy by default and tags the live release", () => {
+    const r = rels(3);
+    const liveStack = { status: { resources: [], last_converged: { release_id: "r2" } }, spec: { stack_resources: [] } } as unknown as Stack;
+    render(<TimelineRail releases={r} activeRelease={r[0]} {...base} stack={liveStack} />);
+    // #2 is the live release → carries the LIVE chip.
+    expect(screen.getByText("Live")).toBeInTheDocument();
   });
 
   it("windows earlier releases behind Show more", async () => {

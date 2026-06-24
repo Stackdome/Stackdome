@@ -4,12 +4,11 @@ import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 import { stateTone } from "../derive";
 import { useReleaseDetail } from "../use-release-detail";
-import { RailNode } from "./rail-node";
-import { CurrentReleaseNode } from "./current-release-node";
-import { HistoryRow } from "./history-row";
+import { RailNode, type RailDotShape } from "./rail-node";
+import { TimelineNode } from "./timeline-node";
 import type { LogContext } from "./resource-row";
 
-const TERMINAL = new Set(["Released", "Failed", "Superseded", "Cancelled"]);
+const DEPLOYING = new Set(["Pending", "InProgress"]);
 
 export interface TimelineRailProps {
   releases: StackRelease[];
@@ -18,17 +17,32 @@ export interface TimelineRailProps {
   logContext?: LogContext;
   onOpenLogs?: (name: string) => void;
   banner?: React.ReactNode;
+  /** Optional draft node, rendered at the head of the rail (saved-but-undeployed). */
+  draftNode?: React.ReactNode;
   onRollback: (id: string) => void;
   onCancel: (id: string) => void;
   onCopyId: (id: string) => void;
   initialWindow?: number;
 }
 
+function dotShape(state: string): RailDotShape {
+  if (DEPLOYING.has(state)) return "spinner";
+  if (state === "Failed") return "ring";
+  return "solid";
+}
+
+/**
+ * One continuous deploy timeline — newest at top, no Current/Earlier split. Each
+ * release is a TimelineNode (lean row + card-below); the latest deploy opens by
+ * default, earlier nodes start closed. An optional draft node leads the rail.
+ */
 export function TimelineRail(props: TimelineRailProps) {
-  const { releases, activeRelease, stack, logContext, onOpenLogs, banner, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
+  const { releases, activeRelease, stack, logContext, onOpenLogs, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
   const detail = useReleaseDetail(logContext?.orgId ?? "", logContext?.teamName ?? "", logContext?.stackId ?? "");
-  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set());
+  const liveReleaseId = stack.status?.last_converged?.release_id;
+  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set(activeRelease?.id ? [activeRelease.id] : []));
   const [windowN, setWindowN] = useState(initialWindow);
+
   // Multiple release details can be open at once — not an accordion.
   const toggle = (id: string) =>
     setOpenIds((cur) => {
@@ -38,65 +52,52 @@ export function TimelineRail(props: TimelineRailProps) {
       return next;
     });
 
-  const earlier = releases.slice(1); // activeRelease = releases[0]
-  const shown = earlier.slice(0, windowN);
-  const prevIdFor = (idx: number) => releases[idx + 1]?.id;   // idx is the index in `releases`
+  const shown = releases.slice(0, windowN);
+  const hidden = releases.length - shown.length;
+  const prevIdFor = (idx: number) => releases[idx + 1]?.id; // idx is the position in `releases`
   const prevSeqFor = (idx: number) => releases[idx + 1]?.sequence;
 
   return (
     <div className="space-y-0">
       {banner && <div className="mb-5">{banner}</div>}
 
-      {activeRelease && (
-        <div className="ml-12 pb-2 font-mono text-[11px] uppercase tracking-wide text-fg-muted">Current deployment</div>
-      )}
+      {draftNode}
 
-      {activeRelease ? (
-        <RailNode tone={stateTone(activeRelease.state ?? "")} big pulse={!TERMINAL.has(activeRelease.state ?? "")} isLast={earlier.length === 0}>
-          <CurrentReleaseNode
-            release={activeRelease}
-            stack={stack}
-            logContext={logContext}
-            onOpenLogs={onOpenLogs}
-            onCancel={onCancel}
-            detail={detail}
-            prevReleaseId={prevIdFor(0)}
-            prevSeq={prevSeqFor(0)}
-          />
-        </RailNode>
-      ) : releases.length === 0 ? (
+      {releases.length === 0 && !draftNode ? (
         <RailNode tone="muted" isLast>
           <EmptyState title="No deployments yet" description="Deploy this stack to create your first release." />
         </RailNode>
-      ) : null}
-
-      {earlier.length > 0 && (
-        <div className="ml-12 py-2 font-mono text-[11px] uppercase tracking-wide text-fg-muted">Earlier deployments</div>
+      ) : (
+        shown.map((r, idx) => {
+          const isLast = idx === shown.length - 1 && hidden <= 0;
+          const state = r.state ?? "";
+          return (
+            <RailNode key={r.id ?? idx} tone={stateTone(state)} shape={dotShape(state)} pulse={DEPLOYING.has(state)} isLast={isLast}>
+              <TimelineNode
+                release={r}
+                prevReleaseId={prevIdFor(idx)}
+                prevSeq={prevSeqFor(idx)}
+                detail={detail}
+                isOpen={openIds.has(r.id ?? "")}
+                onToggle={toggle}
+                onRollback={onRollback}
+                onCancel={onCancel}
+                onCopyId={onCopyId}
+                isActive={idx === 0}
+                isLive={!!liveReleaseId && r.id === liveReleaseId}
+                stack={stack}
+                logContext={logContext}
+                onOpenLogs={onOpenLogs}
+              />
+            </RailNode>
+          );
+        })
       )}
 
-      {shown.map((r, i) => {
-        const idx = i + 1; // position in `releases`
-        return (
-          <RailNode key={r.id ?? idx} tone={stateTone(r.state ?? "")} isLast={idx === releases.length - 1}>
-            <HistoryRow
-              release={r}
-              prevReleaseId={prevIdFor(idx)}
-              prevSeq={prevSeqFor(idx)}
-              detail={detail}
-              isOpen={openIds.has(r.id ?? "")}
-              onToggle={toggle}
-              onRollback={onRollback}
-              onCancel={onCancel}
-              onCopyId={onCopyId}
-            />
-          </RailNode>
-        );
-      })}
-
-      {earlier.length > windowN && (
+      {hidden > 0 && (
         <div className="ml-12 pt-2">
-          <button onClick={() => setWindowN(earlier.length)} className="font-sans text-[12.5px] font-medium text-primary">
-            Show more ({earlier.length - windowN})
+          <button onClick={() => setWindowN(releases.length)} className="font-sans text-[12.5px] font-medium text-primary">
+            Show more ({hidden})
           </button>
         </div>
       )}

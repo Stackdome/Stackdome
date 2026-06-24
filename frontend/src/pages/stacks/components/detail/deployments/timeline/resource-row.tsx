@@ -27,45 +27,63 @@ function CrashLog({ ctx, name }: { ctx: LogContext; name: string }) {
 export function ResourceRow({ vm, logContext, onOpenLogs }: ResourceRowProps) {
   const [open, setOpen] = useState(false);
   const tone = phaseTone(vm.phase);
-  const failing = !!vm.failure;
+  const failure = vm.failure;
+  const hasMsg = !!vm.msg && vm.msg.trim().length > 0;
+  // Any resource carrying context — a structured failure or a status message —
+  // is expandable; that context lives INSIDE the row, never as a clipped blurb.
+  const expandable = !!failure || hasMsg;
+  const isRuntimeCrash = failure?.type === "runtime_crash";
   return (
     <div>
+      {/* The name row AND its source line share one hover/click surface so the
+          whole header lights up as one clickable unit. */}
       <div
-        className={`flex items-baseline gap-2.5 py-2 ${failing ? "cursor-pointer" : ""}`}
-        onClick={failing ? () => setOpen((o) => !o) : undefined}
+        className={expandable ? "-mx-2 rounded-md px-2 transition-colors hover:bg-muted cursor-pointer" : undefined}
+        onClick={expandable ? () => setOpen((o) => !o) : undefined}
       >
-        <span className={`h-2 w-2 flex-none self-center rounded-full ${toneDotClass(tone)}`} />
-        <span className="w-[82px] flex-none font-mono text-[12.5px] font-semibold text-foreground">{vm.name}</span>
-        <span className={`min-w-0 flex-1 text-[13px] ${toneTextClass(tone)}`}>{vm.phase}</span>
-        {vm.tag && <span className="self-center rounded border border-warn px-1.5 py-0.5 font-mono text-[9px] uppercase text-warn">{vm.tag}</span>}
-        {vm.replicas && <span className="self-center font-mono text-[11px] text-fg-muted">{vm.replicas}</span>}
-        {vm.msg && <span className="max-w-[220px] self-center truncate font-mono text-[11px] text-fg-muted">{vm.msg}</span>}
-        {failing && <ChevronDown className={`h-3.5 w-3.5 self-center text-fg-muted transition-transform ${open ? "rotate-180" : ""}`} />}
-      </div>
-      {vm.source && (
-        <div className="-mt-1 mb-1 ml-[18px] flex items-center gap-1.5 font-mono text-[11px] text-fg-muted">
-          {vm.source.kind === "image" ? <Box className="h-3 w-3 flex-none" /> : <GitBranch className="h-3 w-3 flex-none" />}
-          <span className="truncate">{vm.source.label}</span>
+        <div className="flex items-baseline gap-2.5 py-2">
+          <span className={`h-2 w-2 flex-none self-center rounded-full ${toneDotClass(tone)}`} />
+          <span className="w-[82px] flex-none font-mono text-[12.5px] font-semibold text-foreground">{vm.name}</span>
+          <span className={`min-w-0 flex-1 text-[13px] ${toneTextClass(tone)}`}>{vm.phase}</span>
+          {vm.tag && <span className="self-center rounded border border-warn px-1.5 py-0.5 font-mono text-[9px] uppercase text-warn">{vm.tag}</span>}
+          {failure?.exitCode != null && <span className="self-center font-mono text-[11px] text-fg-muted">exit {failure.exitCode}</span>}
+          {failure?.restartCount != null && (
+            <span className="self-center font-mono text-[11px] text-fg-muted">{failure.restartCount} {failure.restartCount === 1 ? "restart" : "restarts"}</span>
+          )}
+          {expandable && <ChevronDown className={`h-3.5 w-3.5 self-center text-fg-muted transition-transform ${open ? "rotate-180" : ""}`} />}
         </div>
-      )}
-      {open && vm.failure && (
-        <div className="ml-[18px] mb-1 rounded-md border border-border bg-muted p-3">
-          <FailureCard
-            resourceName={vm.failure.name}
-            stage={stageForCard(vm.failure.stage)}
-            reason={vm.failure.reason}
-            message={vm.failure.message}
-            exitCode={vm.failure.exitCode}
-            restartCount={vm.failure.restartCount}
-          />
-          {logContext && vm.failure.type === "runtime_crash" && <CrashLog ctx={logContext} name={vm.failure.name} />}
-          {onOpenLogs && (
-            <button
-              onClick={() => onOpenLogs(vm.name)}
-              className="mt-2.5 rounded bg-primary px-3 py-1.5 font-sans text-[12px] font-medium text-primary-foreground"
-            >
-              Open in Logs →
-            </button>
+        {vm.source && (
+          <div className="-mt-1 pb-2 ml-[18px] flex items-center gap-1.5 font-mono text-[11px] text-fg-muted">
+            {vm.source.kind === "image" ? <Box className="h-3 w-3 flex-none" /> : <GitBranch className="h-3 w-3 flex-none" />}
+            <span className="truncate">{vm.source.label}</span>
+          </div>
+        )}
+      </div>
+      {open && expandable && (
+        <div className="ml-[18px] mb-1 mt-1 rounded-md border border-border bg-muted p-3">
+          {failure ? (
+            <>
+              <FailureCard
+                resourceName={failure.name}
+                stage={stageForCard(failure.stage)}
+                reason={failure.reason}
+                message={failure.message}
+                exitCode={failure.exitCode}
+                restartCount={failure.restartCount}
+              />
+              {logContext && isRuntimeCrash && <CrashLog ctx={logContext} name={failure.name} />}
+              {/* Logs are a runtime concept — only offer "Open in Logs" for a crash. */}
+              {onOpenLogs && isRuntimeCrash && (
+                <button
+                  onClick={() => onOpenLogs(vm.name)}
+                  className="mt-2.5 rounded bg-primary px-3 py-1.5 font-sans text-[12px] font-medium text-primary-foreground"
+                >
+                  Open in Logs →
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="font-mono text-[11.5px] leading-relaxed text-foreground">{vm.msg}</div>
           )}
         </div>
       )}

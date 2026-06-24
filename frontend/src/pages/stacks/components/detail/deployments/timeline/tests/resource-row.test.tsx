@@ -20,6 +20,15 @@ describe("ResourceRow", () => {
     expect(screen.getByText("nginx:alpine")).toBeInTheDocument();
   });
 
+  it("does not show the status message inline; expands to reveal it in full", async () => {
+    const msg = "serving traffic but not fully converged";
+    render(<ResourceRow vm={{ name: "web-server", phase: "Ready", replicas: "1/2", msg }} />);
+    // collapsed: the message is contextual, not a clipped right-side blurb
+    expect(screen.queryByText(msg)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("web-server"));
+    expect(screen.getByText(msg)).toBeInTheDocument();
+  });
+
   it("expands a failing row to show the FailureCard and Open in Logs", async () => {
     const onOpenLogs = vi.fn();
     render(<ResourceRow
