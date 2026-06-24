@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,11 +36,20 @@ export interface StickyActionBarSecondary {
   dirtyCount?: number;
 }
 
+/**
+ * pending  — unsaved/staged changes: amber left edge + pulsing amber dot.
+ * deploying — a deploy is in flight: amber edge + spinner dot.
+ * clean    — everything deployed: no edge, green check dot, no primary action.
+ */
+export type StickyActionBarTone = "pending" | "deploying" | "clean";
+
 interface StickyActionBarProps {
   leadLabel: string;
   segments: StickyActionBarSegment[];
-  primary: StickyActionBarPrimary;
+  /** Optional — clean/deploying states may omit the primary action. */
+  primary?: StickyActionBarPrimary;
   secondary?: StickyActionBarSecondary;
+  tone?: StickyActionBarTone;
 }
 
 /**
@@ -52,6 +61,7 @@ export default function StickyActionBar({
   segments,
   primary,
   secondary,
+  tone = "pending",
 }: StickyActionBarProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
@@ -70,13 +80,24 @@ export default function StickyActionBar({
     }
   };
 
+  const dot =
+    tone === "clean" ? (
+      <Check className="h-3.5 w-3.5 text-success" aria-hidden />
+    ) : tone === "deploying" ? (
+      <Loader2 className="h-3 w-3 animate-spin text-brand" aria-hidden />
+    ) : (
+      <span className="h-2 w-2 rounded-full bg-brand animate-pulse" aria-hidden />
+    );
+
   const bar = (
     <div
       className="flex h-11 items-center gap-3 bg-card dark:bg-secondary px-6 text-foreground border-b border-border"
-      style={{ boxShadow: "inset 3px 0 0 var(--brand)" }}
+      style={tone === "clean" ? undefined : { boxShadow: "inset 3px 0 0 var(--brand)" }}
     >
-      <span className="h-2 w-2 rounded-full bg-brand animate-pulse" aria-hidden />
-      <span className="font-mono text-[11px] font-bold uppercase tracking-[1.5px] text-brand">
+      {dot}
+      <span
+        className={`font-mono text-[11px] font-bold uppercase tracking-[1.5px] ${tone === "clean" ? "text-success" : "text-brand"}`}
+      >
         {leadLabel}
       </span>
       {segments.map((s, i) => (
@@ -96,30 +117,32 @@ export default function StickyActionBar({
           variant="railGhost"
           size="rail"
           onClick={handleSecondaryClick}
-          disabled={primary.isLoading}
+          disabled={primary?.isLoading}
         >
           {secondary.label}
         </Button>
       )}
-      <Button
-        type="button"
-        variant="railPrimary"
-        size="rail"
-        onClick={primary.onClick}
-        disabled={primary.isLoading}
-      >
-        {primary.isLoading ? (
-          <>
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            {primary.loadingLabel ?? primary.label}
-          </>
-        ) : (
-          <>
-            {primary.icon}
-            {primary.label}
-          </>
-        )}
-      </Button>
+      {primary && (
+        <Button
+          type="button"
+          variant="railPrimary"
+          size="rail"
+          onClick={primary.onClick}
+          disabled={primary.isLoading}
+        >
+          {primary.isLoading ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {primary.loadingLabel ?? primary.label}
+            </>
+          ) : (
+            <>
+              {primary.icon}
+              {primary.label}
+            </>
+          )}
+        </Button>
+      )}
     </div>
   );
 

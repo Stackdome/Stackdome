@@ -192,3 +192,24 @@ describe("StickyActionBar — secondary confirm gating", () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 });
+
+describe("StickyActionBar — tone / optional primary", () => {
+  it("clean tone renders the lead label with no action buttons", () => {
+    render(<StickyActionBar leadLabel="All deployed" segments={[]} tone="clean" />);
+    expect(screen.getByText("All deployed")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("deploying tone shows only the secondary (Cancel) — no primary", () => {
+    render(
+      <StickyActionBar
+        leadLabel="Deploying"
+        segments={[]}
+        tone="deploying"
+        secondary={{ label: "Cancel", onClick: vi.fn() }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
+});
