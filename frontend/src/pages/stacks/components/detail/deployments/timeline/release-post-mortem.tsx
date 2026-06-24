@@ -2,8 +2,10 @@ import { useEffect } from "react";
 import type { StackRelease } from "@/api/releases";
 import type { ReleaseDetail } from "../use-release-detail";
 import { diffSnapshots } from "../release-snapshot-diff";
-import { OutcomesTable } from "./outcomes-table";
-import { ConfigDiff } from "./config-diff";
+import { resourceSource, replicaLabel } from "../derive";
+import { ResourceOutcomeList } from "./resource-outcome-list";
+import { ConfigChangesToggle } from "./config-changes-toggle";
+import type { ResourceRowVM } from "./resource-row";
 
 const Marker = ({ children, tone }: { children: React.ReactNode; tone?: string }) => (
   <div className={`mb-2.5 font-mono text-[11px] uppercase tracking-wide ${tone ?? "text-fg-muted"}`}>{children}</div>
@@ -34,8 +36,19 @@ export function ReleasePostMortem({ detail, release, prevReleaseId, prevSeq }: R
   const prevSnap = prev.data?.snapshot;
   const diffs = diffSnapshots(prevSnap, snap);
 
+  // Build the same ResourceRowVM shape the live body uses, sourced from this
+  // release's STORED outcome + its frozen snapshot, so the section is uniform.
+  const sourceByName = new Map((snap?.resources ?? []).map((r) => [r.name, r]));
+  const rows: ResourceRowVM[] = Object.entries(outcomes).map(([name, o]) => ({
+    name,
+    phase: o.phase ?? "",
+    replicas: replicaLabel(o.ready_replicas, o.replicas),
+    msg: o.message,
+    source: resourceSource(sourceByName.get(name)),
+  }));
+
   return (
-    <div className="space-y-4 px-0.5 pb-1.5 pt-3.5">
+    <div className="px-0.5 pb-1.5 pt-3.5">
       {release.state === "Failed" && release.message && (
         <div>
           <Marker tone="text-danger">Why it failed</Marker>
@@ -44,12 +57,8 @@ export function ReleasePostMortem({ detail, release, prevReleaseId, prevSeq }: R
           </div>
         </div>
       )}
-      {Object.keys(outcomes).length > 0 && (
-        <div><Marker>Resource outcomes</Marker><OutcomesTable outcomes={outcomes} /></div>
-      )}
-      {prevReleaseId && (
-        <div><Marker>Config changes · vs #{prevSeq ?? "previous"}</Marker><ConfigDiff diff={diffs} hasPrev={!!prevReleaseId} prevSeq={prevSeq} /></div>
-      )}
+      <ResourceOutcomeList rows={rows} />
+      {prevReleaseId && <ConfigChangesToggle diff={diffs} prevSeq={prevSeq} />}
     </div>
   );
 }

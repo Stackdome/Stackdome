@@ -23,8 +23,12 @@ describe("ReleasePostMortem", () => {
         : { id, sequence: 12, snapshot: { resources: [{ name: "web", image_spec: { image: "web:1" } }] } }));
     render(<Wrap release={{ id: "r-cur", sequence: 13, state: "Released" } as StackRelease} prevId="r-prev" />);
     await waitFor(() => expect(screen.getAllByText("web").length).toBeGreaterThan(0));
-    expect(screen.getByText("Resource outcomes")).toBeInTheDocument();
+    expect(screen.getByText("Resource outcome")).toBeInTheDocument();
+    // The image/repo source is sourced from the release snapshot (uniform with the live body).
     expect(screen.getByText("web:2")).toBeInTheDocument();
+    // Config changes is a brand-colored collapsed toggle, not an always-open block.
+    const toggle = screen.getByText(/Config changes · vs #12/);
+    expect(toggle).toHaveClass("text-brand");
   });
 
   it("shows why-it-failed for a failed release", async () => {
