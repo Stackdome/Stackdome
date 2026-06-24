@@ -94,7 +94,7 @@ export function TimelineNode(props: TimelineNodeProps) {
               prevSeq={prevSeq}
             />
           ) : (
-            <ReleasePostMortem detail={detail} release={release} prevReleaseId={prevReleaseId} prevSeq={prevSeq} />
+            <ReleasePostMortem detail={detail} release={release} stack={stack} prevReleaseId={prevReleaseId} prevSeq={prevSeq} />
           )}
         </div>
       )}

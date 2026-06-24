@@ -18,7 +18,7 @@ export interface ConfigChangesToggleProps {
 export function ConfigChangesToggle({ diff, prevSeq, defaultOpen = false }: ConfigChangesToggleProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="mt-4">
+    <div className="mt-4 border-t border-border pt-4">
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wide text-brand hover:text-brand/80"

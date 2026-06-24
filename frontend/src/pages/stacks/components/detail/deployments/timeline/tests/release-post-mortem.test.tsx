@@ -10,9 +10,11 @@ import type { StackRelease } from "@/api/releases";
 
 afterEach(cleanup);
 
+const stack = { status: {}, spec: { stack_resources: [] } } as unknown as import("@/api/stacks").Stack;
+
 function Wrap({ release, prevId }: { release: StackRelease; prevId?: string }) {
   const detail = useReleaseDetail("o", "t", "s");
-  return <ReleasePostMortem detail={detail} release={release} prevReleaseId={prevId} prevSeq={12} />;
+  return <ReleasePostMortem detail={detail} release={release} stack={stack} prevReleaseId={prevId} prevSeq={12} />;
 }
 
 describe("ReleasePostMortem", () => {
@@ -24,6 +26,8 @@ describe("ReleasePostMortem", () => {
     render(<Wrap release={{ id: "r-cur", sequence: 13, state: "Released" } as StackRelease} prevId="r-prev" />);
     await waitFor(() => expect(screen.getAllByText("web").length).toBeGreaterThan(0));
     expect(screen.getByText("Resource outcome")).toBeInTheDocument();
+    // Build→Deploy→Ready tracker leads the card (uniform with the live body).
+    expect(screen.getByText("Build")).toBeInTheDocument();
     // The image/repo source is sourced from the release snapshot (uniform with the live body).
     expect(screen.getByText("web:2")).toBeInTheDocument();
     // Config changes is a brand-colored collapsed toggle, not an always-open block.
