@@ -41,7 +41,6 @@ import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
 import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
 import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
-import { deriveStages, deriveFailingResources } from "@/pages/stacks/components/detail/deployments/derive";
 import {
   connectionsToEnvRows,
 } from "@/pages/stacks/lib/connection-mapping";
@@ -553,61 +552,27 @@ export default function StackDetailPage() {
     </DropdownMenu>
   ) : undefined;
 
-  // Non-editing phases of the status bar (editing is handled inline below so it
-  // keeps using the live edit-session dirty counts). Persistent across tabs.
+  // The bar is an ACTION affordance, not a persistent status: it appears only
+  // when there's something to deploy (a staged draft). The live release and any
+  // in-flight deploy are shown in the timeline + the header pill, not here — so a
+  // rollout and a fresh draft can coexist without the bar lying or blocking.
   const deployBar = (() => {
-    if (lifecycle.phase === "deploying") {
-      const active = releasesResult.activeRelease;
-      const seq = active?.sequence;
-      // Reflect the actual in-flight stage rather than a hardcoded "building" —
-      // an image-only stack skips Build and is rolling out, not building.
-      const stages = active && stackToShow
-        ? deriveStages(stackToShow, active, deriveFailingResources(stackToShow))
-        : undefined;
-      const verb = stages?.build === "active" ? "building…" : stages?.deploy === "active" ? "rolling out…" : "deploying…";
-      // Only a Pending release is cancellable; once InProgress the rollout is
-      // applied and the backend rejects cancel, so don't offer it.
-      const cancellable = active?.state === "Pending" && !!active?.id;
-      return (
-        <StickyActionBar
-          tone="deploying"
-          leadLabel="Deploying"
-          segments={seq != null ? [{ num: seq, label: verb }] : []}
-          secondary={cancellable ? {
-            label: "Cancel",
-            onClick: () => { if (active?.id) onCancelDeploy(active.id); },
-          } : undefined}
-        />
-      );
-    }
-    if (lifecycle.phase === "staged") {
-      const d = lifecycle.stagedDiff;
-      const n = d ? d.resources.length + d.volumes.length + d.connections.length : 0;
-      return (
-        <StickyActionBar
-          leadLabel="Draft saved"
-          segments={n > 0 ? [{ num: n, label: n === 1 ? "change staged — not deployed" : "changes staged — not deployed" }] : []}
-          primary={{
-            label: "Deploy",
-            loadingLabel: "Deploying",
-            icon: <Rocket className="h-3.5 w-3.5" />,
-            isLoading: deployBusy,
-            onClick: onDeploy,
-          }}
-        />
-      );
-    }
-    // clean — only surface the bar when a release is actually live.
-    if (lifecycle.liveSeq != null) {
-      return (
-        <StickyActionBar
-          tone="clean"
-          leadLabel="All changes deployed"
-          segments={[{ num: lifecycle.liveSeq, label: "live" }]}
-        />
-      );
-    }
-    return null;
+    if (lifecycle.phase !== "staged") return null;
+    const d = lifecycle.stagedDiff;
+    const n = d ? d.resources.length + d.volumes.length + d.connections.length : 0;
+    return (
+      <StickyActionBar
+        leadLabel="Draft saved"
+        segments={n > 0 ? [{ num: n, label: n === 1 ? "change staged — not deployed" : "changes staged — not deployed" }] : []}
+        primary={{
+          label: "Deploy",
+          loadingLabel: "Deploying",
+          icon: <Rocket className="h-3.5 w-3.5" />,
+          isLoading: deployBusy,
+          onClick: onDeploy,
+        }}
+      />
+    );
   })();
 
   return (
