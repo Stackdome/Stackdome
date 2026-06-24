@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
-import { Loader2, MoreHorizontal, Pencil, Save, Trash2 } from "lucide-react";
+import { Loader2, MoreHorizontal, Pencil, Rocket, Save, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +37,10 @@ import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/dep
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById, updateStack } from "@/api/stacks";
+import { createRelease, cancelRelease } from "@/api/releases";
+import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
+import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
+import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
 import {
   connectionsToEnvRows,
 } from "@/pages/stacks/lib/connection-mapping";
@@ -283,6 +287,48 @@ export default function StackDetailPage() {
     provenance: new Map<string, { addonName: string; credField?: string }>(),
   });
 
+  // ── Deploy lifecycle (page-level: drives the status bar across all tabs) ──
+  const deployIds = useMemo(() => ({
+    orgId: stackToShow?.organisation_id || getCurrentOrganizationId() || "",
+    teamName: (stackToShow ? teamNameById(stackToShow.team_id) : "") || defaultTeamName || "",
+    stackId: stackToShow?.id || "",
+  }), [stackToShow, teamNameById, defaultTeamName]);
+
+  const releasesResult = useReleases({ ...deployIds, enabled: !!deployIds.stackId });
+  const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.teamName, deployIds.stackId);
+  const lifecycle = useDeployLifecycle({
+    stack: stackToShow ?? undefined,
+    dirty: session.dirty,
+    isActive: session.isActive,
+    releases: releasesResult.releases,
+    activeRelease: releasesResult.activeRelease,
+    detail: releaseDetail,
+  });
+
+  const [deployBusy, setDeployBusy] = useState(false);
+  const refetchReleases = releasesResult.refetch;
+  const runDeploy = useCallback(async (fn: () => Promise<unknown>, ok: string) => {
+    setDeployBusy(true);
+    try {
+      await fn();
+      toast({ title: ok });
+      refetchReleases();
+    } catch (e) {
+      toast({ title: "Action failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
+    } finally {
+      setDeployBusy(false);
+    }
+  }, [toast, refetchReleases]);
+
+  const onDeploy = useCallback(
+    () => runDeploy(() => createRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId), "Deploy started"),
+    [runDeploy, deployIds],
+  );
+  const onCancelDeploy = useCallback(
+    (releaseId: string) => runDeploy(() => cancelRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId, releaseId), "Release cancelled"),
+    [runDeploy, deployIds],
+  );
+
   const performSave = async () => {
     if (!stackToShow || !session.isActive || !id) return;
     setIsSaving(true);
@@ -498,9 +544,59 @@ export default function StackDetailPage() {
     </DropdownMenu>
   ) : undefined;
 
+  // Non-editing phases of the status bar (editing is handled inline below so it
+  // keeps using the live edit-session dirty counts). Persistent across tabs.
+  const deployBar = (() => {
+    if (lifecycle.phase === "deploying") {
+      const seq = releasesResult.activeRelease?.sequence;
+      return (
+        <StickyActionBar
+          tone="deploying"
+          leadLabel="Deploying"
+          segments={seq != null ? [{ num: seq, label: "building…" }] : []}
+          secondary={{
+            label: "Cancel",
+            onClick: () => {
+              const aid = releasesResult.activeRelease?.id;
+              if (aid) onCancelDeploy(aid);
+            },
+          }}
+        />
+      );
+    }
+    if (lifecycle.phase === "staged") {
+      const d = lifecycle.stagedDiff;
+      const n = d ? d.resources.length + d.volumes.length + d.connections.length : 0;
+      return (
+        <StickyActionBar
+          leadLabel="Draft saved"
+          segments={n > 0 ? [{ num: n, label: n === 1 ? "change staged — not deployed" : "changes staged — not deployed" }] : []}
+          primary={{
+            label: "Deploy",
+            loadingLabel: "Deploying",
+            icon: <Rocket className="h-3.5 w-3.5" />,
+            isLoading: deployBusy,
+            onClick: onDeploy,
+          }}
+        />
+      );
+    }
+    // clean — only surface the bar when a release is actually live.
+    if (lifecycle.liveSeq != null) {
+      return (
+        <StickyActionBar
+          tone="clean"
+          leadLabel="All changes deployed"
+          segments={[{ num: lifecycle.liveSeq, label: "live" }]}
+        />
+      );
+    }
+    return null;
+  })();
+
   return (
     <div className="p-8 space-y-8">
-      {session.isActive && (() => {
+      {session.isActive ? (() => {
         const resourceCount = session.dirty.dirtyResourceIdx.size;
         const volumeCount = session.dirty.dirtyVolumeIdx.size;
         const dirtyEntities = resourceCount + volumeCount;
@@ -545,7 +641,7 @@ export default function StackDetailPage() {
             }}
           />
         );
-      })()}
+      })() : deployBar}
 
       <PageHeader
         title={stackToShow.name}

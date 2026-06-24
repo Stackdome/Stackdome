@@ -22,7 +22,7 @@ export interface DeployLifecycle {
 }
 
 export interface DeriveDeployLifecycleArgs {
-  stack: Stack;
+  stack: Stack | undefined;
   dirty: StackDiff;
   isActive: boolean;
   activeRelease?: StackRelease;
@@ -51,6 +51,7 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
   const { stack, dirty, isActive, activeRelease, liveRelease, liveSnapshot } = args;
   const liveSeq = liveRelease?.sequence;
   const nextSeq = (activeRelease?.sequence ?? 0) + 1;
+  if (!stack) return { phase: "clean", liveSeq, nextSeq };
 
   if (isActive && dirtyCount(dirty) > 0) {
     return { phase: "editing", liveSeq, nextSeq };
@@ -67,21 +68,27 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
       : { phase: "staged", stagedDiff, liveSeq, nextSeq };
   }
 
-  if (!liveRelease) {
-    // Never deployed — any saved resources are staged for the first release.
+  const liveReleaseId = stack.status?.last_converged?.release_id;
+  if (!liveReleaseId) {
+    // Never converged a release — any saved resources are staged for the first deploy.
     const hasSpec = (stack.spec?.stack_resources?.length ?? 0) > 0;
     return { phase: hasSpec ? "staged" : "clean", liveSeq, nextSeq };
   }
 
-  // Live release exists but its snapshot hasn't loaded — heuristic drift fallback.
-  const stackUpdated = (stack as { updated_at?: string }).updated_at;
-  const drift = !!stackUpdated && !!liveRelease.completed_at
-    && new Date(stackUpdated) > new Date(liveRelease.completed_at);
-  return { phase: drift ? "staged" : "clean", liveSeq, nextSeq };
+  // A live release is known but its snapshot hasn't loaded. If the release row is
+  // resolved, fall back to a timestamp drift heuristic; otherwise the list is still
+  // loading — stay `clean` rather than flashing a false "staged".
+  if (liveRelease) {
+    const stackUpdated = (stack as { updated_at?: string }).updated_at;
+    const drift = !!stackUpdated && !!liveRelease.completed_at
+      && new Date(stackUpdated) > new Date(liveRelease.completed_at);
+    return { phase: drift ? "staged" : "clean", liveSeq, nextSeq };
+  }
+  return { phase: "clean", liveSeq, nextSeq };
 }
 
 export interface UseDeployLifecycleArgs {
-  stack: Stack;
+  stack: Stack | undefined;
   dirty: StackDiff;
   isActive: boolean;
   releases: StackRelease[];
@@ -94,7 +101,7 @@ export interface UseDeployLifecycleArgs {
  * releases list, lazily loads its snapshot, and derives the lifecycle phase.
  */
 export function useDeployLifecycle({ stack, dirty, isActive, releases, activeRelease, detail }: UseDeployLifecycleArgs): DeployLifecycle {
-  const liveReleaseId = stack.status?.last_converged?.release_id;
+  const liveReleaseId = stack?.status?.last_converged?.release_id;
   const liveRelease = liveReleaseId ? releases.find((r) => r.id === liveReleaseId) : undefined;
 
   useEffect(() => {
