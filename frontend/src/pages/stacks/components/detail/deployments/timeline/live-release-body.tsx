@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StageTracker } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
@@ -26,6 +26,11 @@ export interface LiveReleaseBodyProps {
  */
 export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail, prevReleaseId, prevSeq }: LiveReleaseBodyProps) {
   const [showDiff, setShowDiff] = useState(false);
+  // Source the image/repo from THIS release's snapshot — not the live stack spec,
+  // which may have been edited after the deploy started. The snapshot is the
+  // frozen spec the release is actually shipping.
+  useEffect(() => { if (release.id) detail?.ensure(release.id); }, [detail, release.id]);
+  const releaseSnapshot = detail?.peek(release.id).data?.snapshot;
   const failing = deriveFailingResources(stack);
   const canDiff = !!prevReleaseId && !!detail;
   const onToggleDiff = () => {
@@ -40,7 +45,7 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
   const failingByName = new Map(failing.map((f) => [f.name, f]));
   const stages = deriveStages(stack, release, failing);
   const summaries = stack.status?.resources ?? [];
-  const specByName = new Map((stack.spec?.stack_resources ?? []).map((r) => [r.name, r]));
+  const sourceByName = new Map((releaseSnapshot?.resources ?? stack.spec?.stack_resources ?? []).map((r) => [r.name, r]));
   const releaseLevelError = release.state === "Failed" && failing.length === 0 && release.message;
 
   return (
@@ -70,7 +75,7 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
                   msg: s.message,
                   tag: recoveredNames.has(s.name ?? "") ? "RECOVERED" : undefined,
                   failure: failingByName.get(s.name ?? ""),
-                  source: resourceSource(specByName.get(s.name ?? "")),
+                  source: resourceSource(sourceByName.get(s.name ?? "")),
                 }}
                 logContext={logContext}
                 onOpenLogs={onOpenLogs}

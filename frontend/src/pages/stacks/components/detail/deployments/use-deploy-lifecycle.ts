@@ -25,8 +25,13 @@ export interface DeriveDeployLifecycleArgs {
   stack: Stack | undefined;
   dirty: StackDiff;
   isActive: boolean;
+  /** The latest release attempt (releases[0]). */
   activeRelease?: StackRelease;
+  /** The release currently serving traffic (stack.status.last_converged). */
   liveRelease?: StackRelease;
+  /** Snapshot of the latest attempt — what an in-flight deploy is shipping. */
+  activeSnapshot?: StackReleaseSnapshot;
+  /** Snapshot of the live release — what is actually running. */
   liveSnapshot?: StackReleaseSnapshot;
 }
 
@@ -40,15 +45,20 @@ function diffIsEmpty(d: SnapshotDiff): boolean {
 
 /**
  * Pure lifecycle derivation. Phases are mutually exclusive, evaluated in priority:
- * editing > deploying > staged > clean.
  *
- * `staged` (saved-but-undeployed) is detected by diffing the saved spec against the
- * live release's snapshot. When the live snapshot isn't loaded yet we fall back to
- * a timestamp drift heuristic; when the stack has never deployed, any saved
- * resources count as staged for the first release.
+ *   editing   — unsaved edits in the session.
+ *   deploying — a release is in flight AND it is shipping exactly the current saved
+ *               spec (nothing new to deploy). Just a status.
+ *   staged    — the saved spec is not what's live AND it isn't already being deployed
+ *               as-is. This covers a fresh edit, a fresh edit made mid-deploy (which
+ *               can supersede the in-flight release), and retrying a failed release.
+ *   clean     — the saved spec matches what's live.
+ *
+ * Two comparisons drive this: saved-vs-in-flight (has anything new beyond the
+ * release in flight?) and saved-vs-live (is the saved config actually running?).
  */
 export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLifecycle {
-  const { stack, dirty, isActive, activeRelease, liveRelease, liveSnapshot } = args;
+  const { stack, dirty, isActive, activeRelease, liveRelease, activeSnapshot, liveSnapshot } = args;
   const liveSeq = liveRelease?.sequence;
   const nextSeq = (activeRelease?.sequence ?? 0) + 1;
   if (!stack) return { phase: "clean", liveSeq, nextSeq };
@@ -56,13 +66,23 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
   if (isActive && dirtyCount(dirty) > 0) {
     return { phase: "editing", liveSeq, nextSeq };
   }
-  if (activeRelease && !TERMINAL.has(activeRelease.state ?? "")) {
-    return { phase: "deploying", liveSeq, nextSeq };
+
+  const spec = specToSnapshot(stack);
+  const deploying = !!activeRelease && !TERMINAL.has(activeRelease.state ?? "");
+
+  // A deploy is in flight. If it is shipping exactly the saved spec there's nothing
+  // new to deploy — show the deploying status. If the snapshot hasn't loaded yet,
+  // assume it matches (show status) rather than flashing a Deploy action.
+  if (deploying) {
+    if (!activeSnapshot || diffIsEmpty(diffSnapshots(activeSnapshot, spec))) {
+      return { phase: "deploying", liveSeq, nextSeq };
+    }
+    // else: there are changes beyond the in-flight release — fall through to staged.
   }
 
   // staged: the saved spec differs from what is live.
   if (liveSnapshot) {
-    const stagedDiff = diffSnapshots(liveSnapshot, specToSnapshot(stack));
+    const stagedDiff = diffSnapshots(liveSnapshot, spec);
     return diffIsEmpty(stagedDiff)
       ? { phase: "clean", liveSeq, nextSeq }
       : { phase: "staged", stagedDiff, liveSeq, nextSeq };
@@ -75,9 +95,8 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
     return { phase: hasSpec ? "staged" : "clean", liveSeq, nextSeq };
   }
 
-  // A live release is known but its snapshot hasn't loaded. If the release row is
-  // resolved, fall back to a timestamp drift heuristic; otherwise the list is still
-  // loading — stay `clean` rather than flashing a false "staged".
+  // Live snapshot not loaded yet. If the row is resolved fall back to a timestamp
+  // drift heuristic; otherwise stay clean rather than flashing a false "staged".
   if (liveRelease) {
     const stackUpdated = (stack as { updated_at?: string }).updated_at;
     const drift = !!stackUpdated && !!liveRelease.completed_at
@@ -97,17 +116,20 @@ export interface UseDeployLifecycleArgs {
 }
 
 /**
- * React wrapper: resolves the live release (stack.status.last_converged) from the
- * releases list, lazily loads its snapshot, and derives the lifecycle phase.
+ * React wrapper: resolves the live + latest-attempt releases, lazily loads both
+ * snapshots, and derives the lifecycle phase.
  */
 export function useDeployLifecycle({ stack, dirty, isActive, releases, activeRelease, detail }: UseDeployLifecycleArgs): DeployLifecycle {
   const liveReleaseId = stack?.status?.last_converged?.release_id;
   const liveRelease = liveReleaseId ? releases.find((r) => r.id === liveReleaseId) : undefined;
+  const activeId = activeRelease?.id;
 
   useEffect(() => {
     if (liveReleaseId) detail.ensure(liveReleaseId);
-  }, [detail, liveReleaseId]);
+    if (activeId) detail.ensure(activeId);
+  }, [detail, liveReleaseId, activeId]);
 
   const liveSnapshot = detail.peek(liveReleaseId).data?.snapshot;
-  return deriveDeployLifecycle({ stack, dirty, isActive, activeRelease, liveRelease, liveSnapshot });
+  const activeSnapshot = detail.peek(activeId).data?.snapshot;
+  return deriveDeployLifecycle({ stack, dirty, isActive, activeRelease, liveRelease, activeSnapshot, liveSnapshot });
 }

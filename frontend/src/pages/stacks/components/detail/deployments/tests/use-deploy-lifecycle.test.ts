@@ -34,24 +34,55 @@ describe("deriveDeployLifecycle", () => {
       isActive: true,
       activeRelease: mkRelease({ sequence: 8, state: "InProgress" }),
       liveRelease: mkRelease({ id: "live-1", sequence: 7 }),
+      activeSnapshot: snap("nginx:1.27"),
       liveSnapshot: snap("nginx:1.25"),
     });
     expect(r.phase).toBe("editing");
   });
 
-  it("deploying — active release is non-terminal", () => {
+  it("deploying — the in-flight release is shipping exactly the saved spec", () => {
     const r = deriveDeployLifecycle({
       stack: mkStack("nginx:1.27"),
       dirty: cleanDirty(),
       isActive: false,
       activeRelease: mkRelease({ sequence: 8, state: "InProgress" }),
       liveRelease: mkRelease({ id: "live-1", sequence: 7 }),
+      activeSnapshot: snap("nginx:1.27"), // == saved spec → nothing new
       liveSnapshot: snap("nginx:1.25"),
     });
     expect(r.phase).toBe("deploying");
+    expect(r.nextSeq).toBe(9);
+    expect(r.liveSeq).toBe(7);
   });
 
-  it("staged — saved spec differs from the live snapshot, with a per-field diff", () => {
+  it("staged — a fresh edit made mid-deploy supersedes the in-flight release", () => {
+    const r = deriveDeployLifecycle({
+      stack: mkStack("nginx:1.28"), // newer than the in-flight #8
+      dirty: cleanDirty(),
+      isActive: false,
+      activeRelease: mkRelease({ sequence: 8, state: "InProgress" }),
+      liveRelease: mkRelease({ id: "live-1", sequence: 7 }),
+      activeSnapshot: snap("nginx:1.27"), // in-flight ships 1.27, saved is 1.28
+      liveSnapshot: snap("nginx:1.25"),
+    });
+    expect(r.phase).toBe("staged");
+    expect(r.stagedDiff?.resources).toHaveLength(1);
+  });
+
+  it("staged — retrying a failed release whose spec still isn't live", () => {
+    const r = deriveDeployLifecycle({
+      stack: mkStack("nginx:1.27"),
+      dirty: cleanDirty(),
+      isActive: false,
+      activeRelease: mkRelease({ sequence: 8, state: "Failed" }),
+      liveRelease: mkRelease({ id: "live-1", sequence: 7 }),
+      activeSnapshot: snap("nginx:1.27"), // == saved, but the attempt failed and isn't live
+      liveSnapshot: snap("nginx:1.25"),
+    });
+    expect(r.phase).toBe("staged");
+  });
+
+  it("staged — saved spec differs from the live snapshot (no deploy in flight)", () => {
     const r = deriveDeployLifecycle({
       stack: mkStack("nginx:1.27"),
       dirty: cleanDirty(),
@@ -61,10 +92,7 @@ describe("deriveDeployLifecycle", () => {
       liveSnapshot: snap("nginx:1.25"),
     });
     expect(r.phase).toBe("staged");
-    expect(r.stagedDiff?.resources).toHaveLength(1);
     expect(r.stagedDiff?.resources[0]).toMatchObject({ name: "web", change: "modified" });
-    expect(r.nextSeq).toBe(8);
-    expect(r.liveSeq).toBe(7);
   });
 
   it("clean — saved spec matches the live snapshot", () => {
@@ -74,6 +102,7 @@ describe("deriveDeployLifecycle", () => {
       isActive: false,
       activeRelease: mkRelease({ sequence: 7, state: "Released" }),
       liveRelease: mkRelease({ id: "live-1", sequence: 7 }),
+      activeSnapshot: snap("nginx:1.25"),
       liveSnapshot: snap("nginx:1.25"),
     });
     expect(r.phase).toBe("clean");
@@ -87,26 +116,25 @@ describe("deriveDeployLifecycle", () => {
       isActive: false,
       activeRelease: undefined,
       liveRelease: undefined,
-      liveSnapshot: undefined,
     });
     expect(r.phase).toBe("staged");
     expect(r.nextSeq).toBe(1);
   });
 
-  it("staged (heuristic) — live release exists but snapshot unloaded, stack updated after it", () => {
+  it("deploying — in-flight with its snapshot not loaded yet stays a status (no flash)", () => {
     const r = deriveDeployLifecycle({
-      stack: mkStack("nginx:1.27", "2026-06-25T02:00:00Z"),
+      stack: mkStack("nginx:1.27"),
       dirty: cleanDirty(),
       isActive: false,
-      activeRelease: mkRelease({ sequence: 7, state: "Released" }),
-      liveRelease: mkRelease({ id: "live-1", sequence: 7, completed_at: "2026-06-25T01:00:00Z" }),
+      activeRelease: mkRelease({ sequence: 8, state: "InProgress" }),
+      liveRelease: mkRelease({ id: "live-1", sequence: 7 }),
+      activeSnapshot: undefined,
       liveSnapshot: undefined,
     });
-    expect(r.phase).toBe("staged");
-    expect(r.stagedDiff).toBeUndefined();
+    expect(r.phase).toBe("deploying");
   });
 
-  it("clean (heuristic) — live release exists, snapshot unloaded, no drift", () => {
+  it("clean (heuristic) — live snapshot unloaded, no drift, nothing in flight", () => {
     const r = deriveDeployLifecycle({
       stack: mkStack("nginx:1.27", "2026-06-25T00:30:00Z"),
       dirty: cleanDirty(),
