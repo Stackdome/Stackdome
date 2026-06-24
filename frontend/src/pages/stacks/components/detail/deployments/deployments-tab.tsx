@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { EmptyState } from "@/components/branded";
 import type { Stack } from "@/api/stacks";
 import type { StackRelease } from "@/api/releases";
@@ -25,6 +26,8 @@ export interface DeploymentsTabProps {
 }
 
 export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
+  // Bumped on each Jump click so the rail opens + scrolls to the live node.
+  const [jumpNonce, setJumpNonce] = useState(0);
   if (error) return <EmptyState title="Could not load deployments" description={error} />;
 
   const draftNode = lifecycle.phase === "editing" || lifecycle.phase === "staged"
@@ -43,11 +46,7 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
         <LiveReleaseSummary
           release={liveRelease}
           stack={stack}
-          onJump={() =>
-            document
-              .getElementById(`deploy-node-${liveRelease.id}`)
-              ?.scrollIntoView({ behavior: "smooth", block: "center" })
-          }
+          onJump={() => setJumpNonce((n) => n + 1)}
         />
       )}
 
@@ -66,6 +65,8 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
           onRollback={onRollback}
           onCancel={onCancel}
           onCopyId={onCopyId}
+          focusReleaseId={liveReleaseId}
+          focusNonce={jumpNonce}
         />
       )}
     </div>

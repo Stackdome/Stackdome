@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
@@ -23,12 +23,19 @@ export interface TimelineRailProps {
   onCancel: (id: string) => void;
   onCopyId: (id: string) => void;
   initialWindow?: number;
+  /** Release to open + scroll to when `focusNonce` changes (jump-to-live). */
+  focusReleaseId?: string;
+  /** Bump to trigger a focus; 0 = no focus requested (skips on mount). */
+  focusNonce?: number;
 }
 
-function dotShape(state: string): RailDotShape {
+// Only the live release gets a solid (filled) dot — every other node is a
+// hollow ring so the one serving traffic is the single filled marker on the
+// rail. An in-flight deploy keeps its spinner to read as actively progressing.
+function dotShape(state: string, isLive: boolean): RailDotShape {
+  if (isLive) return "solid";
   if (DEPLOYING.has(state)) return "spinner";
-  if (state === "Failed") return "ring";
-  return "solid";
+  return "ring";
 }
 
 /**
@@ -37,7 +44,7 @@ function dotShape(state: string): RailDotShape {
  * default, earlier nodes start closed. An optional draft node leads the rail.
  */
 export function TimelineRail(props: TimelineRailProps) {
-  const { releases, activeRelease, stack, logContext, onOpenLogs, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
+  const { releases, activeRelease, stack, logContext, onOpenLogs, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15, focusReleaseId, focusNonce } = props;
   const detail = useReleaseDetail(logContext?.orgId ?? "", logContext?.teamName ?? "", logContext?.stackId ?? "");
   const liveReleaseId = stack.status?.last_converged?.release_id;
   // Open the latest deploy AND the live release by default — the live one is the
@@ -46,6 +53,17 @@ export function TimelineRail(props: TimelineRailProps) {
     () => new Set([activeRelease?.id, liveReleaseId].filter((x): x is string => !!x)),
   );
   const [windowN, setWindowN] = useState(initialWindow);
+
+  // Jump-to-live: open the target node and scroll it into view. Runs on every
+  // focusNonce bump (skips the initial 0). The node's row element always exists
+  // regardless of open state, so scrolling is safe immediately. This is the
+  // reliable path — default-open can miss the live id when releases load after
+  // mount and the initial openIds set was seeded with an undefined id.
+  useEffect(() => {
+    if (!focusReleaseId || !focusNonce) return;
+    setOpenIds((cur) => (cur.has(focusReleaseId) ? cur : new Set(cur).add(focusReleaseId)));
+    document.getElementById(`deploy-node-${focusReleaseId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [focusNonce, focusReleaseId]);
 
   // Multiple release details can be open at once — not an accordion.
   const toggle = (id: string) =>
@@ -75,8 +93,9 @@ export function TimelineRail(props: TimelineRailProps) {
         shown.map((r, idx) => {
           const isLast = idx === shown.length - 1 && hidden <= 0;
           const state = r.state ?? "";
+          const isLive = !!liveReleaseId && r.id === liveReleaseId;
           return (
-            <RailNode key={r.id ?? idx} id={r.id ? `deploy-node-${r.id}` : undefined} tone={stateTone(state)} shape={dotShape(state)} pulse={DEPLOYING.has(state)} isLast={isLast}>
+            <RailNode key={r.id ?? idx} id={r.id ? `deploy-node-${r.id}` : undefined} tone={stateTone(state)} shape={dotShape(state, isLive)} pulse={DEPLOYING.has(state)} isLast={isLast}>
               <TimelineNode
                 release={r}
                 prevReleaseId={prevIdFor(idx)}

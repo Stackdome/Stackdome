@@ -44,6 +44,17 @@ describe("TimelineRail", () => {
     expect(screen.getByText("Live")).toBeInTheDocument();
   });
 
+  it("renders only the live dot solid; every other dot is a hollow ring", () => {
+    const r = rels(3);
+    const liveStack = { status: { resources: [], last_converged: { release_id: "r2" } }, spec: { stack_resources: [] } } as unknown as Stack;
+    render(<TimelineRail releases={r} activeRelease={r[0]} {...base} stack={liveStack} />);
+    const dots = screen.getAllByTestId("rail-dot");
+    const solid = dots.filter((d) => !d.className.includes("border-2") && !d.className.includes("animate-spin"));
+    const ring = dots.filter((d) => d.className.includes("border-2"));
+    expect(solid).toHaveLength(1); // only the live release (#2) is filled
+    expect(ring.length).toBe(2); // #3 and #1 are hollow rings
+  });
+
   it("windows earlier releases behind Show more", async () => {
     const r = rels(20);
     render(<TimelineRail releases={r} activeRelease={r[0]} initialWindow={5} {...base} />);
