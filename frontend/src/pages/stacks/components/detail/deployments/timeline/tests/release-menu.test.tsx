@@ -33,4 +33,10 @@ describe("ReleaseMenu", () => {
     expect(screen.getByText("Cancel release")).toBeInTheDocument();
     expect(screen.queryByText("Rollback to this")).not.toBeInTheDocument();
   });
+
+  it("hides Cancel once InProgress (the backend rejects cancelling a rollout)", async () => {
+    render(<ReleaseMenu release={rel({ state: "InProgress" })} onRollback={vi.fn()} onCancel={vi.fn()} onCopyId={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /release actions/i }));
+    expect(screen.queryByText("Cancel release")).not.toBeInTheDocument();
+  });
 });

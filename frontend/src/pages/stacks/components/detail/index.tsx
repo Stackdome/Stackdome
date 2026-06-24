@@ -565,18 +565,18 @@ export default function StackDetailPage() {
         ? deriveStages(stackToShow, active, deriveFailingResources(stackToShow))
         : undefined;
       const verb = stages?.build === "active" ? "building…" : stages?.deploy === "active" ? "rolling out…" : "deploying…";
+      // Only a Pending release is cancellable; once InProgress the rollout is
+      // applied and the backend rejects cancel, so don't offer it.
+      const cancellable = active?.state === "Pending" && !!active?.id;
       return (
         <StickyActionBar
           tone="deploying"
           leadLabel="Deploying"
           segments={seq != null ? [{ num: seq, label: verb }] : []}
-          secondary={{
+          secondary={cancellable ? {
             label: "Cancel",
-            onClick: () => {
-              const aid = releasesResult.activeRelease?.id;
-              if (aid) onCancelDeploy(aid);
-            },
-          }}
+            onClick: () => { if (active?.id) onCancelDeploy(active.id); },
+          } : undefined}
         />
       );
     }
