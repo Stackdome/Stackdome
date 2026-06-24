@@ -85,26 +85,26 @@
 }
 
 .dark {
-  /* ── Dark mode: deep navy ── */
-  --background: oklch(0.09 0.018 250);
+  /* ── Dark mode: design-system navy charcoal (Stackdome DS dark surfaces) ── */
+  --background: oklch(0.162 0.014 258);       /* bg #0a0e14 */
   --foreground: oklch(0.98 0 0);
-  --card: oklch(0.12 0.018 250);
+  --card: oklch(0.199 0.018 260);             /* card #11161e */
   --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.14 0.018 250);
+  --popover: oklch(0.225 0.022 260);          /* elev #161c26 */
   --popover-foreground: oklch(0.98 0 0);
   --primary: oklch(0.72 0.20 40);
   --primary-foreground: oklch(0.14 0 0);
-  --secondary: oklch(0.16 0.018 250);
+  --secondary: oklch(0.225 0.022 260);        /* elev #161c26 */
   --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.16 0.018 250);
-  --muted-foreground: oklch(0.68 0.025 250);
-  --accent: oklch(0.20 0.018 250);
+  --muted: oklch(0.225 0.022 260);            /* elev #161c26 (hover/fill) */
+  --muted-foreground: oklch(0.711 0.035 257); /* fg3 #94a3b8 */
+  --accent: oklch(0.252 0.026 258);           /* between elev and border */
   --accent-foreground: oklch(0.98 0 0);
   --destructive: oklch(0.55 0.20 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.22 0.018 250);
-  --border-strong: oklch(0.30 0.018 250);
-  --input: oklch(0.10 0.018 250);
+  --border: oklch(0.278 0.030 257);           /* border #1f2937 */
+  --border-strong: oklch(0.36 0.035 257);     /* lighter divider */
+  --input: oklch(0.205 0.018 260);            /* input fill, just under card */
   --ring: oklch(0.72 0.20 40);
 
   --brand: oklch(0.72 0.20 40);
@@ -115,8 +115,8 @@
   --brand-bg-hover: oklch(0.72 0.20 40 / 0.18);
   --brand-border: oklch(0.72 0.20 40 / 0.30);
 
-  --fg-2: oklch(0.86 0.020 250);
-  --fg-muted: oklch(0.50 0.020 250);
+  --fg-2: oklch(0.869 0.020 253);   /* fg2 #cbd5e1 */
+  --fg-muted: oklch(0.554 0.041 257); /* fg-muted #64748b */
 
   /* ── Status (dark) — design system: ok #22c55e, warn #eab308, err #dc2626, info #3b82f6 ── */
   --success: oklch(0.71 0.20 145);
@@ -138,13 +138,13 @@
   --chart-4: oklch(0.78 0.16 85);
   --chart-5: oklch(0.62 0.22 25);
 
-  --sidebar: oklch(0.10 0.018 250);
+  --sidebar: oklch(0.162 0.014 258);          /* bg #0a0e14 — chrome matches page */
   --sidebar-foreground: oklch(0.98 0 0);
   --sidebar-primary: oklch(0.98 0 0);
-  --sidebar-primary-foreground: oklch(0.09 0.018 250);
+  --sidebar-primary-foreground: oklch(0.162 0.014 258);
   --sidebar-accent: oklch(0.72 0.20 40 / 0.10);
   --sidebar-accent-foreground: oklch(0.72 0.20 40);
-  --sidebar-border: oklch(0.22 0.018 250);
+  --sidebar-border: oklch(0.278 0.030 257);   /* border #1f2937 */
   --sidebar-ring: oklch(0.72 0.20 40);
 
   --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.24);

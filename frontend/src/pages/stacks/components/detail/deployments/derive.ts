@@ -193,11 +193,21 @@ export function deriveStages(stack: Stack, release: StackRelease, failing: Faili
     };
   }
   if (state === "Failed") {
-    // A terminal crash means the workload was applied (Deploy done) but never
-    // became Ready — so the failure lands on the Ready node, not Deploy.
-    if (runtimeFailed) return { build: hasBuild ? "done" : "skipped", deploy: "done", ready: "failed" };
-    // Pre-cluster (render/apply/timeout) → map to first node per spec.
-    return { build: "failed", deploy: "todo", ready: "todo" };
+    // The worker only records a per-resource `outcome` once it reaches the
+    // convergence loop — i.e. render + apply already succeeded and the workload
+    // was deployed. Pre-cluster failures (render/apply/secret) store no outcome.
+    const reachedCluster = Object.keys(release.outcome?.resources ?? {}).length > 0;
+    // Convergence timeout or a runtime crash: the workload was applied (Deploy
+    // done) but never became Ready — the failure lands on the Ready node.
+    if (runtimeFailed || reachedCluster) {
+      return { build: hasBuild ? "done" : "skipped", deploy: "done", ready: "failed" };
+    }
+    // Pre-cluster (render/apply/secret) failure: nothing was deployed. Build
+    // only owns this when the stack actually builds; an image-only stack skips
+    // Build, so the failure lands on Deploy instead.
+    return hasBuild
+      ? { build: "failed", deploy: "todo", ready: "todo" }
+      : { build: "skipped", deploy: "failed", ready: "todo" };
   }
   // Superseded / Cancelled → neutral.
   return { build: "todo", deploy: "todo", ready: "todo" };

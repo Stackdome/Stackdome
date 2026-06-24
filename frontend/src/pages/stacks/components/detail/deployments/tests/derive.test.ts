@@ -168,6 +168,20 @@ describe("deriveStages", () => {
       .toEqual({ build: "failed", deploy: "todo", ready: "todo" });
   });
 
+  it("convergence timeout (outcome recorded) maps to Deploy done / Ready ✕, Build skipped for image-only", () => {
+    const stack = { status: {} } as unknown as import("../derive").Stack;
+    const rel = release({ state: "Failed", message: "timed out waiting for convergence after 15m0s",
+      pins: { resources: { web: { image_digest: "sha256:..." } } },
+      outcome: { resources: { web: { phase: "Ready", ready_replicas: 1, replicas: 2 } } } });
+    expect(deriveStages(stack, rel, [])).toEqual({ build: "skipped", deploy: "done", ready: "failed" });
+  });
+
+  it("pre-cluster Failed on an image-only stack lands on Deploy, never Build", () => {
+    const stack = { status: {} } as unknown as import("../derive").Stack;
+    const rel = release({ state: "Failed", pins: { resources: { web: { image_digest: "sha256:..." } } } });
+    expect(deriveStages(stack, rel, [])).toEqual({ build: "skipped", deploy: "failed", ready: "todo" });
+  });
+
   it("image-only stack (no build pins) skips Build and starts at Deploy", () => {
     const stack = { status: {} } as unknown as import("../derive").Stack;
     expect(deriveStages(stack, release({ state: "InProgress", pins: { resources: { api: { image_digest: "sha256:..." } } } }), []))
