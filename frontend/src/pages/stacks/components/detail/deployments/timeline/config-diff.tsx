@@ -20,14 +20,14 @@ function Row({ row }: { row: DiffRow }) {
 }
 
 function CardHead({ name, change }: { name: string; change: "added" | "removed" | "modified" }) {
-  const dot = change === "added" ? "bg-success" : change === "removed" ? "bg-danger" : "bg-warn";
+  const dot = change === "added" ? "bg-success" : change === "removed" ? "bg-danger" : "bg-brand";
   return (
     <div className="flex items-center gap-2.5 bg-muted px-3 py-2.5">
       <span className={`h-[7px] w-[7px] flex-none rounded-full ${dot}`} />
       <span className="font-mono text-[12.5px] font-semibold text-foreground">{name}</span>
       {change === "added" && <span className="inline-flex items-center rounded-md border border-success-border bg-success-bg px-2 py-0.5 text-[11px] font-medium text-success">Added</span>}
       {change === "removed" && <span className="inline-flex items-center rounded-md border border-danger-border bg-danger-bg px-2 py-0.5 text-[11px] font-medium text-danger">Removed</span>}
-      {change === "modified" && <span className="inline-flex items-center rounded-md border border-warn-border bg-warn-bg px-2 py-0.5 text-[11px] font-medium text-warn">Modified</span>}
+      {change === "modified" && <span className="inline-flex items-center rounded-md border border-brand-border bg-brand-bg px-2 py-0.5 text-[11px] font-medium text-brand">Modified</span>}
     </div>
   );
 }
