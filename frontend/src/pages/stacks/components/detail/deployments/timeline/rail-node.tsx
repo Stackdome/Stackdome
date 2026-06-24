@@ -13,10 +13,12 @@ export interface RailNodeProps {
   big?: boolean;
   pulse?: boolean;
   isLast?: boolean;
+  /** DOM id on the row, used as a scroll-into-view anchor (e.g. jump-to-live). */
+  id?: string;
   children: React.ReactNode;
 }
 
-export function RailNode({ tone, shape, big, pulse, isLast, children }: RailNodeProps) {
+export function RailNode({ tone, shape, big, pulse, isLast, id, children }: RailNodeProps) {
   const resolved: RailDotShape = shape ?? (big ? "ring" : "solid");
 
   const dot =
@@ -31,7 +33,7 @@ export function RailNode({ tone, shape, big, pulse, isLast, children }: RailNode
     );
 
   return (
-    <div className="flex items-stretch gap-3.5">
+    <div id={id} className="flex items-stretch gap-3.5 scroll-mt-24">
       <div className="flex w-[34px] flex-none flex-col items-center">
         {dot}
         <span

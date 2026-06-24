@@ -40,7 +40,11 @@ export function TimelineRail(props: TimelineRailProps) {
   const { releases, activeRelease, stack, logContext, onOpenLogs, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
   const detail = useReleaseDetail(logContext?.orgId ?? "", logContext?.teamName ?? "", logContext?.stackId ?? "");
   const liveReleaseId = stack.status?.last_converged?.release_id;
-  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set(activeRelease?.id ? [activeRelease.id] : []));
+  // Open the latest deploy AND the live release by default — the live one is the
+  // jump-to-live target, so it must already be expanded when scrolled into view.
+  const [openIds, setOpenIds] = useState<Set<string>>(
+    () => new Set([activeRelease?.id, liveReleaseId].filter((x): x is string => !!x)),
+  );
   const [windowN, setWindowN] = useState(initialWindow);
 
   // Multiple release details can be open at once — not an accordion.
@@ -72,7 +76,7 @@ export function TimelineRail(props: TimelineRailProps) {
           const isLast = idx === shown.length - 1 && hidden <= 0;
           const state = r.state ?? "";
           return (
-            <RailNode key={r.id ?? idx} tone={stateTone(state)} shape={dotShape(state)} pulse={DEPLOYING.has(state)} isLast={isLast}>
+            <RailNode key={r.id ?? idx} id={r.id ? `deploy-node-${r.id}` : undefined} tone={stateTone(state)} shape={dotShape(state)} pulse={DEPLOYING.has(state)} isLast={isLast}>
               <TimelineNode
                 release={r}
                 prevReleaseId={prevIdFor(idx)}

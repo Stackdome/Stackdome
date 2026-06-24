@@ -4,6 +4,7 @@ import type { StackRelease } from "@/api/releases";
 import type { DeployLifecycle } from "./use-deploy-lifecycle";
 import { TimelineRail } from "./timeline/timeline-rail";
 import { DraftNode } from "./timeline/draft-node";
+import { LiveReleaseSummary } from "./timeline/live-release-summary";
 
 export interface DeploymentsTabProps {
   orgId: string;
@@ -30,8 +31,26 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
     ? <DraftNode phase={lifecycle.phase} diff={lifecycle.stagedDiff} vsSeq={lifecycle.vsSeq} nextSeq={lifecycle.nextSeq} isLast={releases.length === 0} />
     : undefined;
 
+  // Surface the live release at the top only when it's buried — i.e. not already
+  // the newest node. (When live IS the newest, it's already at the top of the rail.)
+  const liveReleaseId = stack.status?.last_converged?.release_id;
+  const liveRelease = liveReleaseId ? releases.find((r) => r.id === liveReleaseId) : undefined;
+  const showLiveAnchor = liveRelease && releases[0]?.id !== liveRelease.id;
+
   return (
     <div className="space-y-4">
+      {showLiveAnchor && liveRelease && (
+        <LiveReleaseSummary
+          release={liveRelease}
+          stack={stack}
+          onJump={() =>
+            document
+              .getElementById(`deploy-node-${liveRelease.id}`)
+              ?.scrollIntoView({ behavior: "smooth", block: "center" })
+          }
+        />
+      )}
+
       <div className="font-mono text-[11px] uppercase tracking-wide text-fg-muted">Deploy timeline</div>
 
       {loading && releases.length === 0 && !draftNode ? (
