@@ -67,11 +67,11 @@ export function TimelineNode(props: TimelineNodeProps) {
         onClick={() => onToggle(id)}
       >
         <span className="flex-none font-sans text-[13px] font-semibold text-foreground">#{release.sequence}</span>
-        <span className="min-w-0 flex-1 truncate text-[13px] text-fg-muted">
-          {causeLabel(release.cause)}
-          {subline ? <span className={state === "Failed" ? "text-danger" : "text-fg-muted"}> · {subline}</span> : null}
-        </span>
+        <span className="flex-none text-[13px] text-fg-2">{causeLabel(release.cause)}</span>
         {chip}
+        <span className={`min-w-0 flex-1 truncate text-[13px] ${state === "Failed" ? "text-danger" : "text-fg-muted"}`}>
+          {subline ? `· ${subline}` : ""}
+        </span>
         {ts && <span className="flex-none font-mono text-[11px] text-fg-muted">{ts}</span>}
         <ChevronDown className={`h-3.5 w-3.5 flex-none text-fg-muted transition-transform ${isOpen ? "rotate-180" : ""}`} />
         <span onClick={(e) => e.stopPropagation()}>

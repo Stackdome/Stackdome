@@ -33,9 +33,9 @@ export function DraftNode({ phase, diff, liveSeq, nextSeq, isLast, defaultOpen =
   const [open, setOpen] = useState(defaultOpen);
   const names = changedNames(diff);
   const hasChanges = names.length > 0;
-  const summary = hasChanges
+  const namesLabel = hasChanges
     ? `${names.slice(0, 2).join(", ")}${names.length > 2 ? ` +${names.length - 2}` : ""} modified`
-    : "changes staged";
+    : "";
   const chipLabel = phase === "editing" ? "Unsaved" : "Draft";
 
   return (
@@ -50,7 +50,7 @@ export function DraftNode({ phase, diff, liveSeq, nextSeq, isLast, defaultOpen =
           </span>
           <span className="min-w-0 flex-1 truncate text-[13px] text-fg-muted">
             <span className="font-medium text-foreground">Staged changes</span>
-            <span> · {summary}</span>
+            {namesLabel && <span className="text-fg-muted"> {namesLabel}</span>}
           </span>
           {liveSeq != null && <span className="flex-none font-mono text-[11px] text-fg-muted">vs #{liveSeq}</span>}
           <ChevronDown className={`h-3.5 w-3.5 flex-none text-fg-muted transition-transform ${open ? "rotate-180" : ""}`} />
