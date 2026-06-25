@@ -2,6 +2,8 @@ package preview
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -41,12 +43,21 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 		return resultNil, fmt.Errorf("failed to get config: %w", sErr)
 	}
 
-	content, hash, opErr := r.previewStackService.InternalFetchStackfile(ctx, config, preview.CommitSHA)
-	if opErr != nil {
-		if errors.IsRetryable(opErr) {
-			return resultNil, opErr
+	var content []byte
+	var hash string
+	if preview.StackfileContent != nil {
+		content = []byte(*preview.StackfileContent)
+		h := sha256.Sum256(content)
+		hash = hex.EncodeToString(h[:])
+	} else {
+		var opErr *errors.OperationError
+		content, hash, opErr = r.previewStackService.InternalFetchStackfile(ctx, config, preview.CommitSHA)
+		if opErr != nil {
+			if errors.IsRetryable(opErr) {
+				return resultNil, opErr
+			}
+			return r.fail(ctx, preview, opErr.Reason, opErr.Message)
 		}
-		return r.fail(ctx, preview, opErr.Reason, opErr.Message)
 	}
 
 	if preview.StackID != nil {

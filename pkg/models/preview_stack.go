@@ -107,6 +107,7 @@ type PreviewStack struct {
 	Annotations          Annotations        `gorm:"type:jsonb"`
 	Status               PreviewStackStatus `gorm:"type:jsonb;not null"`
 	StackfileHash        string             `gorm:"not null;default:''"`
+	StackfileContent     *string
 	DeletionTimestamp    *time.Time
 	CreatedAt            time.Time
 	UpdatedAt            time.Time

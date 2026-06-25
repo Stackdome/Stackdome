@@ -12548,7 +12548,6 @@ components:
       type: object
     StackPreviewConfigCreate:
       example:
-        cluster_id: cluster_id
         name: name
         description: description
         annotations:
@@ -12570,8 +12569,6 @@ components:
       properties:
         name:
           type: string
-        cluster_id:
-          type: string
         git_repository:
           $ref: '#/components/schemas/PreviewGitRepository'
         description:
@@ -12589,7 +12586,6 @@ components:
             $ref: '#/components/schemas/Annotation'
           type: array
       required:
-      - cluster_id
       - git_repository
       - name
       type: object
@@ -12798,6 +12794,7 @@ components:
       type: object
     PreviewStackCreate:
       example:
+        stackfile_content: stackfile_content
         config_id: config_id
         image_overrides:
           key: image_overrides
@@ -12813,6 +12810,8 @@ components:
           type: string
         commit:
           type: string
+        stackfile_content:
+          type: string
         image_overrides:
           additionalProperties:
             type: string
@@ -12824,12 +12823,18 @@ components:
       type: object
     PreviewStackSync:
       example:
+        stackfile_content: stackfile_content
+        force_sync: true
         image_overrides:
           key: image_overrides
         commit: commit
       properties:
         commit:
           type: string
+        stackfile_content:
+          type: string
+        force_sync:
+          type: boolean
         image_overrides:
           additionalProperties:
             type: string

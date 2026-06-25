@@ -6014,12 +6014,9 @@ components:
       type: object
       required:
         - name
-        - cluster_id
         - git_repository
       properties:
         name:
-          type: string
-        cluster_id:
           type: string
         git_repository:
           $ref: '#/components/schemas/PreviewGitRepository'
@@ -6172,6 +6169,8 @@ components:
           type: string
         commit:
           type: string
+        stackfile_content:
+          type: string
         image_overrides:
           type: object
           additionalProperties:
@@ -6182,6 +6181,10 @@ components:
       properties:
         commit:
           type: string
+        stackfile_content:
+          type: string
+        force_sync:
+          type: boolean
         image_overrides:
           type: object
           additionalProperties:

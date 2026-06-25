@@ -63,4 +63,5 @@ var MigrationList = []*gormigrate.Migration{
 	addSettingsToStacks(),
 	createStackPreviewConfigsTable(),
 	createPreviewStacksTable(),
+	addStackfileContentToPreviewStacks(),
 }

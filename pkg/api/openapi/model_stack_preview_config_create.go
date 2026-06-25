@@ -17,7 +17,6 @@ import (
 // StackPreviewConfigCreate struct for StackPreviewConfigCreate
 type StackPreviewConfigCreate struct {
 	Name              string               `json:"name"`
-	ClusterId         string               `json:"cluster_id"`
 	GitRepository     PreviewGitRepository `json:"git_repository"`
 	Description       *string              `json:"description,omitempty"`
 	StackfilePath     *string              `json:"stackfile_path,omitempty"`
@@ -30,10 +29,9 @@ type StackPreviewConfigCreate struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewStackPreviewConfigCreate(name string, clusterId string, gitRepository PreviewGitRepository) *StackPreviewConfigCreate {
+func NewStackPreviewConfigCreate(name string, gitRepository PreviewGitRepository) *StackPreviewConfigCreate {
 	this := StackPreviewConfigCreate{}
 	this.Name = name
-	this.ClusterId = clusterId
 	this.GitRepository = gitRepository
 	return &this
 }
@@ -68,30 +66,6 @@ func (o *StackPreviewConfigCreate) GetNameOk() (*string, bool) {
 // SetName sets field value
 func (o *StackPreviewConfigCreate) SetName(v string) {
 	o.Name = v
-}
-
-// GetClusterId returns the ClusterId field value
-func (o *StackPreviewConfigCreate) GetClusterId() string {
-	if o == nil {
-		var ret string
-		return ret
-	}
-
-	return o.ClusterId
-}
-
-// GetClusterIdOk returns a tuple with the ClusterId field value
-// and a boolean to check if the value has been set.
-func (o *StackPreviewConfigCreate) GetClusterIdOk() (*string, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.ClusterId, true
-}
-
-// SetClusterId sets field value
-func (o *StackPreviewConfigCreate) SetClusterId(v string) {
-	o.ClusterId = v
 }
 
 // GetGitRepository returns the GitRepository field value
@@ -282,9 +256,6 @@ func (o StackPreviewConfigCreate) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["name"] = o.Name
-	}
-	if true {
-		toSerialize["cluster_id"] = o.ClusterId
 	}
 	if true {
 		toSerialize["git_repository"] = o.GitRepository

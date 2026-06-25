@@ -33,7 +33,7 @@ import (
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
     teamName := "teamName_example" // string | The name of the team
-    stackPreviewConfigCreate := *openapiclient.NewStackPreviewConfigCreate("Name_example", "ClusterId_example", *openapiclient.NewPreviewGitRepository("RepoUrl_example")) // StackPreviewConfigCreate | 
+    stackPreviewConfigCreate := *openapiclient.NewStackPreviewConfigCreate("Name_example", *openapiclient.NewPreviewGitRepository("RepoUrl_example")) // StackPreviewConfigCreate | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)

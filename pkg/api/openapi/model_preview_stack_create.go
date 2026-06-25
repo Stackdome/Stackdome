@@ -16,11 +16,12 @@ import (
 
 // PreviewStackCreate struct for PreviewStackCreate
 type PreviewStackCreate struct {
-	ConfigId       string             `json:"config_id"`
-	PrNumber       string             `json:"pr_number"`
-	Branch         string             `json:"branch"`
-	Commit         *string            `json:"commit,omitempty"`
-	ImageOverrides *map[string]string `json:"image_overrides,omitempty"`
+	ConfigId         string             `json:"config_id"`
+	PrNumber         string             `json:"pr_number"`
+	Branch           string             `json:"branch"`
+	Commit           *string            `json:"commit,omitempty"`
+	StackfileContent *string            `json:"stackfile_content,omitempty"`
+	ImageOverrides   *map[string]string `json:"image_overrides,omitempty"`
 }
 
 // NewPreviewStackCreate instantiates a new PreviewStackCreate object
@@ -147,6 +148,38 @@ func (o *PreviewStackCreate) SetCommit(v string) {
 	o.Commit = &v
 }
 
+// GetStackfileContent returns the StackfileContent field value if set, zero value otherwise.
+func (o *PreviewStackCreate) GetStackfileContent() string {
+	if o == nil || o.StackfileContent == nil {
+		var ret string
+		return ret
+	}
+	return *o.StackfileContent
+}
+
+// GetStackfileContentOk returns a tuple with the StackfileContent field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PreviewStackCreate) GetStackfileContentOk() (*string, bool) {
+	if o == nil || o.StackfileContent == nil {
+		return nil, false
+	}
+	return o.StackfileContent, true
+}
+
+// HasStackfileContent returns a boolean if a field has been set.
+func (o *PreviewStackCreate) HasStackfileContent() bool {
+	if o != nil && o.StackfileContent != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetStackfileContent gets a reference to the given string and assigns it to the StackfileContent field.
+func (o *PreviewStackCreate) SetStackfileContent(v string) {
+	o.StackfileContent = &v
+}
+
 // GetImageOverrides returns the ImageOverrides field value if set, zero value otherwise.
 func (o *PreviewStackCreate) GetImageOverrides() map[string]string {
 	if o == nil || o.ImageOverrides == nil {
@@ -192,6 +225,9 @@ func (o PreviewStackCreate) MarshalJSON() ([]byte, error) {
 	}
 	if o.Commit != nil {
 		toSerialize["commit"] = o.Commit
+	}
+	if o.StackfileContent != nil {
+		toSerialize["stackfile_content"] = o.StackfileContent
 	}
 	if o.ImageOverrides != nil {
 		toSerialize["image_overrides"] = o.ImageOverrides
