@@ -127,6 +127,23 @@ func (s *previewStackStore) ListByTeamID(ctx context.Context, teamID string, par
 	}, nil
 }
 
+func (s *previewStackStore) ListActive(ctx context.Context, page, pageSize int) ([]*models.PreviewStack, *errors.ServiceError) {
+	offset := 0
+	if page > 1 {
+		offset = (page - 1) * pageSize
+	}
+	var previews []*models.PreviewStack
+	if err := s.sessionFactory.New(ctx).
+		Where("status->>'phase' NOT IN (?, ?)", models.PreviewStackPhaseReady, models.PreviewStackPhaseFailed).
+		Order("created_at ASC").
+		Limit(pageSize).
+		Offset(offset).
+		Find(&previews).Error; err != nil {
+		return nil, errors.GeneralError("failed to list active preview stacks: %s", err.Error())
+	}
+	return previews, nil
+}
+
 func (s *previewStackStore) Delete(ctx context.Context, id string) *errors.ServiceError {
 	result := s.sessionFactory.New(ctx).Where("id = ?", id).Delete(&models.PreviewStack{})
 	if result.Error != nil {
