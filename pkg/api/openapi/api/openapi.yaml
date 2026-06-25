@@ -4273,6 +4273,580 @@ paths:
         "410":
           description: Invite expired or revoked
       summary: Get public invite info (unauthenticated)
+  /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs:
+    get:
+      operationId: listPreviewConfigs
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Page number
+        explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          type: integer
+        style: form
+      - description: Number of items per page
+        explode: true
+        in: query
+        name: page_size
+        required: false
+        schema:
+          default: 20
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackPreviewConfigList'
+          description: List of preview configs
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List preview configs for a team
+      tags:
+      - Preview Configs
+    post:
+      operationId: createPreviewConfig
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StackPreviewConfigCreate'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackPreviewConfig'
+          description: Preview config created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Preview config already exists
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Create a new preview config
+      tags:
+      - Preview Configs
+  /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id}:
+    delete:
+      operationId: deletePreviewConfig
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Preview config deleted successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Preview config not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete a preview config
+      tags:
+      - Preview Configs
+    get:
+      operationId: getPreviewConfig
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackPreviewConfig'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Preview config not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a specific preview config
+      tags:
+      - Preview Configs
+    put:
+      operationId: updatePreviewConfig
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StackPreviewConfigUpdate'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackPreviewConfig'
+          description: Preview config updated successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Preview config not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update a preview config
+      tags:
+      - Preview Configs
+  /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks:
+    get:
+      operationId: listPreviewStacks
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Page number
+        explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          type: integer
+        style: form
+      - description: Number of items per page
+        explode: true
+        in: query
+        name: page_size
+        required: false
+        schema:
+          default: 20
+          type: integer
+        style: form
+      - description: Filter by preview config ID
+        explode: true
+        in: query
+        name: config_id
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewStackList'
+          description: List of preview stacks
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List preview stacks for a team
+      tags:
+      - Preview Stacks
+    post:
+      operationId: createPreviewStack
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewStackCreate'
+        required: true
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewStack'
+          description: Preview stack creation initiated
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Preview stack already exists
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Create a new preview stack
+      tags:
+      - Preview Stacks
+  /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id}:
+    delete:
+      operationId: deletePreviewStack
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewStack'
+          description: Preview stack deletion initiated
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Preview stack not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete a preview stack
+      tags:
+      - Preview Stacks
+    get:
+      operationId: getPreviewStack
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewStack'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Preview stack not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a specific preview stack
+      tags:
+      - Preview Stacks
+  /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id}/sync:
+    post:
+      operationId: syncPreviewStack
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewStackSync'
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewStack'
+          description: Preview stack sync initiated
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Preview stack not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Sync a preview stack
+      tags:
+      - Preview Stacks
 components:
   parameters:
     id:
@@ -11891,6 +12465,475 @@ components:
         message:
           type: string
       type: object
+    PreviewGitRepository:
+      example:
+        repo_url: repo_url
+        base_branch: base_branch
+        git_secret_ref: git_secret_ref
+      properties:
+        repo_url:
+          type: string
+        base_branch:
+          type: string
+        git_secret_ref:
+          type: string
+      required:
+      - repo_url
+      type: object
+    StackPreviewConfig:
+      example:
+        description: description
+        annotations:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        created_at: 2000-01-23T04:56:07.000+00:00
+        git_repository:
+          repo_url: repo_url
+          base_branch: base_branch
+          git_secret_ref: git_secret_ref
+        team_id: team_id
+        labels:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        organisation_id: organisation_id
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        user_id: user_id
+        name: name
+        id: id
+        stackfile_path: stackfile_path
+        max_active_previews: 0
+      properties:
+        id:
+          readOnly: true
+          type: string
+        organisation_id:
+          readOnly: true
+          type: string
+        team_id:
+          readOnly: true
+          type: string
+        user_id:
+          readOnly: true
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        git_repository:
+          $ref: '#/components/schemas/PreviewGitRepository'
+        stackfile_path:
+          type: string
+        max_active_previews:
+          type: integer
+        labels:
+          items:
+            $ref: '#/components/schemas/Label'
+          type: array
+        annotations:
+          items:
+            $ref: '#/components/schemas/Annotation'
+          type: array
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+        updated_at:
+          format: date-time
+          readOnly: true
+          type: string
+      type: object
+    StackPreviewConfigCreate:
+      example:
+        cluster_id: cluster_id
+        name: name
+        description: description
+        annotations:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        git_repository:
+          repo_url: repo_url
+          base_branch: base_branch
+          git_secret_ref: git_secret_ref
+        stackfile_path: stackfile_path
+        max_active_previews: 0
+        labels:
+        - value: value
+          key: key
+        - value: value
+          key: key
+      properties:
+        name:
+          type: string
+        cluster_id:
+          type: string
+        git_repository:
+          $ref: '#/components/schemas/PreviewGitRepository'
+        description:
+          type: string
+        stackfile_path:
+          type: string
+        max_active_previews:
+          type: integer
+        labels:
+          items:
+            $ref: '#/components/schemas/Label'
+          type: array
+        annotations:
+          items:
+            $ref: '#/components/schemas/Annotation'
+          type: array
+      required:
+      - cluster_id
+      - git_repository
+      - name
+      type: object
+    StackPreviewConfigUpdate:
+      example:
+        description: description
+        annotations:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        git_repository:
+          repo_url: repo_url
+          base_branch: base_branch
+          git_secret_ref: git_secret_ref
+        stackfile_path: stackfile_path
+        max_active_previews: 0
+        labels:
+        - value: value
+          key: key
+        - value: value
+          key: key
+      properties:
+        description:
+          type: string
+        stackfile_path:
+          type: string
+        max_active_previews:
+          type: integer
+        git_repository:
+          $ref: '#/components/schemas/PreviewGitRepository'
+        labels:
+          items:
+            $ref: '#/components/schemas/Label'
+          type: array
+        annotations:
+          items:
+            $ref: '#/components/schemas/Annotation'
+          type: array
+      type: object
+    StackPreviewConfigList:
+      example:
+        total: 6
+        page: 1
+        total_pages: 5
+        items:
+        - description: description
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
+          git_repository:
+            repo_url: repo_url
+            base_branch: base_branch
+            git_secret_ref: git_secret_ref
+          team_id: team_id
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          name: name
+          id: id
+          stackfile_path: stackfile_path
+          max_active_previews: 0
+        - description: description
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
+          git_repository:
+            repo_url: repo_url
+            base_branch: base_branch
+            git_secret_ref: git_secret_ref
+          team_id: team_id
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          name: name
+          id: id
+          stackfile_path: stackfile_path
+          max_active_previews: 0
+        page_size: 5
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/StackPreviewConfig'
+          type: array
+        total:
+          description: Total number of records
+          type: integer
+        page:
+          description: Current page number
+          type: integer
+        page_size:
+          description: Number of items per page
+          type: integer
+        total_pages:
+          description: Total number of pages
+          type: integer
+      type: object
+    PreviewStack:
+      example:
+        commit: commit
+        annotations:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        created_at: 2000-01-23T04:56:07.000+00:00
+        team_id: team_id
+        source: source
+        deletion_timestamp: 2000-01-23T04:56:07.000+00:00
+        stack_preview_config_id: stack_preview_config_id
+        branch: branch
+        labels:
+        - value: value
+          key: key
+        - value: value
+          key: key
+        organisation_id: organisation_id
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        user_id: user_id
+        stack_id: stack_id
+        image_overrides:
+          key: image_overrides
+        name: name
+        pr_number: pr_number
+        id: id
+        status:
+          phase: Provisioning
+          outputs:
+            commit_sha: commit_sha
+            urls:
+            - resource: resource
+              url: url
+            - resource: resource
+              url: url
+          reason: reason
+          message: message
+      properties:
+        id:
+          readOnly: true
+          type: string
+        organisation_id:
+          readOnly: true
+          type: string
+        team_id:
+          readOnly: true
+          type: string
+        user_id:
+          readOnly: true
+          type: string
+        stack_preview_config_id:
+          type: string
+        stack_id:
+          type: string
+        name:
+          type: string
+        pr_number:
+          type: string
+        branch:
+          type: string
+        commit:
+          readOnly: true
+          type: string
+        source:
+          type: string
+        status:
+          $ref: '#/components/schemas/PreviewStack_status'
+        image_overrides:
+          additionalProperties:
+            type: string
+          type: object
+        labels:
+          items:
+            $ref: '#/components/schemas/Label'
+          type: array
+        annotations:
+          items:
+            $ref: '#/components/schemas/Annotation'
+          type: array
+        deletion_timestamp:
+          format: date-time
+          type: string
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+        updated_at:
+          format: date-time
+          readOnly: true
+          type: string
+      type: object
+    PreviewStackCreate:
+      example:
+        config_id: config_id
+        image_overrides:
+          key: image_overrides
+        commit: commit
+        pr_number: pr_number
+        branch: branch
+      properties:
+        config_id:
+          type: string
+        pr_number:
+          type: string
+        branch:
+          type: string
+        commit:
+          type: string
+        image_overrides:
+          additionalProperties:
+            type: string
+          type: object
+      required:
+      - branch
+      - config_id
+      - pr_number
+      type: object
+    PreviewStackSync:
+      example:
+        image_overrides:
+          key: image_overrides
+        commit: commit
+      properties:
+        commit:
+          type: string
+        image_overrides:
+          additionalProperties:
+            type: string
+          type: object
+      type: object
+    PreviewStackList:
+      example:
+        total: 0
+        page: 6
+        total_pages: 5
+        items:
+        - commit: commit
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
+          team_id: team_id
+          source: source
+          deletion_timestamp: 2000-01-23T04:56:07.000+00:00
+          stack_preview_config_id: stack_preview_config_id
+          branch: branch
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          stack_id: stack_id
+          image_overrides:
+            key: image_overrides
+          name: name
+          pr_number: pr_number
+          id: id
+          status:
+            phase: Provisioning
+            outputs:
+              commit_sha: commit_sha
+              urls:
+              - resource: resource
+                url: url
+              - resource: resource
+                url: url
+            reason: reason
+            message: message
+        - commit: commit
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          created_at: 2000-01-23T04:56:07.000+00:00
+          team_id: team_id
+          source: source
+          deletion_timestamp: 2000-01-23T04:56:07.000+00:00
+          stack_preview_config_id: stack_preview_config_id
+          branch: branch
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          organisation_id: organisation_id
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          user_id: user_id
+          stack_id: stack_id
+          image_overrides:
+            key: image_overrides
+          name: name
+          pr_number: pr_number
+          id: id
+          status:
+            phase: Provisioning
+            outputs:
+              commit_sha: commit_sha
+              urls:
+              - resource: resource
+                url: url
+              - resource: resource
+                url: url
+            reason: reason
+            message: message
+        page_size: 1
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/PreviewStack'
+          type: array
+        total:
+          description: Total number of records
+          type: integer
+        page:
+          description: Current page number
+          type: integer
+        page_size:
+          description: Number of items per page
+          type: integer
+        total_pages:
+          description: Total number of pages
+          type: integer
+      type: object
     _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_backup_post_request:
       properties:
         description:
@@ -12234,6 +13277,61 @@ components:
           additionalProperties:
             type: string
           type: object
+      type: object
+    PreviewStack_status_outputs_urls_inner:
+      example:
+        resource: resource
+        url: url
+      properties:
+        resource:
+          type: string
+        url:
+          type: string
+      type: object
+    PreviewStack_status_outputs:
+      example:
+        commit_sha: commit_sha
+        urls:
+        - resource: resource
+          url: url
+        - resource: resource
+          url: url
+      properties:
+        commit_sha:
+          type: string
+        urls:
+          items:
+            $ref: '#/components/schemas/PreviewStack_status_outputs_urls_inner'
+          type: array
+      type: object
+    PreviewStack_status:
+      example:
+        phase: Provisioning
+        outputs:
+          commit_sha: commit_sha
+          urls:
+          - resource: resource
+            url: url
+          - resource: resource
+            url: url
+        reason: reason
+        message: message
+      properties:
+        phase:
+          enum:
+          - Provisioning
+          - Deploying
+          - Ready
+          - Failed
+          - Deleting
+          type: string
+        reason:
+          type: string
+        message:
+          type: string
+        outputs:
+          $ref: '#/components/schemas/PreviewStack_status_outputs'
+      readOnly: true
       type: object
   securitySchemes:
     Bearer:
