@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	stderrors "errors"
 	"fmt"
 	"strings"
 	"time"
@@ -26,8 +27,8 @@ type PreviewStackService interface {
 	Delete(ctx context.Context, previewStackID string) *errors.ServiceError
 	Get(ctx context.Context, previewStackID string) (*models.PreviewStack, *errors.ServiceError)
 	List(ctx context.Context, teamID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError)
-	InternalFetchStackfile(ctx context.Context, config *models.StackPreviewConfig, commitSHA string) (content []byte, hash string, sErr *errors.ServiceError)
-	InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, content []byte) (*models.Stack, *errors.ServiceError)
+	InternalFetchStackfile(ctx context.Context, config *models.StackPreviewConfig, commitSHA string) (content []byte, hash string, opErr *errors.OperationError)
+	InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, content []byte) (*models.Stack, *errors.OperationError)
 }
 
 type PreviewStackServiceSpec struct {
@@ -99,7 +100,10 @@ func (s *previewStackService) Create(ctx context.Context, preview *models.Previe
 		}
 		result, branchErr := gitClient.GetBranchHeadSHA(ctx, config.GitRepository.RepoURL, preview.Branch)
 		if branchErr != nil {
-			return nil, errors.BadRequest("branch validation failed: %v", branchErr)
+			if stderrors.Is(branchErr, gitclient.ErrNotFound) {
+				return nil, errors.BadRequest("branch '%s' not found in repository", preview.Branch)
+			}
+			return nil, errors.GeneralError("branch validation failed: %v", branchErr)
 		}
 		preview.CommitSHA = result.HeadSHA
 	}
@@ -242,15 +246,24 @@ func (s *previewStackService) gitClientForConfig(ctx context.Context, config *mo
 
 // InternalFetchStackfile retrieves the stackfile from git and returns its content along
 // with a sha256 hex-encoded hash of the content.
-func (s *previewStackService) InternalFetchStackfile(ctx context.Context, config *models.StackPreviewConfig, commitSHA string) ([]byte, string, *errors.ServiceError) {
+func (s *previewStackService) InternalFetchStackfile(ctx context.Context, config *models.StackPreviewConfig, commitSHA string) ([]byte, string, *errors.OperationError) {
 	gitClient, gErr := s.gitClientForConfig(ctx, config)
 	if gErr != nil {
-		return nil, "", errors.GeneralError("failed to create git client: %v", gErr)
+		return nil, "", errors.Transient("GitClientFailed", fmt.Sprintf("failed to create git client: %v", gErr))
 	}
 
 	content, fetchErr := gitClient.FetchFile(ctx, config.GitRepository.RepoURL, commitSHA, config.StackfilePath)
 	if fetchErr != nil {
-		return nil, "", errors.GeneralError("failed to fetch stackfile: %v", fetchErr)
+		if stderrors.Is(fetchErr, gitclient.ErrNotFound) {
+			return nil, "", errors.Permanent("StackfileNotFound",
+				fmt.Sprintf("stackfile '%s' not found at commit %s", config.StackfilePath, commitSHA))
+		}
+		if stderrors.Is(fetchErr, gitclient.ErrAuthFailed) {
+			return nil, "", errors.Permanent("GitAuthFailed",
+				fmt.Sprintf("git authentication failed: %v", fetchErr))
+		}
+		return nil, "", errors.Transient("StackfileFetchFailed",
+			fmt.Sprintf("failed to fetch stackfile: %v", fetchErr))
 	}
 
 	h := sha256.Sum256(content)
@@ -261,10 +274,10 @@ func (s *previewStackService) InternalFetchStackfile(ctx context.Context, config
 
 // InternalBuildStackFromContent parses stackfile content, resolves references, applies
 // preview transforms, and returns the resulting stack model.
-func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, content []byte) (*models.Stack, *errors.ServiceError) {
+func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, content []byte) (*models.Stack, *errors.OperationError) {
 	sf, err := stackfile.Load(content)
 	if err != nil {
-		return nil, errors.GeneralError("failed to parse stackfile: %v", err)
+		return nil, errors.Permanent("InvalidStackfile", fmt.Sprintf("failed to parse stackfile: %v", err))
 	}
 
 	stack := sf.ToStack()
@@ -275,7 +288,8 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 		orgID:         config.OrganisationID,
 	}
 	if err := stackfile.ResolveStack(ctx, &stack, resolver); err != nil {
-		return nil, errors.GeneralError("failed to resolve stackfile references: %v", err)
+		return nil, errors.Permanent("StackfileResolutionFailed",
+			fmt.Sprintf("failed to resolve stackfile references: %v", err))
 	}
 
 	s.applyBranchSwap(&stack, config.GitRepository.RepoURL, preview.Branch, preview.CommitSHA)
