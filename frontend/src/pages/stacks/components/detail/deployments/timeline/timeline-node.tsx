@@ -3,13 +3,12 @@ import { StatusPill } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 import { causeLabel, releaseGitSha, formatDuration, formatReleaseTime } from "../derive";
+import { ReleaseState, isDeploying } from "../release-states";
 import type { ReleaseDetail } from "../use-release-detail";
 import { ReleaseMenu } from "./release-menu";
 import { ReleasePostMortem } from "./release-post-mortem";
 import { LiveReleaseBody } from "./live-release-body";
 import type { LogContext } from "./resource-row";
-
-const DEPLOYING = new Set(["Pending", "InProgress"]);
 
 export interface TimelineNodeProps {
   release: StackRelease;
@@ -41,11 +40,11 @@ export function TimelineNode(props: TimelineNodeProps) {
   const { release, prevReleaseId, prevSeq, detail, isOpen, onToggle, onRollback, onCancel, onCopyId, isActive, isLive, stack, logContext, onOpenLogs } = props;
   const id = release.id ?? "";
   const state = release.state ?? "";
-  const deploying = DEPLOYING.has(state);
+  const deploying = isDeploying(state);
 
   const sha = releaseGitSha(release);
   const dur = formatDuration(release.rendered_at, release.completed_at);
-  const subline = state === "Released"
+  const subline = state === ReleaseState.Released
     ? [sha && `git ${sha}`, dur !== "—" && `took ${dur}`].filter(Boolean).join(" · ")
     : release.message || (dur !== "—" ? `took ${dur}` : undefined);
   const ts = formatReleaseTime(release.completed_at ?? release.created_at);
@@ -54,7 +53,7 @@ export function TimelineNode(props: TimelineNodeProps) {
   const chipClass = "flex-none gap-1 px-2 py-0.5 text-[10px] tracking-[0.06em]";
   const chip = isLive
     ? <StatusPill variant="ready" className={chipClass}>Live</StatusPill>
-    : state === "Failed"
+    : state === ReleaseState.Failed
       ? <StatusPill variant="error" withDot={false} className={chipClass}>Failed</StatusPill>
       : deploying
         ? <StatusPill variant="pending" className={chipClass}>Deploying</StatusPill>
@@ -71,7 +70,7 @@ export function TimelineNode(props: TimelineNodeProps) {
         <span className="flex-none font-sans text-[13px] font-semibold text-foreground">#{release.sequence}</span>
         <span className="flex-none text-[13px] text-fg-2">{causeLabel(release.cause)}</span>
         {chip}
-        <span className={`min-w-0 flex-1 truncate text-[13px] ${state === "Failed" ? "text-danger" : "text-fg-muted"}`}>
+        <span className={`min-w-0 flex-1 truncate text-[13px] ${state === ReleaseState.Failed ? "text-danger" : "text-fg-muted"}`}>
           {subline ? `· ${subline}` : ""}
         </span>
         {ts && <span className="flex-none font-mono text-[11px] text-fg-muted">{ts}</span>}

@@ -3,12 +3,11 @@ import { EmptyState } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 import { stateTone } from "../derive";
+import { isDeploying } from "../release-states";
 import { useReleaseDetail } from "../use-release-detail";
 import { RailNode, type RailDotShape } from "./rail-node";
 import { TimelineNode } from "./timeline-node";
 import type { LogContext } from "./resource-row";
-
-const DEPLOYING = new Set(["Pending", "InProgress"]);
 
 export interface TimelineRailProps {
   releases: StackRelease[];
@@ -30,7 +29,7 @@ export interface TimelineRailProps {
 // rail. An in-flight deploy keeps its spinner to read as actively progressing.
 function dotShape(state: string, isLive: boolean): RailDotShape {
   if (isLive) return "solid";
-  if (DEPLOYING.has(state)) return "spinner";
+  if (isDeploying(state)) return "spinner";
   return "ring";
 }
 
@@ -79,7 +78,7 @@ export function TimelineRail(props: TimelineRailProps) {
           const state = r.state ?? "";
           const isLive = !!liveReleaseId && r.id === liveReleaseId;
           return (
-            <RailNode key={r.id ?? idx} id={r.id ? `deploy-node-${r.id}` : undefined} tone={stateTone(state)} shape={dotShape(state, isLive)} pulse={DEPLOYING.has(state)} isLast={isLast}>
+            <RailNode key={r.id ?? idx} id={r.id ? `deploy-node-${r.id}` : undefined} tone={stateTone(state)} shape={dotShape(state, isLive)} pulse={isDeploying(state)} isLast={isLast}>
               <TimelineNode
                 release={r}
                 prevReleaseId={prevIdFor(idx)}

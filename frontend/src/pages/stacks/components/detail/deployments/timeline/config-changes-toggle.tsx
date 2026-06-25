@@ -8,6 +8,8 @@ export interface ConfigChangesToggleProps {
   /** Sequence the diff is taken against (the previous release). */
   prevSeq?: number;
   defaultOpen?: boolean;
+  /** Previous snapshot still loading — show a placeholder instead of a false "no changes". */
+  loading?: boolean;
 }
 
 /**
@@ -15,7 +17,7 @@ export interface ConfigChangesToggleProps {
  * detail card. Brand-amber to read as the deploy accent (per the design), and
  * identical across live + historical nodes so the section is uniform.
  */
-export function ConfigChangesToggle({ diff, prevSeq, defaultOpen = false }: ConfigChangesToggleProps) {
+export function ConfigChangesToggle({ diff, prevSeq, defaultOpen = false, loading = false }: ConfigChangesToggleProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="mt-4 border-t border-border pt-4">
@@ -26,7 +28,11 @@ export function ConfigChangesToggle({ diff, prevSeq, defaultOpen = false }: Conf
         Config changes · vs #{prevSeq ?? "previous"}
         <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
-      {open && <div className="mt-3"><ConfigDiff diff={diff} hasPrev prevSeq={prevSeq} /></div>}
+      {open && (
+        loading
+          ? <div className="mt-3 text-[12.5px] text-fg-muted">Loading changes…</div>
+          : <div className="mt-3"><ConfigDiff diff={diff} hasPrev prevSeq={prevSeq} /></div>
+      )}
     </div>
   );
 }

@@ -5,10 +5,9 @@ import type { StackDiff } from "@/pages/stacks/lib/stack-diff";
 import type { ReleaseDetail } from "./use-release-detail";
 import { diffSnapshots, type SnapshotDiff } from "./release-snapshot-diff";
 import { specToSnapshot } from "./spec-to-snapshot";
+import { isTerminal } from "./release-states";
 
 export type DeployPhase = "editing" | "staged" | "deploying" | "clean";
-
-const TERMINAL = new Set<string>(["Released", "Failed", "Superseded", "Cancelled"]);
 
 export interface DeployLifecycle {
   phase: DeployPhase;
@@ -69,7 +68,7 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
   }
 
   const spec = specToSnapshot(stack);
-  const deploying = !!activeRelease && !TERMINAL.has(activeRelease.state ?? "");
+  const deploying = !!activeRelease && !isTerminal(activeRelease.state);
 
   // A deploy is in flight. The draft is measured against the IN-FLIGHT release,
   // not what's live: if the saved spec matches what's deploying there's nothing
@@ -100,10 +99,12 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
 
   // Live snapshot not loaded yet. If the row is resolved fall back to a timestamp
   // drift heuristic; otherwise stay clean rather than flashing a false "staged".
+  // Known false-positive: a metadata-only stack update (or server clock skew) can
+  // read as drift — accepted because it's a last-resort guess that self-corrects
+  // the moment the live snapshot loads and the real diff is computed.
   if (liveRelease) {
-    const stackUpdated = (stack as { updated_at?: string }).updated_at;
-    const drift = !!stackUpdated && !!liveRelease.completed_at
-      && new Date(stackUpdated) > new Date(liveRelease.completed_at);
+    const drift = !!stack.updated_at && !!liveRelease.completed_at
+      && new Date(stack.updated_at) > new Date(liveRelease.completed_at);
     return { phase: drift ? "staged" : "clean", vsSeq: liveSeq, nextSeq };
   }
   return { phase: "clean", nextSeq };

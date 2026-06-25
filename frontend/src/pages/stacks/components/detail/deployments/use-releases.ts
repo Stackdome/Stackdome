@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listReleases, type StackRelease } from "@/api/releases";
+import { isTerminal } from "./release-states";
 
 const POLL_MS = 5000;
 // Slow background refresh so a deploy started elsewhere (webhook push, another
 // user) shows up while the page sits idle with everything terminal.
 const IDLE_POLL_MS = 30000;
-const TERMINAL = new Set<string>(["Released", "Failed", "Superseded", "Cancelled"]);
 
 function isVisible(): boolean {
   return typeof document === "undefined" || document.visibilityState !== "hidden";
@@ -51,7 +51,7 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
       const data = await listReleases(orgId, teamName, stackId);
       if (!mounted.current) return;
       const sorted = [...(data.items ?? [])].sort(bySequenceDesc);
-      hasPendingWork.current = sorted.some((r) => !TERMINAL.has(r.state ?? ""));
+      hasPendingWork.current = sorted.some((r) => !isTerminal(r.state));
       setReleases(sorted);
       setError(null);
     } catch (e) {

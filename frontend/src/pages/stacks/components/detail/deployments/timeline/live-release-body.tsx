@@ -3,6 +3,7 @@ import { StageTracker } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 import { deriveStages, deriveFailingResources, deriveRecovered, resourceSource, replicaLabel } from "../derive";
+import { ReleaseState } from "../release-states";
 import { diffSnapshots } from "../release-snapshot-diff";
 import type { ReleaseDetail } from "../use-release-detail";
 import { type ResourceRowVM, type LogContext } from "./resource-row";
@@ -38,6 +39,9 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
   const releaseSnapshot = detail?.peek(release.id).data?.snapshot;
   const failing = deriveFailingResources(stack);
   const canDiff = !!prevReleaseId && !!detail;
+  // Suppress the empty "no changes" state until the previous snapshot resolves —
+  // otherwise expanding the diff during that window briefly lies "no changes".
+  const prevLoaded = !prevReleaseId || !!detail?.peek(prevReleaseId).data;
   const diff = diffSnapshots(detail?.peek(prevReleaseId).data?.snapshot, detail?.peek(release.id).data?.snapshot);
   const recovered = deriveRecovered(stack);
   const recoveredNames = new Set(recovered.map((r) => r.name));
@@ -45,7 +49,7 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
   const stages = deriveStages(stack, release, failing);
   const summaries = stack.status?.resources ?? [];
   const sourceByName = new Map((releaseSnapshot?.resources ?? stack.spec?.stack_resources ?? []).map((r) => [r.name, r]));
-  const releaseLevelError = release.state === "Failed" && failing.length === 0 && release.message;
+  const failureMsg = release.state === ReleaseState.Failed && failing.length === 0 ? release.message : undefined;
   const rows: ResourceRowVM[] = summaries.map((s) => ({
     name: s.name ?? "",
     phase: s.phase ?? "",
@@ -60,11 +64,11 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
     <div>
       <StageTracker stages={stages} />
 
-      {releaseLevelError && <DeployFailedBanner message={release.message!} />}
+      {failureMsg && <DeployFailedBanner message={failureMsg} />}
 
       <ResourceOutcomeList rows={rows} logContext={logContext} onOpenLogs={onOpenLogs} />
 
-      {canDiff && <ConfigChangesToggle diff={diff} prevSeq={prevSeq} />}
+      {canDiff && <ConfigChangesToggle diff={diff} prevSeq={prevSeq} loading={!prevLoaded} />}
 
       {recovered.length > 0 && (
         <div className="mt-4 rounded-md border border-warn-border bg-warn-bg px-3.5 py-2.5 text-[12.5px] text-fg-muted">

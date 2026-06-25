@@ -2,6 +2,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import type { components } from "@/api/types/openapi";
 import type { StackRelease } from "@/api/releases";
 import type { Stages } from "@/components/branded";
+import { ReleaseState } from "./release-states";
 
 export type Stack = components["schemas"]["Stack"];
 export type StackResource = components["schemas"]["StackResource"];
@@ -175,24 +176,24 @@ export function deriveStages(stack: Stack, release: StackRelease, failing: Faili
 
   // An image-only stack has no build step, so Build is "skipped" (inert grey)
   // rather than "todo" (pending) wherever it isn't an actual build.
-  if (converged || state === "Released") {
+  if (converged || state === ReleaseState.Released) {
     return { build: hasBuild ? "done" : "skipped", deploy: "done", ready: "done" };
   }
   if (buildFailed) return { build: "failed", deploy: "todo", ready: "todo" };
 
-  if (state === "Pending") {
+  if (state === ReleaseState.Pending) {
     return hasBuild
       ? { build: "active", deploy: "todo", ready: "todo" }
       : { build: "skipped", deploy: "active", ready: "todo" };
   }
-  if (state === "InProgress") {
+  if (state === ReleaseState.InProgress) {
     return {
       build: hasBuild ? "done" : "skipped",
       deploy: runtimeFailed ? "failed" : "active",
       ready: "todo",
     };
   }
-  if (state === "Failed") {
+  if (state === ReleaseState.Failed) {
     // The worker only records a per-resource `outcome` once it reaches the
     // convergence loop — i.e. render + apply already succeeded and the workload
     // was deployed. Pre-cluster failures (render/apply/secret) store no outcome.
@@ -224,14 +225,14 @@ export function deriveReleaseTitle(release: StackRelease, failing: FailingResour
   const crash = failing.find((f) => f.type === "runtime_crash");
   if (build) return `Build failed — ${build.name}`;
   // A terminal Failed crash reads as "Deploy failed"; an in-flight one names the resource.
-  if (crash && state !== "Failed") return `Runtime crash — ${crash.name}`;
+  if (crash && state !== ReleaseState.Failed) return `Runtime crash — ${crash.name}`;
   switch (state) {
-    case "Pending": return stages.build === "active" ? "Build queued" : "Deploying";
-    case "InProgress": return "Deploying";
-    case "Failed": return "Deploy failed";
-    case "Released": return "Released";
-    case "Superseded": return "Superseded";
-    case "Cancelled": return "Cancelled";
+    case ReleaseState.Pending: return stages.build === "active" ? "Build queued" : "Deploying";
+    case ReleaseState.InProgress: return "Deploying";
+    case ReleaseState.Failed: return "Deploy failed";
+    case ReleaseState.Released: return "Released";
+    case ReleaseState.Superseded: return "Superseded";
+    case ReleaseState.Cancelled: return "Cancelled";
     default: return state;
   }
 }
@@ -248,10 +249,10 @@ export function phaseTone(phase: string): Tone {
 /** Tone for a release's rail dot, keyed off its lifecycle state. */
 export function stateTone(state: string): Tone {
   switch (state) {
-    case "Released": return "ok";
-    case "Failed": return "err";
-    case "Pending":
-    case "InProgress": return "amber";
+    case ReleaseState.Released: return "ok";
+    case ReleaseState.Failed: return "err";
+    case ReleaseState.Pending:
+    case ReleaseState.InProgress: return "amber";
     default: return "muted"; // Superseded, Cancelled, unknown
   }
 }

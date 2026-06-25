@@ -5,6 +5,7 @@ import type { Stack } from "@/api/stacks";
 import type { ReleaseDetail } from "../use-release-detail";
 import { diffSnapshots } from "../release-snapshot-diff";
 import { resourceSource, replicaLabel, deriveStages } from "../derive";
+import { ReleaseState } from "../release-states";
 import { ResourceOutcomeList } from "./resource-outcome-list";
 import { ConfigChangesToggle } from "./config-changes-toggle";
 import { DeployFailedBanner } from "./deploy-failed-banner";
@@ -55,9 +56,9 @@ export function ReleasePostMortem({ detail, release, stack, prevReleaseId, prevS
   return (
     <div className="px-0.5 pb-1.5 pt-3.5">
       <StageTracker stages={stages} />
-      {release.state === "Failed" && release.message && <DeployFailedBanner message={release.message} />}
+      {release.state === ReleaseState.Failed && release.message && <DeployFailedBanner message={release.message} />}
       <ResourceOutcomeList rows={rows} />
-      {prevReleaseId && <ConfigChangesToggle diff={diffs} prevSeq={prevSeq} />}
+      {prevReleaseId && <ConfigChangesToggle diff={diffs} prevSeq={prevSeq} loading={!prev.data} />}
     </div>
   );
 }
