@@ -50,6 +50,7 @@ func ConvertPreviewStackCreate(req *openapi.PreviewStackCreate) *models.PreviewS
 		Branch:               req.Branch,
 		CommitSHA:            req.GetCommit(),
 		Source:               models.PreviewStackSourceManual,
+		StackfileContent:     req.StackfileContent,
 		ImageOverrides:       models.ImageOverrides(req.GetImageOverrides()),
 	}
 	return preview

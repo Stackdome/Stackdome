@@ -5,6 +5,8 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Commit** | Pointer to **string** |  | [optional] 
+**StackfileContent** | Pointer to **string** |  | [optional] 
+**ForceSync** | Pointer to **bool** |  | [optional] 
 **ImageOverrides** | Pointer to **map[string]string** |  | [optional] 
 
 ## Methods
@@ -50,6 +52,56 @@ SetCommit sets Commit field to given value.
 `func (o *PreviewStackSync) HasCommit() bool`
 
 HasCommit returns a boolean if a field has been set.
+
+### GetStackfileContent
+
+`func (o *PreviewStackSync) GetStackfileContent() string`
+
+GetStackfileContent returns the StackfileContent field if non-nil, zero value otherwise.
+
+### GetStackfileContentOk
+
+`func (o *PreviewStackSync) GetStackfileContentOk() (*string, bool)`
+
+GetStackfileContentOk returns a tuple with the StackfileContent field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetStackfileContent
+
+`func (o *PreviewStackSync) SetStackfileContent(v string)`
+
+SetStackfileContent sets StackfileContent field to given value.
+
+### HasStackfileContent
+
+`func (o *PreviewStackSync) HasStackfileContent() bool`
+
+HasStackfileContent returns a boolean if a field has been set.
+
+### GetForceSync
+
+`func (o *PreviewStackSync) GetForceSync() bool`
+
+GetForceSync returns the ForceSync field if non-nil, zero value otherwise.
+
+### GetForceSyncOk
+
+`func (o *PreviewStackSync) GetForceSyncOk() (*bool, bool)`
+
+GetForceSyncOk returns a tuple with the ForceSync field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetForceSync
+
+`func (o *PreviewStackSync) SetForceSync(v bool)`
+
+SetForceSync sets ForceSync field to given value.
+
+### HasForceSync
+
+`func (o *PreviewStackSync) HasForceSync() bool`
+
+HasForceSync returns a boolean if a field has been set.
 
 ### GetImageOverrides
 

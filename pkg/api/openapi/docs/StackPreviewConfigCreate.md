@@ -5,7 +5,6 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Name** | **string** |  | 
-**ClusterId** | **string** |  | 
 **GitRepository** | [**PreviewGitRepository**](PreviewGitRepository.md) |  | 
 **Description** | Pointer to **string** |  | [optional] 
 **StackfilePath** | Pointer to **string** |  | [optional] 
@@ -17,7 +16,7 @@ Name | Type | Description | Notes
 
 ### NewStackPreviewConfigCreate
 
-`func NewStackPreviewConfigCreate(name string, clusterId string, gitRepository PreviewGitRepository, ) *StackPreviewConfigCreate`
+`func NewStackPreviewConfigCreate(name string, gitRepository PreviewGitRepository, ) *StackPreviewConfigCreate`
 
 NewStackPreviewConfigCreate instantiates a new StackPreviewConfigCreate object
 This constructor will assign default values to properties that have it defined,
@@ -50,26 +49,6 @@ and a boolean to check if the value has been set.
 `func (o *StackPreviewConfigCreate) SetName(v string)`
 
 SetName sets Name field to given value.
-
-
-### GetClusterId
-
-`func (o *StackPreviewConfigCreate) GetClusterId() string`
-
-GetClusterId returns the ClusterId field if non-nil, zero value otherwise.
-
-### GetClusterIdOk
-
-`func (o *StackPreviewConfigCreate) GetClusterIdOk() (*string, bool)`
-
-GetClusterIdOk returns a tuple with the ClusterId field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetClusterId
-
-`func (o *StackPreviewConfigCreate) SetClusterId(v string)`
-
-SetClusterId sets ClusterId field to given value.
 
 
 ### GetGitRepository

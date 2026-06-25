@@ -104,8 +104,10 @@ func (h *previewStackHandler) Sync(w http.ResponseWriter, r *http.Request) {
 		Action: func() (any, *errors.ServiceError) {
 			id := mux.Vars(r)["id"]
 			serr := h.service.Sync(r.Context(), id, services.PreviewSyncOpts{
-				Commit:         req.GetCommit(),
-				ImageOverrides: req.GetImageOverrides(),
+				Commit:           req.GetCommit(),
+				StackfileContent: req.StackfileContent,
+				ForceSync:        req.GetForceSync(),
+				ImageOverrides:   req.GetImageOverrides(),
 			})
 			if serr != nil {
 				return nil, serr

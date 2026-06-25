@@ -8,6 +8,7 @@ Name | Type | Description | Notes
 **PrNumber** | **string** |  | 
 **Branch** | **string** |  | 
 **Commit** | Pointer to **string** |  | [optional] 
+**StackfileContent** | Pointer to **string** |  | [optional] 
 **ImageOverrides** | Pointer to **map[string]string** |  | [optional] 
 
 ## Methods
@@ -113,6 +114,31 @@ SetCommit sets Commit field to given value.
 `func (o *PreviewStackCreate) HasCommit() bool`
 
 HasCommit returns a boolean if a field has been set.
+
+### GetStackfileContent
+
+`func (o *PreviewStackCreate) GetStackfileContent() string`
+
+GetStackfileContent returns the StackfileContent field if non-nil, zero value otherwise.
+
+### GetStackfileContentOk
+
+`func (o *PreviewStackCreate) GetStackfileContentOk() (*string, bool)`
+
+GetStackfileContentOk returns a tuple with the StackfileContent field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetStackfileContent
+
+`func (o *PreviewStackCreate) SetStackfileContent(v string)`
+
+SetStackfileContent sets StackfileContent field to given value.
+
+### HasStackfileContent
+
+`func (o *PreviewStackCreate) HasStackfileContent() bool`
+
+HasStackfileContent returns a boolean if a field has been set.
 
 ### GetImageOverrides
 

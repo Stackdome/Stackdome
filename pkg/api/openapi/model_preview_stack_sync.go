@@ -16,8 +16,10 @@ import (
 
 // PreviewStackSync struct for PreviewStackSync
 type PreviewStackSync struct {
-	Commit         *string            `json:"commit,omitempty"`
-	ImageOverrides *map[string]string `json:"image_overrides,omitempty"`
+	Commit           *string            `json:"commit,omitempty"`
+	StackfileContent *string            `json:"stackfile_content,omitempty"`
+	ForceSync        *bool              `json:"force_sync,omitempty"`
+	ImageOverrides   *map[string]string `json:"image_overrides,omitempty"`
 }
 
 // NewPreviewStackSync instantiates a new PreviewStackSync object
@@ -69,6 +71,70 @@ func (o *PreviewStackSync) SetCommit(v string) {
 	o.Commit = &v
 }
 
+// GetStackfileContent returns the StackfileContent field value if set, zero value otherwise.
+func (o *PreviewStackSync) GetStackfileContent() string {
+	if o == nil || o.StackfileContent == nil {
+		var ret string
+		return ret
+	}
+	return *o.StackfileContent
+}
+
+// GetStackfileContentOk returns a tuple with the StackfileContent field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PreviewStackSync) GetStackfileContentOk() (*string, bool) {
+	if o == nil || o.StackfileContent == nil {
+		return nil, false
+	}
+	return o.StackfileContent, true
+}
+
+// HasStackfileContent returns a boolean if a field has been set.
+func (o *PreviewStackSync) HasStackfileContent() bool {
+	if o != nil && o.StackfileContent != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetStackfileContent gets a reference to the given string and assigns it to the StackfileContent field.
+func (o *PreviewStackSync) SetStackfileContent(v string) {
+	o.StackfileContent = &v
+}
+
+// GetForceSync returns the ForceSync field value if set, zero value otherwise.
+func (o *PreviewStackSync) GetForceSync() bool {
+	if o == nil || o.ForceSync == nil {
+		var ret bool
+		return ret
+	}
+	return *o.ForceSync
+}
+
+// GetForceSyncOk returns a tuple with the ForceSync field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PreviewStackSync) GetForceSyncOk() (*bool, bool) {
+	if o == nil || o.ForceSync == nil {
+		return nil, false
+	}
+	return o.ForceSync, true
+}
+
+// HasForceSync returns a boolean if a field has been set.
+func (o *PreviewStackSync) HasForceSync() bool {
+	if o != nil && o.ForceSync != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetForceSync gets a reference to the given bool and assigns it to the ForceSync field.
+func (o *PreviewStackSync) SetForceSync(v bool) {
+	o.ForceSync = &v
+}
+
 // GetImageOverrides returns the ImageOverrides field value if set, zero value otherwise.
 func (o *PreviewStackSync) GetImageOverrides() map[string]string {
 	if o == nil || o.ImageOverrides == nil {
@@ -105,6 +171,12 @@ func (o PreviewStackSync) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Commit != nil {
 		toSerialize["commit"] = o.Commit
+	}
+	if o.StackfileContent != nil {
+		toSerialize["stackfile_content"] = o.StackfileContent
+	}
+	if o.ForceSync != nil {
+		toSerialize["force_sync"] = o.ForceSync
 	}
 	if o.ImageOverrides != nil {
 		toSerialize["image_overrides"] = o.ImageOverrides
