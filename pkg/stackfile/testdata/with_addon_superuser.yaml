@@ -1,0 +1,12 @@
+name: superuser-app
+
+resources:
+  migration-runner:
+    image: myapp:latest
+    addons:
+      pg-main:
+        type: postgres
+        database: appdb
+        superuser: true
+        env:
+          DATABASE_URL: "postgres://{{ username }}:{{ password }}@{{ host }}:{{ port }}/{{ database }}"
