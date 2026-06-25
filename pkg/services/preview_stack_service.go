@@ -51,8 +51,10 @@ type previewStackService struct {
 }
 
 type PreviewSyncOpts struct {
-	Commit         string
-	ImageOverrides map[string]string
+	Commit           string
+	StackfileContent *string
+	ForceSync        bool
+	ImageOverrides   map[string]string
 }
 
 func NewPreviewStackService(spec PreviewStackServiceSpec) PreviewStackService {
@@ -147,24 +149,22 @@ func (s *previewStackService) Sync(ctx context.Context, previewStackID string, o
 		return sErr
 	}
 
-	if opts.Commit != "" {
-		preview.CommitSHA = opts.Commit
-	} else {
-		gitClient, gErr := s.gitClientForConfig(ctx, config)
-		if gErr != nil {
-			return errors.GeneralError("failed to create git client: %v", gErr)
-		}
-		result, branchErr := gitClient.GetBranchHeadSHA(ctx, config.GitRepository.RepoURL, preview.Branch)
-		if branchErr != nil {
-			return errors.GeneralError("failed to resolve branch head: %v", branchErr)
-		}
-		preview.CommitSHA = result.HeadSHA
+	targetCommit, sErr := s.resolveTargetCommit(ctx, config, preview.Branch, opts.Commit)
+	if sErr != nil {
+		return sErr
 	}
 
+	if s.isSyncNoop(preview, targetCommit, opts) {
+		return nil
+	}
+
+	preview.CommitSHA = targetCommit
+	if opts.StackfileContent != nil {
+		preview.StackfileContent = opts.StackfileContent
+	}
 	if len(opts.ImageOverrides) > 0 {
 		preview.ImageOverrides = opts.ImageOverrides
 	}
-
 	preview.Status = models.PreviewStackStatus{Phase: models.PreviewStackPhaseProvisioning, Reason: "SyncTriggered"}
 
 	if _, sErr := s.store.Update(ctx, preview); sErr != nil {
@@ -176,6 +176,46 @@ func (s *previewStackService) Sync(ctx context.Context, previewStackID string, o
 	}
 
 	return nil
+}
+
+func (s *previewStackService) resolveTargetCommit(ctx context.Context, config *models.StackPreviewConfig, branch, explicitCommit string) (string, *errors.ServiceError) {
+	if explicitCommit != "" {
+		return explicitCommit, nil
+	}
+	gitClient, gErr := s.gitClientForConfig(ctx, config)
+	if gErr != nil {
+		return "", errors.GeneralError("failed to create git client: %v", gErr)
+	}
+	result, branchErr := gitClient.GetBranchHeadSHA(ctx, config.GitRepository.RepoURL, branch)
+	if branchErr != nil {
+		return "", errors.GeneralError("failed to resolve branch head: %v", branchErr)
+	}
+	return result.HeadSHA, nil
+}
+
+func (s *previewStackService) isSyncNoop(preview *models.PreviewStack, targetCommit string, opts PreviewSyncOpts) bool {
+	if opts.ForceSync {
+		return false
+	}
+	if preview.Status.Phase == models.PreviewStackPhaseFailed {
+		return false
+	}
+	return targetCommit == preview.CommitSHA && overridesEqual(opts.ImageOverrides, preview.ImageOverrides)
+}
+
+func overridesEqual(incoming map[string]string, stored models.ImageOverrides) bool {
+	if len(incoming) == 0 && len(stored) == 0 {
+		return true
+	}
+	if len(incoming) != len(stored) {
+		return false
+	}
+	for k, v := range incoming {
+		if stored[k] != v {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *previewStackService) Delete(ctx context.Context, previewStackID string) *errors.ServiceError {
