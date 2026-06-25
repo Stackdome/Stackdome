@@ -51,7 +51,7 @@ export function LiveReleaseSummary({ release, stack, prevReleaseId, prevSeq, log
         <StatusPill variant="ready" className="flex-none gap-1 px-2 py-0.5 text-[10px] tracking-[0.06em]">Live</StatusPill>
         <span className="flex-none font-sans text-[13px] font-semibold text-foreground">#{release.sequence}</span>
         <span className="flex-none text-[13px] text-fg-2">{causeLabel(release.cause)}</span>
-        <span className={`min-w-0 flex-1 truncate text-[12.5px] ${allHealthy ? "text-fg-muted" : "text-danger"}`}>
+        <span className={`min-w-0 flex-1 truncate text-[13px] ${allHealthy ? "text-fg-muted" : "text-danger"}`}>
           {subline && `· ${subline}`}
         </span>
         {ts && <span className="flex-none font-mono text-[11px] text-fg-muted">{ts}</span>}
