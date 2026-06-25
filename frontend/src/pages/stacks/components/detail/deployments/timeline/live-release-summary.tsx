@@ -20,11 +20,9 @@ export interface LiveReleaseSummaryProps {
 }
 
 /**
- * A compact, pinned card for the release that's currently live. It leads the
- * Deployments tab so what serves traffic is visible without scrolling — the
- * live release sinks below newer in-flight/failed deploys in the newest-first
- * timeline. The row expands IN PLACE into the live body (tracker + resource
- * outcome + config changes), so you never have to hunt for the live node.
+ * Compact pinned card for the live release, leading the tab so what serves traffic is
+ * visible without scrolling (it sinks below newer deploys in the newest-first timeline).
+ * Expands in place into the live body.
  */
 export function LiveReleaseSummary({ release, stack, prevReleaseId, prevSeq, logContext, onOpenLogs }: LiveReleaseSummaryProps) {
   const [open, setOpen] = useState(false);

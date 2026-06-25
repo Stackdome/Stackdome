@@ -7,10 +7,8 @@ export interface ResourceOutcomeListProps {
 }
 
 /**
- * The "RESOURCE OUTCOME" section — one ResourceRow per resource. Shared by the
- * live and historical node bodies so both render the same dot + name + phase +
- * source-line shape (the data source differs: live cluster status vs the stored
- * release outcome).
+ * "RESOURCE OUTCOME" section — one ResourceRow per resource, shared by live and historical
+ * bodies (data source differs: live cluster status vs stored release outcome).
  */
 export function ResourceOutcomeList({ rows, logContext, onOpenLogs }: ResourceOutcomeListProps) {
   if (rows.length === 0) return null;

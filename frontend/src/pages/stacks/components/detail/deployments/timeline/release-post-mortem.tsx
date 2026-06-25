@@ -38,8 +38,7 @@ export function ReleasePostMortem({ detail, release, stack, prevReleaseId, prevS
   const prevSnap = prev.data?.snapshot;
   const diffs = diffSnapshots(prevSnap, snap);
 
-  // Build the same ResourceRowVM shape the live body uses, sourced from this
-  // release's STORED outcome + its frozen snapshot, so the section is uniform.
+  // Same ResourceRowVM shape as the live body, but from this release's STORED outcome + frozen snapshot.
   const sourceByName = new Map((snap?.resources ?? []).map((r) => [r.name, r]));
   const rows: ResourceRowVM[] = Object.entries(outcomes).map(([name, o]) => ({
     name,
@@ -48,9 +47,8 @@ export function ReleasePostMortem({ detail, release, stack, prevReleaseId, prevS
     msg: o.message,
     source: resourceSource(sourceByName.get(name)),
   }));
-  // Tracker reads from the release's own state/outcome; the live stack only
-  // supplies last_converged (so the live release reads done/done/done). No live
-  // failure set is threaded — an old node shouldn't surface current cluster crashes.
+  // Tracker reads the release's own state/outcome; stack supplies only last_converged.
+  // Empty failure set: an old node must not surface current cluster crashes.
   const stages = deriveStages(stack, release, []);
 
   return (

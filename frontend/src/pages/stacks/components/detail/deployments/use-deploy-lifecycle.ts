@@ -44,18 +44,14 @@ function diffIsEmpty(d: SnapshotDiff): boolean {
 }
 
 /**
- * Pure lifecycle derivation. Phases are mutually exclusive, evaluated in priority:
- *
+ * Pure lifecycle derivation. Mutually-exclusive phases, in priority:
  *   editing   — unsaved edits in the session.
- *   deploying — a release is in flight AND it is shipping exactly the current saved
- *               spec (nothing new to deploy). Just a status.
- *   staged    — the saved spec is not what's live AND it isn't already being deployed
- *               as-is. This covers a fresh edit, a fresh edit made mid-deploy (which
- *               can supersede the in-flight release), and retrying a failed release.
- *   clean     — the saved spec matches what's live.
+ *   deploying — a release is in flight shipping exactly the saved spec (nothing new).
+ *   staged    — saved spec differs from live and isn't already deploying as-is
+ *               (fresh edit, mid-deploy supersede, or retry of a failed release).
+ *   clean     — saved spec matches what's live.
  *
- * Two comparisons drive this: saved-vs-in-flight (has anything new beyond the
- * release in flight?) and saved-vs-live (is the saved config actually running?).
+ * Driven by two comparisons: saved-vs-in-flight and saved-vs-live.
  */
 export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLifecycle {
   const { stack, dirty, isActive, activeRelease, liveRelease, activeSnapshot, liveSnapshot } = args;
@@ -70,10 +66,8 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
   const spec = specToSnapshot(stack);
   const deploying = !!activeRelease && !isTerminal(activeRelease.state);
 
-  // A deploy is in flight. The draft is measured against the IN-FLIGHT release,
-  // not what's live: if the saved spec matches what's deploying there's nothing
-  // new (just a status); if it differs, it's a draft that would supersede the
-  // in-flight release — even when the saved spec happens to equal what's live.
+  // Deploy in flight: measure the draft against the IN-FLIGHT release, not live. Matches it →
+  // nothing new (status only); differs → a draft that would supersede the in-flight release.
   if (deploying) {
     if (!activeSnapshot) return { phase: "deploying", nextSeq }; // snapshot loading
     const d = diffSnapshots(activeSnapshot, spec);
@@ -97,11 +91,9 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
     return { phase: hasSpec ? "staged" : "clean", vsSeq: liveSeq, nextSeq };
   }
 
-  // Live snapshot not loaded yet. If the row is resolved fall back to a timestamp
-  // drift heuristic; otherwise stay clean rather than flashing a false "staged".
-  // Known false-positive: a metadata-only stack update (or server clock skew) can
-  // read as drift — accepted because it's a last-resort guess that self-corrects
-  // the moment the live snapshot loads and the real diff is computed.
+  // Live snapshot not loaded yet: fall back to a timestamp drift heuristic (else stay clean,
+  // not a false "staged"). Known false-positive: a metadata-only update or clock skew reads as
+  // drift — accepted, since it self-corrects once the live snapshot loads and the real diff runs.
   if (liveRelease) {
     const drift = !!stack.updated_at && !!liveRelease.completed_at
       && new Date(stack.updated_at) > new Date(liveRelease.completed_at);

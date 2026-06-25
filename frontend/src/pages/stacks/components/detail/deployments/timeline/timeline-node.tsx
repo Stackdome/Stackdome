@@ -30,11 +30,8 @@ export interface TimelineNodeProps {
 }
 
 /**
- * One node in the unified deploy timeline: a lean toggle row plus a detail card
- * that opens directly below it. The same shape is used for every release; only
- * the body differs (live progress for the latest deploy, stored post-mortem for
- * earlier ones) and the open card's border (green for the live release, amber
- * while deploying).
+ * One node in the deploy timeline: a lean toggle row + a detail card below. Same shape per
+ * release; only the body differs (live progress for the latest, stored post-mortem for earlier).
  */
 export function TimelineNode(props: TimelineNodeProps) {
   const { release, prevReleaseId, prevSeq, detail, isOpen, onToggle, onRollback, onCancel, onCopyId, isActive, isLive, stack, logContext, onOpenLogs } = props;

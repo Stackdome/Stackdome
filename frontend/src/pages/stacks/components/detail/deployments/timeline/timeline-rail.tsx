@@ -24,9 +24,8 @@ export interface TimelineRailProps {
   initialWindow?: number;
 }
 
-// Only the live release gets a solid (filled) dot — every other node is a
-// hollow ring so the one serving traffic is the single filled marker on the
-// rail. An in-flight deploy keeps its spinner to read as actively progressing.
+// Only the live release gets a solid dot (the single filled marker); others are hollow rings.
+// In-flight deploys keep their spinner.
 function dotShape(state: string, isLive: boolean): RailDotShape {
   if (isLive) return "solid";
   if (isDeploying(state)) return "spinner";
@@ -34,15 +33,13 @@ function dotShape(state: string, isLive: boolean): RailDotShape {
 }
 
 /**
- * One continuous deploy timeline — newest at top, no Current/Earlier split. Each
- * release is a TimelineNode (lean row + card-below); the latest deploy opens by
- * default, earlier nodes start closed. An optional draft node leads the rail.
+ * One continuous deploy timeline, newest at top. Each release is a TimelineNode; the latest
+ * opens by default, earlier nodes start closed. An optional draft node leads the rail.
  */
 export function TimelineRail(props: TimelineRailProps) {
   const { releases, activeRelease, stack, logContext, onOpenLogs, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
   const detail = useReleaseDetail(logContext?.orgId ?? "", logContext?.teamName ?? "", logContext?.stackId ?? "");
   const liveReleaseId = stack.status?.last_converged?.release_id;
-  // Open the latest deploy AND the live release by default.
   const [openIds, setOpenIds] = useState<Set<string>>(
     () => new Set([activeRelease?.id, liveReleaseId].filter((x): x is string => !!x)),
   );
@@ -59,7 +56,7 @@ export function TimelineRail(props: TimelineRailProps) {
 
   const shown = releases.slice(0, windowN);
   const hidden = releases.length - shown.length;
-  const prevIdFor = (idx: number) => releases[idx + 1]?.id; // idx is the position in `releases`
+  const prevIdFor = (idx: number) => releases[idx + 1]?.id;
   const prevSeqFor = (idx: number) => releases[idx + 1]?.sequence;
 
   return (

@@ -36,11 +36,9 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
   const mounted = useRef(true);
-  // Ref tracks whether ANY release is still non-terminal so the poll keeps the
-  // list fresh until every release settles — this catches trailing supersessions
-  // of earlier releases after the latest one has already finished. Gating only on
-  // the latest would stop polling while an earlier Pending release is still
-  // resolving, leaving it stuck on a stale state until a manual refresh.
+  // True while ANY release is non-terminal, so polling continues until every release settles.
+  // Catches trailing supersessions of earlier releases; gating on the latest alone would
+  // strand a still-resolving earlier Pending release on a stale state until manual refresh.
   const hasPendingWork = useRef(false);
 
   const fetchOnce = useCallback(async () => {
@@ -72,10 +70,8 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
     void fetchOnce();
   }, [enabled, fetchOnce]);
 
-  // Two cadences, both paused while the tab is hidden:
-  //  - fast (POLL_MS): only while a release is still settling.
-  //  - slow (IDLE_POLL_MS): always, so external/idle changes still surface.
-  // Returning to a hidden tab refetches immediately rather than waiting a tick.
+  // Two cadences, paused while hidden: fast (POLL_MS) only while a release settles; slow
+  // (IDLE_POLL_MS) always, so external/idle changes surface. Returning to the tab refetches at once.
   useEffect(() => {
     if (!enabled) return;
     const fast = setInterval(() => { if (hasPendingWork.current && isVisible()) void fetchOnce(); }, POLL_MS);

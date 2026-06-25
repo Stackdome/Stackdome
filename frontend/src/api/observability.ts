@@ -1,8 +1,7 @@
 import api from "./client";
 import { API_BASE_URL } from "./base-url";
 
-// Logs and metrics (including SSE streams) are served from the team-scoped stack
-// endpoints; the UI scopes everything to the org's default team.
+// Logs/metrics (incl. SSE) served from team-scoped stack endpoints; UI scopes to the org's default team.
 
 interface LogStreamParams {
   follow?: boolean;

@@ -16,9 +16,8 @@ export function useReleaseDetail(orgId: string, teamName: string, stackId: strin
   const ensure = useCallback((id: string) => {
     if (!id) return;
     const current = cacheRef.current[id];
-    // Already cached (data or error), currently loading, or in-flight — no-op
+    // Already cached (data or error), loading, or in-flight — no-op
     if (current?.data || current?.error || current?.loading || inFlight.current.has(id)) return;
-    // Mark in-flight immediately
     inFlight.current.add(id);
     setCache((c) => ({ ...c, [id]: { loading: true } }));
     getRelease(orgId, teamName, stackId, id)

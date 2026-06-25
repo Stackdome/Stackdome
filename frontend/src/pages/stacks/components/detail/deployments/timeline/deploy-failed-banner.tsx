@@ -2,11 +2,7 @@ export interface DeployFailedBannerProps {
   message: string;
 }
 
-/**
- * The red "Deploy failed" box shown in a failed node's detail card. Shared by
- * the live and historical bodies so failure reads the same everywhere (and
- * replaces the old plain "WHY IT FAILED" marker on historical nodes).
- */
+/** Red "Deploy failed" box in a failed node's detail card. Shared by live and historical bodies. */
 export function DeployFailedBanner({ message }: DeployFailedBannerProps) {
   return (
     <div className="mt-4 rounded-md border border-danger-border bg-danger-bg p-3.5">

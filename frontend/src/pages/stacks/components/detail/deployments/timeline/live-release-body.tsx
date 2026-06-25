@@ -22,16 +22,12 @@ export interface LiveReleaseBodyProps {
 }
 
 /**
- * The detail-card body for the latest deploy (releases[0]). Unlike a historical
- * node — which reads its stored outcome — this renders LIVE progress from
- * stack.status.resources plus the derived Build→Deploy→Ready tracker, so an
- * in-flight or just-failed deploy reflects the current cluster state.
+ * Detail-card body for the latest deploy (releases[0]). Renders LIVE progress from
+ * stack.status.resources + the derived tracker (vs a historical node's stored outcome).
  */
 export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail, prevReleaseId, prevSeq }: LiveReleaseBodyProps) {
-  // Source the image/repo from THIS release's snapshot — not the live stack spec,
-  // which may have been edited after the deploy started. The snapshot is the
-  // frozen spec the release is actually shipping. Also ensure the previous
-  // release's snapshot so the config diff is ready when expanded.
+  // Source image/repo from THIS release's snapshot (the frozen spec it ships), not the
+  // live stack spec which may have been edited after deploy. Also prefetch prev snapshot for the diff.
   useEffect(() => {
     if (release.id) detail?.ensure(release.id);
     if (prevReleaseId) detail?.ensure(prevReleaseId);
@@ -39,8 +35,7 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
   const releaseSnapshot = detail?.peek(release.id).data?.snapshot;
   const failing = deriveFailingResources(stack);
   const canDiff = !!prevReleaseId && !!detail;
-  // Suppress the empty "no changes" state until the previous snapshot resolves —
-  // otherwise expanding the diff during that window briefly lies "no changes".
+  // Suppress empty "no changes" until prev snapshot resolves — else the diff briefly lies.
   const prevLoaded = !prevReleaseId || !!detail?.peek(prevReleaseId).data;
   const diff = diffSnapshots(detail?.peek(prevReleaseId).data?.snapshot, detail?.peek(release.id).data?.snapshot);
   const recovered = deriveRecovered(stack);

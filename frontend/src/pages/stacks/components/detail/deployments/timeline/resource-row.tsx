@@ -29,14 +29,12 @@ export function ResourceRow({ vm, logContext, onOpenLogs }: ResourceRowProps) {
   const tone = phaseTone(vm.phase);
   const failure = vm.failure;
   const hasMsg = !!vm.msg && vm.msg.trim().length > 0;
-  // Any resource carrying context — a structured failure or a status message —
-  // is expandable; that context lives INSIDE the row, never as a clipped blurb.
+  // Expandable when it carries context (failure or status message) — shown inside the row, not clipped.
   const expandable = !!failure || hasMsg;
   const isRuntimeCrash = failure?.type === "runtime_crash";
   return (
     <div>
-      {/* The name row AND its source line share one hover/click surface so the
-          whole header lights up as one clickable unit. */}
+      {/* Name row + source line share one hover/click surface — the whole header is one unit. */}
       <div
         className={expandable ? "-mx-2 rounded-md px-2 transition-colors hover:bg-muted cursor-pointer" : undefined}
         onClick={expandable ? () => setOpen((o) => !o) : undefined}

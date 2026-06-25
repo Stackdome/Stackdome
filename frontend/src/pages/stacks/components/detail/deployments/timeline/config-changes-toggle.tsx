@@ -12,11 +12,7 @@ export interface ConfigChangesToggleProps {
   loading?: boolean;
 }
 
-/**
- * The "CONFIG CHANGES · vs #N" collapsible shown at the foot of every node's
- * detail card. Brand-amber to read as the deploy accent (per the design), and
- * identical across live + historical nodes so the section is uniform.
- */
+/** "CONFIG CHANGES · vs #N" collapsible at the foot of every node's detail card; identical across live + historical. */
 export function ConfigChangesToggle({ diff, prevSeq, defaultOpen = false, loading = false }: ConfigChangesToggleProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (

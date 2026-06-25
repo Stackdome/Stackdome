@@ -15,11 +15,8 @@ const ORDER: Array<{ key: keyof Stages; label: string }> = [
   { key: "ready", label: "Ready" },
 ];
 
-// Per the Deploy Timeline design: done/failed are solid fills with a white
-// glyph; active is a small amber (brand) spinner inside a brand ring; todo is
-// a hollow muted ring. `skipped` (e.g. no build step for an image-only stack)
-// is a solid muted fill so it reads as inert rather than pending. Circles are
-// 15px and connectors flex to a 340px cap.
+// `skipped` (e.g. image-only stack, no build step) is a solid muted fill so it
+// reads as inert, not pending — unlike `todo`'s hollow ring.
 const RING: Record<StageStatus, string> = {
   done: "border-success bg-success",
   failed: "border-danger bg-danger",

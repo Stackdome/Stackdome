@@ -552,10 +552,8 @@ export default function StackDetailPage() {
     </DropdownMenu>
   ) : undefined;
 
-  // The bar is an ACTION affordance, not a persistent status: it appears only
-  // when there's something to deploy (a staged draft). The live release and any
-  // in-flight deploy are shown in the timeline + the header pill, not here — so a
-  // rollout and a fresh draft can coexist without the bar lying or blocking.
+  // The bar is an ACTION affordance, not a status: it shows only when there's a staged draft to
+  // deploy. Live/in-flight state lives in the timeline + header pill, so a rollout and a draft can coexist.
   const deployBar = (() => {
     if (lifecycle.phase !== "staged") return null;
     const d = lifecycle.stagedDiff;

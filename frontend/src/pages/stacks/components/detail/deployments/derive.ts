@@ -161,10 +161,8 @@ function hasBuildResources(release: StackRelease): boolean {
 }
 
 /**
- * Derives the Build→Deploy→Ready tracker state.
- * `failing` MUST be the live, currently-unhealthy failure set from
- * deriveFailingResources(stack) — healthy/recovered resources are already
- * excluded, so a buildFailed/runtimeFailed here always reflects a CURRENT failure.
+ * Build→Deploy→Ready tracker state. `failing` MUST be the live unhealthy set from
+ * deriveFailingResources(stack) — recovered resources excluded, so any failure here is CURRENT.
  */
 export function deriveStages(stack: Stack, release: StackRelease, failing: FailingResource[]): Stages {
   const converged = stack.status?.last_converged?.release_id != null
@@ -174,8 +172,7 @@ export function deriveStages(stack: Stack, release: StackRelease, failing: Faili
   const hasBuild = hasBuildResources(release);
   const state = release.state;
 
-  // An image-only stack has no build step, so Build is "skipped" (inert grey)
-  // rather than "todo" (pending) wherever it isn't an actual build.
+  // Image-only stack has no build step → Build "skipped" (inert), not "todo".
   if (converged || state === ReleaseState.Released) {
     return { build: hasBuild ? "done" : "skipped", deploy: "done", ready: "done" };
   }
@@ -194,18 +191,15 @@ export function deriveStages(stack: Stack, release: StackRelease, failing: Faili
     };
   }
   if (state === ReleaseState.Failed) {
-    // The worker only records a per-resource `outcome` once it reaches the
-    // convergence loop — i.e. render + apply already succeeded and the workload
-    // was deployed. Pre-cluster failures (render/apply/secret) store no outcome.
+    // Worker records per-resource `outcome` only after reaching the convergence loop
+    // (render+apply succeeded, workload deployed). Pre-cluster failures store none.
     const reachedCluster = Object.keys(release.outcome?.resources ?? {}).length > 0;
-    // Convergence timeout or a runtime crash: the workload was applied (Deploy
-    // done) but never became Ready — the failure lands on the Ready node.
+    // Reached cluster but never Ready (timeout/runtime crash) → failure on Ready.
     if (runtimeFailed || reachedCluster) {
       return { build: hasBuild ? "done" : "skipped", deploy: "done", ready: "failed" };
     }
-    // Pre-cluster (render/apply/secret) failure: nothing was deployed. Build
-    // only owns this when the stack actually builds; an image-only stack skips
-    // Build, so the failure lands on Deploy instead.
+    // Pre-cluster failure (render/apply/secret): nothing deployed. Lands on Build if
+    // the stack builds, else on Deploy (image-only stack skips Build).
     return hasBuild
       ? { build: "failed", deploy: "todo", ready: "todo" }
       : { build: "skipped", deploy: "failed", ready: "todo" };
@@ -214,11 +208,7 @@ export function deriveStages(stack: Stack, release: StackRelease, failing: Faili
   return { build: "todo", deploy: "todo", ready: "todo" };
 }
 
-/**
- * Short human title shown after the sequence on the live release card, e.g.
- * "Runtime crash — tooljet", "Build failed — api", "Deploy failed", "Build queued".
- * Mirrors the Deploy Timeline design's per-scenario kind labels.
- */
+/** Short title after the sequence on the live release card, e.g. "Runtime crash — tooljet", "Build queued". */
 export function deriveReleaseTitle(release: StackRelease, failing: FailingResource[], stages: Stages): string {
   const state = release.state ?? "";
   const build = failing.find((f) => f.type === "build_failure");

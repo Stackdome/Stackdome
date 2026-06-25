@@ -2,9 +2,8 @@ import type { Stack } from "@/api/stacks";
 import type { StackReleaseSnapshot } from "@/api/releases";
 
 /**
- * Adapt the stack's current saved spec into the release-snapshot shape so it can
- * be diffed against a real release snapshot via diffSnapshots(). The spec stores
- * resources under `stack_resources`; snapshots store them under `resources`.
+ * Adapt the saved spec into snapshot shape for diffSnapshots().
+ * Spec stores resources under `stack_resources`; snapshots under `resources`.
  */
 export function specToSnapshot(stack: Stack): StackReleaseSnapshot {
   return {

@@ -34,12 +34,11 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
     ? <DraftNode phase={lifecycle.phase} diff={lifecycle.stagedDiff} vsSeq={lifecycle.vsSeq} nextSeq={lifecycle.nextSeq} isLast={releases.length === 0} />
     : undefined;
 
-  // Surface the live release at the top only when it's buried — i.e. not already
-  // the newest node. (When live IS the newest, it's already at the top of the rail.)
+  // Anchor the live release at the top only when it's buried (not already the newest node).
   const liveReleaseId = stack.status?.last_converged?.release_id;
   const liveIdx = liveReleaseId ? releases.findIndex((r) => r.id === liveReleaseId) : -1;
   const liveRelease = liveIdx >= 0 ? releases[liveIdx] : undefined;
-  const liverev = liveIdx >= 0 ? releases[liveIdx + 1] : undefined; // the release just before live
+  const liverev = liveIdx >= 0 ? releases[liveIdx + 1] : undefined;
   const showLiveAnchor = liveRelease && releases[0]?.id !== liveRelease.id;
 
   return (

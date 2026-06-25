@@ -31,10 +31,8 @@ function changedNames(diff?: SnapshotDiff): string[] {
 }
 
 /**
- * The draft node leads the rail whenever there are saved-but-undeployed changes.
- * It mirrors the lean-row + card-below shape of a release node but uses a dashed
- * amber ring + dashed-amber card border to read as "not deployed", and shows the
- * staged config diff instead of a stage tracker / resource outcome.
+ * Leads the rail when there are saved-but-undeployed changes. Mirrors a release node's
+ * shape but with a dashed amber ring/border ("not deployed") and shows the staged diff.
  */
 export function DraftNode({ phase, diff, vsSeq, nextSeq, isLast, defaultOpen = true }: DraftNodeProps) {
   const [open, setOpen] = useState(defaultOpen);
