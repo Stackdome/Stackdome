@@ -56,20 +56,21 @@ describe("DeploymentsTab", () => {
   });
 
   it("pins a live anchor when the live release is buried below a newer deploy", () => {
-    const buriedStack = { status: { resources: [], last_converged: { release_id: "r14" } }, spec: { stack_resources: [] } } as unknown as Stack;
+    const buriedStack = { status: { resources: [{ name: "web", phase: "Ready" }], last_converged: { release_id: "r14" } }, spec: { stack_resources: [{ name: "web" }] } } as unknown as Stack;
     const buried: StackRelease[] = [
       { id: "r15", sequence: 15, state: "InProgress", cause: { kind: "manual" } } as StackRelease,
       { id: "r14", sequence: 14, state: "Released", cause: { kind: "manual" } } as StackRelease,
     ];
     const lifecycle: DeployLifecycle = { phase: "deploying", nextSeq: 16 };
     render(<DeploymentsTab {...base} stack={buriedStack} releases={buried} activeRelease={buried[0]} lifecycle={lifecycle} />);
-    expect(screen.getByText("Jump")).toBeInTheDocument();
+    // The pinned anchor carries the health summary — unique to it (timeline rows don't).
+    expect(screen.getByText(/1 resource healthy/)).toBeInTheDocument();
   });
 
   it("does not pin a live anchor when the live release is already the newest node", () => {
     const liveTopStack = { status: { resources: [], last_converged: { release_id: "r14" } }, spec: { stack_resources: [] } } as unknown as Stack;
     const lifecycle: DeployLifecycle = { phase: "clean", nextSeq: 15, vsSeq: 14 };
     render(<DeploymentsTab {...base} stack={liveTopStack} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
-    expect(screen.queryByText("Jump")).not.toBeInTheDocument();
+    expect(screen.queryByText(/resource healthy|unhealthy/)).not.toBeInTheDocument();
   });
 });

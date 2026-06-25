@@ -1,54 +1,50 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeAll } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+vi.mock("@/api/observability", () => ({ fetchLogSnapshot: vi.fn().mockResolvedValue([]) }));
+vi.mock("@/api/releases", () => ({ getRelease: vi.fn().mockResolvedValue({ id: "r18", sequence: 18, outcome: { resources: {} }, snapshot: { resources: [{ name: "web", image_spec: { image: "nginx:1.25" } }] } }) }));
 import { LiveReleaseSummary } from "../live-release-summary";
 import type { Stack } from "@/api/stacks";
 import type { StackRelease } from "@/api/releases";
 
 afterEach(cleanup);
+beforeAll(() => {
+  const stubs: Record<string, () => unknown> = { hasPointerCapture: () => false, setPointerCapture: () => undefined, releasePointerCapture: () => undefined, scrollIntoView: () => undefined };
+  for (const [k, v] of Object.entries(stubs)) (Element.prototype as unknown as Record<string, unknown>)[k] = v;
+});
 
-const release = { id: "r9", sequence: 9, state: "Released", cause: { kind: "manual" } } as StackRelease;
-
-const healthyStack = {
-  status: { resources: [{ name: "web" }, { name: "api" }] },
-  spec: { stack_resources: [{ name: "web" }, { name: "api" }] },
+const release = { id: "r18", sequence: 18, state: "Released", cause: { kind: "manual" } } as StackRelease;
+const stack = {
+  status: { resources: [{ name: "web", phase: "Ready" }], last_converged: { release_id: "r18" } },
+  spec: { stack_resources: [{ name: "web" }] },
 } as unknown as Stack;
-
-const unhealthyStack = {
-  status: { resources: [{ name: "web" }, { name: "api" }] },
-  spec: {
-    stack_resources: [
-      { name: "web", status: { state: "CrashLoopBackOff", last_failure: { type: "runtime_crash", container: { reason: "OOMKilled" } } } },
-      { name: "api", status: { state: "Ready" } },
-    ],
-  },
-} as unknown as Stack;
+const ctx = { orgId: "o", teamName: "t", stackId: "s" };
 
 describe("LiveReleaseSummary", () => {
-  it("identifies the live release and a healthy summary", () => {
-    render(<LiveReleaseSummary release={release} stack={healthyStack} />);
+  it("shows a healthy live summary, collapsed by default", () => {
+    render(<LiveReleaseSummary release={release} stack={stack} logContext={ctx} />);
     expect(screen.getByText("Live")).toBeInTheDocument();
-    expect(screen.getByText("#9")).toBeInTheDocument();
-    expect(screen.getByText("Manual deploy")).toBeInTheDocument();
-    expect(screen.getByText(/2 resources healthy/)).toBeInTheDocument();
+    expect(screen.getByText("#18")).toBeInTheDocument();
+    expect(screen.getByText(/1 resource healthy/)).toBeInTheDocument();
+    // collapsed — the body (tracker / resource outcome) is not mounted yet
+    expect(screen.queryByText("Resource outcome")).not.toBeInTheDocument();
   });
 
   it("flags an unhealthy live release", () => {
-    render(<LiveReleaseSummary release={release} stack={unhealthyStack} />);
+    const unhealthy = {
+      status: { resources: [{ name: "web" }, { name: "api" }] },
+      spec: { stack_resources: [{ name: "web", status: { state: "CrashLoopBackOff", last_failure: { type: "runtime_crash", container: { reason: "OOMKilled" } } } }, { name: "api", status: { state: "Ready" } }] },
+    } as unknown as Stack;
+    render(<LiveReleaseSummary release={release} stack={unhealthy} logContext={ctx} />);
     expect(screen.getByText(/1 of 2 unhealthy/)).toBeInTheDocument();
   });
 
-  it("fires onJump and shows the jump affordance when provided", () => {
-    const onJump = vi.fn();
-    render(<LiveReleaseSummary release={release} stack={healthyStack} onJump={onJump} />);
-    expect(screen.getByText("Jump")).toBeInTheDocument();
+  it("expands in place into the live body (tracker + resource outcome)", async () => {
+    render(<LiveReleaseSummary release={release} stack={stack} logContext={ctx} />);
     fireEvent.click(screen.getByRole("button"));
-    expect(onJump).toHaveBeenCalledTimes(1);
-  });
-
-  it("omits the jump affordance without onJump", () => {
-    render(<LiveReleaseSummary release={release} stack={healthyStack} />);
-    expect(screen.queryByText("Jump")).not.toBeInTheDocument();
+    expect(await screen.findByText("Resource outcome")).toBeInTheDocument();
+    expect(screen.getByText("Build")).toBeInTheDocument();
+    expect(screen.getAllByText("web").length).toBeGreaterThan(0);
   });
 });

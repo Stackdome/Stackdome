@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { EmptyState } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
@@ -23,10 +23,6 @@ export interface TimelineRailProps {
   onCancel: (id: string) => void;
   onCopyId: (id: string) => void;
   initialWindow?: number;
-  /** Release to open + scroll to when `focusNonce` changes (jump-to-live). */
-  focusReleaseId?: string;
-  /** Bump to trigger a focus; 0 = no focus requested (skips on mount). */
-  focusNonce?: number;
 }
 
 // Only the live release gets a solid (filled) dot — every other node is a
@@ -44,26 +40,14 @@ function dotShape(state: string, isLive: boolean): RailDotShape {
  * default, earlier nodes start closed. An optional draft node leads the rail.
  */
 export function TimelineRail(props: TimelineRailProps) {
-  const { releases, activeRelease, stack, logContext, onOpenLogs, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15, focusReleaseId, focusNonce } = props;
+  const { releases, activeRelease, stack, logContext, onOpenLogs, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
   const detail = useReleaseDetail(logContext?.orgId ?? "", logContext?.teamName ?? "", logContext?.stackId ?? "");
   const liveReleaseId = stack.status?.last_converged?.release_id;
-  // Open the latest deploy AND the live release by default — the live one is the
-  // jump-to-live target, so it must already be expanded when scrolled into view.
+  // Open the latest deploy AND the live release by default.
   const [openIds, setOpenIds] = useState<Set<string>>(
     () => new Set([activeRelease?.id, liveReleaseId].filter((x): x is string => !!x)),
   );
   const [windowN, setWindowN] = useState(initialWindow);
-
-  // Jump-to-live: open the target node and scroll it into view. Runs on every
-  // focusNonce bump (skips the initial 0). The node's row element always exists
-  // regardless of open state, so scrolling is safe immediately. This is the
-  // reliable path — default-open can miss the live id when releases load after
-  // mount and the initial openIds set was seeded with an undefined id.
-  useEffect(() => {
-    if (!focusReleaseId || !focusNonce) return;
-    setOpenIds((cur) => (cur.has(focusReleaseId) ? cur : new Set(cur).add(focusReleaseId)));
-    document.getElementById(`deploy-node-${focusReleaseId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [focusNonce, focusReleaseId]);
 
   // Multiple release details can be open at once — not an accordion.
   const toggle = (id: string) =>

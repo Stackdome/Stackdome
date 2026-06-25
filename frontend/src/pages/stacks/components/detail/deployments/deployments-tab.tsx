@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { EmptyState } from "@/components/branded";
 import type { Stack } from "@/api/stacks";
 import type { StackRelease } from "@/api/releases";
@@ -26,9 +25,10 @@ export interface DeploymentsTabProps {
 }
 
 export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
-  // Bumped on each Jump click so the rail opens + scrolls to the live node.
-  const [jumpNonce, setJumpNonce] = useState(0);
   if (error) return <EmptyState title="Could not load deployments" description={error} />;
+
+  const logContext = { orgId, teamName, stackId };
+  const openLogs = onOpenLogs ? (name: string) => onOpenLogs(name) : undefined;
 
   const draftNode = lifecycle.phase === "editing" || lifecycle.phase === "staged"
     ? <DraftNode phase={lifecycle.phase} diff={lifecycle.stagedDiff} vsSeq={lifecycle.vsSeq} nextSeq={lifecycle.nextSeq} isLast={releases.length === 0} />
@@ -37,7 +37,9 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
   // Surface the live release at the top only when it's buried — i.e. not already
   // the newest node. (When live IS the newest, it's already at the top of the rail.)
   const liveReleaseId = stack.status?.last_converged?.release_id;
-  const liveRelease = liveReleaseId ? releases.find((r) => r.id === liveReleaseId) : undefined;
+  const liveIdx = liveReleaseId ? releases.findIndex((r) => r.id === liveReleaseId) : -1;
+  const liveRelease = liveIdx >= 0 ? releases[liveIdx] : undefined;
+  const liverev = liveIdx >= 0 ? releases[liveIdx + 1] : undefined; // the release just before live
   const showLiveAnchor = liveRelease && releases[0]?.id !== liveRelease.id;
 
   return (
@@ -46,7 +48,10 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
         <LiveReleaseSummary
           release={liveRelease}
           stack={stack}
-          onJump={() => setJumpNonce((n) => n + 1)}
+          prevReleaseId={liverev?.id}
+          prevSeq={liverev?.sequence}
+          logContext={logContext}
+          onOpenLogs={openLogs}
         />
       )}
 
@@ -59,14 +64,12 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
           releases={releases}
           activeRelease={activeRelease}
           stack={stack}
-          logContext={{ orgId, teamName, stackId }}
-          onOpenLogs={onOpenLogs ? (name) => onOpenLogs(name) : undefined}
+          logContext={logContext}
+          onOpenLogs={openLogs}
           draftNode={draftNode}
           onRollback={onRollback}
           onCancel={onCancel}
           onCopyId={onCopyId}
-          focusReleaseId={liveReleaseId}
-          focusNonce={jumpNonce}
         />
       )}
     </div>
