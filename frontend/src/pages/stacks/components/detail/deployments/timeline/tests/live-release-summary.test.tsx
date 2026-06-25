@@ -22,27 +22,18 @@ const stack = {
 const ctx = { orgId: "o", teamName: "t", stackId: "s" };
 
 describe("LiveReleaseSummary", () => {
-  it("shows a healthy live summary, collapsed by default", () => {
+  it("shows a lean live row, collapsed by default", () => {
     render(<LiveReleaseSummary release={release} stack={stack} logContext={ctx} />);
+    expect(screen.getByRole("button", { name: /Live release #18/ })).toBeInTheDocument();
     expect(screen.getByText("Live")).toBeInTheDocument();
     expect(screen.getByText("#18")).toBeInTheDocument();
-    expect(screen.getByText(/1 resource healthy/)).toBeInTheDocument();
     // collapsed — the body (tracker / resource outcome) is not mounted yet
     expect(screen.queryByText("Resource outcome")).not.toBeInTheDocument();
   });
 
-  it("flags an unhealthy live release", () => {
-    const unhealthy = {
-      status: { resources: [{ name: "web" }, { name: "api" }] },
-      spec: { stack_resources: [{ name: "web", status: { state: "CrashLoopBackOff", last_failure: { type: "runtime_crash", container: { reason: "OOMKilled" } } } }, { name: "api", status: { state: "Ready" } }] },
-    } as unknown as Stack;
-    render(<LiveReleaseSummary release={release} stack={unhealthy} logContext={ctx} />);
-    expect(screen.getByText(/1 of 2 unhealthy/)).toBeInTheDocument();
-  });
-
   it("expands in place into the live body (tracker + resource outcome)", async () => {
     render(<LiveReleaseSummary release={release} stack={stack} logContext={ctx} />);
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button", { name: /Live release #18/ }));
     expect(await screen.findByText("Resource outcome")).toBeInTheDocument();
     expect(screen.getByText("Build")).toBeInTheDocument();
     expect(screen.getAllByText("web").length).toBeGreaterThan(0);

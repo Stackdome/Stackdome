@@ -63,14 +63,13 @@ describe("DeploymentsTab", () => {
     ];
     const lifecycle: DeployLifecycle = { phase: "deploying", nextSeq: 16 };
     render(<DeploymentsTab {...base} stack={buriedStack} releases={buried} activeRelease={buried[0]} lifecycle={lifecycle} />);
-    // The pinned anchor carries the health summary — unique to it (timeline rows don't).
-    expect(screen.getByText(/1 resource healthy/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Live release #14/ })).toBeInTheDocument();
   });
 
   it("does not pin a live anchor when the live release is already the newest node", () => {
     const liveTopStack = { status: { resources: [], last_converged: { release_id: "r14" } }, spec: { stack_resources: [] } } as unknown as Stack;
     const lifecycle: DeployLifecycle = { phase: "clean", nextSeq: 15, vsSeq: 14 };
     render(<DeploymentsTab {...base} stack={liveTopStack} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
-    expect(screen.queryByText(/resource healthy|unhealthy/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Live release/ })).not.toBeInTheDocument();
   });
 });
