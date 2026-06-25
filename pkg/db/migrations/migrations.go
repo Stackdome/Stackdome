@@ -61,4 +61,6 @@ var MigrationList = []*gormigrate.Migration{
 	createResourceReferencesTable(),
 	dropResourceUsagesTable(),
 	addSettingsToStacks(),
+	createStackPreviewConfigsTable(),
+	createPreviewStacksTable(),
 }

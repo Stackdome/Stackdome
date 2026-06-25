@@ -9,6 +9,7 @@ import (
 
 type SecretValidator interface {
 	ValidateSecretData(secret *models.Secret) *errors.ServiceError
+	ValidateSecretType(secretType models.SecretType, secret *models.Secret) *errors.ServiceError
 }
 
 type InterpolationValidation interface {
