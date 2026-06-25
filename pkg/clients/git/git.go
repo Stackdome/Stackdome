@@ -1,24 +1,19 @@
-package clients
+package git
 
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
+	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport"
-	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
 )
-
-type GitClient interface {
-	CheckAccess(ctx context.Context, repoURL string) (bool, error)
-	GetBranchHeadSHA(ctx context.Context, repoURL, branch string) (*RepoResult, error)
-	GetTagSHA(ctx context.Context, repoURL, tag string) (string, error)
-	CheckTagExists(ctx context.Context, repoURL, tag string) (bool, error)
-}
 
 type gitClient struct {
 	auth transport.AuthMethod
@@ -29,13 +24,13 @@ type RepoResult struct {
 	Branch  string
 }
 
-func NewGitClient(username, password string) (GitClient, error) {
+func newGitClient(username, password string) (GitClient, error) {
 	var auth transport.AuthMethod
 	if username == "" || password == "" {
 		return nil, fmt.Errorf("username and password must be provided for authentication")
 	}
 	if username != "" && password != "" {
-		auth = &http.BasicAuth{
+		auth = &githttp.BasicAuth{
 			Username: username,
 			Password: password,
 		}
@@ -46,13 +41,13 @@ func NewGitClient(username, password string) (GitClient, error) {
 	}, nil
 }
 
-func NewGitClientWithToken(token string) (GitClient, error) {
+func newGitClientWithToken(token string) (GitClient, error) {
 	var auth transport.AuthMethod
 	if token == "" {
 		return nil, fmt.Errorf("token must be provided for authentication")
 	}
 	if token != "" {
-		auth = &http.BasicAuth{
+		auth = &githttp.BasicAuth{
 			Username: "token",
 			Password: token,
 		}
@@ -63,7 +58,7 @@ func NewGitClientWithToken(token string) (GitClient, error) {
 	}, nil
 }
 
-func NewGitClientAnonymous() (GitClient, error) {
+func newGitClientAnonymous() (GitClient, error) {
 	return &gitClient{
 		auth: nil,
 	}, nil
@@ -78,15 +73,16 @@ func (g *gitClient) CheckAccess(ctx context.Context, repoURL string) (bool, erro
 
 	// List references to check clone access and find the branch
 	_, err := rem.List(&git.ListOptions{
-		Auth: g.auth,
+		Auth:    g.auth,
+		Timeout: 10,
 	})
 	if err != nil {
 		if isGitAuthError(err) {
-			return false, fmt.Errorf("authentication failed: %v", err)
+			return false, fmt.Errorf("authentication failed: %w", err)
 		} else if isGitNotFoundError(err) {
-			return false, fmt.Errorf("repository not found: %v", err)
+			return false, fmt.Errorf("repository not found: %w", err)
 		}
-		return false, fmt.Errorf("failed to access git repo: %v", err)
+		return false, fmt.Errorf("failed to access git repo: %w", err)
 	}
 
 	return true, nil
@@ -160,6 +156,44 @@ func (g *gitClient) CheckTagExists(ctx context.Context, repoURL, tag string) (bo
 		}
 	}
 	return false, nil
+}
+
+func (g *gitClient) FetchFile(ctx context.Context, repoURL, branch, filePath string) ([]byte, error) {
+	fs := memfs.New()
+	repo, err := git.CloneContext(ctx, memory.NewStorage(), fs, &git.CloneOptions{
+		URL:           repoURL,
+		Auth:          g.auth,
+		ReferenceName: plumbing.NewBranchReferenceName(branch),
+		Depth:         1,
+		SingleBranch:  true,
+	})
+	if err != nil {
+		if isGitAuthError(err) {
+			return nil, fmt.Errorf("authentication failed: %v", err)
+		}
+		if isGitNotFoundError(err) {
+			return nil, fmt.Errorf("repository not found: %v", err)
+		}
+		return nil, fmt.Errorf("failed to clone repository: %v", err)
+	}
+
+	wt, err := repo.Worktree()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get worktree: %v", err)
+	}
+
+	f, err := wt.Filesystem.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("file '%s' not found in branch '%s': %v", filePath, branch, err)
+	}
+	defer f.Close()
+
+	content, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file '%s': %v", filePath, err)
+	}
+
+	return content, nil
 }
 
 // Helper function to check if error is authentication related
