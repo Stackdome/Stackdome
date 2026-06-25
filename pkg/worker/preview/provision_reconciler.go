@@ -38,12 +38,15 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 
 	config, sErr := r.configStore.GetByID(ctx, preview.StackPreviewConfigID)
 	if sErr != nil {
-		return r.fail(ctx, preview, "ConfigNotFound", fmt.Sprintf("failed to get config: %v", sErr))
+		return resultNil, fmt.Errorf("failed to get config: %w", sErr)
 	}
 
-	content, hash, sErr := r.previewStackService.InternalFetchStackfile(ctx, config, preview.CommitSHA)
-	if sErr != nil {
-		return r.fail(ctx, preview, "StackfileFetchFailed", sErr.Error())
+	content, hash, opErr := r.previewStackService.InternalFetchStackfile(ctx, config, preview.CommitSHA)
+	if opErr != nil {
+		if errors.IsRetryable(opErr) {
+			return resultNil, opErr
+		}
+		return r.fail(ctx, preview, opErr.Reason, opErr.Message)
 	}
 
 	if preview.StackID != nil {
@@ -51,10 +54,13 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 		needsUpdate := hash != preview.StackfileHash || len(preview.ImageOverrides) > 0
 		var model *models.Stack
 		if needsUpdate {
-			var buildErr *errors.ServiceError
+			var buildErr *errors.OperationError
 			model, buildErr = r.previewStackService.InternalBuildStackFromContent(ctx, config, preview, content)
 			if buildErr != nil {
-				return r.fail(ctx, preview, "StackfileParseFailed", buildErr.Error())
+				if errors.IsRetryable(buildErr) {
+					return resultNil, buildErr
+				}
+				return r.fail(ctx, preview, buildErr.Reason, buildErr.Message)
 			}
 		}
 
@@ -88,9 +94,12 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 	}
 
 	// Create path: no stack yet
-	model, sErr := r.previewStackService.InternalBuildStackFromContent(ctx, config, preview, content)
-	if sErr != nil {
-		return r.fail(ctx, preview, "StackfileParseFailed", sErr.Error())
+	model, opErr := r.previewStackService.InternalBuildStackFromContent(ctx, config, preview, content)
+	if opErr != nil {
+		if errors.IsRetryable(opErr) {
+			return resultNil, opErr
+		}
+		return r.fail(ctx, preview, opErr.Reason, opErr.Message)
 	}
 
 	var created *models.Stack

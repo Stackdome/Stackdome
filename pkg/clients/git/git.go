@@ -78,9 +78,9 @@ func (g *gitClient) CheckAccess(ctx context.Context, repoURL string) (bool, erro
 	})
 	if err != nil {
 		if isGitAuthError(err) {
-			return false, fmt.Errorf("authentication failed: %w", err)
+			return false, fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
 		} else if isGitNotFoundError(err) {
-			return false, fmt.Errorf("repository not found: %w", err)
+			return false, fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
 		}
 		return false, fmt.Errorf("failed to access git repo: %w", err)
 	}
@@ -112,7 +112,7 @@ func (g *gitClient) GetBranchHeadSHA(ctx context.Context, repoURL, branch string
 		}
 	}
 
-	return nil, fmt.Errorf("branch '%s' not found in repository", branch)
+	return nil, fmt.Errorf("branch '%s' not found in repository: %w", branch, ErrNotFound)
 }
 
 func (g *gitClient) GetTagSHA(ctx context.Context, repoURL, tag string) (string, error) {
@@ -169,10 +169,10 @@ func (g *gitClient) FetchFile(ctx context.Context, repoURL, branch, filePath str
 	})
 	if err != nil {
 		if isGitAuthError(err) {
-			return nil, fmt.Errorf("authentication failed: %v", err)
+			return nil, fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
 		}
 		if isGitNotFoundError(err) {
-			return nil, fmt.Errorf("repository not found: %v", err)
+			return nil, fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to clone repository: %v", err)
 	}
@@ -184,7 +184,7 @@ func (g *gitClient) FetchFile(ctx context.Context, repoURL, branch, filePath str
 
 	f, err := wt.Filesystem.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("file '%s' not found in branch '%s': %v", filePath, branch, err)
+		return nil, fmt.Errorf("file '%s' not found in branch '%s': %v: %w", filePath, branch, err, ErrNotFound)
 	}
 	defer f.Close()
 

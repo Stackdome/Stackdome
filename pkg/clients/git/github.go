@@ -43,9 +43,9 @@ func (g *gitHubClient) CheckAccess(ctx context.Context, repoURL string) (bool, e
 		if resp != nil {
 			switch resp.StatusCode {
 			case http.StatusNotFound:
-				return false, fmt.Errorf("repository not found: %w", err)
+				return false, fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
 			case http.StatusUnauthorized, http.StatusForbidden:
-				return false, fmt.Errorf("authentication failed: %w", err)
+				return false, fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
 			}
 		}
 		return false, fmt.Errorf("failed to access git repo: %w", err)
@@ -94,7 +94,7 @@ func (g *gitHubClient) GetBranchHeadSHA(ctx context.Context, repoURL, branch str
 	ref, resp, err := g.client.Repositories.GetBranch(ctx, owner, repo, branch, true)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, fmt.Errorf("branch '%s' not found in repository", branch)
+			return nil, fmt.Errorf("branch '%s' not found in repository: %w", branch, ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to get branch head: %w", err)
 	}
@@ -119,7 +119,7 @@ func (g *gitHubClient) FetchFile(ctx context.Context, repoURL, branch, filePath 
 	})
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, fmt.Errorf("file '%s' not found in branch '%s'", filePath, branch)
+			return nil, fmt.Errorf("file '%s' not found in branch '%s': %w", filePath, branch, ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to fetch file: %w", err)
 	}
