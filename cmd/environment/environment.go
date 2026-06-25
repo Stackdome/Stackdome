@@ -78,4 +78,6 @@ type Services struct {
 	SignupService               services.SignupService
 	StackReleaseService         services.StackReleaseService
 	ReferenceService            services.ReferenceService
+	StackPreviewConfigService   services.StackPreviewConfigService
+	PreviewStackService         services.PreviewStackService
 }
