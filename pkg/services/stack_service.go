@@ -26,6 +26,9 @@ type StackService interface {
 	DeleteStackConnection(ctx context.Context, stackID, connectionID string) *errors.ServiceError
 	UpdateStatus(ctx context.Context, ID string, status *models.StackStatus) *errors.ServiceError
 	DeleteStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
+	InternalCreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError)
+	InternalUpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
+	InternalDeleteStack(ctx context.Context, stack *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStackCrRevision(ctx context.Context, ID string, revision string) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError)
 	InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError
@@ -125,7 +128,11 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 	if permErr := s.permissions.Check(ctx, spec.TeamID, auth.ResourceStacks, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
-	existingStack, _ := s.GetStackByName(ctx, spec.Name, spec.UserID)
+	return s.InternalCreateStack(ctx, spec)
+}
+
+func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
+	existingStack, _ := s.stackStore.GetByName(ctx, spec.Name, spec.UserID)
 	if existingStack != nil {
 		return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
 	}
@@ -223,13 +230,20 @@ func (s *stackService) InternalCreateWithTx(ctx context.Context, spec *models.St
 }
 
 func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
-	// Get existing stack (includes read permission check)
 	existingStack, err := s.GetStack(ctx, ID)
 	if err != nil {
 		return nil, err
 	}
 	if permErr := s.permissions.Check(ctx, existingStack.TeamID, auth.ResourceStacks, ID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
+	}
+	return s.InternalUpdateStack(ctx, ID, spec)
+}
+
+func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
+	existingStack, err := s.InternalGetStack(ctx, ID)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
@@ -551,18 +565,22 @@ func (s *stackService) DeleteStack(ctx context.Context, ID string) (*models.Stac
 	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, ID, auth.ActionDelete); permErr != nil {
 		return nil, permErr
 	}
+	return s.InternalDeleteStack(ctx, stack)
+}
+
+func (s *stackService) InternalDeleteStack(ctx context.Context, stack *models.Stack) (*models.Stack, *errors.ServiceError) {
 	if stack.Status.State == models.StackDeleting {
 		return stack, nil
 	}
 	if s.releaseService != nil {
-		if active, _ := s.releaseService.InternalGetActiveByStackID(ctx, ID); active != nil {
+		if active, _ := s.releaseService.InternalGetActiveByStackID(ctx, stack.ID); active != nil {
 			s.releaseService.MarkFailed(ctx, active.ID, "stack deleted", nil)
 		}
 	}
 	stack.DeletionTimestamp = ptr.To(time.Now().UTC())
 	stack.Status.State = models.StackDeleting
 	stack.Status.Message = "Stack is being deleted"
-	stackMarkedForDelete, err := s.stackStore.UpdateForDelete(ctx, ID, stack)
+	stackMarkedForDelete, err := s.stackStore.UpdateForDelete(ctx, stack.ID, stack)
 	if err != nil {
 		return nil, errors.GeneralError("failed to update stack '%s' for deletion: %s", stack.Name, err.Error())
 	}
