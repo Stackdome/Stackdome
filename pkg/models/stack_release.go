@@ -20,6 +20,8 @@ const (
 	ReleaseStateCancelled  StackReleaseState = "Cancelled"
 )
 
+const ReleaseCreatedByPreviewSync = "system:preview-sync"
+
 func TerminalStackReleaseStates() []StackReleaseState {
 	return []StackReleaseState{
 		ReleaseStateReleased,
@@ -97,6 +99,7 @@ const (
 	ReleaseCauseManual      ReleaseCauseKind = "manual"
 	ReleaseCauseRollback    ReleaseCauseKind = "rollback"
 	ReleaseCauseWebhookPush ReleaseCauseKind = "webhook_push"
+	ReleaseCausePreviewSync ReleaseCauseKind = "preview_sync"
 )
 
 type ReleaseCause struct {
