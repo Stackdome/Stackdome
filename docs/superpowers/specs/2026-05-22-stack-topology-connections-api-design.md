@@ -11,7 +11,7 @@ The first implementation should focus on Stack-scoped topology:
 - StackResources with named ports and typed outputs.
 - Connections with explicit `kind`, `from`, `to`, and mapping/config.
 - A structured value reference DSL for reading outputs from connected resources.
-- Topology read APIs for a Railway-like canvas UI.
+- Topology read APIs for a node-graph canvas UI.
 - Usage views derived from `stack_connections` on read, plus persisted `ResourceUsage` records for direct config references.
 
 ## Goals

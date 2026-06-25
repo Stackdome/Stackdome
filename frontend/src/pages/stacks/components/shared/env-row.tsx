@@ -103,7 +103,9 @@ export function EnvRow({
       data-testid={`env-row-${resourceIndex}-${index}`}
       onBlur={onBlur}
     >
-      <div className="grid grid-cols-12 gap-2 p-3 items-center">
+      {/* items-start keeps every control top-aligned so a per-cell error (which
+          grows that cell downward) never knocks the other columns out of line. */}
+      <div className="grid grid-cols-12 gap-2 p-3 items-start">
         {/* Key */}
         <div className="col-span-3">
           <Input
@@ -175,7 +177,7 @@ export function EnvRow({
         </div>
 
         {/* From select (Stack | Secret | Addon) */}
-        <div className="col-span-2 flex justify-center">
+        <div className="col-span-2 flex h-9 items-center justify-center">
           <Select
             value={row.from}
             onValueChange={(v) => onChangeFrom(v as EnvFrom)}
@@ -194,7 +196,7 @@ export function EnvRow({
         </div>
 
         {/* Reset (modified existing row — restore baseline) or Remove (added/clean rows) */}
-        <div className="col-span-1 flex justify-center">
+        <div className="col-span-1 flex h-9 items-center justify-center">
           {isModified && onReset ? (
             <Button
               variant="ghost"

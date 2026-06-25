@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
-import { Loader2, MoreHorizontal, Pencil, Rocket, Trash2 } from "lucide-react";
+import { Loader2, MoreHorizontal, Pencil, Rocket, Save, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,9 +33,14 @@ import {
 import type { AddonGroupStateMap } from "@/pages/stacks/components/shared/stack-resource-item";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
+import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById, updateStack } from "@/api/stacks";
+import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
+import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
+import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
+import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
 import {
   connectionsToEnvRows,
 } from "@/pages/stacks/lib/connection-mapping";
@@ -81,6 +86,7 @@ export default function StackDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const session = useStackEditSession();
+  const [activeTab, setActiveTab] = useState("configuration");
   const [isSaving, setIsSaving] = useState(false);
   const [editingBindingIds, setEditingBindingIds] = useState<Set<string>>(new Set());
   // Per-addonId provenance for converted env rows after a successful detach
@@ -280,6 +286,56 @@ export default function StackDetailPage() {
     resources: session.draft.resources,
     provenance: new Map<string, { addonName: string; credField?: string }>(),
   });
+
+  // ── Deploy lifecycle (page-level: drives the status bar across all tabs) ──
+  const deployIds = useMemo(() => ({
+    orgId: stackToShow?.organisation_id || getCurrentOrganizationId() || "",
+    teamName: (stackToShow ? teamNameById(stackToShow.team_id) : "") || defaultTeamName || "",
+    stackId: stackToShow?.id || "",
+  }), [stackToShow, teamNameById, defaultTeamName]);
+
+  const releasesResult = useReleases({ ...deployIds, enabled: !!deployIds.stackId });
+  const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.teamName, deployIds.stackId);
+  const lifecycle = useDeployLifecycle({
+    stack: stackToShow ?? undefined,
+    dirty: session.dirty,
+    isActive: session.isActive,
+    releases: releasesResult.releases,
+    activeRelease: releasesResult.activeRelease,
+    detail: releaseDetail,
+  });
+
+  const [deployBusy, setDeployBusy] = useState(false);
+  const refetchReleases = releasesResult.refetch;
+  const runDeploy = useCallback(async (fn: () => Promise<unknown>, ok: string) => {
+    setDeployBusy(true);
+    try {
+      await fn();
+      toast({ title: ok });
+      refetchReleases();
+    } catch (e) {
+      toast({ title: "Action failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
+    } finally {
+      setDeployBusy(false);
+    }
+  }, [toast, refetchReleases]);
+
+  const onDeploy = useCallback(
+    () => runDeploy(() => createRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId), "Deploy started"),
+    [runDeploy, deployIds],
+  );
+  const onCancelDeploy = useCallback(
+    (releaseId: string) => runDeploy(() => cancelRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId, releaseId), "Release cancelled"),
+    [runDeploy, deployIds],
+  );
+  const onRollback = useCallback(
+    (releaseId: string) => runDeploy(() => rollbackRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId, releaseId), "Rollback started"),
+    [runDeploy, deployIds],
+  );
+  const onCopyId = useCallback((releaseId: string) => {
+    void navigator.clipboard?.writeText(releaseId);
+    toast({ title: "Release ID copied" });
+  }, [toast]);
 
   const performSave = async () => {
     if (!stackToShow || !session.isActive || !id) return;
@@ -496,9 +552,39 @@ export default function StackDetailPage() {
     </DropdownMenu>
   ) : undefined;
 
+  // The bar is an ACTION affordance, not a status: it shows only when there's a staged draft to
+  // deploy. Live/in-flight state lives in the timeline + header pill, so a rollout and a draft can coexist.
+  const deployBar = (() => {
+    if (lifecycle.phase !== "staged") return null;
+    const d = lifecycle.stagedDiff;
+    // Per-type counts; a rename collapses to one resource entry in the diff.
+    const segments: StickyActionBarSegment[] = [];
+    const addSeg = (count: number, singular: string) => {
+      if (count > 0) segments.push({ num: count, label: count === 1 ? `${singular} changed` : `${singular}s changed` });
+    };
+    if (d) {
+      addSeg(d.resources.length, "resource");
+      addSeg(d.volumes.length, "volume");
+      addSeg(d.connections.length, "connection");
+    }
+    return (
+      <StickyActionBar
+        leadLabel="Draft saved"
+        segments={segments}
+        primary={{
+          label: "Deploy",
+          loadingLabel: "Deploying",
+          icon: <Rocket className="h-3.5 w-3.5" />,
+          isLoading: deployBusy,
+          onClick: onDeploy,
+        }}
+      />
+    );
+  })();
+
   return (
     <div className="p-8 space-y-8">
-      {session.isActive && (() => {
+      {session.isActive ? (() => {
         const resourceCount = session.dirty.dirtyResourceIdx.size;
         const volumeCount = session.dirty.dirtyVolumeIdx.size;
         const dirtyEntities = resourceCount + volumeCount;
@@ -517,9 +603,9 @@ export default function StackDetailPage() {
             leadLabel="Draft"
             segments={segments}
             primary={{
-              label: "Deploy",
-              loadingLabel: "Deploying",
-              icon: <Rocket className="h-3.5 w-3.5" />,
+              label: "Save",
+              loadingLabel: "Saving",
+              icon: <Save className="h-3.5 w-3.5" />,
               isLoading: isSaving,
               onClick: handleSave,
             }}
@@ -543,7 +629,7 @@ export default function StackDetailPage() {
             }}
           />
         );
-      })()}
+      })() : deployBar}
 
       <PageHeader
         title={stackToShow.name}
@@ -565,13 +651,19 @@ export default function StackDetailPage() {
         actions={headerActions}
       />
 
-      <Tabs defaultValue="configuration" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-6 w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-6">
           <TabsTrigger
             value="configuration"
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
           >
             Configuration
+          </TabsTrigger>
+          <TabsTrigger
+            value="deployments"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
+          >
+            Deployments
           </TabsTrigger>
           <TabsTrigger
             value="logs"
@@ -711,6 +803,29 @@ export default function StackDetailPage() {
               />
             );
           })()}
+        </TabsContent>
+
+        {/* Deployments Tab */}
+        <TabsContent value="deployments">
+          {stackToShow.id ? (
+            <DeploymentsTab
+              orgId={deployIds.orgId}
+              teamName={deployIds.teamName}
+              stackId={stackToShow.id}
+              stack={stackToShow}
+              onOpenLogs={() => setActiveTab("logs")}
+              releases={releasesResult.releases}
+              activeRelease={releasesResult.activeRelease}
+              loading={releasesResult.loading}
+              error={releasesResult.error}
+              lifecycle={lifecycle}
+              onRollback={onRollback}
+              onCancel={onCancelDeploy}
+              onCopyId={onCopyId}
+            />
+          ) : (
+            <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
+          )}
         </TabsContent>
 
         {/* Logs Tab */}

@@ -342,11 +342,29 @@ function StackResourceEnvironmentTabImpl({
             return Object.keys(out).length === 0 ? undefined : out;
           };
 
+          // "Add variable" appends a literal row; its own "From" selector then
+          // switches the source. Shared by the empty state and the populated list.
+          const addVariableButton = (
+            <div className="px-3 py-1.5 flex justify-end border-t border-border first:border-t-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-[12.5px]"
+                onClick={() => addEnvVar({ from: "stack", name: "", value: "" })}
+              >
+                <PlusCircle className="h-3 w-3 mr-1" />Add variable
+              </Button>
+            </div>
+          );
+
           if (envVars.length === 0) {
             return (
-              <div className="p-8 text-center text-muted-foreground">
-                No environment variables defined
-              </div>
+              <>
+                <div className="p-8 text-center text-muted-foreground">
+                  No environment variables defined
+                </div>
+                {addVariableButton}
+              </>
             );
           }
 
@@ -421,18 +439,8 @@ function StackResourceEnvironmentTabImpl({
           return (
             <>
               {plainItems.length > 0 && <div>{plainItems.map(renderRow)}</div>}
-              {/* Add a literal row; the row's own "From" selector switches the source.
-                  Sits directly below the plain rows so a new var appears at the click point. */}
-              <div className="px-3 py-1.5 flex justify-end border-t border-border first:border-t-0">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-[12.5px]"
-                  onClick={() => addEnvVar({ from: "stack", name: "", value: "" })}
-                >
-                  <PlusCircle className="h-3 w-3 mr-1" />Add variable
-                </Button>
-              </div>
+              {/* Sits directly below the plain rows so a new var appears at the click point. */}
+              {addVariableButton}
               {addonGroups.map((g, gIdx) => {
                 const aid = g.addonId;
                 const db = g.database;

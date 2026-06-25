@@ -44,9 +44,10 @@ const styles: Record<StatusVariant, { wrap: string; dot: string; pulse: boolean 
 
 export function variantFromState(state?: string | null): StatusVariant {
   const s = (state ?? "").toLowerCase();
-  if (["ready", "running", "active", "succeeded", "exposed"].includes(s)) return "ready";
-  if (["pending", "deploying", "creating", "updating", "provisioning"].includes(s)) return "pending";
+  if (["ready", "running", "active", "succeeded", "exposed", "released"].includes(s)) return "ready";
+  if (["pending", "deploying", "creating", "updating", "provisioning", "inprogress"].includes(s)) return "pending";
   if (["error", "failed", "crash", "crashloopbackoff", "unhealthy"].includes(s)) return "error";
+  if (["superseded", "cancelled"].includes(s)) return "neutral";
   if (!s) return "neutral";
   return "info";
 }
