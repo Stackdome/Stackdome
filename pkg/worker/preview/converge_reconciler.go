@@ -32,6 +32,8 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 	}
 
 	if preview.ActiveReleaseID == nil {
+		// How did this happen? We should have a release by now.
+		r.logger.Errorf("preview %s: no active release found", preview.ID)
 		return resultStop, nil
 	}
 
