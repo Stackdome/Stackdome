@@ -1,0 +1,8 @@
+name: simple-nginx
+
+resources:
+  web:
+    image: nginx:latest
+    ports:
+      - name: http
+        port: 80

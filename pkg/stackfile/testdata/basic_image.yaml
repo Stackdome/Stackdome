@@ -1,0 +1,10 @@
+name: basic-stack
+
+resources:
+  web:
+    image: nginx:latest
+    ports:
+      - name: http
+        port: 80
+        public: true
+        subdomain: web
