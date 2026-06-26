@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"sync"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -36,30 +37,22 @@ var _ = Describe("ProvisionReconciler", func() {
 		releaseSvc = NewMockreleaseService(ctrl)
 		ctx = context.Background()
 
+		cache := &sync.Map{}
+		cacheKeys := &sync.Map{}
 		reconciler = &provisionReconciler{
 			previewStackService: previewService,
 			previewStackStore:   previewStore,
 			configStore:         cfgStore,
 			stackService:        stackSvc,
 			releaseService:      releaseSvc,
+			stackfileCache:      cache,
+			previewCacheKeys:    cacheKeys,
 			logger:              logger.NewLoggerWithPrefix(ctx, "test"),
 		}
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
-	})
-
-	Context("noop", func() {
-		It("returns resultNil when phase is not Provisioning", func() {
-			preview := &models.PreviewStack{
-				ID:     "p-1",
-				Status: models.PreviewStackStatus{Phase: models.PreviewStackPhaseReady},
-			}
-			result, err := reconciler.Reconcile(ctx, preview)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(resultNil))
-		})
 	})
 
 	Context("create path (StackID is nil)", func() {
@@ -449,6 +442,26 @@ var _ = Describe("ProvisionReconciler", func() {
 				Return(stackfileContent, sameHash, nil)
 
 			// No InternalBuildStackFromContent, transaction, or release expected
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultNil))
+		})
+
+		It("uses cached stackfile on second reconcile without duplicate fetch", func() {
+			stackfileContent := []byte("name: my-app")
+			stackfileHash := "old-hash"
+
+			config.GitRepository = models.PreviewGitRepository{RepoURL: "https://github.com/test/repo"}
+			config.StackfilePath = "stackfile.yaml"
+
+			// Pre-populate the cache with the same key resolveStackfileContent would use
+			cacheKey := config.GitRepository.RepoURL + ":" + preview.CommitSHA + ":" + config.StackfilePath
+			reconciler.stackfileCache.Store(cacheKey, stackfileCacheEntry{content: stackfileContent, hash: stackfileHash})
+
+			// InternalFetchStackfile should NOT be called — cache hit
+			// needsUpdate = false (hash matches), needsRelease = false → noop
+			cfgStore.EXPECT().GetByID(gomock.Any(), "cfg-1").Return(config, nil)
 
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())

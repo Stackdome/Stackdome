@@ -2,6 +2,7 @@ package preview
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -25,6 +26,8 @@ type PreviewWorkerSpec struct {
 
 type previewWorker struct {
 	previewStackStore previewStackStore
+	stackfileCache    sync.Map
+	previewCacheKeys  sync.Map
 	subReconcilers    []subReconciler
 	worker.BaseWorker
 }
@@ -32,15 +35,16 @@ type previewWorker struct {
 var _ worker.Worker = (*previewWorker)(nil)
 
 func NewPreviewWorker(spec PreviewWorkerSpec) worker.Worker {
-	return &previewWorker{
+	w := &previewWorker{
 		previewStackStore: spec.PreviewStackStore,
-		subReconcilers: []subReconciler{
-			newDeprovisionReconciler(spec),
-			newProvisionReconciler(spec),
-			newConvergeReconciler(spec),
-		},
-		BaseWorker: worker.NewBaseWorker(PreviewWorkerName, spec.Env),
+		BaseWorker:        worker.NewBaseWorker(PreviewWorkerName, spec.Env),
 	}
+	w.subReconcilers = []subReconciler{
+		newDeprovisionReconciler(spec, &w.stackfileCache, &w.previewCacheKeys),
+		newProvisionReconciler(spec, &w.stackfileCache, &w.previewCacheKeys),
+		newConvergeReconciler(spec),
+	}
+	return w
 }
 
 func (w *previewWorker) Execute(ctx context.Context, operand worker.Operand) (worker.Result, *errors.ServiceError) {

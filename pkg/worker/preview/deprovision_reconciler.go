@@ -3,6 +3,7 @@ package preview
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
@@ -12,13 +13,17 @@ import (
 type deprovisionReconciler struct {
 	previewStackStore previewStackStore
 	stackService      stackService
+	stackfileCache    *sync.Map
+	previewCacheKeys  *sync.Map
 	logger            logger.Logger
 }
 
-func newDeprovisionReconciler(spec PreviewWorkerSpec) *deprovisionReconciler {
+func newDeprovisionReconciler(spec PreviewWorkerSpec, stackfileCache, previewCacheKeys *sync.Map) *deprovisionReconciler {
 	return &deprovisionReconciler{
 		previewStackStore: spec.PreviewStackStore,
 		stackService:      spec.StackService,
+		stackfileCache:    stackfileCache,
+		previewCacheKeys:  previewCacheKeys,
 		logger:            logger.NewLoggerWithPrefix(context.Background(), "preview-deprovision"),
 	}
 }
@@ -26,7 +31,7 @@ func newDeprovisionReconciler(spec PreviewWorkerSpec) *deprovisionReconciler {
 func (r *deprovisionReconciler) Name() string { return "deprovision" }
 
 func (r *deprovisionReconciler) Reconcile(ctx context.Context, preview *models.PreviewStack) (subReconcilerResult, error) {
-	if preview.Status.Phase != models.PreviewStackPhaseDeleting {
+	if preview.DeletionTimestamp == nil {
 		return resultNil, nil
 	}
 
@@ -56,7 +61,10 @@ func (r *deprovisionReconciler) Reconcile(ctx context.Context, preview *models.P
 }
 
 func (r *deprovisionReconciler) deletePreviewRecord(ctx context.Context, preview *models.PreviewStack) (subReconcilerResult, error) {
-	r.logger.Infof("preview %s: stack already deleted, cleaning up record", preview.ID)
+	if key, ok := r.previewCacheKeys.LoadAndDelete(preview.ID); ok {
+		r.stackfileCache.Delete(key.(string))
+	}
+	r.logger.Infof("preview %s: cleaning up record", preview.ID)
 	if sErr := r.previewStackStore.Delete(ctx, preview.ID); sErr != nil {
 		return resultNil, fmt.Errorf("failed to delete preview record %s: %w", preview.ID, sErr)
 	}

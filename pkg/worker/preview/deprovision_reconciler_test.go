@@ -2,6 +2,7 @@ package preview
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -10,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("DeprovisionReconciler", func() {
@@ -27,9 +29,13 @@ var _ = Describe("DeprovisionReconciler", func() {
 		stackSvc = NewMockstackService(ctrl)
 		ctx = context.Background()
 
+		cache := &sync.Map{}
+		cacheKeys := &sync.Map{}
 		reconciler = &deprovisionReconciler{
 			previewStackStore: previewStore,
 			stackService:      stackSvc,
+			stackfileCache:    cache,
+			previewCacheKeys:  cacheKeys,
 			logger:            logger.NewLoggerWithPrefix(ctx, "test"),
 		}
 	})
@@ -39,7 +45,7 @@ var _ = Describe("DeprovisionReconciler", func() {
 	})
 
 	Context("noop", func() {
-		It("returns resultNil when phase is not Deleting", func() {
+		It("returns resultNil when DeletionTimestamp is nil", func() {
 			preview := &models.PreviewStack{
 				ID:     "p-1",
 				Status: models.PreviewStackStatus{Phase: models.PreviewStackPhaseReady},
@@ -53,14 +59,40 @@ var _ = Describe("DeprovisionReconciler", func() {
 	Context("when StackID is nil", func() {
 		It("hard-deletes the preview record and returns resultStop", func() {
 			preview := &models.PreviewStack{
-				ID:     "p-2",
-				Status: models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
+				ID:                "p-2",
+				DeletionTimestamp: ptr.To(time.Now()),
+				Status:            models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
 			}
 			previewStore.EXPECT().Delete(gomock.Any(), "p-2").Return(nil)
 
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(resultStop))
+		})
+
+		It("evicts stackfile cache entry when preview record is deleted", func() {
+			preview := &models.PreviewStack{
+				ID:                "p-cache",
+				DeletionTimestamp: ptr.To(time.Now()),
+				Status:            models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
+			}
+
+			// Pre-populate cache
+			cacheKey := "https://github.com/test/repo:abc123:stackfile.yaml"
+			reconciler.stackfileCache.Store(cacheKey, "cached-content")
+			reconciler.previewCacheKeys.Store("p-cache", cacheKey)
+
+			previewStore.EXPECT().Delete(gomock.Any(), "p-cache").Return(nil)
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultStop))
+
+			// Verify cache was evicted
+			_, cacheHit := reconciler.stackfileCache.Load(cacheKey)
+			Expect(cacheHit).To(BeFalse())
+			_, keyHit := reconciler.previewCacheKeys.Load("p-cache")
+			Expect(keyHit).To(BeFalse())
 		})
 	})
 
@@ -73,9 +105,10 @@ var _ = Describe("DeprovisionReconciler", func() {
 		BeforeEach(func() {
 			stackID = "stack-1"
 			preview = &models.PreviewStack{
-				ID:      "p-3",
-				StackID: &stackID,
-				Status:  models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
+				ID:                "p-3",
+				StackID:           &stackID,
+				DeletionTimestamp: ptr.To(time.Now()),
+				Status:            models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
 			}
 		})
 
@@ -97,9 +130,10 @@ var _ = Describe("DeprovisionReconciler", func() {
 		It("hard-deletes the preview record and returns resultStop", func() {
 			stackID := "stack-gone"
 			preview := &models.PreviewStack{
-				ID:      "p-4",
-				StackID: &stackID,
-				Status:  models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
+				ID:                "p-4",
+				StackID:           &stackID,
+				DeletionTimestamp: ptr.To(time.Now()),
+				Status:            models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
 			}
 
 			stackSvc.EXPECT().InternalGetStack(gomock.Any(), stackID).
@@ -116,9 +150,10 @@ var _ = Describe("DeprovisionReconciler", func() {
 		It("returns error for retry", func() {
 			stackID := "stack-err"
 			preview := &models.PreviewStack{
-				ID:      "p-5",
-				StackID: &stackID,
-				Status:  models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
+				ID:                "p-5",
+				StackID:           &stackID,
+				DeletionTimestamp: ptr.To(time.Now()),
+				Status:            models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
 			}
 
 			stackSvc.EXPECT().InternalGetStack(gomock.Any(), stackID).
@@ -135,9 +170,10 @@ var _ = Describe("DeprovisionReconciler", func() {
 		It("returns error for retry", func() {
 			stackID := "stack-del-err"
 			preview := &models.PreviewStack{
-				ID:      "p-6",
-				StackID: &stackID,
-				Status:  models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
+				ID:                "p-6",
+				StackID:           &stackID,
+				DeletionTimestamp: ptr.To(time.Now()),
+				Status:            models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
 			}
 			stack := &models.Stack{ID: stackID, Name: "preview-stack"}
 
@@ -159,8 +195,9 @@ var _ = Describe("DeprovisionReconciler", func() {
 	Describe("requeue after delete", func() {
 		It("requeues after 10 seconds when delete is in progress", func() {
 			preview := &models.PreviewStack{
-				ID:     "p-5",
-				Status: models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
+				ID:                "p-5",
+				DeletionTimestamp: ptr.To(time.Now()),
+				Status:            models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
 			}
 			stackID := "stack-5"
 			preview.StackID = &stackID

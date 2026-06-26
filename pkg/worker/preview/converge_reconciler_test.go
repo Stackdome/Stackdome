@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("ConvergeReconciler", func() {
@@ -41,24 +42,33 @@ var _ = Describe("ConvergeReconciler", func() {
 	})
 
 	Context("noop cases", func() {
-		It("returns resultNil when phase is not Deploying", func() {
-			preview := &models.PreviewStack{
-				ID:     "p-1",
-				Status: models.PreviewStackStatus{Phase: models.PreviewStackPhaseReady},
-			}
-			result, err := reconciler.Reconcile(ctx, preview)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(resultNil))
-		})
-
-		It("returns resultStop when ActiveReleaseID is nil", func() {
+		It("returns resultNil when ActiveReleaseID is nil", func() {
 			preview := &models.PreviewStack{
 				ID:     "p-2",
 				Status: models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeploying},
 			}
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(resultStop))
+			Expect(result).To(Equal(resultNil))
+		})
+
+		It("returns resultNil with no DB update when release is Released and phase is already Ready", func() {
+			releaseID := "rel-ready"
+			preview := &models.PreviewStack{
+				ID:              "p-ready",
+				StackID:         ptr.To("stack-1"),
+				ActiveReleaseID: &releaseID,
+				Status:          models.PreviewStackStatus{Phase: models.PreviewStackPhaseReady},
+			}
+
+			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).
+				Return(&models.StackRelease{ID: releaseID, State: models.ReleaseStateReleased}, nil)
+
+			// No previewStore.Update expected — gomock strict mode enforces this
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultNil))
 		})
 	})
 
