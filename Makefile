@@ -29,6 +29,10 @@ mocks: $(MOCKGEN)
 $(MOCKGEN):
 	go install go.uber.org/mock/mockgen@v0.6.0
 
+fmt:
+	gofmt -w .
+.PHONY: fmt
+
 binary:
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o bin/stackdome-server cmd/main.go
 .PHONY: binary
