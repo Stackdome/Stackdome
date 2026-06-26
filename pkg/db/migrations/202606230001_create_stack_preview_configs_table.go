@@ -17,7 +17,6 @@ CREATE TABLE stack_preview_configs (
     organisation_id     TEXT NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
     team_id             TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
     user_id             TEXT NOT NULL REFERENCES users(id),
-    cluster_id          TEXT NOT NULL REFERENCES clusters(id),
     name                TEXT NOT NULL,
     description         TEXT,
     git_repository      JSONB NOT NULL,
