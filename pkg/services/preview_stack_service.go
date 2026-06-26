@@ -159,6 +159,9 @@ func (s *previewStackService) Sync(ctx context.Context, previewStackID string, o
 	}
 
 	preview.CommitSHA = targetCommit
+	if opts.ForceSync {
+		preview.ForceSyncRequestedAt = ptr.To(time.Now().UTC())
+	}
 	if opts.StackfileContent != nil {
 		preview.StackfileContent = opts.StackfileContent
 	}
@@ -199,6 +202,11 @@ func (s *previewStackService) isSyncNoop(preview *models.PreviewStack, targetCom
 	}
 	if preview.Status.Phase == models.PreviewStackPhaseFailed {
 		return false
+	}
+	if opts.StackfileContent != nil {
+		if ContentHash([]byte(*opts.StackfileContent)) != preview.ReconcilerStatus.LastAppliedStackfileHash {
+			return false
+		}
 	}
 	return targetCommit == preview.CommitSHA && overridesEqual(opts.ImageOverrides, preview.ImageOverrides)
 }
@@ -306,10 +314,12 @@ func (s *previewStackService) InternalFetchStackfile(ctx context.Context, config
 			fmt.Sprintf("failed to fetch stackfile: %v", fetchErr))
 	}
 
-	h := sha256.Sum256(content)
-	hash := hex.EncodeToString(h[:])
+	return content, ContentHash(content), nil
+}
 
-	return content, hash, nil
+func ContentHash(data []byte) string {
+	h := sha256.Sum256(data)
+	return hex.EncodeToString(h[:])
 }
 
 // InternalBuildStackFromContent parses stackfile content, resolves references, applies

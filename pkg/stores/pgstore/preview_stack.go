@@ -68,7 +68,8 @@ func (s *previewStackStore) CountActiveByConfigID(ctx context.Context, configID 
 	var count int64
 	if err := s.sessionFactory.New(ctx).
 		Model(&models.PreviewStack{}).
-		Where("stack_preview_config_id = ?", configID).
+		Where("stack_preview_config_id = ? AND (status->>'phase' NOT IN (?, ?))",
+			configID, models.PreviewStackPhaseFailed, models.PreviewStackPhaseDeleting).
 		Count(&count).Error; err != nil {
 		return 0, errors.GeneralError("failed to count active preview stacks: %s", err.Error())
 	}

@@ -153,6 +153,26 @@ var _ = Describe("ConvergeReconciler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(resultStop))
 		})
+
+		It("sets Failed phase with ReleaseCancelled reason when release is Cancelled", func() {
+			release := &models.StackRelease{
+				ID:    releaseID,
+				State: models.ReleaseStateCancelled,
+			}
+
+			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).Return(release, nil)
+			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseFailed))
+					Expect(p.Status.Reason).To(Equal("ReleaseCancelled"))
+					Expect(p.Status.Message).To(Equal("release was cancelled"))
+					return p, nil
+				})
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultStop))
+		})
 	})
 
 	Context("non-terminal cases", func() {

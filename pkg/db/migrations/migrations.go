@@ -64,4 +64,8 @@ var MigrationList = []*gormigrate.Migration{
 	createStackPreviewConfigsTable(),
 	createPreviewStacksTable(),
 	addStackfileContentToPreviewStacks(),
+	addLastAppliedCommitSHAToPreviewStacks(),
+	addOverridesHashAndForceSyncToPreviewStacks(),
+	consolidateReconcilerStatus(),
+	replaceForceSyncWithTimestamp(),
 }
