@@ -6,11 +6,17 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
+
+type stackfileCacheEntry struct {
+	content []byte
+	hash    string
+}
 
 type provisionReconciler struct {
 	previewStackService previewStackService
@@ -18,16 +24,20 @@ type provisionReconciler struct {
 	configStore         configStore
 	stackService        stackService
 	releaseService      releaseService
+	stackfileCache      *sync.Map
+	previewCacheKeys    *sync.Map
 	logger              logger.Logger
 }
 
-func newProvisionReconciler(spec PreviewWorkerSpec) *provisionReconciler {
+func newProvisionReconciler(spec PreviewWorkerSpec, stackfileCache, previewCacheKeys *sync.Map) *provisionReconciler {
 	return &provisionReconciler{
 		previewStackService: spec.PreviewStackService,
 		previewStackStore:   spec.PreviewStackStore,
 		configStore:         spec.ConfigStore,
 		stackService:        spec.StackService,
 		releaseService:      spec.ReleaseService,
+		stackfileCache:      stackfileCache,
+		previewCacheKeys:    previewCacheKeys,
 		logger:              logger.NewLoggerWithPrefix(context.Background(), "preview-provision"),
 	}
 }
@@ -35,10 +45,6 @@ func newProvisionReconciler(spec PreviewWorkerSpec) *provisionReconciler {
 func (r *provisionReconciler) Name() string { return "provision" }
 
 func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.PreviewStack) (subReconcilerResult, error) {
-	if preview.Status.Phase != models.PreviewStackPhaseProvisioning {
-		return resultNil, nil
-	}
-
 	config, sErr := r.configStore.GetByID(ctx, preview.StackPreviewConfigID)
 	if sErr != nil {
 		return resultNil, fmt.Errorf("failed to get config: %w", sErr)
@@ -165,7 +171,21 @@ func (r *provisionReconciler) resolveStackfileContent(ctx context.Context, previ
 		h := sha256.Sum256(content)
 		return content, hex.EncodeToString(h[:]), nil
 	}
-	return r.previewStackService.InternalFetchStackfile(ctx, config, preview.CommitSHA)
+
+	cacheKey := config.GitRepository.RepoURL + ":" + preview.CommitSHA + ":" + config.StackfilePath
+	if cached, ok := r.stackfileCache.Load(cacheKey); ok {
+		entry := cached.(stackfileCacheEntry)
+		return entry.content, entry.hash, nil
+	}
+
+	content, hash, opErr := r.previewStackService.InternalFetchStackfile(ctx, config, preview.CommitSHA)
+	if opErr != nil {
+		return nil, "", opErr
+	}
+
+	r.stackfileCache.Store(cacheKey, stackfileCacheEntry{content: content, hash: hash})
+	r.previewCacheKeys.Store(preview.ID, cacheKey)
+	return content, hash, nil
 }
 
 func (r *provisionReconciler) needsUpdateOrRelease(preview *models.PreviewStack, stackFileHash, overridesHash string) (needsUpdate, needsRelease bool) {

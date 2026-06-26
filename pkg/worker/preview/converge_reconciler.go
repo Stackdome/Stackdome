@@ -27,14 +27,8 @@ func newConvergeReconciler(spec PreviewWorkerSpec) *convergeReconciler {
 func (r *convergeReconciler) Name() string { return "converge" }
 
 func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.PreviewStack) (subReconcilerResult, error) {
-	if preview.Status.Phase != models.PreviewStackPhaseDeploying {
-		return resultNil, nil
-	}
-
 	if preview.ActiveReleaseID == nil {
-		// How did this happen? We should have a release by now.
-		r.logger.Errorf("preview %s: no active release found", preview.ID)
-		return resultStop, nil
+		return resultNil, nil
 	}
 
 	release, sErr := r.releaseService.InternalGet(ctx, *preview.ActiveReleaseID)
@@ -44,6 +38,9 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 
 	switch {
 	case release.State == models.ReleaseStateReleased:
+		if preview.Status.Phase == models.PreviewStackPhaseReady {
+			return resultNil, nil
+		}
 		stack, sErr := r.stackService.InternalGetStack(ctx, *preview.StackID)
 		if sErr != nil {
 			return resultNil, fmt.Errorf("failed to get stack: %w", sErr)
