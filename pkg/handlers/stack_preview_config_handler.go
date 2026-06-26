@@ -116,4 +116,3 @@ func (h *stackPreviewConfigHandler) Delete(w http.ResponseWriter, r *http.Reques
 	}
 	handleDelete(w, r, cfg, http.StatusNoContent)
 }
-

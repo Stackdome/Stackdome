@@ -49,13 +49,15 @@ func (s *stackPreviewConfigService) Create(ctx context.Context, config *models.S
 	if permErr := s.permissions.Check(ctx, config.TeamID, auth.ResourcePreviewConfigs, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
+	if config.MaxActivePreviews <= 0 {
+		config.MaxActivePreviews = models.DefaultMaxActivePreviews
+	}
+	if config.GitRepository.BaseBranch == "" {
+		config.GitRepository.BaseBranch = models.DefaultBaseBranch
+	}
 
 	if err := s.validate(ctx, config); err != nil {
 		return nil, err
-	}
-
-	if config.MaxActivePreviews <= 0 {
-		config.MaxActivePreviews = models.DefaultMaxActivePreviews
 	}
 
 	if err := s.validateGitRepo(ctx, config); err != nil {
@@ -87,15 +89,14 @@ func (s *stackPreviewConfigService) Update(ctx context.Context, id string, updat
 	if permErr := s.permissions.Check(ctx, existing.TeamID, auth.ResourcePreviewConfigs, id, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
-
-	if err := s.validate(ctx, updated); err != nil {
-		return nil, err
-	}
-
 	updated.ID = existing.ID
 	updated.OrganisationID = existing.OrganisationID
 	updated.TeamID = existing.TeamID
 	updated.UserID = existing.UserID
+	updated.Name = existing.Name
+	if err := s.validate(ctx, updated); err != nil {
+		return nil, err
+	}
 
 	return s.store.Update(ctx, updated)
 }

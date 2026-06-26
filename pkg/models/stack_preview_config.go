@@ -11,6 +11,7 @@ const (
 	DefaultMaxActivePreviews = 10
 	MaxMaxActivePreviews     = 50
 	DefaultStackfilePath     = "stackfile.yaml"
+	DefaultBaseBranch        = "main"
 )
 
 // PreviewGitRepository holds the git configuration for a preview environment.
