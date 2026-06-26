@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -43,28 +44,26 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 		return resultNil, fmt.Errorf("failed to get config: %w", sErr)
 	}
 
-	var content []byte
-	var hash string
-	if preview.StackfileContent != nil {
-		content = []byte(*preview.StackfileContent)
-		h := sha256.Sum256(content)
-		hash = hex.EncodeToString(h[:])
-	} else {
-		var opErr *errors.OperationError
-		content, hash, opErr = r.previewStackService.InternalFetchStackfile(ctx, config, preview.CommitSHA)
-		if opErr != nil {
-			if errors.IsRetryable(opErr) {
-				return resultNil, opErr
-			}
-			return r.fail(ctx, preview, opErr.Reason, opErr.Message)
+	content, hash, opErr := r.resolveStackfileContent(ctx, preview, config)
+	if opErr != nil {
+		if errors.IsRetryable(opErr) {
+			return resultNil, opErr
 		}
+		return r.fail(ctx, preview, opErr.Reason, opErr.Message)
 	}
 
+	// Sync path: stack already exists
 	if preview.StackID != nil {
-		// Sync path: stack already exists
-		needsUpdate := hash != preview.StackfileHash || len(preview.ImageOverrides) > 0
+		overridesHash := hashOverrides(preview.ImageOverrides)
+		needsUpdate, needsRelease := r.needsUpdateOrRelease(preview, hash, overridesHash)
+		if !needsRelease {
+			// NOOP.
+			return resultNil, nil
+		}
+
 		var model *models.Stack
 		if needsUpdate {
+			// Build the stack model from the content
 			var buildErr *errors.OperationError
 			model, buildErr = r.previewStackService.InternalBuildStackFromContent(ctx, config, preview, content)
 			if buildErr != nil {
@@ -84,13 +83,20 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 
 			release, sErr := r.releaseService.InternalCreateRelease(txCtx, *preview.StackID, models.ReleaseCause{
 				Kind:   models.ReleaseCausePreviewSync,
-				Detail: fmt.Sprintf("PR #%s synced at %s", preview.PRNumber, preview.CommitSHA[:7]),
+				Detail: fmt.Sprintf("PR #%s synced at %s", preview.PRNumber, shortSHA(preview.CommitSHA)),
 			})
 			if sErr != nil {
 				return sErr
 			}
 
-			preview.StackfileHash = hash
+			preview.ReconcilerStatus = models.PreviewReconcilerStatus{
+				LastAppliedCommitSHA:     preview.CommitSHA,
+				LastAppliedStackfileHash: hash,
+				LastAppliedOverridesHash: overridesHash,
+			}
+			if preview.ForceSyncRequestedAt != nil {
+				preview.ReconcilerStatus.LastProcessedForceSyncAt = *preview.ForceSyncRequestedAt
+			}
 			preview.ActiveReleaseID = &release.ID
 			preview.Status = models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeploying, Reason: "SyncTriggered"}
 			if _, sErr := r.previewStackStore.Update(txCtx, preview); sErr != nil {
@@ -105,6 +111,7 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 	}
 
 	// Create path: no stack yet
+	overridesHash := hashOverrides(preview.ImageOverrides)
 	model, opErr := r.previewStackService.InternalBuildStackFromContent(ctx, config, preview, content)
 	if opErr != nil {
 		if errors.IsRetryable(opErr) {
@@ -123,7 +130,7 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 
 		release, sErr := r.releaseService.InternalCreateRelease(txCtx, created.ID, models.ReleaseCause{
 			Kind:   models.ReleaseCausePreviewSync,
-			Detail: fmt.Sprintf("PR #%s opened at %s", preview.PRNumber, preview.CommitSHA[:7]),
+			Detail: fmt.Sprintf("PR #%s opened at %s", preview.PRNumber, shortSHA(preview.CommitSHA)),
 		})
 		if sErr != nil {
 			return sErr
@@ -131,7 +138,14 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 
 		preview.StackID = &created.ID
 		preview.ActiveReleaseID = &release.ID
-		preview.StackfileHash = hash
+		preview.ReconcilerStatus = models.PreviewReconcilerStatus{
+			LastAppliedCommitSHA:     preview.CommitSHA,
+			LastAppliedStackfileHash: hash,
+			LastAppliedOverridesHash: overridesHash,
+		}
+		if preview.ForceSyncRequestedAt != nil {
+			preview.ReconcilerStatus.LastProcessedForceSyncAt = *preview.ForceSyncRequestedAt
+		}
 		preview.Status = models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeploying, Reason: "StackCreated"}
 		if _, sErr := r.previewStackStore.Update(txCtx, preview); sErr != nil {
 			return sErr
@@ -143,6 +157,41 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 
 	r.logger.Infof("preview %s provisioned, stack %s created", preview.ID, created.ID)
 	return resultRequeueAfter(convergePollInterval), nil
+}
+
+func (r *provisionReconciler) resolveStackfileContent(ctx context.Context, preview *models.PreviewStack, config *models.StackPreviewConfig) ([]byte, string, *errors.OperationError) {
+	if preview.StackfileContent != nil {
+		content := []byte(*preview.StackfileContent)
+		h := sha256.Sum256(content)
+		return content, hex.EncodeToString(h[:]), nil
+	}
+	return r.previewStackService.InternalFetchStackfile(ctx, config, preview.CommitSHA)
+}
+
+func (r *provisionReconciler) needsUpdateOrRelease(preview *models.PreviewStack, stackFileHash, overridesHash string) (needsUpdate, needsRelease bool) {
+	needsUpdate = stackFileHash != preview.ReconcilerStatus.LastAppliedStackfileHash ||
+		preview.CommitSHA != preview.ReconcilerStatus.LastAppliedCommitSHA ||
+		overridesHash != preview.ReconcilerStatus.LastAppliedOverridesHash
+	forceSyncPending := preview.ForceSyncRequestedAt != nil &&
+		preview.ForceSyncRequestedAt.After(preview.ReconcilerStatus.LastProcessedForceSyncAt)
+	needsRelease = needsUpdate || forceSyncPending
+	return needsUpdate, needsRelease
+}
+
+func hashOverrides(overrides models.ImageOverrides) string {
+	if len(overrides) == 0 {
+		return ""
+	}
+	data, _ := json.Marshal(overrides)
+	h := sha256.Sum256(data)
+	return hex.EncodeToString(h[:])
+}
+
+func shortSHA(sha string) string {
+	if len(sha) > 7 {
+		return sha[:7]
+	}
+	return sha
 }
 
 func (r *provisionReconciler) fail(ctx context.Context, preview *models.PreviewStack, reason, message string) (subReconcilerResult, error) {

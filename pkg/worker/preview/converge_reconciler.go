@@ -78,6 +78,18 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 		r.logger.Infof("preview %s failed: %s", preview.ID, release.Message)
 		return resultStop, nil
 
+	case release.State == models.ReleaseStateCancelled:
+		preview.Status = models.PreviewStackStatus{
+			Phase:   models.PreviewStackPhaseFailed,
+			Reason:  "ReleaseCancelled",
+			Message: "release was cancelled",
+		}
+		if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
+			return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
+		}
+		r.logger.Infof("preview %s cancelled", preview.ID)
+		return resultStop, nil
+
 	default:
 		return resultRequeueAfter(convergePollInterval), nil
 	}

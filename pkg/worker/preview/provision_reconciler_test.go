@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"time"
+
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
@@ -105,7 +107,9 @@ var _ = Describe("ProvisionReconciler", func() {
 					Expect(*p.StackID).To(Equal("stack-1"))
 					Expect(p.ActiveReleaseID).ToNot(BeNil())
 					Expect(*p.ActiveReleaseID).To(Equal("rel-1"))
-					Expect(p.StackfileHash).To(Equal(stackfileHash))
+					Expect(p.ReconcilerStatus.LastAppliedStackfileHash).To(Equal(stackfileHash))
+					Expect(p.ReconcilerStatus.LastAppliedCommitSHA).To(Equal(preview.CommitSHA))
+
 					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseDeploying))
 					Expect(p.Status.Reason).To(Equal("StackCreated"))
 					return p, nil
@@ -214,7 +218,9 @@ var _ = Describe("ProvisionReconciler", func() {
 					Expect(*p.StackID).To(Equal("stack-1"))
 					Expect(p.ActiveReleaseID).ToNot(BeNil())
 					Expect(*p.ActiveReleaseID).To(Equal("rel-1"))
-					Expect(p.StackfileHash).To(Equal(expectedHash))
+					Expect(p.ReconcilerStatus.LastAppliedStackfileHash).To(Equal(expectedHash))
+					Expect(p.ReconcilerStatus.LastAppliedCommitSHA).To(Equal(preview.CommitSHA))
+
 					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseDeploying))
 					Expect(p.Status.Reason).To(Equal("StackCreated"))
 					return p, nil
@@ -241,8 +247,11 @@ var _ = Describe("ProvisionReconciler", func() {
 				StackID:              &stackID,
 				PRNumber:             "42",
 				CommitSHA:            "abc1234def5678",
-				StackfileHash:        "old-hash",
-				Status:               models.PreviewStackStatus{Phase: models.PreviewStackPhaseProvisioning},
+				ReconcilerStatus: models.PreviewReconcilerStatus{
+					LastAppliedStackfileHash: "old-hash",
+					LastAppliedCommitSHA:     "abc1234def5678",
+				},
+				Status: models.PreviewStackStatus{Phase: models.PreviewStackPhaseProvisioning},
 			}
 			config = &models.StackPreviewConfig{
 				ID:   "cfg-1",
@@ -250,35 +259,19 @@ var _ = Describe("ProvisionReconciler", func() {
 			}
 		})
 
-		It("skips UpdateStack when hash is unchanged and no image overrides, still creates release", func() {
+		It("returns resultNil when stackfile hash and lastAppliedCommit is unchanged and no image overrides (idempotent noop)", func() {
 			stackfileContent := []byte("name: my-app")
 			sameHash := "old-hash"
-			createdRelease := &models.StackRelease{ID: "rel-2"}
 
 			cfgStore.EXPECT().GetByID(gomock.Any(), "cfg-1").Return(config, nil)
 			previewService.EXPECT().InternalFetchStackfile(gomock.Any(), config, preview.CommitSHA).
 				Return(stackfileContent, sameHash, nil)
 
-			// No InternalBuildStackFromContent or InternalUpdateStack expected
-
-			previewStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
-					return fn(ctx)
-				})
-			// No UpdateStack call expected
-			releaseSvc.EXPECT().InternalCreateRelease(gomock.Any(), stackID, gomock.Any()).Return(createdRelease, nil)
-			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
-					Expect(p.ActiveReleaseID).ToNot(BeNil())
-					Expect(*p.ActiveReleaseID).To(Equal("rel-2"))
-					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseDeploying))
-					Expect(p.Status.Reason).To(Equal("SyncTriggered"))
-					return p, nil
-				})
+			// No InternalBuildStackFromContent, InternalUpdateStack, transaction, or release expected
 
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(resultRequeueAfter(convergePollInterval)))
+			Expect(result).To(Equal(resultNil))
 		})
 
 		It("calls UpdateStack when stackfile hash changed", func() {
@@ -302,7 +295,10 @@ var _ = Describe("ProvisionReconciler", func() {
 			releaseSvc.EXPECT().InternalCreateRelease(gomock.Any(), stackID, gomock.Any()).Return(createdRelease, nil)
 			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
-					Expect(p.StackfileHash).To(Equal(newHash))
+					Expect(p.ReconcilerStatus.LastAppliedStackfileHash).To(Equal(newHash))
+					Expect(p.ReconcilerStatus.LastAppliedCommitSHA).To(Equal(preview.CommitSHA))
+					Expect(p.ReconcilerStatus.LastAppliedOverridesHash).To(Equal("")) // no overrides
+
 					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseDeploying))
 					return p, nil
 				})
@@ -316,6 +312,7 @@ var _ = Describe("ProvisionReconciler", func() {
 			stackfileContent := []byte("name: my-app")
 			sameHash := "old-hash"
 			preview.ImageOverrides = models.ImageOverrides{"web": "myapp:pr-42"}
+			// LastAppliedOverridesHash defaults to "" which differs from the non-empty overrides hash
 
 			builtStack := &models.Stack{Name: "my-app"}
 			updatedStack := &models.Stack{ID: stackID, Name: "my-app"}
@@ -335,6 +332,8 @@ var _ = Describe("ProvisionReconciler", func() {
 			releaseSvc.EXPECT().InternalCreateRelease(gomock.Any(), stackID, gomock.Any()).Return(createdRelease, nil)
 			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(p.ReconcilerStatus.LastAppliedCommitSHA).To(Equal(preview.CommitSHA))
+					Expect(p.ReconcilerStatus.LastAppliedOverridesHash).ToNot(BeEmpty())
 					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseDeploying))
 					return p, nil
 				})
@@ -367,7 +366,10 @@ var _ = Describe("ProvisionReconciler", func() {
 			releaseSvc.EXPECT().InternalCreateRelease(gomock.Any(), stackID, gomock.Any()).Return(createdRelease, nil)
 			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
-					Expect(p.StackfileHash).To(Equal(newHash))
+					Expect(p.ReconcilerStatus.LastAppliedStackfileHash).To(Equal(newHash))
+					Expect(p.ReconcilerStatus.LastAppliedCommitSHA).To(Equal(preview.CommitSHA))
+					Expect(p.ReconcilerStatus.LastAppliedOverridesHash).To(Equal("")) // no overrides
+
 					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseDeploying))
 					return p, nil
 				})
@@ -377,28 +379,113 @@ var _ = Describe("ProvisionReconciler", func() {
 			Expect(result).To(Equal(resultRequeueAfter(convergePollInterval)))
 		})
 
-		It("skips UpdateStack with inline StackfileContent when hash is unchanged", func() {
+		It("returns resultNil with inline StackfileContent when hash is unchanged (idempotent noop)", func() {
 			inlineContent := []byte("name: same-content")
 			h := sha256.Sum256(inlineContent)
 			unchangedHash := hex.EncodeToString(h[:])
 
-			preview.StackfileHash = unchangedHash
+			preview.ReconcilerStatus.LastAppliedStackfileHash = unchangedHash
 			preview.StackfileContent = ptr.To("name: same-content")
-			createdRelease := &models.StackRelease{ID: "rel-6"}
 
 			cfgStore.EXPECT().GetByID(gomock.Any(), "cfg-1").Return(config, nil)
-			// InternalFetchStackfile should NOT be called
-			// InternalBuildStackFromContent and InternalUpdateStack should NOT be called
+			// InternalFetchStackfile should NOT be called (inline content used)
+			// No InternalBuildStackFromContent, transaction, or release expected
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultNil))
+		})
+
+		It("calls UpdateStack when commit SHA changed but stackfile hash unchanged", func() {
+			// Set up: stackfile hash matches, but commit SHA differs from last applied
+			preview.CommitSHA = "newcommit1234567"
+			preview.ReconcilerStatus.LastAppliedCommitSHA = "abc1234def5678"
+			preview.ReconcilerStatus.LastAppliedStackfileHash = "old-hash"
+
+			stackfileContent := []byte("name: my-app")
+			sameHash := "old-hash" // same as StackfileHash
+			builtStack := &models.Stack{Name: "my-app"}
+			updatedStack := &models.Stack{ID: stackID, Name: "my-app"}
+			createdRelease := &models.StackRelease{ID: "rel-commit"}
+
+			cfgStore.EXPECT().GetByID(gomock.Any(), "cfg-1").Return(config, nil)
+			previewService.EXPECT().InternalFetchStackfile(gomock.Any(), config, preview.CommitSHA).
+				Return(stackfileContent, sameHash, nil)
+			previewService.EXPECT().InternalBuildStackFromContent(gomock.Any(), config, preview, stackfileContent).
+				Return(builtStack, nil)
 
 			previewStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
 					return fn(ctx)
 				})
+			stackSvc.EXPECT().InternalUpdateStack(gomock.Any(), stackID, builtStack).Return(updatedStack, nil)
+			releaseSvc.EXPECT().InternalCreateRelease(gomock.Any(), stackID, gomock.Any()).Return(createdRelease, nil)
+			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(p.ReconcilerStatus.LastAppliedCommitSHA).To(Equal("newcommit1234567"))
+					Expect(p.ReconcilerStatus.LastAppliedOverridesHash).To(Equal("")) // no overrides
+
+					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseDeploying))
+					return p, nil
+				})
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultRequeueAfter(convergePollInterval)))
+		})
+
+		It("returns resultNil when commit, hash, and overrides are all unchanged (idempotent noop)", func() {
+			// Everything matches - needsUpdate=false, ForceSync=false
+			preview.CommitSHA = "abc1234def5678"
+			preview.ReconcilerStatus.LastAppliedCommitSHA = "abc1234def5678"
+			preview.ReconcilerStatus.LastAppliedStackfileHash = "old-hash"
+			// No image overrides, LastAppliedOverridesHash defaults to ""
+
+			stackfileContent := []byte("name: my-app")
+			sameHash := "old-hash"
+
+			cfgStore.EXPECT().GetByID(gomock.Any(), "cfg-1").Return(config, nil)
+			previewService.EXPECT().InternalFetchStackfile(gomock.Any(), config, preview.CommitSHA).
+				Return(stackfileContent, sameHash, nil)
+
+			// No InternalBuildStackFromContent, transaction, or release expected
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultNil))
+		})
+
+		It("creates release when ForceSyncRequestedAt is pending despite no changes", func() {
+			preview.CommitSHA = "abc1234def5678"
+			preview.ReconcilerStatus.LastAppliedCommitSHA = "abc1234def5678"
+			preview.ReconcilerStatus.LastAppliedStackfileHash = "old-hash"
+			preview.ForceSyncRequestedAt = ptr.To(time.Now().UTC())
+
+			stackfileContent := []byte("name: my-app")
+			sameHash := "old-hash"
+			createdRelease := &models.StackRelease{ID: "rel-force"}
+
+			cfgStore.EXPECT().GetByID(gomock.Any(), "cfg-1").Return(config, nil)
+			previewService.EXPECT().InternalFetchStackfile(gomock.Any(), config, preview.CommitSHA).
+				Return(stackfileContent, sameHash, nil)
+
+			// needsUpdate=false so no InternalBuildStackFromContent or InternalUpdateStack,
+			// but needsRelease=true (ForceSync) so transaction + release are created
+
+			previewStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+					return fn(ctx)
+				})
+			// No InternalUpdateStack expected (needsUpdate is false)
 			releaseSvc.EXPECT().InternalCreateRelease(gomock.Any(), stackID, gomock.Any()).Return(createdRelease, nil)
 			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
 					Expect(p.ActiveReleaseID).ToNot(BeNil())
-					Expect(*p.ActiveReleaseID).To(Equal("rel-6"))
+					Expect(*p.ActiveReleaseID).To(Equal("rel-force"))
+
+					Expect(p.ReconcilerStatus.LastAppliedCommitSHA).To(Equal("abc1234def5678"))
+					Expect(p.ReconcilerStatus.LastAppliedOverridesHash).To(Equal(""))
+					Expect(p.ReconcilerStatus.LastProcessedForceSyncAt).To(Equal(*preview.ForceSyncRequestedAt))
 					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseDeploying))
 					Expect(p.Status.Reason).To(Equal("SyncTriggered"))
 					return p, nil

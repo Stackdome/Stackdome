@@ -33,6 +33,29 @@ const (
 	PreviewStackPhaseDeleting     PreviewStackPhase = "Deleting"
 )
 
+type PreviewReconcilerStatus struct {
+	LastAppliedCommitSHA     string    `json:"last_applied_commit_sha,omitempty"`
+	LastAppliedStackfileHash string    `json:"last_applied_stackfile_hash,omitempty"`
+	LastAppliedOverridesHash string    `json:"last_applied_overrides_hash,omitempty"`
+	LastProcessedForceSyncAt time.Time `json:"last_processed_force_sync_at,omitempty"`
+}
+
+func (s PreviewReconcilerStatus) Value() (driver.Value, error) {
+	return json.Marshal(s)
+}
+
+func (s *PreviewReconcilerStatus) Scan(value any) error {
+	if value == nil {
+		*s = PreviewReconcilerStatus{}
+		return nil
+	}
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed for PreviewReconcilerStatus")
+	}
+	return json.Unmarshal(b, s)
+}
+
 // PreviewStackStatus holds the current status of a preview stack.
 type PreviewStackStatus struct {
 	Phase   PreviewStackPhase    `json:"phase"`
@@ -97,16 +120,17 @@ type PreviewStack struct {
 	StackPreviewConfigID string `gorm:"not null"`
 	StackID              *string
 	ActiveReleaseID      *string
-	Name                 string             `gorm:"not null"`
-	PRNumber             string             `gorm:"not null"`
-	Branch               string             `gorm:"not null"`
-	CommitSHA            string             `gorm:"not null"`
-	Source               PreviewStackSource `gorm:"not null"`
-	ImageOverrides       ImageOverrides     `gorm:"type:jsonb"`
-	Labels               Labels             `gorm:"type:jsonb"`
-	Annotations          Annotations        `gorm:"type:jsonb"`
-	Status               PreviewStackStatus `gorm:"type:jsonb;not null"`
-	StackfileHash        string             `gorm:"not null;default:''"`
+	Name                 string                  `gorm:"not null"`
+	PRNumber             string                  `gorm:"not null"`
+	Branch               string                  `gorm:"not null"`
+	CommitSHA            string                  `gorm:"not null"`
+	Source               PreviewStackSource      `gorm:"not null"`
+	ImageOverrides       ImageOverrides          `gorm:"type:jsonb"`
+	Labels               Labels                  `gorm:"type:jsonb"`
+	Annotations          Annotations             `gorm:"type:jsonb"`
+	Status               PreviewStackStatus      `gorm:"type:jsonb;not null"`
+	ReconcilerStatus     PreviewReconcilerStatus `gorm:"type:jsonb;not null;default:'{}'"`
+	ForceSyncRequestedAt *time.Time
 	StackfileContent     *string
 	DeletionTimestamp    *time.Time
 	CreatedAt            time.Time
