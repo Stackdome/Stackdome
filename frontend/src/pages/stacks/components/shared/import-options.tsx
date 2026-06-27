@@ -20,18 +20,18 @@ export function buildImportOptions({
 }): ImportOption[] {
   return [
     {
-      id: 'docker-compose',
-      label: 'Docker Compose',
-      description: 'Import from a docker-compose.yml file',
-      icon: <img src={dockerIconUrl} alt="Docker" className="h-4 w-4" />,
-      onClick: onDockerCompose,
-    },
-    {
       id: 'templates',
       label: 'Templates',
       description: 'Start from a curated stack template',
       icon: <LayoutTemplate className="h-4 w-4" />,
       onClick: onTemplates,
+    },
+    {
+      id: 'docker-compose',
+      label: 'Docker Compose',
+      description: 'Import from a docker-compose.yml file',
+      icon: <img src={dockerIconUrl} alt="Docker" className="h-4 w-4" />,
+      onClick: onDockerCompose,
     },
   ];
 }

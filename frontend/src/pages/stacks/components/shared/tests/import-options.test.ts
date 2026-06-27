@@ -15,6 +15,11 @@ describe("buildImportOptions", () => {
     expect(onTemplates).toHaveBeenCalledTimes(1);
   });
 
+  it("lists Templates before Docker Compose", () => {
+    const opts = buildImportOptions({ onDockerCompose: vi.fn(), onTemplates: vi.fn() });
+    expect(opts.map((o) => o.id)).toEqual(["templates", "docker-compose"]);
+  });
+
   it("wires the Docker Compose option to onDockerCompose", () => {
     const onTemplates = vi.fn();
     const onDockerCompose = vi.fn();
