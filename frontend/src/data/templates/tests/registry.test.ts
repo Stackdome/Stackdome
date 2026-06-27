@@ -75,4 +75,14 @@ describe("templates registry", () => {
     expect(cmd).toContain("config set gateway.mode local");
     expect(cmd).toContain("node openclaw.mjs gateway");
   });
+
+  it("ships the Grafana preset as a single web service with a volume", () => {
+    const { data } = templateToFormData(getTemplateById("grafana")!);
+    const resources = data.spec!.stack_resources!;
+    expect(resources.map((r) => r.name)).toEqual(["grafana"]);
+    expect(
+      resources.find((r) => r.name === "grafana")!.depends_on ?? [],
+    ).toHaveLength(0);
+    expect(data.spec!.volumes!.length).toBeGreaterThan(0);
+  });
 });
