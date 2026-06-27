@@ -16,36 +16,49 @@ const REQUIRED_FIELDS = [
 ] as const;
 
 describe("templates registry", () => {
-  it("exposes the ToolJet template with all display fields", () => {
-    const t = getTemplateById("tooljet");
-    expect(t).toBeDefined();
-    expect(t!.name).toBe("ToolJet");
-    for (const field of REQUIRED_FIELDS) {
-      expect(t![field], `expected non-empty ${field}`).toBeTruthy();
-    }
-    expect(templates).toContain(t);
-  });
+  // Every registered template must be display-complete and produce a valid
+  // create-form stack — adding a template that breaks either fails here.
+  it.each(templates.map((t) => [t.id, t] as const))(
+    "%s: has all display fields and converts to a valid create-form stack",
+    (_id, template) => {
+      expect(template.name).toBeTruthy();
+      for (const field of REQUIRED_FIELDS) {
+        expect(
+          template[field],
+          `expected non-empty ${field} on ${template.id}`,
+        ).toBeTruthy();
+      }
 
-  it("converts the ToolJet preset into a valid create-form stack", () => {
-    const t = getTemplateById("tooljet")!;
-    const { data } = templateToFormData(t);
+      const { data } = templateToFormData(template);
+      const parsed = FormStackSchema.safeParse(data);
+      expect(parsed.success, JSON.stringify(parsed.error?.issues, null, 2)).toBe(
+        true,
+      );
+      expect(data.name).toBe(template.id);
+    },
+  );
 
-    const parsed = FormStackSchema.safeParse(data);
-    expect(parsed.success, JSON.stringify(parsed.error?.issues, null, 2)).toBe(true);
-
+  it("ships the ToolJet preset as app + postgresql with a volume", () => {
+    const { data } = templateToFormData(getTemplateById("tooljet")!);
     const resources = data.spec!.stack_resources!;
     const names = resources.map((r) => r.name);
     expect(names).toContain("tooljet");
     expect(names).toContain("postgresql");
-
-    const app = resources.find((r) => r.name === "tooljet")!;
-    expect(app.depends_on).toContain("postgresql");
-
+    expect(
+      resources.find((r) => r.name === "tooljet")!.depends_on,
+    ).toContain("postgresql");
     expect(data.spec!.volumes!.length).toBeGreaterThan(0);
   });
 
-  it("names the prefilled stack after the template", () => {
-    const t = getTemplateById("tooljet")!;
-    expect(templateToFormData(t).data.name).toBe("tooljet");
+  it("ships the n8n preset as app + postgres with a volume", () => {
+    const { data } = templateToFormData(getTemplateById("n8n")!);
+    const resources = data.spec!.stack_resources!;
+    const names = resources.map((r) => r.name);
+    expect(names).toContain("n8n");
+    expect(names).toContain("postgres");
+    expect(resources.find((r) => r.name === "n8n")!.depends_on).toContain(
+      "postgres",
+    );
+    expect(data.spec!.volumes!.length).toBeGreaterThan(0);
   });
 });
