@@ -11,9 +11,9 @@ export const tooljet: Template = {
   shortDescription:
     "Low-code platform for building internal tools and dashboards.",
   longDescription:
-    "A drag-and-drop builder for internal tools — connect to your databases and APIs and ship admin panels, dashboards and CRUD apps without a frontend team.",
-  website: "https://tooljet.com",
-  docs: "https://docs.tooljet.com",
+    "Build enterprise apps, AI agents, and workflows in minutes, not months. Just describe what you need in natural language.",
+  website: "https://tooljet.com/",
+  docs: "https://docs.tooljet.com/",
   version: "ee-lts-latest",
   stackYaml,
 };
