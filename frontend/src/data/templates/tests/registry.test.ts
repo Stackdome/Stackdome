@@ -85,4 +85,18 @@ describe("templates registry", () => {
     ).toHaveLength(0);
     expect(data.spec!.volumes!.length).toBeGreaterThan(0);
   });
+
+  it("ships the Immich preset as server + ML + redis + vector-postgres with volumes", () => {
+    const { data } = templateToFormData(getTemplateById("immich")!);
+    const resources = data.spec!.stack_resources!;
+    const names = resources.map((r) => r.name);
+    expect(names).toContain("immich-server");
+    expect(names).toContain("immich-machine-learning");
+    expect(names).toContain("redis");
+    expect(names).toContain("database");
+    expect(
+      resources.find((r) => r.name === "immich-server")!.depends_on ?? [],
+    ).toEqual(expect.arrayContaining(["redis", "database"]));
+    expect(data.spec!.volumes!.length).toBeGreaterThanOrEqual(3);
+  });
 });

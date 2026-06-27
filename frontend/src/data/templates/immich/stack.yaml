@@ -1,0 +1,47 @@
+# Immich — self-hosted photo & video backup (Google Photos alternative). 4 services.
+# From the official docker-compose (docs.immich.app/install/docker-compose), flattened for Stackdome:
+# .env inlined, host bind mounts -> named volumes, healthcheck/restart/shm_size dropped.
+# database MUST be the immich vector Postgres (VectorChord + pgvector) — plain postgres won't work.
+# immich-server serves the web UI on 2283; redis = valkey; machine-learning does smart search/faces
+# (the server boots without it, just degraded). Replace both REPLACE_DB_PASSWORD_VALUE_HERE (must match).
+# Volumes: immich-upload = your photo library (large); immich-db = Postgres data; model-cache = ML models.
+name: immich
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:v2.7.5
+    ports:
+      - "2283:2283"
+    depends_on:
+      - redis
+      - database
+    environment:
+      DB_HOSTNAME: database
+      DB_USERNAME: postgres
+      DB_PASSWORD: "REPLACE_DB_PASSWORD_VALUE_HERE"
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: redis
+    volumes:
+      - immich-upload:/data
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:v2.7.5
+    volumes:
+      - model-cache:/cache
+
+  redis:
+    image: valkey/valkey:9
+
+  database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "REPLACE_DB_PASSWORD_VALUE_HERE"
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - immich-db:/var/lib/postgresql/data
+
+volumes:
+  immich-upload:
+  model-cache:
+  immich-db:
