@@ -50,6 +50,21 @@ export interface ConversionError {
 }
 
 /**
+ * Sanitize a Docker Compose name into a valid Kubernetes resource name (RFC 1123 subdomain).
+ * Docker Compose permits characters Kubernetes rejects — most commonly '_' in volume names
+ * like "postgres_data". An invalid name makes the Volume CR rejected by the API server, which
+ * stalls the entire stack rollout. Lowercase, replace unsupported runs with '-', and trim so
+ * the result starts and ends on an alphanumeric character.
+ */
+export function sanitizeKubernetesName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9.-]+/g, "-")
+    .replace(/^[^a-z0-9]+/, "")
+    .replace(/[^a-z0-9]+$/, "");
+}
+
+/**
  * Convert Docker Compose file to StackResource format
  */
 export function convertDockerComposeToStackData(
@@ -237,7 +252,7 @@ export function convertVolumeToStackVolume(
 
   try {
     const stackVolume: FormVolumeExtendedData = {
-      name: volumeName,
+      name: sanitizeKubernetesName(volumeName),
       sourceType: "None", // User must configure manually
       labels: [],
       spec: {
@@ -456,7 +471,7 @@ function convertVolumeMounts(
           if (!source.startsWith('/') && !source.startsWith('./') && !source.startsWith('../')) {
             // Named volume - this maps to StackDome volumes
             volumeMounts.push({
-              source_volume_name: source,
+              source_volume_name: sanitizeKubernetesName(source),
               target_path: target,
             });
 
@@ -493,7 +508,7 @@ function convertVolumeMounts(
           if (volume.type === 'volume') {
             // Named volume
             volumeMounts.push({
-              source_volume_name: volume.source,
+              source_volume_name: sanitizeKubernetesName(volume.source),
               target_path: volume.target,
             });
 
