@@ -1,31 +1,29 @@
 # OpenClaw — self-hosted AI assistant gateway (single container, no external DB).
-# Adapted from github.com/openclaw/openclaw docker-compose.yml, flattened for Stackdome:
-#   - uses the published GHCR image (no local build)
-#   - binds LAN so the Control UI is reachable through the platform ingress
-#   - skips interactive onboarding; the deployer sets the token + provider key below
-#   - state, config, and workspace persist on the openclaw-data volume (/home/node/.openclaw)
-# Replace REPLACE_OPENCLAW_GATEWAY_TOKEN_VALUE_HERE (openssl rand -hex 32) and
-# REPLACE_ANTHROPIC_API_KEY_VALUE_HERE before deploying. A remote Control UI also
-# needs one-time device pairing (openclaw devices approve) after the first connect.
+# Minimal config, boot-verified against ghcr.io/openclaw/openclaw:2026.6.10 (docker compose up → healthy):
+#   - `--allow-unconfigured` lets the gateway boot headless without a mounted openclaw.json
+#     (the image otherwise exits with "Missing config. Run openclaw setup or set gateway.mode=local").
+#   - the image entrypoint runs `node openclaw.mjs gateway`; we only append the flag above.
+#   - OPENCLAW_GATEWAY_BIND=lan binds 0.0.0.0:18789 so the Control UI is reachable through the ingress
+#     (default bind is loopback-only); OPENCLAW_SKIP_ONBOARDING=1 skips the interactive prompt.
+#   - HOME and the state/config/workspace paths default to /home/node inside the image, so they are omitted.
+#   - state, sessions, and memory persist on the openclaw-data volume (/home/node/.openclaw).
+# Replace REPLACE_OPENCLAW_GATEWAY_TOKEN_VALUE_HERE (openssl rand -hex 32 — Control UI auth) and
+# REPLACE_OPENAI_API_KEY_VALUE_HERE before deploying. The default agent model is openai/gpt-5.5, so
+# OPENAI_API_KEY works out of the box; to use Claude instead, set an Anthropic model + ANTHROPIC_API_KEY.
+# Post-deploy (one-time): approve the browser via `openclaw devices approve`, and add your Stackdome
+# domain to gateway.controlUi.allowedOrigins (only localhost is allowlisted by default since v2026.2.26).
 name: openclaw
 services:
   openclaw:
     image: ghcr.io/openclaw/openclaw:2026.6.10
+    command: ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]
     ports:
       - "18789:18789"
     environment:
-      HOME: /home/node
-      OPENCLAW_HOME: /home/node
-      OPENCLAW_STATE_DIR: /home/node/.openclaw
-      OPENCLAW_CONFIG_DIR: /home/node/.openclaw
-      OPENCLAW_CONFIG_PATH: /home/node/.openclaw/openclaw.json
-      OPENCLAW_WORKSPACE_DIR: /home/node/.openclaw/workspace
-      OPENCLAW_GATEWAY_BIND: lan
       OPENCLAW_SKIP_ONBOARDING: "1"
-      OPENCLAW_DISABLE_BONJOUR: "1"
+      OPENCLAW_GATEWAY_BIND: lan
       OPENCLAW_GATEWAY_TOKEN: "REPLACE_OPENCLAW_GATEWAY_TOKEN_VALUE_HERE"
-      ANTHROPIC_API_KEY: "REPLACE_ANTHROPIC_API_KEY_VALUE_HERE"
-      TZ: UTC
+      OPENAI_API_KEY: "REPLACE_OPENAI_API_KEY_VALUE_HERE"
     volumes:
       - openclaw-data:/home/node/.openclaw
 

@@ -67,9 +67,11 @@ describe("templates registry", () => {
     const resources = data.spec!.stack_resources!;
     const names = resources.map((r) => r.name);
     expect(names).toEqual(["openclaw"]);
-    expect(
-      resources.find((r) => r.name === "openclaw")!.depends_on ?? [],
-    ).toHaveLength(0);
+    const openclaw = resources.find((r) => r.name === "openclaw")!;
+    expect(openclaw.depends_on ?? []).toHaveLength(0);
     expect(data.spec!.volumes!.length).toBeGreaterThan(0);
+    // --allow-unconfigured is load-bearing: without it the gateway exits with
+    // "Missing config" instead of serving the Control UI. Guard against regression.
+    expect(openclaw.execution_config?.command).toContain("--allow-unconfigured");
   });
 });
