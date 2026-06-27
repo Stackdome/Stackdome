@@ -61,4 +61,15 @@ describe("templates registry", () => {
     );
     expect(data.spec!.volumes!.length).toBeGreaterThan(0);
   });
+
+  it("ships the OpenClaw preset as a single gateway service with a volume", () => {
+    const { data } = templateToFormData(getTemplateById("openclaw")!);
+    const resources = data.spec!.stack_resources!;
+    const names = resources.map((r) => r.name);
+    expect(names).toEqual(["openclaw"]);
+    expect(
+      resources.find((r) => r.name === "openclaw")!.depends_on ?? [],
+    ).toHaveLength(0);
+    expect(data.spec!.volumes!.length).toBeGreaterThan(0);
+  });
 });
