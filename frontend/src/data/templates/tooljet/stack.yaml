@@ -1,0 +1,35 @@
+# ToolJet — in-built PostgreSQL deployment.
+# Adapted from https://tooljet-deployments.s3.us-west-1.amazonaws.com/docker/docker-compose-db.yaml
+# with the .env values inlined. Replace the `replace-with-…` secrets before deploying.
+name: tooljet
+services:
+  tooljet:
+    image: tooljet/tooljet:ee-lts-latest
+    command: npm run start:prod
+    ports:
+      - "80:80"
+    depends_on:
+      - postgresql
+    environment:
+      SERVE_CLIENT: "true"
+      PORT: "80"
+      TOOLJET_HOST: "http://localhost:80"
+      LOCKBOX_MASTER_KEY: "replace-with-openssl-rand-hex-32"
+      SECRET_KEY_BASE: "replace-with-openssl-rand-hex-64"
+      PG_HOST: "postgresql"
+      PG_PORT: "5432"
+      PG_DB: "tooljet_production"
+      PG_USER: "postgres"
+      PG_PASS: "replace-with-a-strong-password"
+
+  postgresql:
+    image: postgres:16
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: "tooljet_production"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "replace-with-a-strong-password"
+
+volumes:
+  postgres_data:

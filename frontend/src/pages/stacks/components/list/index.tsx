@@ -19,7 +19,10 @@ import { PageHeader, EmptyState, variantFromState, type StatusVariant } from "@/
 import { formatDistanceToNow } from "date-fns";
 import { DockerComposeImportDropdown } from "@/pages/stacks/components/shared/import-dropdown";
 import DockerComposeImportDialog from "@/pages/stacks/components/shared/docker-compose-import-dialog";
+import TemplatesBrowserDialog from "@/pages/stacks/components/shared/templates-browser-dialog";
 import { useDockerComposeImport } from "@/pages/stacks/hooks/use-docker-compose-import";
+import { useTemplateImport } from "@/pages/stacks/hooks/use-template-import";
+import { templates } from "@/data/templates/registry";
 import type { Stack } from "@/pages/stacks/types";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
@@ -76,6 +79,13 @@ export default function StacksPage() {
     handleImport,
     clearError: clearImportError,
   } = useDockerComposeImport();
+
+  const {
+    isDialogOpen: isTemplatesDialogOpen,
+    openDialog: openTemplatesDialog,
+    closeDialog: closeTemplatesDialog,
+    useTemplate,
+  } = useTemplateImport();
 
   useEffect(() => {
     const currentOrgId = getCurrentOrganizationId();
@@ -171,6 +181,7 @@ export default function StacksPage() {
               <>
                 <DockerComposeImportDropdown
                   onDockerComposeImport={openImportDialog}
+                  onTemplates={openTemplatesDialog}
                   variant="outline"
                 />
                 <Button onClick={handleCreateNewStack}>
@@ -350,6 +361,16 @@ export default function StacksPage() {
           isLoading={isImportLoading}
           error={importError}
           onClearError={clearImportError}
+        />
+
+        {/* Templates Browser Dialog */}
+        <TemplatesBrowserDialog
+          open={isTemplatesDialogOpen}
+          onOpenChange={(open) =>
+            open ? openTemplatesDialog() : closeTemplatesDialog()
+          }
+          templates={templates}
+          onUse={useTemplate}
         />
       </div>
     </TooltipProvider>

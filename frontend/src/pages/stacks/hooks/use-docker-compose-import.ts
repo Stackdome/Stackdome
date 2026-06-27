@@ -4,6 +4,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { convertDockerComposeToStackData } from '@/lib/docker-compose-converter';
 import { parseAndValidateDockerCompose } from '@/lib/docker-compose-parser';
 import type { DockerComposeFile } from '@/types/docker-compose';
+import { ImportSource } from '@/pages/stacks/lib/import-source';
 
 export interface ImportState {
   isLoading: boolean;
@@ -67,7 +68,7 @@ export function useDockerComposeImport(): ImportState & ImportActions {
       navigate('/stacks/create', {
         state: {
           importedData: conversionResult.data,
-          importSource: 'docker-compose',
+          importSource: ImportSource.DockerCompose,
           importWarnings: conversionResult.warnings
         }
       });

@@ -8,17 +8,8 @@ import {
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { VariantProps } from 'class-variance-authority';
-import { ChevronDown, Import, LayoutTemplate } from 'lucide-react';
-import dockerIconUrl from '@/assets/docker.svg';
-
-export interface ImportOption {
-  id: string;
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-}
+import { ChevronDown, Import } from 'lucide-react';
+import { buildImportOptions, type ImportOption } from './import-options';
 
 interface ImportDropdownProps {
   variant?: VariantProps<typeof buttonVariants>['variant'];
@@ -90,9 +81,10 @@ export default function ImportDropdown({
   );
 }
 
-// Pre-configured Docker Compose import dropdown
+// Pre-configured Docker Compose + Templates import dropdown
 interface DockerComposeImportDropdownProps {
   onDockerComposeImport: () => void;
+  onTemplates: () => void;
   variant?: VariantProps<typeof buttonVariants>['variant'];
   size?: VariantProps<typeof buttonVariants>['size'];
   children?: React.ReactNode;
@@ -102,29 +94,17 @@ interface DockerComposeImportDropdownProps {
 
 export function DockerComposeImportDropdown({
   onDockerComposeImport,
+  onTemplates,
   variant = 'outline',
   size = 'default',
   children,
   className,
   disabled = false,
 }: DockerComposeImportDropdownProps) {
-  const importOptions: ImportOption[] = [
-    {
-      id: 'docker-compose',
-      label: 'Docker Compose',
-      description: 'Import from a docker-compose.yml file',
-      icon: <img src={dockerIconUrl} alt="Docker" className="h-4 w-4" />,
-      onClick: onDockerComposeImport,
-    },
-    {
-      id: 'templates',
-      label: 'Templates',
-      description: 'Start from a curated stack template',
-      icon: <LayoutTemplate className="h-4 w-4" />,
-      onClick: () => {},
-      disabled: true,
-    },
-  ];
+  const importOptions = buildImportOptions({
+    onDockerCompose: onDockerComposeImport,
+    onTemplates,
+  });
 
   return (
     <ImportDropdown
