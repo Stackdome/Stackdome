@@ -99,4 +99,14 @@ describe("templates registry", () => {
     ).toEqual(expect.arrayContaining(["redis", "database"]));
     expect(data.spec!.volumes!.length).toBeGreaterThanOrEqual(3);
   });
+
+  it("ships the Prometheus preset as a single web service with a volume", () => {
+    const { data } = templateToFormData(getTemplateById("prometheus")!);
+    const resources = data.spec!.stack_resources!;
+    expect(resources.map((r) => r.name)).toEqual(["prometheus"]);
+    expect(
+      resources.find((r) => r.name === "prometheus")!.depends_on ?? [],
+    ).toHaveLength(0);
+    expect(data.spec!.volumes!.length).toBeGreaterThan(0);
+  });
 });
