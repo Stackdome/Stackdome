@@ -230,13 +230,6 @@ export default function TemplatesBrowserDialog({
               </div>
             )}
           </div>
-
-          {/* footer hints */}
-          <div className="flex items-center gap-4 border-t border-border bg-background/50 px-6 py-3 font-mono text-[10.5px] tracking-[0.4px] text-muted-foreground">
-            <span>↑↓ navigate</span>
-            <span>↵ create stack</span>
-            <span>esc close</span>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
