@@ -1,24 +1,10 @@
-# OpenClaw — self-hosted AI assistant gateway (single container, no external DB).
-# Minimal config, boot-verified against ghcr.io/openclaw/openclaw:2026.6.10 (docker compose up → healthy).
-#
-# OpenClaw refuses to start unless gateway.mode=local is set in openclaw.json (it treats a missing
-# config as clobbered/suspicious). The blessed Kubernetes install does this with an init container that
-# seeds an openclaw.json ConfigMap into the data volume. Stackdome has no init-container/ConfigMap
-# primitive in the compose-import path, so we seed the same config inline in the startup command:
-# `openclaw config set` writes /home/node/.openclaw/openclaw.json (on the volume, so it persists), then
-# the gateway starts NORMALLY. gateway.auth.mode=token makes it use OPENCLAW_GATEWAY_TOKEN for Control UI
-# auth. (Simpler alternative: append `--allow-unconfigured` to the gateway command — boots without writing
-# config, but is the upstream "ad-hoc/dev" bypass and does not enable token auth.)
-#
-#   - OPENCLAW_GATEWAY_BIND=lan binds 0.0.0.0:18789 so the Control UI is reachable through the ingress
-#     (the default bind is loopback-only, for kubectl port-forward); OPENCLAW_SKIP_ONBOARDING=1 skips the prompt.
-#   - HOME and the state/config/workspace paths default to /home/node inside the image, so they are omitted.
-#   - state, sessions, config, and memory persist on the openclaw-data volume (/home/node/.openclaw).
-# Replace REPLACE_OPENCLAW_GATEWAY_TOKEN_VALUE_HERE (openssl rand -hex 32 — Control UI auth) and
-# REPLACE_OPENAI_API_KEY_VALUE_HERE before deploying. The default agent model is openai/gpt-5.5, so
-# OPENAI_API_KEY works out of the box; to use Claude instead, set an Anthropic model + ANTHROPIC_API_KEY.
-# Post-deploy (one-time): approve the browser via `openclaw devices approve`, and add your Stackdome
-# domain to gateway.controlUi.allowedOrigins (only localhost is allowlisted by default since v2026.2.26).
+# OpenClaw — self-hosted AI assistant gateway. Single container, no DB. Boot-verified.
+# Startup command seeds gateway.mode=local + auth.mode=token into openclaw.json on the volume,
+# then starts the gateway. The gateway refuses to boot without that config and Stackdome's
+# converter can't mount a ConfigMap (the upstream k8s init-container approach) — do not drop it.
+# bind=lan: reachable via ingress (default is loopback-only).
+# Replace both REPLACE_* secrets. Default model openai/gpt-5.5 -> OPENAI_API_KEY (Claude needs a model override).
+# Post-deploy once: `openclaw devices approve`; add your domain to gateway.controlUi.allowedOrigins (localhost-only since v2026.2.26).
 name: openclaw
 services:
   openclaw:

@@ -70,8 +70,7 @@ describe("templates registry", () => {
     const openclaw = resources.find((r) => r.name === "openclaw")!;
     expect(openclaw.depends_on ?? []).toHaveLength(0);
     expect(data.spec!.volumes!.length).toBeGreaterThan(0);
-    // The startup command is load-bearing: it seeds gateway.mode=local (else the
-    // gateway exits with "Missing config") then starts the gateway. Guard it.
+    // Startup command seeds gateway.mode=local (else gateway exits "Missing config"). Guard it.
     const cmd = (openclaw.execution_config?.command ?? []).join(" ");
     expect(cmd).toContain("config set gateway.mode local");
     expect(cmd).toContain("node openclaw.mjs gateway");
