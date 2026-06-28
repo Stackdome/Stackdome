@@ -434,6 +434,23 @@ describe('convertServiceToStackResource', () => {
     expect(bindWarnings.length).toBeGreaterThan(0);
   });
 
+  it('should sanitize volume mount source names to match the sanitized volume name', () => {
+    // The mount's source_volume_name must use the same RFC 1123 sanitization as the
+    // volume definition, otherwise the mount references a volume name that never exists.
+    const service: DockerComposeService = {
+      image: 'postgres:16',
+      volumes: ['postgres_data:/var/lib/postgresql/data'],
+    };
+
+    const result = convertServiceToStackResource('postgresql', service);
+
+    expect(result.success).toBe(true);
+    expect(result.data!.volume_mounts[0]).toEqual({
+      source_volume_name: 'postgres-data',
+      target_path: '/var/lib/postgresql/data',
+    });
+  });
+
   it('should convert environment variables from different formats', () => {
     const service: DockerComposeService = {
       image: 'node:18',
@@ -632,6 +649,16 @@ describe('convertVolumeToStackVolume', () => {
 
     expect(resultNull.success).toBe(true);
     expect(resultNull.data!.name).toBe('vol1');
+  });
+
+  it('should sanitize volume names to a valid RFC 1123 Kubernetes name', () => {
+    // Docker Compose allows underscores (e.g. the ToolJet template's "postgres_data"),
+    // but Kubernetes resource names must be RFC 1123 subdomains. An underscore makes the
+    // Volume CR invalid, which blocks the release-apply gate and stalls the whole deploy.
+    const result = convertVolumeToStackVolume('postgres_data', {});
+
+    expect(result.success).toBe(true);
+    expect(result.data!.name).toBe('postgres-data');
   });
 });
 

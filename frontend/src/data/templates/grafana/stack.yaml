@@ -1,0 +1,14 @@
+# Grafana — dashboards. Replace REPLACE_GF_SECURITY_ADMIN_PASSWORD_VALUE_HERE (else admin/admin).
+name: grafana
+services:
+  grafana:
+    image: grafana/grafana:13.0.2
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "REPLACE_GF_SECURITY_ADMIN_PASSWORD_VALUE_HERE"
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+volumes:
+  grafana-data:

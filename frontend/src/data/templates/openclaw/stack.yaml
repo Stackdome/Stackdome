@@ -1,0 +1,23 @@
+# OpenClaw — self-hosted AI assistant gateway. The command seeds gateway.mode=local
+# (won't boot without it) then starts the gateway — keep it. Replace both REPLACE_* secrets.
+# OPENAI_API_KEY matches the default model; for Claude set an Anthropic model + ANTHROPIC_API_KEY.
+name: openclaw
+services:
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:2026.6.10
+    command:
+      - sh
+      - -c
+      - openclaw config set gateway.mode local && openclaw config set gateway.auth.mode token && exec node openclaw.mjs gateway
+    ports:
+      - "18789:18789"
+    environment:
+      OPENCLAW_SKIP_ONBOARDING: "1"
+      OPENCLAW_GATEWAY_BIND: lan
+      OPENCLAW_GATEWAY_TOKEN: "REPLACE_OPENCLAW_GATEWAY_TOKEN_VALUE_HERE"
+      OPENAI_API_KEY: "REPLACE_OPENAI_API_KEY_VALUE_HERE"
+    volumes:
+      - openclaw-data:/home/node/.openclaw
+
+volumes:
+  openclaw-data:

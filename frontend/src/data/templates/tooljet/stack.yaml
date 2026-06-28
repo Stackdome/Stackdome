@@ -1,0 +1,33 @@
+# ToolJet + PostgreSQL. Replace every REPLACE_*_VALUE_HERE secret.
+name: tooljet
+services:
+  tooljet:
+    image: tooljet/tooljet:ee-lts-latest
+    command: npm run start:prod
+    ports:
+      - "80:80"
+    depends_on:
+      - postgresql
+    environment:
+      SERVE_CLIENT: "true"
+      PORT: "80"
+      TOOLJET_HOST: "http://localhost:80"
+      LOCKBOX_MASTER_KEY: "REPLACE_LOCKBOX_MASTER_KEY_VALUE_HERE"
+      SECRET_KEY_BASE: "REPLACE_SECRET_KEY_BASE_VALUE_HERE"
+      PG_HOST: "postgresql"
+      PG_PORT: "5432"
+      PG_DB: "tooljet_production"
+      PG_USER: "postgres"
+      PG_PASS: "REPLACE_POSTGRES_PASSWORD_VALUE_HERE"
+
+  postgresql:
+    image: postgres:16
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: "tooljet_production"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "REPLACE_POSTGRES_PASSWORD_VALUE_HERE"
+
+volumes:
+  postgres-data:

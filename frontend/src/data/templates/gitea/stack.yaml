@@ -1,0 +1,16 @@
+# Gitea — self-hosted Git (SQLite). First visit shows the install wizard; create the admin.
+# SSH (port 22) dropped — clone over HTTPS.
+name: gitea
+services:
+  gitea:
+    image: gitea/gitea:1.26.4
+    ports:
+      - "3000:3000"
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+    volumes:
+      - gitea-data:/data
+
+volumes:
+  gitea-data:

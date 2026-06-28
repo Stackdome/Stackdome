@@ -1,0 +1,13 @@
+# Prometheus — metrics. Boots on the bundled self-scrape config; edit /etc/prometheus/prometheus.yml
+# for custom targets. No built-in auth — keep behind the platform ingress.
+name: prometheus
+services:
+  prometheus:
+    image: prom/prometheus:v3.12.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus-data:/prometheus
+
+volumes:
+  prometheus-data:

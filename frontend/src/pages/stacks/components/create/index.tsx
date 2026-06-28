@@ -24,6 +24,7 @@ import { getCurrentOrganizationId } from '@/helpers/common';
 import { getErrorMessage } from '@/api/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useResourceTeams } from '@/hooks/use-resource-teams';
+import { isPrefillSource } from "@/pages/stacks/lib/import-source";
 
 type FormErrors = { [path: string]: string | undefined };
 
@@ -51,7 +52,7 @@ export default function StackCreatePage() {
     const importedData = location.state?.importedData;
     const importSource = location.state?.importSource;
 
-    if (importedData && importSource === 'docker-compose') {
+    if (importedData && isPrefillSource(importSource)) {
       setFormData(importedData);
 
       // Clear the navigation state to prevent re-importing on refresh
