@@ -20,8 +20,8 @@ resources:
       DB_NAME: stackdome
       DB_USERNAME: stackdome
       DB_PASSWORD: stackdome-preview
-      JWT_SECRET: preview-jwt-secret-not-for-production
-      ENCRYPTION_KEY: preview-encryption-key-not-for-prod
+      JWT_SECRET: 358bf580cb24f862bcc6bf7decba810f179fe971ccd8d72da3a58e43f72c989a
+      ENCRYPTION_KEY: 96c65f672796aa1bb290c2ce93b142def6c637a59dcff97c4b37d0b68da39897
       LOG_LEVEL: info
     depends_on: [db]
 
