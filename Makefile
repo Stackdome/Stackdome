@@ -16,6 +16,8 @@ generate:
 .PHONY: generate
 
 frontend:
+	corepack enable pnpm
+	corepack prepare pnpm@10.33.2 --activate
 	pnpm --prefix frontend install --frozen-lockfile
 	pnpm --prefix frontend exec vite build
 	touch pkg/web/dist/.gitkeep
@@ -54,7 +56,7 @@ all: frontend binary
 
 image-build: frontend ## Build API server container image
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/linux_amd64/stackdome-server cmd/main.go
-	$(DOCKER) build -t $(IMAGE_TAG) .
+	$(DOCKER) build --platform linux/amd64 -t $(IMAGE_TAG) .
 	@echo "Built image: $(IMAGE_TAG)"
 .PHONY: image-build
 
