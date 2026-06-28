@@ -1,0 +1,48 @@
+apiVersion: core.stackdome.io/v1alpha1
+kind: StackResource
+metadata:
+  name: api-server
+  namespace: stackdome-control-plane
+  labels:
+    app.kubernetes.io/part-of: stackdome-platform
+    app.kubernetes.io/managed-by: stackdome-installer
+    stackdome.io/bootstrap: "true"
+    stackdome.io/stack-name: stackdome-platform
+  {{- if .TLSEnabled }}
+  annotations:
+    core.stackdome.io/cluster-issuer: letsencrypt-prod
+  {{- end }}
+spec:
+  workloadType: Service
+  imageSpec:
+    image: "{{.APIServerImage}}"
+  init:
+    command: ["./stackdome-server", "migrate"]
+  command: ["./stackdome-server"]
+  args: ["serve"]
+  dependsOn:
+    - db
+  ports:
+    - name: http
+      number: 8000
+      protocol: http
+      exposeToPublic: true
+      fqdn: "{{.Domain}}"
+      tls: {{.TLSEnabled}}
+  environmentVariables:
+    - name: DB_HOST
+      value: db.stackdome-control-plane.svc.cluster.local
+    - name: DB_PORT
+      value: "5432"
+    - name: DB_NAME
+      value: stackdome
+    - name: DB_USERNAME
+      value: stackdome
+    - name: DB_PASSWORD
+      value: "{{.DBPassword}}"
+    - name: JWT_SECRET
+      value: "{{.JWTSecret}}"
+    - name: ENCRYPTION_KEY
+      value: "{{.EncryptionKey}}"
+    - name: LOG_LEVEL
+      value: info
