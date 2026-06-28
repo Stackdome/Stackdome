@@ -357,11 +357,13 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 			fmt.Sprintf("failed to resolve stackfile references: %v", err))
 	}
 
+	s.applyGitSecretFromConfig(&stack, config)
 	s.applyBranchSwap(&stack, config.GitRepository.RepoURL, preview.Branch, preview.CommitSHA)
 	s.applyImageOverrides(&stack, preview.ImageOverrides)
 	s.applyDomainPrefix(&stack, preview.PRNumber)
 
 	model := presenters.ConvertStack(&stack)
+	model.Name = preview.Name
 	model.OrganisationID = config.OrganisationID
 	model.TeamID = config.TeamID
 	model.UserID = preview.UserID
@@ -431,6 +433,28 @@ func (s *previewStackService) applyDomainPrefix(stack *openapi.Stack, prNumber s
 				port.SubdomainPrefix = &prefixed
 			}
 		}
+	}
+}
+
+// applyGitSecretFromConfig injects the preview config's git_secret_id into build
+// specs that match the config's repo URL and don't already have a git secret set.
+func (s *previewStackService) applyGitSecretFromConfig(stack *openapi.Stack, config *models.StackPreviewConfig) {
+	if !config.UsesGitSecret() {
+		return
+	}
+	secretID := *config.GitSecretID()
+	for i := range stack.Spec.StackResources {
+		res := &stack.Spec.StackResources[i]
+		if res.BuildSpec == nil || res.BuildSpec.SourceContext.GitRepo == nil {
+			continue
+		}
+		if res.BuildSpec.SourceContext.GitRepo.GitSecret != nil {
+			continue
+		}
+		if normalizeRepoURL(res.BuildSpec.SourceContext.GitRepo.RepoUrl) != normalizeRepoURL(config.GitRepository.RepoURL) {
+			continue
+		}
+		res.BuildSpec.SourceContext.GitRepo.GitSecret = &openapi.SecretRef{SecretId: secretID}
 	}
 }
 
