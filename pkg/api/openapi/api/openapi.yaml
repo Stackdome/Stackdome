@@ -12709,9 +12709,8 @@ components:
           key: key
         created_at: 2000-01-23T04:56:07.000+00:00
         team_id: team_id
-        source: source
+        source: manual
         deletion_timestamp: 2000-01-23T04:56:07.000+00:00
-        stack_preview_config_id: stack_preview_config_id
         branch: branch
         labels:
         - value: value
@@ -12721,6 +12720,7 @@ components:
         organisation_id: organisation_id
         updated_at: 2000-01-23T04:56:07.000+00:00
         user_id: user_id
+        config_id: config_id
         stack_id: stack_id
         image_overrides:
           key: image_overrides
@@ -12751,7 +12751,7 @@ components:
         user_id:
           readOnly: true
           type: string
-        stack_preview_config_id:
+        config_id:
           type: string
         stack_id:
           type: string
@@ -12765,6 +12765,9 @@ components:
           readOnly: true
           type: string
         source:
+          enum:
+          - manual
+          - webhook
           type: string
         status:
           $ref: '#/components/schemas/PreviewStack_status'
@@ -12854,9 +12857,8 @@ components:
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
           team_id: team_id
-          source: source
+          source: manual
           deletion_timestamp: 2000-01-23T04:56:07.000+00:00
-          stack_preview_config_id: stack_preview_config_id
           branch: branch
           labels:
           - value: value
@@ -12866,6 +12868,7 @@ components:
           organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
           user_id: user_id
+          config_id: config_id
           stack_id: stack_id
           image_overrides:
             key: image_overrides
@@ -12891,9 +12894,8 @@ components:
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
           team_id: team_id
-          source: source
+          source: manual
           deletion_timestamp: 2000-01-23T04:56:07.000+00:00
-          stack_preview_config_id: stack_preview_config_id
           branch: branch
           labels:
           - value: value
@@ -12903,6 +12905,7 @@ components:
           organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
           user_id: user_id
+          config_id: config_id
           stack_id: stack_id
           image_overrides:
             key: image_overrides

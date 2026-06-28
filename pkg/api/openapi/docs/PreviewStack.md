@@ -8,7 +8,7 @@ Name | Type | Description | Notes
 **OrganisationId** | Pointer to **string** |  | [optional] [readonly] 
 **TeamId** | Pointer to **string** |  | [optional] [readonly] 
 **UserId** | Pointer to **string** |  | [optional] [readonly] 
-**StackPreviewConfigId** | Pointer to **string** |  | [optional] 
+**ConfigId** | Pointer to **string** |  | [optional] 
 **StackId** | Pointer to **string** |  | [optional] 
 **Name** | Pointer to **string** |  | [optional] 
 **PrNumber** | Pointer to **string** |  | [optional] 
@@ -142,30 +142,30 @@ SetUserId sets UserId field to given value.
 
 HasUserId returns a boolean if a field has been set.
 
-### GetStackPreviewConfigId
+### GetConfigId
 
-`func (o *PreviewStack) GetStackPreviewConfigId() string`
+`func (o *PreviewStack) GetConfigId() string`
 
-GetStackPreviewConfigId returns the StackPreviewConfigId field if non-nil, zero value otherwise.
+GetConfigId returns the ConfigId field if non-nil, zero value otherwise.
 
-### GetStackPreviewConfigIdOk
+### GetConfigIdOk
 
-`func (o *PreviewStack) GetStackPreviewConfigIdOk() (*string, bool)`
+`func (o *PreviewStack) GetConfigIdOk() (*string, bool)`
 
-GetStackPreviewConfigIdOk returns a tuple with the StackPreviewConfigId field if it's non-nil, zero value otherwise
+GetConfigIdOk returns a tuple with the ConfigId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetStackPreviewConfigId
+### SetConfigId
 
-`func (o *PreviewStack) SetStackPreviewConfigId(v string)`
+`func (o *PreviewStack) SetConfigId(v string)`
 
-SetStackPreviewConfigId sets StackPreviewConfigId field to given value.
+SetConfigId sets ConfigId field to given value.
 
-### HasStackPreviewConfigId
+### HasConfigId
 
-`func (o *PreviewStack) HasStackPreviewConfigId() bool`
+`func (o *PreviewStack) HasConfigId() bool`
 
-HasStackPreviewConfigId returns a boolean if a field has been set.
+HasConfigId returns a boolean if a field has been set.
 
 ### GetStackId
 

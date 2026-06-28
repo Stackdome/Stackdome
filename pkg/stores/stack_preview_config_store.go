@@ -9,6 +9,7 @@ import (
 
 //go:generate mockgen -source=stack_preview_config_store.go -destination=../mocks/mock_stack_preview_config_store.go -package=mocks
 type StackPreviewConfigStore interface {
+	AtomicExecutor
 	Create(ctx context.Context, config *models.StackPreviewConfig) (*models.StackPreviewConfig, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.StackPreviewConfig, *errors.ServiceError)
 	GetByTeamAndName(ctx context.Context, teamID, name string) (*models.StackPreviewConfig, *errors.ServiceError)

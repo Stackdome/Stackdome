@@ -25,36 +25,26 @@ type RepoResult struct {
 }
 
 func newGitClient(username, password string) (GitClient, error) {
-	var auth transport.AuthMethod
 	if username == "" || password == "" {
 		return nil, fmt.Errorf("username and password must be provided for authentication")
 	}
-	if username != "" && password != "" {
-		auth = &githttp.BasicAuth{
+	return &gitClient{
+		auth: &githttp.BasicAuth{
 			Username: username,
 			Password: password,
-		}
-	}
-
-	return &gitClient{
-		auth: auth,
+		},
 	}, nil
 }
 
 func newGitClientWithToken(token string) (GitClient, error) {
-	var auth transport.AuthMethod
 	if token == "" {
 		return nil, fmt.Errorf("token must be provided for authentication")
 	}
-	if token != "" {
-		auth = &githttp.BasicAuth{
+	return &gitClient{
+		auth: &githttp.BasicAuth{
 			Username: "token",
 			Password: token,
-		}
-	}
-
-	return &gitClient{
-		auth: auth,
+		},
 	}, nil
 }
 
@@ -158,9 +148,16 @@ func (g *gitClient) CheckTagExists(ctx context.Context, repoURL, tag string) (bo
 	return false, nil
 }
 
-func (g *gitClient) FetchFile(ctx context.Context, repoURL, branch, filePath string) ([]byte, error) {
+func (g *gitClient) FetchFile(ctx context.Context, repoURL, ref, filePath string) ([]byte, error) {
+	if isCommitSHA(ref) {
+		return g.fetchFileByCommit(ctx, repoURL, ref, filePath)
+	}
+	return g.fetchFileByBranch(ctx, repoURL, ref, filePath)
+}
+
+func (g *gitClient) fetchFileByBranch(ctx context.Context, repoURL, branch, filePath string) ([]byte, error) {
 	fs := memfs.New()
-	repo, err := git.CloneContext(ctx, memory.NewStorage(), fs, &git.CloneOptions{
+	_, err := git.CloneContext(ctx, memory.NewStorage(), fs, &git.CloneOptions{
 		URL:           repoURL,
 		Auth:          g.auth,
 		ReferenceName: plumbing.NewBranchReferenceName(branch),
@@ -174,26 +171,73 @@ func (g *gitClient) FetchFile(ctx context.Context, repoURL, branch, filePath str
 		if isGitNotFoundError(err) {
 			return nil, fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
 		}
-		return nil, fmt.Errorf("failed to clone repository: %v", err)
+		return nil, fmt.Errorf("failed to clone repository: %w", err)
 	}
 
-	wt, err := repo.Worktree()
+	f, err := fs.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get worktree: %v", err)
-	}
-
-	f, err := wt.Filesystem.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("file '%s' not found in branch '%s': %v: %w", filePath, branch, err, ErrNotFound)
+		return nil, fmt.Errorf("file '%s' not found at ref '%s': %v: %w", filePath, branch, err, ErrNotFound)
 	}
 	defer f.Close()
 
 	content, err := io.ReadAll(f)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file '%s': %v", filePath, err)
+		return nil, fmt.Errorf("failed to read file '%s': %w", filePath, err)
 	}
 
 	return content, nil
+}
+
+func (g *gitClient) fetchFileByCommit(ctx context.Context, repoURL, sha, filePath string) ([]byte, error) {
+	repo, err := git.CloneContext(ctx, memory.NewStorage(), nil, &git.CloneOptions{
+		URL:        repoURL,
+		Auth:       g.auth,
+		NoCheckout: true,
+	})
+	if err != nil {
+		if isGitAuthError(err) {
+			return nil, fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
+		}
+		if isGitNotFoundError(err) {
+			return nil, fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to clone repository: %w", err)
+	}
+
+	commit, err := repo.CommitObject(plumbing.NewHash(sha))
+	if err != nil {
+		return nil, fmt.Errorf("commit '%s' not found: %v: %w", sha, err, ErrNotFound)
+	}
+
+	tree, err := commit.Tree()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tree for commit '%s': %w", sha, err)
+	}
+
+	file, err := tree.File(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("file '%s' not found at ref '%s': %v: %w", filePath, sha, err, ErrNotFound)
+	}
+
+	content, err := file.Contents()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file '%s': %w", filePath, err)
+	}
+
+	return []byte(content), nil
+}
+
+// isCommitSHA returns true if s is a 40-character hexadecimal string.
+func isCommitSHA(s string) bool {
+	if len(s) != 40 {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 // Helper function to check if error is authentication related

@@ -6090,7 +6090,7 @@ components:
         user_id:
           type: string
           readOnly: true
-        stack_preview_config_id:
+        config_id:
           type: string
         stack_id:
           type: string
@@ -6105,6 +6105,7 @@ components:
           readOnly: true
         source:
           type: string
+          enum: [manual, webhook]
         status:
           type: object
           readOnly: true

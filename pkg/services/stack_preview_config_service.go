@@ -98,6 +98,10 @@ func (s *stackPreviewConfigService) Update(ctx context.Context, id string, updat
 		return nil, err
 	}
 
+	if err := s.validateGitRepo(ctx, updated); err != nil {
+		return nil, err
+	}
+
 	return s.store.Update(ctx, updated)
 }
 

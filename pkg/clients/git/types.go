@@ -10,7 +10,7 @@ type GitClient interface {
 	GetTagSHA(ctx context.Context, repoURL, tag string) (string, error)
 	CheckTagExists(ctx context.Context, repoURL, tag string) (bool, error)
 	GetBranchHeadSHA(ctx context.Context, repoURL, branch string) (*RepoResult, error)
-	FetchFile(ctx context.Context, repoURL, branch, filePath string) ([]byte, error)
+	FetchFile(ctx context.Context, repoURL, ref, filePath string) ([]byte, error)
 }
 
 // GitCredentials holds optional git authentication material.

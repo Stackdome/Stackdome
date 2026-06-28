@@ -58,20 +58,6 @@ func (mr *MockPreviewStackStoreMockRecorder) CountActiveByConfigID(ctx, configID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountActiveByConfigID", reflect.TypeOf((*MockPreviewStackStore)(nil).CountActiveByConfigID), ctx, configID)
 }
 
-// Delete mocks base method.
-func (m *MockPreviewStackStore) Delete(ctx context.Context, id string) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, id)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockPreviewStackStoreMockRecorder) Delete(ctx, id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockPreviewStackStore)(nil).Delete), ctx, id)
-}
-
 // Create mocks base method.
 func (m *MockPreviewStackStore) Create(ctx context.Context, preview *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
 	m.ctrl.T.Helper()
@@ -87,8 +73,22 @@ func (mr *MockPreviewStackStoreMockRecorder) Create(ctx, preview any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockPreviewStackStore)(nil).Create), ctx, preview)
 }
 
+// Delete mocks base method.
+func (m *MockPreviewStackStore) Delete(ctx context.Context, id string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, id)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockPreviewStackStoreMockRecorder) Delete(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockPreviewStackStore)(nil).Delete), ctx, id)
+}
+
 // GetByConfigAndPR mocks base method.
-func (m *MockPreviewStackStore) GetByConfigAndPR(ctx context.Context, configID string, prNumber int) (*models.PreviewStack, *errors.ServiceError) {
+func (m *MockPreviewStackStore) GetByConfigAndPR(ctx context.Context, configID, prNumber string) (*models.PreviewStack, *errors.ServiceError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetByConfigAndPR", ctx, configID, prNumber)
 	ret0, _ := ret[0].(*models.PreviewStack)
@@ -115,6 +115,21 @@ func (m *MockPreviewStackStore) GetByID(ctx context.Context, id string) (*models
 func (mr *MockPreviewStackStoreMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockPreviewStackStore)(nil).GetByID), ctx, id)
+}
+
+// ListNeedingReconciliation mocks base method.
+func (m *MockPreviewStackStore) ListNeedingReconciliation(ctx context.Context, page, pageSize int) ([]*models.PreviewStack, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNeedingReconciliation", ctx, page, pageSize)
+	ret0, _ := ret[0].([]*models.PreviewStack)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// ListNeedingReconciliation indicates an expected call of ListNeedingReconciliation.
+func (mr *MockPreviewStackStoreMockRecorder) ListNeedingReconciliation(ctx, page, pageSize any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNeedingReconciliation", reflect.TypeOf((*MockPreviewStackStore)(nil).ListNeedingReconciliation), ctx, page, pageSize)
 }
 
 // ListByConfigID mocks base method.
@@ -147,18 +162,19 @@ func (mr *MockPreviewStackStoreMockRecorder) ListByTeamID(ctx, teamID, params an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTeamID", reflect.TypeOf((*MockPreviewStackStore)(nil).ListByTeamID), ctx, teamID, params)
 }
 
-// SoftDelete mocks base method.
-func (m *MockPreviewStackStore) SoftDelete(ctx context.Context, id string) *errors.ServiceError {
+// Update mocks base method.
+func (m *MockPreviewStackStore) Update(ctx context.Context, preview *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SoftDelete", ctx, id)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
+	ret := m.ctrl.Call(m, "Update", ctx, preview)
+	ret0, _ := ret[0].(*models.PreviewStack)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
 }
 
-// SoftDelete indicates an expected call of SoftDelete.
-func (mr *MockPreviewStackStoreMockRecorder) SoftDelete(ctx, id any) *gomock.Call {
+// Update indicates an expected call of Update.
+func (mr *MockPreviewStackStoreMockRecorder) Update(ctx, preview any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SoftDelete", reflect.TypeOf((*MockPreviewStackStore)(nil).SoftDelete), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockPreviewStackStore)(nil).Update), ctx, preview)
 }
 
 // WithTransaction mocks base method.
@@ -173,19 +189,4 @@ func (m *MockPreviewStackStore) WithTransaction(ctx context.Context, fn func(con
 func (mr *MockPreviewStackStoreMockRecorder) WithTransaction(ctx, fn any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithTransaction", reflect.TypeOf((*MockPreviewStackStore)(nil).WithTransaction), ctx, fn)
-}
-
-// Update mocks base method.
-func (m *MockPreviewStackStore) Update(ctx context.Context, preview *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, preview)
-	ret0, _ := ret[0].(*models.PreviewStack)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// Update indicates an expected call of Update.
-func (mr *MockPreviewStackStoreMockRecorder) Update(ctx, preview any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockPreviewStackStore)(nil).Update), ctx, preview)
 }

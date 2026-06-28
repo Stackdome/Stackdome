@@ -34,7 +34,7 @@ type previewStackStore interface {
 	GetByID(ctx context.Context, id string) (*models.PreviewStack, *errors.ServiceError)
 	Update(ctx context.Context, preview *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError)
 	Delete(ctx context.Context, id string) *errors.ServiceError
-	ListActive(ctx context.Context, page, pageSize int) ([]*models.PreviewStack, *errors.ServiceError)
+	ListNeedingReconciliation(ctx context.Context, page, pageSize int) ([]*models.PreviewStack, *errors.ServiceError)
 	WithTransaction(ctx context.Context, fn func(ctx context.Context) *errors.ServiceError) *errors.ServiceError
 }
 

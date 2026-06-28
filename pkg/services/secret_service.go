@@ -23,6 +23,7 @@ type SecretService interface {
 	GetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError)
 	// InternalGetByID is used internally to get the secret with decrypted data.
 	InternalGetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError)
+	InternalGetByName(ctx context.Context, organisationID, name string) (*models.Secret, *errors.ServiceError)
 	GetByName(ctx context.Context, organisationID, name string) (*models.Secret, *errors.ServiceError)
 	Update(ctx context.Context, id string, secret *models.Secret) (*models.Secret, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
@@ -129,6 +130,10 @@ func (s *secretService) InternalGetByID(ctx context.Context, ID string) (*models
 	}
 
 	return secret, nil
+}
+
+func (s *secretService) InternalGetByName(ctx context.Context, organisationID, name string) (*models.Secret, *errors.ServiceError) {
+	return s.secretStore.GetByName(ctx, organisationID, name)
 }
 
 func (s *secretService) GetByName(ctx context.Context, organisationID, name string) (*models.Secret, *errors.ServiceError) {

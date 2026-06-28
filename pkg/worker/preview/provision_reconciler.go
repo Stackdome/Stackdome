@@ -183,6 +183,9 @@ func (r *provisionReconciler) resolveStackfileContent(ctx context.Context, previ
 		return nil, "", opErr
 	}
 
+	if oldKey, ok := r.previewCacheKeys.Load(preview.ID); ok {
+		r.stackfileCache.Delete(oldKey.(string))
+	}
 	r.stackfileCache.Store(cacheKey, stackfileCacheEntry{content: content, hash: hash})
 	r.previewCacheKeys.Store(preview.ID, cacheKey)
 	return content, hash, nil
@@ -221,7 +224,7 @@ func (r *provisionReconciler) fail(ctx context.Context, preview *models.PreviewS
 		Message: message,
 	}
 	if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
-		r.logger.Errorf("failed to update preview %s status: %v", preview.ID, sErr)
+		return resultNil, fmt.Errorf("failed to mark preview %s as failed: %w", preview.ID, sErr)
 	}
 	r.logger.Errorf("preview %s failed: %s: %s", preview.ID, reason, message)
 	return resultStop, nil

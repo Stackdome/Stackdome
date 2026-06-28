@@ -29,7 +29,9 @@ CREATE TABLE preview_stacks (
     labels                   JSONB DEFAULT '[]',
     annotations              JSONB DEFAULT '[]',
     status                   JSONB NOT NULL,
-    stackfile_hash           TEXT NOT NULL DEFAULT '',
+    stackfile_content        TEXT,
+    reconciler_status        JSONB NOT NULL DEFAULT '{}',
+    force_sync_requested_at  TIMESTAMPTZ,
     deletion_timestamp       TIMESTAMPTZ,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -38,6 +40,7 @@ CREATE TABLE preview_stacks (
 CREATE INDEX idx_preview_stacks_config_id ON preview_stacks (stack_preview_config_id);
 CREATE INDEX idx_preview_stacks_stack_id ON preview_stacks (stack_id);
 CREATE INDEX idx_preview_stacks_team_id ON preview_stacks (team_id);
+CREATE INDEX idx_preview_stacks_org_id ON preview_stacks (organisation_id);
 `
 			if err := tx.Exec(sql).Error; err != nil {
 				return fmt.Errorf("failed to create preview_stacks table: %w", err)

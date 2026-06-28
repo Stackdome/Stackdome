@@ -26,6 +26,7 @@ type Identity struct {
 	TokenID     string
 	TokenScopes []string
 	ResourceIDs []string
+	IsSystem    bool
 }
 
 func (i *Identity) IsOrgAdmin() bool {

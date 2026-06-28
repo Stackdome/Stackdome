@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
@@ -28,6 +29,9 @@ func NewPreviewStackStore(spec PreviewStackStoreSpec) stores.PreviewStackStore {
 
 func (s *previewStackStore) Create(ctx context.Context, preview *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
 	if err := s.sessionFactory.New(ctx).Create(preview).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, errors.Conflict("preview stack for config and PR #%s already exists", preview.PRNumber)
+		}
 		return nil, errors.GeneralError("failed to create preview stack: %s", err.Error())
 	}
 	return s.GetByID(ctx, preview.ID)
@@ -45,7 +49,7 @@ func (s *previewStackStore) GetByID(ctx context.Context, id string) (*models.Pre
 }
 
 func (s *previewStackStore) Update(ctx context.Context, preview *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
-	if err := s.sessionFactory.New(ctx).Model(&models.PreviewStack{}).Where("id = ?", preview.ID).Updates(preview).Error; err != nil {
+	if err := s.sessionFactory.New(ctx).Model(&models.PreviewStack{}).Where("id = ?", preview.ID).Select("*").Updates(preview).Error; err != nil {
 		return nil, errors.GeneralError("failed to update preview stack: %s", err.Error())
 	}
 	return s.GetByID(ctx, preview.ID)
@@ -128,7 +132,7 @@ func (s *previewStackStore) ListByTeamID(ctx context.Context, teamID string, par
 	}, nil
 }
 
-func (s *previewStackStore) ListActive(ctx context.Context, page, pageSize int) ([]*models.PreviewStack, *errors.ServiceError) {
+func (s *previewStackStore) ListNeedingReconciliation(ctx context.Context, page, pageSize int) ([]*models.PreviewStack, *errors.ServiceError) {
 	offset := 0
 	if page > 1 {
 		offset = (page - 1) * pageSize

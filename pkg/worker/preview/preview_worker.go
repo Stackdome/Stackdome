@@ -104,7 +104,7 @@ const activePreviewPageSize = 50
 func (w *previewWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
 	var operands []worker.Operand
 	for page := 1; ; page++ {
-		previews, sErr := w.previewStackStore.ListActive(ctx, page, activePreviewPageSize)
+		previews, sErr := w.previewStackStore.ListNeedingReconciliation(ctx, page, activePreviewPageSize)
 		if sErr != nil {
 			return nil, w.WorkerError.NewError("failed to list active previews: %v", sErr)
 		}

@@ -2,6 +2,7 @@ package stackfile
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 
 	openapi "github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
@@ -33,7 +34,13 @@ func (sf *Stackfile) ToStack() openapi.Stack {
 
 func (sf *Stackfile) buildResources() []openapi.StackResource {
 	resources := make([]openapi.StackResource, 0, len(sf.Resources))
-	for name, res := range sf.Resources {
+	names := make([]string, 0, len(sf.Resources))
+	for name := range sf.Resources {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		res := sf.Resources[name]
 		sr := openapi.StackResource{
 			Name:      name,
 			DependsOn: res.DependsOn,
@@ -242,7 +249,13 @@ func (sf *Stackfile) buildVolumes() []openapi.Volume {
 		return nil
 	}
 	volumes := make([]openapi.Volume, 0, len(sf.Volumes))
-	for name, v := range sf.Volumes {
+	names := make([]string, 0, len(sf.Volumes))
+	for name := range sf.Volumes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		v := sf.Volumes[name]
 		accessMode := openapi.VolumeAccessMode("ReadWriteOnce")
 		if v.AccessMode != "" {
 			accessMode = openapi.VolumeAccessMode(v.AccessMode)
@@ -263,7 +276,13 @@ func (sf *Stackfile) buildVolumes() []openapi.Volume {
 func (sf *Stackfile) buildConnections() []openapi.StackConnection {
 	var connections []openapi.StackConnection
 
-	for resourceName, res := range sf.Resources {
+	names := make([]string, 0, len(sf.Resources))
+	for name := range sf.Resources {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, resourceName := range names {
+		res := sf.Resources[resourceName]
 		connections = append(connections, buildEnvRefConnections(resourceName, res.Env)...)
 		connections = append(connections, buildSecretConnections(resourceName, res.Secrets)...)
 		connections = append(connections, buildAddonConnections(resourceName, res.Addons)...)

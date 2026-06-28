@@ -17,24 +17,24 @@ import (
 
 // PreviewStack struct for PreviewStack
 type PreviewStack struct {
-	Id                   *string             `json:"id,omitempty"`
-	OrganisationId       *string             `json:"organisation_id,omitempty"`
-	TeamId               *string             `json:"team_id,omitempty"`
-	UserId               *string             `json:"user_id,omitempty"`
-	StackPreviewConfigId *string             `json:"stack_preview_config_id,omitempty"`
-	StackId              *string             `json:"stack_id,omitempty"`
-	Name                 *string             `json:"name,omitempty"`
-	PrNumber             *string             `json:"pr_number,omitempty"`
-	Branch               *string             `json:"branch,omitempty"`
-	Commit               *string             `json:"commit,omitempty"`
-	Source               *string             `json:"source,omitempty"`
-	Status               *PreviewStackStatus `json:"status,omitempty"`
-	ImageOverrides       *map[string]string  `json:"image_overrides,omitempty"`
-	Labels               []Label             `json:"labels,omitempty"`
-	Annotations          []Annotation        `json:"annotations,omitempty"`
-	DeletionTimestamp    *time.Time          `json:"deletion_timestamp,omitempty"`
-	CreatedAt            *time.Time          `json:"created_at,omitempty"`
-	UpdatedAt            *time.Time          `json:"updated_at,omitempty"`
+	Id                *string             `json:"id,omitempty"`
+	OrganisationId    *string             `json:"organisation_id,omitempty"`
+	TeamId            *string             `json:"team_id,omitempty"`
+	UserId            *string             `json:"user_id,omitempty"`
+	ConfigId          *string             `json:"config_id,omitempty"`
+	StackId           *string             `json:"stack_id,omitempty"`
+	Name              *string             `json:"name,omitempty"`
+	PrNumber          *string             `json:"pr_number,omitempty"`
+	Branch            *string             `json:"branch,omitempty"`
+	Commit            *string             `json:"commit,omitempty"`
+	Source            *string             `json:"source,omitempty"`
+	Status            *PreviewStackStatus `json:"status,omitempty"`
+	ImageOverrides    *map[string]string  `json:"image_overrides,omitempty"`
+	Labels            []Label             `json:"labels,omitempty"`
+	Annotations       []Annotation        `json:"annotations,omitempty"`
+	DeletionTimestamp *time.Time          `json:"deletion_timestamp,omitempty"`
+	CreatedAt         *time.Time          `json:"created_at,omitempty"`
+	UpdatedAt         *time.Time          `json:"updated_at,omitempty"`
 }
 
 // NewPreviewStack instantiates a new PreviewStack object
@@ -182,36 +182,36 @@ func (o *PreviewStack) SetUserId(v string) {
 	o.UserId = &v
 }
 
-// GetStackPreviewConfigId returns the StackPreviewConfigId field value if set, zero value otherwise.
-func (o *PreviewStack) GetStackPreviewConfigId() string {
-	if o == nil || o.StackPreviewConfigId == nil {
+// GetConfigId returns the ConfigId field value if set, zero value otherwise.
+func (o *PreviewStack) GetConfigId() string {
+	if o == nil || o.ConfigId == nil {
 		var ret string
 		return ret
 	}
-	return *o.StackPreviewConfigId
+	return *o.ConfigId
 }
 
-// GetStackPreviewConfigIdOk returns a tuple with the StackPreviewConfigId field value if set, nil otherwise
+// GetConfigIdOk returns a tuple with the ConfigId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *PreviewStack) GetStackPreviewConfigIdOk() (*string, bool) {
-	if o == nil || o.StackPreviewConfigId == nil {
+func (o *PreviewStack) GetConfigIdOk() (*string, bool) {
+	if o == nil || o.ConfigId == nil {
 		return nil, false
 	}
-	return o.StackPreviewConfigId, true
+	return o.ConfigId, true
 }
 
-// HasStackPreviewConfigId returns a boolean if a field has been set.
-func (o *PreviewStack) HasStackPreviewConfigId() bool {
-	if o != nil && o.StackPreviewConfigId != nil {
+// HasConfigId returns a boolean if a field has been set.
+func (o *PreviewStack) HasConfigId() bool {
+	if o != nil && o.ConfigId != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetStackPreviewConfigId gets a reference to the given string and assigns it to the StackPreviewConfigId field.
-func (o *PreviewStack) SetStackPreviewConfigId(v string) {
-	o.StackPreviewConfigId = &v
+// SetConfigId gets a reference to the given string and assigns it to the ConfigId field.
+func (o *PreviewStack) SetConfigId(v string) {
+	o.ConfigId = &v
 }
 
 // GetStackId returns the StackId field value if set, zero value otherwise.
@@ -644,8 +644,8 @@ func (o PreviewStack) MarshalJSON() ([]byte, error) {
 	if o.UserId != nil {
 		toSerialize["user_id"] = o.UserId
 	}
-	if o.StackPreviewConfigId != nil {
-		toSerialize["stack_preview_config_id"] = o.StackPreviewConfigId
+	if o.ConfigId != nil {
+		toSerialize["config_id"] = o.ConfigId
 	}
 	if o.StackId != nil {
 		toSerialize["stack_id"] = o.StackId

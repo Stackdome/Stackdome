@@ -56,6 +56,20 @@ func (mr *MockWorkerManagerMockRecorder) Enqueue(operand any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enqueue", reflect.TypeOf((*MockWorkerManager)(nil).Enqueue), operand)
 }
 
+// EnqueueAfterCommit mocks base method.
+func (m *MockWorkerManager) EnqueueAfterCommit(ctx context.Context, operand any) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnqueueAfterCommit", ctx, operand)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnqueueAfterCommit indicates an expected call of EnqueueAfterCommit.
+func (mr *MockWorkerManagerMockRecorder) EnqueueAfterCommit(ctx, operand any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnqueueAfterCommit", reflect.TypeOf((*MockWorkerManager)(nil).EnqueueAfterCommit), ctx, operand)
+}
+
 // EnqueueAfter mocks base method.
 func (m *MockWorkerManager) EnqueueAfter(operand any, after time.Duration) error {
 	m.ctrl.T.Helper()
@@ -158,6 +172,20 @@ func (m *MockBackgroundJobEnqueuer) Enqueue(operand any) error {
 func (mr *MockBackgroundJobEnqueuerMockRecorder) Enqueue(operand any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enqueue", reflect.TypeOf((*MockBackgroundJobEnqueuer)(nil).Enqueue), operand)
+}
+
+// EnqueueAfterCommit mocks base method.
+func (m *MockBackgroundJobEnqueuer) EnqueueAfterCommit(ctx context.Context, operand any) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnqueueAfterCommit", ctx, operand)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnqueueAfterCommit indicates an expected call of EnqueueAfterCommit.
+func (mr *MockBackgroundJobEnqueuerMockRecorder) EnqueueAfterCommit(ctx, operand any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnqueueAfterCommit", reflect.TypeOf((*MockBackgroundJobEnqueuer)(nil).EnqueueAfterCommit), ctx, operand)
 }
 
 // EnqueueAfter mocks base method.

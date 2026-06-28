@@ -78,6 +78,17 @@ func (s *previewStackService) Create(ctx context.Context, preview *models.Previe
 		return nil, permErr
 	}
 
+	if preview.TeamID != "" && preview.TeamID != config.TeamID {
+		return nil, errors.BadRequest("preview stack team does not match config team")
+	}
+
+	if preview.PRNumber == "" {
+		return nil, errors.BadRequest("pr_number is required")
+	}
+	if preview.Branch == "" {
+		return nil, errors.BadRequest("branch is required")
+	}
+
 	existing, sErr := s.store.GetByConfigAndPR(ctx, preview.StackPreviewConfigID, preview.PRNumber)
 	if sErr != nil && sErr.Code != errors.ErrorNotFound {
 		return nil, sErr
@@ -310,6 +321,10 @@ func (s *previewStackService) InternalFetchStackfile(ctx context.Context, config
 			return nil, "", errors.Permanent("GitAuthFailed",
 				fmt.Sprintf("git authentication failed: %v", fetchErr))
 		}
+		if stderrors.Is(fetchErr, gitclient.ErrRateLimited) {
+			return nil, "", errors.Transient("GitRateLimited",
+				fmt.Sprintf("git API rate limited: %v", fetchErr))
+		}
 		return nil, "", errors.Transient("StackfileFetchFailed",
 			fmt.Sprintf("failed to fetch stackfile: %v", fetchErr))
 	}
@@ -463,7 +478,7 @@ type previewSecretResolver struct {
 }
 
 func (r *previewSecretResolver) ResolveSecretByName(ctx context.Context, name string) (string, error) {
-	secret, sErr := r.secretService.GetByName(ctx, r.orgID, name)
+	secret, sErr := r.secretService.InternalGetByName(ctx, r.orgID, name)
 	if sErr != nil {
 		return "", fmt.Errorf("secret '%s' not found: %v", name, sErr)
 	}

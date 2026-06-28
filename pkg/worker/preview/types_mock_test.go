@@ -124,19 +124,19 @@ func (mr *MockpreviewStackStoreMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockpreviewStackStore)(nil).GetByID), ctx, id)
 }
 
-// ListActive mocks base method.
-func (m *MockpreviewStackStore) ListActive(ctx context.Context, page, pageSize int) ([]*models.PreviewStack, *errors.ServiceError) {
+// ListNeedingReconciliation mocks base method.
+func (m *MockpreviewStackStore) ListNeedingReconciliation(ctx context.Context, page, pageSize int) ([]*models.PreviewStack, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListActive", ctx, page, pageSize)
+	ret := m.ctrl.Call(m, "ListNeedingReconciliation", ctx, page, pageSize)
 	ret0, _ := ret[0].([]*models.PreviewStack)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// ListActive indicates an expected call of ListActive.
-func (mr *MockpreviewStackStoreMockRecorder) ListActive(ctx, page, pageSize any) *gomock.Call {
+// ListNeedingReconciliation indicates an expected call of ListNeedingReconciliation.
+func (mr *MockpreviewStackStoreMockRecorder) ListNeedingReconciliation(ctx, page, pageSize any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActive", reflect.TypeOf((*MockpreviewStackStore)(nil).ListActive), ctx, page, pageSize)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNeedingReconciliation", reflect.TypeOf((*MockpreviewStackStore)(nil).ListNeedingReconciliation), ctx, page, pageSize)
 }
 
 // Update mocks base method.

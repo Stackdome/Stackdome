@@ -17,11 +17,13 @@ type StackPreviewConfigStoreSpec struct {
 
 type stackPreviewConfigStore struct {
 	sessionFactory db.SessionFactory
+	atomicExecutor
 }
 
 func NewStackPreviewConfigStore(spec StackPreviewConfigStoreSpec) stores.StackPreviewConfigStore {
 	return &stackPreviewConfigStore{
 		sessionFactory: spec.SessionFactory,
+		atomicExecutor: atomicExecutor{sessionFactory: spec.SessionFactory},
 	}
 }
 
@@ -58,15 +60,19 @@ func (s *stackPreviewConfigStore) GetByTeamAndName(ctx context.Context, teamID, 
 }
 
 func (s *stackPreviewConfigStore) Update(ctx context.Context, config *models.StackPreviewConfig) (*models.StackPreviewConfig, *errors.ServiceError) {
-	if err := s.sessionFactory.New(ctx).Model(&models.StackPreviewConfig{}).Where("id = ?", config.ID).Updates(config).Error; err != nil {
+	if err := s.sessionFactory.New(ctx).Model(&models.StackPreviewConfig{}).Where("id = ?", config.ID).Select("*").Updates(config).Error; err != nil {
 		return nil, errors.GeneralError("failed to update preview config: %s", err.Error())
 	}
 	return s.GetByID(ctx, config.ID)
 }
 
 func (s *stackPreviewConfigStore) Delete(ctx context.Context, id string) *errors.ServiceError {
-	if err := s.sessionFactory.New(ctx).Delete(&models.StackPreviewConfig{}, "id = ?", id).Error; err != nil {
-		return errors.GeneralError("failed to delete preview config: %s", err.Error())
+	result := s.sessionFactory.New(ctx).Where("id = ?", id).Delete(&models.StackPreviewConfig{})
+	if result.Error != nil {
+		return errors.GeneralError("failed to delete preview config: %s", result.Error.Error())
+	}
+	if result.RowsAffected == 0 {
+		return errors.NotFound("preview config with id %s not found", id)
 	}
 	return nil
 }

@@ -173,13 +173,11 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 	if err != nil {
 		return nil, err
 	}
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.Stack{
-		ID: createdStack.ID,
-	}); err != nil {
+	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.Stack{ID: createdStack.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", spec.Name, err.Error())
 	}
 	for _, v := range createdStack.Volumes {
-		_ = s.BackgroundJobEnqueuer.Enqueue(&models.Volume{ID: v.ID})
+		_ = s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.Volume{ID: v.ID})
 	}
 	return createdStack, nil
 }

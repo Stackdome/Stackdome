@@ -33,13 +33,14 @@ func (h *previewStackHandler) Create(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		MarshalInto: &req,
 		Action: func() (any, *errors.ServiceError) {
-			_, serr := resolveTeamID(r, h.teamService)
+			teamID, serr := resolveTeamID(r, h.teamService)
 			if serr != nil {
 				return nil, serr
 			}
 			identity := auth.GetIdentityFromCtx(r.Context())
 			model := presenters.ConvertPreviewStackCreate(&req)
 			model.UserID = identity.UserID
+			model.TeamID = teamID
 			preview, serr := h.service.Create(r.Context(), model)
 			if serr != nil {
 				return nil, serr
@@ -94,7 +95,7 @@ func (h *previewStackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 			return nil, nil
 		},
 	}
-	handleDelete(w, r, cfg, http.StatusAccepted)
+	handleDelete(w, r, cfg, http.StatusNoContent)
 }
 
 func (h *previewStackHandler) Sync(w http.ResponseWriter, r *http.Request) {
@@ -116,5 +117,5 @@ func (h *previewStackHandler) Sync(w http.ResponseWriter, r *http.Request) {
 		},
 		ErrorHandler: handleError,
 	}
-	handle(w, r, cfg, http.StatusAccepted)
+	handle(w, r, cfg, http.StatusNoContent)
 }

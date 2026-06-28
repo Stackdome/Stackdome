@@ -42,6 +42,9 @@ func (p *permissionService) Check(ctx context.Context, domain, resource, resourc
 	if identity == nil {
 		return errors.Unauthenticated("no identity found in context")
 	}
+	if identity.IsSystem {
+		return nil
+	}
 
 	if identity.AuthMethod == AuthMethodAPIToken {
 		scopeAllowed := false

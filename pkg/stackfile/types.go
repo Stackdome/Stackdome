@@ -18,7 +18,6 @@ type Resource struct {
 	Command []string          `yaml:"command,omitempty"`
 	Args    []string          `yaml:"args,omitempty"`
 	Ports   []PortDef         `yaml:"ports,omitempty"`
-	EnvFile string            `yaml:"env_file,omitempty"`
 	Env     map[string]string `yaml:"env,omitempty"`
 	// Secret Name -> Mapping of secret keys to env var names
 	Secrets map[string]SecretMapping `yaml:"secrets,omitempty"`

@@ -41,6 +41,9 @@ func (g *gitHubClient) CheckAccess(ctx context.Context, repoURL string) (bool, e
 	_, resp, err := g.client.Repositories.Get(ctx, owner, repo)
 	if err != nil {
 		if resp != nil {
+			if isRateLimited(resp) {
+				return false, fmt.Errorf("rate limited: %v: %w", err, ErrRateLimited)
+			}
 			switch resp.StatusCode {
 			case http.StatusNotFound:
 				return false, fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
@@ -108,18 +111,23 @@ func (g *gitHubClient) GetBranchHeadSHA(ctx context.Context, repoURL, branch str
 	}, nil
 }
 
-func (g *gitHubClient) FetchFile(ctx context.Context, repoURL, branch, filePath string) ([]byte, error) {
+func (g *gitHubClient) FetchFile(ctx context.Context, repoURL, ref, filePath string) ([]byte, error) {
 	owner, repo, ok := ParseGitHubRepoURL(repoURL)
 	if !ok {
 		return nil, fmt.Errorf("not a GitHub repository URL: %s", repoURL)
 	}
 
 	fc, _, resp, err := g.client.Repositories.GetContents(ctx, owner, repo, filePath, &github.RepositoryContentGetOptions{
-		Ref: branch,
+		Ref: ref,
 	})
 	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil, fmt.Errorf("file '%s' not found in branch '%s': %w", filePath, branch, ErrNotFound)
+		if resp != nil {
+			if isRateLimited(resp) {
+				return nil, fmt.Errorf("rate limited: %v: %w", err, ErrRateLimited)
+			}
+			if resp.StatusCode == http.StatusNotFound {
+				return nil, fmt.Errorf("file '%s' not found at ref '%s': %w", filePath, ref, ErrNotFound)
+			}
 		}
 		return nil, fmt.Errorf("failed to fetch file: %w", err)
 	}
@@ -134,17 +142,17 @@ func (g *gitHubClient) FetchFile(ctx context.Context, repoURL, branch, filePath 
 	return []byte(content), nil
 }
 
-func (g *gitHubClient) CheckFileExists(ctx context.Context, owner, repo, filePath, ref string) (bool, error) {
-	_, _, resp, err := g.client.Repositories.GetContents(ctx, owner, repo, filePath, &github.RepositoryContentGetOptions{
-		Ref: ref,
-	})
-	if err != nil {
-		if resp != nil && resp.StatusCode == 404 {
-			return false, nil
-		}
-		return false, fmt.Errorf("failed to check file existence: %w", err)
+func isRateLimited(resp *github.Response) bool {
+	if resp == nil {
+		return false
 	}
-	return true, nil
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return true
+	}
+	if resp.StatusCode == http.StatusForbidden && resp.Rate.Remaining == 0 {
+		return true
+	}
+	return false
 }
 
 func IsGithubHost(host string) bool {

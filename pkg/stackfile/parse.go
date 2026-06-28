@@ -7,8 +7,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const MaxStackfileSize = 1 << 20 // 1MB
+
 // Load parses raw YAML bytes into a Stackfile and validates it.
 func Load(content []byte) (*Stackfile, error) {
+	if len(content) > MaxStackfileSize {
+		return nil, fmt.Errorf("stackfile too large (%d bytes, max %d)", len(content), MaxStackfileSize)
+	}
 	var sf Stackfile
 	if err := yaml.Unmarshal(content, &sf); err != nil {
 		return nil, fmt.Errorf("failed to parse stackfile: %w", err)
@@ -27,6 +32,9 @@ func Validate(sf *Stackfile) error {
 	}
 	if len(sf.Resources) == 0 {
 		return fmt.Errorf("stackfile must define at least one resource")
+	}
+	if len(sf.Resources) > 50 {
+		return fmt.Errorf("stackfile defines too many resources (%d, max 50)", len(sf.Resources))
 	}
 	for name, res := range sf.Resources {
 		if res.Image == "" && res.Build == nil {
@@ -56,17 +64,29 @@ func Validate(sf *Stackfile) error {
 				return fmt.Errorf("resource '%s' build config: 'dockerfile' should be a path to a Dockerfile", name)
 			}
 		}
+		if len(res.Ports) > 20 {
+			return fmt.Errorf("resource '%s' defines too many ports (%d, max 20)", name, len(res.Ports))
+		}
 		for _, p := range res.Ports {
 			if p.Name == "" {
 				return fmt.Errorf("resource '%s' has a port without a name", name)
 			}
-			if p.Port <= 0 {
+			if p.Port <= 0 || p.Port > 65535 {
 				return fmt.Errorf("resource '%s' port '%s' has invalid port number", name, p.Name)
 			}
 		}
 		for _, vm := range res.Volumes {
 			if _, ok := sf.Volumes[vm.Name]; !ok {
 				return fmt.Errorf("resource '%s' references undefined volume '%s'", name, vm.Name)
+			}
+		}
+
+		for _, dep := range res.DependsOn {
+			if _, ok := sf.Resources[dep]; !ok {
+				return fmt.Errorf("resource '%s' depends_on unknown resource '%s'", name, dep)
+			}
+			if dep == name {
+				return fmt.Errorf("resource '%s' cannot depend on itself", name)
 			}
 		}
 
@@ -80,6 +100,25 @@ func Validate(sf *Stackfile) error {
 			}
 		}
 	}
+
+	if len(sf.Volumes) > 50 {
+		return fmt.Errorf("stackfile defines too many volumes (%d, max 50)", len(sf.Volumes))
+	}
+	validAccessModes := map[string]bool{
+		"":              true,
+		"ReadWriteOnce": true,
+		"ReadOnlyMany":  true,
+		"ReadWriteMany": true,
+	}
+	for volName, vol := range sf.Volumes {
+		if !validAccessModes[vol.AccessMode] {
+			return fmt.Errorf("volume '%s' has invalid access_mode '%s'; valid values: ReadWriteOnce, ReadOnlyMany, ReadWriteMany", volName, vol.AccessMode)
+		}
+		if vol.Size == "" {
+			return fmt.Errorf("volume '%s' missing required field: size", volName)
+		}
+	}
+
 	return nil
 }
 
