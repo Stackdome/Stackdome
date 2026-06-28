@@ -109,4 +109,14 @@ describe("templates registry", () => {
     ).toHaveLength(0);
     expect(data.spec!.volumes!.length).toBeGreaterThan(0);
   });
+
+  it("ships the Gitea preset as a single web service with a volume", () => {
+    const { data } = templateToFormData(getTemplateById("gitea")!);
+    const resources = data.spec!.stack_resources!;
+    expect(resources.map((r) => r.name)).toEqual(["gitea"]);
+    expect(
+      resources.find((r) => r.name === "gitea")!.depends_on ?? [],
+    ).toHaveLength(0);
+    expect(data.spec!.volumes!.length).toBeGreaterThan(0);
+  });
 });
