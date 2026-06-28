@@ -1,8 +1,5 @@
-# Prometheus — metrics collection & monitoring (PromQL). Single container.
-# Official prom/prometheus image; boots on the bundled default config (scrapes itself) on port 9090.
-# To scrape your own targets, edit /etc/prometheus/prometheus.yml — the platform can't mount a config
-# file, so customize it post-deploy. No built-in auth: keep it behind the platform ingress/auth.
-# TSDB metrics persist on the prometheus-data volume (/prometheus); image runs as uid 65534 (k8s fsGroup).
+# Prometheus — metrics. Boots on the bundled self-scrape config; edit /etc/prometheus/prometheus.yml
+# for custom targets. No built-in auth — keep behind the platform ingress.
 name: prometheus
 services:
   prometheus:

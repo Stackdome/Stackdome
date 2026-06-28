@@ -1,6 +1,4 @@
-# n8n + Postgres. From n8n's official k8s manifests + n8n-hosting compose, simplified for Stackdome:
-# no Traefik, single Postgres superuser, N8N_ENCRYPTION_KEY auto-generated on the n8n-data volume.
-# Replace both REPLACE_POSTGRES_PASSWORD_VALUE_HERE passwords (must match) before deploying.
+# n8n + Postgres. Replace both REPLACE_POSTGRES_PASSWORD_VALUE_HERE (must match).
 name: n8n
 services:
   n8n:

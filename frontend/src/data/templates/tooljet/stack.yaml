@@ -1,5 +1,4 @@
-# ToolJet + in-built PostgreSQL. Adapted from the official docker-compose-db.yaml, .env inlined.
-# Replace every REPLACE_*_VALUE_HERE secret before deploying.
+# ToolJet + PostgreSQL. Replace every REPLACE_*_VALUE_HERE secret.
 name: tooljet
 services:
   tooljet:

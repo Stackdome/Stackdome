@@ -1,8 +1,5 @@
-# Gitea — self-hosted Git service (lightweight GitHub alternative). Single container, SQLite.
-# Official gitea/gitea image; auto-starts on port 3000 with the default SQLite DB (entrypoint sets it).
-# First visit shows the web install wizard (keep SQLite, create the admin) — complete it promptly,
-# it's open until you do. SSH git (port 22) is dropped (the platform can't ingress it); clone over HTTPS.
-# Repos, config, and the SQLite DB persist on the gitea-data volume (/data). Runs as uid 1000 (k8s fsGroup).
+# Gitea — self-hosted Git (SQLite). First visit shows the install wizard; create the admin.
+# SSH (port 22) dropped — clone over HTTPS.
 name: gitea
 services:
   gitea:

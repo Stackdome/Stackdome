@@ -1,10 +1,5 @@
-# Immich — self-hosted photo & video backup (Google Photos alternative). 4 services.
-# From the official docker-compose (docs.immich.app/install/docker-compose), flattened for Stackdome:
-# .env inlined, host bind mounts -> named volumes, healthcheck/restart/shm_size dropped.
-# database MUST be the immich vector Postgres (VectorChord + pgvector) — plain postgres won't work.
-# immich-server serves the web UI on 2283; redis = valkey; machine-learning does smart search/faces
-# (the server boots without it, just degraded). Replace both REPLACE_DB_PASSWORD_VALUE_HERE (must match).
-# Volumes: immich-upload = your photo library (large); immich-db = Postgres data; model-cache = ML models.
+# Immich — photo & video backup. The database MUST be the immich vector Postgres (VectorChord +
+# pgvector) — plain postgres won't work. Replace both REPLACE_DB_PASSWORD_VALUE_HERE (must match).
 name: immich
 services:
   immich-server:

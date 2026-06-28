@@ -1,9 +1,4 @@
-# Grafana — observability dashboards. Single container, embedded SQLite (no external DB).
-# Boots clean with defaults on port 3000; only the admin password is worth setting.
-# Replace REPLACE_GF_SECURITY_ADMIN_PASSWORD_VALUE_HERE before deploying (else admin/admin).
-# Data (SQLite, dashboards, plugins) persists on the grafana-data volume (/var/lib/grafana).
-# Post-deploy: set GF_SERVER_ROOT_URL to your domain if login redirects misbehave; the image
-# runs as uid 472, so the platform volume must be writable by it (k8s: fsGroup 472).
+# Grafana — dashboards. Replace REPLACE_GF_SECURITY_ADMIN_PASSWORD_VALUE_HERE (else admin/admin).
 name: grafana
 services:
   grafana:
