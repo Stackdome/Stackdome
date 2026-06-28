@@ -35,6 +35,7 @@ type BuildConfig struct {
 	Commit     string `yaml:"commit,omitempty"`
 	Dockerfile string `yaml:"dockerfile,omitempty"`
 	Context    string `yaml:"context,omitempty"`
+	GitSecret  string `yaml:"git_secret,omitempty"`
 }
 
 type PortDef struct {

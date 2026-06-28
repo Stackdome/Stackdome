@@ -83,10 +83,14 @@ func buildSpec(b *BuildConfig) *openapi.StackResourceBuildSpec {
 		spec.DockerfilePath = b.Dockerfile
 	}
 
+	gitRepo := &openapi.BuildSourceContextGitRepo{
+		RepoUrl: b.Repo,
+	}
+	if b.GitSecret != "" {
+		gitRepo.GitSecret = &openapi.SecretRef{SecretId: b.GitSecret}
+	}
 	spec.SourceContext = openapi.BuildSourceContext{
-		GitRepo: &openapi.BuildSourceContextGitRepo{
-			RepoUrl: b.Repo,
-		},
+		GitRepo: gitRepo,
 	}
 
 	revision := openapi.BuildSourceRevision{}

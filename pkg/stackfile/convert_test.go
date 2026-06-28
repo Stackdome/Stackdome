@@ -842,6 +842,58 @@ func TestToStack_VolumeMountConnectionHasCorrectNodeTypes(t *testing.T) {
 	}
 }
 
+func TestToStack_BuildWithGitSecret(t *testing.T) {
+	sf := &Stackfile{
+		Name: "private-build",
+		Resources: map[string]Resource{
+			"api": {
+				Build: &BuildConfig{
+					Repo:      "https://github.com/myorg/private-repo.git",
+					Branch:    "main",
+					GitSecret: "my-git-token",
+				},
+			},
+		},
+	}
+
+	stack := sf.ToStack()
+	res := stack.Spec.StackResources[0]
+
+	if res.BuildSpec == nil {
+		t.Fatal("expected build spec")
+	}
+	gitRepo := res.BuildSpec.SourceContext.GitRepo
+	if gitRepo == nil {
+		t.Fatal("expected git repo source context")
+	}
+	if gitRepo.GitSecret == nil {
+		t.Fatal("expected git secret ref")
+	}
+	if gitRepo.GitSecret.SecretId != "my-git-token" {
+		t.Errorf("expected git secret name 'my-git-token', got %q", gitRepo.GitSecret.SecretId)
+	}
+}
+
+func TestToStack_BuildWithoutGitSecret(t *testing.T) {
+	sf := &Stackfile{
+		Name: "public-build",
+		Resources: map[string]Resource{
+			"api": {
+				Build: &BuildConfig{
+					Repo:   "https://github.com/myorg/public-repo.git",
+					Branch: "main",
+				},
+			},
+		},
+	}
+
+	stack := sf.ToStack()
+	gitRepo := stack.Spec.StackResources[0].BuildSpec.SourceContext.GitRepo
+	if gitRepo.GitSecret != nil {
+		t.Errorf("expected no git secret for public repo, got %v", gitRepo.GitSecret)
+	}
+}
+
 func envVarsToMap(vars []openapi.EnvVar) map[string]openapi.EnvVar {
 	m := make(map[string]openapi.EnvVar)
 	for _, v := range vars {
