@@ -95,7 +95,6 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
             <div className="mt-6">
               <div className="mb-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
                 MANAGED ADD-ONS
-                <span className="font-normal normal-case tracking-normal text-muted-foreground/70"> · already in your workspace</span>
               </div>
               {availableAddons.length > 0 ? (
                 <div className="grid grid-cols-2 gap-2.5">

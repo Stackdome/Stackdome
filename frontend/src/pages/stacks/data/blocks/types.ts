@@ -3,7 +3,6 @@ export type BlockCategory = "services" | "data";
 export interface BlockCategoryMeta {
   id: BlockCategory;
   label: string; // uppercase marker label
-  note: string;  // muted sub-note
 }
 
 export const BlockId = {

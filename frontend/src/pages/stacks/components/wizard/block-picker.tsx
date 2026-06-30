@@ -33,7 +33,6 @@ export function BlockPicker({ catalog, categories, addedIds, onAdd, query }: Blo
           <div key={cat.id}>
             <div className="mb-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
               {cat.label}
-              <span className="font-normal normal-case tracking-normal text-muted-foreground/70"> · {cat.note}</span>
             </div>
             <div className="grid grid-cols-2 gap-2.5">
               {blocks.map((b) => {
