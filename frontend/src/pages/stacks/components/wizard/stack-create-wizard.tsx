@@ -40,7 +40,6 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
   };
 
   const backToChooser = () => setPhase("chooser");
-  const isPath = phase !== "chooser";
 
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
@@ -62,17 +61,22 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
           </span>
         </div>
 
-        <div className={isPath ? "h-[72vh] overflow-hidden" : "max-h-[80vh] overflow-y-auto"}>
+        {/* One stable frame for every step (fixed height, clamped on short
+            screens) so the modal never grows/shrinks or re-centers between
+            phases. Content scrolls inside; path panels fill it via flex. */}
+        <div className="h-[620px] max-h-[82vh] overflow-hidden">
           {phase === "chooser" && (
-            <WizardChooser
-              onPickBlocks={() => setPhase("composer")}
-              onPickTemplate={() => setPhase("template")}
-              onPickCompose={() => setPhase("compose")}
-              onPickBlank={() => {
-                navigate("/stacks/create");
-                close();
-              }}
-            />
+            <div className="scrollbar-hide h-full overflow-y-auto">
+              <WizardChooser
+                onPickBlocks={() => setPhase("composer")}
+                onPickTemplate={() => setPhase("template")}
+                onPickCompose={() => setPhase("compose")}
+                onPickBlank={() => {
+                  navigate("/stacks/create");
+                  close();
+                }}
+              />
+            </div>
           )}
           {phase === "composer" && <BlockComposer onBack={backToChooser} onClose={close} />}
           {phase === "template" && (

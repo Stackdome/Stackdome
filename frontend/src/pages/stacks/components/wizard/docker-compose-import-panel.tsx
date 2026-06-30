@@ -74,7 +74,7 @@ export function DockerComposeImportPanel({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="scrollbar-hide flex-1 overflow-y-auto p-6">
+      <div className="flex min-h-0 flex-1 flex-col p-6">
         <h2 className="text-lg font-semibold leading-none tracking-tight">
           Import from Docker Compose
         </h2>
@@ -83,43 +83,42 @@ export function DockerComposeImportPanel({
           paste its contents to scaffold a new stack.
         </p>
 
-        <div className="mt-5 space-y-5">
-          <div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
-            >
-              <Upload className="h-4 w-4" />
-            Choose file…
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".yml,.yaml"
-              onChange={handleFileUpload}
-              className="hidden"
-              disabled={isLoading}
-            />
-          </div>
-
-          <FieldShell
-            label="YAML"
-            htmlFor="yaml-content"
-            hint="Paste your docker-compose YAML below."
-            error={error}
+        <div className="mt-5">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
           >
-            <Textarea
-              id="yaml-content"
-              placeholder={SAMPLE_YAML}
-              value={yamlContent}
-              onChange={(e) => handleContentChange(e.target.value)}
-              className="h-96 font-mono text-sm resize-none"
-              disabled={isLoading}
-            />
-          </FieldShell>
+            <Upload className="h-4 w-4" />
+            Choose file…
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".yml,.yaml"
+            onChange={handleFileUpload}
+            className="hidden"
+            disabled={isLoading}
+          />
         </div>
+
+        <FieldShell
+          label="YAML"
+          htmlFor="yaml-content"
+          hint="Paste your docker-compose YAML below."
+          error={error}
+          className="mt-5 flex min-h-0 flex-1 flex-col"
+        >
+          <Textarea
+            id="yaml-content"
+            placeholder={SAMPLE_YAML}
+            value={yamlContent}
+            onChange={(e) => handleContentChange(e.target.value)}
+            className="min-h-0 flex-1 resize-none font-mono text-sm"
+            disabled={isLoading}
+          />
+        </FieldShell>
       </div>
 
       <WizardFooter
