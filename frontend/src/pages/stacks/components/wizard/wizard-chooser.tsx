@@ -1,4 +1,5 @@
 // frontend/src/pages/stacks/components/wizard/wizard-chooser.tsx
+import type { ComponentType } from "react";
 import {
   Grid3x3,
   LayoutTemplate,
@@ -8,7 +9,18 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import dockerUrl from "@/assets/brand/docker.svg";
+
+/**
+ * Docker whale as a monochrome glyph (fill=currentColor) so it matches the
+ * muted-foreground color of the lucide tiles around it.
+ */
+function DockerGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 512 512" fill="currentColor" aria-hidden className={className}>
+      <path d="M501.4 212.3c-11.5-8-38-11-58.6-7-2.4-20-13.5-37.5-32.7-53l-11-8-7.7 11.5c-9.6 15-14.4 36-13 56 .5 7 2.9 19.5 10.1 30.5-6.7 4-20.7 9-38.9 9H2.3l-1 4c-3.4 20-3.4 82.5 36 130.5 29.8 36.5 74 55 132.1 55 125.9 0 219.1-60.5 262.8-170 17.3.5 54.3 0 73-37.5.5-1 1.4-3 4.8-10.5l1.9-4zM280 71.3h-52.8v50H280zm0 60h-52.8v50H280zm-62.5 0h-52.8v50h52.8zm-62.4 0h-52.8v50h52.8zm-62.5 60H39.8v50h52.8zm62.5 0h-52.8v50h52.8zm62.4 0h-52.8v50h52.8zm62.5 0h-52.8v50H280zm62.4 0h-52.8v50h52.8z" />
+    </svg>
+  );
+}
 
 interface WizardChooserProps {
   onPickBlocks: () => void;
@@ -18,10 +30,9 @@ interface WizardChooserProps {
 }
 
 interface AltStart {
-  /** Lucide icon component, or omit and supply `img` for a brand logo. */
+  /** Lucide icon, or a custom glyph component (both render at muted-foreground). */
   icon?: LucideIcon;
-  /** Brand logo URL rendered via <img> (takes precedence over `icon`). */
-  img?: string;
+  glyph?: ComponentType<{ className?: string }>;
   label: string;
   desc: string;
   onClick?: () => void;
@@ -50,7 +61,7 @@ export function WizardChooser({
       soon: true,
     },
     {
-      img: dockerUrl,
+      glyph: DockerGlyph,
       label: "Docker compose",
       desc: "Import a compose.yml.",
       onClick: onPickCompose,
@@ -126,8 +137,8 @@ export function WizardChooser({
             )}
           >
             <span className="flex h-9 w-9 flex-none items-center justify-center rounded bg-muted text-muted-foreground">
-              {a.img ? (
-                <img src={a.img} alt="" aria-hidden className="h-[18px] w-[18px] object-contain" />
+              {a.glyph ? (
+                <a.glyph className="h-[18px] w-[18px]" />
               ) : (
                 a.icon && <a.icon className="h-[18px] w-[18px]" />
               )}
