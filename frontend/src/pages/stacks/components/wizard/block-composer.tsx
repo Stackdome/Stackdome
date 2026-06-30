@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Plus, Search, X } from "lucide-react";
+import { Check, ExternalLink, Plus, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { blockCatalog, BLOCK_CATEGORY_META, getBlockById } from "@/pages/stacks/data/blocks/registry";
@@ -87,37 +87,58 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
           </div>
           <BlockPicker catalog={blockCatalog} categories={BLOCK_CATEGORY_META} addedIds={addedIds} onAdd={addBlock} query={query} />
 
-          {availableAddons.length > 0 && (
+          {(availableAddons.length > 0 || (addons.length === 0 && !q)) && (
             <div className="mt-6">
               <div className="mb-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
                 MANAGED ADD-ONS
                 <span className="font-normal normal-case tracking-normal text-muted-foreground/70"> · already in your workspace</span>
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                {availableAddons.map((a) => {
-                  const added = selectedAddonIds.has(a.id!);
-                  return (
-                    <button
-                      type="button"
-                      key={a.id}
-                      onClick={() => toggleAddon(a.id!)}
-                      className={cn(
-                        "flex min-h-[60px] items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary",
-                        added && "border-primary/60",
-                      )}
-                    >
-                      <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
-                        <AddonTypeIcon type="postgres" size={18} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-foreground">{a.name}</span>
-                        <span className="block truncate font-mono text-[11px] text-muted-foreground">managed postgres</span>
-                      </span>
-                      {added ? <Check className="h-[17px] w-[17px] text-success" /> : <Plus className="h-[17px] w-[17px] text-primary" />}
-                    </button>
-                  );
-                })}
-              </div>
+              {availableAddons.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2.5">
+                  {availableAddons.map((a) => {
+                    const added = selectedAddonIds.has(a.id!);
+                    return (
+                      <button
+                        type="button"
+                        key={a.id}
+                        onClick={() => toggleAddon(a.id!)}
+                        className={cn(
+                          "flex min-h-[60px] items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary",
+                          added && "border-primary/60",
+                        )}
+                      >
+                        <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
+                          <AddonTypeIcon type="postgres" size={18} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-foreground">{a.name}</span>
+                          <span className="block truncate font-mono text-[11px] text-muted-foreground">managed postgres</span>
+                        </span>
+                        {added ? <Check className="h-[17px] w-[17px] text-success" /> : <Plus className="h-[17px] w-[17px] text-primary" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                // No managed addons in the workspace yet — offer a way to create one.
+                <a
+                  href="/addons"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-h-[60px] items-center gap-3 rounded-md border border-dashed bg-card/40 px-3 py-3 text-left transition-colors hover:border-primary hover:bg-card"
+                >
+                  <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
+                    <Plus className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-foreground">Create an add-on</span>
+                    <span className="block text-[12px] text-muted-foreground">
+                      No managed add-ons yet — set one up in the Addons page
+                    </span>
+                  </span>
+                  <ExternalLink className="h-4 w-4 flex-none text-muted-foreground" />
+                </a>
+              )}
             </div>
           )}
         </div>

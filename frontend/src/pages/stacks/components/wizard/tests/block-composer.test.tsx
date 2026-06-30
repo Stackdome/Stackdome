@@ -41,4 +41,11 @@ describe("BlockComposer", () => {
     render(<BlockComposer onBack={vi.fn()} onClose={vi.fn()} />);
     expect(screen.getByRole("button", { name: /Continue/i })).toBeDisabled();
   });
+
+  it("offers a Create add-on link to the addons page when the workspace has none", () => {
+    render(<BlockComposer onBack={vi.fn()} onClose={vi.fn()} />);
+    const link = screen.getByRole("link", { name: /Create an add-on/i });
+    expect(link).toHaveAttribute("href", "/addons");
+    expect(link).toHaveAttribute("target", "_blank");
+  });
 });
