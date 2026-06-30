@@ -7,6 +7,7 @@ import type {
   FormStackResourceData,
   FormVolumeData,
 } from "@/pages/stacks/schemas/form-schema";
+import type { DockerComposeFile } from "@/types/docker-compose";
 
 type WorkingStack = Pick<FormStackData, "name" | "labels" | "spec">;
 
@@ -33,7 +34,7 @@ export function blockToResources(block: BlockPreset): {
     return { resources: [genericResource(block)], volumes: [] };
   }
   const parsed = parseAndValidateDockerCompose(block.compose);
-  const result = convertDockerComposeToStackData(parsed);
+  const result = convertDockerComposeToStackData(parsed as DockerComposeFile);
   if (!result.success || !result.data) {
     throw new Error(
       `Block "${block.id}" failed to convert: ${result.errors?.[0]?.message ?? "unknown"}`
