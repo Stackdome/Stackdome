@@ -38,4 +38,14 @@ describe("StackCreateWizard", () => {
     expect(navigate).toHaveBeenCalledWith("/stacks/create");
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it("template phase has back affordance to return to chooser", async () => {
+    const user = userEvent.setup();
+    render(<StackCreateWizard open onOpenChange={vi.fn()} />);
+    expect(screen.getByText(/How do you want to start\?/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /From template/i }));
+    expect(screen.getByText(/Choose a template/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /back/i }));
+    expect(screen.getByText(/How do you want to start\?/i)).toBeInTheDocument();
+  });
 });

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Layers } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, Layers } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { templates } from "@/data/templates/registry";
 import { useTemplateImport } from "@/pages/stacks/hooks/use-template-import";
 import { useDockerComposeImport } from "@/pages/stacks/hooks/use-docker-compose-import";
@@ -47,13 +47,25 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
         className={`block gap-0 overflow-hidden p-0 ${wide ? "sm:max-w-[1000px]" : "sm:max-w-[640px]"}`}
       >
         <DialogTitle className="sr-only">New Stack</DialogTitle>
-        <div className="flex items-center gap-3 border-b px-5 py-3.5">
-          <span className="flex h-6 w-6 items-center justify-center text-primary">
-            <Layers className="h-5 w-5" />
-          </span>
-          <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
-            New Stack
-          </span>
+        <DialogDescription className="sr-only">Choose how to create your new stack</DialogDescription>
+        <div className="flex items-center justify-between gap-3 border-b px-5 py-3.5">
+          <div className="flex items-center gap-3">
+            <span className="flex h-6 w-6 items-center justify-center text-primary">
+              <Layers className="h-5 w-5" />
+            </span>
+            <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+              New Stack
+            </span>
+          </div>
+          {(phase === "template" || phase === "compose") && (
+            <button
+              type="button"
+              onClick={() => setPhase("chooser")}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" /> back
+            </button>
+          )}
         </div>
 
         <div className="max-h-[80vh] overflow-y-auto">
