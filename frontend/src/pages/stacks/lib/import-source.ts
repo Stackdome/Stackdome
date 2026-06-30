@@ -5,6 +5,7 @@
 export const ImportSource = {
   DockerCompose: "docker-compose",
   Template: "template",
+  Blocks: "blocks",
 } as const;
 
 export type ImportSource = (typeof ImportSource)[keyof typeof ImportSource];
@@ -12,6 +13,7 @@ export type ImportSource = (typeof ImportSource)[keyof typeof ImportSource];
 export const PREFILL_IMPORT_SOURCES: ImportSource[] = [
   ImportSource.DockerCompose,
   ImportSource.Template,
+  ImportSource.Blocks,
 ];
 
 export function isPrefillSource(source: unknown): source is ImportSource {
