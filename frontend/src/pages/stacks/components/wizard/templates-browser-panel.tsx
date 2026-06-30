@@ -106,7 +106,7 @@ export function TemplatesBrowserPanel({
           <div className="font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-brand">
             Import / Templates
           </div>
-          <h2 className="mt-1.5 text-xl font-medium tracking-tight">
+          <h2 className="mt-1.5 text-2xl font-medium tracking-tight">
             Self-hosted apps, ready to deploy
           </h2>
           <p className="mt-1.5 max-w-[640px] text-sm text-muted-foreground">
@@ -145,7 +145,7 @@ export function TemplatesBrowserPanel({
                   className={cn(
                     "flex cursor-pointer items-center gap-2.5 rounded-md border px-2.5 py-2.5",
                     isActive
-                      ? "border-border bg-muted"
+                      ? "border-primary bg-muted"
                       : "border-transparent hover:bg-muted/50",
                   )}
                 >
@@ -173,8 +173,8 @@ export function TemplatesBrowserPanel({
             )}
           </ul>
           <div className="border-t border-border px-4 py-3">
-            <span className="font-mono text-[10.5px] tracking-[0.5px] text-muted-foreground">
-              {filtered.length} templates
+            <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+              {filtered.length} TEMPLATES
             </span>
           </div>
         </div>
@@ -185,7 +185,8 @@ export function TemplatesBrowserPanel({
             <div className="flex items-center gap-4">
               <TemplateBadge
                 template={selected}
-                className="h-[60px] w-[60px] rounded-[10px] text-[22px]"
+                active
+                className="h-[60px] w-[60px] rounded-[10px] border-brand-border bg-brand-bg text-[22px]"
               />
               <div>
                 <div className="text-2xl font-medium tracking-tight">

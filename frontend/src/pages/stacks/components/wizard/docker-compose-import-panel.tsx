@@ -79,7 +79,7 @@ export function DockerComposeImportPanel({
         <div className="font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-brand">
           Import / Docker
         </div>
-        <h2 className="mt-1.5 text-xl font-medium tracking-tight">
+        <h2 className="mt-1.5 text-2xl font-medium tracking-tight">
           Import from Docker Compose
         </h2>
         <p className="sr-only">

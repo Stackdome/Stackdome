@@ -35,4 +35,9 @@ describe("TemplatesBrowserPanel", () => {
     await user.click(screen.getByRole("button", { name: /Continue/i }));
     expect(onUse).toHaveBeenCalledWith(tooljet);
   });
+
+  it("shows the template count marker", () => {
+    render(<TemplatesBrowserPanel templates={[tooljet]} onBack={vi.fn()} onUse={vi.fn()} />);
+    expect(screen.getByText("1 TEMPLATES")).toBeInTheDocument();
+  });
 });

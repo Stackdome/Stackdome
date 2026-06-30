@@ -158,6 +158,7 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
               <>
                 {stack.spec.stack_resources.map((r, i) => (
                   <div key={`${r.name}-${i}`} className="flex items-center gap-3 rounded border bg-card px-3 py-2">
+                    <span className="h-2 w-2 flex-none rounded-full bg-success" />
                     <BlockGlyph icon={iconForResource(r.name)} size={16} />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm text-foreground">{r.name}</span>
@@ -175,6 +176,7 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
                   const name = addon?.name ?? id;
                   return (
                     <div key={id} className="flex items-center gap-3 rounded border bg-card px-3 py-2">
+                      <span className="h-2 w-2 flex-none rounded-full bg-success" />
                       <AddonTypeIcon type="postgres" size={16} />
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm text-foreground">{name}</span>

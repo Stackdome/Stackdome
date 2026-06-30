@@ -75,91 +75,96 @@ export function WizardChooser({
   ];
 
   return (
-    <div className="p-8">
-      <h2 className="mb-1 text-2xl font-medium tracking-tight">
-        How do you want to start?
-      </h2>
-      <p className="mb-6 text-sm text-muted-foreground">
-        Let&apos;s get something running. Pick a starting point. You can change
-        anything later.
-      </p>
+    <div className="flex min-h-full items-center justify-center p-8">
+      <div className="w-full max-w-[780px]">
+        <div className="mb-8 text-center">
+          <h2 className="mb-2 text-3xl font-medium tracking-tight">
+            How do you want to start?
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Let&apos;s get something running. Pick a starting point. You can
+            change anything later.
+          </p>
+        </div>
 
-      {/* Primary tile */}
-      <button
-        type="button"
-        onClick={onPickBlocks}
-        className="mb-6 flex w-full items-center gap-4 rounded-lg border border-primary bg-card p-5 text-left transition-colors hover:bg-card/80"
-      >
-        <span className="flex h-11 w-11 flex-none items-center justify-center rounded bg-primary/10 text-primary">
-          <Grid3x3 className="h-5 w-5" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="mb-0.5 flex items-center gap-2">
-            <span className="text-base font-medium text-foreground">
-              Build from blocks
+        {/* Primary tile */}
+        <button
+          type="button"
+          onClick={onPickBlocks}
+          className="mb-6 flex w-full items-center gap-4 rounded-lg border border-primary bg-card p-5 text-left transition-colors hover:bg-card/80"
+        >
+          <span className="flex h-[54px] w-[54px] flex-none items-center justify-center rounded bg-primary/10 text-primary">
+            <Grid3x3 className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="mb-0.5 flex items-center gap-2">
+              <span className="text-base font-medium text-foreground">
+                Build from blocks
+              </span>
+              <span className="rounded-full border border-primary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary">
+                Recommended
+              </span>
             </span>
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary">
-              Recommended
+            <span className="block text-sm text-muted-foreground">
+              Assemble from recognizable building blocks like web, Postgres,
+              Redis, and workers. Known software lands fully configured.
             </span>
           </span>
-          <span className="block text-sm text-muted-foreground">
-            Assemble from recognizable building blocks like web, Postgres, Redis,
-            and workers. Known software lands fully configured.
+          {/*
+            Rendered as a <span> (not <Button>) to avoid a nested <button> inside
+            this <button> tile, which is invalid HTML. The outer button already
+            has the accessible name "Compose blocks" via its text content, so the
+            test's getByRole("button", { name: /Compose blocks/i }) still matches.
+          */}
+          <span className="inline-flex flex-none cursor-default items-center gap-1.5 rounded-sm bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">
+            Compose blocks <ArrowRight className="h-4 w-4" />
           </span>
-        </span>
-        {/*
-          Rendered as a <span> (not <Button>) to avoid a nested <button> inside
-          this <button> tile, which is invalid HTML. The outer button already
-          has the accessible name "Compose blocks" via its text content, so the
-          test's getByRole("button", { name: /Compose blocks/i }) still matches.
-        */}
-        <span className="inline-flex flex-none cursor-default items-center gap-1.5 rounded-sm bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">
-          Compose blocks <ArrowRight className="h-4 w-4" />
-        </span>
-      </button>
+        </button>
 
-      <div className="mb-4 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
-        OR START FROM
-      </div>
+        <div className="mb-4 text-center font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+          OR START FROM
+        </div>
 
-      <div className="grid grid-cols-2 gap-2.5">
-        {alts.map((a) => (
-          <button
-            type="button"
-            key={a.label}
-            onClick={a.onClick}
-            disabled={a.disabled}
-            className={cn(
-              "flex min-h-[76px] items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
-              a.disabled
-                ? "cursor-not-allowed opacity-50"
-                : "hover:border-primary",
-            )}
-          >
-            <span className="flex h-9 w-9 flex-none items-center justify-center rounded bg-muted text-muted-foreground">
-              {a.glyph ? (
-                <a.glyph className="h-[18px] w-[18px]" />
-              ) : (
-                a.icon && <a.icon className="h-[18px] w-[18px]" />
+        <div className="grid grid-cols-2 gap-2.5">
+          {alts.map((a) => (
+            <button
+              type="button"
+              key={a.label}
+              onClick={a.onClick}
+              disabled={a.disabled}
+              className={cn(
+                "flex min-h-[76px] items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
+                a.disabled
+                  ? "cursor-not-allowed opacity-50"
+                  : "hover:border-primary",
               )}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="mb-0.5 flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">
-                  {a.label}
-                </span>
-                {a.soon && (
-                  <span className="rounded-full border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-                    soon
-                  </span>
+            >
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded bg-muted text-muted-foreground">
+                {a.glyph ? (
+                  <a.glyph className="h-[18px] w-[18px]" />
+                ) : (
+                  a.icon && <a.icon className="h-[18px] w-[18px]" />
                 )}
               </span>
-              <span className="block text-xs text-muted-foreground">
-                {a.desc}
+              <span className="min-w-0 flex-1">
+                <span className="mb-0.5 flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">
+                    {a.label}
+                  </span>
+                  {a.soon && (
+                    <span className="rounded-full border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                      soon
+                    </span>
+                  )}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {a.desc}
+                </span>
               </span>
-            </span>
-          </button>
-        ))}
+              <ArrowRight className="h-[17px] w-[17px] flex-none self-center text-muted-foreground" />
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
