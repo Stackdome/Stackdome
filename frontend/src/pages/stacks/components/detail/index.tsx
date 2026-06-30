@@ -34,6 +34,8 @@ import type { AddonGroupStateMap } from "@/pages/stacks/components/shared/stack-
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
 import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
+import { StackCanvasTab } from "@/pages/stacks/components/canvas/StackCanvasTab";
+import { isCanvasEnabled } from "@/lib/feature-flags";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { getStackById, updateStack } from "@/api/stacks";
@@ -681,6 +683,10 @@ export default function StackDetailPage() {
 
         {/* Configuration Tab: Stack Resources and Volumes */}
         <TabsContent value="configuration" className="space-y-8">
+          {isCanvasEnabled() ? (
+            <StackCanvasTab session={session} />
+          ) : (
+            <>
           <Panel
             title="Stack Resources"
             count={baselineResources.length}
@@ -803,6 +809,8 @@ export default function StackDetailPage() {
               />
             );
           })()}
+            </>
+          )}
         </TabsContent>
 
         {/* Deployments Tab */}
