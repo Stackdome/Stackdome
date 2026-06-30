@@ -133,7 +133,7 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium text-foreground">Create an add-on</span>
                     <span className="block text-[12px] text-muted-foreground">
-                      No managed add-ons yet — set one up in the Addons page
+                      No managed add-ons yet. Set one up in the Addons page.
                     </span>
                   </span>
                   <ExternalLink className="h-4 w-4 flex-none text-muted-foreground" />

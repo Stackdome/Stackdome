@@ -36,7 +36,7 @@ export function WizardChooser({
     {
       icon: LayoutTemplate,
       label: "From template",
-      desc: "A curated, ready-made stack.",
+      desc: "Curated self-hosted apps, ready to deploy.",
       onClick: onPickTemplate,
     },
     {
@@ -66,7 +66,7 @@ export function WizardChooser({
         How do you want to start?
       </h2>
       <p className="mb-6 text-sm text-muted-foreground">
-        Let&apos;s get something running. Pick a starting point — you can change
+        Let&apos;s get something running. Pick a starting point. You can change
         anything later.
       </p>
 
@@ -89,8 +89,8 @@ export function WizardChooser({
             </span>
           </span>
           <span className="block text-sm text-muted-foreground">
-            Assemble from recognizable building blocks — web, Postgres, Redis,
-            workers. Known software lands fully configured.
+            Assemble from recognizable building blocks like web, Postgres, Redis,
+            and workers. Known software lands fully configured.
           </span>
         </span>
         {/*

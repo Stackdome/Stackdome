@@ -44,7 +44,7 @@ describe("StackCreateWizard", () => {
     render(<StackCreateWizard open onOpenChange={vi.fn()} />);
     expect(screen.getByText(/How do you want to start\?/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /From template/i }));
-    expect(screen.getByText(/Choose a template/i)).toBeInTheDocument();
+    expect(screen.getByText(/Self-hosted apps, ready to deploy/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /back/i }));
     expect(screen.getByText(/How do you want to start\?/i)).toBeInTheDocument();
   });

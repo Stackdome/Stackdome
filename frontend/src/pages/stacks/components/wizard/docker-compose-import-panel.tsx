@@ -77,7 +77,7 @@ export function DockerComposeImportPanel({
       {/* Header mirrors the templates panel: brand eyebrow + title, divided. */}
       <div className="border-b border-border px-6 py-5">
         <div className="font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-brand">
-          Import / Compose
+          Import / Docker
         </div>
         <h2 className="mt-1.5 text-xl font-medium tracking-tight">
           Import from Docker Compose

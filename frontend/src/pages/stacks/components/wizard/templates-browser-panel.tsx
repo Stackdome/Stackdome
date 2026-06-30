@@ -107,10 +107,10 @@ export function TemplatesBrowserPanel({
             Import / Templates
           </div>
           <h2 className="mt-1.5 text-xl font-medium tracking-tight">
-            Choose a template
+            Self-hosted apps, ready to deploy
           </h2>
-          <p className="sr-only">
-            Pick a curated template to prefill the new-stack form.
+          <p className="mt-1.5 max-w-[640px] text-sm text-muted-foreground">
+            Hand-picked open-source apps, tuned to their sanest minimal config. Pick one and ship it.
           </p>
         </div>
       </div>
