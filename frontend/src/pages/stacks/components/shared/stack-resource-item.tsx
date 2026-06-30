@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from "react";
+import React from "react";
 import {
   AccordionItem,
   AccordionTrigger,
@@ -8,23 +8,14 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { X, GitBranch, Box, Trash2 } from "lucide-react";
-import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
-import { dirtyTabsForResource, isResourceDirty } from "@/pages/stacks/lib/stack-diff";
-import type { z } from "zod";
-import { variantFromState } from "@/components/branded";
 
-import type { FormStackResourceData, FormEnvVarData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import type { UseSecretsReturn } from "../../hooks/use-secrets";
 import type { PostgresAddon } from "@/api/addons";
-import {
-  StackResourceConfigurationTab,
-  pickConfigurationDraft,
-} from "./stack-resource-configuration-tab";
-import {
-  StackResourceDeploymentTab,
-  pickDeploymentDraft,
-} from "./stack-resource-deployment-tab";
+import { StackResourceConfigurationTab } from "./stack-resource-configuration-tab";
+import { StackResourceDeploymentTab } from "./stack-resource-deployment-tab";
 import { StackResourceEnvironmentTab } from "./stack-resource-environment-tab";
+import { useResourceTabProps } from "./hooks/use-resource-tab-props";
 
 export type AddonGroupStateMap = Map<string, "idle" | "editing-binding" | "detaching">;
 
@@ -71,123 +62,21 @@ function StackResourceItemImpl({
   onDiscardResource,
   onDiscardField,
 }: StackResourceItemProps) {
-  // Per-tab dirty bucketing → renders the small brand dot next to each tab label.
-  const dirtyTabs = useMemo(
-    () => (baselineResource ? dirtyTabsForResource(resource, baselineResource) : { configuration: false, deployment: false, environment: false }),
-    [resource, baselineResource],
-  );
-
-  const isDirty = baselineResource ? isResourceDirty(resource, baselineResource) : false;
-
-  // Refs to the latest props so the patch callbacks below can stay
-  // referentially stable across renders. Without this, every keystroke would
-  // recreate the callbacks and defeat React.memo on the per-tab children —
-  // the whole point of splitting the file.
-  const resourceRef = useRef(resource);
-  resourceRef.current = resource;
-  const indexRef = useRef(index);
-  indexRef.current = index;
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
-
-  // Stable: shallow-merge a patch into the latest resource and forward.
-  const onPatchResource = useCallback((patch: Partial<FormStackResourceData>) => {
-    onChangeRef.current(indexRef.current, { ...resourceRef.current, ...patch });
-  }, []);
-
-  // Stable: merge into init_spec, preserving sibling fields.
-  const onPatchInitSpec = useCallback(
-    (patch: Partial<NonNullable<FormStackResourceData["init_spec"]>>) => {
-      const r = resourceRef.current;
-      onChangeRef.current(indexRef.current, {
-        ...r,
-        init_spec: { ...r.init_spec, ...patch },
-      });
-    },
-    [],
-  );
-
-  // Stable: patch only command/args on execution_config, preserving env vars.
-  const onPatchExecCommandArgs = useCallback(
-    (patch: { command?: string[]; args?: string[] }) => {
-      const r = resourceRef.current;
-      onChangeRef.current(indexRef.current, {
-        ...r,
-        execution_config: { ...r.execution_config, ...patch },
-      });
-    },
-    [],
-  );
-
-  // Stable: replace the env vars array, preserving the rest of execution_config.
-  const onChangeEnvVars = useCallback((next: FormEnvVarData[]) => {
-    const r = resourceRef.current;
-    onChangeRef.current(indexRef.current, {
-      ...r,
-      execution_config: {
-        ...r.execution_config,
-        environment_variables: next,
-      },
-    });
-  }, []);
-
-  // Status semantics
-  const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
-  const statusVariant = variantFromState(statusObj.state);
-  const statusDotColor =
-    statusVariant === "ready" ? "bg-success"
-      : statusVariant === "error" ? "bg-danger"
-        : statusVariant === "pending" ? "bg-warn"
-          : "bg-muted-foreground";
-
-  // Per-tab projections. Done in useMemo so the projected object's identity
-  // only changes when the tab's own fields change — which is what lets
-  // React.memo skip the inactive tabs.
-  const configurationDraft = useMemo(() => pickConfigurationDraft(resource), [
-    resource.name,
-    resource.depends_on,
-    resource.sourceType,
-    resource.image_spec,
-    resource.build_spec,
-    resource.useImageSecret,
-    resource.selectedImageSecretId,
-    resource.useGitSecret,
-    resource.selectedGitSecretId,
-    resource.gitRevisionType,
-    resource.gitRevisionValue,
-    resource.volume_mounts,
-    resource.ports,
-  ]);
-  const configurationBaseline = useMemo(
-    () => (baselineResource ? pickConfigurationDraft(baselineResource) : undefined),
-    [baselineResource],
-  );
-  const deploymentDraft = useMemo(() => pickDeploymentDraft(resource), [
-    resource.init_spec,
-    resource.execution_config?.command,
-    resource.execution_config?.args,
-  ]);
-  const deploymentBaseline = useMemo(
-    () => (baselineResource ? pickDeploymentDraft(baselineResource) : undefined),
-    [baselineResource],
-  );
-
-  const envVars = (resource.execution_config?.environment_variables || []) as FormEnvVarData[];
-  const baselineEnvVars = baselineResource?.execution_config?.environment_variables as FormEnvVarData[] | undefined;
-
-  // Picker data for env-row source bindings.
-  const thisResourceName = resource.name ?? `Resource ${index + 1}`;
-  const resourceOptions = useMemo(
-    () =>
-      (allResources ?? [])
-        .filter((r) => r.name !== thisResourceName)
-        .map((r) => ({ name: r.name, outputs: r.outputs })),
-    [allResources, thisResourceName],
-  );
-  const selfOutputs = useMemo(
-    () => (resource.outputs ?? []).map((o) => o.name),
-    [resource.outputs],
-  );
+  const {
+    dirtyTabs,
+    isDirty,
+    statusDotColor,
+    statusState,
+    configurationProps,
+    deploymentProps,
+    environmentProps,
+  } = useResourceTabProps({
+    resource,
+    index,
+    baselineResource,
+    onChange,
+    context: { errors, volumes, allResources, secrets, addons, addonNameById, onDiscardField, onDiscardEnvRow },
+  });
 
   return (
     <TooltipProvider>
@@ -206,7 +95,7 @@ function StackResourceItemImpl({
                 <span className={`h-2 w-2 rounded-full shrink-0 ${statusDotColor}`}></span>
               </TooltipTrigger>
               <TooltipContent side="top">
-                <p className="capitalize">{statusObj.state || 'Pending'}</p>
+                <p className="capitalize">{statusState || 'Pending'}</p>
               </TooltipContent>
             </Tooltip>
             <div className="flex flex-col flex-grow min-w-0">
@@ -284,41 +173,9 @@ function StackResourceItemImpl({
                 </TabsList>
               </div>
 
-              <StackResourceConfigurationTab
-                index={index}
-                draft={configurationDraft}
-                baseline={configurationBaseline}
-                errors={errors}
-                volumes={volumes}
-                allResources={allResources}
-                secrets={secrets}
-                onDiscardField={onDiscardField}
-                onPatchResource={onPatchResource}
-              />
-
-              <StackResourceDeploymentTab
-                index={index}
-                draft={deploymentDraft}
-                baseline={deploymentBaseline}
-                onPatchInitSpec={onPatchInitSpec}
-                onPatchExecCommandArgs={onPatchExecCommandArgs}
-                onDiscardField={onDiscardField}
-              />
-
-              <StackResourceEnvironmentTab
-                index={index}
-                envVars={envVars}
-                baselineEnvVars={baselineEnvVars}
-                errors={errors}
-                resourceOptions={resourceOptions}
-                selfOutputs={selfOutputs}
-                secrets={secrets.secrets}
-                secretsLoading={secrets.isLoading}
-                addons={addons}
-                addonNameById={addonNameById}
-                onChangeEnvVars={onChangeEnvVars}
-                onDiscardEnvRow={onDiscardEnvRow}
-              />
+              <StackResourceConfigurationTab {...configurationProps} />
+              <StackResourceDeploymentTab {...deploymentProps} />
+              <StackResourceEnvironmentTab {...environmentProps} />
             </Tabs>
 
             <div className="mt-8 pt-3 border-t border-border flex justify-end">
@@ -343,9 +200,9 @@ function StackResourceItemImpl({
 /**
  * The form is heavy (~1500 lines of JSX). It's split into per-tab
  * subcomponents (Configuration / Deployment / Environment), each wrapped in
- * React.memo. The parent passes per-tab projected `draft` slices so a
- * keystroke that only mutates Configuration fields leaves the Deployment and
- * Environment subtrees idle (memo skips them on shallow compare).
+ * React.memo. `useResourceTabProps` assembles their props with referentially
+ * stable callbacks so a keystroke that only mutates Configuration fields leaves
+ * the Deployment and Environment subtrees idle (memo skips them).
  *
  * The outer React.memo here keeps the *whole* item idle when other resources
  * in the accordion change — Radix Accordion keeps closed items mounted.
