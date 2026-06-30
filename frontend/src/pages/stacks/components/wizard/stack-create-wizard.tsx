@@ -40,14 +40,14 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
   };
 
   const backToChooser = () => setPhase("chooser");
-  const wide = phase === "composer" || phase === "template";
   const isPath = phase !== "chooser";
 
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
-      <DialogContent
-        className={`block gap-0 overflow-hidden p-0 ${wide ? "sm:max-w-[1000px]" : "sm:max-w-[640px]"}`}
-      >
+      {/* Constant width across every step so the modal never resizes between
+          phases — the composer/template steps need the wide two-column layout,
+          so all steps use it and the body scrolls instead. */}
+      <DialogContent className="block gap-0 overflow-hidden p-0 sm:max-w-[1000px]">
         <DialogTitle className="sr-only">New Stack</DialogTitle>
         <DialogDescription className="sr-only">Choose how to create your new stack</DialogDescription>
         {/* pr-12 reserves space so the title never sits under the dialog's
