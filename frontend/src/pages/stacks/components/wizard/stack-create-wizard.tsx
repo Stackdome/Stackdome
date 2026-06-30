@@ -35,8 +35,8 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
   };
 
   const onImportCompose = async (yaml: string) => {
-    await compose.handleImport(yaml);
-    close();
+    const ok = await compose.handleImport(yaml);
+    if (ok) close();
   };
 
   const wide = phase === "composer" || phase === "template";

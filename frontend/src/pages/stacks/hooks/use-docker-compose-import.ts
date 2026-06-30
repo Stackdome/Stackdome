@@ -15,7 +15,8 @@ export interface ImportState {
 export interface ImportActions {
   openDialog: () => void;
   closeDialog: () => void;
-  handleImport: (yamlContent: string) => Promise<void>;
+  /** Returns true when the import succeeded and navigation was triggered; false on any error. */
+  handleImport: (yamlContent: string) => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -40,10 +41,10 @@ export function useDockerComposeImport(): ImportState & ImportActions {
     setError(null);
   };
 
-  const handleImport = async (yamlContent: string): Promise<void> => {
+  const handleImport = async (yamlContent: string): Promise<boolean> => {
     if (!yamlContent.trim()) {
       setError('Please enter a Docker Compose YAML configuration');
-      return;
+      return false;
     }
 
     setIsLoading(true);
@@ -79,6 +80,7 @@ export function useDockerComposeImport(): ImportState & ImportActions {
         description: 'Docker Compose services imported. Please review and configure as needed.',
       });
 
+      return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to import Docker Compose file';
       setError(errorMessage);
@@ -88,6 +90,8 @@ export function useDockerComposeImport(): ImportState & ImportActions {
         description: errorMessage,
         variant: 'destructive',
       });
+
+      return false;
     } finally {
       setIsLoading(false);
     }

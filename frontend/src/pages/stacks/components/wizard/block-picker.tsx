@@ -55,7 +55,7 @@ export function BlockPicker({ catalog, categories, addedIds, onAdd, query }: Blo
                       <span className="block text-sm font-medium text-foreground">{b.name}</span>
                       <span className="block truncate font-mono text-[11px] text-muted-foreground">{b.summary}</span>
                     </span>
-                    {added ? <Check className="h-[17px] w-[17px] text-green-500" /> : <Plus className="h-[17px] w-[17px] text-primary" />}
+                    {added ? <Check className="h-[17px] w-[17px] text-success" /> : <Plus className="h-[17px] w-[17px] text-primary" />}
                   </button>
                 );
               })}

@@ -63,16 +63,32 @@ export function addBlockToStack(stack: WorkingStack, block: BlockPreset): Workin
     takenResources.add(name);
     return { ...r, name };
   });
+
+  // Build oldName → newName map for volumes that were renamed during de-duplication
+  const volumeNameMap = new Map<string, string>();
   const renamedVolumes = volumes.map((v) => {
     const name = uniqueName(v.name, takenVolumes);
     takenVolumes.add(name);
+    if (name !== v.name) volumeNameMap.set(v.name, name);
     return { ...v, name };
+  });
+
+  // Rewrite volume_mounts in the new resources to reflect any renamed volumes
+  const rewiredResources = renamedResources.map((r) => {
+    if (volumeNameMap.size === 0 || !r.volume_mounts?.length) return r;
+    return {
+      ...r,
+      volume_mounts: r.volume_mounts.map((vm) => {
+        const newSourceName = volumeNameMap.get(vm.source_volume_name);
+        return newSourceName ? { ...vm, source_volume_name: newSourceName } : vm;
+      }),
+    };
   });
 
   return {
     ...stack,
     spec: {
-      stack_resources: [...(stack.spec.stack_resources ?? []), ...renamedResources],
+      stack_resources: [...(stack.spec.stack_resources ?? []), ...rewiredResources],
       volumes: [...(stack.spec.volumes ?? []), ...renamedVolumes],
     },
   };

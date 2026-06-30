@@ -27,4 +27,18 @@ describe("block-to-form", () => {
     stack = addBlockToStack(stack, getBlockById(BlockId.Postgres)!);
     expect(stack.spec.stack_resources.map((r) => r.name)).toEqual(["postgres", "postgres-2"]);
   });
+
+  it("rewires volume_mounts.source_volume_name after de-duplicating volumes (no orphan mounts)", () => {
+    let stack = emptyStack();
+    stack = addBlockToStack(stack, getBlockById(BlockId.Postgres)!);
+    stack = addBlockToStack(stack, getBlockById(BlockId.Postgres)!);
+
+    // Both volumes must be present and uniquely named
+    expect(stack.spec.volumes?.map((v) => v.name)).toEqual(["pgdata", "pgdata-2"]);
+
+    // The second resource's volume mount must point at the renamed volume, not the original
+    const postgres2 = stack.spec.stack_resources.find((r) => r.name === "postgres-2");
+    const mount = postgres2?.volume_mounts?.[0];
+    expect(mount?.source_volume_name).toBe("pgdata-2");
+  });
 });
