@@ -2,14 +2,15 @@ import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { FieldShell } from '@/components/branded';
-import { Loader2, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
+import { WizardFooter } from './wizard-footer';
 
 export interface DockerComposeImportPanelProps {
   onImport: (yaml: string) => Promise<void>;
   isLoading: boolean;
   error: string | null;
   onClearError: () => void;
-  onCancel?: () => void;
+  onBack: () => void;
 }
 
 const SAMPLE_YAML = `version: '3.8'
@@ -36,7 +37,7 @@ export function DockerComposeImportPanel({
   isLoading,
   error,
   onClearError,
-  onCancel,
+  onBack,
 }: DockerComposeImportPanelProps) {
   const [yamlContent, setYamlContent] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,10 +46,10 @@ export function DockerComposeImportPanel({
     await onImport(yamlContent);
   };
 
-  const handleCancel = () => {
+  const handleBack = () => {
     setYamlContent('');
     onClearError();
-    onCancel?.();
+    onBack();
   };
 
   const handleContentChange = (value: string) => {
@@ -72,62 +73,62 @@ export function DockerComposeImportPanel({
   const isValidYaml = yamlContent.trim().length > 0;
 
   return (
-    <div>
-      <h2 className="text-lg font-semibold leading-none tracking-tight">
-        Import from Docker Compose
-      </h2>
-      <p className="mt-1.5 text-sm text-muted-foreground">
-        Upload a <span className="font-mono">docker-compose.yml</span> file or
-        paste its contents to scaffold a new stack.
-      </p>
+    <div className="flex h-full flex-col">
+      <div className="scrollbar-hide flex-1 overflow-y-auto p-6">
+        <h2 className="text-lg font-semibold leading-none tracking-tight">
+          Import from Docker Compose
+        </h2>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Upload a <span className="font-mono">docker-compose.yml</span> file or
+          paste its contents to scaffold a new stack.
+        </p>
 
-      <div className="mt-5 space-y-5">
-        <div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-          >
-            <Upload className="h-4 w-4" />
+        <div className="mt-5 space-y-5">
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+            >
+              <Upload className="h-4 w-4" />
             Choose file…
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".yml,.yaml"
-            onChange={handleFileUpload}
-            className="hidden"
-            disabled={isLoading}
-          />
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".yml,.yaml"
+              onChange={handleFileUpload}
+              className="hidden"
+              disabled={isLoading}
+            />
+          </div>
+
+          <FieldShell
+            label="YAML"
+            htmlFor="yaml-content"
+            hint="Paste your docker-compose YAML below."
+            error={error}
+          >
+            <Textarea
+              id="yaml-content"
+              placeholder={SAMPLE_YAML}
+              value={yamlContent}
+              onChange={(e) => handleContentChange(e.target.value)}
+              className="h-96 font-mono text-sm resize-none"
+              disabled={isLoading}
+            />
+          </FieldShell>
         </div>
-
-        <FieldShell
-          label="YAML"
-          htmlFor="yaml-content"
-          hint="Paste your docker-compose YAML below."
-          error={error}
-        >
-          <Textarea
-            id="yaml-content"
-            placeholder={SAMPLE_YAML}
-            value={yamlContent}
-            onChange={(e) => handleContentChange(e.target.value)}
-            className="h-96 font-mono text-sm resize-none"
-            disabled={isLoading}
-          />
-        </FieldShell>
       </div>
 
-      <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-5">
-        <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
-          Cancel
-        </Button>
-        <Button onClick={handleImport} disabled={!isValidYaml || isLoading}>
-          {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-          Import
-        </Button>
-      </div>
+      <WizardFooter
+        onBack={handleBack}
+        onContinue={handleImport}
+        continueDisabled={!isValidYaml}
+        loading={isLoading}
+        hint="Scaffolds a new stack from your compose file."
+      />
     </div>
   );
 }

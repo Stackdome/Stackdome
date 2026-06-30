@@ -31,8 +31,8 @@ describe("TemplatesBrowserPanel", () => {
   it("calls onUse with the selected template", async () => {
     const user = userEvent.setup();
     const onUse = vi.fn();
-    render(<TemplatesBrowserPanel templates={[tooljet]} onUse={onUse} />);
-    await user.click(screen.getByRole("button", { name: /Use template/i }));
+    render(<TemplatesBrowserPanel templates={[tooljet]} onBack={vi.fn()} onUse={onUse} />);
+    await user.click(screen.getByRole("button", { name: /Continue/i }));
     expect(onUse).toHaveBeenCalledWith(tooljet);
   });
 });

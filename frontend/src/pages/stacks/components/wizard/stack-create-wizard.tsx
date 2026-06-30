@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Layers } from "lucide-react";
+import { Layers } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { templates } from "@/data/templates/registry";
 import { useTemplateImport } from "@/pages/stacks/hooks/use-template-import";
@@ -39,7 +39,9 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
     if (ok) close();
   };
 
+  const backToChooser = () => setPhase("chooser");
   const wide = phase === "composer" || phase === "template";
+  const isPath = phase !== "chooser";
 
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
@@ -48,18 +50,10 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
       >
         <DialogTitle className="sr-only">New Stack</DialogTitle>
         <DialogDescription className="sr-only">Choose how to create your new stack</DialogDescription>
-        {/* pr-12 reserves space so the header never sits under the dialog's
-            built-in close (X), which is absolutely positioned at top-right. */}
+        {/* pr-12 reserves space so the title never sits under the dialog's
+            built-in close (X), which is absolutely positioned at top-right.
+            Per-step navigation lives in each path's footer (WizardFooter). */}
         <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
-          {phase !== "chooser" && (
-            <button
-              type="button"
-              onClick={() => setPhase("chooser")}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" /> back
-            </button>
-          )}
           <span className="flex h-6 w-6 items-center justify-center text-primary">
             <Layers className="h-5 w-5" />
           </span>
@@ -68,7 +62,7 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
           </span>
         </div>
 
-        <div className="max-h-[80vh] overflow-y-auto">
+        <div className={isPath ? "h-[72vh] overflow-hidden" : "max-h-[80vh] overflow-y-auto"}>
           {phase === "chooser" && (
             <WizardChooser
               onPickBlocks={() => setPhase("composer")}
@@ -80,15 +74,9 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
               }}
             />
           )}
-          {phase === "composer" && (
-            <div className="h-[70vh]">
-              <BlockComposer onClose={close} />
-            </div>
-          )}
+          {phase === "composer" && <BlockComposer onBack={backToChooser} onClose={close} />}
           {phase === "template" && (
-            <div className="h-[70vh]">
-              <TemplatesBrowserPanel templates={templates} onUse={onUseTemplate} />
-            </div>
+            <TemplatesBrowserPanel templates={templates} onBack={backToChooser} onUse={onUseTemplate} />
           )}
           {phase === "compose" && (
             <DockerComposeImportPanel
@@ -96,7 +84,7 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
               isLoading={compose.isLoading}
               error={compose.error}
               onClearError={compose.clearError}
-              onCancel={() => setPhase("chooser")}
+              onBack={backToChooser}
             />
           )}
         </div>

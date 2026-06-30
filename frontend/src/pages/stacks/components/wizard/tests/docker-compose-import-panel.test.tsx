@@ -17,44 +17,46 @@ describe("DockerComposeImportPanel", () => {
         isLoading={false}
         error={null}
         onClearError={vi.fn()}
+        onBack={vi.fn()}
       />,
     );
     await user.type(
       screen.getByRole("textbox"),
       "services:\n  web:\n    image: nginx",
     );
-    await user.click(screen.getByRole("button", { name: /^Import$/i }));
+    await user.click(screen.getByRole("button", { name: /Continue/i }));
     expect(onImport).toHaveBeenCalledWith(
       "services:\n  web:\n    image: nginx",
     );
   });
 
-  it("Import button is disabled when textarea is empty", () => {
+  it("Continue button is disabled when textarea is empty", () => {
     render(
       <DockerComposeImportPanel
         onImport={vi.fn()}
         isLoading={false}
         error={null}
         onClearError={vi.fn()}
+        onBack={vi.fn()}
       />,
     );
-    expect(screen.getByRole("button", { name: /^Import$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Continue/i })).toBeDisabled();
   });
 
-  it("calls onCancel when Cancel is clicked", async () => {
+  it("calls onBack when Back is clicked", async () => {
     const user = userEvent.setup();
-    const onCancel = vi.fn();
+    const onBack = vi.fn();
     render(
       <DockerComposeImportPanel
         onImport={vi.fn()}
         isLoading={false}
         error={null}
         onClearError={vi.fn()}
-        onCancel={onCancel}
+        onBack={onBack}
       />,
     );
-    await user.click(screen.getByRole("button", { name: /Cancel/i }));
-    expect(onCancel).toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: /Back/i }));
+    expect(onBack).toHaveBeenCalled();
   });
 
   it("shows error when error prop is set", () => {
@@ -64,6 +66,7 @@ describe("DockerComposeImportPanel", () => {
         isLoading={false}
         error="Invalid YAML"
         onClearError={vi.fn()}
+        onBack={vi.fn()}
       />,
     );
     expect(screen.getByText("Invalid YAML")).toBeInTheDocument();

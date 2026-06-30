@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Check, Plus, Search, X } from "lucide-react";
+import { Check, Plus, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { blockCatalog, BLOCK_CATEGORY_META, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { addBlockToStack, emptyStack } from "@/pages/stacks/lib/block-to-form";
@@ -11,12 +10,14 @@ import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 import { BlockPicker } from "./block-picker";
 import { BlockGlyph } from "./block-glyph";
+import { WizardFooter } from "./wizard-footer";
 
 interface BlockComposerProps {
+  onBack: () => void;
   onClose: () => void;
 }
 
-export function BlockComposer({ onClose }: BlockComposerProps) {
+export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [stack, setStack] = useState(emptyStack);
@@ -67,7 +68,7 @@ export function BlockComposer({ onClose }: BlockComposerProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="grid flex-1 grid-cols-[1fr_360px] gap-0 overflow-hidden">
+      <div className="grid min-h-0 flex-1 grid-cols-[1fr_360px] gap-0 overflow-hidden">
         {/* LEFT: palette */}
         <div className="scrollbar-hide overflow-y-auto p-6">
           <div className="mb-1 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">COMPOSE</div>
@@ -122,7 +123,7 @@ export function BlockComposer({ onClose }: BlockComposerProps) {
         </div>
 
         {/* RIGHT: your stack so far */}
-        <div className="flex flex-col border-l bg-card/40">
+        <div className="flex min-h-0 flex-col border-l bg-card/40">
           <div className="border-b px-4 py-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
             Your stack so far · {count}
           </div>
@@ -164,14 +165,14 @@ export function BlockComposer({ onClose }: BlockComposerProps) {
               </>
             )}
           </div>
-          <div className="border-t p-4">
-            <Button className="w-full" disabled={count === 0} onClick={openEditor}>
-              Open editor <ArrowRight className="ml-1 h-4 w-4" />
-            </Button>
-            <p className="mt-2 text-center text-xs text-muted-foreground">Review &amp; configure your resources</p>
-          </div>
         </div>
       </div>
+      <WizardFooter
+        onBack={onBack}
+        onContinue={openEditor}
+        continueDisabled={count === 0}
+        hint="Review & configure your resources"
+      />
     </div>
   );
 }

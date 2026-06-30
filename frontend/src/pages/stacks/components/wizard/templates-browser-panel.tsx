@@ -1,12 +1,13 @@
 import { useMemo, useState, type KeyboardEvent } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, ExternalLink, ArrowRight } from "lucide-react";
+import { Search, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Template } from "@/data/templates/types";
+import { WizardFooter } from "./wizard-footer";
 
 interface TemplatesBrowserPanelProps {
   templates: Template[];
+  onBack: () => void;
   onUse: (template: Template) => void;
 }
 
@@ -58,6 +59,7 @@ function ExternalLinkButton({ href, label }: { href: string; label: string }) {
 
 export function TemplatesBrowserPanel({
   templates,
+  onBack,
   onUse,
 }: TemplatesBrowserPanelProps) {
   const [query, setQuery] = useState("");
@@ -97,7 +99,7 @@ export function TemplatesBrowserPanel({
   };
 
   return (
-    <div onKeyDown={handleKeyDown} className="flex flex-col">
+    <div onKeyDown={handleKeyDown} className="flex h-full flex-col">
       {/* header */}
       <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
         <div>
@@ -114,7 +116,7 @@ export function TemplatesBrowserPanel({
       </div>
 
       {/* body: split */}
-      <div className="grid h-[520px] grid-cols-[340px_1fr]">
+      <div className="grid min-h-0 flex-1 grid-cols-[340px_1fr]">
         {/* left: search + list */}
         <div className="flex min-h-0 flex-col border-r border-border">
           <div className="relative px-3.5 pb-2.5 pt-3.5">
@@ -179,7 +181,7 @@ export function TemplatesBrowserPanel({
 
         {/* right: detail */}
         {selected ? (
-          <div className="flex min-h-0 flex-col px-8 pb-7 pt-8">
+          <div className="scrollbar-hide flex min-h-0 flex-col overflow-y-auto px-8 pb-7 pt-8">
             <div className="flex items-center gap-4">
               <TemplateBadge
                 template={selected}
@@ -201,16 +203,6 @@ export function TemplatesBrowserPanel({
               <ExternalLinkButton href={selected.website} label="Website" />
               <ExternalLinkButton href={selected.docs} label="Docs" />
             </div>
-            <div className="flex-1" />
-            <div className="flex items-center justify-between gap-4 border-t border-border pt-5">
-              <p className="max-w-[300px] text-xs leading-snug text-muted-foreground">
-                Opens the new-stack form, prefilled with this template.
-              </p>
-              <Button onClick={() => onUse(selected)}>
-                Use template
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
           </div>
         ) : (
           <div className="flex items-center justify-center text-sm text-muted-foreground">
@@ -218,6 +210,13 @@ export function TemplatesBrowserPanel({
           </div>
         )}
       </div>
+
+      <WizardFooter
+        onBack={onBack}
+        onContinue={() => selected && onUse(selected)}
+        continueDisabled={!selected}
+        hint="Opens the new-stack form, prefilled with this template."
+      />
     </div>
   );
 }
