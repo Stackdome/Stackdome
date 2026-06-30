@@ -35,6 +35,10 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
     if (block) setStack((s) => addBlockToStack(s, block));
   };
 
+  // Match a resource back to its block so the stack-so-far list shows the right glyph.
+  const iconForResource = (name: string) =>
+    blockCatalog.find((b) => b.id === name || name.startsWith(`${b.id}-`))?.icon ?? "box";
+
   const removeResource = (index: number) =>
     setStack((s) => ({
       ...s,
@@ -155,7 +159,7 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
               <>
                 {stack.spec.stack_resources.map((r, i) => (
                   <div key={`${r.name}-${i}`} className="flex items-center gap-3 rounded border bg-card px-3 py-2">
-                    <BlockGlyph icon="box" size={16} />
+                    <BlockGlyph icon={iconForResource(r.name)} size={16} />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm text-foreground">{r.name}</span>
                       <span className="block truncate font-mono text-[11px] text-muted-foreground">

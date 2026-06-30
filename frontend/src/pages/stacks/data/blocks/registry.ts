@@ -9,7 +9,7 @@ export const blockCatalog: BlockPreset[] = [
   { id: BlockId.Web, name: "Web service", category: "services", icon: "globe", summary: "your image · :8080" },
   { id: BlockId.Custom, name: "Custom", category: "services", icon: "box", summary: "empty container shape" },
   {
-    id: BlockId.Postgres, name: "Postgres", category: "data", icon: "database", summary: "postgres:16 · :5432 · pgdata",
+    id: BlockId.Postgres, name: "Postgres", category: "data", icon: "postgres", summary: "postgres:16 · :5432 · pgdata",
     compose: [
       "services:",
       "  postgres:",
@@ -24,11 +24,11 @@ export const blockCatalog: BlockPreset[] = [
     ].join("\n"),
   },
   {
-    id: BlockId.Redis, name: "Redis", category: "data", icon: "zap", summary: "redis:7 · :6379",
+    id: BlockId.Redis, name: "Redis", category: "data", icon: "redis", summary: "redis:7 · :6379",
     compose: ["services:", "  redis:", "    image: redis:7", '    ports: ["6379:6379"]', ""].join("\n"),
   },
   {
-    id: BlockId.Mysql, name: "MySQL", category: "data", icon: "database", summary: "mysql:8 · :3306 · mysql-data",
+    id: BlockId.Mysql, name: "MySQL", category: "data", icon: "mysql", summary: "mysql:8 · :3306 · mysql-data",
     compose: [
       "services:", "  mysql:", "    image: mysql:8", '    ports: ["3306:3306"]',
       '    volumes: ["mysql-data:/var/lib/mysql"]', "    environment:", '      MYSQL_ROOT_PASSWORD: ""',
@@ -36,7 +36,7 @@ export const blockCatalog: BlockPreset[] = [
     ].join("\n"),
   },
   {
-    id: BlockId.Mongo, name: "MongoDB", category: "data", icon: "database", summary: "mongo:7 · :27017 · mongo-data",
+    id: BlockId.Mongo, name: "MongoDB", category: "data", icon: "mongo", summary: "mongo:7 · :27017 · mongo-data",
     compose: [
       "services:", "  mongo:", "    image: mongo:7", '    ports: ["27017:27017"]',
       '    volumes: ["mongo-data:/data/db"]', "volumes:", "  mongo-data: {}", "",

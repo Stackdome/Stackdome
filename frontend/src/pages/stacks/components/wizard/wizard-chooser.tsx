@@ -3,12 +3,12 @@ import {
   Grid3x3,
   LayoutTemplate,
   GitBranch,
-  Container,
   Code,
   ArrowRight,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import dockerUrl from "@/assets/brand/docker.svg";
 
 interface WizardChooserProps {
   onPickBlocks: () => void;
@@ -18,7 +18,10 @@ interface WizardChooserProps {
 }
 
 interface AltStart {
-  icon: LucideIcon;
+  /** Lucide icon component, or omit and supply `img` for a brand logo. */
+  icon?: LucideIcon;
+  /** Brand logo URL rendered via <img> (takes precedence over `icon`). */
+  img?: string;
   label: string;
   desc: string;
   onClick?: () => void;
@@ -47,7 +50,7 @@ export function WizardChooser({
       soon: true,
     },
     {
-      icon: Container,
+      img: dockerUrl,
       label: "Docker compose",
       desc: "Import a compose.yml.",
       onClick: onPickCompose,
@@ -123,7 +126,11 @@ export function WizardChooser({
             )}
           >
             <span className="flex h-9 w-9 flex-none items-center justify-center rounded bg-muted text-muted-foreground">
-              <a.icon className="h-[18px] w-[18px]" />
+              {a.img ? (
+                <img src={a.img} alt="" aria-hidden className="h-[18px] w-[18px] object-contain" />
+              ) : (
+                a.icon && <a.icon className="h-[18px] w-[18px]" />
+              )}
             </span>
             <span className="min-w-0 flex-1">
               <span className="mb-0.5 flex items-center gap-2">

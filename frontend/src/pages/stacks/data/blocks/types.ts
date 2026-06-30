@@ -20,7 +20,7 @@ export interface BlockPreset {
   id: string;
   name: string;
   category: BlockCategory;
-  icon: string;      // lucide icon name (e.g. "globe", "database", "zap", "box")
+  icon: string;      // BlockGlyph key: a lucide name ("globe", "box") or a brand key ("postgres", "redis", "mysql", "mongo")
   summary: string;   // mono one-liner shown on the card, e.g. "postgres:16 · :5432 · pgdata"
   compose?: string;  // 1-service docker-compose YAML; omitted for generic blocks
 }
