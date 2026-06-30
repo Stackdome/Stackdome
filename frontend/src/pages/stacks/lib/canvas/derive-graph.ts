@@ -16,12 +16,16 @@ export interface VolumeChip {
   mountPath?: string;
 }
 
+/** Unsaved-change state shown as a mark on the node card. */
+export type DirtyState = "new" | "edited" | "removed";
+
 export interface ResourceNodeData {
   kind: NodeKind;
   name: string;
   summary: string;
   status?: string;
   volumes: VolumeChip[];
+  dirtyState?: DirtyState;
   /** Index into the edit session's resource array; absent for addon nodes. */
   resourceIdx?: number;
   [key: string]: unknown; // satisfies React Flow's Record<string, unknown> node data
@@ -45,10 +49,37 @@ export interface CanvasGraph {
   edges: CanvasEdge[];
 }
 
+/** Optional unsaved-change context used to mark nodes new/edited/removed. */
+export interface DirtyInput {
+  /** Indices of resources that differ from baseline. */
+  dirtyResourceIdx?: ReadonlySet<number>;
+  /** Resource count in the baseline — anything at or beyond it is "new". */
+  baselineResourceCount?: number;
+  /** Addon ids queued for removal. */
+  pendingDetach?: ReadonlySet<string>;
+  /** Addon ids linked in the baseline — anything not here is a "new" link. */
+  baselineAddonIds?: ReadonlySet<string>;
+}
+
 export interface DeriveGraphInput {
   resources: Partial<FormStackResourceData>[];
   linkedAddonIds: ReadonlySet<string>;
   addonNameById: ReadonlyMap<string, string>;
+  dirty?: DirtyInput;
+}
+
+function serviceDirtyState(idx: number, dirty: DirtyInput | undefined): DirtyState | undefined {
+  if (!dirty) return undefined;
+  if (dirty.baselineResourceCount != null && idx >= dirty.baselineResourceCount) return "new";
+  if (dirty.dirtyResourceIdx?.has(idx)) return "edited";
+  return undefined;
+}
+
+function addonDirtyState(addonId: string, dirty: DirtyInput | undefined): DirtyState | undefined {
+  if (!dirty) return undefined;
+  if (dirty.pendingDetach?.has(addonId)) return "removed";
+  if (dirty.baselineAddonIds != null && !dirty.baselineAddonIds.has(addonId)) return "new";
+  return undefined;
 }
 
 function resourceNodeId(name: string): string {
@@ -103,6 +134,7 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         summary: serviceSummary(resource),
         status: resource.status as string | undefined,
         volumes: volumeChips(resource),
+        dirtyState: serviceDirtyState(idx, input.dirty),
         resourceIdx: idx,
       },
     });
@@ -118,6 +150,7 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         name: input.addonNameById.get(addonId) ?? addonId,
         summary: "postgres",
         volumes: [],
+        dirtyState: addonDirtyState(addonId, input.dirty),
       },
     });
   }

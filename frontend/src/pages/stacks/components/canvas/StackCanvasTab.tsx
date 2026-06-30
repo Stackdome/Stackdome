@@ -38,21 +38,48 @@ function StackCanvasFlow({
   const resources = session.isActive ? session.draft.resources : baselineResources;
   const linkedAddonIds = session.isActive ? session.linkedAddonIds : connectionAddonIds;
 
-  const graph = useMemo(
-    () => layoutGraph(deriveGraph({ resources, linkedAddonIds, addonNameById })),
-    [resources, linkedAddonIds, addonNameById],
+  const dirty = useMemo(
+    () => ({
+      dirtyResourceIdx: session.dirty.dirtyResourceIdx,
+      baselineResourceCount: baselineResources.length,
+      pendingDetach: session.pendingDetach,
+      baselineAddonIds: connectionAddonIds,
+    }),
+    [session.dirty, session.pendingDetach, baselineResources.length, connectionAddonIds],
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<ResourceFlowNode>(graph.nodes as ResourceFlowNode[]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges as Edge[]);
+  // Topology + node data (cheap, pure). Re-runs on any edit.
+  const dataGraph = useMemo(
+    () => deriveGraph({ resources, linkedAddonIds, addonNameById, dirty }),
+    [resources, linkedAddonIds, addonNameById, dirty],
+  );
+  // Signature of the node/edge id-set — changes only when topology changes.
+  const topologySignature = useMemo(
+    () => `${dataGraph.nodes.map((n) => n.id).join("|")}::${dataGraph.edges.map((e) => e.id).join("|")}`,
+    [dataGraph],
+  );
+
+  const [nodes, setNodes, onNodesChange] = useNodesState<ResourceFlowNode>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [showConnections, setShowConnections] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  // Re-sync only on topology change (graph is memoised on its inputs).
+  // Re-layout ONLY when topology changes; preserve in-session drag positions by id.
   useEffect(() => {
-    setNodes(graph.nodes as ResourceFlowNode[]);
-    setEdges(graph.edges as Edge[]);
-  }, [graph, setNodes, setEdges]);
+    const laid = layoutGraph(dataGraph);
+    setNodes((prev) => {
+      const posById = new Map(prev.map((n) => [n.id, n.position]));
+      return laid.nodes.map((n) => ({ ...n, position: posById.get(n.id) ?? n.position })) as ResourceFlowNode[];
+    });
+    setEdges(dataGraph.edges as Edge[]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on topology only
+  }, [topologySignature, setNodes, setEdges]);
+
+  // Update node data (summary + dirty mark) in place, without moving nodes.
+  useEffect(() => {
+    const dataById = new Map(dataGraph.nodes.map((n) => [n.id, n.data]));
+    setNodes((prev) => prev.map((n) => (dataById.has(n.id) ? { ...n, data: dataById.get(n.id)! } : n)));
+  }, [dataGraph, setNodes]);
 
   const toggleConnections = useCallback(() => setShowConnections((v) => !v), []);
 

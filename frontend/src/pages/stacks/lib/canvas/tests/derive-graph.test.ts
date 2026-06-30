@@ -84,4 +84,40 @@ describe("deriveGraph", () => {
     const g = deriveGraph({ ...base, resources: [r({ name: "web" })] });
     expect(g.nodes[0].position).toEqual({ x: 0, y: 0 });
   });
+
+  it("leaves dirtyState undefined without dirty info", () => {
+    const g = deriveGraph({ ...base, resources: [r({ name: "web" })] });
+    expect(g.nodes[0].data.dirtyState).toBeUndefined();
+  });
+
+  it("marks a resource beyond the baseline count as new", () => {
+    const g = deriveGraph({
+      ...base,
+      resources: [r({ name: "web" }), r({ name: "fresh" })],
+      dirty: { baselineResourceCount: 1, dirtyResourceIdx: new Set() },
+    });
+    expect(g.nodes[0].data.dirtyState).toBeUndefined();
+    expect(g.nodes[1].data.dirtyState).toBe("new");
+  });
+
+  it("marks a changed existing resource as edited", () => {
+    const g = deriveGraph({
+      ...base,
+      resources: [r({ name: "web" })],
+      dirty: { baselineResourceCount: 1, dirtyResourceIdx: new Set([0]) },
+    });
+    expect(g.nodes[0].data.dirtyState).toBe("edited");
+  });
+
+  it("marks a pending-detach addon as removed and a newly linked addon as new", () => {
+    const g = deriveGraph({
+      ...base,
+      linkedAddonIds: new Set(["a1", "a2"]),
+      dirty: { baselineAddonIds: new Set(["a1"]), pendingDetach: new Set(["a1"]) },
+    });
+    const a1 = g.nodes.find((n) => n.id === "addon:a1");
+    const a2 = g.nodes.find((n) => n.id === "addon:a2");
+    expect(a1?.data.dirtyState).toBe("removed");
+    expect(a2?.data.dirtyState).toBe("new");
+  });
 });
