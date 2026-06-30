@@ -117,6 +117,9 @@ export default function StackResourcesForm({
   // names or count of resources change, NOT on every keystroke into a body
   // field. Without this, every keystroke would hand a new array to each
   // StackResourceItem and break React.memo.
+  const resourcesSignature = resources
+    .map((r) => `${r.name} ${(r.outputs ?? []).map((o) => o.name).join(",")}`)
+    .join("");
   const allResourcesRef = useMemo(
     () =>
       resources.map((r, i) => ({
@@ -124,8 +127,8 @@ export default function StackResourcesForm({
         index: i,
         outputs: (r.outputs ?? []).map((o) => o.name),
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- name list is the only structural input
-    [resources.length, ...resources.map((r) => r.name)],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stable signature captures names and outputs
+    [resourcesSignature],
   );
 
   return (
