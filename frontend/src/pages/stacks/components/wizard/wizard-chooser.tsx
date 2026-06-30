@@ -93,8 +93,8 @@ export function WizardChooser({
           onClick={onPickBlocks}
           className="mb-6 flex w-full items-center gap-4 rounded-lg border border-primary bg-card p-5 text-left transition-colors hover:bg-card/80"
         >
-          <span className="flex h-[54px] w-[54px] flex-none items-center justify-center rounded bg-primary/10 text-primary">
-            <Grid3x3 className="h-5 w-5" />
+          <span className="flex h-[54px] w-[54px] flex-none items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Grid3x3 className="h-7 w-7" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="mb-0.5 flex items-center gap-2">
