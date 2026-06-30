@@ -684,7 +684,11 @@ export default function StackDetailPage() {
         {/* Configuration Tab: Stack Resources and Volumes */}
         <TabsContent value="configuration" className="space-y-8">
           {isCanvasEnabled() ? (
-            <StackCanvasTab session={session} />
+            <StackCanvasTab
+              resources={session.isActive ? session.draft.resources : baselineResources}
+              linkedAddonIds={session.isActive ? session.linkedAddonIds : connectionAddonIds}
+              addonNameById={addonNameById}
+            />
           ) : (
             <>
           <Panel
