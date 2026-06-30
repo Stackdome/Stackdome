@@ -110,7 +110,7 @@ export function TemplatesBrowserPanel({
             Self-hosted apps, ready to deploy
           </h2>
           <p className="mt-1.5 max-w-[640px] text-sm text-muted-foreground">
-            Hand-picked open-source apps, tuned to their sanest minimal config. Pick one and ship it.
+            Hand-picked open-source apps, tuned to their sanest minimal config. Pick one and deploy.
           </p>
         </div>
       </div>
