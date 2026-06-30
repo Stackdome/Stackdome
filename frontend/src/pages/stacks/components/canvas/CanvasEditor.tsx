@@ -10,6 +10,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ResourceNode, type ResourceFlowNode } from "./nodes/ResourceNode";
+import { AddResourcePopover } from "./AddResourcePopover";
 
 /** Declared at module scope — a fresh object identity here re-renders every node. */
 const nodeTypes = { resource: ResourceNode };
@@ -22,6 +23,8 @@ interface CanvasEditorProps {
   onNodeClick?: NodeMouseHandler<ResourceFlowNode>;
   showConnections: boolean;
   onToggleConnections: () => void;
+  addedBlockIds: string[];
+  onAddBlock: (blockId: string) => void;
 }
 
 /**
@@ -36,6 +39,8 @@ export function CanvasEditor({
   onNodeClick,
   showConnections,
   onToggleConnections,
+  addedBlockIds,
+  onAddBlock,
 }: CanvasEditorProps) {
   return (
     <div className="h-full w-full" data-testid="stack-canvas">
@@ -53,6 +58,9 @@ export function CanvasEditor({
         <Background />
         <Controls />
         <Panel position="top-left">
+          <AddResourcePopover addedIds={addedBlockIds} onAdd={onAddBlock} />
+        </Panel>
+        <Panel position="top-right">
           <button
             type="button"
             onClick={onToggleConnections}

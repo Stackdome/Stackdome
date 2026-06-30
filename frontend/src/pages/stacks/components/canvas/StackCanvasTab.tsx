@@ -13,6 +13,8 @@ import type {
 import type { UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { deriveGraph } from "@/pages/stacks/lib/canvas/derive-graph";
 import { layoutGraph } from "@/pages/stacks/lib/canvas/layout-graph";
+import { addBlockToStack } from "@/pages/stacks/lib/block-to-form";
+import { blockCatalog, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { CanvasEditor } from "./CanvasEditor";
 import { ResourceDrawer } from "./ResourceDrawer";
 import type { ResourceFlowNode } from "./nodes/ResourceNode";
@@ -99,6 +101,40 @@ function StackCanvasFlow({
     [session, baselineResources, baselineVolumes, connectionAddonIds],
   );
 
+  // Block ids already present in the stack (drives the picker's "added" badge).
+  const addedBlockIds = useMemo(() => {
+    const names = new Set(resources.map((r) => r.name));
+    return blockCatalog
+      .filter((b) => names.has(b.id) || [...names].some((n) => n?.startsWith(`${b.id}-`)))
+      .map((b) => b.id);
+  }, [resources]);
+
+  const onAddBlock = useCallback(
+    (blockId: string) => {
+      const block = getBlockById(blockId);
+      if (!block) return;
+      const current = session.isActive
+        ? { resources: session.draft.resources, volumes: session.draft.volumes }
+        : { resources: baselineResources, volumes: baselineVolumes };
+      const working = { name: "", labels: [], spec: { stack_resources: current.resources, volumes: current.volumes } };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- WorkingStack uses full FormStackResourceData; the draft holds Partial, structurally compatible here
+      const next = addBlockToStack(working as any, block);
+      // block-to-form yields base FormVolumeData; the session works in the extended
+      // form (adds an optional sourceType) — structurally compatible at runtime.
+      const nextVolumes = next.spec.volumes as unknown as VolumeFormData[];
+      if (!session.isActive) {
+        session.start(
+          { resources: next.spec.stack_resources, volumes: nextVolumes },
+          { linkedAddonIds: new Set(connectionAddonIds) },
+        );
+      } else {
+        session.updateResources(() => next.spec.stack_resources);
+        session.updateVolumes(() => nextVolumes);
+      }
+    },
+    [session, baselineResources, baselineVolumes, connectionAddonIds],
+  );
+
   const closeDrawer = useCallback(() => setSelectedIndex(null), []);
   const removeResource = useCallback(
     (idx: number) => {
@@ -118,6 +154,8 @@ function StackCanvasFlow({
         onNodeClick={onNodeClick}
         showConnections={showConnections}
         onToggleConnections={toggleConnections}
+        addedBlockIds={addedBlockIds}
+        onAddBlock={onAddBlock}
       />
       {selectedIndex != null && (
         <ResourceDrawer
