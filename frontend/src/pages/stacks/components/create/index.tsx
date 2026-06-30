@@ -51,9 +51,16 @@ export default function StackCreatePage() {
   useEffect(() => {
     const importedData = location.state?.importedData;
     const importSource = location.state?.importSource;
+    const importedAddonIds = location.state?.linkedAddonIds as string[] | undefined;
 
     if (importedData && isPrefillSource(importSource)) {
       setFormData(importedData);
+
+      // Pre-link any managed addons the wizard's block composer selected so they
+      // show up in the Stack Addons panel ready to bind into resources.
+      if (importedAddonIds?.length) {
+        setLinkedAddonIds(new Set(importedAddonIds));
+      }
 
       // Clear the navigation state to prevent re-importing on refresh
       navigate(location.pathname, { replace: true });

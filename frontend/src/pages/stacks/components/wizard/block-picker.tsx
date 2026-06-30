@@ -44,7 +44,7 @@ export function BlockPicker({ catalog, categories, addedIds, onAdd, query }: Blo
                     key={b.id}
                     onClick={() => onAdd(b.id)}
                     className={cn(
-                      "flex items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary",
+                      "flex min-h-[60px] items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary",
                       added && "border-primary/60",
                     )}
                   >

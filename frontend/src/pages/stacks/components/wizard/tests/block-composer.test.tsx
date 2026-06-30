@@ -15,7 +15,7 @@ afterEach(() => { cleanup(); navigate.mockReset(); });
 describe("BlockComposer", () => {
   it("adds blocks and navigates to the form with importSource=blocks", async () => {
     const user = userEvent.setup();
-    render(<BlockComposer onBack={vi.fn()} onClose={vi.fn()} />);
+    render(<BlockComposer onClose={vi.fn()} />);
 
     await user.click(screen.getByRole("button", { name: /Web service/i }));
     await user.click(screen.getByRole("button", { name: /Postgres/i }));
@@ -38,7 +38,7 @@ describe("BlockComposer", () => {
   });
 
   it("disables Open editor until at least one block is added", () => {
-    render(<BlockComposer onBack={vi.fn()} onClose={vi.fn()} />);
+    render(<BlockComposer onClose={vi.fn()} />);
     expect(screen.getByRole("button", { name: /Open editor/i })).toBeDisabled();
   });
 });

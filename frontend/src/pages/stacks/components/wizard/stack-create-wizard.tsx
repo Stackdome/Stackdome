@@ -48,16 +48,10 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
       >
         <DialogTitle className="sr-only">New Stack</DialogTitle>
         <DialogDescription className="sr-only">Choose how to create your new stack</DialogDescription>
-        <div className="flex items-center justify-between gap-3 border-b px-5 py-3.5">
-          <div className="flex items-center gap-3">
-            <span className="flex h-6 w-6 items-center justify-center text-primary">
-              <Layers className="h-5 w-5" />
-            </span>
-            <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
-              New Stack
-            </span>
-          </div>
-          {(phase === "template" || phase === "compose") && (
+        {/* pr-12 reserves space so the header never sits under the dialog's
+            built-in close (X), which is absolutely positioned at top-right. */}
+        <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
+          {phase !== "chooser" && (
             <button
               type="button"
               onClick={() => setPhase("chooser")}
@@ -66,6 +60,12 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
               <ArrowLeft className="h-4 w-4" /> back
             </button>
           )}
+          <span className="flex h-6 w-6 items-center justify-center text-primary">
+            <Layers className="h-5 w-5" />
+          </span>
+          <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+            New Stack
+          </span>
         </div>
 
         <div className="max-h-[80vh] overflow-y-auto">
@@ -81,7 +81,9 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
             />
           )}
           {phase === "composer" && (
-            <BlockComposer onBack={() => setPhase("chooser")} onClose={close} />
+            <div className="h-[70vh]">
+              <BlockComposer onClose={close} />
+            </div>
           )}
           {phase === "template" && (
             <div className="h-[70vh]">

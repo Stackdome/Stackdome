@@ -54,7 +54,7 @@ export function WizardChooser({
     },
     {
       icon: Code,
-      label: "Start from a blank slate",
+      label: "Blank slate",
       desc: "Build it up yourself.",
       onClick: onPickBlank,
     },
@@ -116,7 +116,7 @@ export function WizardChooser({
             onClick={a.onClick}
             disabled={a.disabled}
             className={cn(
-              "flex items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
+              "flex min-h-[76px] items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
               a.disabled
                 ? "cursor-not-allowed opacity-50"
                 : "hover:border-primary",

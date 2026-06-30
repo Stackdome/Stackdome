@@ -1,23 +1,27 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Search, X } from "lucide-react";
+import { ArrowRight, Check, Plus, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { blockCatalog, BLOCK_CATEGORY_META, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { addBlockToStack, emptyStack } from "@/pages/stacks/lib/block-to-form";
 import { ImportSource } from "@/pages/stacks/lib/import-source";
+import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 import { BlockPicker } from "./block-picker";
 import { BlockGlyph } from "./block-glyph";
 
 interface BlockComposerProps {
-  onBack: () => void;
   onClose: () => void;
 }
 
-export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
+export function BlockComposer({ onClose }: BlockComposerProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [stack, setStack] = useState(emptyStack);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<Set<string>>(new Set());
+  const { addons } = usePostgresAddons();
 
   // addedIds = block ids whose resource name (or a -N variant) is present
   const addedIds = useMemo(() => {
@@ -36,24 +40,36 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
       spec: { ...s.spec, stack_resources: s.spec.stack_resources.filter((_, i) => i !== index) },
     }));
 
+  const toggleAddon = (id: string) =>
+    setSelectedAddonIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  // Managed addons already provisioned in the workspace, filtered by the search box.
+  const q = query.trim().toLowerCase();
+  const availableAddons = addons.filter((a) => a.id && (!q || a.name.toLowerCase().includes(q)));
+
   const openEditor = () => {
-    navigate("/stacks/create", { state: { importedData: stack, importSource: ImportSource.Blocks } });
+    navigate("/stacks/create", {
+      state: {
+        importedData: stack,
+        importSource: ImportSource.Blocks,
+        linkedAddonIds: Array.from(selectedAddonIds),
+      },
+    });
     onClose();
   };
 
-  const count = stack.spec.stack_resources.length;
+  const count = stack.spec.stack_resources.length + selectedAddonIds.size;
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b px-5 py-3">
-        <button type="button" onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" /> back
-        </button>
-      </div>
-
       <div className="grid flex-1 grid-cols-[1fr_360px] gap-0 overflow-hidden">
         {/* LEFT: palette */}
-        <div className="overflow-y-auto p-6">
+        <div className="scrollbar-hide overflow-y-auto p-6">
           <div className="mb-1 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">COMPOSE</div>
           <h2 className="mb-1 text-2xl font-medium tracking-tight">What's in your stack?</h2>
           <p className="mb-5 text-sm text-muted-foreground">
@@ -69,6 +85,40 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
             />
           </div>
           <BlockPicker catalog={blockCatalog} categories={BLOCK_CATEGORY_META} addedIds={addedIds} onAdd={addBlock} query={query} />
+
+          {availableAddons.length > 0 && (
+            <div className="mt-6">
+              <div className="mb-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+                MANAGED ADD-ONS
+                <span className="font-normal normal-case tracking-normal text-muted-foreground/70"> · already in your workspace</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {availableAddons.map((a) => {
+                  const added = selectedAddonIds.has(a.id!);
+                  return (
+                    <button
+                      type="button"
+                      key={a.id}
+                      onClick={() => toggleAddon(a.id!)}
+                      className={cn(
+                        "flex min-h-[60px] items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary",
+                        added && "border-primary/60",
+                      )}
+                    >
+                      <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
+                        <AddonTypeIcon type="postgres" size={18} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-foreground">{a.name}</span>
+                        <span className="block truncate font-mono text-[11px] text-muted-foreground">managed postgres</span>
+                      </span>
+                      {added ? <Check className="h-[17px] w-[17px] text-success" /> : <Plus className="h-[17px] w-[17px] text-primary" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* RIGHT: your stack so far */}
@@ -76,24 +126,42 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
           <div className="border-b px-4 py-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
             Your stack so far · {count}
           </div>
-          <div data-testid="stack-so-far" className="flex-1 space-y-1.5 overflow-y-auto p-4">
+          <div data-testid="stack-so-far" className="scrollbar-hide flex-1 space-y-1.5 overflow-y-auto p-4">
             {count === 0 ? (
               <p className="px-1 py-6 text-sm text-muted-foreground">Pick blocks on the left to start.</p>
             ) : (
-              stack.spec.stack_resources.map((r, i) => (
-                <div key={`${r.name}-${i}`} className="flex items-center gap-3 rounded border bg-card px-3 py-2">
-                  <BlockGlyph icon="box" size={16} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm text-foreground">{r.name}</span>
-                    <span className="block truncate font-mono text-[11px] text-muted-foreground">
-                      {r.image_spec?.image || "configure source"}
+              <>
+                {stack.spec.stack_resources.map((r, i) => (
+                  <div key={`${r.name}-${i}`} className="flex items-center gap-3 rounded border bg-card px-3 py-2">
+                    <BlockGlyph icon="box" size={16} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm text-foreground">{r.name}</span>
+                      <span className="block truncate font-mono text-[11px] text-muted-foreground">
+                        {r.image_spec?.image || "configure source"}
+                      </span>
                     </span>
-                  </span>
-                  <button type="button" aria-label={`Remove ${r.name}`} onClick={() => removeResource(i)} className="text-muted-foreground hover:text-foreground">
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))
+                    <button type="button" aria-label={`Remove ${r.name}`} onClick={() => removeResource(i)} className="text-muted-foreground hover:text-foreground">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                {Array.from(selectedAddonIds).map((id) => {
+                  const addon = addons.find((a) => a.id === id);
+                  const name = addon?.name ?? id;
+                  return (
+                    <div key={id} className="flex items-center gap-3 rounded border bg-card px-3 py-2">
+                      <AddonTypeIcon type="postgres" size={16} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm text-foreground">{name}</span>
+                        <span className="block truncate font-mono text-[11px] text-muted-foreground">managed postgres · addon</span>
+                      </span>
+                      <button type="button" aria-label={`Remove ${name}`} onClick={() => toggleAddon(id)} className="text-muted-foreground hover:text-foreground">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </>
             )}
           </div>
           <div className="border-t p-4">
