@@ -13,6 +13,12 @@ export const BlockId = {
   Redis: "redis",
   Mysql: "mysql",
   Mongo: "mongo",
+  Mariadb: "mariadb",
+  Mssql: "mssql",
+  Elasticsearch: "elasticsearch",
+  Couchdb: "couchdb",
+  Influxdb: "influxdb",
+  Clickhouse: "clickhouse",
 } as const;
 export type BlockId = (typeof BlockId)[keyof typeof BlockId];
 

@@ -2,9 +2,22 @@ import { describe, it, expect } from "vitest";
 import { blockCatalog, getBlockById, BlockId, BLOCK_CATEGORY_META } from "../registry";
 
 describe("block registry", () => {
-  it("ships exactly the v1 catalog (web, custom, postgres, redis, mysql, mongo)", () => {
+  it("ships the expected catalog (services + v1 data sources)", () => {
     expect(blockCatalog.map((b) => b.id).sort()).toEqual(
-      [BlockId.Custom, BlockId.Mongo, BlockId.Mysql, BlockId.Postgres, BlockId.Redis, BlockId.Web].sort(),
+      [
+        BlockId.Web,
+        BlockId.Custom,
+        BlockId.Postgres,
+        BlockId.Redis,
+        BlockId.Mysql,
+        BlockId.Mongo,
+        BlockId.Mariadb,
+        BlockId.Mssql,
+        BlockId.Elasticsearch,
+        BlockId.Couchdb,
+        BlockId.Influxdb,
+        BlockId.Clickhouse,
+      ].sort(),
     );
   });
 

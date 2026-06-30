@@ -1,8 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { blockToResources, addBlockToStack, emptyStack } from "../block-to-form";
-import { getBlockById, BlockId } from "@/pages/stacks/data/blocks/registry";
+import { blockCatalog, getBlockById, BlockId } from "@/pages/stacks/data/blocks/registry";
 
 describe("block-to-form", () => {
+  it("every catalog block converts to a resource named after the block, without throwing", () => {
+    for (const block of blockCatalog) {
+      expect(() => blockToResources(block), `block ${block.id} should convert`).not.toThrow();
+      const { resources } = blockToResources(block);
+      expect(resources.length, `block ${block.id} resource count`).toBeGreaterThan(0);
+      expect(resources[0].name, `block ${block.id} resource name`).toBe(block.id);
+    }
+  });
+
   it("converts the postgres block into one resource + one volume", () => {
     const { resources, volumes } = blockToResources(getBlockById(BlockId.Postgres)!);
     expect(resources).toHaveLength(1);
