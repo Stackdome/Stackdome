@@ -74,16 +74,21 @@ export function DockerComposeImportPanel({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex min-h-0 flex-1 flex-col p-6">
-        <h2 className="text-lg font-semibold leading-none tracking-tight">
+      {/* Header mirrors the templates panel: brand eyebrow + title, divided. */}
+      <div className="border-b border-border px-6 py-5">
+        <div className="font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-brand">
+          Import / Compose
+        </div>
+        <h2 className="mt-1.5 text-xl font-medium tracking-tight">
           Import from Docker Compose
         </h2>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Upload a <span className="font-mono">docker-compose.yml</span> file or
-          paste its contents to scaffold a new stack.
+        <p className="sr-only">
+          Upload a docker-compose file or paste its contents to scaffold a new stack.
         </p>
+      </div>
 
-        <div className="mt-5">
+      <div className="flex min-h-0 flex-1 flex-col p-6">
+        <div>
           <Button
             type="button"
             variant="outline"
