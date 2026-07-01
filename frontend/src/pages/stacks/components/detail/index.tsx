@@ -309,6 +309,20 @@ export default function StackDetailPage() {
     setNameError(undefined);
     setValidationErrors({ resources: {}, volumes: {} });
 
+    // A draft needs a name before it can be created. The stack name field is not
+    // min-length-constrained in the schema (empty passes zod and only fails at
+    // the API), so guard it here to surface the error inline on the title input.
+    if (isDraft && !draftName.trim()) {
+      setNameError("Required");
+      setIsSaving(false);
+      toast({
+        title: "Name your stack",
+        description: "Give the stack a name before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const orgId = getCurrentOrganizationId();
       if (!orgId) throw new Error("Organization ID not found");
