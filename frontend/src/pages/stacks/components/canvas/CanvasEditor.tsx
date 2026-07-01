@@ -1,7 +1,7 @@
 import {
   ReactFlow,
   Background,
-  Controls,
+  BackgroundVariant,
   Panel,
   type Edge,
   type OnNodesChange,
@@ -9,8 +9,10 @@ import {
   type NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { Move } from "lucide-react";
 import { ResourceNode, type ResourceFlowNode } from "./nodes/ResourceNode";
 import { ConnectionEdge } from "./edges/ConnectionEdge";
+import { CanvasControls } from "./CanvasControls";
 import { AddResourcePopover } from "./AddResourcePopover";
 
 /** Declared at module scope — a fresh object identity here re-renders every node. */
@@ -67,7 +69,7 @@ export function CanvasEditor({
         snapGrid={SNAP_GRID}
         proOptions={{ hideAttribution: true }}
       >
-        <Background />
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
         {nodes.length === 0 && (
           <Panel position="top-center">
             <div className="mt-24 text-center">
@@ -78,19 +80,18 @@ export function CanvasEditor({
             </div>
           </Panel>
         )}
-        <Controls />
+        <CanvasControls showConnections={showConnections} onToggleConnections={onToggleConnections} />
         <Panel position="top-left">
           <AddResourcePopover addedIds={addedBlockIds} onAdd={onAddBlock} />
         </Panel>
-        <Panel position="top-right">
-          <button
-            type="button"
-            onClick={onToggleConnections}
-            className="rounded-md border border-border bg-card px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-fg-muted transition-colors hover:text-foreground"
-          >
-            {showConnections ? "Hide connections" : "Show connections"}
-          </button>
-        </Panel>
+        {nodes.length > 0 && (
+          <Panel position="bottom-center" className="pointer-events-none !mb-[18px]">
+            <div className="flex items-center gap-2 text-[11.5px] text-fg-muted">
+              <Move className="size-[13px]" aria-hidden />
+              drag to rearrange · click a node to configure · edges carry connection env vars
+            </div>
+          </Panel>
+        )}
       </ReactFlow>
     </div>
   );
