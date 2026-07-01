@@ -42,35 +42,37 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
   const showLiveAnchor = liveRelease && releases[0]?.id !== liveRelease.id;
 
   return (
-    <div className="space-y-4">
-      {showLiveAnchor && liveRelease && (
-        <LiveReleaseSummary
-          release={liveRelease}
-          stack={stack}
-          prevReleaseId={liverev?.id}
-          prevSeq={liverev?.sequence}
-          logContext={logContext}
-          onOpenLogs={openLogs}
-        />
-      )}
+    <div className="mx-auto max-w-[920px] px-[30px] py-[26px]">
+      <div className="space-y-4">
+        {showLiveAnchor && liveRelease && (
+          <LiveReleaseSummary
+            release={liveRelease}
+            stack={stack}
+            prevReleaseId={liverev?.id}
+            prevSeq={liverev?.sequence}
+            logContext={logContext}
+            onOpenLogs={openLogs}
+          />
+        )}
 
-      <div className="font-mono text-[11px] uppercase tracking-wide text-fg-muted">Deploy timeline</div>
+        <div className="font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-fg-muted">Deploy timeline</div>
 
-      {loading && releases.length === 0 && !draftNode ? (
-        <p className="text-[13px] text-fg-muted">Loading deployments…</p>
-      ) : (
-        <TimelineRail
-          releases={releases}
-          activeRelease={activeRelease}
-          stack={stack}
-          logContext={logContext}
-          onOpenLogs={openLogs}
-          draftNode={draftNode}
-          onRollback={onRollback}
-          onCancel={onCancel}
-          onCopyId={onCopyId}
-        />
-      )}
+        {loading && releases.length === 0 && !draftNode ? (
+          <p className="text-[13px] text-fg-muted">Loading deployments…</p>
+        ) : (
+          <TimelineRail
+            releases={releases}
+            activeRelease={activeRelease}
+            stack={stack}
+            logContext={logContext}
+            onOpenLogs={openLogs}
+            draftNode={draftNode}
+            onRollback={onRollback}
+            onCancel={onCancel}
+            onCopyId={onCopyId}
+          />
+        )}
+      </div>
     </div>
   );
 }

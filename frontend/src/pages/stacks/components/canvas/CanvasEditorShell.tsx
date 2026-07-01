@@ -198,9 +198,9 @@ export function CanvasEditorShell({
         })}
       </div>
 
-      {/* Mode body */}
+      {/* Mode body. Ops views own their own max-width + padding; the canvas fills. */}
       <div className="min-h-0 flex-1 overflow-hidden">
-        {activeTab === "configuration" ? body : <div className="h-full overflow-auto px-7 py-6">{body}</div>}
+        {activeTab === "configuration" ? body : <div className="h-full overflow-auto">{body}</div>}
       </div>
 
       <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
