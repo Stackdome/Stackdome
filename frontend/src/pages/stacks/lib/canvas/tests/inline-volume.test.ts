@@ -23,5 +23,18 @@ describe("addInlineVolume", () => {
     );
     expect(volumes.map((v) => v.name)).toEqual(["a", "b"]);
     expect(mounts.map((m) => m.target_path)).toEqual(["/a", "/b"]);
+    // Full shape of the newly-appended volume "b" — guards against wrong defaults.
+    expect(volumes[1]).toEqual({
+      name: "b",
+      sourceType: "None",
+      labels: [],
+      spec: { size: "5Gi", access_mode: "ReadWriteOnce", needs_sync_before_use: false },
+    });
+    // Full shape of the newly-appended mount for "b".
+    expect(mounts[1]).toEqual({
+      source_volume_name: "b",
+      source_sub_path: "",
+      target_path: "/b",
+    });
   });
 });

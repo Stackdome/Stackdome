@@ -93,11 +93,14 @@ export function ResourceDrawer({
     (input: { name: string; size: string; targetPath: string }) => {
       const currentMounts = session.draft.resources[resourceIndex]?.volume_mounts ?? [];
       const { volumes, mounts } = addInlineVolume(
-        session.draft.volumes as never,
-        currentMounts as never,
+        // session holds Partial<FormVolumeExtendedData>[]; addInlineVolume works in the extended form — structurally equivalent at runtime (fields are always present on creation).
+        session.draft.volumes as unknown as VolumeFormData[],
+        // Partial resource mounts are structurally compatible with the VolumeMount type — all required fields exist at runtime.
+        currentMounts as unknown as NonNullable<FormStackResourceData["volume_mounts"]>,
         input,
       );
-      session.updateVolumes(() => volumes as never);
+      // FormVolumeExtendedData[] widens safely to Partial<FormVolumeExtendedData>[] (VolumeArr) — the session type is the broader Partial form.
+      session.updateVolumes(() => volumes as unknown as Partial<VolumeFormData>[]);
       session.updateResources((prev) =>
         prev.map((r, i) => (i === resourceIndex ? { ...r, volume_mounts: mounts } : r)),
       );

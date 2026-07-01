@@ -17,6 +17,7 @@ export function addInlineVolume(
   mounts: VolumeMount[],
   input: InlineVolumeInput,
 ): { volumes: FormVolumeExtendedData[]; mounts: VolumeMount[] } {
+  // Structural cast: the literal satisfies the `sourceType: "None"` branch of FormVolumeExtendedData's discriminated union; the double-cast bypasses the union narrowing that TypeScript cannot verify from an object literal.
   const volume = {
     name: input.name,
     sourceType: "None" as const,
