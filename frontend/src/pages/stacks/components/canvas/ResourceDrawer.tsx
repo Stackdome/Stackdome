@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { addInlineVolume } from "@/pages/stacks/lib/canvas/inline-volume";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { X, ScrollText, Trash2 } from "lucide-react";
@@ -88,6 +89,22 @@ export function ResourceDrawer({
     [session],
   );
 
+  const onCreateVolume = useCallback(
+    (input: { name: string; size: string; targetPath: string }) => {
+      const currentMounts = session.draft.resources[resourceIndex]?.volume_mounts ?? [];
+      const { volumes, mounts } = addInlineVolume(
+        session.draft.volumes as never,
+        currentMounts as never,
+        input,
+      );
+      session.updateVolumes(() => volumes as never);
+      session.updateResources((prev) =>
+        prev.map((r, i) => (i === resourceIndex ? { ...r, volume_mounts: mounts } : r)),
+      );
+    },
+    [session, resourceIndex],
+  );
+
   const { dirtyTabs, isDirty, statusDotColor, configurationProps, deploymentProps, environmentProps } =
     useResourceTabProps({
       resource,
@@ -103,6 +120,7 @@ export function ResourceDrawer({
         addonNameById,
         onDiscardField: (path) => session.discardResourceField(resourceIndex, path),
         onDiscardEnvRow: (envIdx) => session.discardEnvRow(resourceIndex, envIdx),
+        onCreateVolume,
       },
     });
 

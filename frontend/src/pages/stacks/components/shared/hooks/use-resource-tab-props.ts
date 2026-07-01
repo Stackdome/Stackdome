@@ -31,6 +31,8 @@ export interface ResourceTabContext {
   addonNameById: Map<string, string>;
   onDiscardField?: (path: string) => void;
   onDiscardEnvRow?: (envIdx: number) => void;
+  /** When provided, the canvas drawer offers inline volume creation. */
+  onCreateVolume?: (input: { name: string; size: string; targetPath: string }) => void;
 }
 
 type ConfigurationProps = React.ComponentProps<typeof StackResourceConfigurationTab>;
@@ -179,6 +181,7 @@ export function useResourceTabProps(args: {
       secrets: context.secrets,
       onDiscardField: context.onDiscardField,
       onPatchResource,
+      onCreateVolume: context.onCreateVolume,
     },
     deploymentProps: {
       index,

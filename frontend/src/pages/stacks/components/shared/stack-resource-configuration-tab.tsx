@@ -39,6 +39,9 @@ interface StackResourceConfigurationTabProps {
   onDiscardField?: (path: string) => void;
   /** Patch any subset of resource fields. Identity must be stable across renders. */
   onPatchResource: (patch: Partial<FormStackResourceData>) => void;
+  /** When provided, the drawer offers inline volume creation (name+size+path)
+   *  instead of only selecting a pre-existing volume. */
+  onCreateVolume?: (input: { name: string; size: string; targetPath: string }) => void;
 }
 
 /** Subset of FormStackResourceData read by the Configuration tab. We pass this
@@ -98,6 +101,7 @@ function StackResourceConfigurationTabImpl({
   secrets,
   onDiscardField,
   onPatchResource,
+  onCreateVolume,
 }: StackResourceConfigurationTabProps) {
   const update = onPatchResource;
 
@@ -658,19 +662,18 @@ function StackResourceConfigurationTabImpl({
               </div>
             </DirtyField>
           ))}
-          <div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={addVolumeMount}
-              disabled={(volumes || []).length === 0}
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />Add mount
-            </Button>
-            {(volumes || []).length === 0 && (
-              <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
-            )}
-          </div>
+          {onCreateVolume ? (
+            <InlineVolumeAdder onCreate={onCreateVolume} />
+          ) : (
+            <div>
+              <Button variant="ghost" size="sm" onClick={addVolumeMount} disabled={(volumes || []).length === 0}>
+                <PlusCircle className="h-4 w-4 mr-2" />Add mount
+              </Button>
+              {(volumes || []).length === 0 && (
+                <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <Separator className="my-6" />
@@ -754,6 +757,32 @@ function StackResourceConfigurationTabImpl({
         </div>
       </div>
     </TabsContent>
+  );
+}
+
+function InlineVolumeAdder({ onCreate }: { onCreate: (i: { name: string; size: string; targetPath: string }) => void }) {
+  const [name, setName] = React.useState("");
+  const [size, setSize] = React.useState("1Gi");
+  const [targetPath, setTargetPath] = React.useState("/mnt/data");
+  const canAdd = name.trim() !== "" && size.trim() !== "" && targetPath.trim() !== "";
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end border border-dashed p-3 rounded-md">
+      <FieldShell label="Volume name" htmlFor="inline-vol-name">
+        <Input id="inline-vol-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., data" />
+      </FieldShell>
+      <FieldShell label="Size" htmlFor="inline-vol-size">
+        <Input id="inline-vol-size" value={size} onChange={(e) => setSize(e.target.value)} placeholder="e.g., 1Gi" />
+      </FieldShell>
+      <FieldShell label="Mount path" htmlFor="inline-vol-path">
+        <Input id="inline-vol-path" value={targetPath} onChange={(e) => setTargetPath(e.target.value)} placeholder="/mnt/data" />
+      </FieldShell>
+      <Button
+        variant="ghost" size="sm" disabled={!canAdd}
+        onClick={() => { onCreate({ name: name.trim(), size: size.trim(), targetPath: targetPath.trim() }); setName(""); setSize("1Gi"); setTargetPath("/mnt/data"); }}
+      >
+        <PlusCircle className="h-4 w-4 mr-2" />Add volume
+      </Button>
+    </div>
   );
 }
 
