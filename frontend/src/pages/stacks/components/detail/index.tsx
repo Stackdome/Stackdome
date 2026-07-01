@@ -1,22 +1,8 @@
 import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
-import { Loader2, MoreHorizontal, Pencil, Rocket, Save, Trash2 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { PageHeader, Panel, StatusPill, variantFromState } from "@/components/branded";
+import { Loader2 } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import StackResourcesForm, { getDefaultResource } from "@/pages/stacks/components/shared/stack-resources-form";
-import StackVolumesForm, { getDefaultVolume } from "@/pages/stacks/components/shared/stack-volumes-form";
-import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resources-detail";
-import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
-import StickyActionBar, { type StickyActionBarSegment } from "@/pages/stacks/components/shared/sticky-action-bar";
-import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
 import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
@@ -30,13 +16,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { AddonGroupStateMap } from "@/pages/stacks/components/shared/stack-resource-item";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
 import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
 import { StackCanvasTab } from "@/pages/stacks/components/canvas/StackCanvasTab";
 import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditorShell";
-import { isCanvasEnabled } from "@/lib/feature-flags";
+import { DraftTabPlaceholder } from "@/pages/stacks/components/canvas/DraftTabPlaceholder";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { createStack, getStackById, updateStack } from "@/api/stacks";
@@ -104,13 +89,6 @@ export default function StackDetailPage() {
   const session = useStackEditSession();
   const [activeTab, setActiveTab] = useState("configuration");
   const [isSaving, setIsSaving] = useState(false);
-  const [editingBindingIds, setEditingBindingIds] = useState<Set<string>>(new Set());
-  // Per-addonId provenance for converted env rows after a successful detach
-  // save. Keyed by `${resourceIdx}::${envName}`. Page-state only — vanishes
-  // on reload by design (no API field for it).
-  const [detachedProvenance, setDetachedProvenance] = useState<Map<string, { addonName: string; credField?: string }>>(
-    new Map(),
-  );
   const [detachConfirmOpen, setDetachConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{
     resources: { [index: number]: { [field: string]: string | undefined } };
@@ -245,19 +223,6 @@ export default function StackDetailPage() {
     [stackToShow],
   );
 
-  // addonId → the resources it binds to (a connection's `to` stack resource).
-  const addonResourceNames = useMemo<Map<string, string[]>>(() => {
-    const map = new Map<string, string[]>();
-    for (const c of stackToShow?.spec?.connections ?? []) {
-      if (c.from?.type === "addon/postgres" && c.from?.id && c.to?.name) {
-        const arr = map.get(c.from.id) ?? [];
-        if (!arr.includes(c.to.name)) arr.push(c.to.name);
-        map.set(c.from.id, arr);
-      }
-    }
-    return map;
-  }, [stackToShow]);
-
   const activateEdit = (opts?: { resourceIdx?: number; volumeIdx?: number; openTab?: EditSessionTab }) => {
     session.start(
       { resources: baselineResources, volumes: baselineVolumes },
@@ -268,50 +233,7 @@ export default function StackDetailPage() {
         linkedAddonIds: connectionAddonIds,
       },
     );
-    setEditingBindingIds(new Set());
   };
-
-  // Page-derived per-addonId state map. Detaching wins over editing.
-  const addonGroupState = useMemo<AddonGroupStateMap>(() => {
-    const m = new Map<string, "idle" | "editing-binding" | "detaching">();
-    for (const id of editingBindingIds) m.set(id, "editing-binding");
-    for (const id of session.pendingDetach) m.set(id, "detaching");
-    return m;
-  }, [editingBindingIds, session.pendingDetach]);
-
-  const handleEditAddonBinding = useCallback((addonId: string) => {
-    setEditingBindingIds((prev) => {
-      const next = new Set(prev);
-      next.add(addonId);
-      return next;
-    });
-  }, []);
-
-  const handleDetachAddon = useCallback((addonId: string) => {
-    setEditingBindingIds((prev) => {
-      const next = new Set(prev);
-      next.delete(addonId);
-      return next;
-    });
-    session.setPendingDetach((prev) => {
-      const next = new Set(prev);
-      next.add(addonId);
-      return next;
-    });
-  }, [session]);
-
-  const handleCancelDetachAddon = useCallback((addonId: string) => {
-    session.setPendingDetach((prev) => {
-      const next = new Set(prev);
-      next.delete(addonId);
-      return next;
-    });
-    setEditingBindingIds((prev) => {
-      const next = new Set(prev);
-      next.add(addonId);
-      return next;
-    });
-  }, [session]);
 
   // Compute "linked but unbound" — addons in linkedAddonIds with zero env
   // bindings across the draft. Env vars no longer carry addon-backed sources,
@@ -447,10 +369,7 @@ export default function StackDetailPage() {
       const updatedStack = await updateStack(orgId, teamName, id!, apiData);
       setFetchedStack(updatedStack);
 
-      if (detachResult) setDetachedProvenance(detachResult.provenance);
-      else setDetachedProvenance(new Map());
       session.discard();
-      setEditingBindingIds(new Set());
 
       toast({
         title: "Stack updated successfully",
@@ -489,43 +408,6 @@ export default function StackDetailPage() {
     }
     void performSave();
   };
-
-  // NOTE: this used to be wrapped in useTransition, which improved
-  // typing throughput but broke caret position on controlled inputs —
-  // when React commits the deferred state, it re-applies the input's
-  // value prop and the browser moves the caret to the end. Mid-string
-  // edits became impossible. The win from Cycle 6 (per-tab memoization)
-  // gives us most of the throughput back without the side effect.
-  const handleResourcesChange = useCallback((updatedResources: Partial<FormStackResourceData>[]) => {
-    session.updateResources(updatedResources as FormStackResourceData[]);
-  }, [session]);
-
-  const handleVolumesChange = useCallback((updatedVolumes: Partial<VolumeFormData>[]) => {
-    session.updateVolumes(updatedVolumes as VolumeFormData[]);
-  }, [session]);
-
-  const handleDiscardEnvRow = useCallback(
-    (rIdx: number, eIdx: number) => session.discardEnvRow(rIdx, eIdx),
-    [session],
-  );
-  const handleDiscardResource = useCallback(
-    (rIdx: number) => session.discardResource(rIdx),
-    [session],
-  );
-  const handleDiscardResourceField = useCallback(
-    (rIdx: number, path: string) => session.discardResourceField(rIdx, path),
-    [session],
-  );
-
-  // Stable Set of every addonId explicitly linked to the stack. Env vars no
-  // longer carry addon-backed sources, so explicit links are the only source.
-  // Without useMemo this would be a fresh Set every render of detail/index.tsx,
-  // breaking memo on every StackResourceItem child via the addons →
-  // availableAddonIds → addons.filter chain.
-  const availableAddonIds = useMemo(
-    () => (session.isActive ? new Set(session.linkedAddonIds) : connectionAddonIds),
-    [session.isActive, session.linkedAddonIds, connectionAddonIds],
-  );
 
   const addDraftLabel = useCallback((value: string) => {
     setDraftLabels((prev) => [...(prev ?? []), { key: "stackdome.io/user-defined-value", value }]);
@@ -569,81 +451,13 @@ export default function StackDetailPage() {
 
   const resourceCount = effectiveStack?.spec?.stack_resources?.length || 0;
   const volumeCount = effectiveStack?.spec?.volumes?.length || 0;
-  const subtitleParts: React.ReactNode[] = [
-    `${resourceCount} ${resourceCount === 1 ? "service" : "services"}`,
-    `${volumeCount} ${volumeCount === 1 ? "volume" : "volumes"}`,
-  ];
   const subtitleText = `${resourceCount} ${resourceCount === 1 ? "service" : "services"} · ${volumeCount} ${
     volumeCount === 1 ? "volume" : "volumes"
   }`;
 
-  // The actions menu only holds mutating items (Edit + Delete). Hide the whole
-  // trigger for users who can't write this stack.
-  const headerActions = canWriteStack ? (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Stack actions">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[160px]">
-        <DropdownMenuItem
-          onClick={() => activateEdit({})}
-          disabled={session.isActive}
-        >
-          <Pencil className="h-4 w-4" />
-          {session.isActive ? "Editing" : "Edit"}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="text-danger focus:text-danger"
-          onClick={() =>
-            toast({
-              title: "Not implemented",
-              description: "Delete stack will land in a follow-up.",
-            })
-          }
-        >
-          <Trash2 className="h-4 w-4 text-danger" />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  ) : undefined;
-
-  // The bar is an ACTION affordance, not a status: it shows only when there's a staged draft to
-  // deploy. Live/in-flight state lives in the timeline + header pill, so a rollout and a draft can coexist.
-  const deployBar = (() => {
-    if (lifecycle.phase !== "staged") return null;
-    const d = lifecycle.stagedDiff;
-    // Per-type counts; a rename collapses to one resource entry in the diff.
-    const segments: StickyActionBarSegment[] = [];
-    const addSeg = (count: number, singular: string) => {
-      if (count > 0) segments.push({ num: count, label: count === 1 ? `${singular} changed` : `${singular}s changed` });
-    };
-    if (d) {
-      addSeg(d.resources.length, "resource");
-      addSeg(d.volumes.length, "volume");
-      addSeg(d.connections.length, "connection");
-    }
-    return (
-      <StickyActionBar
-        leadLabel="Draft saved"
-        segments={segments}
-        primary={{
-          label: "Deploy",
-          loadingLabel: "Deploying",
-          icon: <Rocket className="h-3.5 w-3.5" />,
-          isLoading: deployBusy,
-          onClick: onDeploy,
-        }}
-      />
-    );
-  })();
-
-  // Ops-view bodies — identical in both the flag-ON shell and the flag-OFF
-  // page, so computed once and referenced by each. (The Configuration body
-  // differs: canvas when flag-ON, form when flag-OFF.)
-  const deploymentsBody = effectiveStack?.id ? (
+  // Ops-view bodies — rendered inside the canvas shell; gated on isDraft so
+  // the user sees a placeholder until the stack is saved for the first time.
+  const deploymentsBody = isDraft ? <DraftTabPlaceholder label="Deployments" /> : effectiveStack?.id ? (
     <DeploymentsTab
       orgId={deployIds.orgId}
       teamName={deployIds.teamName}
@@ -663,7 +477,7 @@ export default function StackDetailPage() {
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  const logsBody = effectiveStack?.id ? (
+  const logsBody = isDraft ? <DraftTabPlaceholder label="Logs" /> : effectiveStack?.id ? (
     <StackLogsTab
       stackId={effectiveStack.id}
       organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
@@ -673,7 +487,7 @@ export default function StackDetailPage() {
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  const metricsBody = effectiveStack?.id ? (
+  const metricsBody = isDraft ? <DraftTabPlaceholder label="Metrics" /> : effectiveStack?.id ? (
     <StackMetricsTab
       stackId={effectiveStack.id}
       organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
@@ -717,294 +531,53 @@ export default function StackDetailPage() {
     </AlertDialog>
   );
 
-  // ── Flag-ON: full-bleed canvas editor shell (replaces PageHeader + tabs +
-  // sticky bar). Reuses the same session/deploy wiring; presentation only. ──
-  if (isCanvasEnabled()) {
-    const dirtyTotal =
-      session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size + session.dirty.addonLinkCount;
-    return (
-      <>
-        <CanvasEditorShell
-          stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
-          isDraft={isDraft}
-          nameEditable={isDraft}
-          onNameChange={setDraftName}
-          labels={(isDraft ? draftLabels : effectiveStack?.labels) ?? []}
-          labelsEditable={isDraft}
-          onAddLabel={addDraftLabel}
-          onRemoveLabel={removeDraftLabel}
-          statusState={effectiveStack?.status?.state}
-          subtitle={subtitleText}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          isActive={session.isActive}
-          dirtyResourceCount={session.dirty.dirtyResourceIdx.size}
-          dirtyTotal={dirtyTotal}
-          isStaged={lifecycle.phase === "staged"}
-          isSaving={isSaving}
-          deployBusy={deployBusy}
-          canWrite={canWriteStack}
-          onSave={handleSave}
-          onDeploy={onDeploy}
-          onDiscardAll={() => session.discard()}
-          onEdit={() => activateEdit({})}
-          onDelete={() =>
-            toast({ title: "Not implemented", description: "Delete stack will land in a follow-up." })
-          }
-          configuration={
-            <StackCanvasTab
-              session={session}
-              baselineResources={baselineResources}
-              baselineVolumes={baselineVolumes}
-              connectionAddonIds={connectionAddonIds}
-              addonNameById={addonNameById}
-              errors={validationErrors.resources}
-              onViewLogs={() => setActiveTab("logs")}
-            />
-          }
-          deployments={deploymentsBody}
-          logs={logsBody}
-          metrics={metricsBody}
-        />
-        {detachDialog}
-      </>
-    );
-  }
-
+  const dirtyTotal =
+    session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size + session.dirty.addonLinkCount;
   return (
-    <div className="p-8 space-y-8">
-      {session.isActive ? (() => {
-        const resourceCount = session.dirty.dirtyResourceIdx.size;
-        const volumeCount = session.dirty.dirtyVolumeIdx.size;
-        const dirtyEntities = resourceCount + volumeCount;
-        const segments: StickyActionBarSegment[] = [];
-        if (resourceCount > 0) {
-          segments.push({ num: resourceCount, label: resourceCount === 1 ? "RESOURCE MODIFIED" : "RESOURCES MODIFIED" });
+    <>
+      <CanvasEditorShell
+        stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
+        isDraft={isDraft}
+        nameEditable={isDraft}
+        onNameChange={setDraftName}
+        labels={(isDraft ? draftLabels : effectiveStack?.labels) ?? []}
+        labelsEditable={isDraft}
+        onAddLabel={addDraftLabel}
+        onRemoveLabel={removeDraftLabel}
+        statusState={effectiveStack?.status?.state}
+        subtitle={subtitleText}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isActive={session.isActive}
+        dirtyResourceCount={session.dirty.dirtyResourceIdx.size}
+        dirtyTotal={dirtyTotal}
+        isStaged={lifecycle.phase === "staged"}
+        isSaving={isSaving}
+        deployBusy={deployBusy}
+        canWrite={canWriteStack}
+        onSave={handleSave}
+        onDeploy={onDeploy}
+        onDiscardAll={() => session.discard()}
+        onEdit={() => activateEdit({})}
+        onDelete={() =>
+          toast({ title: "Not implemented", description: "Delete stack will land in a follow-up." })
         }
-        if (volumeCount > 0) {
-          segments.push({ num: volumeCount, label: volumeCount === 1 ? "VOLUME MODIFIED" : "VOLUMES MODIFIED" });
-        }
-        if (session.dirty.addonLinkCount > 0) {
-          segments.push({ num: session.dirty.addonLinkCount, label: session.dirty.addonLinkCount === 1 ? "ADDON" : "ADDONS" });
-        }
-        return (
-          <StickyActionBar
-            leadLabel="Draft"
-            segments={segments}
-            primary={{
-              label: "Save",
-              loadingLabel: "Saving",
-              icon: <Save className="h-3.5 w-3.5" />,
-              isLoading: isSaving,
-              onClick: handleSave,
-            }}
-            secondary={{
-              label: "Discard all",
-              onClick: () => session.discard(),
-              dirtyCount: dirtyEntities,
-              confirm: {
-                threshold: 2,
-                title: "Discard all changes?",
-                description: (
-                  <>
-                    You have unsaved edits across {dirtyEntities}{" "}
-                    {dirtyEntities === 1 ? "item" : "items"}. This will revert every
-                    change in this session.
-                  </>
-                ),
-                confirmLabel: "Discard all",
-                cancelLabel: "Keep editing",
-              },
-            }}
+        configuration={
+          <StackCanvasTab
+            session={session}
+            baselineResources={baselineResources}
+            baselineVolumes={baselineVolumes}
+            connectionAddonIds={connectionAddonIds}
+            addonNameById={addonNameById}
+            errors={validationErrors.resources}
+            onViewLogs={() => setActiveTab("logs")}
           />
-        );
-      })() : deployBar}
-
-      <PageHeader
-        title={effectiveStack?.name ?? ""}
-        status={
-          <span className="flex items-center gap-2">
-            {effectiveStack?.status?.state && (
-              <StatusPill variant={variantFromState(effectiveStack.status.state)}>
-                {effectiveStack.status.state}
-              </StatusPill>
-            )}
-          </span>
         }
-        subtitle={subtitleParts.map((p, i) => (
-          <span key={i}>
-            {i > 0 && <span className="mx-2 text-muted-foreground/50">·</span>}
-            {p}
-          </span>
-        ))}
-        actions={headerActions}
+        deployments={deploymentsBody}
+        logs={logsBody}
+        metrics={metricsBody}
       />
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-6 w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-6">
-          <TabsTrigger
-            value="configuration"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
-          >
-            Configuration
-          </TabsTrigger>
-          <TabsTrigger
-            value="deployments"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
-          >
-            Deployments
-          </TabsTrigger>
-          <TabsTrigger
-            value="logs"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
-          >
-            Logs
-          </TabsTrigger>
-          <TabsTrigger
-            value="metrics"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
-          >
-            Metrics
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Configuration Tab: Stack Resources and Volumes (flag-OFF form path) */}
-        <TabsContent value="configuration" className="space-y-8">
-          <Panel
-            title="Stack Resources"
-            count={baselineResources.length}
-            bodyClassName="p-0"
-          >
-            {session.isActive ? (
-              <StackResourcesForm
-                resources={session.draft.resources}
-                onResourcesChange={handleResourcesChange}
-                errors={validationErrors.resources}
-                volumes={session.draft.volumes}
-                accordionDefaultOpen={false}
-                defaultOpenResourceIdx={session.openResourceIdx}
-                addonGroupState={addonGroupState}
-                onEditAddonBinding={handleEditAddonBinding}
-                onDetachAddon={handleDetachAddon}
-                onCancelDetachAddon={handleCancelDetachAddon}
-                baselineResources={session.baseline.resources}
-                onDiscardEnvRow={handleDiscardEnvRow}
-                onDiscardResource={handleDiscardResource}
-                onDiscardResourceField={handleDiscardResourceField}
-                availableAddonIds={availableAddonIds}
-              />
-            ) : (
-              <StackResourcesDetail
-                resources={baselineResources}
-                accordionDefaultOpen={false}
-                onEditResource={
-                  canWriteStack
-                    ? (idx) => activateEdit({ resourceIdx: idx, openTab: "environment" })
-                    : undefined
-                }
-                onAddResource={
-                  canWriteStack
-                    ? () => {
-                      const nextIdx = baselineResources.length;
-                      session.start(
-                        {
-                          resources: [...baselineResources, getDefaultResource() as FormStackResourceData],
-                          volumes: baselineVolumes,
-                        },
-                        { openResourceIdx: nextIdx, openTab: "configuration", linkedAddonIds: connectionAddonIds },
-                      );
-                      setEditingBindingIds(new Set());
-                    }
-                    : undefined
-                }
-                detachedProvenance={detachedProvenance}
-                addonNameById={addonNameById}
-              />
-            )}
-          </Panel>
-
-          <Panel
-            title="Stack Volumes"
-            count={baselineVolumes.length}
-            bodyClassName="p-0"
-          >
-            {session.isActive ? (
-              <StackVolumesForm
-                volumes={session.draft.volumes}
-                onVolumesChange={handleVolumesChange}
-                errors={validationErrors.volumes}
-                stackResources={session.draft.resources}
-                baselineVolumes={baselineVolumes}
-                accordionDefaultOpen={false}
-                defaultOpenVolumeIdx={session.openVolumeIdx}
-              />
-            ) : (
-              <StackVolumesDetail
-                volumes={baselineVolumes}
-                stackResources={baselineResources}
-                accordionDefaultOpen={false}
-                onEditVolume={canWriteStack ? (idx) => activateEdit({ volumeIdx: idx }) : undefined}
-                onAddVolume={
-                  canWriteStack
-                    ? () => {
-                      const nextIdx = baselineVolumes.length;
-                      session.start(
-                        {
-                          resources: baselineResources,
-                          volumes: [...baselineVolumes, getDefaultVolume() as VolumeFormData],
-                        },
-                        { openVolumeIdx: nextIdx, linkedAddonIds: connectionAddonIds },
-                      );
-                      setEditingBindingIds(new Set());
-                    }
-                    : undefined
-                }
-              />
-            )}
-          </Panel>
-
-          {(() => {
-            const baseline = { resources: baselineResources, volumes: baselineVolumes };
-            const ensureActive = () => {
-              if (!session.isActive) session.start(baseline, { linkedAddonIds: connectionAddonIds });
-            };
-            return (
-              <AddonsInStackPanel
-                readOnly={!canWriteStack}
-                resources={(session.isActive ? session.draft.resources : baselineResources) as Partial<FormStackResourceData>[]}
-                linkedAddonIds={session.isActive ? session.linkedAddonIds : connectionAddonIds}
-                addonResourceNames={addonResourceNames}
-                onLinkAddon={(addonId) => {
-                  ensureActive();
-                  session.setLinkedAddonIds((prev) => {
-                    const next = new Set(prev);
-                    next.add(addonId);
-                    return next;
-                  });
-                }}
-                onRemoveLinkedAddon={(addonId) => {
-                  session.setLinkedAddonIds((prev) => {
-                    const next = new Set(prev);
-                    next.delete(addonId);
-                    return next;
-                  });
-                }}
-              />
-            );
-          })()}
-        </TabsContent>
-
-        {/* Deployments Tab */}
-        <TabsContent value="deployments">{deploymentsBody}</TabsContent>
-
-        {/* Logs Tab */}
-        <TabsContent value="logs">{logsBody}</TabsContent>
-
-        {/* Metrics Tab */}
-        <TabsContent value="metrics">{metricsBody}</TabsContent>
-      </Tabs>
-
       {detachDialog}
-    </div>
+    </>
   );
 }

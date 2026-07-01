@@ -10,7 +10,7 @@ export interface TemplateImportState {
 export interface TemplateImportActions {
   openDialog: () => void;
   closeDialog: () => void;
-  /** Convert the template's preset and open the create form, prefilled. */
+  /** Convert the template's preset and navigate to the canvas editor pre-seeded with the template data. */
   useTemplate: (template: Template) => void;
 }
 

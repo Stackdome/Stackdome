@@ -14,7 +14,6 @@ import { BreadcrumbProvider } from "@/contexts/breadcrumb-context";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
-import { isCanvasEnabled } from "@/lib/feature-flags";
 
 interface BreadcrumbItemType {
   name: string;
@@ -35,8 +34,7 @@ function AppLayoutContent({
 
   // Full-bleed layout for the canvas stack editor: /stacks/new (draft) and
   // /stacks/<id> (existing). A single trailing segment only — not /stacks.
-  const isFullBleed =
-    isCanvasEnabled() && /^\/stacks\/[^/]+$/.test(location.pathname);
+  const isFullBleed = /^\/stacks\/[^/]+$/.test(location.pathname);
 
   // Create breadcrumb items based on the current path
   const breadcrumbItems: BreadcrumbItemType[] = [
@@ -109,9 +107,8 @@ function AppLayoutContent({
               into it via #page-sticky-bar.
 
               The canvas stack editor opts out of the centered max-width column
-              and renders full-bleed (edge-to-edge, full height). Gated on the
-              feature flag + the stack-detail route so every other page keeps
-              the standard constrained layout. */}
+              and renders full-bleed (edge-to-edge, full height) for the stack
+              detail route; every other page keeps the standard layout. */}
           <div className="flex-grow overflow-auto scrollbar-hide rounded-bl-lg rounded-br-lg">
             <div id="page-sticky-bar" className="sticky top-0 z-30" />
             {isFullBleed ? (
