@@ -40,8 +40,10 @@ export interface CanvasEditorShellProps {
   /** Render the title as an editable input (draft, or a rename-capable stack). */
   nameEditable: boolean;
   onNameChange?: (name: string) => void;
+  /** Validation error message for the stack name — shown when nameEditable and set. */
+  nameError?: string;
   labels: { key: string; value: string }[];
-  labelsEditable?: boolean;
+  labelsEditable: boolean;
   onAddLabel?: (value: string) => void;
   onRemoveLabel?: (index: number) => void;
   activeTab: string;
@@ -89,6 +91,7 @@ export function CanvasEditorShell({
   isDraft,
   nameEditable,
   onNameChange,
+  nameError,
   labels,
   labelsEditable,
   onAddLabel,
@@ -148,10 +151,14 @@ export function CanvasEditorShell({
           {nameEditable ? (
             <Input
               aria-label="Stack name"
+              aria-invalid={!!nameError}
               value={stackName}
               onChange={(e) => onNameChange?.(e.target.value)}
               placeholder="name-your-stack"
-              className="h-auto w-[22ch] border-0 bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none focus-visible:ring-0"
+              className={cn(
+                "h-auto w-[22ch] bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none focus-visible:ring-0",
+                nameError ? "border border-danger ring-1 ring-danger" : "border-0",
+              )}
             />
           ) : (
             <h1 className="truncate text-[29px] font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
@@ -193,34 +200,39 @@ export function CanvasEditorShell({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        {nameEditable && nameError && (
+          <p className="mt-1 text-[12px] text-danger">{nameError}</p>
+        )}
         <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          {labels.map((l, i) => (
-            <span key={`${l.value}-${i}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-              {l.value}
-              {labelsEditable && (
-                <button type="button" aria-label={`Remove label ${l.value}`} onClick={() => onRemoveLabel?.(i)} className="rounded-full hover:text-foreground">
-                  <X className="size-3" />
-                </button>
-              )}
-            </span>
-          ))}
-          {labelsEditable && (
-            <Input
-              value={labelInput}
-              onChange={(e) => setLabelInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && labelInput.trim()) {
-                  e.preventDefault();
-                  onAddLabel?.(labelInput.trim());
-                  setLabelInput("");
-                }
-              }}
-              placeholder="add label…"
-              className="h-6 w-[14ch] border-0 bg-transparent px-0 text-[11px] shadow-none focus-visible:ring-0"
-            />
-          )}
-        </div>
+        {(labelsEditable || labels.length > 0) && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {labels.map((l, i) => (
+              <span key={`${l.value}-${i}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                {l.value}
+                {labelsEditable && (
+                  <button type="button" aria-label={`Remove label ${l.value}`} onClick={() => onRemoveLabel?.(i)} className="rounded-full hover:text-foreground">
+                    <X className="size-3" />
+                  </button>
+                )}
+              </span>
+            ))}
+            {labelsEditable && (
+              <Input
+                value={labelInput}
+                onChange={(e) => setLabelInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && labelInput.trim()) {
+                    e.preventDefault();
+                    onAddLabel?.(labelInput.trim());
+                    setLabelInput("");
+                  }
+                }}
+                placeholder="add label…"
+                className="h-6 w-[14ch] border-0 bg-transparent px-0 text-[11px] shadow-none focus-visible:ring-0"
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tab row */}

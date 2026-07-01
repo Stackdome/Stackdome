@@ -26,6 +26,7 @@ import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, F
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import { createStack, getStackById, updateStack } from "@/api/stacks";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
+import { USER_DEFINED_LABEL_KEY } from "@/pages/stacks/lib/constants";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
 import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
@@ -89,6 +90,7 @@ export default function StackDetailPage() {
   const session = useStackEditSession();
   const [activeTab, setActiveTab] = useState("configuration");
   const [isSaving, setIsSaving] = useState(false);
+  const [nameError, setNameError] = useState<string | undefined>();
   const [detachConfirmOpen, setDetachConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{
     resources: { [index: number]: { [field: string]: string | undefined } };
@@ -304,6 +306,7 @@ export default function StackDetailPage() {
     if (!session.isActive) return;
     if (!isDraft && !stackToShow) return;
     setIsSaving(true);
+    setNameError(undefined);
     setValidationErrors({ resources: {}, volumes: {} });
 
     try {
@@ -324,20 +327,44 @@ export default function StackDetailPage() {
       const validation = FormStackSchema.safeParse(formStackData);
       if (!validation.success) {
         const nextErrors: typeof validationErrors = { resources: {}, volumes: {} };
+        let newNameError: string | undefined;
+        const topLevelMessages: string[] = [];
+
         for (const issue of validation.error.issues) {
           const [scope0, scope1, idxRaw, ...rest] = issue.path;
-          if (scope0 !== "spec" || (scope1 !== "stack_resources" && scope1 !== "volumes")) continue;
-          const idx = typeof idxRaw === "number" ? idxRaw : Number(idxRaw);
-          if (Number.isNaN(idx)) continue;
-          const bucket = scope1 === "stack_resources" ? nextErrors.resources : nextErrors.volumes;
-          if (!bucket[idx]) bucket[idx] = {};
-          const fieldKey = rest.join(".");
-          if (!bucket[idx][fieldKey]) bucket[idx][fieldKey] = issue.message;
+
+          // Name-field error → surface in the title input.
+          if (scope0 === "name") {
+            newNameError = issue.message;
+            continue;
+          }
+
+          // Per-resource / per-volume errors.
+          if (scope0 === "spec" && (scope1 === "stack_resources" || scope1 === "volumes")) {
+            const idx = typeof idxRaw === "number" ? idxRaw : Number(idxRaw);
+            if (Number.isNaN(idx)) {
+              // e.g. ["spec","stack_resources"] with no index → "add at least one resource"
+              topLevelMessages.push(issue.message);
+              continue;
+            }
+            const bucket = scope1 === "stack_resources" ? nextErrors.resources : nextErrors.volumes;
+            if (!bucket[idx]) bucket[idx] = {};
+            const fieldKey = rest.join(".");
+            if (!bucket[idx][fieldKey]) bucket[idx][fieldKey] = issue.message;
+            continue;
+          }
+
+          // Any other top-level issue.
+          topLevelMessages.push(issue.message);
         }
+
         setValidationErrors(nextErrors);
+        setNameError(newNameError);
         toast({
           title: "Validation error",
-          description: "Please fix the highlighted errors before deploying.",
+          description: topLevelMessages.length > 0
+            ? topLevelMessages.join("; ")
+            : "Please fix the highlighted errors before saving.",
           variant: "destructive",
         });
         setIsSaving(false);
@@ -409,8 +436,13 @@ export default function StackDetailPage() {
     void performSave();
   };
 
+  const handleNameChange = useCallback((name: string) => {
+    setDraftName(name);
+    setNameError(undefined);
+  }, []);
+
   const addDraftLabel = useCallback((value: string) => {
-    setDraftLabels((prev) => [...(prev ?? []), { key: "stackdome.io/user-defined-value", value }]);
+    setDraftLabels((prev) => [...(prev ?? []), { key: USER_DEFINED_LABEL_KEY, value }]);
   }, []);
   const removeDraftLabel = useCallback((idx: number) => {
     setDraftLabels((prev) => (prev ?? []).filter((_, i) => i !== idx));
@@ -539,7 +571,8 @@ export default function StackDetailPage() {
         stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
         isDraft={isDraft}
         nameEditable={isDraft}
-        onNameChange={setDraftName}
+        onNameChange={handleNameChange}
+        nameError={nameError}
         labels={(isDraft ? draftLabels : effectiveStack?.labels) ?? []}
         labelsEditable={isDraft}
         onAddLabel={addDraftLabel}

@@ -8,6 +8,7 @@ import { addBlockToStack, emptyStack } from "@/pages/stacks/lib/block-to-form";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 import { emptyDraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
+import type { FormStackResourceData, FormVolumeExtendedData } from "@/pages/stacks/schemas/form-schema";
 import { BlockPicker } from "./block-picker";
 import { BlockGlyph } from "./block-glyph";
 import { WizardFooter } from "./wizard-footer";
@@ -60,9 +61,11 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
   const openCanvas = () => {
     const seed = {
       ...emptyDraftSeed(),
-      resources: stack.spec.stack_resources as never,
-      volumes: (stack.spec.volumes ?? []) as never,
-      labels: stack.labels,
+      // The wizard's stack type uses a lighter API shape; cast to the form
+      // seed types that draft-seed expects so downstream code is type-safe.
+      resources: stack.spec.stack_resources as unknown as FormStackResourceData[],
+      volumes: (stack.spec.volumes ?? []) as unknown as FormVolumeExtendedData[],
+      labels: stack.labels ?? [],
       linkedAddonIds: Array.from(selectedAddonIds),
     };
     onClose();

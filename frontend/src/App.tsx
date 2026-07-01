@@ -45,6 +45,7 @@ const router = createBrowserRouter(
         <Route path="/dashboard" element={<StacksPage />} />
         <Route path="/stacks" element={<StacksPage />} />
         <Route path="/stacks/new" element={<StackDetailPage />} />
+        <Route path="/stacks/create" element={<Navigate to="/stacks/new" replace />} />
         <Route path="/stacks/:id" element={<StackDetailPage />} />
         <Route path="/secrets" element={<SecretsPage />} />
         <Route path="/object-stores" element={<ObjectStoresPage />} />

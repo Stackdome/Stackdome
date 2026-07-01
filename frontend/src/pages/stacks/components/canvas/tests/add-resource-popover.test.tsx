@@ -22,4 +22,22 @@ describe("AddResourcePopover managed addons", () => {
     fireEvent.click(screen.getByRole("button", { name: /prod-db/i }));
     expect(onLinkAddon).toHaveBeenCalledWith("a1");
   });
+
+  it("shows check indicator when addon is already linked", () => {
+    render(
+      <AddResourcePopover
+        addedIds={[]}
+        onAdd={() => {}}
+        addons={[{ id: "a1", name: "prod-db" }]}
+        linkedAddonIds={new Set(["a1"])}
+        onLinkAddon={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Add resource/i }));
+    // The Check icon renders as an SVG inside the tile; the Plus icon must be absent
+    const tile = screen.getByRole("button", { name: /prod-db/i });
+    // lucide Check renders with aria-hidden; query by the SVG class text-success
+    expect(tile.querySelector(".text-success")).toBeInTheDocument();
+    expect(tile.querySelector(".text-primary")).toBeNull();
+  });
 });

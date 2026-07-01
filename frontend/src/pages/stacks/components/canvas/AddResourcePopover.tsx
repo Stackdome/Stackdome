@@ -26,6 +26,10 @@ export function AddResourcePopover({ addedIds, onAdd, addons, linkedAddonIds, on
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
+  const visibleAddons = addons.filter(
+    (a) => !query.trim() || a.name.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -55,46 +59,40 @@ export function AddResourcePopover({ addedIds, onAdd, addons, linkedAddonIds, on
             query={query}
             onAdd={onAdd}
           />
-          {addons.length > 0 && (
+          {visibleAddons.length > 0 && (
             <div className="mt-5">
               <div className="mb-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
                 Managed add-ons
               </div>
               <div className="grid grid-cols-2 gap-2.5">
-                {addons
-                  .filter(
-                    (a) =>
-                      !query.trim() ||
-                      a.name.toLowerCase().includes(query.trim().toLowerCase()),
-                  )
-                  .map((a) => {
-                    const linked = linkedAddonIds.has(a.id);
-                    return (
-                      <button
-                        type="button"
-                        key={a.id}
-                        onClick={() => onLinkAddon(a.id)}
-                        className="flex min-h-[60px] items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary"
-                      >
-                        <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
-                          <AddonTypeIcon type="postgres" size={18} />
+                {visibleAddons.map((a) => {
+                  const linked = linkedAddonIds.has(a.id);
+                  return (
+                    <button
+                      type="button"
+                      key={a.id}
+                      onClick={() => onLinkAddon(a.id)}
+                      className="flex min-h-[60px] items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary"
+                    >
+                      <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
+                        <AddonTypeIcon type="postgres" size={18} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-foreground">
+                          {a.name}
                         </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-foreground">
-                            {a.name}
-                          </span>
-                          <span className="block truncate font-mono text-[11px] text-muted-foreground">
-                            managed postgres
-                          </span>
+                        <span className="block truncate font-mono text-[11px] text-muted-foreground">
+                          managed postgres
                         </span>
-                        {linked ? (
-                          <Check className="h-[17px] w-[17px] text-success" />
-                        ) : (
-                          <Plus className="h-[17px] w-[17px] text-primary" />
-                        )}
-                      </button>
-                    );
-                  })}
+                      </span>
+                      {linked ? (
+                        <Check className="h-[17px] w-[17px] text-success" />
+                      ) : (
+                        <Plus className="h-[17px] w-[17px] text-primary" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
