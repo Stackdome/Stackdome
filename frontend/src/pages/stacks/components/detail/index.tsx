@@ -93,9 +93,8 @@ export default function StackDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-  // setters wired in Task 2 (editable name/labels in shell)
-  const [draftName] = useState(seed.name);
-  const [draftLabels] = useState<FormStackData["labels"]>(seed.labels);
+  const [draftName, setDraftName] = useState(seed.name);
+  const [draftLabels, setDraftLabels] = useState<FormStackData["labels"]>(seed.labels);
 
   const { stacks } = useStacks();
   const [fetchedStack, setFetchedStack] = useState<Stack | null>(null);
@@ -528,6 +527,13 @@ export default function StackDetailPage() {
     [session.isActive, session.linkedAddonIds, connectionAddonIds],
   );
 
+  const addDraftLabel = useCallback((value: string) => {
+    setDraftLabels((prev) => [...(prev ?? []), { key: "stackdome.io/user-defined-value", value }]);
+  }, []);
+  const removeDraftLabel = useCallback((idx: number) => {
+    setDraftLabels((prev) => (prev ?? []).filter((_, i) => i !== idx));
+  }, []);
+
   if (!isDraft && loading) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
@@ -719,7 +725,14 @@ export default function StackDetailPage() {
     return (
       <>
         <CanvasEditorShell
-          stackName={effectiveStack?.name ?? ""}
+          stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
+          isDraft={isDraft}
+          nameEditable={isDraft}
+          onNameChange={setDraftName}
+          labels={(isDraft ? draftLabels : effectiveStack?.labels) ?? []}
+          labelsEditable={isDraft}
+          onAddLabel={addDraftLabel}
+          onRemoveLabel={removeDraftLabel}
           statusState={effectiveStack?.status?.state}
           subtitle={subtitleText}
           activeTab={activeTab}

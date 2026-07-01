@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { Activity, LayoutGrid, Loader2, MoreHorizontal, Pencil, Rocket, Save, Terminal, Trash2 } from "lucide-react";
+import { Activity, LayoutGrid, Loader2, MoreHorizontal, Pencil, Rocket, Save, Terminal, Trash2, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { StatusPill, variantFromState } from "@/components/branded";
@@ -34,6 +35,15 @@ export interface CanvasEditorShellProps {
   statusState?: string | null;
   /** Human subtitle, e.g. "3 services · 2 volumes". */
   subtitle: string;
+  /** Draft (unsaved) stack — primary action is always Save (create). */
+  isDraft?: boolean;
+  /** Render the title as an editable input (draft, or a rename-capable stack). */
+  nameEditable: boolean;
+  onNameChange?: (name: string) => void;
+  labels: { key: string; value: string }[];
+  labelsEditable?: boolean;
+  onAddLabel?: (value: string) => void;
+  onRemoveLabel?: (index: number) => void;
   activeTab: string;
   onTabChange: (tab: string) => void;
 
@@ -76,6 +86,13 @@ export function CanvasEditorShell({
   stackName,
   statusState,
   subtitle,
+  isDraft,
+  nameEditable,
+  onNameChange,
+  labels,
+  labelsEditable,
+  onAddLabel,
+  onRemoveLabel,
   activeTab,
   onTabChange,
   isActive,
@@ -96,8 +113,10 @@ export function CanvasEditorShell({
   metrics,
 }: CanvasEditorShellProps) {
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [labelInput, setLabelInput] = useState("");
 
   const hasUnsaved = isActive && dirtyTotal > 0;
+  const primaryIsSave = isDraft || hasUnsaved;
   const dirtyLabel = dirtyTotal === 1 ? "1 unsaved change" : `${dirtyTotal} unsaved changes`;
 
   // The canvas (Configuration) stays mounted so its open drawer + node
@@ -106,10 +125,10 @@ export function CanvasEditorShell({
   const opsBody =
     activeTab === "deployments" ? deployments : activeTab === "logs" ? logs : activeTab === "metrics" ? metrics : null;
 
-  // When there are unsaved edits the primary action is Save (the draft must be
-  // persisted before it can be deployed — the backend keeps save and deploy
-  // separate). Otherwise the primary action is Deploy.
-  const primaryButton = hasUnsaved ? (
+  // When there are unsaved edits (or in draft mode) the primary action is Save
+  // (the draft must be persisted before it can be deployed — the backend keeps
+  // save and deploy separate). Otherwise the primary action is Deploy.
+  const primaryButton = primaryIsSave ? (
     <Button type="button" variant="default" size="sm" onClick={onSave} disabled={isSaving}>
       {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
       {isSaving ? "Saving" : "Save"}
@@ -126,7 +145,17 @@ export function CanvasEditorShell({
       {/* Stack-title header */}
       <div className="flex-none px-7 pt-6">
         <div className="flex items-center gap-3.5">
-          <h1 className="truncate text-[29px] font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
+          {nameEditable ? (
+            <Input
+              aria-label="Stack name"
+              value={stackName}
+              onChange={(e) => onNameChange?.(e.target.value)}
+              placeholder="name-your-stack"
+              className="h-auto w-[22ch] border-0 bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none focus-visible:ring-0"
+            />
+          ) : (
+            <h1 className="truncate text-[29px] font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
+          )}
           {statusState && (
             <StatusPill variant={variantFromState(statusState)} className="flex-none">
               {statusState}
@@ -165,6 +194,33 @@ export function CanvasEditorShell({
           </DropdownMenu>
         </div>
         <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {labels.map((l, i) => (
+            <span key={`${l.value}-${i}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+              {l.value}
+              {labelsEditable && (
+                <button type="button" aria-label={`Remove label ${l.value}`} onClick={() => onRemoveLabel?.(i)} className="rounded-full hover:text-foreground">
+                  <X className="size-3" />
+                </button>
+              )}
+            </span>
+          ))}
+          {labelsEditable && (
+            <Input
+              value={labelInput}
+              onChange={(e) => setLabelInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && labelInput.trim()) {
+                  e.preventDefault();
+                  onAddLabel?.(labelInput.trim());
+                  setLabelInput("");
+                }
+              }}
+              placeholder="add label…"
+              className="h-6 w-[14ch] border-0 bg-transparent px-0 text-[11px] shadow-none focus-visible:ring-0"
+            />
+          )}
+        </div>
       </div>
 
       {/* Tab row */}
