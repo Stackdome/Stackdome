@@ -31,6 +31,8 @@ interface ResourceDrawerProps {
   errors: { [field: string]: string | undefined };
   onClose: () => void;
   onRemove: (index: number) => void;
+  /** Open the stack's Logs view (from the footer "View logs"). */
+  onViewLogs?: () => void;
 }
 
 /**
@@ -48,6 +50,7 @@ export function ResourceDrawer({
   errors,
   onClose,
   onRemove,
+  onViewLogs,
 }: ResourceDrawerProps) {
   const resource = session.draft.resources[resourceIndex] ?? {};
   const baselineResource = baselineResources[resourceIndex];
@@ -201,8 +204,8 @@ export function ResourceDrawer({
           variant="ghost"
           size="sm"
           className="h-7 gap-1.5 px-2 text-[12.5px] text-fg-muted hover:bg-brand-bg hover:text-brand"
-          disabled
-          title="Coming soon"
+          disabled={!onViewLogs}
+          onClick={onViewLogs}
         >
           <ScrollText className="size-3.5" />
           View logs
@@ -211,7 +214,7 @@ export function ResourceDrawer({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 gap-1.5 px-2 text-[12.5px] text-fg-muted hover:bg-danger-bg hover:text-danger"
+          className="h-7 gap-1.5 px-2 text-[12.5px] text-danger hover:bg-danger-bg hover:text-danger"
           onClick={() => onRemove(resourceIndex)}
         >
           <Trash2 className="size-3.5" />

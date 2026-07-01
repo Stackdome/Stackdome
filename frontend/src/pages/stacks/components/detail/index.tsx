@@ -700,6 +700,7 @@ export default function StackDetailPage() {
               connectionAddonIds={connectionAddonIds}
               addonNameById={addonNameById}
               errors={validationErrors.resources}
+              onViewLogs={() => setActiveTab("logs")}
             />
           }
           deployments={deploymentsBody}

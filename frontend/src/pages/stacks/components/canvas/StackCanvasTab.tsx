@@ -28,6 +28,8 @@ interface StackCanvasTabProps {
   connectionAddonIds: ReadonlySet<string>;
   addonNameById: ReadonlyMap<string, string>;
   errors: { [index: number]: { [field: string]: string | undefined } };
+  /** Switch the editor to the Logs tab (from the drawer's "View logs"). */
+  onViewLogs?: () => void;
 }
 
 function StackCanvasFlow({
@@ -37,6 +39,7 @@ function StackCanvasFlow({
   connectionAddonIds,
   addonNameById,
   errors,
+  onViewLogs,
 }: StackCanvasTabProps) {
   // Read from the live draft when the session is active, baseline otherwise.
   const resources = session.isActive ? session.draft.resources : baselineResources;
@@ -192,6 +195,7 @@ function StackCanvasFlow({
           errors={errors[selectedIndex] ?? {}}
           onClose={closeDrawer}
           onRemove={removeResource}
+          onViewLogs={onViewLogs}
         />
       )}
     </div>

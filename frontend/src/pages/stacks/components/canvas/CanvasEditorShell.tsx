@@ -100,14 +100,11 @@ export function CanvasEditorShell({
   const hasUnsaved = isActive && dirtyTotal > 0;
   const dirtyLabel = dirtyTotal === 1 ? "1 unsaved change" : `${dirtyTotal} unsaved changes`;
 
-  const body =
-    activeTab === "deployments"
-      ? deployments
-      : activeTab === "logs"
-        ? logs
-        : activeTab === "metrics"
-          ? metrics
-          : configuration;
+  // The canvas (Configuration) stays mounted so its open drawer + node
+  // selection survive tab switches; ops views render as an opaque overlay on
+  // top when active.
+  const opsBody =
+    activeTab === "deployments" ? deployments : activeTab === "logs" ? logs : activeTab === "metrics" ? metrics : null;
 
   // When there are unsaved edits the primary action is Save (the draft must be
   // persisted before it can be deployed — the backend keeps save and deploy
@@ -198,9 +195,11 @@ export function CanvasEditorShell({
         })}
       </div>
 
-      {/* Mode body. Ops views own their own max-width + padding; the canvas fills. */}
-      <div className="min-h-0 flex-1 overflow-hidden">
-        {activeTab === "configuration" ? body : <div className="h-full overflow-auto">{body}</div>}
+      {/* Mode body. The canvas is always mounted (keeps its drawer/selection);
+          ops views overlay it. Ops views own their own max-width + padding. */}
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div className="absolute inset-0">{configuration}</div>
+        {opsBody && <div className="absolute inset-0 overflow-auto bg-background">{opsBody}</div>}
       </div>
 
       <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
