@@ -10,10 +10,15 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ResourceNode, type ResourceFlowNode } from "./nodes/ResourceNode";
+import { ConnectionEdge } from "./edges/ConnectionEdge";
 import { AddResourcePopover } from "./AddResourcePopover";
 
 /** Declared at module scope — a fresh object identity here re-renders every node. */
 const nodeTypes = { resource: ResourceNode };
+const edgeTypes = { connection: ConnectionEdge };
+
+/** All derived edges are variable-reference connections (dashed amber). */
+const DEFAULT_EDGE_OPTIONS = { type: "connection" };
 
 /** Snap dragged nodes to a small grid for tidy, lower-frequency position updates. */
 const SNAP_GRID: [number, number] = [16, 16];
@@ -51,6 +56,8 @@ export function CanvasEditor({
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
