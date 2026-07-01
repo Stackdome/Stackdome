@@ -37,6 +37,9 @@ interface CanvasEditorProps {
   onAutoLayout: () => void;
   addedBlockIds: string[];
   onAddBlock: (blockId: string) => void;
+  addons: { id: string; name: string }[];
+  linkedAddonIds: ReadonlySet<string>;
+  onLinkAddon: (addonId: string) => void;
 }
 
 /**
@@ -54,6 +57,9 @@ export function CanvasEditor({
   onAutoLayout,
   addedBlockIds,
   onAddBlock,
+  addons,
+  linkedAddonIds,
+  onLinkAddon,
 }: CanvasEditorProps) {
   return (
     <div className="h-full w-full" data-testid="stack-canvas">
@@ -90,7 +96,13 @@ export function CanvasEditor({
           onAutoLayout={onAutoLayout}
         />
         <Panel position="top-left">
-          <AddResourcePopover addedIds={addedBlockIds} onAdd={onAddBlock} />
+          <AddResourcePopover
+            addedIds={addedBlockIds}
+            onAdd={onAddBlock}
+            addons={addons}
+            linkedAddonIds={linkedAddonIds}
+            onLinkAddon={onLinkAddon}
+          />
         </Panel>
         {nodes.length > 0 && (
           <Panel position="bottom-center" className="pointer-events-none !mb-[18px]">

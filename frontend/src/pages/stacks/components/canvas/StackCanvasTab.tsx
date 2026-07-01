@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import {
   ReactFlowProvider,
   useNodesState,
@@ -159,6 +160,25 @@ function StackCanvasFlow({
     [session, baselineResources, baselineVolumes, connectionAddonIds],
   );
 
+  const { addons: allAddons } = usePostgresAddons();
+  const pickableAddons = useMemo(
+    () => allAddons.filter((a) => a.id && a.name).map((a) => ({ id: a.id!, name: a.name! })),
+    [allAddons],
+  );
+  const onLinkAddon = useCallback(
+    (addonId: string) => {
+      if (!session.isActive) {
+        session.start(
+          { resources: baselineResources, volumes: baselineVolumes },
+          { linkedAddonIds: new Set([...connectionAddonIds, addonId]) },
+        );
+      } else {
+        session.setLinkedAddonIds((prev) => new Set(prev).add(addonId));
+      }
+    },
+    [session, baselineResources, baselineVolumes, connectionAddonIds],
+  );
+
   const closeDrawer = useCallback(() => setSelectedIndex(null), []);
   const removeResource = useCallback(
     (idx: number) => {
@@ -182,6 +202,9 @@ function StackCanvasFlow({
           onAutoLayout={autoLayout}
           addedBlockIds={addedBlockIds}
           onAddBlock={onAddBlock}
+          addons={pickableAddons}
+          linkedAddonIds={linkedAddonIds}
+          onLinkAddon={onLinkAddon}
         />
       </div>
       {selectedIndex != null && (
