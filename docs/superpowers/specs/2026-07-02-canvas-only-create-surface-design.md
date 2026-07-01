@@ -49,14 +49,15 @@ wizard path → builds FormStackData seed
             → Save → createStack → /stacks/:id (real stack, session ends, page refetches)
 ```
 
-### Flag off
+### Feature flag removed (required, not optional)
 
-`isCanvasEnabled()` is default-on. With the form deleted there is no legacy
-surface to fall back to, so **the opt-out escape (`VITE_STACK_CANVAS=false` /
-`localStorage.stackCanvas="0"`) is removed** along with the form. `isCanvasEnabled`
-and its call sites in `StackDetailPage` / `app-layout` are simplified to
-unconditional canvas. (The flag existed only to A/B the two surfaces; with one
-surface it is dead weight.)
+`isCanvasEnabled()`'s **off-branch rendered the legacy form** — which is being
+deleted. So the flag cannot stay: its opt-out (`VITE_STACK_CANVAS=false` /
+`localStorage.stackCanvas="0"`) has nothing to render. `isCanvasEnabled` and its
+call sites are removed and collapsed to unconditional canvas:
+- `StackDetailPage` — drop the flag branch; always render `CanvasEditorShell`.
+- `app-layout.tsx` — the full-bleed detection `isCanvasEnabled() && /^\/stacks\/[^/]+$/.test(pathname) && !pathname.endsWith("/new")` currently **excludes** `/new`. Flip it: the draft canvas at `/stacks/new` **must** be full-bleed. New rule: full-bleed for `/^\/stacks\/(new|[^/]+)$/` (both the draft route and `/stacks/:id`), no flag gate.
+- `feature-flags.ts` + its tests — delete `isCanvasEnabled` (and the file if nothing else lives there).
 
 ## Components
 
@@ -107,8 +108,8 @@ surface it is dead weight.)
 
 - Route `/stacks/create` + `StackCreatePage` import in `App.tsx`.
 - `frontend/src/pages/stacks/components/create/` directory (page + any create-only helpers) and its tests.
-- `ImportSource` prefill plumbing that only served the form (`isPrefillSource` consumers in the create page). Keep `ImportSource` if the seed still tags provenance; otherwise remove.
-- Canvas feature flag opt-out (`isCanvasEnabled` branches) if we collapse to unconditional canvas.
+- `ImportSource` prefill plumbing that only served the form (`isPrefillSource` consumers in the create page). Lean to removing `ImportSource` unless the seed still needs provenance tags in the canvas.
+- `isCanvasEnabled` + `feature-flags.ts` + its tests (see "Feature flag removed").
 
 ## Error handling
 
