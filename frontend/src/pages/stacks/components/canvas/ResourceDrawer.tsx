@@ -14,6 +14,7 @@ import { StackResourceConfigurationTab } from "@/pages/stacks/components/shared/
 import { StackResourceDeploymentTab } from "@/pages/stacks/components/shared/stack-resource-deployment-tab";
 import { StackResourceEnvironmentTab } from "@/pages/stacks/components/shared/stack-resource-environment-tab";
 import { useResourceTabProps } from "@/pages/stacks/components/shared/hooks/use-resource-tab-props";
+import { nodePresentation } from "@/pages/stacks/lib/canvas/node-presentation";
 import { NodeGlyph } from "./nodes/node-glyph";
 
 /** Radix tab values used by the sub-tab components (they render their own TabsContent). */
@@ -84,7 +85,7 @@ export function ResourceDrawer({
     [session],
   );
 
-  const { dirtyTabs, isDirty, statusDotColor, statusState, configurationProps, deploymentProps, environmentProps } =
+  const { dirtyTabs, isDirty, statusDotColor, configurationProps, deploymentProps, environmentProps } =
     useResourceTabProps({
       resource,
       index: resourceIndex,
@@ -104,27 +105,59 @@ export function ResourceDrawer({
 
   const defaultTab = session.openTab ? TAB_VALUE[session.openTab] : TAB_VALUE.configuration;
 
+  // Kind glyph + summary sub-line, derived the same way the node card is.
+  const pres = useMemo(
+    () =>
+      nodePresentation({
+        isAddon: false,
+        image: resource.image_spec?.image,
+        hasBuild: !!resource.build_spec,
+        ports: (resource.ports ?? []).map((p) => ({
+          number: p.number,
+          protocol: p.protocol,
+          exposedToPublic: p.exposed_to_public,
+        })),
+      }),
+    [resource.image_spec?.image, resource.build_spec, resource.ports],
+  );
+
+  // "N changes" counts the dirty sub-tabs (config / deployment / environment).
+  const changeCount = [dirtyTabs.configuration, dirtyTabs.deployment, dirtyTabs.environment].filter(Boolean).length;
+
   const tabTriggerClass =
-    "flex-none rounded-none border-b-2 border-transparent bg-transparent px-0 py-2 font-mono text-[11px] uppercase tracking-wider text-fg-muted data-[state=active]:border-brand data-[state=active]:text-foreground data-[state=active]:shadow-none";
+    "flex-none rounded-none border-b-[1.5px] border-transparent bg-transparent px-[13px] py-3 font-mono text-[11px] uppercase tracking-[1.5px] text-fg-muted data-[state=active]:border-brand data-[state=active]:text-foreground data-[state=active]:shadow-none";
 
   return (
     <aside
-      className="absolute right-0 top-0 z-10 flex h-full w-[380px] flex-col border-l border-border bg-card shadow-lg"
+      className="absolute right-0 top-0 z-10 flex h-full w-[496px] flex-col border-l border-border bg-background shadow-lg"
       data-testid="resource-drawer"
     >
       {/* Header */}
-      <div className="flex items-start gap-2 border-b border-border px-4 py-3">
-        <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${statusDotColor}`} aria-hidden />
-        <NodeGlyph glyph="service" className="mt-0.5 size-4 shrink-0 text-fg-muted" />
-        <div className="min-w-0 flex-grow">
-          <div className="truncate text-sm font-medium text-foreground">
+      <div className="flex flex-none items-center gap-3 border-b border-border px-4 py-[15px]">
+        <span className={`size-[9px] shrink-0 rounded-full ${statusDotColor}`} aria-hidden />
+        <NodeGlyph glyph={pres.glyph} className="size-[19px] shrink-0 text-brand" />
+        <div className="min-w-0 flex-1 leading-tight">
+          <div className="truncate text-base font-medium text-foreground">
             {resource.name || `Resource ${resourceIndex + 1}`}
           </div>
-          <div className="font-mono text-[11px] capitalize text-muted-foreground">{statusState || "pending"}</div>
+          <div className="truncate font-mono text-[11px] text-fg-muted">{pres.summary}</div>
         </div>
-        {isDirty && (
-          <span className="shrink-0 rounded-md border border-brand-border bg-brand-bg px-1.5 py-0.5 text-[10px] font-medium text-brand">
-            Modified
+        {isDirty ? (
+          <span className="flex shrink-0 items-center gap-1 rounded-md border border-brand pl-2 pr-1 py-0.5 text-[11px] font-medium text-brand">
+            {changeCount === 1 ? "1 change" : `${changeCount} changes`}
+            <button
+              type="button"
+              onClick={() => session.discardResource(resourceIndex)}
+              aria-label="Discard changes to this resource"
+              title="Discard changes"
+              className="flex size-4 items-center justify-center rounded-sm hover:bg-brand hover:text-background"
+            >
+              <X className="size-3" />
+            </button>
+          </span>
+        ) : (
+          <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-fg-muted">
+            {pres.kindLabel}
           </span>
         )}
         <button
@@ -133,37 +166,44 @@ export function ResourceDrawer({
           aria-label="Close"
           className="shrink-0 rounded p-1 text-fg-muted hover:bg-muted hover:text-foreground"
         >
-          <X className="size-4" />
+          <X className="size-[18px]" />
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex-grow overflow-y-auto px-4 py-3">
-        <Tabs defaultValue={defaultTab} className="w-full">
-          <TabsList className="mb-3 h-auto w-full justify-start gap-4 rounded-none border-b border-border bg-transparent p-0">
-            <TabsTrigger value={TAB_VALUE.configuration} className={tabTriggerClass}>
-              Configuration
-              {dirtyTabs.configuration && <span aria-hidden className="ml-1.5 inline-block size-1.5 rounded-full bg-brand" />}
-            </TabsTrigger>
-            <TabsTrigger value={TAB_VALUE.deployment} className={tabTriggerClass}>
-              Deployment
-              {dirtyTabs.deployment && <span aria-hidden className="ml-1.5 inline-block size-1.5 rounded-full bg-brand" />}
-            </TabsTrigger>
-            <TabsTrigger value={TAB_VALUE.environment} className={tabTriggerClass}>
-              Environment
-              {dirtyTabs.environment && <span aria-hidden className="ml-1.5 inline-block size-1.5 rounded-full bg-brand" />}
-            </TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue={defaultTab} className="flex min-h-0 flex-1 flex-col">
+        <TabsList className="h-auto w-full flex-none justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 px-1">
+          <TabsTrigger value={TAB_VALUE.configuration} className={tabTriggerClass}>
+            Configuration
+            {dirtyTabs.configuration && <span aria-hidden className="ml-1.5 inline-block size-1.5 rounded-full bg-brand" />}
+          </TabsTrigger>
+          <TabsTrigger value={TAB_VALUE.deployment} className={tabTriggerClass}>
+            Deployment
+            {dirtyTabs.deployment && <span aria-hidden className="ml-1.5 inline-block size-1.5 rounded-full bg-brand" />}
+          </TabsTrigger>
+          <TabsTrigger value={TAB_VALUE.environment} className={tabTriggerClass}>
+            Environment
+            {dirtyTabs.environment && <span aria-hidden className="ml-1.5 inline-block size-1.5 rounded-full bg-brand" />}
+          </TabsTrigger>
+        </TabsList>
 
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
           <StackResourceConfigurationTab {...configurationProps} />
           <StackResourceDeploymentTab {...deploymentProps} />
           <StackResourceEnvironmentTab {...environmentProps} />
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t border-border px-4 py-2.5">
-        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[12px] text-muted-foreground" disabled title="Coming soon">
+      <div className="flex flex-none items-center justify-between border-t border-border px-4 py-[11px]">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 px-2 text-[12.5px] text-fg-muted hover:bg-brand-bg hover:text-brand"
+          disabled
+          title="Coming soon"
+        >
           <ScrollText className="size-3.5" />
           View logs
         </Button>
@@ -171,7 +211,7 @@ export function ResourceDrawer({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-[12px] text-muted-foreground/70 hover:bg-danger-bg hover:text-danger"
+          className="h-7 gap-1.5 px-2 text-[12.5px] text-fg-muted hover:bg-danger-bg hover:text-danger"
           onClick={() => onRemove(resourceIndex)}
         >
           <Trash2 className="size-3.5" />
