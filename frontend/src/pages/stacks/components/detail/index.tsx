@@ -39,7 +39,8 @@ import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditor
 import { isCanvasEnabled } from "@/lib/feature-flags";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
-import { getStackById, updateStack } from "@/api/stacks";
+import { createStack, getStackById, updateStack } from "@/api/stacks";
+import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
 import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
@@ -83,6 +84,19 @@ function mapVolumeToFormData(volume: Volume): VolumeFormData {
 
 export default function StackDetailPage() {
   const { id } = useParams();
+  const isDraft = !id;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const seed = useMemo<DraftSeed>(
+    () => ((location.state as { seed?: DraftSeed } | null)?.seed) ?? emptyDraftSeed(),
+    // read once from the entry navigation; later navigations replace state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  // setters wired in Task 2 (editable name/labels in shell)
+  const [draftName] = useState(seed.name);
+  const [draftLabels] = useState<FormStackData["labels"]>(seed.labels);
+
   const { stacks } = useStacks();
   const [fetchedStack, setFetchedStack] = useState<Stack | null>(null);
   const [loading, setLoading] = useState(false);
@@ -118,6 +132,7 @@ export default function StackDetailPage() {
 
   // Update breadcrumb with stack name
   useEffect(() => {
+    if (isDraft) return;
     const path = `/stacks/${id}`;
 
     if (currentStack) {
@@ -155,9 +170,22 @@ export default function StackDetailPage() {
           setPathLoading(path, false);
         });
     }
-  }, [currentStack, id, defaultTeamName, setCustomLabel, setPathLoading]);
+  }, [currentStack, id, defaultTeamName, setCustomLabel, setPathLoading, isDraft]);
 
   const stackToShow = currentStack || fetchedStack;
+
+  const draftStackView = useMemo(
+    () =>
+      isDraft
+        ? ({
+          name: draftName,
+          labels: draftLabels,
+          spec: { stack_resources: session.draft.resources, volumes: session.draft.volumes, connections: [] },
+        } as unknown as Stack)
+        : null,
+    [isDraft, draftName, draftLabels, session.draft.resources, session.draft.volumes],
+  );
+  const effectiveStack = draftStackView ?? stackToShow;
 
   const baselineResources = useMemo<FormStackResourceData[]>(() => {
     const connections = stackToShow?.spec?.connections ?? [];
@@ -182,23 +210,16 @@ export default function StackDetailPage() {
     [stackToShow],
   );
 
-  // Arriving from the wizard (create-and-open) with pre-selected managed addons:
-  // open an edit session pre-linked with them so they render as addon nodes and
-  // can be bound + saved from the canvas. Runs once, then clears the nav state.
-  const location = useLocation();
-  const navigate = useNavigate();
-  const wizardLinkApplied = useRef(false);
+  const draftSeeded = useRef(false);
   useEffect(() => {
-    const linked = (location.state as { linkedAddonIds?: string[] } | null)?.linkedAddonIds;
-    if (wizardLinkApplied.current || !linked?.length || !stackToShow || session.isActive) return;
-    wizardLinkApplied.current = true;
-    session.start(
-      { resources: baselineResources, volumes: baselineVolumes },
-      { linkedAddonIds: new Set(linked) },
-    );
-    navigate(`/stacks/${id}`, { replace: true, state: null });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when the stack + wizard state are ready
-  }, [location.state, stackToShow]);
+    if (!isDraft || draftSeeded.current) return;
+    draftSeeded.current = true;
+    // Baseline empty so seeded resources/volumes read as "added" and Save is enabled.
+    session.start({ resources: [], volumes: [] }, { linkedAddonIds: new Set(seed.linkedAddonIds) });
+    if (seed.resources.length) session.updateResources(() => seed.resources);
+    if (seed.volumes.length) session.updateVolumes(() => seed.volumes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDraft]);
 
   // Addons bound to the saved stack come from its connections (from.type
   // "addon/postgres"), not from the env vars — so this is the source of truth
@@ -359,7 +380,8 @@ export default function StackDetailPage() {
   }, [toast]);
 
   const performSave = async () => {
-    if (!stackToShow || !session.isActive || !id) return;
+    if (!session.isActive) return;
+    if (!isDraft && !stackToShow) return;
     setIsSaving(true);
     setValidationErrors({ resources: {}, volumes: {} });
 
@@ -370,14 +392,13 @@ export default function StackDetailPage() {
       const detachResult = session.pendingDetach.size > 0 ? applyPendingDetach() : null;
       const resources = (detachResult?.resources ?? session.draft.resources) as FormStackResourceData[];
 
-      const formStackData: FormStackData = {
-        name: stackToShow.name || '',
-        labels: stackToShow.labels || [],
-        spec: {
-          stack_resources: resources,
-          volumes: session.draft.volumes as VolumeFormData[],
-        }
-      };
+      const formStackData: FormStackData = isDraft
+        ? buildDraftFormData(draftName.trim(), draftLabels, resources, session.draft.volumes as VolumeFormData[])
+        : {
+          name: stackToShow!.name || "",
+          labels: stackToShow!.labels || [],
+          spec: { stack_resources: resources, volumes: session.draft.volumes as VolumeFormData[] },
+        };
 
       const validation = FormStackSchema.safeParse(formStackData);
       if (!validation.success) {
@@ -402,22 +423,29 @@ export default function StackDetailPage() {
         return;
       }
 
-      const teamName = teamNameById(fetchedStack?.team_id ?? currentStack?.team_id);
+      const teamName = isDraft ? defaultTeamName : teamNameById(fetchedStack?.team_id ?? currentStack?.team_id);
       if (!teamName) {
         toast({
-          title: "Failed to update stack",
-          description: "Could not resolve the team for this stack.",
+          title: isDraft ? "No team available" : "Failed to update stack",
+          description: "Could not resolve a team to save into.",
           variant: "destructive",
         });
         setIsSaving(false);
         return;
       }
 
+      const apiData = convertFormStackToApiStack(formStackData);
+      if (isDraft) {
+        const created = await createStack(orgId, teamName, apiData);
+        session.discard();
+        navigate(`/stacks/${created.id}`, { replace: true, state: null });
+        return;
+      }
+
       // The stack PUT carries the full desired connection set in spec.connections;
       // the backend replaces the connection set atomically (upsert-by-id) and
       // returns the stack with its reconciled connections. No separate diff.
-      const apiData = convertFormStackToApiStack(formStackData);
-      const updatedStack = await updateStack(orgId, teamName, id, apiData);
+      const updatedStack = await updateStack(orgId, teamName, id!, apiData);
       setFetchedStack(updatedStack);
 
       if (detachResult) setDetachedProvenance(detachResult.provenance);
@@ -432,9 +460,9 @@ export default function StackDetailPage() {
       });
 
     } catch (err) {
-      console.error('Failed to update stack:', err);
+      console.error('Failed to save stack:', err);
       toast({
-        title: "Failed to update stack",
+        title: "Failed to save stack",
         description: err instanceof Error ? err.message : "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
@@ -500,7 +528,7 @@ export default function StackDetailPage() {
     [session.isActive, session.linkedAddonIds, connectionAddonIds],
   );
 
-  if (loading) {
+  if (!isDraft && loading) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -521,7 +549,7 @@ export default function StackDetailPage() {
     );
   }
 
-  if (!stackToShow) {
+  if (!isDraft && !stackToShow) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold mb-2">Stack not found</h2>
@@ -533,8 +561,8 @@ export default function StackDetailPage() {
     );
   }
 
-  const resourceCount = stackToShow.spec?.stack_resources?.length || 0;
-  const volumeCount = stackToShow.spec?.volumes?.length || 0;
+  const resourceCount = effectiveStack?.spec?.stack_resources?.length || 0;
+  const volumeCount = effectiveStack?.spec?.volumes?.length || 0;
   const subtitleParts: React.ReactNode[] = [
     `${resourceCount} ${resourceCount === 1 ? "service" : "services"}`,
     `${volumeCount} ${volumeCount === 1 ? "volume" : "volumes"}`,
@@ -609,12 +637,12 @@ export default function StackDetailPage() {
   // Ops-view bodies — identical in both the flag-ON shell and the flag-OFF
   // page, so computed once and referenced by each. (The Configuration body
   // differs: canvas when flag-ON, form when flag-OFF.)
-  const deploymentsBody = stackToShow.id ? (
+  const deploymentsBody = effectiveStack?.id ? (
     <DeploymentsTab
       orgId={deployIds.orgId}
       teamName={deployIds.teamName}
-      stackId={stackToShow.id}
-      stack={stackToShow}
+      stackId={effectiveStack.id}
+      stack={effectiveStack}
       onOpenLogs={() => setActiveTab("logs")}
       releases={releasesResult.releases}
       activeRelease={releasesResult.activeRelease}
@@ -629,21 +657,21 @@ export default function StackDetailPage() {
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  const logsBody = stackToShow.id ? (
+  const logsBody = effectiveStack?.id ? (
     <StackLogsTab
-      stackId={stackToShow.id}
-      organizationId={stackToShow.organisation_id || getCurrentOrganizationId() || ''}
-      resources={stackToShow.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
+      stackId={effectiveStack.id}
+      organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
+      resources={effectiveStack.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
     />
   ) : (
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  const metricsBody = stackToShow.id ? (
+  const metricsBody = effectiveStack?.id ? (
     <StackMetricsTab
-      stackId={stackToShow.id}
-      organizationId={stackToShow.organisation_id || getCurrentOrganizationId() || ''}
-      resources={stackToShow.spec.stack_resources || []}
+      stackId={effectiveStack.id}
+      organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
+      resources={effectiveStack.spec.stack_resources || []}
     />
   ) : (
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
@@ -691,8 +719,8 @@ export default function StackDetailPage() {
     return (
       <>
         <CanvasEditorShell
-          stackName={stackToShow.name ?? ""}
-          statusState={stackToShow.status?.state}
+          stackName={effectiveStack?.name ?? ""}
+          statusState={effectiveStack?.status?.state}
           subtitle={subtitleText}
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -780,12 +808,12 @@ export default function StackDetailPage() {
       })() : deployBar}
 
       <PageHeader
-        title={stackToShow.name}
+        title={effectiveStack?.name ?? ""}
         status={
           <span className="flex items-center gap-2">
-            {stackToShow.status?.state && (
-              <StatusPill variant={variantFromState(stackToShow.status.state)}>
-                {stackToShow.status.state}
+            {effectiveStack?.status?.state && (
+              <StatusPill variant={variantFromState(effectiveStack.status.state)}>
+                {effectiveStack.status.state}
               </StatusPill>
             )}
           </span>

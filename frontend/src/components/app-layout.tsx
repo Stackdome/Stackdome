@@ -33,12 +33,10 @@ function AppLayoutContent({
   // Parse the current path for breadcrumbs
   const pathSegments = location.pathname.split('/').filter(Boolean);
 
-  // Full-bleed layout for the canvas stack editor: /stacks/<id> (a single id
-  // segment — not /stacks or /stacks/new), and only when the flag is on.
+  // Full-bleed layout for the canvas stack editor: /stacks/new (draft) and
+  // /stacks/<id> (existing). A single trailing segment only — not /stacks.
   const isFullBleed =
-    isCanvasEnabled() &&
-    /^\/stacks\/[^/]+$/.test(location.pathname) &&
-    !location.pathname.endsWith("/new");
+    isCanvasEnabled() && /^\/stacks\/[^/]+$/.test(location.pathname);
 
   // Create breadcrumb items based on the current path
   const breadcrumbItems: BreadcrumbItemType[] = [
