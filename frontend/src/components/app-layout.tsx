@@ -14,6 +14,7 @@ import { BreadcrumbProvider } from "@/contexts/breadcrumb-context";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
+import { isCanvasEnabled } from "@/lib/feature-flags";
 
 interface BreadcrumbItemType {
   name: string;
@@ -31,6 +32,13 @@ function AppLayoutContent({
 
   // Parse the current path for breadcrumbs
   const pathSegments = location.pathname.split('/').filter(Boolean);
+
+  // Full-bleed layout for the canvas stack editor: /stacks/<id> (a single id
+  // segment — not /stacks or /stacks/new), and only when the flag is on.
+  const isFullBleed =
+    isCanvasEnabled() &&
+    /^\/stacks\/[^/]+$/.test(location.pathname) &&
+    !location.pathname.endsWith("/new");
 
   // Create breadcrumb items based on the current path
   const breadcrumbItems: BreadcrumbItemType[] = [
@@ -100,14 +108,23 @@ function AppLayoutContent({
               The page-sticky-bar slot lives at the top of the scroll container
               so a sticky element inside it pins flush under the topnav and
               spans the full width of the inset (no max-w cap). Pages portal
-              into it via #page-sticky-bar. */}
+              into it via #page-sticky-bar.
+
+              The canvas stack editor opts out of the centered max-width column
+              and renders full-bleed (edge-to-edge, full height). Gated on the
+              feature flag + the stack-detail route so every other page keeps
+              the standard constrained layout. */}
           <div className="flex-grow overflow-auto scrollbar-hide rounded-bl-lg rounded-br-lg">
             <div id="page-sticky-bar" className="sticky top-0 z-30" />
-            <div className="flex justify-center items-start p-6">
-              <div className="w-full max-w-6xl">
-                {children ? children : <Outlet />}
+            {isFullBleed ? (
+              <div className="h-full">{children ? children : <Outlet />}</div>
+            ) : (
+              <div className="flex justify-center items-start p-6">
+                <div className="w-full max-w-6xl">
+                  {children ? children : <Outlet />}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </SidebarInset>
       </div>

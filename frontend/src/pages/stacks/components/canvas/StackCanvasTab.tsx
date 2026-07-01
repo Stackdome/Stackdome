@@ -181,7 +181,8 @@ function StackCanvasFlow({
  */
 export function StackCanvasTab(props: StackCanvasTabProps) {
   return (
-    <div className="relative h-[calc(100vh-13rem)] overflow-hidden rounded-md border border-border">
+    // Edge-to-edge inside the full-bleed editor shell (shell owns the chrome).
+    <div className="relative h-full w-full overflow-hidden">
       <ReactFlowProvider>
         <StackCanvasFlow {...props} />
       </ReactFlowProvider>

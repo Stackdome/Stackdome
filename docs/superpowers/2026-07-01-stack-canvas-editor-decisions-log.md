@@ -68,3 +68,27 @@ Format: `[slice] decision — why — impact/how-to-revert`.
 - **The tooljet-addon stack was left untouched** — every Save during verification was reverted; no Deploy was triggered.
 - **NOT done (awaiting you):** no push / PR / merge (outward-facing — needs your go-ahead). Branch `stack-canvas-editor` holds all commits in the worktree.
 - **Deferred/tweakable** (all logged above): pixel-faithful ops-view redesign (needs bundle markup), per-image kind labels (WEB/REDIS vs SERVICE), volume fill-bar + orphan-volume cleanup on remove, status→dot-colour mapping, draw-edges-on-canvas authoring, worker/cron nodes (backend), node-position persistence, header restyle to bundle (inline unsaved-count + per-tab badge).
+
+---
+
+# Visual-Fidelity Pass — Decisions Log
+
+Executing `docs/superpowers/plans/2026-07-01-canvas-visual-fidelity.md` (slices FS-1..FS-8). Same running-log format.
+
+## §3 open decisions (confirmed at kickoff)
+1. **Editor takeover = full-bleed shell** (user-confirmed). Flag-ON + Configuration renders a dedicated shell replacing PageHeader + Radix tabs + sticky bar with the design's compact top bar + icon tab row; canvas edge-to-edge; app left sidebar + breadcrumb kept.
+2. **Dark-force → OVERRIDDEN by user: follow the app theme.** No `.dark` wrapper. The shell uses brand tokens (`--brand*`, `--fg-*`, `--muted-foreground`, `--bg*`), which already carry both light and dark values in `index.css` — so it renders like the dark reference when the app is dark, and adapts to light otherwise. Cleaner than a forced scope and avoids inventing unspecified light-canvas values.
+3. **Ops views = restyle existing** `deployments-tab`/`stack-logs-tab`/`stack-metrics-tab` (keep data hooks). (user-confirmed)
+4. **Kind-badge/summary heuristic** = a pure, unit-tested mapper built in FS-2 — no user confirmation needed.
+
+## FS-1 — Full-bleed editor shell
+- **New `CanvasEditorShell.tsx`** (presentational; owns no stack state). Renders stack-title header (name 29px, status pill, subtitle, dirty summary, primary button, overflow menu) + icon tab row (Configuration count badge, amber active) + full-height mode body. Wired straight to the caller's `session.dirty` + `handleSave`/`onDeploy` — no save/deploy logic inside.
+- **Full-bleed via `app-layout.tsx` conditional.** The centered `max-w-6xl p-6` wrapper is dropped (→ `h-full`) only when `isCanvasEnabled()` AND the route matches `/^\/stacks\/[^/]+$/` and isn't `/new`. Touches global chrome, but tightly gated: flag-OFF and every other route keep the exact original wrapper. Needed because the editor can't go edge-to-edge inside the max-width column.
+- **Primary button is context-aware: Save when dirty, Deploy when staged/clean.** The bundle mock shows a single always-"Deploy" alongside "N unsaved changes", but this backend keeps *save* (PUT the draft) and *deploy* (create a release) separate, and the plan forbids rebuilding deploy logic. So: unsaved edits → **Save** + amber "N unsaved changes"; saved-but-undeployed (`lifecycle.phase==="staged"`) → **Deploy** + muted "draft saved · undeployed" hint; clean → **Deploy**. Preserves the two-step model exactly.
+- **Amber CTA reuses `Button variant="default"`** (`bg-brand text-white`) rather than the mock's raw `#1a0e05` near-black-on-amber label. Stays on the established brand primitive / no raw hex (brand-system rule). Minor visual delta (white vs near-black label text).
+- **Discard-all moved into the overflow (⋯) menu** with its own `AlertDialog` confirm (parity with the old sticky-bar confirm-threshold). Edit + Delete also live in that menu. The Configuration tab count badge = `session.dirty.dirtyResourceIdx.size`; the "N unsaved changes" total = resources + volumes + addon links (mirrors the sticky-bar segments).
+- **DRY:** the three ops-view bodies (Deployments/Logs/Metrics) + the detach `AlertDialog` were extracted to local variables in `detail/index.tsx`, reused by both the flag-ON shell and the flag-OFF page (single place to restyle in FS-6/7/8). The dead `isCanvasEnabled()` ternary inside the flag-OFF Configuration `TabsContent` was removed (that path is now only reached when the flag is off).
+- **`StackCanvasTab` box → `h-full w-full` edge-to-edge** (dropped `h-[calc(100vh-13rem)] rounded-md border`); its only consumer is the flag-ON canvas.
+- In the shell, non-canvas modes get a temporary `overflow-auto px-7 py-6` wrapper; they are restyled to the bundle in FS-6/7/8.
+- **Verified (dark, Playwright):** shell fills viewport & matches Image #4 (top bar + tab row + edge-to-edge dot-grid canvas); editing a node → "1 unsaved change" + **Save** + Configuration badge "1" + node EDITED mark + live summary; overflow → Discard all → confirm dialog reverts cleanly (no PUT, backend untouched); **flag-OFF reload is pristine** (PageHeader + sticky bar + Radix tabs + Panels + max-width column). tsc clean (1 pre-existing `postgres-backups.ts` error), eslint clean on touched files, **506 tests pass**.
+- **Known (deferred to later FS slices, visible in FS-1 screenshots):** default React-Flow `<Controls>` renders as a light box in dark mode (→ FS-4 replaces it); "Hide connections" is still a top-right text button (→ FS-4 cluster); edges are solid grey (→ FS-3 dashed amber); node summaries are image-only + badge SERVICE/POSTGRES (→ FS-2); drawer still uses the accordion sub-tabs styling (→ FS-5).

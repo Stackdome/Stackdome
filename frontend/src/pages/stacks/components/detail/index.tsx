@@ -35,6 +35,7 @@ import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-t
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
 import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
 import { StackCanvasTab } from "@/pages/stacks/components/canvas/StackCanvasTab";
+import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditorShell";
 import { isCanvasEnabled } from "@/lib/feature-flags";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
@@ -520,6 +521,9 @@ export default function StackDetailPage() {
     `${resourceCount} ${resourceCount === 1 ? "service" : "services"}`,
     `${volumeCount} ${volumeCount === 1 ? "volume" : "volumes"}`,
   ];
+  const subtitleText = `${resourceCount} ${resourceCount === 1 ? "service" : "services"} · ${volumeCount} ${
+    volumeCount === 1 ? "volume" : "volumes"
+  }`;
 
   // The actions menu only holds mutating items (Edit + Delete). Hide the whole
   // trigger for users who can't write this stack.
@@ -583,6 +587,129 @@ export default function StackDetailPage() {
       />
     );
   })();
+
+  // Ops-view bodies — identical in both the flag-ON shell and the flag-OFF
+  // page, so computed once and referenced by each. (The Configuration body
+  // differs: canvas when flag-ON, form when flag-OFF.)
+  const deploymentsBody = stackToShow.id ? (
+    <DeploymentsTab
+      orgId={deployIds.orgId}
+      teamName={deployIds.teamName}
+      stackId={stackToShow.id}
+      stack={stackToShow}
+      onOpenLogs={() => setActiveTab("logs")}
+      releases={releasesResult.releases}
+      activeRelease={releasesResult.activeRelease}
+      loading={releasesResult.loading}
+      error={releasesResult.error}
+      lifecycle={lifecycle}
+      onRollback={onRollback}
+      onCancel={onCancelDeploy}
+      onCopyId={onCopyId}
+    />
+  ) : (
+    <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
+  );
+
+  const logsBody = stackToShow.id ? (
+    <StackLogsTab
+      stackId={stackToShow.id}
+      organizationId={stackToShow.organisation_id || getCurrentOrganizationId() || ''}
+      resources={stackToShow.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
+    />
+  ) : (
+    <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
+  );
+
+  const metricsBody = stackToShow.id ? (
+    <StackMetricsTab
+      stackId={stackToShow.id}
+      organizationId={stackToShow.organisation_id || getCurrentOrganizationId() || ''}
+      resources={stackToShow.spec.stack_resources || []}
+    />
+  ) : (
+    <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
+  );
+
+  const detachDialog = (
+    <AlertDialog open={detachConfirmOpen} onOpenChange={setDetachConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            Detach {session.pendingDetach.size} {session.pendingDetach.size === 1 ? "addon" : "addons"}?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Bound env keys will be converted to plain stack vars with their last-known values. Confirm to continue.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              setDetachConfirmOpen(false);
+              const unbound = computeUnboundLinked();
+              if (unbound.length > 0) {
+                session.setLinkedAddonIds((prev) => {
+                  const next = new Set(prev);
+                  for (const id of unbound) next.delete(id);
+                  return next;
+                });
+              }
+              void performSave();
+            }}
+          >
+            Confirm and detach
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  // ── Flag-ON: full-bleed canvas editor shell (replaces PageHeader + tabs +
+  // sticky bar). Reuses the same session/deploy wiring; presentation only. ──
+  if (isCanvasEnabled()) {
+    const dirtyTotal =
+      session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size + session.dirty.addonLinkCount;
+    return (
+      <>
+        <CanvasEditorShell
+          stackName={stackToShow.name ?? ""}
+          statusState={stackToShow.status?.state}
+          subtitle={subtitleText}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          isActive={session.isActive}
+          dirtyResourceCount={session.dirty.dirtyResourceIdx.size}
+          dirtyTotal={dirtyTotal}
+          isStaged={lifecycle.phase === "staged"}
+          isSaving={isSaving}
+          deployBusy={deployBusy}
+          canWrite={canWriteStack}
+          onSave={handleSave}
+          onDeploy={onDeploy}
+          onDiscardAll={() => session.discard()}
+          onEdit={() => activateEdit({})}
+          onDelete={() =>
+            toast({ title: "Not implemented", description: "Delete stack will land in a follow-up." })
+          }
+          configuration={
+            <StackCanvasTab
+              session={session}
+              baselineResources={baselineResources}
+              baselineVolumes={baselineVolumes}
+              connectionAddonIds={connectionAddonIds}
+              addonNameById={addonNameById}
+              errors={validationErrors.resources}
+            />
+          }
+          deployments={deploymentsBody}
+          logs={logsBody}
+          metrics={metricsBody}
+        />
+        {detachDialog}
+      </>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8">
@@ -681,19 +808,8 @@ export default function StackDetailPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Configuration Tab: Stack Resources and Volumes */}
+        {/* Configuration Tab: Stack Resources and Volumes (flag-OFF form path) */}
         <TabsContent value="configuration" className="space-y-8">
-          {isCanvasEnabled() ? (
-            <StackCanvasTab
-              session={session}
-              baselineResources={baselineResources}
-              baselineVolumes={baselineVolumes}
-              connectionAddonIds={connectionAddonIds}
-              addonNameById={addonNameById}
-              errors={validationErrors.resources}
-            />
-          ) : (
-            <>
           <Panel
             title="Stack Resources"
             count={baselineResources.length}
@@ -816,91 +932,19 @@ export default function StackDetailPage() {
               />
             );
           })()}
-            </>
-          )}
         </TabsContent>
 
         {/* Deployments Tab */}
-        <TabsContent value="deployments">
-          {stackToShow.id ? (
-            <DeploymentsTab
-              orgId={deployIds.orgId}
-              teamName={deployIds.teamName}
-              stackId={stackToShow.id}
-              stack={stackToShow}
-              onOpenLogs={() => setActiveTab("logs")}
-              releases={releasesResult.releases}
-              activeRelease={releasesResult.activeRelease}
-              loading={releasesResult.loading}
-              error={releasesResult.error}
-              lifecycle={lifecycle}
-              onRollback={onRollback}
-              onCancel={onCancelDeploy}
-              onCopyId={onCopyId}
-            />
-          ) : (
-            <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
-          )}
-        </TabsContent>
+        <TabsContent value="deployments">{deploymentsBody}</TabsContent>
 
         {/* Logs Tab */}
-        <TabsContent value="logs">
-          {stackToShow.id ? (
-            <StackLogsTab
-              stackId={stackToShow.id}
-              organizationId={stackToShow.organisation_id || getCurrentOrganizationId() || ''}
-              resources={stackToShow.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
-            />
-          ) : (
-            <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
-          )}
-        </TabsContent>
+        <TabsContent value="logs">{logsBody}</TabsContent>
 
         {/* Metrics Tab */}
-        <TabsContent value="metrics">
-          {stackToShow.id ? (
-            <StackMetricsTab
-              stackId={stackToShow.id}
-              organizationId={stackToShow.organisation_id || getCurrentOrganizationId() || ''}
-              resources={stackToShow.spec.stack_resources || []}
-            />
-          ) : (
-            <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
-          )}
-        </TabsContent>
+        <TabsContent value="metrics">{metricsBody}</TabsContent>
       </Tabs>
 
-      <AlertDialog open={detachConfirmOpen} onOpenChange={setDetachConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Detach {session.pendingDetach.size} {session.pendingDetach.size === 1 ? "addon" : "addons"}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Bound env keys will be converted to plain stack vars with their last-known values. Confirm to continue.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setDetachConfirmOpen(false);
-                const unbound = computeUnboundLinked();
-                if (unbound.length > 0) {
-                  session.setLinkedAddonIds((prev) => {
-                    const next = new Set(prev);
-                    for (const id of unbound) next.delete(id);
-                    return next;
-                  });
-                }
-                void performSave();
-              }}
-            >
-              Confirm and detach
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {detachDialog}
     </div>
   );
 }
