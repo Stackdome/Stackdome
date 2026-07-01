@@ -391,14 +391,18 @@ export default function StackCreatePage() {
       // convertFormStackToApiStack builds spec.connections from the
       // secret/addon/resource env rows, so the create payload carries them.
       const apiStack = convertFormStackToApiStack(validationResult.data);
-      await createStack(orgId, defaultTeamName, apiStack);
+      const created = await createStack(orgId, defaultTeamName, apiStack);
       setIsLoading(false);
       toast({
         title: 'Stack Created',
         description: 'Your stack has been successfully created.',
         variant: 'success',
       });
-      navigate('/stacks');
+      // Land in the canvas editor for the new stack (carry any linked addons so
+      // they can be bound there); fall back to the list if no id came back.
+      navigate(created?.id ? `/stacks/${created.id}` : '/stacks', {
+        state: linkedAddonIds.size > 0 ? { linkedAddonIds: Array.from(linkedAddonIds) } : undefined,
+      });
     } catch (error) {
       setIsLoading(false);
 

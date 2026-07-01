@@ -8,6 +8,11 @@ import { addBlockToStack, emptyStack } from "@/pages/stacks/lib/block-to-form";
 import { ImportSource } from "@/pages/stacks/lib/import-source";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
+import { createStack } from "@/api/stacks";
+import { convertFormStackToApiStack, FormStackSchema, type FormStackData } from "@/pages/stacks/schemas/form-schema";
+import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { getCurrentOrganizationId } from "@/helpers/common";
+import { useToast } from "@/components/ui/use-toast";
 import { BlockPicker } from "./block-picker";
 import { BlockGlyph } from "./block-glyph";
 import { WizardFooter } from "./wizard-footer";
@@ -19,9 +24,12 @@ interface BlockComposerProps {
 
 export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { defaultTeamName } = useResourceTeams();
   const [query, setQuery] = useState("");
   const [stack, setStack] = useState(emptyStack);
   const [selectedAddonIds, setSelectedAddonIds] = useState<Set<string>>(new Set());
+  const [creating, setCreating] = useState(false);
   const { addons } = usePostgresAddons();
 
   // addedIds = block ids whose resource name (or a -N variant) is present
@@ -57,7 +65,9 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
   const q = query.trim().toLowerCase();
   const availableAddons = addons.filter((a) => a.id && (!q || a.name.toLowerCase().includes(q)));
 
-  const openEditor = () => {
+  // Hand off to the full create form (naming, configuring, addon binding) when
+  // the composed stack can't be created directly.
+  const openFormEditor = () => {
     navigate("/stacks/create", {
       state: {
         importedData: stack,
@@ -66,6 +76,38 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
       },
     });
     onClose();
+  };
+
+  // Prefer canvas-first: if the composed stack is named + fully configured,
+  // create it now and drop the user straight into the canvas editor (carrying
+  // any selected addons so they can be bound there). Otherwise fall back to the
+  // create form, which also lands on the canvas after save.
+  const createAndOpen = async () => {
+    const orgId = getCurrentOrganizationId();
+    const formData: FormStackData = {
+      name: stack.name.trim(),
+      labels: stack.labels,
+      spec: { stack_resources: stack.spec.stack_resources, volumes: stack.spec.volumes },
+    } as FormStackData;
+    const parsed = FormStackSchema.safeParse(formData);
+    if (!parsed.success || !orgId || !defaultTeamName) {
+      openFormEditor();
+      return;
+    }
+    setCreating(true);
+    try {
+      const created = await createStack(orgId, defaultTeamName, convertFormStackToApiStack(parsed.data));
+      onClose();
+      navigate(`/stacks/${created.id}`, { state: { linkedAddonIds: Array.from(selectedAddonIds) } });
+    } catch (error) {
+      setCreating(false);
+      toast({
+        title: "Couldn't create stack",
+        description: error instanceof Error ? error.message : "Review the details and try again.",
+        variant: "destructive",
+      });
+      openFormEditor();
+    }
   };
 
   const count = stack.spec.stack_resources.length + selectedAddonIds.size;
@@ -148,6 +190,17 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
 
         {/* RIGHT: your stack so far */}
         <div className="flex min-h-0 flex-col border-l bg-card/40">
+          <div className="border-b px-4 py-3">
+            <label htmlFor="wizard-stack-name" className="mb-1.5 block font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+              Stack name
+            </label>
+            <Input
+              id="wizard-stack-name"
+              value={stack.name}
+              onChange={(e) => setStack((s) => ({ ...s, name: e.target.value }))}
+              placeholder="e.g. my-app"
+            />
+          </div>
           <div className="border-b px-4 py-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
             Your stack so far · {count}
           </div>
@@ -195,9 +248,9 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
       </div>
       <WizardFooter
         onBack={onBack}
-        onContinue={openEditor}
-        continueDisabled={count === 0}
-        hint="Review & configure your resources"
+        onContinue={createAndOpen}
+        continueDisabled={count === 0 || creating}
+        hint={creating ? "Creating your stack…" : "Open in the canvas editor"}
       />
     </div>
   );

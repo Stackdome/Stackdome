@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
 import { Loader2, MoreHorizontal, Pencil, Rocket, Save, Trash2 } from "lucide-react";
@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PageHeader, Panel, StatusPill, variantFromState } from "@/components/branded";
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StackResourcesForm, { getDefaultResource } from "@/pages/stacks/components/shared/stack-resources-form";
 import StackVolumesForm, { getDefaultVolume } from "@/pages/stacks/components/shared/stack-volumes-form";
@@ -181,6 +181,24 @@ export default function StackDetailPage() {
     () => (stackToShow?.spec?.volumes || []).map(mapVolumeToFormData),
     [stackToShow],
   );
+
+  // Arriving from the wizard (create-and-open) with pre-selected managed addons:
+  // open an edit session pre-linked with them so they render as addon nodes and
+  // can be bound + saved from the canvas. Runs once, then clears the nav state.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const wizardLinkApplied = useRef(false);
+  useEffect(() => {
+    const linked = (location.state as { linkedAddonIds?: string[] } | null)?.linkedAddonIds;
+    if (wizardLinkApplied.current || !linked?.length || !stackToShow || session.isActive) return;
+    wizardLinkApplied.current = true;
+    session.start(
+      { resources: baselineResources, volumes: baselineVolumes },
+      { linkedAddonIds: new Set(linked) },
+    );
+    navigate(`/stacks/${id}`, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when the stack + wizard state are ready
+  }, [location.state, stackToShow]);
 
   // Addons bound to the saved stack come from its connections (from.type
   // "addon/postgres"), not from the env vars — so this is the source of truth
