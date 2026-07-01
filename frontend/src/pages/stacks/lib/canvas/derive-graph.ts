@@ -1,4 +1,5 @@
 import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
+import { nodePresentation, type GlyphKind, type DotState } from "./node-presentation";
 
 /**
  * Canvas node kinds. Only the workload kinds that exist in the backend today —
@@ -22,6 +23,12 @@ export type DirtyState = "new" | "edited" | "removed";
 export interface ResourceNodeData {
   kind: NodeKind;
   name: string;
+  /** Role/tech label shown as the node's top-right badge (Web/Redis/Postgres…). */
+  kindLabel: string;
+  /** Glyph identifier for the node icon. */
+  glyph: GlyphKind;
+  /** Status-dot colour bucket. */
+  dotState: DotState;
   summary: string;
   status?: string;
   volumes: VolumeChip[];
@@ -94,11 +101,17 @@ function envVarsOf(resource: Partial<FormStackResourceData>): FormEnvVarData[] {
   return (resource.execution_config?.environment_variables ?? []) as FormEnvVarData[];
 }
 
-function serviceSummary(resource: Partial<FormStackResourceData>): string {
-  const image = resource.image_spec?.image;
-  if (image) return image;
-  if (resource.build_spec) return "git build";
-  return "service";
+function servicePresentation(resource: Partial<FormStackResourceData>) {
+  return nodePresentation({
+    isAddon: false,
+    image: resource.image_spec?.image,
+    hasBuild: !!resource.build_spec,
+    ports: (resource.ports ?? []).map((p) => ({
+      number: p.number,
+      protocol: p.protocol,
+      exposedToPublic: p.exposed_to_public,
+    })),
+  });
 }
 
 function volumeChips(resource: Partial<FormStackResourceData>): VolumeChip[] {
@@ -124,6 +137,7 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
 
   input.resources.forEach((resource, idx) => {
     const name = resource.name ?? "";
+    const pres = servicePresentation(resource);
     nodes.push({
       id: resourceNodeId(name),
       type: "resource",
@@ -131,7 +145,10 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
       data: {
         kind: NODE_KIND.service,
         name,
-        summary: serviceSummary(resource),
+        kindLabel: pres.kindLabel,
+        glyph: pres.glyph,
+        dotState: pres.dotState,
+        summary: pres.summary,
         status: resource.status as string | undefined,
         volumes: volumeChips(resource),
         dirtyState: serviceDirtyState(idx, input.dirty),
@@ -141,6 +158,7 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
   });
 
   for (const addonId of input.linkedAddonIds) {
+    const pres = nodePresentation({ isAddon: true });
     nodes.push({
       id: addonNodeId(addonId),
       type: "resource",
@@ -148,7 +166,10 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
       data: {
         kind: NODE_KIND.addon,
         name: input.addonNameById.get(addonId) ?? addonId,
-        summary: "postgres",
+        kindLabel: pres.kindLabel,
+        glyph: pres.glyph,
+        dotState: pres.dotState,
+        summary: pres.summary,
         volumes: [],
         dirtyState: addonDirtyState(addonId, input.dirty),
       },

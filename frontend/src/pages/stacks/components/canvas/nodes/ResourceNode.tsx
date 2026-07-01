@@ -1,7 +1,9 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
+import { HardDrive } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NODE_KIND, type ResourceNodeData, type DirtyState } from "@/pages/stacks/lib/canvas/derive-graph";
+import type { ResourceNodeData } from "@/pages/stacks/lib/canvas/derive-graph";
+import type { DotState } from "@/pages/stacks/lib/canvas/node-presentation";
 import { NodeGlyph } from "./node-glyph";
 
 export type ResourceFlowNode = Node<ResourceNodeData, "resource">;
@@ -9,60 +11,61 @@ export type ResourceFlowNode = Node<ResourceNodeData, "resource">;
 /** Edges are derived, not hand-drawn, so the handles are anchors only. */
 const HIDDEN_HANDLE = { opacity: 0, pointerEvents: "none" as const };
 
-const DIRTY_MARK: Record<DirtyState, { border: string; label: string; text: string }> = {
-  new: { border: "border-success", label: "NEW", text: "text-success" },
-  edited: { border: "border-brand", label: "EDITED", text: "text-brand" },
-  removed: { border: "border-danger", label: "REMOVED", text: "text-danger" },
+/** Status-dot colour per state (semantic tokens only). */
+const DOT_COLOR: Record<DotState, string> = {
+  ok: "bg-success",
+  warn: "bg-warn",
+  err: "bg-danger",
 };
 
-function kindLabel(data: ResourceNodeData): string {
-  return data.kind === NODE_KIND.addon ? "POSTGRES" : "SERVICE";
-}
-
 function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
-  const mark = data.dirtyState ? DIRTY_MARK[data.dirtyState] : undefined;
-  const borderClass = mark ? mark.border : selected ? "border-brand" : "border-border";
+  const dirty = data.dirtyState;
+  // Unsaved changes read as a left accent stripe + tinted border; removal is
+  // crimson + dimmed. Selection (amber border + halo) wins the border colour.
+  const stripeColor = dirty === "removed" ? "bg-danger" : dirty ? "bg-brand" : null;
+  const borderClass = selected
+    ? "border-brand"
+    : dirty === "removed"
+      ? "border-danger/50"
+      : dirty
+        ? "border-brand/60"
+        : "border-border";
 
   return (
     <div
       className={cn(
-        "relative w-[216px] rounded-lg border bg-card px-3 py-2.5 shadow-xs transition-colors",
+        "relative w-[216px] cursor-grab overflow-hidden rounded-lg border bg-card shadow-xs transition-colors",
         borderClass,
-        data.dirtyState === "removed" && "opacity-60",
+        selected && "ring-[3px] ring-brand/20",
+        dirty === "removed" && "opacity-60",
       )}
     >
+      {stripeColor && <span className={cn("absolute inset-y-0 left-0 w-[3px]", stripeColor)} aria-hidden />}
       <Handle type="target" position={Position.Left} style={HIDDEN_HANDLE} isConnectable={false} />
       <Handle type="source" position={Position.Right} style={HIDDEN_HANDLE} isConnectable={false} />
 
-      <div className="flex items-center gap-2">
-        <span className="size-1.5 shrink-0 rounded-full bg-success" aria-hidden />
-        <NodeGlyph kind={data.kind} className="size-3.5 shrink-0 text-fg-muted" />
-        <span className="truncate text-sm font-medium text-foreground">{data.name}</span>
-        <span
-          className={cn(
-            "ml-auto shrink-0 font-mono text-[10px] uppercase tracking-wider",
-            mark ? mark.text : "text-fg-muted",
-          )}
-        >
-          {mark ? mark.label : kindLabel(data)}
-        </span>
+      <div className="px-[13px] py-3">
+        <div className="flex items-center gap-2.5">
+          <span className={cn("size-2 shrink-0 rounded-full", DOT_COLOR[data.dotState])} aria-hidden />
+          <NodeGlyph glyph={data.glyph} className="size-[17px] shrink-0 text-fg-2" />
+          <span className="flex-1 truncate text-sm font-medium text-foreground">{data.name}</span>
+          <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-fg-muted">
+            {data.kindLabel}
+          </span>
+        </div>
+        <div className="mt-1.5 truncate pl-[18px] font-mono text-[11px] text-muted-foreground">{data.summary}</div>
       </div>
 
-      <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{data.summary}</div>
-
-      {data.volumes.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {data.volumes.map((v) => (
-            <span
-              key={v.name}
-              title={v.mountPath}
-              className="rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[10px] text-fg-2"
-            >
-              {v.name}
-            </span>
-          ))}
+      {data.volumes.map((v) => (
+        <div
+          key={v.name}
+          title={v.mountPath}
+          className="flex items-center gap-2 border-t border-border bg-background px-[13px] py-2"
+        >
+          <HardDrive className="size-[13px] shrink-0 text-fg-muted" aria-hidden />
+          <span className="truncate font-mono text-[10.5px] text-fg-2">{v.name}</span>
         </div>
-      )}
+      ))}
     </div>
   );
 }

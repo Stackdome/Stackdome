@@ -1,13 +1,18 @@
-import { Box, Database } from "lucide-react";
-import { NODE_KIND, type NodeKind } from "@/pages/stacks/lib/canvas/derive-graph";
+import { Box, Cloud, Cpu, Database, Globe, Zap, type LucideIcon } from "lucide-react";
+import type { GlyphKind } from "@/pages/stacks/lib/canvas/node-presentation";
 
-const GLYPH_BY_KIND = {
-  [NODE_KIND.service]: Box,
-  [NODE_KIND.addon]: Database,
-} as const;
+const GLYPH_BY_KIND: Record<GlyphKind, LucideIcon> = {
+  web: Globe,
+  postgres: Database,
+  redis: Zap,
+  database: Database,
+  object: Cloud,
+  worker: Cpu,
+  service: Box,
+};
 
-/** Lucide glyph for a canvas node kind. */
-export function NodeGlyph({ kind, className }: { kind: NodeKind; className?: string }) {
-  const Icon = GLYPH_BY_KIND[kind];
+/** Lucide glyph for a canvas node's inferred kind. */
+export function NodeGlyph({ glyph, className }: { glyph: GlyphKind; className?: string }) {
+  const Icon = GLYPH_BY_KIND[glyph] ?? Box;
   return <Icon className={className} aria-hidden />;
 }

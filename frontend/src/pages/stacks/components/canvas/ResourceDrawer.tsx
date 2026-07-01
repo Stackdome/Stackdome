@@ -115,7 +115,7 @@ export function ResourceDrawer({
       {/* Header */}
       <div className="flex items-start gap-2 border-b border-border px-4 py-3">
         <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${statusDotColor}`} aria-hidden />
-        <NodeGlyph kind="service" className="mt-0.5 size-4 shrink-0 text-fg-muted" />
+        <NodeGlyph glyph="service" className="mt-0.5 size-4 shrink-0 text-fg-muted" />
         <div className="min-w-0 flex-grow">
           <div className="truncate text-sm font-medium text-foreground">
             {resource.name || `Resource ${resourceIndex + 1}`}
