@@ -72,7 +72,7 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
                 onPickTemplate={() => setPhase("template")}
                 onPickCompose={() => setPhase("compose")}
                 onPickBlank={() => {
-                  navigate("/stacks/create");
+                  navigate("/stacks/new");
                   close();
                 }}
               />

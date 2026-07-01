@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { templateToFormData } from "@/data/templates/template-to-form";
-import { ImportSource } from "@/pages/stacks/lib/import-source";
 import type { Template } from "@/data/templates/types";
 
 export interface TemplateImportState {
@@ -23,13 +22,17 @@ export function useTemplateImport(): TemplateImportState & TemplateImportActions
   const closeDialog = () => setIsDialogOpen(false);
 
   const useTemplate = (template: Template) => {
-    const { data, warnings } = templateToFormData(template);
+    const { data } = templateToFormData(template);
     setIsDialogOpen(false);
-    navigate("/stacks/create", {
+    navigate("/stacks/new", {
       state: {
-        importedData: data,
-        importSource: ImportSource.Template,
-        importWarnings: warnings,
+        seed: {
+          name: data.name ?? "",
+          labels: data.labels ?? [],
+          resources: data.spec?.stack_resources ?? [],
+          volumes: data.spec?.volumes ?? [],
+          linkedAddonIds: [],
+        },
       },
     });
   };
