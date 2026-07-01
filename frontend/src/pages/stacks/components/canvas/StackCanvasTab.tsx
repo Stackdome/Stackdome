@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Edge,
   type NodeMouseHandler,
 } from "@xyflow/react";
@@ -17,6 +18,7 @@ import { addBlockToStack } from "@/pages/stacks/lib/block-to-form";
 import { blockCatalog, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { CanvasEditor } from "./CanvasEditor";
 import { ResourceDrawer } from "./ResourceDrawer";
+import { FIT_OPTIONS } from "./fit-options";
 import type { ResourceFlowNode } from "./nodes/ResourceNode";
 
 interface StackCanvasTabProps {
@@ -65,6 +67,7 @@ function StackCanvasFlow({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [showConnections, setShowConnections] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const { fitView } = useReactFlow();
 
   // Re-layout ONLY when topology changes; preserve in-session drag positions by id.
   useEffect(() => {
@@ -84,6 +87,24 @@ function StackCanvasFlow({
   }, [dataGraph, setNodes]);
 
   const toggleConnections = useCallback(() => setShowConnections((v) => !v), []);
+
+  // Re-run auto-layout: reset every node to its fresh dagre position and re-fit.
+  const autoLayout = useCallback(() => {
+    const laid = layoutGraph(dataGraph);
+    setNodes(laid.nodes as ResourceFlowNode[]);
+    requestAnimationFrame(() => fitView(FIT_OPTIONS));
+  }, [dataGraph, setNodes, fitView]);
+
+  // The drawer is a side panel, not an overlay — opening/closing it changes the
+  // canvas width, so re-fit to recenter the graph into the remaining space.
+  const drawerWasOpen = useRef(false);
+  useEffect(() => {
+    const open = selectedIndex != null;
+    if (open === drawerWasOpen.current) return;
+    drawerWasOpen.current = open;
+    const t = setTimeout(() => fitView(FIT_OPTIONS), 80);
+    return () => clearTimeout(t);
+  }, [selectedIndex, fitView]);
 
   const onNodeClick = useCallback<NodeMouseHandler<ResourceFlowNode>>(
     (_event, node) => {
@@ -145,18 +166,21 @@ function StackCanvasFlow({
   );
 
   return (
-    <>
-      <CanvasEditor
-        nodes={nodes}
-        edges={showConnections ? edges : []}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={onNodeClick}
-        showConnections={showConnections}
-        onToggleConnections={toggleConnections}
-        addedBlockIds={addedBlockIds}
-        onAddBlock={onAddBlock}
-      />
+    <div className="flex h-full w-full">
+      <div className="relative min-w-0 flex-1">
+        <CanvasEditor
+          nodes={nodes}
+          edges={showConnections ? edges : []}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={onNodeClick}
+          showConnections={showConnections}
+          onToggleConnections={toggleConnections}
+          onAutoLayout={autoLayout}
+          addedBlockIds={addedBlockIds}
+          onAddBlock={onAddBlock}
+        />
+      </div>
       {selectedIndex != null && (
         <ResourceDrawer
           key={selectedIndex}
@@ -170,7 +194,7 @@ function StackCanvasFlow({
           onRemove={removeResource}
         />
       )}
-    </>
+    </div>
   );
 }
 

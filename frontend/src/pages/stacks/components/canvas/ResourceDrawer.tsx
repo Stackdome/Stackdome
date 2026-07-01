@@ -129,7 +129,7 @@ export function ResourceDrawer({
 
   return (
     <aside
-      className="absolute right-0 top-0 z-10 flex h-full w-[496px] flex-col border-l border-border bg-background shadow-lg"
+      className="flex h-full w-[496px] shrink-0 flex-col border-l border-border bg-background shadow-lg"
       data-testid="resource-drawer"
     >
       {/* Header */}

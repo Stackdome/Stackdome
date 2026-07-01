@@ -14,6 +14,7 @@ import { ResourceNode, type ResourceFlowNode } from "./nodes/ResourceNode";
 import { ConnectionEdge } from "./edges/ConnectionEdge";
 import { CanvasControls } from "./CanvasControls";
 import { AddResourcePopover } from "./AddResourcePopover";
+import { FIT_OPTIONS } from "./fit-options";
 
 /** Declared at module scope — a fresh object identity here re-renders every node. */
 const nodeTypes = { resource: ResourceNode };
@@ -33,6 +34,7 @@ interface CanvasEditorProps {
   onNodeClick?: NodeMouseHandler<ResourceFlowNode>;
   showConnections: boolean;
   onToggleConnections: () => void;
+  onAutoLayout: () => void;
   addedBlockIds: string[];
   onAddBlock: (blockId: string) => void;
 }
@@ -49,6 +51,7 @@ export function CanvasEditor({
   onNodeClick,
   showConnections,
   onToggleConnections,
+  onAutoLayout,
   addedBlockIds,
   onAddBlock,
 }: CanvasEditorProps) {
@@ -64,6 +67,7 @@ export function CanvasEditor({
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         fitView
+        fitViewOptions={FIT_OPTIONS}
         colorMode="system"
         snapToGrid
         snapGrid={SNAP_GRID}
@@ -80,7 +84,11 @@ export function CanvasEditor({
             </div>
           </Panel>
         )}
-        <CanvasControls showConnections={showConnections} onToggleConnections={onToggleConnections} />
+        <CanvasControls
+          showConnections={showConnections}
+          onToggleConnections={onToggleConnections}
+          onAutoLayout={onAutoLayout}
+        />
         <Panel position="top-left">
           <AddResourcePopover addedIds={addedBlockIds} onAdd={onAddBlock} />
         </Panel>
