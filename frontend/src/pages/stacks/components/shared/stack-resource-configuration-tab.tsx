@@ -609,6 +609,19 @@ function StackResourceConfigurationTabImpl({
                       <SelectValue placeholder="Select volume" />
                     </SelectTrigger>
                     <SelectContent>
+                      {/* A mount can reference a volume missing from the list
+                          (dangling data). Render it as a disabled item so the
+                          select still SHOWS the name instead of going blank. */}
+                      {vm.source_volume_name &&
+                        !(volumes || []).some((vol) => vol.name === vm.source_volume_name) && (
+                        <SelectItem value={vm.source_volume_name} disabled>
+                          <div className="flex items-center gap-2">
+                            <Database className="h-4 w-4" />
+                            <span>{vm.source_volume_name}</span>
+                            <span className="ml-1 text-xs text-muted-foreground">(missing)</span>
+                          </div>
+                        </SelectItem>
+                      )}
                       {(volumes || []).filter((vol) => !!vol.name).length === 0 ? (
                         <div className="p-2 text-sm text-muted-foreground">No volumes available</div>
                       ) : (

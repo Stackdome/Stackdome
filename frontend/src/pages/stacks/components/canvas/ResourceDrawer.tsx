@@ -26,7 +26,6 @@ interface ResourceDrawerProps {
   resourceIndex: number;
   session: UseStackEditSession;
   baselineResources: Partial<FormStackResourceData>[];
-  baselineVolumes: Partial<VolumeFormData>[];
   /** Addon ids linked to the stack — filters the addon picker + drives bindings. */
   connectionAddonIds: ReadonlySet<string>;
   errors: { [field: string]: string | undefined };
@@ -46,7 +45,6 @@ export function ResourceDrawer({
   resourceIndex,
   session,
   baselineResources,
-  baselineVolumes,
   connectionAddonIds,
   errors,
   onClose,
@@ -116,7 +114,10 @@ export function ResourceDrawer({
       onChange,
       context: {
         errors,
-        volumes: baselineVolumes,
+        // Draft volumes, not baseline: an inline-added volume must be pickable
+        // (and resolvable by existing mount rows) before the next autosave
+        // cycle advances the baseline.
+        volumes: session.draft.volumes,
         allResources,
         secrets,
         addons,

@@ -212,7 +212,6 @@ function StackCanvasFlow({
           resourceIndex={selectedIndex}
           session={session}
           baselineResources={baselineResources}
-          baselineVolumes={baselineVolumes}
           connectionAddonIds={connectionAddonIds}
           errors={errors[selectedIndex] ?? {}}
           onClose={closeDrawer}
