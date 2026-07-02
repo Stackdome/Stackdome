@@ -33,8 +33,19 @@ import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convert
 import { useToast } from "@/components/ui/use-toast";
 import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/schemas/api-schema";
 import { useDraftSync } from "@/pages/stacks/hooks/use-draft-sync";
+import { useStackRevert } from "@/pages/stacks/hooks/use-stack-revert";
 import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
 import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Helper to map API build_spec to form schema shape
 
@@ -275,6 +286,26 @@ export default function StackDetailPage() {
     detail: releaseDetail,
   });
 
+  // Live snapshot: already lazily fetched by useDeployLifecycle via detail.ensure;
+  // peek here to gate canDiscardDraft and pass to the revert hook.
+  const liveReleaseId = stackToShow?.status?.last_converged?.release_id;
+  const liveSnapshot = releaseDetail.peek(liveReleaseId).data?.snapshot;
+
+  const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
+
+  const stackRevert = useStackRevert({
+    ids: deployIds.stackId ? deployIds : null,
+    stack: stackToShow ?? undefined,
+    liveSnapshot,
+    onReverted: (fresh) => {
+      setFetchedStack(fresh);
+      setStacks(stacks.map((s) => (s.id === fresh.id ? fresh : s)));
+      draftSync.notifyExternalUpdate(fresh);
+      session.discard(); // auto-start effect restarts the session on the reverted baseline
+      toast({ title: "Draft discarded", description: "Stack restored to the last deployment." });
+    },
+  });
+
   const [deployBusy, setDeployBusy] = useState(false);
   const refetchReleases = releasesResult.refetch;
   const runDeploy = useCallback(async (fn: () => Promise<unknown>, ok: string) => {
@@ -498,50 +529,72 @@ export default function StackDetailPage() {
     session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size + session.dirty.addonLinkCount;
 
   return (
-    <CanvasEditorShell
-      stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
-      isDraft={isDraft}
-      nameEditable={isDraft}
-      onNameChange={handleNameChange}
-      nameError={nameError}
-      labels={(isDraft ? draftLabels : effectiveStack?.labels) ?? []}
-      labelsEditable={isDraft}
-      onAddLabel={addDraftLabel}
-      onRemoveLabel={removeDraftLabel}
-      statusState={effectiveStack?.status?.state}
-      subtitle={subtitleText}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      isActive={session.isActive}
-      dirtyResourceCount={session.dirty.dirtyResourceIdx.size}
-      dirtyTotal={dirtyTotal}
-      isStaged={lifecycle.phase === "staged"}
-      syncStatus={isDraft ? SYNC_STATUS.idle : draftSync.status}
-      deployBusy={deployBusy}
-      canWrite={canWriteStack}
-      onCreate={() => void performCreate()}
-      isCreating={isCreating}
-      onDeploy={onDeploy}
-      onDiscardAll={() => session.discard()}
-      canDiscardDraft={false}
-      canDeleteStack={canWriteStack}
-      onDelete={() =>
-        toast({ title: "Not implemented", description: "Delete stack will land in a follow-up." })
-      }
-      configuration={
-        <StackCanvasTab
-          session={session}
-          baselineResources={baselineResources}
-          baselineVolumes={baselineVolumes}
-          connectionAddonIds={connectionAddonIds}
-          addonNameById={addonNameById}
-          errors={validationErrors.resources}
-          onViewLogs={() => setActiveTab("logs")}
-        />
-      }
-      deployments={deploymentsBody}
-      logs={logsBody}
-      metrics={metricsBody}
-    />
+    <>
+      <CanvasEditorShell
+        stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
+        isDraft={isDraft}
+        nameEditable={isDraft}
+        onNameChange={handleNameChange}
+        nameError={nameError}
+        labels={(isDraft ? draftLabels : effectiveStack?.labels) ?? []}
+        labelsEditable={isDraft}
+        onAddLabel={addDraftLabel}
+        onRemoveLabel={removeDraftLabel}
+        statusState={effectiveStack?.status?.state}
+        subtitle={subtitleText}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isActive={session.isActive}
+        dirtyResourceCount={session.dirty.dirtyResourceIdx.size}
+        dirtyTotal={dirtyTotal}
+        isStaged={lifecycle.phase === "staged"}
+        syncStatus={isDraft ? SYNC_STATUS.idle : draftSync.status}
+        deployBusy={deployBusy}
+        canWrite={canWriteStack}
+        onCreate={() => void performCreate()}
+        isCreating={isCreating}
+        onDeploy={onDeploy}
+        onDiscardAll={() => session.discard()}
+        canDiscardDraft={lifecycle.phase === "staged" && !!liveSnapshot && canWriteStack}
+        onDiscardDraft={() => setRevertConfirmOpen(true)}
+        canDeleteStack={canWriteStack}
+        onDelete={() =>
+          toast({ title: "Not implemented", description: "Delete stack will land in a follow-up." })
+        }
+        configuration={
+          <StackCanvasTab
+            session={session}
+            baselineResources={baselineResources}
+            baselineVolumes={baselineVolumes}
+            connectionAddonIds={connectionAddonIds}
+            addonNameById={addonNameById}
+            errors={validationErrors.resources}
+            onViewLogs={() => setActiveTab("logs")}
+          />
+        }
+        deployments={deploymentsBody}
+        logs={logsBody}
+        metrics={metricsBody}
+      />
+      <AlertDialog open={revertConfirmOpen} onOpenChange={setRevertConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard draft changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+            This restores the stack to its last deployment. Volumes added since then are deleted — their data is destroyed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void stackRevert.revert()}
+              disabled={stackRevert.reverting}
+            >
+            Discard draft
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
