@@ -3,15 +3,19 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { CanvasEditorShell } from "../CanvasEditorShell";
+import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 
 afterEach(cleanup);
 
 const base = {
   statusState: null, subtitle: "0 services · 0 volumes",
   activeTab: "configuration", onTabChange: () => {},
-  isActive: true, dirtyResourceCount: 0, dirtyTotal: 1, isStaged: false,
-  isSaving: false, deployBusy: false, canWrite: true,
-  onSave: () => {}, onDeploy: () => {}, onDiscardAll: () => {}, onEdit: () => {}, onDelete: () => {},
+  isActive: true, dirtyResourceCount: 0, dirtyTotal: 0, isStaged: false,
+  syncStatus: SYNC_STATUS.idle,
+  deployBusy: false, canWrite: true,
+  onCreate: () => {}, isCreating: false,
+  onDeploy: () => {}, onDiscardAll: () => {}, onDelete: () => {},
+  canDiscardDraft: false, canDeleteStack: true,
   configuration: <div />, deployments: <div />, logs: <div />, metrics: <div />,
   labels: [], labelsEditable: true,
 };
@@ -44,5 +48,85 @@ describe("CanvasEditorShell header", () => {
     fireEvent.change(labelInput, { target: { value: "dev" } });
     fireEvent.keyDown(labelInput, { key: "Enter" });
     expect(onAddLabel).toHaveBeenCalledWith("dev");
+  });
+});
+
+describe("CanvasEditorShell primary button matrix", () => {
+  it("draft mode shows 'Create stack' button", () => {
+    render(<CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" />);
+    expect(screen.getByRole("button", { name: /create stack/i })).toBeInTheDocument();
+    // Primary "Deploy" button absent in draft mode (Deployments tab still present)
+    expect(screen.queryByRole("button", { name: "Deploy" })).toBeNull();
+  });
+
+  it("draft mode shows 'Creating' while creating", () => {
+    render(<CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" isCreating />);
+    expect(screen.getByRole("button", { name: /creating/i })).toBeInTheDocument();
+  });
+
+  it("existing stack with isStaged shows enabled Deploy", () => {
+    render(
+      <CanvasEditorShell {...base} nameEditable={false} stackName="api" isStaged />,
+    );
+    const btn = screen.getByRole("button", { name: "Deploy" });
+    expect(btn).toBeInTheDocument();
+    expect(btn).not.toBeDisabled();
+  });
+
+  it("existing stack clean (no staged, no unsaved) shows disabled Deploy", () => {
+    render(
+      <CanvasEditorShell {...base} nameEditable={false} stackName="api" isStaged={false} dirtyTotal={0} />,
+    );
+    const btn = screen.getByRole("button", { name: "Deploy" });
+    expect(btn).toBeDisabled();
+  });
+
+  it("existing stack with hasUnsaved shows enabled Deploy", () => {
+    render(
+      <CanvasEditorShell
+        {...base}
+        nameEditable={false}
+        stackName="api"
+        isActive
+        dirtyTotal={2}
+        isStaged={false}
+      />,
+    );
+    const btn = screen.getByRole("button", { name: "Deploy" });
+    expect(btn).not.toBeDisabled();
+  });
+
+  it("syncStatus saving shows 'Saving…' for existing stacks", () => {
+    render(
+      <CanvasEditorShell
+        {...base}
+        nameEditable={false}
+        stackName="api"
+        syncStatus={SYNC_STATUS.saving}
+      />,
+    );
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
+  });
+
+  it("DRAFT pill renders when isStaged and not isDraft", () => {
+    render(
+      <CanvasEditorShell {...base} nameEditable={false} stackName="api" isStaged />,
+    );
+    expect(screen.getByText("DRAFT")).toBeInTheDocument();
+  });
+
+  it("DRAFT pill does not render for isDraft mode", () => {
+    render(
+      <CanvasEditorShell {...base} isDraft nameEditable stackName="new" isStaged />,
+    );
+    expect(screen.queryByText("DRAFT")).toBeNull();
+  });
+
+  it("Edit menu item is absent", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" />);
+    // Open the dropdown
+    fireEvent.click(screen.getByLabelText("Stack actions"));
+    expect(screen.queryByText("Edit")).toBeNull();
+    expect(screen.queryByText("Editing")).toBeNull();
   });
 });

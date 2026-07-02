@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Activity, LayoutGrid, Loader2, MoreHorizontal, Pencil, Rocket, Save, Terminal, Trash2, X } from "lucide-react";
+import { Activity, LayoutGrid, Loader2, MoreHorizontal, Rocket, Save, Terminal, Trash2, Undo2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AutosaveStatus } from "./AutosaveStatus";
+import type { SyncStatus } from "@/pages/stacks/lib/draft-sync/constants";
 
 /** The four editor modes, in display order. Icons per the design bundle. */
 const EDITOR_TABS = [
@@ -35,7 +37,7 @@ export interface CanvasEditorShellProps {
   statusState?: string | null;
   /** Human subtitle, e.g. "3 services · 2 volumes". */
   subtitle: string;
-  /** Draft (unsaved) stack — primary action is always Save (create). */
+  /** Draft (unsaved) stack — primary action is always Create (nothing exists server-side until it runs). */
   isDraft?: boolean;
   /** Render the title as an editable input (draft, or a rename-capable stack). */
   nameEditable: boolean;
@@ -58,14 +60,22 @@ export interface CanvasEditorShellProps {
   dirtyTotal: number;
   /** A saved-but-undeployed diff exists (lifecycle.phase === "staged"). */
   isStaged: boolean;
-  isSaving: boolean;
+  /** Autosave status for existing stacks (idle/saving/saved/error). */
+  syncStatus: SyncStatus;
   deployBusy: boolean;
   canWrite: boolean;
-  onSave: () => void;
+  /** Draft-mode create action. */
+  onCreate?: () => void;
+  isCreating?: boolean;
   onDeploy: () => void;
   onDiscardAll: () => void;
-  onEdit: () => void;
+  /** Session-scope discard of server-persisted draft changes (wired in Task 6). */
+  onDiscardDraft?: () => void;
+  /** Whether the "Discard draft changes" menu item should appear. */
+  canDiscardDraft: boolean;
   onDelete: () => void;
+  /** Whether Delete is enabled (false until Task 7 wires it fully, but shell respects the gate). */
+  canDeleteStack: boolean;
 
   // ── mode bodies (rendered by active tab) ──
   configuration: ReactNode;
@@ -80,8 +90,8 @@ export interface CanvasEditorShellProps {
  * compact top bar and icon tab row, and lets the active mode body fill the
  * viewport edge-to-edge.
  *
- * Presentation only: it owns no stack state. "N unsaved changes" and the
- * Save/Deploy button are wired straight to the caller's session + deploy
+ * Presentation only: it owns no stack state. The autosave indicator and
+ * Deploy button are wired straight to the caller's session + deploy
  * lifecycle — no save/deploy logic lives here.
  */
 export function CanvasEditorShell({
@@ -102,14 +112,17 @@ export function CanvasEditorShell({
   dirtyResourceCount,
   dirtyTotal,
   isStaged,
-  isSaving,
+  syncStatus,
   deployBusy,
   canWrite,
-  onSave,
+  onCreate,
+  isCreating,
   onDeploy,
   onDiscardAll,
-  onEdit,
+  onDiscardDraft,
+  canDiscardDraft,
   onDelete,
+  canDeleteStack,
   configuration,
   deployments,
   logs,
@@ -119,8 +132,6 @@ export function CanvasEditorShell({
   const [labelInput, setLabelInput] = useState("");
 
   const hasUnsaved = isActive && dirtyTotal > 0;
-  const primaryIsSave = isDraft || hasUnsaved;
-  const dirtyLabel = dirtyTotal === 1 ? "1 unsaved change" : `${dirtyTotal} unsaved changes`;
 
   // The canvas (Configuration) stays mounted so its open drawer + node
   // selection survive tab switches; ops views render as an opaque overlay on
@@ -128,16 +139,21 @@ export function CanvasEditorShell({
   const opsBody =
     activeTab === "deployments" ? deployments : activeTab === "logs" ? logs : activeTab === "metrics" ? metrics : null;
 
-  // When there are unsaved edits (or in draft mode) the primary action is Save
-  // (the draft must be persisted before it can be deployed — the backend keeps
-  // save and deploy separate). Otherwise the primary action is Deploy.
-  const primaryButton = primaryIsSave ? (
-    <Button type="button" variant="default" size="sm" onClick={onSave} disabled={isSaving}>
-      {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-      {isSaving ? "Saving" : "Save"}
+  // Draft mode keeps ONE explicit action (nothing exists server-side until it
+  // runs); existing stacks autosave, so the primary is always Deploy.
+  const primaryButton = isDraft ? (
+    <Button type="button" variant="default" size="sm" onClick={onCreate} disabled={isCreating}>
+      {isCreating ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+      {isCreating ? "Creating" : "Create stack"}
     </Button>
   ) : (
-    <Button type="button" variant="default" size="sm" onClick={onDeploy} disabled={deployBusy || !canWrite}>
+    <Button
+      type="button"
+      variant="default"
+      size="sm"
+      onClick={onDeploy}
+      disabled={deployBusy || !canWrite || !(isStaged || hasUnsaved)}
+    >
       {deployBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Rocket className="size-3.5" />}
       {deployBusy ? "Deploying" : "Deploy"}
     </Button>
@@ -168,11 +184,11 @@ export function CanvasEditorShell({
               {statusState}
             </StatusPill>
           )}
-          {isStaged && !hasUnsaved && (
-            <span className="flex-none font-mono text-[11.5px] text-muted-foreground">draft saved · undeployed</span>
+          {!isDraft && isStaged && (
+            <StatusPill variant="info" className="flex-none">DRAFT</StatusPill>
           )}
           <div className="flex-1" />
-          {hasUnsaved && <span className="flex-none font-mono text-[11.5px] text-brand">{dirtyLabel}</span>}
+          {!isDraft && <AutosaveStatus status={syncStatus} />}
           {primaryButton}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -181,21 +197,25 @@ export function CanvasEditorShell({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[180px]">
-              {canWrite && (
-                <DropdownMenuItem onClick={onEdit} disabled={isActive}>
-                  <Pencil className="size-4" />
-                  {isActive ? "Editing" : "Edit"}
-                </DropdownMenuItem>
-              )}
               {hasUnsaved && (
                 <DropdownMenuItem onClick={() => setDiscardOpen(true)}>
                   <Trash2 className="size-4" />
                   Discard all changes
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem className="text-danger focus:text-danger" onClick={onDelete}>
+              {canDiscardDraft && onDiscardDraft && (
+                <DropdownMenuItem onClick={onDiscardDraft}>
+                  <Undo2 className="size-4" />
+                  Discard draft changes
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                className="text-danger focus:text-danger"
+                onClick={onDelete}
+                disabled={!canDeleteStack}
+              >
                 <Trash2 className="size-4 text-danger" />
-                Delete
+                Delete stack
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

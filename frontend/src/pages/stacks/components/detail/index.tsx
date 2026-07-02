@@ -5,17 +5,7 @@ import { Loader2 } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
-import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
 import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
@@ -24,7 +14,7 @@ import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditor
 import { DraftTabPlaceholder } from "@/pages/stacks/components/canvas/DraftTabPlaceholder";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
-import { createStack, getStackById, updateStack } from "@/api/stacks";
+import { createStack, getStackById } from "@/api/stacks";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import { USER_DEFINED_LABEL_KEY } from "@/pages/stacks/lib/constants";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
@@ -42,6 +32,9 @@ import type { z } from "zod";
 import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
 import { useToast } from "@/components/ui/use-toast";
 import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/schemas/api-schema";
+import { useDraftSync } from "@/pages/stacks/hooks/use-draft-sync";
+import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
+import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 
 // Helper to map API build_spec to form schema shape
 
@@ -82,20 +75,15 @@ export default function StackDetailPage() {
   const [draftName, setDraftName] = useState(seed.name);
   const [draftLabels, setDraftLabels] = useState<FormStackData["labels"]>(seed.labels);
 
-  const { stacks } = useStacks();
+  const { stacks, setStacks } = useStacks();
   const [fetchedStack, setFetchedStack] = useState<Stack | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const session = useStackEditSession();
   const [activeTab, setActiveTab] = useState("configuration");
-  const [isSaving, setIsSaving] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [nameError, setNameError] = useState<string | undefined>();
-  const [detachConfirmOpen, setDetachConfirmOpen] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<{
-    resources: { [index: number]: { [field: string]: string | undefined } };
-    volumes: { [index: number]: { [field: string]: string | undefined } };
-  }>({ resources: {}, volumes: {} });
 
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const { toast } = useToast();
@@ -225,32 +213,18 @@ export default function StackDetailPage() {
     [stackToShow],
   );
 
-  const activateEdit = (opts?: { resourceIdx?: number; volumeIdx?: number; openTab?: EditSessionTab }) => {
+  // Autosave model: the canvas is always editable for writers. The session
+  // starts as soon as the stack is loaded and restarts after discard/revert.
+  useEffect(() => {
+    if (isDraft || !stackToShow || !canWriteStack || session.isActive) return;
     session.start(
       { resources: baselineResources, volumes: baselineVolumes },
-      {
-        openResourceIdx: opts?.resourceIdx ?? null,
-        openVolumeIdx: opts?.volumeIdx ?? null,
-        openTab: opts?.openTab ?? null,
-        linkedAddonIds: connectionAddonIds,
-      },
+      { linkedAddonIds: connectionAddonIds },
     );
-  };
-
-  // Compute "linked but unbound" — addons in linkedAddonIds with zero env
-  // bindings across the draft. Env vars no longer carry addon-backed sources,
-  // so every linked addon is unbound.
-  const computeUnboundLinked = (): string[] => Array.from(session.linkedAddonIds);
-
-  // Env vars are no longer addon-backed, so there is nothing to convert on
-  // detach; resources pass through unchanged with empty provenance.
-  const applyPendingDetach = (): {
-    resources: Partial<FormStackResourceData>[];
-    provenance: Map<string, { addonName: string; credField?: string }>;
-  } => ({
-    resources: session.draft.resources,
-    provenance: new Map<string, { addonName: string; credField?: string }>(),
-  });
+    // session.start is a stable useCallback; session.isActive is the only reactive
+    // field we need from the session object itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDraft, stackToShow, canWriteStack, session.isActive, baselineResources, baselineVolumes, connectionAddonIds]);
 
   // ── Deploy lifecycle (page-level: drives the status bar across all tabs) ──
   const deployIds = useMemo(() => ({
@@ -258,6 +232,37 @@ export default function StackDetailPage() {
     teamName: (stackToShow ? teamNameById(stackToShow.team_id) : "") || defaultTeamName || "",
     stackId: stackToShow?.id || "",
   }), [stackToShow, teamNameById, defaultTeamName]);
+
+  // Autosave engine: debounces draft changes and syncs thin per-resource ops to
+  // the server. Disabled for drafts (nothing exists server-side to sync yet).
+  const draftSync = useDraftSync({
+    enabled: !isDraft && canWriteStack,
+    stack: stackToShow ?? undefined,
+    session,
+    ids: deployIds.stackId ? deployIds : null,
+    onStackRefreshed: (fresh) => {
+      setFetchedStack(fresh);
+      // Context write-through: stale currentStack must not win after a remote refresh.
+      setStacks(stacks.map((s) => (s.id === fresh.id ? fresh : s)));
+    },
+  });
+
+  // Live drawer validation: compute desired state from draft and expose zod issues
+  // per resource index. Issue paths are relative to the resource root (no
+  // ["spec","stack_resources",idx] prefix — drop that prefix at this boundary).
+  const desiredState = useMemo(() => buildDesiredState(session.draft), [session.draft]);
+
+  const validationErrors = useMemo(() => {
+    const resources: { [index: number]: { [field: string]: string | undefined } } = {};
+    desiredState.resourceIssues.forEach((issues, idx) => {
+      resources[idx] = {};
+      for (const issue of issues) {
+        const fieldKey = issue.path.join(".");
+        if (!resources[idx][fieldKey]) resources[idx][fieldKey] = issue.message;
+      }
+    });
+    return { resources, volumes: {} };
+  }, [desiredState.resourceIssues]);
 
   const releasesResult = useReleases({ ...deployIds, enabled: !!deployIds.stackId });
   const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.teamName, deployIds.stackId);
@@ -302,19 +307,18 @@ export default function StackDetailPage() {
     toast({ title: "Release ID copied" });
   }, [toast]);
 
-  const performSave = async () => {
-    if (!session.isActive) return;
-    if (!isDraft && !stackToShow) return;
-    setIsSaving(true);
+  // Draft create: validates name, creates the stack, and navigates to the new page.
+  const performCreate = async () => {
+    if (!isDraft) return;
+    setIsCreating(true);
     setNameError(undefined);
-    setValidationErrors({ resources: {}, volumes: {} });
 
     // A draft needs a name before it can be created. The stack name field is not
     // min-length-constrained in the schema (empty passes zod and only fails at
     // the API), so guard it here to surface the error inline on the title input.
-    if (isDraft && !draftName.trim()) {
+    if (!draftName.trim()) {
       setNameError("Required");
-      setIsSaving(false);
+      setIsCreating(false);
       toast({
         title: "Name your stack",
         description: "Give the stack a name before saving.",
@@ -327,52 +331,28 @@ export default function StackDetailPage() {
       const orgId = getCurrentOrganizationId();
       if (!orgId) throw new Error("Organization ID not found");
 
-      const detachResult = session.pendingDetach.size > 0 ? applyPendingDetach() : null;
-      const resources = (detachResult?.resources ?? session.draft.resources) as FormStackResourceData[];
-
-      const formStackData: FormStackData = isDraft
-        ? buildDraftFormData(draftName.trim(), draftLabels, resources, session.draft.volumes as VolumeFormData[])
-        : {
-          name: stackToShow!.name || "",
-          labels: stackToShow!.labels || [],
-          spec: { stack_resources: resources, volumes: session.draft.volumes as VolumeFormData[] },
-        };
+      const resources = session.draft.resources as FormStackResourceData[];
+      const formStackData: FormStackData = buildDraftFormData(
+        draftName.trim(),
+        draftLabels,
+        resources,
+        session.draft.volumes as VolumeFormData[],
+      );
 
       const validation = FormStackSchema.safeParse(formStackData);
       if (!validation.success) {
-        const nextErrors: typeof validationErrors = { resources: {}, volumes: {} };
-        let newNameError: string | undefined;
         const topLevelMessages: string[] = [];
+        let newNameError: string | undefined;
 
         for (const issue of validation.error.issues) {
-          const [scope0, scope1, idxRaw, ...rest] = issue.path;
-
-          // Name-field error → surface in the title input.
+          const [scope0] = issue.path;
           if (scope0 === "name") {
             newNameError = issue.message;
-            continue;
+          } else {
+            topLevelMessages.push(issue.message);
           }
-
-          // Per-resource / per-volume errors.
-          if (scope0 === "spec" && (scope1 === "stack_resources" || scope1 === "volumes")) {
-            const idx = typeof idxRaw === "number" ? idxRaw : Number(idxRaw);
-            if (Number.isNaN(idx)) {
-              // e.g. ["spec","stack_resources"] with no index → "add at least one resource"
-              topLevelMessages.push(issue.message);
-              continue;
-            }
-            const bucket = scope1 === "stack_resources" ? nextErrors.resources : nextErrors.volumes;
-            if (!bucket[idx]) bucket[idx] = {};
-            const fieldKey = rest.join(".");
-            if (!bucket[idx][fieldKey]) bucket[idx][fieldKey] = issue.message;
-            continue;
-          }
-
-          // Any other top-level issue.
-          topLevelMessages.push(issue.message);
         }
 
-        setValidationErrors(nextErrors);
         setNameError(newNameError);
         toast({
           title: "Validation error",
@@ -381,73 +361,35 @@ export default function StackDetailPage() {
             : "Please fix the highlighted errors before saving.",
           variant: "destructive",
         });
-        setIsSaving(false);
+        setIsCreating(false);
         return;
       }
 
-      const teamName = isDraft ? defaultTeamName : teamNameById(fetchedStack?.team_id ?? currentStack?.team_id);
+      const teamName = defaultTeamName;
       if (!teamName) {
         toast({
-          title: isDraft ? "No team available" : "Failed to update stack",
+          title: "No team available",
           description: "Could not resolve a team to save into.",
           variant: "destructive",
         });
-        setIsSaving(false);
+        setIsCreating(false);
         return;
       }
 
       const apiData = convertFormStackToApiStack(formStackData);
-      if (isDraft) {
-        const created = await createStack(orgId, teamName, apiData);
-        session.discard();
-        navigate(`/stacks/${created.id}`, { replace: true, state: null });
-        return;
-      }
-
-      // The stack PUT carries the full desired connection set in spec.connections;
-      // the backend replaces the connection set atomically (upsert-by-id) and
-      // returns the stack with its reconciled connections. No separate diff.
-      const updatedStack = await updateStack(orgId, teamName, id!, apiData);
-      setFetchedStack(updatedStack);
-
+      const created = await createStack(orgId, teamName, apiData);
       session.discard();
-
-      toast({
-        title: "Stack updated successfully",
-        description: "Your stack configuration has been saved.",
-        variant: "default"
-      });
-
+      navigate(`/stacks/${created.id}`, { replace: true, state: null });
     } catch (err) {
-      console.error('Failed to save stack:', err);
+      console.error('Failed to create stack:', err);
       toast({
-        title: "Failed to save stack",
+        title: "Failed to create stack",
         description: err instanceof Error ? err.message : "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
     } finally {
-      setIsSaving(false);
+      setIsCreating(false);
     }
-  };
-
-  const handleSave = () => {
-    if (!session.isActive) return;
-    if (session.pendingDetach.size > 0) {
-      setDetachConfirmOpen(true);
-      return;
-    }
-    const unbound = computeUnboundLinked();
-    if (unbound.length > 0) {
-      // Silently drop phantom links — addons that were added to the stack
-      // but never referenced in any env var. They have no API representation
-      // anyway (links are derived from env vars), so this is just cleanup.
-      session.setLinkedAddonIds((prev) => {
-        const next = new Set(prev);
-        for (const id of unbound) next.delete(id);
-        return next;
-      });
-    }
-    void performSave();
   };
 
   const handleNameChange = useCallback((name: string) => {
@@ -543,88 +485,54 @@ export default function StackDetailPage() {
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  const detachDialog = (
-    <AlertDialog open={detachConfirmOpen} onOpenChange={setDetachConfirmOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            Detach {session.pendingDetach.size} {session.pendingDetach.size === 1 ? "addon" : "addons"}?
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            Bound env keys will be converted to plain stack vars with their last-known values. Confirm to continue.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => {
-              setDetachConfirmOpen(false);
-              const unbound = computeUnboundLinked();
-              if (unbound.length > 0) {
-                session.setLinkedAddonIds((prev) => {
-                  const next = new Set(prev);
-                  for (const id of unbound) next.delete(id);
-                  return next;
-                });
-              }
-              void performSave();
-            }}
-          >
-            Confirm and detach
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-
   const dirtyTotal =
     session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size + session.dirty.addonLinkCount;
+
   return (
-    <>
-      <CanvasEditorShell
-        stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
-        isDraft={isDraft}
-        nameEditable={isDraft}
-        onNameChange={handleNameChange}
-        nameError={nameError}
-        labels={(isDraft ? draftLabels : effectiveStack?.labels) ?? []}
-        labelsEditable={isDraft}
-        onAddLabel={addDraftLabel}
-        onRemoveLabel={removeDraftLabel}
-        statusState={effectiveStack?.status?.state}
-        subtitle={subtitleText}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        isActive={session.isActive}
-        dirtyResourceCount={session.dirty.dirtyResourceIdx.size}
-        dirtyTotal={dirtyTotal}
-        isStaged={lifecycle.phase === "staged"}
-        isSaving={isSaving}
-        deployBusy={deployBusy}
-        canWrite={canWriteStack}
-        onSave={handleSave}
-        onDeploy={onDeploy}
-        onDiscardAll={() => session.discard()}
-        onEdit={() => activateEdit({})}
-        onDelete={() =>
-          toast({ title: "Not implemented", description: "Delete stack will land in a follow-up." })
-        }
-        configuration={
-          <StackCanvasTab
-            session={session}
-            baselineResources={baselineResources}
-            baselineVolumes={baselineVolumes}
-            connectionAddonIds={connectionAddonIds}
-            addonNameById={addonNameById}
-            errors={validationErrors.resources}
-            onViewLogs={() => setActiveTab("logs")}
-          />
-        }
-        deployments={deploymentsBody}
-        logs={logsBody}
-        metrics={metricsBody}
-      />
-      {detachDialog}
-    </>
+    <CanvasEditorShell
+      stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
+      isDraft={isDraft}
+      nameEditable={isDraft}
+      onNameChange={handleNameChange}
+      nameError={nameError}
+      labels={(isDraft ? draftLabels : effectiveStack?.labels) ?? []}
+      labelsEditable={isDraft}
+      onAddLabel={addDraftLabel}
+      onRemoveLabel={removeDraftLabel}
+      statusState={effectiveStack?.status?.state}
+      subtitle={subtitleText}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      isActive={session.isActive}
+      dirtyResourceCount={session.dirty.dirtyResourceIdx.size}
+      dirtyTotal={dirtyTotal}
+      isStaged={lifecycle.phase === "staged"}
+      syncStatus={isDraft ? SYNC_STATUS.idle : draftSync.status}
+      deployBusy={deployBusy}
+      canWrite={canWriteStack}
+      onCreate={() => void performCreate()}
+      isCreating={isCreating}
+      onDeploy={onDeploy}
+      onDiscardAll={() => session.discard()}
+      canDiscardDraft={false}
+      canDeleteStack={canWriteStack}
+      onDelete={() =>
+        toast({ title: "Not implemented", description: "Delete stack will land in a follow-up." })
+      }
+      configuration={
+        <StackCanvasTab
+          session={session}
+          baselineResources={baselineResources}
+          baselineVolumes={baselineVolumes}
+          connectionAddonIds={connectionAddonIds}
+          addonNameById={addonNameById}
+          errors={validationErrors.resources}
+          onViewLogs={() => setActiveTab("logs")}
+        />
+      }
+      deployments={deploymentsBody}
+      logs={logsBody}
+      metrics={metricsBody}
+    />
   );
 }
