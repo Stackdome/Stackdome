@@ -108,6 +108,24 @@ func (h *stackHandler) CreateConnection(w http.ResponseWriter, r *http.Request) 
 	handle(w, r, cfg, http.StatusCreated)
 }
 
+func (h *stackHandler) CreateVolume(w http.ResponseWriter, r *http.Request) {
+	var volume openapi.Volume
+	cfg := &handlerConfig{
+		MarshalInto: &volume,
+		Validate:    validation.ValidateVolume(&volume),
+		Action: func() (interface{}, *errors.ServiceError) {
+			stackID := mux.Vars(r)["id"]
+			obj, err := h.stackService.CreateStackVolume(r.Context(), stackID, presenters.ConvertVolume(&volume))
+			if err != nil {
+				return nil, err
+			}
+			return presenters.PresentVolume(obj, true), nil
+		},
+		ErrorHandler: handleError,
+	}
+	handle(w, r, cfg, http.StatusCreated)
+}
+
 func (h *stackHandler) UpdateConnection(w http.ResponseWriter, r *http.Request) {
 	var connection openapi.StackConnection
 	cfg := &handlerConfig{

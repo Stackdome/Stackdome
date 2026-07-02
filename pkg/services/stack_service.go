@@ -22,6 +22,7 @@ type StackService interface {
 	UpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	ListStackConnections(ctx context.Context, stackID string) (models.StackConnections, *errors.ServiceError)
 	CreateStackConnection(ctx context.Context, stackID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError)
+	CreateStackVolume(ctx context.Context, stackID string, volume *models.Volume) (*models.Volume, *errors.ServiceError)
 	UpdateStackConnection(ctx context.Context, stackID, connectionID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError)
 	DeleteStackConnection(ctx context.Context, stackID, connectionID string) *errors.ServiceError
 	UpdateStatus(ctx context.Context, ID string, status *models.StackStatus) *errors.ServiceError
@@ -323,6 +324,38 @@ func (s *stackService) ListStackConnections(ctx context.Context, stackID string)
 		return nil, err
 	}
 	return stack.Connections, nil
+}
+
+// CreateStackVolume creates a volume and associates it with the stack in one
+// transaction — the thin counterpart of the whole-stack PUT's volume sync.
+func (s *stackService) CreateStackVolume(ctx context.Context, stackID string, volume *models.Volume) (*models.Volume, *errors.ServiceError) {
+	stack, err := s.GetStack(ctx, stackID)
+	if err != nil {
+		return nil, err
+	}
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
+		return nil, permErr
+	}
+	for _, existing := range stack.Volumes {
+		if existing.Name == volume.Name {
+			return nil, errors.Conflict("a volume named '%s' already exists in this stack", volume.Name)
+		}
+	}
+
+	var created *models.Volume
+	txErr := s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		var serr *errors.ServiceError
+		created, serr = s.volumeService.InternalCreateWithTx(ctx, stack, volume)
+		return serr
+	})
+	if txErr != nil {
+		return nil, txErr
+	}
+
+	if enqErr := s.BackgroundJobEnqueuer.Enqueue(&models.Volume{ID: created.ID}); enqErr != nil {
+		return nil, errors.GeneralError("failed to enqueue volume '%s': %s", created.ID, enqErr.Error())
+	}
+	return created, nil
 }
 
 func (s *stackService) CreateStackConnection(ctx context.Context, stackID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
