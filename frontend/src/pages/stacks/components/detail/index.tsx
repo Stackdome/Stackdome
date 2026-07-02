@@ -14,7 +14,7 @@ import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditor
 import { DraftTabPlaceholder } from "@/pages/stacks/components/canvas/DraftTabPlaceholder";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
-import { createStack, getStackById } from "@/api/stacks";
+import { createStack, getStackById, deleteStack } from "@/api/stacks";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import { USER_DEFINED_LABEL_KEY } from "@/pages/stacks/lib/constants";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
@@ -292,6 +292,8 @@ export default function StackDetailPage() {
   const liveSnapshot = releaseDetail.peek(liveReleaseId).data?.snapshot;
 
   const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const stackRevert = useStackRevert({
     ids: deployIds.stackId ? deployIds : null,
@@ -432,6 +434,22 @@ export default function StackDetailPage() {
     }
   };
 
+  const performDelete = useCallback(async () => {
+    if (!deployIds) return;
+    setDeleting(true);
+    try {
+      await deleteStack(deployIds.orgId, deployIds.teamName, deployIds.stackId);
+      setStacks(stacks.filter((s) => s.id !== deployIds.stackId));
+      toast({ title: "Stack deleted", description: `"${stackToShow?.name}" was deleted.` });
+      navigate("/stacks");
+    } catch {
+      toast({ title: "Delete failed", description: "The stack could not be deleted.", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+      setDeleteConfirmOpen(false);
+    }
+  }, [deployIds, setStacks, stackToShow?.name, toast, navigate, stacks]);
+
   const handleNameChange = useCallback((name: string) => {
     setDraftName(name);
     setNameError(undefined);
@@ -558,9 +576,7 @@ export default function StackDetailPage() {
         canDiscardDraft={lifecycle.phase === "staged" && !!liveSnapshot && canWriteStack}
         onDiscardDraft={() => setRevertConfirmOpen(true)}
         canDeleteStack={canWriteStack}
-        onDelete={() =>
-          toast({ title: "Not implemented", description: "Delete stack will land in a follow-up." })
-        }
+        onDelete={() => setDeleteConfirmOpen(true)}
         configuration={
           <StackCanvasTab
             session={session}
@@ -604,6 +620,25 @@ export default function StackDetailPage() {
               disabled={stackRevert.reverting}
             >
             Discard draft
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete stack?</AlertDialogTitle>
+            <AlertDialogDescription>
+            This permanently deletes "{stackToShow?.name}", its resources, volumes and deployments. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void performDelete()}
+              disabled={deleting}
+            >
+            Delete stack
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
