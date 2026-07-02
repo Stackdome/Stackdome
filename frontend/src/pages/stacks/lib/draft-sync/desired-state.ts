@@ -9,7 +9,7 @@ import {
   type FormStackResourceData,
   type FormVolumeExtendedData,
 } from "@/pages/stacks/schemas/form-schema";
-import { buildDesiredConnections, type FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
+import { buildDesiredConnections, mountsToConnections, type FormEnvRow, type FormMountRow } from "@/pages/stacks/lib/connection-mapping";
 import { connectionIdentityKey } from "./server-state";
 
 /**
@@ -32,16 +32,24 @@ export function buildDesiredState(draft: EditSessionDraft): DesiredStackState {
   const held = new Set<string>();
   const resourceIssues = new Map<number, z.ZodIssue[]>();
   const validForConnections: { name: string; rows: FormEnvRow[] }[] = [];
+  const validForMounts: { name: string; mounts: FormMountRow[] }[] = [];
 
   draft.resources.forEach((raw, idx) => {
     const parsed = FormStackResourceSchema.safeParse(raw);
     if (parsed.success) {
       const data = parsed.data as FormStackResourceData;
       if (!data.name?.trim()) return; // unnamed: nothing to sync
-      resources.set(data.name, prepareFormResourceForApi(data));
+      // volume_mounts are fully represented as volume_mount connections — strip
+      // them from the resource payload to prevent phantom updateResource diffs
+      // (the server returns volume_mounts: [] while form state carries rows).
+      resources.set(data.name, { ...prepareFormResourceForApi(data), volume_mounts: undefined });
       validForConnections.push({
         name: data.name,
         rows: (data.execution_config?.environment_variables ?? []) as FormEnvRow[],
+      });
+      validForMounts.push({
+        name: data.name,
+        mounts: (data.volume_mounts ?? []) as FormMountRow[],
       });
       return;
     }
@@ -60,6 +68,12 @@ export function buildDesiredState(draft: EditSessionDraft): DesiredStackState {
   const connections = new Map<string, StackConnection>();
   for (const conn of buildDesiredConnections(validForConnections)) {
     connections.set(connectionIdentityKey(conn), conn);
+  }
+  // Add volume mount connections for each valid resource.
+  for (const { name, mounts } of validForMounts) {
+    for (const conn of mountsToConnections(name, mounts)) {
+      connections.set(connectionIdentityKey(conn), conn);
+    }
   }
 
   return { resources, held, volumes, connections, resourceIssues };

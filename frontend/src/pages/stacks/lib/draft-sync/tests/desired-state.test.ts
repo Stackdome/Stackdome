@@ -54,4 +54,45 @@ describe("buildDesiredState", () => {
     expect([...d.volumes.keys()]).toEqual(["web-data"]);
     expect((d.volumes.get("web-data") as Record<string, unknown>).sourceType).toBeUndefined();
   });
+
+  it("converts volume_mounts rows into volume_mount connections", () => {
+    const r = {
+      ...validResource,
+      volume_mounts: [{ source_volume_name: "web-data", target_path: "/data" }],
+    };
+    const d = buildDesiredState({ resources: [r], volumes: [] } as unknown as EditSessionDraft);
+    // 1 env-row secret connection + 1 volume_mount connection
+    expect(d.connections.size).toBe(2);
+    const vmConn = [...d.connections.values()].find((c) => c.kind === "volume_mount");
+    expect(vmConn).toBeDefined();
+    expect(vmConn?.from).toEqual({ type: "volume", name: "web-data" });
+    expect(vmConn?.to).toEqual({ type: "stack_resource", name: "web" });
+    expect((vmConn?.config as { mount_path?: string })?.mount_path).toBe("/data");
+  });
+
+  it("skips in-progress volume_mount rows missing source_volume_name or target_path", () => {
+    const r = {
+      ...validResource,
+      volume_mounts: [
+        { source_volume_name: "", target_path: "/data" }, // missing volume
+        { source_volume_name: "vol", target_path: "" },   // missing path
+      ],
+    };
+    const d = buildDesiredState({ resources: [r], volumes: [] } as unknown as EditSessionDraft);
+    const vmConns = [...d.connections.values()].filter((c) => c.kind === "volume_mount");
+    expect(vmConns).toHaveLength(0);
+  });
+
+  it("strips volume_mounts from desired resources to prevent phantom updateResource diffs", () => {
+    // The server always returns volume_mounts:[] on resources (mounts are stored
+    // as connections). If desired resources also strip volume_mounts, deepEqual
+    // sees no diff and emits no spurious updateResource on every autosave cycle.
+    const r = {
+      ...validResource,
+      volume_mounts: [{ source_volume_name: "web-data", target_path: "/data" }],
+    };
+    const d = buildDesiredState({ resources: [r], volumes: [] } as unknown as EditSessionDraft);
+    const web = d.resources.get("web")!;
+    expect(web.volume_mounts).toBeUndefined();
+  });
 });

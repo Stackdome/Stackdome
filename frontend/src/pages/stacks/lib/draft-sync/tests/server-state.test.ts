@@ -56,7 +56,16 @@ describe("serverStateFromStack", () => {
     expect(web).toBeDefined();
     expect((web as Record<string, unknown>).id).toBeUndefined();
     expect((web as Record<string, unknown>).status).toBeUndefined();
-    expect(web.volume_mounts?.[0]).toEqual({ source_volume_name: "web-data", target_path: "/data" });
+    // volume_mounts are stripped — they are now represented as volume_mount
+    // connections, not as a field on the resource.
+    expect(web.volume_mounts).toBeUndefined();
+  });
+
+  it("strips volume_mounts from server resource to prevent phantom updateResource diffs", () => {
+    // Server returns volume_mounts:[] on the resource while the desired state
+    // also strips them. Both sides become undefined → deepEqual returns true → no op.
+    const s = serverStateFromStack(stack);
+    expect(s.resourcesByName.get("web")?.volume_mounts).toBeUndefined();
   });
 
   it("indexes volumes by name and maps ids", () => {

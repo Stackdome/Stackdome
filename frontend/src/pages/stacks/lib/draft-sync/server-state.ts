@@ -40,12 +40,11 @@ export function connectionIdentityKey(c: StackConnection): string {
 export function cleanServerResource(r: StackResource): StackResourceUpdateRequest {
   const { id, stack_id, revision, status, outputs, ...rest } = r as StackResource & { outputs?: unknown };
   void id; void stack_id; void revision; void status; void outputs;
-  const volume_mounts = rest.volume_mounts?.map((m) => {
-    const { stack_resource_id, source_volume_type, ...mount } = m as Record<string, unknown>;
-    void stack_resource_id; void source_volume_type;
-    return mount;
-  });
-  return { ...rest, volume_mounts } as StackResourceUpdateRequest;
+  // volume_mounts are stored as volume_mount connections since the volume_mounts
+  // table was dropped. The server always returns volume_mounts: [] on resources,
+  // while the desired state strips them too — both sides must be undefined so
+  // deepEqual sees no phantom diff on every autosave cycle.
+  return { ...rest, volume_mounts: undefined } as StackResourceUpdateRequest;
 }
 
 function cleanServerVolume(v: Volume): VolumeUpdateRequest {

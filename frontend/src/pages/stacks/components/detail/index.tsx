@@ -23,6 +23,7 @@ import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/u
 import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
 import {
   connectionsToEnvRows,
+  connectionsToMounts,
 } from "@/pages/stacks/lib/connection-mapping";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
@@ -170,13 +171,19 @@ export default function StackDetailPage() {
     return (stackToShow?.spec?.stack_resources || []).map((r) => {
       const form = mapStackResourceToFormData(r);
       const connRows = connectionsToEnvRows(form.name ?? "", connections) as FormEnvVarData[];
-      if (connRows.length === 0) return form;
+      // Populate volume_mounts from volume_mount connections — the server always
+      // returns resource.volume_mounts as [] since mounts are stored in connections.
+      const mountRows = connectionsToMounts(form.name ?? "", connections);
+      // connectionsToMounts only emits rows with all required fields present (it
+      // skips malformed connections), so the cast to the strict form type is safe.
+      const withMounts: FormStackResourceData = { ...form, volume_mounts: mountRows as FormStackResourceData["volume_mounts"] };
+      if (connRows.length === 0) return withMounts;
       return {
-        ...form,
+        ...withMounts,
         execution_config: {
-          ...(form.execution_config ?? {}),
+          ...(withMounts.execution_config ?? {}),
           environment_variables: [
-            ...((form.execution_config?.environment_variables ?? []) as FormEnvVarData[]),
+            ...((withMounts.execution_config?.environment_variables ?? []) as FormEnvVarData[]),
             ...connRows,
           ],
         },

@@ -129,4 +129,71 @@ describe("computeSyncOps", () => {
     server.connections.set("k", { id: undefined, conn: secretConn("web") });
     expect(computeSyncOps(server, emptyDesired())).toEqual([]);
   });
+
+  // ── Config-aware update tests ─────────────────────────────────────────────
+
+  const vmConn = (mountPath: string, subPath?: string) => ({
+    kind: "volume_mount",
+    from: { type: "volume", name: "web-data" },
+    to: { type: "stack_resource", name: "web" },
+    config: { mount_path: mountPath, ...(subPath ? { sub_path: subPath } : {}) },
+  }) as never;
+
+  const vmKey = "volume_mount|volume:web-data|stack_resource:web|db:";
+
+  it("emits updateConnection when mount_path config changes", () => {
+    const server = emptyServer();
+    server.resourcesByName.set("web", webResource);
+    server.connections.set(vmKey, { id: "vm-1", conn: vmConn("/data") });
+    const desired = emptyDesired();
+    desired.resources.set("web", webResource);
+    desired.connections.set(vmKey, vmConn("/mnt/data"));
+    const ops = computeSyncOps(server, desired);
+    expect(ops).toEqual([{ kind: "updateConnection", id: "vm-1", identityKey: vmKey, conn: vmConn("/mnt/data") }]);
+  });
+
+  it("emits updateConnection when sub_path is added to config", () => {
+    const server = emptyServer();
+    server.resourcesByName.set("web", webResource);
+    server.connections.set(vmKey, { id: "vm-1", conn: vmConn("/data") });
+    const desired = emptyDesired();
+    desired.resources.set("web", webResource);
+    desired.connections.set(vmKey, vmConn("/data", "logs"));
+    const ops = computeSyncOps(server, desired);
+    expect(ops).toHaveLength(1);
+    expect(ops[0].kind).toBe("updateConnection");
+  });
+
+  it("emits no op when volume_mount connection config is unchanged", () => {
+    const server = emptyServer();
+    server.resourcesByName.set("web", webResource);
+    server.connections.set(vmKey, { id: "vm-1", conn: vmConn("/data", "sub") });
+    const desired = emptyDesired();
+    desired.resources.set("web", webResource);
+    desired.connections.set(vmKey, vmConn("/data", "sub"));
+    expect(computeSyncOps(server, desired)).toEqual([]);
+  });
+
+  it("does not delete a server volume_mount connection that is present in desired", () => {
+    const server = emptyServer();
+    server.resourcesByName.set("web", webResource);
+    server.connections.set(vmKey, { id: "vm-1", conn: vmConn("/data") });
+    const desired = emptyDesired();
+    desired.resources.set("web", webResource);
+    desired.connections.set(vmKey, vmConn("/data"));
+    const ops = computeSyncOps(server, desired);
+    expect(ops.some((o) => o.kind === "deleteConnection")).toBe(false);
+  });
+
+  it("deletes a server volume_mount connection absent from desired (mount row removed)", () => {
+    const server = emptyServer();
+    server.resourcesByName.set("web", webResource);
+    server.connections.set(vmKey, { id: "vm-1", conn: vmConn("/data") });
+    const desired = emptyDesired();
+    desired.resources.set("web", webResource);
+    // no volume_mount connection in desired → should be deleted
+    expect(computeSyncOps(server, desired)).toEqual([
+      { kind: "deleteConnection", id: "vm-1", identityKey: vmKey },
+    ]);
+  });
 });

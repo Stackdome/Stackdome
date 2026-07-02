@@ -54,7 +54,12 @@ export function computeSyncOps(server: ServerStackState, desired: DesiredStackSt
   for (const [key, entry] of server.connections) {
     const want = desired.connections.get(key);
     if (want) {
-      if (entry.id && !deepEqual(entry.conn.mappings ?? [], want.mappings ?? [])) {
+      // Compare both mappings and config — volume_mount connections carry their
+      // mount_path / sub_path in config with no mappings, so a config-only
+      // diff (e.g. mount_path change) must still produce an updateConnection.
+      const serverContent = { m: entry.conn.mappings ?? [], c: entry.conn.config ?? {} };
+      const wantContent = { m: want.mappings ?? [], c: want.config ?? {} };
+      if (entry.id && !deepEqual(serverContent, wantContent)) {
         updateConnections.push({ kind: "updateConnection", id: entry.id, identityKey: key, conn: want });
       }
       continue;
