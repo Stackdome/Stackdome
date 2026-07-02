@@ -62,7 +62,7 @@ export function CanvasEditor({
   onLinkAddon,
 }: CanvasEditorProps) {
   return (
-    <div className="h-full w-full" data-testid="stack-canvas">
+    <div className="relative h-full w-full" data-testid="stack-canvas">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -80,16 +80,6 @@ export function CanvasEditor({
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
-        {nodes.length === 0 && (
-          <Panel position="top-center">
-            <div className="mt-24 text-center">
-              <p className="text-sm font-medium text-foreground">No resources yet</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">
-                Use <span className="font-medium text-foreground">+ Add resource</span> to start building your stack.
-              </p>
-            </div>
-          </Panel>
-        )}
         <CanvasControls
           showConnections={showConnections}
           onToggleConnections={onToggleConnections}
@@ -113,6 +103,14 @@ export function CanvasEditor({
           </Panel>
         )}
       </ReactFlow>
+      {nodes.length === 0 && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center text-center">
+          <p className="text-sm font-medium text-foreground">No resources yet</p>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Use <span className="font-medium text-foreground">+ Add resource</span> to start building your stack.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
