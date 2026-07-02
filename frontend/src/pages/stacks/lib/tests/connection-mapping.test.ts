@@ -227,6 +227,18 @@ describe("mountsToConnections", () => {
     expect(conn.config).toEqual({ mount_path: "/logs", sub_path: "logs" });
   });
 
+  it("includes read_only in config when set on row", () => {
+    const mounts: FormMountRow[] = [{ source_volume_name: "v", target_path: "/data", read_only: true }];
+    const [conn] = mountsToConnections("web", mounts);
+    expect(conn.config).toEqual({ mount_path: "/data", read_only: true });
+  });
+
+  it("omits read_only from config when undefined on row", () => {
+    const mounts: FormMountRow[] = [{ source_volume_name: "v", target_path: "/data" }];
+    const [conn] = mountsToConnections("web", mounts);
+    expect((conn.config as Record<string, unknown>).read_only).toBeUndefined();
+  });
+
   it("skips in-progress rows missing source_volume_name", () => {
     const mounts: FormMountRow[] = [{ source_volume_name: "", target_path: "/data" }];
     expect(mountsToConnections("web", mounts)).toHaveLength(0);
@@ -253,12 +265,22 @@ describe("mountsToConnections", () => {
 });
 
 describe("connectionsToMounts", () => {
-  const mountConn = (volName: string, resourceName: string, mountPath: string, subPath?: string): StackConnection => ({
+  const mountConn = (
+    volName: string,
+    resourceName: string,
+    mountPath: string,
+    subPath?: string,
+    readOnly?: boolean,
+  ): StackConnection => ({
     id: "vm-1",
     kind: "volume_mount",
     from: { type: "volume", name: volName },
     to: { type: "stack_resource", name: resourceName },
-    config: { mount_path: mountPath, ...(subPath ? { sub_path: subPath } : {}) },
+    config: {
+      mount_path: mountPath,
+      ...(subPath ? { sub_path: subPath } : {}),
+      ...(readOnly !== undefined ? { read_only: readOnly } : {}),
+    },
   });
 
   it("expands a volume_mount connection into a mount row", () => {
@@ -285,6 +307,16 @@ describe("connectionsToMounts", () => {
     expect(connectionsToMounts("web", [envConn])).toHaveLength(0);
   });
 
+  it("carries read_only: true from config into row", () => {
+    const rows = connectionsToMounts("web", [mountConn("v", "web", "/data", undefined, true)]);
+    expect(rows[0].read_only).toBe(true);
+  });
+
+  it("omits read_only from row when absent in config", () => {
+    const rows = connectionsToMounts("web", [mountConn("v", "web", "/data")]);
+    expect(rows[0].read_only).toBeUndefined();
+  });
+
   it("round-trips through mountsToConnections → connectionsToMounts", () => {
     const original: FormMountRow[] = [
       { source_volume_name: "vol-a", source_sub_path: "sub", target_path: "/mnt/a" },
@@ -293,6 +325,16 @@ describe("connectionsToMounts", () => {
     const conns = mountsToConnections("web", original);
     const recovered = connectionsToMounts("web", conns);
     expect(recovered).toEqual(original);
+  });
+
+  it("round-trips read_only: true through mountsToConnections → connectionsToMounts", () => {
+    const original: FormMountRow[] = [
+      { source_volume_name: "vol-a", source_sub_path: "logs", target_path: "/mnt/a", read_only: true },
+    ];
+    const conns = mountsToConnections("web", original);
+    const recovered = connectionsToMounts("web", conns);
+    expect(recovered).toEqual(original);
+    expect(recovered[0].read_only).toBe(true);
   });
 
   it("two mounts of the same volume to the same resource produce the same identity key (collide like the backend)", () => {

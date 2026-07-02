@@ -153,6 +153,7 @@ export type FormMountRow = {
   source_volume_name?: string;
   source_sub_path?: string;
   target_path?: string;
+  read_only?: boolean;
 };
 
 type VolumeMountCfg = { mount_path?: string; sub_path?: string; read_only?: boolean };
@@ -172,6 +173,7 @@ export function mountsToConnections(resourceName: string, mounts: FormMountRow[]
       config: {
         mount_path: m.target_path,
         ...(m.source_sub_path ? { sub_path: m.source_sub_path } : {}),
+        ...(m.read_only !== undefined ? { read_only: m.read_only } : {}),
       },
     });
   }
@@ -193,6 +195,7 @@ export function connectionsToMounts(resourceName: string, connections: StackConn
       source_volume_name: c.from.name,
       source_sub_path: vmcfg.sub_path ?? "",
       target_path: vmcfg.mount_path,
+      ...(vmcfg.read_only !== undefined ? { read_only: vmcfg.read_only } : {}),
     });
   }
   return rows;

@@ -196,4 +196,59 @@ describe("computeSyncOps", () => {
       { kind: "deleteConnection", id: "vm-1", identityKey: vmKey },
     ]);
   });
+
+  // Finding 1: read_only round-trip — server conn with read_only:true, desired from
+  // round-tripped row → shapes match → NO op (no spurious updateConnection).
+  it("emits no op when volume_mount connection with read_only:true is unchanged", () => {
+    const vmConnRO = {
+      kind: "volume_mount",
+      from: { type: "volume", name: "web-data" },
+      to: { type: "stack_resource", name: "web" },
+      config: { mount_path: "/data", sub_path: "logs", read_only: true },
+    } as never;
+    const server = emptyServer();
+    server.resourcesByName.set("web", webResource);
+    server.connections.set(vmKey, { id: "vm-1", conn: vmConnRO });
+    const desired = emptyDesired();
+    desired.resources.set("web", webResource);
+    desired.connections.set(vmKey, vmConnRO);
+    expect(computeSyncOps(server, desired)).toEqual([]);
+  });
+
+  // Finding 2: addon-config comparison — server and desired both carry { superuser: true };
+  // deep-equal must hold so no spurious updateConnection is emitted.
+  it("emits no op for unchanged addon connection with superuser config", () => {
+    const addonConn = {
+      kind: "env",
+      from: { type: "addon/postgres", id: "a-1" },
+      to: { type: "stack_resource", name: "web" },
+      config: { superuser: true },
+      mappings: [{ target: { type: "env", name: "PG_URL" }, value: { output: "url" } }],
+    } as never;
+    const addonKey = "env|addon/postgres:a-1|stack_resource:web|superuser";
+    const server = emptyServer();
+    server.resourcesByName.set("web", webResource);
+    server.connections.set(addonKey, { id: "c-1", conn: addonConn });
+    const desired = emptyDesired();
+    desired.resources.set("web", webResource);
+    desired.connections.set(addonKey, addonConn);
+    expect(computeSyncOps(server, desired)).toEqual([]);
+  });
+
+  // Finding 3: held-resource volume_mount — server has a volume_mount connection to "api";
+  // desired omits "api" and marks it held → connection must NOT be deleted.
+  it("does not delete a volume_mount connection to a held resource", () => {
+    const apiVmConn = {
+      kind: "volume_mount",
+      from: { type: "volume", name: "api-data" },
+      to: { type: "stack_resource", name: "api" },
+      config: { mount_path: "/data" },
+    } as never;
+    const apiVmKey = "volume_mount|volume:api-data|stack_resource:api|db:";
+    const server = emptyServer();
+    server.connections.set(apiVmKey, { id: "vm-2", conn: apiVmConn });
+    const desired = emptyDesired();
+    desired.held.add("api");
+    expect(computeSyncOps(server, desired)).toEqual([]);
+  });
 });
