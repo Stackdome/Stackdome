@@ -117,6 +117,13 @@ describe("computeSyncOps", () => {
     expect(computeSyncOps(server, desired)).toEqual([]);
   });
 
+  it("does not create new connections to a held resource", () => {
+    const desired = emptyDesired();
+    desired.held.add("api");
+    desired.connections.set("k", secretConn("api")); // desired connection, but target is held
+    expect(computeSyncOps(emptyServer(), desired)).toEqual([]);
+  });
+
   it("skips a server connection without an id for update/delete (heals on next refetch)", () => {
     const server = emptyServer();
     server.connections.set("k", { id: undefined, conn: secretConn("web") });
