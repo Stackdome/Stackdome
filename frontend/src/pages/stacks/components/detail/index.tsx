@@ -587,7 +587,20 @@ export default function StackDetailPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Keep editing</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => void stackRevert.revert()}
+              onClick={() => {
+                void (async () => {
+                  // Flush any pending autosave before reverting (don't block on failure)
+                  await draftSync.flush();
+                  const ok = await stackRevert.revert();
+                  if (!ok) {
+                    toast({
+                      title: "Discard failed",
+                      description: "The stack may be partially reverted. Reload the page to see its current state.",
+                      variant: "destructive",
+                    });
+                  }
+                })();
+              }}
               disabled={stackRevert.reverting}
             >
             Discard draft
