@@ -64,8 +64,10 @@ export function deepEqual(a: unknown, b: unknown): boolean {
 
   const ao = a as Record<string, unknown>;
   const bo = b as Record<string, unknown>;
-  const aKeys = Object.keys(ao).filter((k) => ao[k] !== undefined);
-  const bKeys = Object.keys(bo).filter((k) => bo[k] !== undefined);
+  // Exclude structurally-empty values (undefined, [], {}) so that server fields
+  // like `depends_on: []` compare equal to missing form fields.
+  const aKeys = Object.keys(ao).filter((k) => !isStructurallyEmpty(ao[k]));
+  const bKeys = Object.keys(bo).filter((k) => !isStructurallyEmpty(bo[k]));
   if (aKeys.length !== bKeys.length) return false;
   for (const k of aKeys) {
     if (!deepEqual(ao[k], bo[k])) return false;
