@@ -290,10 +290,19 @@ export default function StackDetailPage() {
     }
   }, [toast, refetchReleases]);
 
-  const onDeploy = useCallback(
-    () => runDeploy(() => createRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId), "Deploy started"),
-    [runDeploy, deployIds],
-  );
+  const onDeploy = useCallback(async () => {
+    if (!draftSync || !deployIds.stackId) return;
+    const flushed = await draftSync.flush();
+    if (!flushed) {
+      toast({
+        title: "Deploy blocked",
+        description: "Draft changes failed to save. Fix the save error and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    runDeploy(() => createRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId), "Deploy started");
+  }, [draftSync, deployIds, runDeploy, toast]);
   const onCancelDeploy = useCallback(
     (releaseId: string) => runDeploy(() => cancelRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId, releaseId), "Release cancelled"),
     [runDeploy, deployIds],
