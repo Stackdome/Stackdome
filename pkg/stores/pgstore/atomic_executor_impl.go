@@ -22,11 +22,13 @@ func (a *atomicExecutor) WithTransaction(ctx context.Context, fn func(ctx contex
 		tx      *gorm.DB
 		txCtx   context.Context
 		isOwner bool
+		hooks   *db.PostCommitHooks
 	)
 	tx = db.TxFromContext(ctx)
 	if tx == nil {
 		tx = a.sessionFactory.New(ctx).Begin()
 		txCtx = db.CtxWithTransaction(ctx, tx)
+		txCtx, hooks = db.CtxWithPostCommitHooks(txCtx)
 		isOwner = true
 	} else {
 		txCtx = ctx
@@ -53,6 +55,7 @@ func (a *atomicExecutor) WithTransaction(ctx context.Context, fn func(ctx contex
 			tx.Rollback()
 			return errors.GeneralError("failed to commit transaction: %s", err.Error())
 		}
+		hooks.Run()
 	}
 	return nil
 }

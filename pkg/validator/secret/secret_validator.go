@@ -35,7 +35,11 @@ func (s *secretValidator) ValidateSecretData(secret *models.Secret) *errors.Serv
 		return errors.BadRequest("secret data cannot be empty")
 	}
 
-	switch secret.Type {
+	return s.ValidateSecretType(secret.Type, secret)
+}
+
+func (s *secretValidator) ValidateSecretType(secretType models.SecretType, secret *models.Secret) *errors.ServiceError {
+	switch secretType {
 	case models.SecretTypeDockerRegistry:
 		return s.validateDockerRegistrySecret(secret)
 	case models.SecretTypeGitCredentials:
@@ -49,7 +53,7 @@ func (s *secretValidator) ValidateSecretData(secret *models.Secret) *errors.Serv
 	case models.SecretTypeGeneric:
 		return s.validateGenericSecret(secret)
 	default:
-		return errors.BadRequest("unsupported secret type: %s", secret.Type)
+		return errors.BadRequest("unsupported secret type: %s", secretType)
 	}
 }
 
@@ -91,6 +95,10 @@ func (s *secretValidator) validateGitCredentialsSecret(secret *models.Secret) *e
 	}
 
 	return nil
+}
+
+func (s *secretValidator) ValidateGitCredentialsSecret(secret *models.Secret) *errors.ServiceError {
+	return s.validateGitCredentialsSecret(secret)
 }
 
 // validateUsernamePasswordSecret validates username/password secret data

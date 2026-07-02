@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
+	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	workerlib "github.com/ashishmax31/stackdome-api-server/pkg/worker"
 )
@@ -29,6 +31,7 @@ type WorkerManager interface {
 type BackgroundJobEnqueuer interface {
 	Enqueue(operand interface{}) error
 	EnqueueAfter(operand interface{}, after time.Duration) error
+	EnqueueAfterCommit(ctx context.Context, operand interface{}) error
 }
 
 type WorkerManagerSpec struct {
@@ -111,6 +114,17 @@ func (s *serviceWorkerManager) EnqueueAfter(operand interface{}, after time.Dura
 	return nil
 }
 
+func (s *serviceWorkerManager) EnqueueAfterCommit(ctx context.Context, operand interface{}) error {
+	worker := s.Find(operand)
+	if worker == nil {
+		return fmt.Errorf("worker not registered for '%s' type", reflect.TypeOf(operand).String())
+	}
+	db.OnPostCommit(ctx, func() {
+		worker.EnqueueNow(operand)
+	})
+	return nil
+}
+
 func (s *serviceWorkerManager) Find(operand interface{}) workerlib.Worker {
 	if worker, found := s.registeredWorkers[reflect.TypeOf(operand)]; found {
 		return worker
@@ -135,6 +149,7 @@ func (s *serviceWorkerManager) startWorker(ctx context.Context, worker workerlib
 }
 
 func (s *serviceWorkerManager) populateWorkerQueue(ctx context.Context, worker workerlib.Worker) {
+	ctx = withSystemIdentity(ctx)
 	worker.Logger().Infof("populating queue once for worker: %s", worker.Name())
 	operandList, err := worker.GetInput(ctx)
 	if err != nil {
@@ -194,8 +209,13 @@ func (s *serviceWorkerManager) startPeriodicWorkEnqueue(ctx context.Context,
 		}
 	}
 }
+func withSystemIdentity(ctx context.Context) context.Context {
+	return auth.SetIdentityInContext(ctx, &auth.Identity{IsSystem: true})
+}
+
 func (s *serviceWorkerManager) getWorkerInput(
 	ctx context.Context, worker workerlib.Worker) (res []workerlib.Operand, err error) {
+	ctx = withSystemIdentity(ctx)
 	defer func() {
 		if panicErr := recover(); panicErr != nil {
 			{
@@ -214,6 +234,7 @@ func (s *serviceWorkerManager) getWorkerInput(
 
 func (s *serviceWorkerManager) workerExecute(
 	ctx context.Context, worker workerlib.Worker, operand workerlib.Operand) (res workerlib.Result, err error) {
+	ctx = withSystemIdentity(ctx)
 	defer func() {
 		if panicErr := recover(); panicErr != nil {
 			{

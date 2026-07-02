@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/clients"
+	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stackrelease"
@@ -21,6 +21,7 @@ type StackReleaseService interface {
 	CancelRelease(ctx context.Context, releaseID string) *errors.ServiceError
 
 	// Internal methods are called by workers and controllers; no permission checks.
+	InternalCreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError)
 	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
 	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
 	InternalListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
@@ -68,6 +69,10 @@ func (s *stackReleaseService) CreateRelease(ctx context.Context, stackID string,
 		return nil, sErr
 	}
 
+	if labels := stack.Labels.ToMap(); labels[models.PreviewStackLabel] == "true" {
+		return nil, errors.BadRequest("cannot create releases on preview-managed stacks; use the preview sync API")
+	}
+
 	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
@@ -76,6 +81,24 @@ func (s *stackReleaseService) CreateRelease(ctx context.Context, stackID string,
 		return nil, errors.BadRequest("cannot create release for a stack that is being deleted")
 	}
 
+	identity := auth.GetIdentityFromCtx(ctx)
+	return s.createReleaseForStack(ctx, stack, cause, identity.UserID)
+}
+
+func (s *stackReleaseService) InternalCreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError) {
+	stack, sErr := s.stackQuery.InternalGetStack(ctx, stackID)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	if stack.DeletionTimestamp != nil {
+		return nil, errors.BadRequest("cannot create release for a stack that is being deleted")
+	}
+
+	return s.createReleaseForStack(ctx, stack, cause, models.ReleaseCreatedByPreviewSync)
+}
+
+func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *models.Stack, cause models.ReleaseCause, createdBy string) (*models.StackRelease, *errors.ServiceError) {
 	snapshot, err := models.NewStackSnapshot(stack)
 	if err != nil {
 		return nil, errors.GeneralError("failed to create stack snapshot: %s", err.Error())
@@ -92,11 +115,8 @@ func (s *stackReleaseService) CreateRelease(ctx context.Context, stackID string,
 		return nil, errors.GeneralError("failed to compute snapshot revision: %s", err.Error())
 	}
 
-	identity := auth.GetIdentityFromCtx(ctx)
-	createdBy := identity.UserID
-
 	release := &models.StackRelease{
-		StackID:          stackID,
+		StackID:          stack.ID,
 		State:            models.ReleaseStatePending,
 		Cause:            cause,
 		Snapshot:         snapshot,
@@ -117,13 +137,14 @@ func (s *stackReleaseService) CreateRelease(ctx context.Context, stackID string,
 		return nil, txErr
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.StackRelease{ID: created.ID}); err != nil {
+	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.StackRelease{ID: created.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue release: %s", err.Error())
 	}
 	return created, nil
 }
 
-func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, fromReleaseID string) (*models.StackRelease, *errors.ServiceError) {
+func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, fromReleaseID string) (
+	*models.StackRelease, *errors.ServiceError) {
 	src, sErr := s.store.GetByID(ctx, fromReleaseID)
 	if sErr != nil {
 		return nil, sErr
@@ -142,6 +163,11 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 	if sErr != nil {
 		return nil, sErr
 	}
+
+	if labels := stack.Labels.ToMap(); labels[models.PreviewStackLabel] == "true" {
+		return nil, errors.BadRequest("cannot roll back a stack that is managed by preview sync")
+	}
+
 	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
@@ -184,7 +210,7 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 		return nil, txErr
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.StackRelease{ID: created.ID}); err != nil {
+	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.StackRelease{ID: created.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue release: %s", err.Error())
 	}
 	return created, nil
@@ -366,10 +392,10 @@ func (s *stackReleaseService) resolveGitSHA(ctx context.Context, res *models.Sta
 	return "", errors.GeneralError("resource '%s': git revision has no commit, tag, or branch", res.Name)
 }
 
-func (s *stackReleaseService) gitClientForResource(ctx context.Context, res *models.StackResource) (clients.GitClient, error) {
+func (s *stackReleaseService) gitClientForResource(ctx context.Context, res *models.StackResource) (gitclient.GitClient, error) {
 	gitSource := res.BuildConfig.SourceContext.Git
 	if gitSource.GitSecretRef == nil {
-		return clients.NewGitClientAnonymous()
+		return gitclient.NewGitClientForRepo(gitSource.RepoURL, gitclient.GitCredentials{})
 	}
 
 	secret, serr := s.secretService.InternalGetByID(ctx, gitSource.GitSecretRef.SecretID)
@@ -378,9 +404,15 @@ func (s *stackReleaseService) gitClientForResource(ctx context.Context, res *mod
 	}
 
 	if token, ok := secret.Data[models.TokenSecretKey]; ok {
-		return clients.NewGitClientWithToken(token)
+		return gitclient.NewGitClientForRepo(gitSource.RepoURL, gitclient.GitCredentials{Token: token})
 	}
-	return clients.NewGitClient(secret.Data[models.UsernameSecretKey], secret.Data[models.PasswordSecretKey])
+	return gitclient.NewGitClientForRepo(
+		gitSource.RepoURL,
+		gitclient.GitCredentials{
+			Username: secret.Data[models.UsernameSecretKey],
+			Password: secret.Data[models.PasswordSecretKey],
+		},
+	)
 }
 
 func applyPinsToSnapshot(snapshot *models.StackSnapshot, pins models.ReleasePins) {

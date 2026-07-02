@@ -1,0 +1,13 @@
+name: build-stack
+
+resources:
+  api:
+    build:
+      repo: https://github.com/myorg/myapp.git
+      branch: develop
+      dockerfile: docker/Dockerfile.prod
+      context: ./backend
+    ports:
+      - name: http
+        port: 3000
+        public: true

@@ -173,6 +173,16 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1UsersCurrentGet**](docs/DefaultApi.md#apiv1userscurrentget) | **Get** /api/v1/users/current | Get the current authenticated user
 *DefaultApi* | [**ApiV1UsersCurrentTeamsGet**](docs/DefaultApi.md#apiv1userscurrentteamsget) | **Get** /api/v1/users/current/teams | List teams for the current authenticated user
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
+*PreviewConfigsApi* | [**CreatePreviewConfig**](docs/PreviewConfigsApi.md#createpreviewconfig) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs | Create a new preview config
+*PreviewConfigsApi* | [**DeletePreviewConfig**](docs/PreviewConfigsApi.md#deletepreviewconfig) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id} | Delete a preview config
+*PreviewConfigsApi* | [**GetPreviewConfig**](docs/PreviewConfigsApi.md#getpreviewconfig) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id} | Get a specific preview config
+*PreviewConfigsApi* | [**ListPreviewConfigs**](docs/PreviewConfigsApi.md#listpreviewconfigs) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs | List preview configs for a team
+*PreviewConfigsApi* | [**UpdatePreviewConfig**](docs/PreviewConfigsApi.md#updatepreviewconfig) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id} | Update a preview config
+*PreviewStacksApi* | [**CreatePreviewStack**](docs/PreviewStacksApi.md#createpreviewstack) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks | Create a new preview stack
+*PreviewStacksApi* | [**DeletePreviewStack**](docs/PreviewStacksApi.md#deletepreviewstack) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id} | Delete a preview stack
+*PreviewStacksApi* | [**GetPreviewStack**](docs/PreviewStacksApi.md#getpreviewstack) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id} | Get a specific preview stack
+*PreviewStacksApi* | [**ListPreviewStacks**](docs/PreviewStacksApi.md#listpreviewstacks) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks | List preview stacks for a team
+*PreviewStacksApi* | [**SyncPreviewStack**](docs/PreviewStacksApi.md#syncpreviewstack) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id}/sync | Sync a preview stack
 *ReleasesApi* | [**CancelRelease**](docs/ReleasesApi.md#cancelrelease) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel | Cancel a pending or rendering release
 *ReleasesApi* | [**CreateRelease**](docs/ReleasesApi.md#createrelease) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases | Create a new release (deploy)
 *ReleasesApi* | [**GetRelease**](docs/ReleasesApi.md#getrelease) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id} | Get a release by ID
@@ -282,6 +292,14 @@ Class | Method | HTTP request | Description
  - [PostgresResourcesMemory](docs/PostgresResourcesMemory.md)
  - [PostgresStorage](docs/PostgresStorage.md)
  - [PostgresVersion](docs/PostgresVersion.md)
+ - [PreviewGitRepository](docs/PreviewGitRepository.md)
+ - [PreviewStack](docs/PreviewStack.md)
+ - [PreviewStackCreate](docs/PreviewStackCreate.md)
+ - [PreviewStackList](docs/PreviewStackList.md)
+ - [PreviewStackStatus](docs/PreviewStackStatus.md)
+ - [PreviewStackStatusOutputs](docs/PreviewStackStatusOutputs.md)
+ - [PreviewStackStatusOutputsUrlsInner](docs/PreviewStackStatusOutputsUrlsInner.md)
+ - [PreviewStackSync](docs/PreviewStackSync.md)
  - [PromoteAdminRequest](docs/PromoteAdminRequest.md)
  - [RefreshTokenRequest](docs/RefreshTokenRequest.md)
  - [RefreshTokenResponse](docs/RefreshTokenResponse.md)
@@ -310,6 +328,10 @@ Class | Method | HTTP request | Description
  - [StackConnectionList](docs/StackConnectionList.md)
  - [StackConvergenceRecord](docs/StackConvergenceRecord.md)
  - [StackList](docs/StackList.md)
+ - [StackPreviewConfig](docs/StackPreviewConfig.md)
+ - [StackPreviewConfigCreate](docs/StackPreviewConfigCreate.md)
+ - [StackPreviewConfigList](docs/StackPreviewConfigList.md)
+ - [StackPreviewConfigUpdate](docs/StackPreviewConfigUpdate.md)
  - [StackRelease](docs/StackRelease.md)
  - [StackReleaseDetail](docs/StackReleaseDetail.md)
  - [StackReleaseDetailAllOf](docs/StackReleaseDetailAllOf.md)

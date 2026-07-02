@@ -24,13 +24,31 @@ func applyCRs(vals install.TemplateValues, domain string) error {
 		return fmt.Errorf("applying volume CR: %w", err)
 	}
 
-	stepLog("Applying Stack CR (db + api-server)...")
-	stackManifest, err := install.RenderManifest("stack-cr.yaml", vals)
+	stepLog("Applying Stack CR...")
+	stackManifest, err := install.ReadManifest("stack-cr.yaml")
 	if err != nil {
-		return fmt.Errorf("rendering stack CR: %w", err)
+		return fmt.Errorf("reading stack CR: %w", err)
 	}
 	if err := kubectlApply(stackManifest); err != nil {
 		return fmt.Errorf("applying stack CR: %w", err)
+	}
+
+	stepLog("Applying db StackResource CR...")
+	dbManifest, err := install.RenderManifest("db-resource-cr.yaml", vals)
+	if err != nil {
+		return fmt.Errorf("rendering db resource CR: %w", err)
+	}
+	if err := kubectlApply(dbManifest); err != nil {
+		return fmt.Errorf("applying db resource CR: %w", err)
+	}
+
+	stepLog("Applying api-server StackResource CR...")
+	apiManifest, err := install.RenderManifest("api-server-resource-cr.yaml", vals)
+	if err != nil {
+		return fmt.Errorf("rendering api-server resource CR: %w", err)
+	}
+	if err := kubectlApply(apiManifest); err != nil {
+		return fmt.Errorf("applying api-server resource CR: %w", err)
 	}
 
 	stepLog("Waiting for API server to be reachable...")

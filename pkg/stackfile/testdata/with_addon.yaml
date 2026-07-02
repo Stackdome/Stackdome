@@ -1,0 +1,16 @@
+name: addon-app
+
+resources:
+  api:
+    image: api:latest
+    ports:
+      - name: http
+        port: 3000
+        public: true
+    addons:
+      pg-addon-id:
+        type: postgres
+        database: appdb
+        env:
+          DATABASE_URL: "postgres://{{ username }}:{{ password }}@{{ host }}:{{ port }}/{{ database }}"
+          DB_HOST: "{{ host }}"

@@ -20,6 +20,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stackdeploy"
 	inviteworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/invite"
 	postgresaddonworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/postgresaddon"
+	previewworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/preview"
 	releaseworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/release"
 	releasegcworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/releasegc"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/stack"
@@ -178,6 +179,20 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		Env:            d.Env.Name,
 	})
 	d.WorkerManager.RegisterWorker(inviteCleanupWorker, &inviteworker.InviteCleanupBatch{})
+
+	previewWorker := previewworker.NewPreviewWorker(previewworker.PreviewWorkerSpec{
+		PreviewStackService: d.Services.PreviewStackService,
+		PreviewStackStore: pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
+			SessionFactory: d.DBSession,
+		}),
+		ConfigStore: pgstore.NewStackPreviewConfigStore(pgstore.StackPreviewConfigStoreSpec{
+			SessionFactory: d.DBSession,
+		}),
+		ReleaseService: d.Services.StackReleaseService,
+		StackService:   d.Services.StackService,
+		Env:            d.Env.Name,
+	})
+	d.WorkerManager.RegisterWorker(previewWorker, &models.PreviewStack{})
 
 	return nil
 }
@@ -569,6 +584,29 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 
 	stackService.SetReleaseService(stackReleaseService)
 
+	stackPreviewConfigStore := pgstore.NewStackPreviewConfigStore(pgstore.StackPreviewConfigStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+	previewStackStore := pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+
+	stackPreviewConfigService := services.NewStackPreviewConfigService(services.StackPreviewConfigServiceSpec{
+		Store:             stackPreviewConfigStore,
+		PreviewStackStore: previewStackStore,
+		SecretService:     secretService,
+		Permissions:       d.PermissionService,
+	})
+
+	previewStackService := services.NewPreviewStackService(services.PreviewStackServiceSpec{
+		Store:          previewStackStore,
+		ConfigStore:    stackPreviewConfigStore,
+		StackService:   stackService,
+		ReleaseService: stackReleaseService,
+		SecretService:  secretService,
+		Permissions:    d.PermissionService,
+	})
+
 	d.Services = Services{
 		UserService:                 userService,
 		WorkspaceUserService:        workspaceUserService,
@@ -596,6 +634,8 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SignupService:               signupService,
 		StackReleaseService:         stackReleaseService,
 		ReferenceService:            referenceService,
+		StackPreviewConfigService:   stackPreviewConfigService,
+		PreviewStackService:         previewStackService,
 	}
 
 	return nil
@@ -671,6 +711,7 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 	d.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
 	d.Services.OrgInviteService.InjectBackgroundJobEnqueuer(dep)
 	d.Services.StackReleaseService.InjectBackgroundJobEnqueuer(dep)
+	d.Services.PreviewStackService.InjectBackgroundJobEnqueuer(dep)
 	return nil
 }
 
