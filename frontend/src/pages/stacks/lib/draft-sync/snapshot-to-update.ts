@@ -1,4 +1,4 @@
-import type { Stack, StackUpdateRequest, StackResource, Volume } from "@/api/stacks";
+import type { Stack, StackUpdateRequest, StackResource, StackResourceUpdateRequest, Volume } from "@/api/stacks";
 import type { StackReleaseSnapshot } from "@/api/releases";
 import { cleanServerResource } from "./server-state";
 
@@ -6,6 +6,24 @@ function cleanVolume(v: Volume) {
   const { id, status, ...rest } = v as Volume & { status?: unknown };
   void id; void status;
   return rest;
+}
+
+/**
+ * gorm's Updates() skips nil fields, so a revert must send explicit empty
+ * collections to CLEAR authored values the deployment never had.
+ */
+function withExplicitEmptyCollections(r: StackResourceUpdateRequest): StackResourceUpdateRequest {
+  return {
+    ...r,
+    depends_on: r.depends_on ?? [],
+    volume_mounts: r.volume_mounts ?? [],
+    execution_config: {
+      ...(r.execution_config ?? {}),
+      command: r.execution_config?.command ?? [],
+      args: r.execution_config?.args ?? [],
+      environment_variables: r.execution_config?.environment_variables ?? [],
+    },
+  };
 }
 
 /**
@@ -22,7 +40,9 @@ export function snapshotToUpdateRequest(
     name: current.name,
     labels: current.labels,
     spec: {
-      stack_resources: (snap.resources ?? []).map((r) => cleanServerResource(r as StackResource)),
+      stack_resources: (snap.resources ?? []).map((r) =>
+        withExplicitEmptyCollections(cleanServerResource(r as StackResource)),
+      ),
       volumes: (snap.volumes ?? []).length > 0 ? (snap.volumes ?? []).map((v) => cleanVolume(v as Volume)) : undefined,
       ...(connections.length > 0 ? { connections } : {}),
     },

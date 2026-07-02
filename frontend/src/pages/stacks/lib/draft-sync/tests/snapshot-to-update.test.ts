@@ -25,6 +25,33 @@ describe("snapshotToUpdateRequest", () => {
     const req = snapshotToUpdateRequest({ ...snap, connections: [] } as StackReleaseSnapshot, { name: "demo" });
     expect(req.spec.connections).toBeUndefined();
   });
+
+  it("emits explicit empty arrays for execution_config fields when resource has no execution_config", () => {
+    const snapNoExec = {
+      resources: [{ id: "r-2", stack_id: "st-1", revision: 1, status: {}, name: "api", image_spec: { image: "myapp:1" } }],
+      volumes: [],
+      connections: [],
+    } as unknown as StackReleaseSnapshot;
+    const req = snapshotToUpdateRequest(snapNoExec, { name: "demo" });
+    const res = req.spec.stack_resources[0] as Record<string, unknown>;
+    const exec = res.execution_config as Record<string, unknown>;
+    expect(exec).toBeDefined();
+    expect(exec.environment_variables).toEqual([]);
+    expect(exec.command).toEqual([]);
+    expect(exec.args).toEqual([]);
+  });
+
+  it("emits explicit empty arrays for volume_mounts and depends_on when resource has none", () => {
+    const snapNoDeps = {
+      resources: [{ id: "r-3", stack_id: "st-1", revision: 1, status: {}, name: "worker", image_spec: { image: "worker:1" } }],
+      volumes: [],
+      connections: [],
+    } as unknown as StackReleaseSnapshot;
+    const req = snapshotToUpdateRequest(snapNoDeps, { name: "demo" });
+    const res = req.spec.stack_resources[0] as Record<string, unknown>;
+    expect(res.volume_mounts).toEqual([]);
+    expect(res.depends_on).toEqual([]);
+  });
 });
 
 describe("volumesToDelete", () => {
