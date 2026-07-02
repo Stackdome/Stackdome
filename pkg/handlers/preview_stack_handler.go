@@ -8,6 +8,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
 	"github.com/ashishmax31/stackdome-api-server/pkg/services"
+	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/gorilla/mux"
 )
 
@@ -73,7 +74,10 @@ func (h *previewStackHandler) List(w http.ResponseWriter, r *http.Request) {
 			if serr != nil {
 				return nil, serr
 			}
-			params := parseListParams(r, []string{"config_id"})
+			params := parseListParams(r, nil)
+			if configID := r.URL.Query().Get("config_id"); configID != "" {
+				params.Filters = append(params.Filters, stores.Filter{Field: "stack_preview_config_id", Value: configID})
+			}
 			result, serr := h.service.List(r.Context(), teamID, params)
 			if serr != nil {
 				return nil, serr
