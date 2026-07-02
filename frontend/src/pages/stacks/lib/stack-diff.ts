@@ -159,8 +159,15 @@ export function getAddonLinkCount(
  * Each entry stores both the dirty flag and the per-X stats; on a cache
  * hit we return both without walking.
  */
-type ResourceDiffEntry = { dirty: false } | { dirty: true; stats: PerResourceDirty };
-type VolumeDiffEntry = { dirty: false } | { dirty: true; stats: PerVolumeDirty };
+// Each entry also records the baseline reference it was computed against.
+// When the baseline changes (e.g. after a rebase), the cache key is the
+// same draft object but the baseline ref differs, so we recompute.
+type ResourceDiffEntry =
+  | { dirty: false; baseline: unknown }
+  | { dirty: true; baseline: unknown; stats: PerResourceDirty };
+type VolumeDiffEntry =
+  | { dirty: false; baseline: unknown }
+  | { dirty: true; baseline: unknown; stats: PerVolumeDirty };
 const resourceDiffCache = new WeakMap<object, ResourceDiffEntry>();
 const volumeDiffCache = new WeakMap<object, VolumeDiffEntry>();
 
@@ -170,12 +177,13 @@ function diffOneResource(
 ): ResourceDiffEntry {
   if (d && typeof d === "object") {
     const cached = resourceDiffCache.get(d);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined && cached.baseline === b) return cached;
   }
   const dirty = isResourceDirty(d, b);
   const entry: ResourceDiffEntry = dirty
     ? {
       dirty: true,
+      baseline: b,
       stats: {
         rowsChanged: countEnvRowsChanged(d, b),
         fieldsChanged: countChangedFields(
@@ -184,7 +192,7 @@ function diffOneResource(
         ),
       },
     }
-    : { dirty: false };
+    : { dirty: false, baseline: b };
   if (d && typeof d === "object") resourceDiffCache.set(d, entry);
   return entry;
 }
@@ -195,12 +203,13 @@ function diffOneVolume(
 ): VolumeDiffEntry {
   if (d && typeof d === "object") {
     const cached = volumeDiffCache.get(d);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined && cached.baseline === b) return cached;
   }
   const dirty = isVolumeDirty(d, b);
   const entry: VolumeDiffEntry = dirty
     ? {
       dirty: true,
+      baseline: b,
       stats: {
         fieldsChanged: countChangedFields(
             d as Record<string, unknown> | undefined,
@@ -208,7 +217,7 @@ function diffOneVolume(
         ),
       },
     }
-    : { dirty: false };
+    : { dirty: false, baseline: b };
   if (d && typeof d === "object") volumeDiffCache.set(d, entry);
   return entry;
 }

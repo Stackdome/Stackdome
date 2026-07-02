@@ -75,6 +75,9 @@ export interface UseStackEditSession {
   ) => void;
   setLinkedAddonIds: (next: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
   setPendingDetach: (next: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+  /** Advance the baseline to a synced snapshot; the draft is untouched, so
+   *  edits made after the snapshot remain dirty. */
+  rebase: (baseline: EditSessionDraft) => void;
 }
 
 export function useStackEditSession(): UseStackEditSession {
@@ -186,6 +189,16 @@ export function useStackEditSession(): UseStackEditSession {
     [],
   );
 
+  const rebase = useCallback((baseline: EditSessionDraft) => {
+    setState((prev) => {
+      if (!prev.isActive) return prev;
+      return {
+        ...prev,
+        baseline: { resources: cloneJson(baseline.resources), volumes: cloneJson(baseline.volumes) },
+      };
+    });
+  }, []);
+
   const dirty = useMemo<StackDiff>(
     () => diffStack(state.draft, state.baseline),
     [state.draft, state.baseline],
@@ -211,5 +224,6 @@ export function useStackEditSession(): UseStackEditSession {
     updateVolumes,
     setLinkedAddonIds,
     setPendingDetach,
+    rebase,
   };
 }
