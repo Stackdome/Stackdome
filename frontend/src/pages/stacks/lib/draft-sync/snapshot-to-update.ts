@@ -11,12 +11,26 @@ function cleanVolume(v: Volume) {
 /**
  * gorm's Updates() skips nil fields, so a revert must send explicit empty
  * collections to CLEAR authored values the deployment never had.
+ *
+ * All ARRAY-valued resource fields are normalised here so a "Discard draft
+ * changes" revert cannot leave a post-deploy canvas edit (e.g. an added port)
+ * stranded in the DB.
+ *
+ * KNOWN LIMITATION: struct-pointer fields (build_spec, image_spec,
+ * lifecycle_config) cannot be cleared from the frontend — JSON null still
+ * unmarshals to a nil pointer that gorm's Updates() skips. A post-deploy
+ * source-type flip (image ↔ git) is therefore not fully reverted by a discard.
+ * Fixing this requires a backend change (dedicated PATCH endpoint or explicit
+ * NULL handling in the store). Tracked as a follow-up.
  */
 function withExplicitEmptyCollections(r: StackResourceUpdateRequest): StackResourceUpdateRequest {
   return {
     ...r,
     depends_on: r.depends_on ?? [],
     volume_mounts: r.volume_mounts ?? [],
+    ports: r.ports ?? [],
+    labels: r.labels ?? [],
+    annotations: r.annotations ?? [],
     execution_config: {
       ...(r.execution_config ?? {}),
       command: r.execution_config?.command ?? [],

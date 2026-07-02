@@ -52,6 +52,22 @@ describe("snapshotToUpdateRequest", () => {
     expect(res.volume_mounts).toEqual([]);
     expect(res.depends_on).toEqual([]);
   });
+
+  it("emits explicit empty arrays for ports, labels, and annotations when resource has none", () => {
+    // A snapshot resource with no ports/labels/annotations (e.g. reverted after
+    // a canvas edit that added a port). The PUT body must carry explicit []
+    // so gorm's Updates() does not skip the column and leave the draft value.
+    const snapNoPorts = {
+      resources: [{ id: "r-4", stack_id: "st-1", revision: 1, status: {}, name: "api", image_spec: { image: "api:1" } }],
+      volumes: [],
+      connections: [],
+    } as unknown as StackReleaseSnapshot;
+    const req = snapshotToUpdateRequest(snapNoPorts, { name: "demo" });
+    const res = req.spec.stack_resources[0] as Record<string, unknown>;
+    expect(res.ports).toEqual([]);
+    expect(res.labels).toEqual([]);
+    expect(res.annotations).toEqual([]);
+  });
 });
 
 describe("volumesToDelete", () => {
