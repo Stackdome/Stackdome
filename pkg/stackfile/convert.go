@@ -171,6 +171,9 @@ func buildExecutionConfig(env map[string]string, command, args []string) *openap
 		envVars = append(envVars, ev)
 	}
 
+	sort.Slice(envVars, func(i, j int) bool {
+		return envVars[i].Name < envVars[j].Name
+	})
 	if len(envVars) > 0 {
 		cfg.EnvironmentVariables = envVars
 	}
