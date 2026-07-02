@@ -499,6 +499,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Filter by secret name
+        explode: true
+        in: query
+        name: name
+        required: false
+        schema:
+          type: string
+        style: form
       responses:
         "200":
           content:
@@ -2717,6 +2725,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Filter by secret name
+        explode: true
+        in: query
+        name: name
+        required: false
+        schema:
+          type: string
+        style: form
       responses:
         "200":
           content:

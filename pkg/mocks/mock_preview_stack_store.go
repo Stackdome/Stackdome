@@ -117,21 +117,6 @@ func (mr *MockPreviewStackStoreMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockPreviewStackStore)(nil).GetByID), ctx, id)
 }
 
-// ListNeedingReconciliation mocks base method.
-func (m *MockPreviewStackStore) ListNeedingReconciliation(ctx context.Context, page, pageSize int) ([]*models.PreviewStack, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListNeedingReconciliation", ctx, page, pageSize)
-	ret0, _ := ret[0].([]*models.PreviewStack)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// ListNeedingReconciliation indicates an expected call of ListNeedingReconciliation.
-func (mr *MockPreviewStackStoreMockRecorder) ListNeedingReconciliation(ctx, page, pageSize any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNeedingReconciliation", reflect.TypeOf((*MockPreviewStackStore)(nil).ListNeedingReconciliation), ctx, page, pageSize)
-}
-
 // ListByConfigID mocks base method.
 func (m *MockPreviewStackStore) ListByConfigID(ctx context.Context, configID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError) {
 	m.ctrl.T.Helper()
@@ -160,6 +145,21 @@ func (m *MockPreviewStackStore) ListByTeamID(ctx context.Context, teamID string,
 func (mr *MockPreviewStackStoreMockRecorder) ListByTeamID(ctx, teamID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTeamID", reflect.TypeOf((*MockPreviewStackStore)(nil).ListByTeamID), ctx, teamID, params)
+}
+
+// ListNeedingReconciliation mocks base method.
+func (m *MockPreviewStackStore) ListNeedingReconciliation(ctx context.Context, page, pageSize int) ([]*models.PreviewStack, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNeedingReconciliation", ctx, page, pageSize)
+	ret0, _ := ret[0].([]*models.PreviewStack)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// ListNeedingReconciliation indicates an expected call of ListNeedingReconciliation.
+func (mr *MockPreviewStackStoreMockRecorder) ListNeedingReconciliation(ctx, page, pageSize any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNeedingReconciliation", reflect.TypeOf((*MockPreviewStackStore)(nil).ListNeedingReconciliation), ctx, page, pageSize)
 }
 
 // Update mocks base method.

@@ -442,6 +442,11 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
+        - in: query
+          name: name
+          schema:
+            type: string
+          description: Filter by secret name
       responses:
         '200':
           description: Successful operation
@@ -1832,6 +1837,11 @@ paths:
       parameters:
         - $ref: '#/components/parameters/org_id'
         - $ref: '#/components/parameters/team_name'
+        - in: query
+          name: name
+          schema:
+            type: string
+          description: Filter by secret name
       responses:
         '200':
           description: Successful operation

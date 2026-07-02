@@ -2144,7 +2144,7 @@ Name | Type | Description  | Notes
 
 ## ApiV1OrganizationsOrgIdSecretsGet
 
-> SecretList ApiV1OrganizationsOrgIdSecretsGet(ctx, orgId).Execute()
+> SecretList ApiV1OrganizationsOrgIdSecretsGet(ctx, orgId).Name(name).Execute()
 
 List all secrets the user has access to across all teams
 
@@ -2164,10 +2164,11 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
+    name := "name_example" // string | Filter by secret name (optional)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsGet(context.Background(), orgId).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsGet(context.Background(), orgId).Name(name).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdSecretsGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -2193,6 +2194,7 @@ Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdSec
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
+ **name** | **string** | Filter by secret name | 
 
 ### Return type
 
@@ -4050,7 +4052,7 @@ Name | Type | Description  | Notes
 
 ## ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet
 
-> SecretList ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet(ctx, orgId, teamName).Execute()
+> SecretList ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet(ctx, orgId, teamName).Name(name).Execute()
 
 List all secrets for a team
 
@@ -4069,10 +4071,11 @@ import (
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
     teamName := "teamName_example" // string | The name of the team
+    name := "name_example" // string | Filter by secret name (optional)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet(context.Background(), orgId, teamName).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet(context.Background(), orgId, teamName).Name(name).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -4100,6 +4103,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
 
+ **name** | **string** | Filter by secret name | 
 
 ### Return type
 
