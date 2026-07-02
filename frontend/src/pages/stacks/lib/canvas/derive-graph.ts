@@ -62,8 +62,6 @@ export interface DirtyInput {
   dirtyResourceIdx?: ReadonlySet<number>;
   /** Resource count in the baseline — anything at or beyond it is "new". */
   baselineResourceCount?: number;
-  /** Addon ids queued for removal. */
-  pendingDetach?: ReadonlySet<string>;
   /** Addon ids linked in the baseline — anything not here is a "new" link. */
   baselineAddonIds?: ReadonlySet<string>;
 }
@@ -84,7 +82,6 @@ function serviceDirtyState(idx: number, dirty: DirtyInput | undefined): DirtySta
 
 function addonDirtyState(addonId: string, dirty: DirtyInput | undefined): DirtyState | undefined {
   if (!dirty) return undefined;
-  if (dirty.pendingDetach?.has(addonId)) return "removed";
   if (dirty.baselineAddonIds != null && !dirty.baselineAddonIds.has(addonId)) return "new";
   return undefined;
 }

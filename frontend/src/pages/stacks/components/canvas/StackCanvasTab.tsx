@@ -50,10 +50,9 @@ function StackCanvasFlow({
     () => ({
       dirtyResourceIdx: session.dirty.dirtyResourceIdx,
       baselineResourceCount: baselineResources.length,
-      pendingDetach: session.pendingDetach,
       baselineAddonIds: connectionAddonIds,
     }),
-    [session.dirty, session.pendingDetach, baselineResources.length, connectionAddonIds],
+    [session.dirty, baselineResources.length, connectionAddonIds],
   );
 
   // Topology + node data (cheap, pure). Re-runs on any edit.

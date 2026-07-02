@@ -56,7 +56,6 @@ export interface UseStackEditSession {
   openTab: EditSessionTab | null;
   dirty: StackDiff;
   linkedAddonIds: Set<string>;
-  pendingDetach: Set<string>;
   start: (baseline: EditSessionDraft, opts?: EditSessionStartOpts) => void;
   discard: () => void;
   discardResource: (idx: number) => void;
@@ -74,7 +73,6 @@ export interface UseStackEditSession {
       | ((prev: VolumeArr) => VolumeArr),
   ) => void;
   setLinkedAddonIds: (next: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
-  setPendingDetach: (next: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
   /** Advance the baseline to a synced snapshot; the draft is untouched, so
    *  edits made after the snapshot remain dirty. */
   rebase: (baseline: EditSessionDraft) => void;
@@ -83,7 +81,6 @@ export interface UseStackEditSession {
 export function useStackEditSession(): UseStackEditSession {
   const [state, setState] = useState<EditSessionState>(INITIAL_STATE);
   const [linkedAddonIds, setLinkedAddonIdsState] = useState<Set<string>>(new Set());
-  const [pendingDetach, setPendingDetachState] = useState<Set<string>>(new Set());
 
   const start = useCallback(
     (baseline: EditSessionDraft, opts?: EditSessionStartOpts) => {
@@ -104,7 +101,6 @@ export function useStackEditSession(): UseStackEditSession {
         openTab: opts?.openTab ?? null,
       });
       setLinkedAddonIdsState(opts?.linkedAddonIds ? new Set(opts.linkedAddonIds) : new Set());
-      setPendingDetachState(new Set());
     },
     [],
   );
@@ -112,7 +108,6 @@ export function useStackEditSession(): UseStackEditSession {
   const discard = useCallback(() => {
     setState(INITIAL_STATE);
     setLinkedAddonIdsState(new Set());
-    setPendingDetachState(new Set());
   }, []);
 
   const discardResource = useCallback((idx: number) => {
@@ -180,15 +175,6 @@ export function useStackEditSession(): UseStackEditSession {
     [],
   );
 
-  const setPendingDetach = useCallback(
-    (next: Set<string> | ((prev: Set<string>) => Set<string>)) => {
-      setPendingDetachState((prev) =>
-        typeof next === "function" ? (next as (p: Set<string>) => Set<string>)(prev) : next,
-      );
-    },
-    [],
-  );
-
   const rebase = useCallback((baseline: EditSessionDraft) => {
     setState((prev) => {
       if (!prev.isActive) return prev;
@@ -213,7 +199,6 @@ export function useStackEditSession(): UseStackEditSession {
     openTab: state.openTab,
     dirty,
     linkedAddonIds,
-    pendingDetach,
     start,
     discard,
     discardResource,
@@ -223,7 +208,6 @@ export function useStackEditSession(): UseStackEditSession {
     updateResources,
     updateVolumes,
     setLinkedAddonIds,
-    setPendingDetach,
     rebase,
   };
 }
