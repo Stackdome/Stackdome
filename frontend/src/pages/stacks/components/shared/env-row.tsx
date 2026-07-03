@@ -93,26 +93,33 @@ export function EnvRow({
   const isDirty = isModified || isAdded;
   return (
     <div
-      className={`border-b last:border-b-0 ${
+      className={`relative rounded-md border py-2 pl-[13px] pr-2.5 transition-colors ${
         isOrphanAddon
-          ? "border-l-4 border-l-warn/60 pl-2 bg-warn/5"
+          ? "border-warn-border bg-warn-bg"
           : isDirty
-            ? "border-l-4 border-l-brand bg-brand-bg"
-            : ""
+            ? "border-brand-border bg-brand-bg"
+            : "border-border bg-background"
       }`}
       data-testid={`env-row-${resourceIndex}-${index}`}
       onBlur={onBlur}
     >
+      {/* 2px accent bar signalling row state (dirty = brand, orphan = warn). */}
+      <span
+        aria-hidden
+        className={`absolute bottom-1.5 left-0 top-1.5 w-0.5 rounded-full ${
+          isOrphanAddon ? "bg-warn" : isDirty ? "bg-brand" : "bg-transparent"
+        }`}
+      />
       {/* items-start keeps every control top-aligned so a per-cell error (which
           grows that cell downward) never knocks the other columns out of line. */}
-      <div className="grid grid-cols-12 gap-2 p-3 items-start">
+      <div className="flex items-start gap-2">
         {/* Key */}
-        <div className="col-span-3">
+        <div className="w-[130px] flex-none">
           <Input
             id={`env-name-${resourceIndex}-${index}`}
             value={row.name || ""}
             onChange={(e) => onChangeName(e.target.value)}
-            className={`w-full text-sm font-mono ${isOrphanAddon ? "opacity-60" : ""} ${
+            className={`h-8 w-full font-mono text-xs ${isOrphanAddon ? "opacity-60" : ""} ${
               rowErrors?.duplicate || rowErrors?.name ? "border-danger" : ""
             }`}
             placeholder="KEY"
@@ -126,13 +133,13 @@ export function EnvRow({
         </div>
 
         {/* Value */}
-        <div className="col-span-6">
+        <div className="min-w-0 flex-1">
           {row.from === "stack" && (
             <Input
               value={row.value || ""}
               onChange={(e) => onChangeValue(e.target.value)}
-              className="w-full text-sm font-mono"
-              placeholder="VALUE"
+              className="h-8 w-full font-mono text-xs"
+              placeholder="value"
             />
           )}
           {row.from === "secret" && (
@@ -177,12 +184,12 @@ export function EnvRow({
         </div>
 
         {/* From select (Stack | Secret | Addon) */}
-        <div className="col-span-2 flex h-9 items-center justify-center">
+        <div className="w-[106px] flex-none">
           <Select
             value={row.from}
             onValueChange={(v) => onChangeFrom(v as EnvFrom)}
           >
-            <SelectTrigger className="w-[110px]">
+            <SelectTrigger className="h-8 w-full text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -196,7 +203,7 @@ export function EnvRow({
         </div>
 
         {/* Reset (modified existing row — restore baseline) or Remove (added/clean rows) */}
-        <div className="col-span-1 flex h-9 items-center justify-center">
+        <div className="flex h-8 w-6 flex-none items-center justify-center">
           {isModified && onReset ? (
             <Button
               variant="ghost"
@@ -222,7 +229,7 @@ export function EnvRow({
         </div>
       </div>
       {isOrphanAddon && (
-        <p className="col-span-full text-xs text-warn mt-0.5 mb-1 px-3">
+        <p className="text-xs text-warn mt-1.5">
           Addon was deleted. This variable won't resolve. Remove to clean up.
         </p>
       )}
@@ -248,13 +255,13 @@ function SecretValueCell({
   const availableKeys = selected?.data?.map((d) => d.key) || [];
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-1.5">
       <Select
         value={secretId || ""}
         onValueChange={(value) => onChange(value, "")}
         disabled={loading || genericSecrets.length === 0}
       >
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="h-8 w-full text-xs">
           <SelectValue
             placeholder={
               genericSecrets.length === 0
@@ -282,7 +289,7 @@ function SecretValueCell({
           onValueChange={(value) => onChange(secretId, value)}
           disabled={availableKeys.length === 0}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="h-8 w-full text-xs">
             <SelectValue
               placeholder={
                 availableKeys.length === 0
@@ -318,13 +325,13 @@ function ResourceOutputCell({
   const selected = resourceOptions.find((r) => r.name === resourceName);
   const outputs = selected?.outputs ?? [];
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-1.5">
       <Select
         value={resourceName || ""}
         onValueChange={(v) => onChange(v, "")}
         disabled={resourceOptions.length === 0}
       >
-        <SelectTrigger className="w-full" data-testid="resource-picker-trigger">
+        <SelectTrigger className="h-8 w-full text-xs" data-testid="resource-picker-trigger">
           <SelectValue placeholder={resourceOptions.length === 0 ? "No other resources" : "select resource..."} />
         </SelectTrigger>
         <SelectContent>
@@ -335,7 +342,7 @@ function ResourceOutputCell({
       </Select>
       {resourceName && (
         <Select value={output || ""} onValueChange={(v) => onChange(resourceName, v)} disabled={outputs.length === 0}>
-          <SelectTrigger className="w-full" data-testid="resource-output-trigger">
+          <SelectTrigger className="h-8 w-full text-xs" data-testid="resource-output-trigger">
             <SelectValue placeholder={outputs.length === 0 ? "No outputs" : "select output..."} />
           </SelectTrigger>
           <SelectContent>
@@ -358,7 +365,7 @@ function SelfOutputCell({
 }) {
   return (
     <Select value={selfOutput || ""} onValueChange={onChange} disabled={outputs.length === 0}>
-      <SelectTrigger className="w-full" data-testid="self-output-trigger">
+      <SelectTrigger className="h-8 w-full text-xs" data-testid="self-output-trigger">
         <SelectValue placeholder={outputs.length === 0 ? "No outputs declared" : "select output..."} />
       </SelectTrigger>
       <SelectContent>
@@ -379,7 +386,7 @@ function AddonOrphanReadOnly({
 }) {
   const dbLabel = superuser ? "(superuser)" : database ?? "—";
   return (
-    <div className="text-xs italic px-3 py-2 text-warn">
+    <div className="text-xs italic py-1.5 text-warn">
       ⚙ &lt;missing addon&gt; · {dbLabel} · {credField ?? "—"}
     </div>
   );
@@ -404,7 +411,7 @@ function AddonCredFieldPicker({
         disabled={disabled}
       >
         <SelectTrigger
-          className={`w-full ${error ? "border-danger" : ""}`}
+          className={`h-8 w-full text-xs ${error ? "border-danger" : ""}`}
           data-testid="field-picker-trigger"
         >
           <SelectValue placeholder={disabled ? "Pick an addon first" : "Select field"} />
