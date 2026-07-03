@@ -45,6 +45,20 @@ interface StackResourceEnvironmentTabProps {
   onDiscardEnvRow?: (envIdx: number) => void;
 }
 
+/** Full-width dashed "add row" affordance shared by the variable list and each addon group. */
+function AddRowButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong px-3 py-2 text-[12.5px] font-medium text-foreground/80 transition-colors hover:bg-muted/30"
+    >
+      <Plus className="size-3.5" />
+      {label}
+    </button>
+  );
+}
+
 function StackResourceEnvironmentTabImpl({
   index,
   envVars,
@@ -346,14 +360,10 @@ function StackResourceEnvironmentTabImpl({
           // "Add variable" appends a literal row; its own "From" selector then
           // switches the source. Shared by the empty state and the populated list.
           const addVariableButton = (
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-[12.5px] text-muted-foreground transition-colors hover:border-brand hover:text-brand"
+            <AddRowButton
+              label="Add variable"
               onClick={() => addEnvVar({ from: "stack", name: "", value: "" })}
-            >
-              <Plus className="size-3.5" />
-              Add variable
-            </button>
+            />
           );
 
           if (envVars.length === 0) {
@@ -498,11 +508,11 @@ function StackResourceEnvironmentTabImpl({
                 return (
                   <div
                     key={`a-${gIdx}-${aid}-${db}`}
-                    className="relative mt-2 rounded-lg border border-dashed border-brand-border bg-brand-bg/50 px-2.5 pb-2.5 pt-6"
+                    className="relative mt-2 rounded-lg border border-border-strong bg-muted/20 px-2.5 pb-2.5 pt-6"
                     data-testid="env-addon-group"
                   >
                     <div className="absolute -top-3.5 left-3 inline-flex items-center gap-2 rounded-md bg-background px-1.5 py-0.5">
-                      <span className="inline-flex items-center gap-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.15em] text-brand">
+                      <span className="inline-flex items-center gap-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.15em] text-foreground/80">
                         <Plug className="size-3" />
                         Addon
                       </span>
@@ -585,15 +595,8 @@ function StackResourceEnvironmentTabImpl({
                       )}
                     </div>
                     <div className="flex flex-col gap-1.5">{g.items.map(renderRow)}</div>
-                    <div className="flex justify-end pt-1.5">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleAddBinding}
-                        className="h-7 gap-1 text-xs text-brand hover:bg-brand-bg hover:text-brand-press"
-                      >
-                        <Plus className="size-3" /> Add binding
-                      </Button>
+                    <div className="pt-1.5">
+                      <AddRowButton label="Add binding" onClick={handleAddBinding} />
                     </div>
                   </div>
                 );

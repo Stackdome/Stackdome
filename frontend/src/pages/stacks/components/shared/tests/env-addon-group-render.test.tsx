@@ -57,12 +57,12 @@ describe("StackResourceEnvironmentTab addon grouping", () => {
     { from: "stack", name: "PLAIN", value: "v" },
   ];
 
-  it("renders the two addon rows inside one dashed group container", () => {
+  it("renders the two addon rows inside one group container", () => {
     renderTab(envVars);
     const groups = screen.getAllByTestId("env-addon-group");
     expect(groups).toHaveLength(1);
     const group = groups[0];
-    expect(group).toHaveClass("border-dashed");
+    expect(group).toHaveClass("border-border-strong");
     // both addon rows live inside the group
     expect(within(group).getByTestId("env-row-0-0")).toBeInTheDocument();
     expect(within(group).getByTestId("env-row-0-1")).toBeInTheDocument();
