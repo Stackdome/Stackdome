@@ -40,7 +40,6 @@ describe("DeploymentsTab", () => {
     const lifecycle: DeployLifecycle = { phase: "staged", stagedDiff, vsSeq: 14, nextSeq: 15 };
     render(<DeploymentsTab {...base} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
     expect(screen.getByText("Draft")).toBeInTheDocument();
-    expect(screen.getByText(/ship as release #15/)).toBeInTheDocument();
   });
 
   it("does not show a draft node when clean", () => {

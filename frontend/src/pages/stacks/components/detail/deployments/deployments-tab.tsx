@@ -31,7 +31,7 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
   const openLogs = onOpenLogs ? (name: string) => onOpenLogs(name) : undefined;
 
   const draftNode = lifecycle.phase === "editing" || lifecycle.phase === "staged"
-    ? <DraftNode phase={lifecycle.phase} diff={lifecycle.stagedDiff} vsSeq={lifecycle.vsSeq} nextSeq={lifecycle.nextSeq} isLast={releases.length === 0} />
+    ? <DraftNode phase={lifecycle.phase} diff={lifecycle.stagedDiff} vsSeq={lifecycle.vsSeq} isLast={releases.length === 0} />
     : undefined;
 
   // Anchor the live release at the top only when it's buried (not already the newest node).
