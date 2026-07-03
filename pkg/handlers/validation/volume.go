@@ -107,22 +107,12 @@ func validateGitRepoRevision(gitRepoRevision *openapi.GitRepoRevision) *errors.S
 		return nil
 	}
 
-	if gitRepoRevision.Branch == nil && gitRepoRevision.Tag == nil && gitRepoRevision.Commit == nil {
-		return errors.Validation("git repo revision branch, tag or commit cannot be empty. At least one must be set")
+	if gitRepoRevision.Branch == nil && gitRepoRevision.Tag == nil {
+		return errors.Validation("git repo revision requires a branch or tag (the commit SHA is resolved at release time)")
 	}
 
-	setValues := 0
-	if gitRepoRevision.Branch != nil {
-		setValues++
-	}
-	if gitRepoRevision.Tag != nil {
-		setValues++
-	}
-	if gitRepoRevision.Commit != nil {
-		setValues++
-	}
-	if setValues > 1 {
-		return errors.Validation("git repo revision branch, tag or commit cannot be set at the same time")
+	if gitRepoRevision.Branch != nil && gitRepoRevision.Tag != nil {
+		return errors.Validation("git repo revision branch and tag cannot be set at the same time")
 	}
 
 	return nil

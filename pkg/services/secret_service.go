@@ -332,11 +332,19 @@ func (s *secretService) generateDataHash(data map[string]string) string {
 }
 
 func (s *secretService) ValidateImageRegistrySecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError {
-	requiredKeys := []string{"registry", "username", "password"}
-	hasKeys, missingKeys, err := s.ValidateSecretHasKeys(ctx, secretID, requiredKeys)
-
+	secret, err := s.secretStore.GetByID(ctx, secretID)
 	if err != nil {
 		return err
+	}
+
+	if secret.Type != models.SecretTypeDockerRegistry {
+		return errors.BadRequest("secret must be of type %s, got %s", models.SecretTypeDockerRegistry, secret.Type)
+	}
+
+	requiredKeys := []string{models.UsernameSecretKey, models.PasswordSecretKey}
+	hasKeys, missingKeys, storeErr := s.ValidateSecretHasKeys(ctx, secretID, requiredKeys)
+	if storeErr != nil {
+		return storeErr
 	}
 
 	if !hasKeys {

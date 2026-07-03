@@ -59,7 +59,7 @@ func (s *secretValidator) ValidateSecretType(secretType models.SecretType, secre
 
 // validateDockerRegistrySecret validates Docker registry secret data
 func (s *secretValidator) validateDockerRegistrySecret(secret *models.Secret) *errors.ServiceError {
-	requiredFields := []string{models.RegistrySecretKey, models.UsernameSecretKey, models.PasswordSecretKey}
+	requiredFields := []string{models.UsernameSecretKey, models.PasswordSecretKey}
 
 	for _, field := range requiredFields {
 		if value, exists := secret.Data[field]; !exists || strings.TrimSpace(value) == "" {
@@ -67,8 +67,8 @@ func (s *secretValidator) validateDockerRegistrySecret(secret *models.Secret) *e
 		}
 	}
 
-	// Validate registry URL format
-	registry := secret.Data["registry"]
+	// Validate registry URL format if provided
+	registry := secret.Data[models.RegistrySecretKey]
 	if registry != "" {
 		// Basic validation - should not contain protocol if it's a domain
 		if strings.HasPrefix(registry, "http://") || strings.HasPrefix(registry, "https://") {
