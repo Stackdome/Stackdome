@@ -153,8 +153,8 @@ export function ResourceDrawer({
     "flex-none rounded-none border-b-[1.5px] border-transparent bg-transparent px-[13px] py-3 font-mono text-[11px] uppercase tracking-[1.5px] text-fg-muted data-[state=active]:border-brand data-[state=active]:text-foreground data-[state=active]:shadow-none";
 
   return (
-    <aside
-      className="flex h-full w-[496px] shrink-0 flex-col border-l border-border bg-background shadow-lg"
+    <div
+      className="flex h-full w-full flex-col bg-background"
       data-testid="resource-drawer"
     >
       {/* Header */}
@@ -243,6 +243,6 @@ export function ResourceDrawer({
           Remove resource
         </Button>
       </div>
-    </aside>
+    </div>
   );
 }

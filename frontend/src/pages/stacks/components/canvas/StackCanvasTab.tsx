@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import {
   ReactFlowProvider,
@@ -19,6 +19,18 @@ import { addBlockToStack } from "@/pages/stacks/lib/block-to-form";
 import { blockCatalog, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { CanvasEditor } from "./CanvasEditor";
 import { ResourceDrawer } from "./ResourceDrawer";
+import { DrawerStack, type DrawerPanelDescriptor } from "./DrawerStack";
+import {
+  replaceStack,
+  pushEntry,
+  truncateTo,
+  popEntry,
+  entryKey,
+  type DrawerEntry,
+} from "@/pages/stacks/lib/canvas/drawer-stack";
+import { nodePresentation } from "@/pages/stacks/lib/canvas/node-presentation";
+import { NodeGlyph } from "./nodes/node-glyph";
+import { HardDrive } from "lucide-react";
 import { FIT_OPTIONS } from "./fit-options";
 import type { ResourceFlowNode } from "./nodes/ResourceNode";
 
@@ -69,7 +81,7 @@ function StackCanvasFlow({
   const [nodes, setNodes, onNodesChange] = useNodesState<ResourceFlowNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [showConnections, setShowConnections] = useState(true);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [drawerStack, setDrawerStack] = useState<DrawerEntry[]>([]);
   const { fitView } = useReactFlow();
 
   // Re-layout ONLY when topology changes; preserve in-session drag positions by id.
@@ -98,17 +110,6 @@ function StackCanvasFlow({
     requestAnimationFrame(() => fitView(FIT_OPTIONS));
   }, [dataGraph, setNodes, fitView]);
 
-  // The drawer is a side panel, not an overlay — opening/closing it changes the
-  // canvas width, so re-fit to recenter the graph into the remaining space.
-  const drawerWasOpen = useRef(false);
-  useEffect(() => {
-    const open = selectedIndex != null;
-    if (open === drawerWasOpen.current) return;
-    drawerWasOpen.current = open;
-    const t = setTimeout(() => fitView(FIT_OPTIONS), 80);
-    return () => clearTimeout(t);
-  }, [selectedIndex, fitView]);
-
   const onNodeClick = useCallback<NodeMouseHandler<ResourceFlowNode>>(
     (_event, node) => {
       const idx = node.data.resourceIdx;
@@ -120,7 +121,7 @@ function StackCanvasFlow({
           { linkedAddonIds: new Set(connectionAddonIds), openResourceIdx: idx, openTab: "configuration" },
         );
       }
-      setSelectedIndex(idx);
+      setDrawerStack(replaceStack({ kind: "resource", index: idx }));
     },
     [session, baselineResources, baselineVolumes, connectionAddonIds],
   );
@@ -178,14 +179,74 @@ function StackCanvasFlow({
     [session, baselineResources, baselineVolumes, connectionAddonIds],
   );
 
-  const closeDrawer = useCallback(() => setSelectedIndex(null), []);
+  const popDrawer = useCallback(() => setDrawerStack((s) => popEntry(s)), []);
+  const closeAllDrawers = useCallback(() => setDrawerStack([]), []);
+  const truncateDrawers = useCallback((depth: number) => setDrawerStack((s) => truncateTo(s, depth)), []);
+  const openVolume = useCallback(
+    (name: string) => setDrawerStack((s) => pushEntry(s, { kind: "volume", name })),
+    [],
+  );
+  void openVolume; // threaded into the drawer body in the mount-row task
   const removeResource = useCallback(
     (idx: number) => {
       session.updateResources((prev) => prev.filter((_, i) => i !== idx));
-      setSelectedIndex(null);
+      setDrawerStack([]);
     },
     [session],
   );
+
+  // Drop panels whose target no longer exists in the draft (deleted resource/volume).
+  useEffect(() => {
+    setDrawerStack((s) =>
+      s.filter((e) =>
+        e.kind === "resource"
+          ? e.index < resources.length
+          : (session.isActive ? session.draft.volumes : baselineVolumes).some((v) => v.name === e.name),
+      ),
+    );
+  }, [resources.length, session.isActive, session.draft.volumes, baselineVolumes]);
+
+  const panels: DrawerPanelDescriptor[] = useMemo(
+    () =>
+      drawerStack.map((entry) => {
+        if (entry.kind === "resource") {
+          const r = resources[entry.index] ?? {};
+          const pres = nodePresentation({
+            isAddon: false,
+            image: r.image_spec?.image,
+            hasBuild: !!r.build_spec,
+            ports: (r.ports ?? []).map((p) => ({
+              number: p.number,
+              protocol: p.protocol,
+              exposedToPublic: p.exposed_to_public,
+            })),
+          });
+          return {
+            entry,
+            title: r.name || `Resource ${entry.index + 1}`,
+            icon: <NodeGlyph glyph={pres.glyph} className="size-[19px]" />,
+          };
+        }
+        return { entry, title: entry.name, icon: <HardDrive className="size-[19px]" /> };
+      }),
+    [drawerStack, resources],
+  );
+
+  const frontEntry = drawerStack[drawerStack.length - 1];
+  const frontBody =
+    frontEntry?.kind === "resource" ? (
+      <ResourceDrawer
+        key={entryKey(frontEntry)}
+        resourceIndex={frontEntry.index}
+        session={session}
+        baselineResources={baselineResources}
+        connectionAddonIds={connectionAddonIds}
+        errors={errors[frontEntry.index] ?? {}}
+        onClose={popDrawer}
+        onRemove={removeResource}
+        onViewLogs={onViewLogs}
+      />
+    ) : null; // volume front body arrives with VolumeDrawer (next task)
 
   return (
     <div className="flex h-full w-full">
@@ -206,19 +267,13 @@ function StackCanvasFlow({
           onLinkAddon={onLinkAddon}
         />
       </div>
-      {selectedIndex != null && (
-        <ResourceDrawer
-          key={selectedIndex}
-          resourceIndex={selectedIndex}
-          session={session}
-          baselineResources={baselineResources}
-          connectionAddonIds={connectionAddonIds}
-          errors={errors[selectedIndex] ?? {}}
-          onClose={closeDrawer}
-          onRemove={removeResource}
-          onViewLogs={onViewLogs}
-        />
-      )}
+      <DrawerStack
+        panels={panels}
+        front={frontBody}
+        onTruncate={truncateDrawers}
+        onPop={popDrawer}
+        onCloseAll={closeAllDrawers}
+      />
     </div>
   );
 }
