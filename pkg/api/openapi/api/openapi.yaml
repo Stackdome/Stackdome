@@ -5563,13 +5563,13 @@ components:
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
           serviceaccount_token: serviceaccount_token
       properties:
@@ -5627,13 +5627,13 @@ components:
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
         serviceaccount_token: serviceaccount_token
       properties:
@@ -5662,7 +5662,7 @@ components:
       type: object
     ClusterList:
       example:
-        total: 1
+        total: 0
         items:
         - cluster_url: cluster_url
           cluster_ca_data: cluster_ca_data
@@ -5679,10 +5679,7 @@ components:
             id: id
             spec:
               backend_storage_size: backend_storage_size
-              max_repositories: 0
               backend_storage_class: backend_storage_class
-              tags_per_repository: 6
-              delete_untagged: true
             status:
               state: null
               conditions:
@@ -5690,13 +5687,13 @@ components:
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 1
+                observed_generation: 5
                 status: status
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 1
+                observed_generation: 5
                 status: status
           id: id
         - cluster_url: cluster_url
@@ -5714,10 +5711,7 @@ components:
             id: id
             spec:
               backend_storage_size: backend_storage_size
-              max_repositories: 0
               backend_storage_class: backend_storage_class
-              tags_per_repository: 6
-              delete_untagged: true
             status:
               state: null
               conditions:
@@ -5725,13 +5719,13 @@ components:
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 1
+                observed_generation: 5
                 status: status
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 1
+                observed_generation: 5
                 status: status
           id: id
       properties:
@@ -5759,10 +5753,7 @@ components:
           id: id
           spec:
             backend_storage_size: backend_storage_size
-            max_repositories: 0
             backend_storage_class: backend_storage_class
-            tags_per_repository: 6
-            delete_untagged: true
           status:
             state: null
             conditions:
@@ -5770,13 +5761,13 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
         id: id
       properties:
@@ -5823,9 +5814,7 @@ components:
               revision:
                 commit: commit
                 tag: tag
-                branch:
-                  name: name
-                  head_sha: head_sha
+                branch: branch
             remote_source:
               path: path
               current_directory_hash: current_directory_hash
@@ -5859,13 +5848,13 @@ components:
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
       properties:
         id:
@@ -5922,9 +5911,7 @@ components:
             revision:
               commit: commit
               tag: tag
-              branch:
-                name: name
-                head_sha: head_sha
+              branch: branch
           remote_source:
             path: path
             current_directory_hash: current_directory_hash
@@ -5967,9 +5954,7 @@ components:
           revision:
             commit: commit
             tag: tag
-            branch:
-              name: name
-              head_sha: head_sha
+            branch: branch
         remote_source:
           path: path
           current_directory_hash: current_directory_hash
@@ -6007,9 +5992,7 @@ components:
         revision:
           commit: commit
           tag: tag
-          branch:
-            name: name
-            head_sha: head_sha
+          branch: branch
       properties:
         repo_url:
           type: string
@@ -6023,15 +6006,13 @@ components:
       example:
         commit: commit
         tag: tag
-        branch:
-          name: name
-          head_sha: head_sha
+        branch: branch
       properties:
         branch:
-          $ref: '#/components/schemas/GitRepoRevision_branch'
-        commit:
           type: string
         tag:
+          type: string
+        commit:
           type: string
       type: object
     RemoteSource:
@@ -6081,13 +6062,13 @@ components:
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
       properties:
         conditions:
@@ -6121,9 +6102,9 @@ components:
     Stack:
       example:
         settings:
-          deploy_timeout_minutes: 2
-          min_successful_releases: 3
-          release_retention_limit: 9
+          deploy_timeout_minutes: 1
+          min_successful_releases: 1
+          release_retention_limit: 7
         annotations:
         - value: value
           key: key
@@ -6143,6 +6124,7 @@ components:
             depends_on:
             - depends_on
             - depends_on
+            replicas: 0
             annotations:
             - value: value
               key: key
@@ -6195,12 +6177,14 @@ components:
               exposed_to_public: true
               name: name
               subdomain_prefix: subdomain_prefix
+            workload_type: Service
             labels:
             - value: value
               key: key
             - value: value
               key: key
             revision: revision
+            schedule: schedule
             stack_id: stack_id
             name: name
             lifecycle_config:
@@ -6212,9 +6196,7 @@ components:
                 git_repo_revision:
                   commit: commit
                   tag: tag
-                  branch:
-                    name: name
-                    head_sha: head_sha
+                  branch: branch
               image_repository:
                 external_image_repo_url: external_image_repo_url
                 use_internal_registry: true
@@ -6231,54 +6213,58 @@ components:
                   git_secret:
                     secret_id: secret_id
             id: id
-            stateful: true
             image_spec:
               image: image
               pull_secret:
                 secret_id: secret_id
             status:
+              updated_replicas: 4
+              last_run_succeeded: true
               last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
               last_failure:
                 container:
                   reason: reason
                   restart_count: 5
                   failure_type: crash_loop
-                  exit_code: 5
+                  exit_code: 2
                   message: message
                 build:
                   reason: reason
-                  restart_count: 2
+                  restart_count: 7
                   failure_type: crash_loop
-                  exit_code: 7
+                  exit_code: 9
                   message: message
                 init_container:
                   reason: reason
                   restart_count: 5
                   failure_type: crash_loop
-                  exit_code: 5
+                  exit_code: 2
                   message: message
                 type: runtime_crash
+              available_replicas: 2
               internal_service_name: internal_service_name
+              replicas: 3
               state: state
               conditions:
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 1
+                observed_generation: 5
                 status: status
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 1
+                observed_generation: 5
                 status: status
               observed_revision: observed_revision
               public_ingress:
-              - target_port: 6
+              - target_port: 1
                 url: url
-              - target_port: 6
+              - target_port: 1
                 url: url
+              last_run_time: 2000-01-23T04:56:07.000+00:00
           - outputs:
             - name: name
               sensitive: true
@@ -6289,6 +6275,7 @@ components:
             depends_on:
             - depends_on
             - depends_on
+            replicas: 0
             annotations:
             - value: value
               key: key
@@ -6341,12 +6328,14 @@ components:
               exposed_to_public: true
               name: name
               subdomain_prefix: subdomain_prefix
+            workload_type: Service
             labels:
             - value: value
               key: key
             - value: value
               key: key
             revision: revision
+            schedule: schedule
             stack_id: stack_id
             name: name
             lifecycle_config:
@@ -6358,9 +6347,7 @@ components:
                 git_repo_revision:
                   commit: commit
                   tag: tag
-                  branch:
-                    name: name
-                    head_sha: head_sha
+                  branch: branch
               image_repository:
                 external_image_repo_url: external_image_repo_url
                 use_internal_registry: true
@@ -6377,54 +6364,58 @@ components:
                   git_secret:
                     secret_id: secret_id
             id: id
-            stateful: true
             image_spec:
               image: image
               pull_secret:
                 secret_id: secret_id
             status:
+              updated_replicas: 4
+              last_run_succeeded: true
               last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
               last_failure:
                 container:
                   reason: reason
                   restart_count: 5
                   failure_type: crash_loop
-                  exit_code: 5
+                  exit_code: 2
                   message: message
                 build:
                   reason: reason
-                  restart_count: 2
+                  restart_count: 7
                   failure_type: crash_loop
-                  exit_code: 7
+                  exit_code: 9
                   message: message
                 init_container:
                   reason: reason
                   restart_count: 5
                   failure_type: crash_loop
-                  exit_code: 5
+                  exit_code: 2
                   message: message
                 type: runtime_crash
+              available_replicas: 2
               internal_service_name: internal_service_name
+              replicas: 3
               state: state
               conditions:
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 1
+                observed_generation: 5
                 status: status
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 1
+                observed_generation: 5
                 status: status
               observed_revision: observed_revision
               public_ingress:
-              - target_port: 6
+              - target_port: 1
                 url: url
-              - target_port: 6
+              - target_port: 1
                 url: url
+              last_run_time: 2000-01-23T04:56:07.000+00:00
           volumes:
           - name: name
             annotations:
@@ -6444,9 +6435,7 @@ components:
                   revision:
                     commit: commit
                     tag: tag
-                    branch:
-                      name: name
-                      head_sha: head_sha
+                    branch: branch
                 remote_source:
                   path: path
                   current_directory_hash: current_directory_hash
@@ -6480,13 +6469,13 @@ components:
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 1
+                observed_generation: 5
                 status: status
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 1
+                observed_generation: 5
                 status: status
           - name: name
             annotations:
@@ -6506,9 +6495,7 @@ components:
                   revision:
                     commit: commit
                     tag: tag
-                    branch:
-                      name: name
-                      head_sha: head_sha
+                    branch: branch
                 remote_source:
                   path: path
                   current_directory_hash: current_directory_hash
@@ -6542,13 +6529,13 @@ components:
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 1
+                observed_generation: 5
                 status: status
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
                 type: type
                 message: message
-                observed_generation: 1
+                observed_generation: 5
                 status: status
           connections:
           - mappings:
@@ -6634,18 +6621,18 @@ components:
             revision: revision
           resources:
           - phase: phase
-            updated_replicas: 7
-            available_replicas: 4
-            replicas: 1
+            updated_replicas: 6
+            available_replicas: 1
+            replicas: 7
             name: name
             missing: true
             converged_revision: converged_revision
             message: message
             observed_revision: observed_revision
           - phase: phase
-            updated_replicas: 7
-            available_replicas: 4
-            replicas: 1
+            updated_replicas: 6
+            available_replicas: 1
+            replicas: 7
             name: name
             missing: true
             converged_revision: converged_revision
@@ -6659,13 +6646,13 @@ components:
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
           observed_revision: observed_revision
       properties:
@@ -6717,9 +6704,9 @@ components:
       type: object
     StackSettings:
       example:
-        deploy_timeout_minutes: 2
-        min_successful_releases: 3
-        release_retention_limit: 9
+        deploy_timeout_minutes: 1
+        min_successful_releases: 1
+        release_retention_limit: 7
       properties:
         release_retention_limit:
           default: 10
@@ -6740,9 +6727,9 @@ components:
         total: 1
         items:
         - settings:
-            deploy_timeout_minutes: 2
-            min_successful_releases: 3
-            release_retention_limit: 9
+            deploy_timeout_minutes: 1
+            min_successful_releases: 1
+            release_retention_limit: 7
           annotations:
           - value: value
             key: key
@@ -6762,6 +6749,7 @@ components:
               depends_on:
               - depends_on
               - depends_on
+              replicas: 0
               annotations:
               - value: value
                 key: key
@@ -6814,12 +6802,14 @@ components:
                 exposed_to_public: true
                 name: name
                 subdomain_prefix: subdomain_prefix
+              workload_type: Service
               labels:
               - value: value
                 key: key
               - value: value
                 key: key
               revision: revision
+              schedule: schedule
               stack_id: stack_id
               name: name
               lifecycle_config:
@@ -6831,9 +6821,7 @@ components:
                   git_repo_revision:
                     commit: commit
                     tag: tag
-                    branch:
-                      name: name
-                      head_sha: head_sha
+                    branch: branch
                 image_repository:
                   external_image_repo_url: external_image_repo_url
                   use_internal_registry: true
@@ -6850,54 +6838,58 @@ components:
                     git_secret:
                       secret_id: secret_id
               id: id
-              stateful: true
               image_spec:
                 image: image
                 pull_secret:
                   secret_id: secret_id
               status:
+                updated_replicas: 4
+                last_run_succeeded: true
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 last_failure:
                   container:
                     reason: reason
                     restart_count: 5
                     failure_type: crash_loop
-                    exit_code: 5
+                    exit_code: 2
                     message: message
                   build:
                     reason: reason
-                    restart_count: 2
+                    restart_count: 7
                     failure_type: crash_loop
-                    exit_code: 7
+                    exit_code: 9
                     message: message
                   init_container:
                     reason: reason
                     restart_count: 5
                     failure_type: crash_loop
-                    exit_code: 5
+                    exit_code: 2
                     message: message
                   type: runtime_crash
+                available_replicas: 2
                 internal_service_name: internal_service_name
+                replicas: 3
                 state: state
                 conditions:
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
                 observed_revision: observed_revision
                 public_ingress:
-                - target_port: 6
+                - target_port: 1
                   url: url
-                - target_port: 6
+                - target_port: 1
                   url: url
+                last_run_time: 2000-01-23T04:56:07.000+00:00
             - outputs:
               - name: name
                 sensitive: true
@@ -6908,6 +6900,7 @@ components:
               depends_on:
               - depends_on
               - depends_on
+              replicas: 0
               annotations:
               - value: value
                 key: key
@@ -6960,12 +6953,14 @@ components:
                 exposed_to_public: true
                 name: name
                 subdomain_prefix: subdomain_prefix
+              workload_type: Service
               labels:
               - value: value
                 key: key
               - value: value
                 key: key
               revision: revision
+              schedule: schedule
               stack_id: stack_id
               name: name
               lifecycle_config:
@@ -6977,9 +6972,7 @@ components:
                   git_repo_revision:
                     commit: commit
                     tag: tag
-                    branch:
-                      name: name
-                      head_sha: head_sha
+                    branch: branch
                 image_repository:
                   external_image_repo_url: external_image_repo_url
                   use_internal_registry: true
@@ -6996,54 +6989,58 @@ components:
                     git_secret:
                       secret_id: secret_id
               id: id
-              stateful: true
               image_spec:
                 image: image
                 pull_secret:
                   secret_id: secret_id
               status:
+                updated_replicas: 4
+                last_run_succeeded: true
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 last_failure:
                   container:
                     reason: reason
                     restart_count: 5
                     failure_type: crash_loop
-                    exit_code: 5
+                    exit_code: 2
                     message: message
                   build:
                     reason: reason
-                    restart_count: 2
+                    restart_count: 7
                     failure_type: crash_loop
-                    exit_code: 7
+                    exit_code: 9
                     message: message
                   init_container:
                     reason: reason
                     restart_count: 5
                     failure_type: crash_loop
-                    exit_code: 5
+                    exit_code: 2
                     message: message
                   type: runtime_crash
+                available_replicas: 2
                 internal_service_name: internal_service_name
+                replicas: 3
                 state: state
                 conditions:
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
                 observed_revision: observed_revision
                 public_ingress:
-                - target_port: 6
+                - target_port: 1
                   url: url
-                - target_port: 6
+                - target_port: 1
                   url: url
+                last_run_time: 2000-01-23T04:56:07.000+00:00
             volumes:
             - name: name
               annotations:
@@ -7063,9 +7060,7 @@ components:
                     revision:
                       commit: commit
                       tag: tag
-                      branch:
-                        name: name
-                        head_sha: head_sha
+                      branch: branch
                   remote_source:
                     path: path
                     current_directory_hash: current_directory_hash
@@ -7099,13 +7094,13 @@ components:
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
             - name: name
               annotations:
@@ -7125,9 +7120,7 @@ components:
                     revision:
                       commit: commit
                       tag: tag
-                      branch:
-                        name: name
-                        head_sha: head_sha
+                      branch: branch
                   remote_source:
                     path: path
                     current_directory_hash: current_directory_hash
@@ -7161,13 +7154,13 @@ components:
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
             connections:
             - mappings:
@@ -7253,18 +7246,18 @@ components:
               revision: revision
             resources:
             - phase: phase
-              updated_replicas: 7
-              available_replicas: 4
-              replicas: 1
+              updated_replicas: 6
+              available_replicas: 1
+              replicas: 7
               name: name
               missing: true
               converged_revision: converged_revision
               message: message
               observed_revision: observed_revision
             - phase: phase
-              updated_replicas: 7
-              available_replicas: 4
-              replicas: 1
+              updated_replicas: 6
+              available_replicas: 1
+              replicas: 7
               name: name
               missing: true
               converged_revision: converged_revision
@@ -7278,19 +7271,19 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             observed_revision: observed_revision
         - settings:
-            deploy_timeout_minutes: 2
-            min_successful_releases: 3
-            release_retention_limit: 9
+            deploy_timeout_minutes: 1
+            min_successful_releases: 1
+            release_retention_limit: 7
           annotations:
           - value: value
             key: key
@@ -7310,6 +7303,7 @@ components:
               depends_on:
               - depends_on
               - depends_on
+              replicas: 0
               annotations:
               - value: value
                 key: key
@@ -7362,12 +7356,14 @@ components:
                 exposed_to_public: true
                 name: name
                 subdomain_prefix: subdomain_prefix
+              workload_type: Service
               labels:
               - value: value
                 key: key
               - value: value
                 key: key
               revision: revision
+              schedule: schedule
               stack_id: stack_id
               name: name
               lifecycle_config:
@@ -7379,9 +7375,7 @@ components:
                   git_repo_revision:
                     commit: commit
                     tag: tag
-                    branch:
-                      name: name
-                      head_sha: head_sha
+                    branch: branch
                 image_repository:
                   external_image_repo_url: external_image_repo_url
                   use_internal_registry: true
@@ -7398,54 +7392,58 @@ components:
                     git_secret:
                       secret_id: secret_id
               id: id
-              stateful: true
               image_spec:
                 image: image
                 pull_secret:
                   secret_id: secret_id
               status:
+                updated_replicas: 4
+                last_run_succeeded: true
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 last_failure:
                   container:
                     reason: reason
                     restart_count: 5
                     failure_type: crash_loop
-                    exit_code: 5
+                    exit_code: 2
                     message: message
                   build:
                     reason: reason
-                    restart_count: 2
+                    restart_count: 7
                     failure_type: crash_loop
-                    exit_code: 7
+                    exit_code: 9
                     message: message
                   init_container:
                     reason: reason
                     restart_count: 5
                     failure_type: crash_loop
-                    exit_code: 5
+                    exit_code: 2
                     message: message
                   type: runtime_crash
+                available_replicas: 2
                 internal_service_name: internal_service_name
+                replicas: 3
                 state: state
                 conditions:
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
                 observed_revision: observed_revision
                 public_ingress:
-                - target_port: 6
+                - target_port: 1
                   url: url
-                - target_port: 6
+                - target_port: 1
                   url: url
+                last_run_time: 2000-01-23T04:56:07.000+00:00
             - outputs:
               - name: name
                 sensitive: true
@@ -7456,6 +7454,7 @@ components:
               depends_on:
               - depends_on
               - depends_on
+              replicas: 0
               annotations:
               - value: value
                 key: key
@@ -7508,12 +7507,14 @@ components:
                 exposed_to_public: true
                 name: name
                 subdomain_prefix: subdomain_prefix
+              workload_type: Service
               labels:
               - value: value
                 key: key
               - value: value
                 key: key
               revision: revision
+              schedule: schedule
               stack_id: stack_id
               name: name
               lifecycle_config:
@@ -7525,9 +7526,7 @@ components:
                   git_repo_revision:
                     commit: commit
                     tag: tag
-                    branch:
-                      name: name
-                      head_sha: head_sha
+                    branch: branch
                 image_repository:
                   external_image_repo_url: external_image_repo_url
                   use_internal_registry: true
@@ -7544,54 +7543,58 @@ components:
                     git_secret:
                       secret_id: secret_id
               id: id
-              stateful: true
               image_spec:
                 image: image
                 pull_secret:
                   secret_id: secret_id
               status:
+                updated_replicas: 4
+                last_run_succeeded: true
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 last_failure:
                   container:
                     reason: reason
                     restart_count: 5
                     failure_type: crash_loop
-                    exit_code: 5
+                    exit_code: 2
                     message: message
                   build:
                     reason: reason
-                    restart_count: 2
+                    restart_count: 7
                     failure_type: crash_loop
-                    exit_code: 7
+                    exit_code: 9
                     message: message
                   init_container:
                     reason: reason
                     restart_count: 5
                     failure_type: crash_loop
-                    exit_code: 5
+                    exit_code: 2
                     message: message
                   type: runtime_crash
+                available_replicas: 2
                 internal_service_name: internal_service_name
+                replicas: 3
                 state: state
                 conditions:
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
                 observed_revision: observed_revision
                 public_ingress:
-                - target_port: 6
+                - target_port: 1
                   url: url
-                - target_port: 6
+                - target_port: 1
                   url: url
+                last_run_time: 2000-01-23T04:56:07.000+00:00
             volumes:
             - name: name
               annotations:
@@ -7611,9 +7614,7 @@ components:
                     revision:
                       commit: commit
                       tag: tag
-                      branch:
-                        name: name
-                        head_sha: head_sha
+                      branch: branch
                   remote_source:
                     path: path
                     current_directory_hash: current_directory_hash
@@ -7647,13 +7648,13 @@ components:
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
             - name: name
               annotations:
@@ -7673,9 +7674,7 @@ components:
                     revision:
                       commit: commit
                       tag: tag
-                      branch:
-                        name: name
-                        head_sha: head_sha
+                      branch: branch
                   remote_source:
                     path: path
                     current_directory_hash: current_directory_hash
@@ -7709,13 +7708,13 @@ components:
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
                   type: type
                   message: message
-                  observed_generation: 1
+                  observed_generation: 5
                   status: status
             connections:
             - mappings:
@@ -7801,18 +7800,18 @@ components:
               revision: revision
             resources:
             - phase: phase
-              updated_replicas: 7
-              available_replicas: 4
-              replicas: 1
+              updated_replicas: 6
+              available_replicas: 1
+              replicas: 7
               name: name
               missing: true
               converged_revision: converged_revision
               message: message
               observed_revision: observed_revision
             - phase: phase
-              updated_replicas: 7
-              available_replicas: 4
-              replicas: 1
+              updated_replicas: 6
+              available_replicas: 1
+              replicas: 7
               name: name
               missing: true
               converged_revision: converged_revision
@@ -7826,13 +7825,13 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             observed_revision: observed_revision
       properties:
@@ -7932,6 +7931,7 @@ components:
           depends_on:
           - depends_on
           - depends_on
+          replicas: 0
           annotations:
           - value: value
             key: key
@@ -7984,12 +7984,14 @@ components:
             exposed_to_public: true
             name: name
             subdomain_prefix: subdomain_prefix
+          workload_type: Service
           labels:
           - value: value
             key: key
           - value: value
             key: key
           revision: revision
+          schedule: schedule
           stack_id: stack_id
           name: name
           lifecycle_config:
@@ -8001,9 +8003,7 @@ components:
               git_repo_revision:
                 commit: commit
                 tag: tag
-                branch:
-                  name: name
-                  head_sha: head_sha
+                branch: branch
             image_repository:
               external_image_repo_url: external_image_repo_url
               use_internal_registry: true
@@ -8020,54 +8020,58 @@ components:
                 git_secret:
                   secret_id: secret_id
           id: id
-          stateful: true
           image_spec:
             image: image
             pull_secret:
               secret_id: secret_id
           status:
+            updated_replicas: 4
+            last_run_succeeded: true
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             last_failure:
               container:
                 reason: reason
                 restart_count: 5
                 failure_type: crash_loop
-                exit_code: 5
+                exit_code: 2
                 message: message
               build:
                 reason: reason
-                restart_count: 2
+                restart_count: 7
                 failure_type: crash_loop
-                exit_code: 7
+                exit_code: 9
                 message: message
               init_container:
                 reason: reason
                 restart_count: 5
                 failure_type: crash_loop
-                exit_code: 5
+                exit_code: 2
                 message: message
               type: runtime_crash
+            available_replicas: 2
             internal_service_name: internal_service_name
+            replicas: 3
             state: state
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             observed_revision: observed_revision
             public_ingress:
-            - target_port: 6
+            - target_port: 1
               url: url
-            - target_port: 6
+            - target_port: 1
               url: url
+            last_run_time: 2000-01-23T04:56:07.000+00:00
         - outputs:
           - name: name
             sensitive: true
@@ -8078,6 +8082,7 @@ components:
           depends_on:
           - depends_on
           - depends_on
+          replicas: 0
           annotations:
           - value: value
             key: key
@@ -8130,12 +8135,14 @@ components:
             exposed_to_public: true
             name: name
             subdomain_prefix: subdomain_prefix
+          workload_type: Service
           labels:
           - value: value
             key: key
           - value: value
             key: key
           revision: revision
+          schedule: schedule
           stack_id: stack_id
           name: name
           lifecycle_config:
@@ -8147,9 +8154,7 @@ components:
               git_repo_revision:
                 commit: commit
                 tag: tag
-                branch:
-                  name: name
-                  head_sha: head_sha
+                branch: branch
             image_repository:
               external_image_repo_url: external_image_repo_url
               use_internal_registry: true
@@ -8166,54 +8171,58 @@ components:
                 git_secret:
                   secret_id: secret_id
           id: id
-          stateful: true
           image_spec:
             image: image
             pull_secret:
               secret_id: secret_id
           status:
+            updated_replicas: 4
+            last_run_succeeded: true
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             last_failure:
               container:
                 reason: reason
                 restart_count: 5
                 failure_type: crash_loop
-                exit_code: 5
+                exit_code: 2
                 message: message
               build:
                 reason: reason
-                restart_count: 2
+                restart_count: 7
                 failure_type: crash_loop
-                exit_code: 7
+                exit_code: 9
                 message: message
               init_container:
                 reason: reason
                 restart_count: 5
                 failure_type: crash_loop
-                exit_code: 5
+                exit_code: 2
                 message: message
               type: runtime_crash
+            available_replicas: 2
             internal_service_name: internal_service_name
+            replicas: 3
             state: state
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             observed_revision: observed_revision
             public_ingress:
-            - target_port: 6
+            - target_port: 1
               url: url
-            - target_port: 6
+            - target_port: 1
               url: url
+            last_run_time: 2000-01-23T04:56:07.000+00:00
         volumes:
         - name: name
           annotations:
@@ -8233,9 +8242,7 @@ components:
                 revision:
                   commit: commit
                   tag: tag
-                  branch:
-                    name: name
-                    head_sha: head_sha
+                  branch: branch
               remote_source:
                 path: path
                 current_directory_hash: current_directory_hash
@@ -8269,13 +8276,13 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
         - name: name
           annotations:
@@ -8295,9 +8302,7 @@ components:
                 revision:
                   commit: commit
                   tag: tag
-                  branch:
-                    name: name
-                    head_sha: head_sha
+                  branch: branch
               remote_source:
                 path: path
                 current_directory_hash: current_directory_hash
@@ -8331,13 +8336,13 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
         connections:
         - mappings:
@@ -8428,18 +8433,18 @@ components:
           revision: revision
         resources:
         - phase: phase
-          updated_replicas: 7
-          available_replicas: 4
-          replicas: 1
+          updated_replicas: 6
+          available_replicas: 1
+          replicas: 7
           name: name
           missing: true
           converged_revision: converged_revision
           message: message
           observed_revision: observed_revision
         - phase: phase
-          updated_replicas: 7
-          available_replicas: 4
-          replicas: 1
+          updated_replicas: 6
+          available_replicas: 1
+          replicas: 7
           name: name
           missing: true
           converged_revision: converged_revision
@@ -8453,13 +8458,13 @@ components:
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
         observed_revision: observed_revision
       properties:
@@ -8494,6 +8499,7 @@ components:
         depends_on:
         - depends_on
         - depends_on
+        replicas: 0
         annotations:
         - value: value
           key: key
@@ -8546,12 +8552,14 @@ components:
           exposed_to_public: true
           name: name
           subdomain_prefix: subdomain_prefix
+        workload_type: Service
         labels:
         - value: value
           key: key
         - value: value
           key: key
         revision: revision
+        schedule: schedule
         stack_id: stack_id
         name: name
         lifecycle_config:
@@ -8563,9 +8571,7 @@ components:
             git_repo_revision:
               commit: commit
               tag: tag
-              branch:
-                name: name
-                head_sha: head_sha
+              branch: branch
           image_repository:
             external_image_repo_url: external_image_repo_url
             use_internal_registry: true
@@ -8582,54 +8588,58 @@ components:
               git_secret:
                 secret_id: secret_id
         id: id
-        stateful: true
         image_spec:
           image: image
           pull_secret:
             secret_id: secret_id
         status:
+          updated_replicas: 4
+          last_run_succeeded: true
           last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
           last_failure:
             container:
               reason: reason
               restart_count: 5
               failure_type: crash_loop
-              exit_code: 5
+              exit_code: 2
               message: message
             build:
               reason: reason
-              restart_count: 2
+              restart_count: 7
               failure_type: crash_loop
-              exit_code: 7
+              exit_code: 9
               message: message
             init_container:
               reason: reason
               restart_count: 5
               failure_type: crash_loop
-              exit_code: 5
+              exit_code: 2
               message: message
             type: runtime_crash
+          available_replicas: 2
           internal_service_name: internal_service_name
+          replicas: 3
           state: state
           conditions:
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
           observed_revision: observed_revision
           public_ingress:
-          - target_port: 6
+          - target_port: 1
             url: url
-          - target_port: 6
+          - target_port: 1
             url: url
+          last_run_time: 2000-01-23T04:56:07.000+00:00
       properties:
         id:
           readOnly: true
@@ -8677,8 +8687,21 @@ components:
             $ref: '#/components/schemas/OutputDescriptor'
           readOnly: true
           type: array
-        stateful:
-          type: boolean
+        workload_type:
+          default: Service
+          enum:
+          - Service
+          - StatefulService
+          - Worker
+          - Job
+          - CronJob
+          type: string
+        schedule:
+          type: string
+        replicas:
+          format: int32
+          minimum: 0
+          type: integer
         status:
           $ref: '#/components/schemas/StackResourceStatus'
       required:
@@ -8698,6 +8721,7 @@ components:
           depends_on:
           - depends_on
           - depends_on
+          replicas: 0
           annotations:
           - value: value
             key: key
@@ -8750,12 +8774,14 @@ components:
             exposed_to_public: true
             name: name
             subdomain_prefix: subdomain_prefix
+          workload_type: Service
           labels:
           - value: value
             key: key
           - value: value
             key: key
           revision: revision
+          schedule: schedule
           stack_id: stack_id
           name: name
           lifecycle_config:
@@ -8767,9 +8793,7 @@ components:
               git_repo_revision:
                 commit: commit
                 tag: tag
-                branch:
-                  name: name
-                  head_sha: head_sha
+                branch: branch
             image_repository:
               external_image_repo_url: external_image_repo_url
               use_internal_registry: true
@@ -8786,54 +8810,58 @@ components:
                 git_secret:
                   secret_id: secret_id
           id: id
-          stateful: true
           image_spec:
             image: image
             pull_secret:
               secret_id: secret_id
           status:
+            updated_replicas: 4
+            last_run_succeeded: true
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             last_failure:
               container:
                 reason: reason
                 restart_count: 5
                 failure_type: crash_loop
-                exit_code: 5
+                exit_code: 2
                 message: message
               build:
                 reason: reason
-                restart_count: 2
+                restart_count: 7
                 failure_type: crash_loop
-                exit_code: 7
+                exit_code: 9
                 message: message
               init_container:
                 reason: reason
                 restart_count: 5
                 failure_type: crash_loop
-                exit_code: 5
+                exit_code: 2
                 message: message
               type: runtime_crash
+            available_replicas: 2
             internal_service_name: internal_service_name
+            replicas: 3
             state: state
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             observed_revision: observed_revision
             public_ingress:
-            - target_port: 6
+            - target_port: 1
               url: url
-            - target_port: 6
+            - target_port: 1
               url: url
+            last_run_time: 2000-01-23T04:56:07.000+00:00
         - outputs:
           - name: name
             sensitive: true
@@ -8844,6 +8872,7 @@ components:
           depends_on:
           - depends_on
           - depends_on
+          replicas: 0
           annotations:
           - value: value
             key: key
@@ -8896,12 +8925,14 @@ components:
             exposed_to_public: true
             name: name
             subdomain_prefix: subdomain_prefix
+          workload_type: Service
           labels:
           - value: value
             key: key
           - value: value
             key: key
           revision: revision
+          schedule: schedule
           stack_id: stack_id
           name: name
           lifecycle_config:
@@ -8913,9 +8944,7 @@ components:
               git_repo_revision:
                 commit: commit
                 tag: tag
-                branch:
-                  name: name
-                  head_sha: head_sha
+                branch: branch
             image_repository:
               external_image_repo_url: external_image_repo_url
               use_internal_registry: true
@@ -8932,54 +8961,58 @@ components:
                 git_secret:
                   secret_id: secret_id
           id: id
-          stateful: true
           image_spec:
             image: image
             pull_secret:
               secret_id: secret_id
           status:
+            updated_replicas: 4
+            last_run_succeeded: true
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             last_failure:
               container:
                 reason: reason
                 restart_count: 5
                 failure_type: crash_loop
-                exit_code: 5
+                exit_code: 2
                 message: message
               build:
                 reason: reason
-                restart_count: 2
+                restart_count: 7
                 failure_type: crash_loop
-                exit_code: 7
+                exit_code: 9
                 message: message
               init_container:
                 reason: reason
                 restart_count: 5
                 failure_type: crash_loop
-                exit_code: 5
+                exit_code: 2
                 message: message
               type: runtime_crash
+            available_replicas: 2
             internal_service_name: internal_service_name
+            replicas: 3
             state: state
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             observed_revision: observed_revision
             public_ingress:
-            - target_port: 6
+            - target_port: 1
               url: url
-            - target_port: 6
+            - target_port: 1
               url: url
+            last_run_time: 2000-01-23T04:56:07.000+00:00
       properties:
         items:
           items:
@@ -9466,9 +9499,7 @@ components:
           git_repo_revision:
             commit: commit
             tag: tag
-            branch:
-              name: name
-              head_sha: head_sha
+            branch: branch
         updated_at: 2000-01-23T04:56:07.000+00:00
         image_repo: image_repo
         stack_id: stack_id
@@ -9490,22 +9521,22 @@ components:
           state: state
           last_build_failure_detail:
             reason: reason
-            restart_count: 2
+            restart_count: 7
             failure_type: crash_loop
-            exit_code: 7
+            exit_code: 9
             message: message
           conditions:
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
       properties:
         id:
@@ -9586,9 +9617,7 @@ components:
             git_repo_revision:
               commit: commit
               tag: tag
-              branch:
-                name: name
-                head_sha: head_sha
+              branch: branch
           updated_at: 2000-01-23T04:56:07.000+00:00
           image_repo: image_repo
           stack_id: stack_id
@@ -9610,22 +9639,22 @@ components:
             state: state
             last_build_failure_detail:
               reason: reason
-              restart_count: 2
+              restart_count: 7
               failure_type: crash_loop
-              exit_code: 7
+              exit_code: 9
               message: message
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
         - stack_resource_id: stack_resource_id
           source_revision:
@@ -9634,9 +9663,7 @@ components:
             git_repo_revision:
               commit: commit
               tag: tag
-              branch:
-                name: name
-                head_sha: head_sha
+              branch: branch
           updated_at: 2000-01-23T04:56:07.000+00:00
           image_repo: image_repo
           stack_id: stack_id
@@ -9658,22 +9685,22 @@ components:
             state: state
             last_build_failure_detail:
               reason: reason
-              restart_count: 2
+              restart_count: 7
               failure_type: crash_loop
-              exit_code: 7
+              exit_code: 9
               message: message
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
       properties:
         items:
@@ -9690,22 +9717,22 @@ components:
         state: state
         last_build_failure_detail:
           reason: reason
-          restart_count: 2
+          restart_count: 7
           failure_type: crash_loop
-          exit_code: 7
+          exit_code: 9
           message: message
         conditions:
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
       properties:
         state:
@@ -9870,10 +9897,7 @@ components:
           id: id
           spec:
             backend_storage_size: backend_storage_size
-            max_repositories: 0
             backend_storage_class: backend_storage_class
-            tags_per_repository: 6
-            delete_untagged: true
           status:
             state: null
             conditions:
@@ -9881,13 +9905,13 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
         - organisation_id: organisation_id
           cluster_id: cluster_id
@@ -9897,10 +9921,7 @@ components:
           id: id
           spec:
             backend_storage_size: backend_storage_size
-            max_repositories: 0
             backend_storage_class: backend_storage_class
-            tags_per_repository: 6
-            delete_untagged: true
           status:
             state: null
             conditions:
@@ -9908,13 +9929,13 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
       properties:
         items:
@@ -9934,10 +9955,7 @@ components:
         id: id
         spec:
           backend_storage_size: backend_storage_size
-          max_repositories: 0
           backend_storage_class: backend_storage_class
-          tags_per_repository: 6
-          delete_untagged: true
         status:
           state: null
           conditions:
@@ -9945,13 +9963,13 @@ components:
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
       properties:
         id:
@@ -9980,21 +9998,12 @@ components:
     ClusterImageRegistrySpec:
       example:
         backend_storage_size: backend_storage_size
-        max_repositories: 0
         backend_storage_class: backend_storage_class
-        tags_per_repository: 6
-        delete_untagged: true
       properties:
         backend_storage_size:
           type: string
         backend_storage_class:
           type: string
-        max_repositories:
-          type: integer
-        tags_per_repository:
-          type: integer
-        delete_untagged:
-          type: boolean
       type: object
     ClusterImageRegistryStatus:
       example:
@@ -10004,13 +10013,13 @@ components:
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
       properties:
         state:
@@ -10028,48 +10037,53 @@ components:
       type: string
     StackResourceStatus:
       example:
+        updated_replicas: 4
+        last_run_succeeded: true
         last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
         last_failure:
           container:
             reason: reason
             restart_count: 5
             failure_type: crash_loop
-            exit_code: 5
+            exit_code: 2
             message: message
           build:
             reason: reason
-            restart_count: 2
+            restart_count: 7
             failure_type: crash_loop
-            exit_code: 7
+            exit_code: 9
             message: message
           init_container:
             reason: reason
             restart_count: 5
             failure_type: crash_loop
-            exit_code: 5
+            exit_code: 2
             message: message
           type: runtime_crash
+        available_replicas: 2
         internal_service_name: internal_service_name
+        replicas: 3
         state: state
         conditions:
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
         observed_revision: observed_revision
         public_ingress:
-        - target_port: 6
+        - target_port: 1
           url: url
-        - target_port: 6
+        - target_port: 1
           url: url
+        last_run_time: 2000-01-23T04:56:07.000+00:00
       properties:
         public_ingress:
           items:
@@ -10090,13 +10104,32 @@ components:
           type: array
         last_failure:
           $ref: '#/components/schemas/StackResourceFailure'
+        replicas:
+          format: int32
+          readOnly: true
+          type: integer
+        available_replicas:
+          format: int32
+          readOnly: true
+          type: integer
+        updated_replicas:
+          format: int32
+          readOnly: true
+          type: integer
+        last_run_time:
+          format: date-time
+          readOnly: true
+          type: string
+        last_run_succeeded:
+          readOnly: true
+          type: boolean
       type: object
     ContainerFailureDetail:
       example:
         reason: reason
         restart_count: 5
         failure_type: crash_loop
-        exit_code: 5
+        exit_code: 2
         message: message
       properties:
         failure_type:
@@ -10121,9 +10154,9 @@ components:
     BuildFailureDetail:
       example:
         reason: reason
-        restart_count: 2
+        restart_count: 7
         failure_type: crash_loop
-        exit_code: 7
+        exit_code: 9
         message: message
       properties:
         failure_type:
@@ -10151,19 +10184,19 @@ components:
           reason: reason
           restart_count: 5
           failure_type: crash_loop
-          exit_code: 5
+          exit_code: 2
           message: message
         build:
           reason: reason
-          restart_count: 2
+          restart_count: 7
           failure_type: crash_loop
-          exit_code: 7
+          exit_code: 9
           message: message
         init_container:
           reason: reason
           restart_count: 5
           failure_type: crash_loop
-          exit_code: 5
+          exit_code: 2
           message: message
         type: runtime_crash
       properties:
@@ -10181,7 +10214,7 @@ components:
       type: object
     Ingress:
       example:
-        target_port: 6
+        target_port: 1
         url: url
       properties:
         url:
@@ -10259,9 +10292,7 @@ components:
           git_repo_revision:
             commit: commit
             tag: tag
-            branch:
-              name: name
-              head_sha: head_sha
+            branch: branch
         image_repository:
           external_image_repo_url: external_image_repo_url
           use_internal_registry: true
@@ -10331,9 +10362,7 @@ components:
         git_repo_revision:
           commit: commit
           tag: tag
-          branch:
-            name: name
-            head_sha: head_sha
+          branch: branch
       properties:
         volume_source_revision:
           $ref: '#/components/schemas/BuildSourceRevision_volume_source_revision'
@@ -10444,7 +10473,7 @@ components:
         last_transition_time: 2000-01-23T04:56:07.000+00:00
         type: type
         message: message
-        observed_generation: 1
+        observed_generation: 5
         status: status
       properties:
         type:
@@ -10943,13 +10972,13 @@ components:
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
             type: type
             message: message
-            observed_generation: 1
+            observed_generation: 5
             status: status
           cluster_info:
             version: version
@@ -11132,13 +11161,13 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             cluster_info:
               version: version
@@ -11263,13 +11292,13 @@ components:
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
               type: type
               message: message
-              observed_generation: 1
+              observed_generation: 5
               status: status
             cluster_info:
               version: version
@@ -11585,13 +11614,13 @@ components:
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
           type: type
           message: message
-          observed_generation: 1
+          observed_generation: 5
           status: status
         cluster_info:
           version: version
@@ -12453,9 +12482,9 @@ components:
     StackResourceSummary:
       example:
         phase: phase
-        updated_replicas: 7
-        available_replicas: 4
-        replicas: 1
+        updated_replicas: 6
+        available_replicas: 1
+        replicas: 7
         name: name
         missing: true
         converged_revision: converged_revision
@@ -13021,16 +13050,6 @@ components:
         workspace_name:
           type: string
         namespace:
-          type: string
-      type: object
-    GitRepoRevision_branch:
-      example:
-        name: name
-        head_sha: head_sha
-      properties:
-        name:
-          type: string
-        head_sha:
           type: string
       type: object
     ResourceMetrics_node_capacities_inner:

@@ -26,7 +26,9 @@ type StackResource struct {
 	LifecycleConfig *LifecycleConfig   `gorm:"type:jsonb"`
 	Ports           Ports              `gorm:"type:jsonb"`
 	Outputs         []OutputDescriptor `gorm:"-" json:"outputs,omitempty"`
-	StateFul        bool
+	WorkloadType    WorkloadType
+	Schedule        string
+	Replicas        *int32
 	Status          *StackResourceStatus `gorm:"type:jsonb"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
@@ -100,6 +102,11 @@ type StackResourceStatus struct {
 	LastObservedStatusHash        string                `json:"last_observed_status_hash,omitempty"`
 	LastRestartRequestProcessedAt *time.Time            `json:"last_restart_request_processed_at,omitempty"`
 	LastFailure                   *StackResourceFailure `json:"last_failure,omitempty"`
+	Replicas                      int32                 `json:"replicas,omitempty"`
+	AvailableReplicas             int32                 `json:"available_replicas,omitempty"`
+	UpdatedReplicas               int32                 `json:"updated_replicas,omitempty"`
+	LastRunTime                   *time.Time            `json:"last_run_time,omitempty"`
+	LastRunSucceeded              *bool                 `json:"last_run_succeeded,omitempty"`
 }
 
 type Ingress struct {

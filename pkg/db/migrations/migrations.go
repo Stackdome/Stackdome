@@ -63,4 +63,6 @@ var MigrationList = []*gormigrate.Migration{
 	addSettingsToStacks(),
 	createStackPreviewConfigsTable(),
 	createPreviewStacksTable(),
+	addWorkloadTypeColumns(),
+	dropRegistryRetentionColumns(),
 }

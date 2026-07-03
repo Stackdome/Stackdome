@@ -4,9 +4,9 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Branch** | Pointer to [**GitRepoRevisionBranch**](GitRepoRevisionBranch.md) |  | [optional] 
-**Commit** | Pointer to **string** |  | [optional] 
+**Branch** | Pointer to **string** |  | [optional] 
 **Tag** | Pointer to **string** |  | [optional] 
+**Commit** | Pointer to **string** |  | [optional] 
 
 ## Methods
 
@@ -29,20 +29,20 @@ but it doesn't guarantee that properties required by API are set
 
 ### GetBranch
 
-`func (o *GitRepoRevision) GetBranch() GitRepoRevisionBranch`
+`func (o *GitRepoRevision) GetBranch() string`
 
 GetBranch returns the Branch field if non-nil, zero value otherwise.
 
 ### GetBranchOk
 
-`func (o *GitRepoRevision) GetBranchOk() (*GitRepoRevisionBranch, bool)`
+`func (o *GitRepoRevision) GetBranchOk() (*string, bool)`
 
 GetBranchOk returns a tuple with the Branch field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetBranch
 
-`func (o *GitRepoRevision) SetBranch(v GitRepoRevisionBranch)`
+`func (o *GitRepoRevision) SetBranch(v string)`
 
 SetBranch sets Branch field to given value.
 
@@ -51,31 +51,6 @@ SetBranch sets Branch field to given value.
 `func (o *GitRepoRevision) HasBranch() bool`
 
 HasBranch returns a boolean if a field has been set.
-
-### GetCommit
-
-`func (o *GitRepoRevision) GetCommit() string`
-
-GetCommit returns the Commit field if non-nil, zero value otherwise.
-
-### GetCommitOk
-
-`func (o *GitRepoRevision) GetCommitOk() (*string, bool)`
-
-GetCommitOk returns a tuple with the Commit field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetCommit
-
-`func (o *GitRepoRevision) SetCommit(v string)`
-
-SetCommit sets Commit field to given value.
-
-### HasCommit
-
-`func (o *GitRepoRevision) HasCommit() bool`
-
-HasCommit returns a boolean if a field has been set.
 
 ### GetTag
 
@@ -101,6 +76,31 @@ SetTag sets Tag field to given value.
 `func (o *GitRepoRevision) HasTag() bool`
 
 HasTag returns a boolean if a field has been set.
+
+### GetCommit
+
+`func (o *GitRepoRevision) GetCommit() string`
+
+GetCommit returns the Commit field if non-nil, zero value otherwise.
+
+### GetCommitOk
+
+`func (o *GitRepoRevision) GetCommitOk() (*string, bool)`
+
+GetCommitOk returns a tuple with the Commit field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCommit
+
+`func (o *GitRepoRevision) SetCommit(v string)`
+
+SetCommit sets Commit field to given value.
+
+### HasCommit
+
+`func (o *GitRepoRevision) HasCommit() bool`
+
+HasCommit returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

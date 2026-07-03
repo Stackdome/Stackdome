@@ -60,7 +60,7 @@ func TestFixture_BuildFromSource(t *testing.T) {
 	if res.BuildSpec.ContextPathWithinSource != "./backend" {
 		t.Errorf("expected context './backend', got %q", res.BuildSpec.ContextPathWithinSource)
 	}
-	if *res.BuildSpec.SourceRevision.GitRepoRevision.Branch.Name != "develop" {
+	if *res.BuildSpec.SourceRevision.GitRepoRevision.Branch != "develop" {
 		t.Error("expected branch develop")
 	}
 }

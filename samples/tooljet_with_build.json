@@ -46,7 +46,7 @@
             {
                 "name": "postgres",
                 "image_spec": { "image": "postgres:13" },
-                "stateful": true,
+                "workload_type": "StatefulService",
                 "ports": [
                     { "name": "postgres", "number": 5432, "exposed_to_public": false, "protocol": "TCP" }
                 ],

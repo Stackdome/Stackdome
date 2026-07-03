@@ -3811,15 +3811,10 @@ components:
       type: object
       properties:
         branch:
-          type: object
-          properties:
-            name:
-              type: string
-            head_sha:
-              type: string
-        commit:
           type: string
         tag:
+          type: string
+        commit:
           type: string
 
     RemoteSource:
@@ -4050,8 +4045,21 @@ components:
           readOnly: true
           items:
             $ref: '#/components/schemas/OutputDescriptor'
-        stateful:
-          type: boolean
+        workload_type:
+          type: string
+          enum:
+            - Service
+            - StatefulService
+            - Worker
+            - Job
+            - CronJob
+          default: Service
+        schedule:
+          type: string
+        replicas:
+          type: integer
+          format: int32
+          minimum: 0
         status:
           $ref: '#/components/schemas/StackResourceStatus'
           readOnly: true
@@ -4543,12 +4551,6 @@ components:
           type: string
         backend_storage_class:
           type: string
-        max_repositories:
-          type: integer
-        tags_per_repository:
-          type: integer
-        delete_untagged:
-          type: boolean
     ClusterImageRegistryStatus:
       type: object
       properties:
@@ -4586,6 +4588,25 @@ components:
             $ref: '#/components/schemas/Condition'
         last_failure:
           $ref: '#/components/schemas/StackResourceFailure'
+        replicas:
+          type: integer
+          format: int32
+          readOnly: true
+        available_replicas:
+          type: integer
+          format: int32
+          readOnly: true
+        updated_replicas:
+          type: integer
+          format: int32
+          readOnly: true
+        last_run_time:
+          type: string
+          format: date-time
+          readOnly: true
+        last_run_succeeded:
+          type: boolean
+          readOnly: true
     ContainerFailureDetail:
       type: object
       properties:

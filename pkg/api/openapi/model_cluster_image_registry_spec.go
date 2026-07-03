@@ -18,9 +18,6 @@ import (
 type ClusterImageRegistrySpec struct {
 	BackendStorageSize  *string `json:"backend_storage_size,omitempty"`
 	BackendStorageClass *string `json:"backend_storage_class,omitempty"`
-	MaxRepositories     *int32  `json:"max_repositories,omitempty"`
-	TagsPerRepository   *int32  `json:"tags_per_repository,omitempty"`
-	DeleteUntagged      *bool   `json:"delete_untagged,omitempty"`
 }
 
 // NewClusterImageRegistrySpec instantiates a new ClusterImageRegistrySpec object
@@ -104,102 +101,6 @@ func (o *ClusterImageRegistrySpec) SetBackendStorageClass(v string) {
 	o.BackendStorageClass = &v
 }
 
-// GetMaxRepositories returns the MaxRepositories field value if set, zero value otherwise.
-func (o *ClusterImageRegistrySpec) GetMaxRepositories() int32 {
-	if o == nil || o.MaxRepositories == nil {
-		var ret int32
-		return ret
-	}
-	return *o.MaxRepositories
-}
-
-// GetMaxRepositoriesOk returns a tuple with the MaxRepositories field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ClusterImageRegistrySpec) GetMaxRepositoriesOk() (*int32, bool) {
-	if o == nil || o.MaxRepositories == nil {
-		return nil, false
-	}
-	return o.MaxRepositories, true
-}
-
-// HasMaxRepositories returns a boolean if a field has been set.
-func (o *ClusterImageRegistrySpec) HasMaxRepositories() bool {
-	if o != nil && o.MaxRepositories != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetMaxRepositories gets a reference to the given int32 and assigns it to the MaxRepositories field.
-func (o *ClusterImageRegistrySpec) SetMaxRepositories(v int32) {
-	o.MaxRepositories = &v
-}
-
-// GetTagsPerRepository returns the TagsPerRepository field value if set, zero value otherwise.
-func (o *ClusterImageRegistrySpec) GetTagsPerRepository() int32 {
-	if o == nil || o.TagsPerRepository == nil {
-		var ret int32
-		return ret
-	}
-	return *o.TagsPerRepository
-}
-
-// GetTagsPerRepositoryOk returns a tuple with the TagsPerRepository field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ClusterImageRegistrySpec) GetTagsPerRepositoryOk() (*int32, bool) {
-	if o == nil || o.TagsPerRepository == nil {
-		return nil, false
-	}
-	return o.TagsPerRepository, true
-}
-
-// HasTagsPerRepository returns a boolean if a field has been set.
-func (o *ClusterImageRegistrySpec) HasTagsPerRepository() bool {
-	if o != nil && o.TagsPerRepository != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetTagsPerRepository gets a reference to the given int32 and assigns it to the TagsPerRepository field.
-func (o *ClusterImageRegistrySpec) SetTagsPerRepository(v int32) {
-	o.TagsPerRepository = &v
-}
-
-// GetDeleteUntagged returns the DeleteUntagged field value if set, zero value otherwise.
-func (o *ClusterImageRegistrySpec) GetDeleteUntagged() bool {
-	if o == nil || o.DeleteUntagged == nil {
-		var ret bool
-		return ret
-	}
-	return *o.DeleteUntagged
-}
-
-// GetDeleteUntaggedOk returns a tuple with the DeleteUntagged field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *ClusterImageRegistrySpec) GetDeleteUntaggedOk() (*bool, bool) {
-	if o == nil || o.DeleteUntagged == nil {
-		return nil, false
-	}
-	return o.DeleteUntagged, true
-}
-
-// HasDeleteUntagged returns a boolean if a field has been set.
-func (o *ClusterImageRegistrySpec) HasDeleteUntagged() bool {
-	if o != nil && o.DeleteUntagged != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetDeleteUntagged gets a reference to the given bool and assigns it to the DeleteUntagged field.
-func (o *ClusterImageRegistrySpec) SetDeleteUntagged(v bool) {
-	o.DeleteUntagged = &v
-}
-
 func (o ClusterImageRegistrySpec) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.BackendStorageSize != nil {
@@ -207,15 +108,6 @@ func (o ClusterImageRegistrySpec) MarshalJSON() ([]byte, error) {
 	}
 	if o.BackendStorageClass != nil {
 		toSerialize["backend_storage_class"] = o.BackendStorageClass
-	}
-	if o.MaxRepositories != nil {
-		toSerialize["max_repositories"] = o.MaxRepositories
-	}
-	if o.TagsPerRepository != nil {
-		toSerialize["tags_per_repository"] = o.TagsPerRepository
-	}
-	if o.DeleteUntagged != nil {
-		toSerialize["delete_untagged"] = o.DeleteUntagged
 	}
 	return json.Marshal(toSerialize)
 }

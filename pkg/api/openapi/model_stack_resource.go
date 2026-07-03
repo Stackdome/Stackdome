@@ -31,7 +31,9 @@ type StackResource struct {
 	LifecycleConfig *LifecycleConfig        `json:"lifecycle_config,omitempty"`
 	Ports           []Port                  `json:"ports,omitempty"`
 	Outputs         []OutputDescriptor      `json:"outputs,omitempty"`
-	Stateful        *bool                   `json:"stateful,omitempty"`
+	WorkloadType    *string                 `json:"workload_type,omitempty"`
+	Schedule        *string                 `json:"schedule,omitempty"`
+	Replicas        *int32                  `json:"replicas,omitempty"`
 	Status          *StackResourceStatus    `json:"status,omitempty"`
 }
 
@@ -42,6 +44,8 @@ type StackResource struct {
 func NewStackResource(name string) *StackResource {
 	this := StackResource{}
 	this.Name = name
+	var workloadType string = "Service"
+	this.WorkloadType = &workloadType
 	return &this
 }
 
@@ -50,6 +54,8 @@ func NewStackResource(name string) *StackResource {
 // but it doesn't guarantee that properties required by API are set
 func NewStackResourceWithDefaults() *StackResource {
 	this := StackResource{}
+	var workloadType string = "Service"
+	this.WorkloadType = &workloadType
 	return &this
 }
 
@@ -525,36 +531,100 @@ func (o *StackResource) SetOutputs(v []OutputDescriptor) {
 	o.Outputs = v
 }
 
-// GetStateful returns the Stateful field value if set, zero value otherwise.
-func (o *StackResource) GetStateful() bool {
-	if o == nil || o.Stateful == nil {
-		var ret bool
+// GetWorkloadType returns the WorkloadType field value if set, zero value otherwise.
+func (o *StackResource) GetWorkloadType() string {
+	if o == nil || o.WorkloadType == nil {
+		var ret string
 		return ret
 	}
-	return *o.Stateful
+	return *o.WorkloadType
 }
 
-// GetStatefulOk returns a tuple with the Stateful field value if set, nil otherwise
+// GetWorkloadTypeOk returns a tuple with the WorkloadType field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StackResource) GetStatefulOk() (*bool, bool) {
-	if o == nil || o.Stateful == nil {
+func (o *StackResource) GetWorkloadTypeOk() (*string, bool) {
+	if o == nil || o.WorkloadType == nil {
 		return nil, false
 	}
-	return o.Stateful, true
+	return o.WorkloadType, true
 }
 
-// HasStateful returns a boolean if a field has been set.
-func (o *StackResource) HasStateful() bool {
-	if o != nil && o.Stateful != nil {
+// HasWorkloadType returns a boolean if a field has been set.
+func (o *StackResource) HasWorkloadType() bool {
+	if o != nil && o.WorkloadType != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetStateful gets a reference to the given bool and assigns it to the Stateful field.
-func (o *StackResource) SetStateful(v bool) {
-	o.Stateful = &v
+// SetWorkloadType gets a reference to the given string and assigns it to the WorkloadType field.
+func (o *StackResource) SetWorkloadType(v string) {
+	o.WorkloadType = &v
+}
+
+// GetSchedule returns the Schedule field value if set, zero value otherwise.
+func (o *StackResource) GetSchedule() string {
+	if o == nil || o.Schedule == nil {
+		var ret string
+		return ret
+	}
+	return *o.Schedule
+}
+
+// GetScheduleOk returns a tuple with the Schedule field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackResource) GetScheduleOk() (*string, bool) {
+	if o == nil || o.Schedule == nil {
+		return nil, false
+	}
+	return o.Schedule, true
+}
+
+// HasSchedule returns a boolean if a field has been set.
+func (o *StackResource) HasSchedule() bool {
+	if o != nil && o.Schedule != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetSchedule gets a reference to the given string and assigns it to the Schedule field.
+func (o *StackResource) SetSchedule(v string) {
+	o.Schedule = &v
+}
+
+// GetReplicas returns the Replicas field value if set, zero value otherwise.
+func (o *StackResource) GetReplicas() int32 {
+	if o == nil || o.Replicas == nil {
+		var ret int32
+		return ret
+	}
+	return *o.Replicas
+}
+
+// GetReplicasOk returns a tuple with the Replicas field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackResource) GetReplicasOk() (*int32, bool) {
+	if o == nil || o.Replicas == nil {
+		return nil, false
+	}
+	return o.Replicas, true
+}
+
+// HasReplicas returns a boolean if a field has been set.
+func (o *StackResource) HasReplicas() bool {
+	if o != nil && o.Replicas != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetReplicas gets a reference to the given int32 and assigns it to the Replicas field.
+func (o *StackResource) SetReplicas(v int32) {
+	o.Replicas = &v
 }
 
 // GetStatus returns the Status field value if set, zero value otherwise.
@@ -636,8 +706,14 @@ func (o StackResource) MarshalJSON() ([]byte, error) {
 	if o.Outputs != nil {
 		toSerialize["outputs"] = o.Outputs
 	}
-	if o.Stateful != nil {
-		toSerialize["stateful"] = o.Stateful
+	if o.WorkloadType != nil {
+		toSerialize["workload_type"] = o.WorkloadType
+	}
+	if o.Schedule != nil {
+		toSerialize["schedule"] = o.Schedule
+	}
+	if o.Replicas != nil {
+		toSerialize["replicas"] = o.Replicas
 	}
 	if o.Status != nil {
 		toSerialize["status"] = o.Status

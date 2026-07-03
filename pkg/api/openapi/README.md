@@ -235,7 +235,6 @@ Class | Method | HTTP request | Description
  - [ExecutionConfig](docs/ExecutionConfig.md)
  - [GCSCredentials](docs/GCSCredentials.md)
  - [GitRepoRevision](docs/GitRepoRevision.md)
- - [GitRepoRevisionBranch](docs/GitRepoRevisionBranch.md)
  - [GitRepoSource](docs/GitRepoSource.md)
  - [ImageBuild](docs/ImageBuild.md)
  - [ImageBuildList](docs/ImageBuildList.md)
