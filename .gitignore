@@ -25,3 +25,4 @@ pkg/web/dist/*
 .playwright-mcp/
 *.png
 !frontend/**/*.png
+.vite/
