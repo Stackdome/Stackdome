@@ -52,7 +52,8 @@ func (h *secretHandler) ListByOrgID(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
 			orgID := mux.Vars(r)["org_id"]
-			objs, serr := h.secretService.ListSecretsForCurrentUser(r.Context(), orgID)
+			params := parseListParams(r, []string{"name"})
+			objs, serr := h.secretService.ListSecretsForCurrentUser(r.Context(), orgID, params)
 			if serr != nil {
 				return nil, serr
 			}
@@ -73,7 +74,8 @@ func (h *secretHandler) ListByTeamID(w http.ResponseWriter, r *http.Request) {
 			if serr != nil {
 				return nil, serr
 			}
-			objs, serr := h.secretService.ListByTeamID(ctx, teamID)
+			params := parseListParams(r, []string{"name"})
+			objs, serr := h.secretService.ListByTeamID(ctx, teamID, params)
 			if serr != nil {
 				return nil, serr
 			}

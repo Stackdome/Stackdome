@@ -49,11 +49,14 @@ func (s *PreviewReconcilerStatus) Scan(value any) error {
 		*s = PreviewReconcilerStatus{}
 		return nil
 	}
-	b, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed for PreviewReconcilerStatus")
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, s)
+	case string:
+		return json.Unmarshal([]byte(v), s)
+	default:
+		return errors.New("unsupported type for PreviewReconcilerStatus")
 	}
-	return json.Unmarshal(b, s)
 }
 
 // PreviewStackStatus holds the current status of a preview stack.
@@ -73,11 +76,14 @@ func (s *PreviewStackStatus) Scan(value any) error {
 		*s = PreviewStackStatus{}
 		return nil
 	}
-	b, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed for PreviewStackStatus")
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, s)
+	case string:
+		return json.Unmarshal([]byte(v), s)
+	default:
+		return errors.New("unsupported type for PreviewStackStatus")
 	}
-	return json.Unmarshal(b, s)
 }
 
 // PreviewStackOutputs holds deployment outputs for a preview stack.
@@ -104,11 +110,14 @@ func (o *ImageOverrides) Scan(value any) error {
 		*o = ImageOverrides{}
 		return nil
 	}
-	b, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed for ImageOverrides")
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, o)
+	case string:
+		return json.Unmarshal([]byte(v), o)
+	default:
+		return errors.New("unsupported type for ImageOverrides")
 	}
-	return json.Unmarshal(b, o)
 }
 
 // PreviewStack represents a preview environment spawned from a StackPreviewConfig.

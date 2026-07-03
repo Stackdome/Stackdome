@@ -27,9 +27,9 @@ type SecretService interface {
 	GetByName(ctx context.Context, organisationID, name string) (*models.Secret, *errors.ServiceError)
 	Update(ctx context.Context, id string, secret *models.Secret) (*models.Secret, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
-	ListByOrganisation(ctx context.Context, organisationID string) ([]*models.Secret, *errors.ServiceError)
-	ListByTeamID(ctx context.Context, teamID string) ([]*models.Secret, *errors.ServiceError)
-	ListSecretsForCurrentUser(ctx context.Context, orgID string) ([]*models.Secret, *errors.ServiceError)
+	ListByOrganisation(ctx context.Context, organisationID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError)
+	ListByTeamID(ctx context.Context, teamID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError)
+	ListSecretsForCurrentUser(ctx context.Context, orgID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError)
 	ListByUser(ctx context.Context, organisationID, userID string) ([]*models.Secret, *errors.ServiceError)
 	ListByType(ctx context.Context, organisationID, secretType models.SecretType) ([]*models.Secret, *errors.ServiceError)
 	ValidateSecretExists(ctx context.Context, secretID string) (bool, *errors.ServiceError)
@@ -211,11 +211,11 @@ func (s *secretService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 	return nil
 }
 
-func (s *secretService) ListByOrganisation(ctx context.Context, organisationID string) ([]*models.Secret, *errors.ServiceError) {
+func (s *secretService) ListByOrganisation(ctx context.Context, organisationID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
 	if permErr := s.permissions.Check(ctx, organisationID, auth.ResourceSecrets, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
-	secrets, err := s.secretStore.ListByOrganisation(ctx, organisationID)
+	secrets, err := s.secretStore.ListByOrganisation(ctx, organisationID, params)
 	if err != nil {
 		return nil, err
 	}
@@ -223,21 +223,21 @@ func (s *secretService) ListByOrganisation(ctx context.Context, organisationID s
 	return secrets, nil
 }
 
-func (s *secretService) ListByTeamID(ctx context.Context, teamID string) ([]*models.Secret, *errors.ServiceError) {
+func (s *secretService) ListByTeamID(ctx context.Context, teamID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
 	if permErr := s.permissions.Check(ctx, teamID, auth.ResourceSecrets, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
-	return s.secretStore.ListByTeamID(ctx, teamID)
+	return s.secretStore.ListByTeamID(ctx, teamID, params)
 }
 
-func (s *secretService) ListSecretsForCurrentUser(ctx context.Context, orgID string) ([]*models.Secret, *errors.ServiceError) {
+func (s *secretService) ListSecretsForCurrentUser(ctx context.Context, orgID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
 	identity := auth.GetIdentityFromCtx(ctx)
 	if identity == nil {
 		return nil, errors.Unauthorized("not authenticated")
 	}
 
 	if identity.IsOrgAdmin() {
-		return s.secretStore.ListByOrganisation(ctx, orgID)
+		return s.secretStore.ListByOrganisation(ctx, orgID, params)
 	}
 
 	memberships, serr := s.teamService.InternalListUserTeams(ctx, identity.UserID, orgID)
@@ -252,7 +252,7 @@ func (s *secretService) ListSecretsForCurrentUser(ctx context.Context, orgID str
 		}
 	}
 
-	return s.secretStore.ListByTeamIDs(ctx, allowedTeamIDs)
+	return s.secretStore.ListByTeamIDs(ctx, allowedTeamIDs, params)
 }
 
 func (s *secretService) ListByUser(ctx context.Context, organisationID, userID string) ([]*models.Secret, *errors.ServiceError) {
