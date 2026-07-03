@@ -278,7 +278,7 @@ export default function StackDetailPage() {
     onStackRefreshed: (fresh) => {
       setFetchedStack(fresh);
       // Context write-through: stale currentStack must not win after a remote refresh.
-      setStacks(stacks.map((s) => (s.id === fresh.id ? fresh : s)));
+      setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
     },
   });
 
@@ -325,7 +325,7 @@ export default function StackDetailPage() {
     liveSnapshot,
     onReverted: (fresh) => {
       setFetchedStack(fresh);
-      setStacks(stacks.map((s) => (s.id === fresh.id ? fresh : s)));
+      setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
       draftSync.notifyExternalUpdate(fresh);
       session.discard(); // auto-start effect restarts the session on the reverted baseline
       toast({ title: "Draft discarded", description: "Stack restored to the last deployment." });
@@ -463,7 +463,7 @@ export default function StackDetailPage() {
     setDeleting(true);
     try {
       await deleteStack(deployIds.orgId, deployIds.teamName, deployIds.stackId);
-      setStacks(stacks.filter((s) => s.id !== deployIds.stackId));
+      setStacks((prev) => prev.filter((s) => s.id !== deployIds.stackId));
       toast({ title: "Stack deleted", description: `"${stackToShow?.name}" was deleted.` });
       navigate("/stacks");
     } catch {
@@ -472,7 +472,7 @@ export default function StackDetailPage() {
       setDeleting(false);
       setDeleteConfirmOpen(false);
     }
-  }, [deployIds, setStacks, stackToShow?.name, toast, navigate, stacks]);
+  }, [deployIds, setStacks, stackToShow?.name, toast, navigate]);
 
   const handleNameChange = useCallback((name: string) => {
     setDraftName(name);
@@ -494,9 +494,11 @@ export default function StackDetailPage() {
 
   // Deployed stacks: persist the new label set immediately via a full PUT
   // (replace-all body built from the live server stack, labels swapped).
-  // The body snapshots stackToShow at call time: an autosave op in flight can
-  // land after this PUT and vice versa — bounded clobber window accepted by
-  // the spec (labels never touch resources; both writers are last-write-wins).
+  // The PUT body snapshots stackToShow at call time: an autosave op in flight
+  // can land after this PUT and vice versa — bounded clobber window accepted
+  // by the spec (labels never touch resources; both writers are
+  // last-write-wins). The context list itself is updated functionally, so the
+  // response can never clobber the list with a stale render snapshot.
   const persistLabels = useCallback(
     async (next: NonNullable<Stack["labels"]>) => {
       if (!stackToShow?.id || !deployIds.stackId) return;
@@ -509,14 +511,14 @@ export default function StackDetailPage() {
           stackToUpdateRequest(stackToShow, next),
         );
         setFetchedStack(fresh);
-        setStacks(stacks.map((s) => (s.id === fresh.id ? fresh : s)));
+        setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
         setLabelSync(SYNC_STATUS.saved);
         setTimeout(() => setLabelSync(SYNC_STATUS.idle), 2000);
       } catch {
         setLabelSync(SYNC_STATUS.error);
       }
     },
-    [stackToShow, deployIds, setStacks, stacks],
+    [stackToShow, deployIds, setStacks],
   );
 
   const addStackLabel = useCallback(

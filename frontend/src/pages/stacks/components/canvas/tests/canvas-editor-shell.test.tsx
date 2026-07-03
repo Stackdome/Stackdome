@@ -49,6 +49,29 @@ describe("CanvasEditorShell header", () => {
     fireEvent.keyDown(labelInput, { key: "Enter" });
     expect(onAddLabel).toHaveBeenCalledWith("dev");
   });
+
+  it("label input commits on blur", () => {
+    const onAddLabel = vi.fn();
+    render(<CanvasEditorShell {...base} stackName="web" nameEditable onAddLabel={onAddLabel} />);
+    const labelInput = screen.getByPlaceholderText("add label…");
+    fireEvent.change(labelInput, { target: { value: " staging " } });
+    fireEvent.blur(labelInput);
+    expect(onAddLabel).toHaveBeenCalledWith("staging");
+    expect(labelInput).toHaveValue("");
+  });
+
+  it("Escape cancels the pending label and consumes the event", () => {
+    const onAddLabel = vi.fn();
+    render(<CanvasEditorShell {...base} stackName="web" nameEditable onAddLabel={onAddLabel} />);
+    const labelInput = screen.getByPlaceholderText("add label…");
+    fireEvent.change(labelInput, { target: { value: "dev" } });
+    // fireEvent returns false when preventDefault was called — the consumed
+    // event must not reach the drawer stack's window Esc listener.
+    const propagated = fireEvent.keyDown(labelInput, { key: "Escape", cancelable: true });
+    expect(propagated).toBe(false);
+    expect(labelInput).toHaveValue("");
+    expect(onAddLabel).not.toHaveBeenCalled();
+  });
 });
 
 describe("CanvasEditorShell primary button matrix", () => {

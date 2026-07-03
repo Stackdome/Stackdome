@@ -164,6 +164,7 @@ export function CanvasEditorShell({
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return; // consumed by a nested layer (dialog, drawer…)
       if (e.key === "." && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         toggleCollapsed();
@@ -216,7 +217,7 @@ export function CanvasEditorShell({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       {collapsed && (
-        <div className="flex h-11 flex-none items-center gap-3 border-b border-border px-4">
+        <div className="flex h-11 flex-none items-center gap-3 border-b border-border px-4 animate-in fade-in slide-in-from-top-1 duration-300">
           {chevron}
           <span className="truncate text-[14px] font-medium text-foreground">{stackName}</span>
           {statusState && (
@@ -262,8 +263,8 @@ export function CanvasEditorShell({
       )}
       {!collapsed && (
         <>
-          {/* Stack-title header */}
-          <div className="flex-none px-7 pt-6">
+          {/* Stack-title header (fade/translate on expand per design sd-fade) */}
+          <div className="flex-none px-7 pt-6 animate-in fade-in slide-in-from-top-1 duration-300">
             <div className="flex items-center gap-3.5">
               {chevron}
               {nameEditable ? (
@@ -347,7 +348,17 @@ export function CanvasEditorShell({
                         e.preventDefault();
                         onAddLabel?.(labelInput.trim());
                         setLabelInput("");
+                      } else if (e.key === "Escape" && labelInput) {
+                        // Cancel the pending label. preventDefault marks the
+                        // event consumed so an open drawer doesn't pop on it.
+                        e.preventDefault();
+                        setLabelInput("");
                       }
+                    }}
+                    onBlur={() => {
+                      // Design rule: blur commits (Enter chains, Esc cancels).
+                      if (labelInput.trim()) onAddLabel?.(labelInput.trim());
+                      setLabelInput("");
                     }}
                     placeholder="add label…"
                     className="h-6 w-[14ch] border-0 bg-transparent px-0 text-[11px] shadow-none focus-visible:ring-0"
@@ -359,7 +370,7 @@ export function CanvasEditorShell({
           </div>
 
           {/* Tab row */}
-          <div className="flex-none flex items-center gap-2 border-b border-border px-7 py-[18px]">
+          <div className="flex-none flex items-center gap-2 border-b border-border px-7 py-[18px] animate-in fade-in slide-in-from-top-1 duration-300">
             {EDITOR_TABS.map(({ id, label, Icon }) => {
               const active = activeTab === id;
               return (

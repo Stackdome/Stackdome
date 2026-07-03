@@ -184,8 +184,14 @@ function StackCanvasFlow({
   const closeAllDrawers = useCallback(() => setDrawerStack([]), []);
   const truncateDrawers = useCallback((depth: number) => setDrawerStack((s) => truncateTo(s, depth)), []);
   const openVolume = useCallback(
-    (name: string) => setDrawerStack((s) => pushEntry(s, { kind: "volume", name })),
-    [],
+    (name: string) => {
+      // Guard dangling mount references (mount rows can outlive a deleted
+      // volume): pushing one would render an empty panel.
+      const volumes = session.isActive ? session.draft.volumes : baselineVolumes;
+      if (!volumes.some((v) => v.name === name)) return;
+      setDrawerStack((s) => pushEntry(s, { kind: "volume", name }));
+    },
+    [session, baselineVolumes],
   );
   const removeResource = useCallback(
     (idx: number) => {
@@ -197,13 +203,15 @@ function StackCanvasFlow({
 
   // Drop panels whose target no longer exists in the draft (deleted resource/volume).
   useEffect(() => {
-    setDrawerStack((s) =>
-      s.filter((e) =>
+    setDrawerStack((s) => {
+      const next = s.filter((e) =>
         e.kind === "resource"
           ? e.index < resources.length
           : (session.isActive ? session.draft.volumes : baselineVolumes).some((v) => v.name === e.name),
-      ),
-    );
+      );
+      // Same-ref bailout: skip the state update (and re-render) when nothing was dropped.
+      return next.length === s.length ? s : next;
+    });
   }, [resources.length, session.isActive, session.draft.volumes, baselineVolumes]);
 
   const panels: DrawerPanelDescriptor[] = useMemo(

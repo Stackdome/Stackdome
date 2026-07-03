@@ -19,6 +19,9 @@ describe("classifyIngressUrl", () => {
   it("unparseable url → custom (shown as-is, never hidden)", () => {
     expect(classifyIngressUrl("not a url", ORG)).toBe("custom");
   });
+  it("host equal to an org domain (apex) → prefix, not custom", () => {
+    expect(classifyIngressUrl("https://acme.stackdome.app", ORG)).toBe("prefix");
+  });
 });
 
 describe("pickBestIngress", () => {
