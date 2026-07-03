@@ -114,7 +114,7 @@ export function EnvRow({
           grows that cell downward) never knocks the other columns out of line. */}
       <div className="flex items-start gap-2">
         {/* Key */}
-        <div className="w-[130px] flex-none">
+        <div className="w-[180px] flex-none">
           <Input
             id={`env-name-${resourceIndex}-${index}`}
             value={row.name || ""}
