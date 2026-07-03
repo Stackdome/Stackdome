@@ -37,6 +37,15 @@ describe("VolumeDrawer", () => {
     expect(updateVolumes).toHaveBeenCalled();
   });
 
+  it("name input is read-only in the drawer; size stays editable", () => {
+    // Drawer entries are keyed by volume name — renaming in place would
+    // orphan the entry and close the drawer after one keystroke.
+    const { session } = makeSession([{ name: "data", spec: { size: "1Gi" } }]);
+    render(<VolumeDrawer volumeName="data" session={session} onClose={vi.fn()} />);
+    expect(screen.getByDisplayValue("data")).toBeDisabled();
+    expect(screen.getByDisplayValue("1Gi")).toBeEnabled();
+  });
+
   it("close button calls onClose", () => {
     const { session } = makeSession([{ name: "data" }]);
     const onClose = vi.fn();

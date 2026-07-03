@@ -224,7 +224,11 @@ export function CanvasEditorShell({
               aria-label={`status ${statusState}`}
               className={cn(
                 "size-2 flex-none rounded-full",
-                variantFromState(statusState) === "ready" ? "bg-success" : "bg-warn",
+                variantFromState(statusState) === "ready"
+                  ? "bg-success"
+                  : variantFromState(statusState) === "error"
+                    ? "bg-danger"
+                    : "bg-warn",
               )}
             />
           )}

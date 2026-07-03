@@ -62,6 +62,7 @@ export function VolumeDrawer({ volumeName, session, onClose }: VolumeDrawerProps
           errors={{}}
           allVolumes={volumes}
           allStackResources={session.draft.resources}
+          nameReadOnly
         />
       </div>
     </div>

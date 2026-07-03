@@ -30,6 +30,12 @@ interface VolumeFieldsProps {
   errors: { [field: string]: string | undefined };
   allVolumes: Partial<VolumeFormData>[];
   allStackResources?: Partial<FormStackResourceData>[];
+  /**
+   * Render the Name input read-only. Used by VolumeDrawer, where drawer
+   * entries are keyed by volume name — a live rename would orphan the open
+   * entry and close the drawer mid-edit.
+   */
+  nameReadOnly?: boolean;
 }
 
 /** Shared form body for a volume: spec grid, mount details, and remove footer. */
@@ -41,6 +47,7 @@ export function VolumeFields({
   errors,
   allVolumes,
   allStackResources = [],
+  nameReadOnly = false,
 }: VolumeFieldsProps): ReactNode {
   const update = (patch: Partial<VolumeFormData>) => {
     onChange(index, { ...volume, ...patch });
@@ -61,6 +68,7 @@ export function VolumeFields({
               label="Name"
               htmlFor={`volume-name-${index}`}
               required
+              hint={nameReadOnly ? "Rename from the stack Volumes list." : undefined}
               error={errors.name || (isDuplicate ? "Volume name must be unique" : undefined)}
             >
               <Input
@@ -68,6 +76,7 @@ export function VolumeFields({
                 placeholder="Volume name"
                 value={volume.name || ""}
                 onChange={(e) => update({ name: e.target.value })}
+                disabled={nameReadOnly}
                 className={`font-mono ${errors.name || isDuplicate ? "border-danger" : ""}`}
                 aria-invalid={!!errors.name || isDuplicate}
               />

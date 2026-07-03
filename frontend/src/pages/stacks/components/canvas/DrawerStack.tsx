@@ -4,7 +4,13 @@ import { entryKey, type DrawerEntry } from "@/pages/stacks/lib/canvas/drawer-sta
 const BASE_INSET_PX = 12;
 const STAGGER_Y_PX = 10;
 const STAGGER_X_PX = 16;
-const FRONT_Z = 200;
+/**
+ * Front panel z-index. Constraint: panels must sit BELOW the shared Radix
+ * portal layer (z-50 in ui/select|popover|dropdown-menu|tooltip) so
+ * drawer-internal dropdowns render above the panel, and below dialog
+ * overlays (z-50) so modals still top drawers.
+ */
+const FRONT_Z = 40;
 
 export interface DrawerPanelDescriptor {
   entry: DrawerEntry;

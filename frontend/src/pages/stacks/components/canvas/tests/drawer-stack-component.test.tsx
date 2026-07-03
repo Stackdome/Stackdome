@@ -42,9 +42,9 @@ describe("DrawerStack", () => {
     const behind = screen.getByTestId("drawer-panel-0");
     const front = screen.getByTestId("drawer-panel-1");
     expect(behind.style.right).toBe("28px"); // 12 + 16·1
-    expect(behind.style.zIndex).toBe("199");
+    expect(behind.style.zIndex).toBe("39");
     expect(front.style.right).toBe("12px");
-    expect(front.style.zIndex).toBe("200");
+    expect(front.style.zIndex).toBe("40");
   });
 
   it("clicking a behind panel truncates to its depth", () => {
