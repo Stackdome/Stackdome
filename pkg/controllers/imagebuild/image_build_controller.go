@@ -150,7 +150,6 @@ func (r *ImageBuildReconciler) createImageBuildInDB(
 		Spec: models.BuildConfigSpec{
 			DockerfilePath:          imageBuildCr.Spec.BuildContext.DockerfilePath,
 			ContextPathWithinSource: imageBuildCr.Spec.BuildContext.ContextPath,
-			ImageRepositoryUrl:      deriveImageRepositoryUrl(imageBuildCr.Spec.Repository),
 			BuildImageRepository:    deriveImageRepository(imageBuildCr.Spec.Repository),
 			SourceContext:           *dbSourceContext,
 			SourceRevision:          dbSourceRevision,
@@ -290,13 +289,6 @@ func (r *ImageBuildReconciler) propagateBuildFailureToStackResource(
 	return nil
 }
 
-func deriveImageRepositoryUrl(repo corev1alpha1.ImageRepositorySpec) string {
-	if repo.External != nil {
-		return repo.External.Host + "/" + repo.Repository
-	}
-	return repo.Repository
-}
-
 func deriveImageRepository(repo corev1alpha1.ImageRepositorySpec) models.BuildImageRepository {
 	if repo.ClusterRegistryRef != nil {
 		return models.BuildImageRepository{
@@ -308,7 +300,12 @@ func deriveImageRepository(repo corev1alpha1.ImageRepositorySpec) models.BuildIm
 	if repo.External != nil && repo.External.TLS != nil {
 		insecure = repo.External.TLS.Insecure
 	}
+	var externalRef string
+	if repo.External != nil {
+		externalRef = repo.External.Host + "/" + repo.Repository
+	}
 	return models.BuildImageRepository{
 		InsecureRegistry: insecure,
+		ExternalImageRef: externalRef,
 	}
 }

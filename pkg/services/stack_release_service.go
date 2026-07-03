@@ -353,6 +353,9 @@ func (s *stackReleaseService) pinResource(ctx context.Context, res *models.Stack
 	}
 
 	if res.BuildConfig.SourceRevision.Volume != nil {
+		if res.BuildConfig.SourceRevision.Volume.CurrentVolumeHash == "" {
+			return nil, errors.GeneralError("resource '%s': current volume revision is empty", res.Name)
+		}
 		rp.VolumeHash = res.BuildConfig.SourceRevision.Volume.CurrentVolumeHash
 	}
 

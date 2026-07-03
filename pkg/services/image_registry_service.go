@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
@@ -101,7 +100,6 @@ func (s *clusterImageRegistryService) PopulateInClusterRegistryUrlForResource(ct
 	}
 
 	resource.BuildConfig.BuildImageRepository.ClusterRegistryName = clusterRegistry.Name
-	resource.BuildConfig.ImageRepositoryUrl = fmt.Sprintf("%s/%s/%s", orgID, stackName, resource.Name)
 	return nil
 }
 

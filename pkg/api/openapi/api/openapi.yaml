@@ -6198,8 +6198,8 @@ components:
                   tag: tag
                   branch: branch
               image_repository:
-                external_image_repo_url: external_image_repo_url
                 use_internal_registry: true
+                external_image_ref: external_image_ref
               registry_push_secret:
                 secret_id: secret_id
               context_path_within_source: context_path_within_source
@@ -6349,8 +6349,8 @@ components:
                   tag: tag
                   branch: branch
               image_repository:
-                external_image_repo_url: external_image_repo_url
                 use_internal_registry: true
+                external_image_ref: external_image_ref
               registry_push_secret:
                 secret_id: secret_id
               context_path_within_source: context_path_within_source
@@ -6823,8 +6823,8 @@ components:
                     tag: tag
                     branch: branch
                 image_repository:
-                  external_image_repo_url: external_image_repo_url
                   use_internal_registry: true
+                  external_image_ref: external_image_ref
                 registry_push_secret:
                   secret_id: secret_id
                 context_path_within_source: context_path_within_source
@@ -6974,8 +6974,8 @@ components:
                     tag: tag
                     branch: branch
                 image_repository:
-                  external_image_repo_url: external_image_repo_url
                   use_internal_registry: true
+                  external_image_ref: external_image_ref
                 registry_push_secret:
                   secret_id: secret_id
                 context_path_within_source: context_path_within_source
@@ -7377,8 +7377,8 @@ components:
                     tag: tag
                     branch: branch
                 image_repository:
-                  external_image_repo_url: external_image_repo_url
                   use_internal_registry: true
+                  external_image_ref: external_image_ref
                 registry_push_secret:
                   secret_id: secret_id
                 context_path_within_source: context_path_within_source
@@ -7528,8 +7528,8 @@ components:
                     tag: tag
                     branch: branch
                 image_repository:
-                  external_image_repo_url: external_image_repo_url
                   use_internal_registry: true
+                  external_image_ref: external_image_ref
                 registry_push_secret:
                   secret_id: secret_id
                 context_path_within_source: context_path_within_source
@@ -8005,8 +8005,8 @@ components:
                 tag: tag
                 branch: branch
             image_repository:
-              external_image_repo_url: external_image_repo_url
               use_internal_registry: true
+              external_image_ref: external_image_ref
             registry_push_secret:
               secret_id: secret_id
             context_path_within_source: context_path_within_source
@@ -8156,8 +8156,8 @@ components:
                 tag: tag
                 branch: branch
             image_repository:
-              external_image_repo_url: external_image_repo_url
               use_internal_registry: true
+              external_image_ref: external_image_ref
             registry_push_secret:
               secret_id: secret_id
             context_path_within_source: context_path_within_source
@@ -8573,8 +8573,8 @@ components:
               tag: tag
               branch: branch
           image_repository:
-            external_image_repo_url: external_image_repo_url
             use_internal_registry: true
+            external_image_ref: external_image_ref
           registry_push_secret:
             secret_id: secret_id
           context_path_within_source: context_path_within_source
@@ -8795,8 +8795,8 @@ components:
                 tag: tag
                 branch: branch
             image_repository:
-              external_image_repo_url: external_image_repo_url
               use_internal_registry: true
+              external_image_ref: external_image_ref
             registry_push_secret:
               secret_id: secret_id
             context_path_within_source: context_path_within_source
@@ -8946,8 +8946,8 @@ components:
                 tag: tag
                 branch: branch
             image_repository:
-              external_image_repo_url: external_image_repo_url
               use_internal_registry: true
+              external_image_ref: external_image_ref
             registry_push_secret:
               secret_id: secret_id
             context_path_within_source: context_path_within_source
@@ -10294,8 +10294,8 @@ components:
             tag: tag
             branch: branch
         image_repository:
-          external_image_repo_url: external_image_repo_url
           use_internal_registry: true
+          external_image_ref: external_image_ref
         registry_push_secret:
           secret_id: secret_id
         context_path_within_source: context_path_within_source
@@ -10332,10 +10332,10 @@ components:
       additionalProperties: false
       description: The image repository to push the built image to
       example:
-        external_image_repo_url: external_image_repo_url
         use_internal_registry: true
+        external_image_ref: external_image_ref
       properties:
-        external_image_repo_url:
+        external_image_ref:
           type: string
         use_internal_registry:
           type: boolean

@@ -985,10 +985,10 @@ func TestValidateForCreatePushSecretHappyPath(t *testing.T) {
 			{
 				Name: "api",
 				BuildConfig: &models.BuildConfigSpec{
-					SourceContext:      models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
-					SourceRevision:     models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
-					ImageRepositoryUrl: "myregistry.io/org/repo",
-					RegistrySecretRef:  &models.SecretReference{SecretID: "push-secret-1"},
+					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
+					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
+					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
+					RegistrySecretRef:    &models.SecretReference{SecretID: "push-secret-1"},
 				},
 			},
 		},
@@ -1011,10 +1011,10 @@ func TestValidateForCreatePushSecretWrongType(t *testing.T) {
 			{
 				Name: "api",
 				BuildConfig: &models.BuildConfigSpec{
-					SourceContext:      models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
-					SourceRevision:     models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
-					ImageRepositoryUrl: "myregistry.io/org/repo",
-					RegistrySecretRef:  &models.SecretReference{SecretID: "bad-secret"},
+					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
+					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
+					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
+					RegistrySecretRef:    &models.SecretReference{SecretID: "bad-secret"},
 				},
 			},
 		},
@@ -1034,10 +1034,10 @@ func TestValidateForCreatePushSecretEmptyID(t *testing.T) {
 			{
 				Name: "api",
 				BuildConfig: &models.BuildConfigSpec{
-					SourceContext:      models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
-					SourceRevision:     models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
-					ImageRepositoryUrl: "myregistry.io/org/repo",
-					RegistrySecretRef:  &models.SecretReference{SecretID: ""},
+					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
+					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
+					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
+					RegistrySecretRef:    &models.SecretReference{SecretID: ""},
 				},
 			},
 		},

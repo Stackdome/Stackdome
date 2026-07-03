@@ -135,7 +135,7 @@ func presentImageRepository(in *models.BuildConfigSpec) openapi.ImageRepository 
 		res.UseInternalRegistry = openapi.PtrBool(true)
 	} else {
 		res.UseInternalRegistry = openapi.PtrBool(false)
-		res.ExternalImageRepoUrl = &in.ImageRepositoryUrl
+		res.ExternalImageRef = &in.BuildImageRepository.ExternalImageRef
 	}
 	return res
 }
@@ -486,7 +486,7 @@ func convertBuildConfig(config *openapi.StackResourceBuildSpec) *models.BuildCon
 			InsecureRegistry:     true,
 		}
 	} else {
-		res.ImageRepositoryUrl = config.ImageRepository.GetExternalImageRepoUrl()
+		res.BuildImageRepository.ExternalImageRef = config.ImageRepository.GetExternalImageRef()
 	}
 	res.RegistrySecretRef = convertSecretRef(config.RegistryPushSecret)
 	return res

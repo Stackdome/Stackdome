@@ -4749,7 +4749,7 @@ components:
       description: The image repository to push the built image to
       additionalProperties: false
       properties:
-        external_image_repo_url:
+        external_image_ref:
           type: string
         use_internal_registry:
           type: boolean

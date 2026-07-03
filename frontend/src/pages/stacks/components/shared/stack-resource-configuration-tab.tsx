@@ -107,7 +107,7 @@ function StackResourceConfigurationTabImpl({
       source_context: { git_repo: { repo_url: '' } },
       context_path_within_source: './',
       dockerfile_path: 'Dockerfile',
-      image_repository: { external_image_repo_url: '' },
+      image_repository: { external_image_ref: '' },
       insecure_registry: false,
       source_revision: { volume_source_revision: undefined, git_repo_revision: undefined },
     };
@@ -468,22 +468,22 @@ function StackResourceConfigurationTabImpl({
                 htmlFor={`external-image-repo-url-${index}`}
                 required
                 hint="External registry where built images are pushed, e.g., ghcr.io/your-org/your-image."
-                error={getError(errors, "build_spec.image_repository.external_image_repo_url")}
+                error={getError(errors, "build_spec.image_repository.external_image_ref")}
               >
                 <DirtyField
                   draft={draft}
                   baseline={baseline}
-                  path="build_spec.image_repository.external_image_repo_url"
-                  onReset={onDiscardField ? () => onDiscardField("build_spec.image_repository.external_image_repo_url") : undefined}
+                  path="build_spec.image_repository.external_image_ref"
+                  onReset={onDiscardField ? () => onDiscardField("build_spec.image_repository.external_image_ref") : undefined}
                 >
                   <Input
                     id={`external-image-repo-url-${index}`}
-                    value={draft.build_spec?.image_repository?.external_image_repo_url || ""}
-                    onChange={(e) => updateBuildSpec({ image_repository: { external_image_repo_url: e.target.value } })}
+                    value={draft.build_spec?.image_repository?.external_image_ref || ""}
+                    onChange={(e) => updateBuildSpec({ image_repository: { external_image_ref: e.target.value } })}
                     placeholder="e.g., ghcr.io/your-org/your-image"
-                    className={`max-w-xl ${getError(errors, "build_spec.image_repository.external_image_repo_url") ? "border-danger" : ""}`}
+                    className={`max-w-xl ${getError(errors, "build_spec.image_repository.external_image_ref") ? "border-danger" : ""}`}
                     required={draft.sourceType === "git"}
-                    aria-invalid={!!getError(errors, "build_spec.image_repository.external_image_repo_url")}
+                    aria-invalid={!!getError(errors, "build_spec.image_repository.external_image_ref")}
                   />
                 </DirtyField>
               </FieldShell>

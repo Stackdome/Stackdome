@@ -166,7 +166,7 @@ func (s *clusterStackService) desiredObjectInCluster(stack *models.Stack) (*core
 	}
 
 	for _, sr := range stack.StackResources {
-		spec, err := s.buildStackResourceSpec(sr)
+		spec, err := s.buildStackResourceSpec(sr, stack.OrganisationID, stack.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -182,7 +182,7 @@ func (s *clusterStackService) desiredObjectInCluster(stack *models.Stack) (*core
 	return stackCR, nil
 }
 
-func (s *clusterStackService) buildStackResourceSpec(stackResource *models.StackResource) (*corev1alpha1.StackResourceSpec, error) {
+func (s *clusterStackService) buildStackResourceSpec(stackResource *models.StackResource, orgID, stackName string) (*corev1alpha1.StackResourceSpec, error) {
 	workloadType := corev1alpha1.WorkloadType(stackResource.WorkloadType)
 	if workloadType == "" {
 		workloadType = corev1alpha1.WorkloadTypeService
@@ -203,7 +203,7 @@ func (s *clusterStackService) buildStackResourceSpec(stackResource *models.Stack
 		spec.RestartRequest = &metav1.Time{Time: stackResource.LifecycleConfig.RestartRequestTime.UTC()}
 	}
 
-	if err := s.setBuildSpec(spec, stackResource); err != nil {
+	if err := s.setBuildSpec(spec, stackResource, orgID, stackName); err != nil {
 		return nil, err
 	}
 	if err := s.setImageSpec(spec, stackResource); err != nil {
@@ -227,7 +227,7 @@ func hasTLSPorts(spec *corev1alpha1.StackResourceSpec) bool {
 	return false
 }
 
-func (s *clusterStackService) setBuildSpec(spec *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) error {
+func (s *clusterStackService) setBuildSpec(spec *corev1alpha1.StackResourceSpec, stackResource *models.StackResource, orgID, stackName string) error {
 	if stackResource.BuildConfig != nil {
 		buildSourceCtx, err := s.buildBuildSourceContext(stackResource.BuildConfig.SourceContext)
 		if err != nil {
@@ -246,14 +246,14 @@ func (s *clusterStackService) setBuildSpec(spec *corev1alpha1.StackResourceSpec,
 				ClusterRegistryRef: &corev1.LocalObjectReference{
 					Name: stackResource.BuildConfig.BuildImageRepository.ClusterRegistryName,
 				},
-				Repository: stackResource.BuildConfig.ImageRepositoryUrl,
+				Repository: fmt.Sprintf("%s/%s/%s", orgID, stackName, stackResource.Name),
 			}
 		} else {
 			var opts []name.Option
 			if stackResource.BuildConfig.BuildImageRepository.InsecureRegistry {
 				opts = append(opts, name.Insecure)
 			}
-			repo, err := name.NewRepository(stackResource.BuildConfig.ImageRepositoryUrl, opts...)
+			repo, err := name.NewRepository(stackResource.BuildConfig.BuildImageRepository.ExternalImageRef, opts...)
 			if err != nil {
 				return fmt.Errorf("failed to parse image repository URL: %w", err)
 			}

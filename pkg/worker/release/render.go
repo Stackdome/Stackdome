@@ -68,7 +68,7 @@ func (r *renderReconciler) Reconcile(ctx context.Context, release *models.StackR
 	resourceRevisions := make(map[string]string)
 
 	for _, sr := range effective.StackResources {
-		srCR, buildErr := r.crBuilder.BuildStackResourceCR(sr, effective.Name)
+		srCR, buildErr := r.crBuilder.BuildStackResourceCR(sr, effective.Name, effective.OrganisationID)
 		if buildErr != nil {
 			failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to build CR for resource '%s': %v", sr.Name, buildErr))
 			return resultStop, nil

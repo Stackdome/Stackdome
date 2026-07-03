@@ -282,11 +282,11 @@ export default function StackCreatePage() {
               dockerfile_path: sr.build_spec.dockerfile_path || "Dockerfile",
               image_repository: sr.build_spec.image_repository
                 ? {
-                  external_image_repo_url: sr.build_spec.image_repository.external_image_repo_url || "",
+                  external_image_ref: sr.build_spec.image_repository.external_image_ref || "",
                   use_internal_registry: sr.build_spec.image_repository.use_internal_registry,
                   cluster_registry_id: sr.build_spec.image_repository.cluster_registry_id,
                 }
-                : { external_image_repo_url: "" },
+                : { external_image_ref: "" },
               insecure_registry: sr.build_spec.insecure_registry || false,
               source_revision: { volume_source_revision: undefined, git_repo_revision },
             } : undefined;

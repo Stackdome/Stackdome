@@ -106,9 +106,8 @@ func TestBuildImageRepositorySpec(t *testing.T) {
 		b := &clusterResourceBuilder{}
 		cfg := &models.BuildConfigSpec{
 			BuildImageRepository: models.BuildImageRepository{UseInClusterRegistry: true, ClusterRegistryName: "test-registry"},
-			ImageRepositoryUrl:   "orgid/stack/resource",
 		}
-		got, err := b.buildImageRepositorySpec(cfg)
+		got, err := b.buildImageRepositorySpec(cfg, "orgid", "stack", "resource")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -129,10 +128,9 @@ func TestBuildImageRepositorySpec(t *testing.T) {
 	t.Run("external docker.io", func(t *testing.T) {
 		b := &clusterResourceBuilder{}
 		cfg := &models.BuildConfigSpec{
-			ImageRepositoryUrl:   "nginx",
-			BuildImageRepository: models.BuildImageRepository{},
+			BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "nginx"},
 		}
-		got, err := b.buildImageRepositorySpec(cfg)
+		got, err := b.buildImageRepositorySpec(cfg, "org", "stack", "res")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -150,10 +148,9 @@ func TestBuildImageRepositorySpec(t *testing.T) {
 	t.Run("external host with port", func(t *testing.T) {
 		b := &clusterResourceBuilder{}
 		cfg := &models.BuildConfigSpec{
-			ImageRepositoryUrl:   "myregistry.io:5000/org/repo",
-			BuildImageRepository: models.BuildImageRepository{},
+			BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io:5000/org/repo"},
 		}
-		got, err := b.buildImageRepositorySpec(cfg)
+		got, err := b.buildImageRepositorySpec(cfg, "org", "stack", "res")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -168,10 +165,9 @@ func TestBuildImageRepositorySpec(t *testing.T) {
 	t.Run("external insecure", func(t *testing.T) {
 		b := &clusterResourceBuilder{}
 		cfg := &models.BuildConfigSpec{
-			ImageRepositoryUrl:   "myregistry.io/org/repo",
-			BuildImageRepository: models.BuildImageRepository{InsecureRegistry: true},
+			BuildImageRepository: models.BuildImageRepository{InsecureRegistry: true, ExternalImageRef: "myregistry.io/org/repo"},
 		}
-		got, err := b.buildImageRepositorySpec(cfg)
+		got, err := b.buildImageRepositorySpec(cfg, "org", "stack", "res")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -189,11 +185,10 @@ func TestBuildImageRepositorySpec(t *testing.T) {
 		}}
 		b := &clusterResourceBuilder{secretService: fetcher}
 		cfg := &models.BuildConfigSpec{
-			ImageRepositoryUrl:   "myregistry.io/org/repo",
-			BuildImageRepository: models.BuildImageRepository{},
+			BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
 			RegistrySecretRef:    &models.SecretReference{SecretID: "secret-1"},
 		}
-		got, err := b.buildImageRepositorySpec(cfg)
+		got, err := b.buildImageRepositorySpec(cfg, "org", "stack", "res")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -215,10 +210,9 @@ func TestBuildImageRepositorySpec(t *testing.T) {
 	t.Run("external no push secret", func(t *testing.T) {
 		b := &clusterResourceBuilder{}
 		cfg := &models.BuildConfigSpec{
-			ImageRepositoryUrl:   "myregistry.io/org/repo",
-			BuildImageRepository: models.BuildImageRepository{},
+			BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
 		}
-		got, err := b.buildImageRepositorySpec(cfg)
+		got, err := b.buildImageRepositorySpec(cfg, "org", "stack", "res")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -317,7 +311,7 @@ func TestBuildStackResourceCR_AnnotationMerge(t *testing.T) {
 			},
 		}
 
-		cr, err := builder.BuildStackResourceCR(sr, "test-stack")
+		cr, err := builder.BuildStackResourceCR(sr, "test-stack", "test-org")
 		if err != nil {
 			t.Fatalf("BuildStackResourceCR() error = %v", err)
 		}
@@ -342,7 +336,7 @@ func TestBuildStackResourceCR_AnnotationMerge(t *testing.T) {
 			},
 		}
 
-		cr, err := builder.BuildStackResourceCR(sr, "test-stack")
+		cr, err := builder.BuildStackResourceCR(sr, "test-stack", "test-org")
 		if err != nil {
 			t.Fatalf("BuildStackResourceCR() error = %v", err)
 		}

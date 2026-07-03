@@ -27,7 +27,6 @@ type BuildConfigSpec struct {
 	DockerfilePath          string               `json:"dockerfile_path"`
 	SourceRevision          BuildSourceRevision  `json:"source_revision"`
 	BuildImageRepository    BuildImageRepository `json:"build_image_repository"`
-	ImageRepositoryUrl      string               `json:"image_repository_url"`
 	RegistrySecretRef       *SecretReference     `json:"registry_secret_ref,omitempty"` // Push credentials
 }
 
@@ -35,6 +34,7 @@ type BuildImageRepository struct {
 	InsecureRegistry     bool   `json:"insecure_registry"`
 	UseInClusterRegistry bool   `json:"use_in_cluster_registry"`
 	ClusterRegistryName  string `json:"cluster_registry_name,omitempty"`
+	ExternalImageRef     string `json:"external_image_ref,omitempty"`
 }
 
 func (b *BuildConfigSpec) Validate() error {
@@ -71,13 +71,11 @@ func (b *BuildConfigSpec) Validate() error {
 		}
 	}
 
-	if b.ImageRepositoryUrl != "" && b.BuildImageRepository.UseInClusterRegistry {
-		return errors.New("image_repository_url cannot be set if use_in_cluster_registry is true")
+	if b.BuildImageRepository.ExternalImageRef != "" && b.BuildImageRepository.UseInClusterRegistry {
+		return errors.New("external_image_ref cannot be set if use_in_cluster_registry is true")
 	}
-	if b.ImageRepositoryUrl == "" && !b.BuildImageRepository.UseInClusterRegistry {
-		// If the image repository URL is empty, we need to check if the in-cluster registry is set to true
-		// If it is not, we need to return an error
-		return errors.New("image_repository_url is required if use_in_cluster_registry is false")
+	if b.BuildImageRepository.ExternalImageRef == "" && !b.BuildImageRepository.UseInClusterRegistry {
+		return errors.New("external_image_ref is required if use_in_cluster_registry is false")
 	}
 	return nil
 }

@@ -20,7 +20,7 @@ import (
 type ClusterResourceBuilder interface {
 	BuildStackCR(stack *models.Stack) (*corev1alpha1.Stack, error)
 	GetStackCRHash(stack *models.Stack) (string, error)
-	BuildStackResourceCR(stackResource *models.StackResource, stackName string) (*corev1alpha1.StackResource, error)
+	BuildStackResourceCR(stackResource *models.StackResource, stackName, orgID string) (*corev1alpha1.StackResource, error)
 	BuildVolumeCR(ctx context.Context, volume *models.Volume) (*storagev1alpha1.Volume, error)
 }
 
@@ -54,7 +54,7 @@ func (b *clusterResourceBuilder) GetStackCRHash(stack *models.Stack) (string, er
 	printer.Fprintf(hasher, "%#v", stackCR)
 
 	for _, sr := range stack.StackResources {
-		srCR, err := b.BuildStackResourceCR(sr, stack.Name)
+		srCR, err := b.BuildStackResourceCR(sr, stack.Name, stack.OrganisationID)
 		if err != nil {
 			return "", fmt.Errorf("failed to build stack resource CR for '%s': %w", sr.Name, err)
 		}
@@ -166,8 +166,8 @@ func (b *clusterResourceBuilder) BuildStackCR(stack *models.Stack) (*corev1alpha
 	return stackCR, nil
 }
 
-func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.StackResource, stackName string) (*corev1alpha1.StackResource, error) {
-	stackResourceSpec, err := b.buildStackResourceSpec(stackResource)
+func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.StackResource, stackName, orgID string) (*corev1alpha1.StackResource, error) {
+	stackResourceSpec, err := b.buildStackResourceSpec(stackResource, stackName, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func hasTLSPorts(spec *corev1alpha1.StackResourceSpec) bool {
 	return false
 }
 
-func (b *clusterResourceBuilder) buildStackResourceSpec(stackResource *models.StackResource) (*corev1alpha1.StackResourceSpec, error) {
+func (b *clusterResourceBuilder) buildStackResourceSpec(stackResource *models.StackResource, stackName, orgID string) (*corev1alpha1.StackResourceSpec, error) {
 	workloadType := corev1alpha1.WorkloadType(stackResource.WorkloadType)
 	if workloadType == "" {
 		workloadType = corev1alpha1.WorkloadTypeService
@@ -228,7 +228,7 @@ func (b *clusterResourceBuilder) buildStackResourceSpec(stackResource *models.St
 		resourceSpec.RestartRequest = &metav1.Time{Time: stackResource.LifecycleConfig.RestartRequestTime.UTC()}
 	}
 
-	buildSpec, err := b.buildStackResourceBuildSpec(stackResource)
+	buildSpec, err := b.buildStackResourceBuildSpec(stackResource, stackName, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build stack resource build spec: %w", err)
 	}
@@ -245,14 +245,14 @@ func (b *clusterResourceBuilder) buildStackResourceSpec(stackResource *models.St
 	return &resourceSpec, nil
 }
 
-func (b *clusterResourceBuilder) buildStackResourceBuildSpec(stackResource *models.StackResource) (*corev1alpha1.StackResourceBuildSpec, error) {
+func (b *clusterResourceBuilder) buildStackResourceBuildSpec(stackResource *models.StackResource, stackName, orgID string) (*corev1alpha1.StackResourceBuildSpec, error) {
 	if stackResource.BuildConfig != nil {
 		buildSourceCtx, err := b.buildBuildSourceContext(stackResource.BuildConfig.SourceContext)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build source context: %w", err)
 		}
 
-		repoSpec, err := b.buildImageRepositorySpec(stackResource.BuildConfig)
+		repoSpec, err := b.buildImageRepositorySpec(stackResource.BuildConfig, orgID, stackName, stackResource.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build image repository spec: %w", err)
 		}
@@ -332,13 +332,13 @@ func (b *clusterResourceBuilder) buildBuildSourceContext(sourceContext models.Bu
 	return nil, fmt.Errorf("invalid build source context: must specify either volume or git")
 }
 
-func (b *clusterResourceBuilder) buildImageRepositorySpec(buildConfig *models.BuildConfigSpec) (corev1alpha1.ImageRepositorySpec, error) {
+func (b *clusterResourceBuilder) buildImageRepositorySpec(buildConfig *models.BuildConfigSpec, orgID, stackName, resourceName string) (corev1alpha1.ImageRepositorySpec, error) {
 	if buildConfig.BuildImageRepository.UseInClusterRegistry {
 		return corev1alpha1.ImageRepositorySpec{
 			ClusterRegistryRef: &corev1.LocalObjectReference{
 				Name: buildConfig.BuildImageRepository.ClusterRegistryName,
 			},
-			Repository: buildConfig.ImageRepositoryUrl,
+			Repository: fmt.Sprintf("%s/%s/%s", orgID, stackName, resourceName),
 		}, nil
 	}
 
@@ -346,7 +346,7 @@ func (b *clusterResourceBuilder) buildImageRepositorySpec(buildConfig *models.Bu
 	if buildConfig.BuildImageRepository.InsecureRegistry {
 		opts = append(opts, name.Insecure)
 	}
-	repo, err := name.NewRepository(buildConfig.ImageRepositoryUrl, opts...)
+	repo, err := name.NewRepository(buildConfig.BuildImageRepository.ExternalImageRef, opts...)
 	if err != nil {
 		return corev1alpha1.ImageRepositorySpec{}, fmt.Errorf("failed to parse image repository URL: %w", err)
 	}
