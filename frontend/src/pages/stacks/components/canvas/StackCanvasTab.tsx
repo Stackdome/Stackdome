@@ -187,7 +187,6 @@ function StackCanvasFlow({
     (name: string) => setDrawerStack((s) => pushEntry(s, { kind: "volume", name })),
     [],
   );
-  void openVolume; // threaded into the drawer body in the mount-row task
   const removeResource = useCallback(
     (idx: number) => {
       session.updateResources((prev) => prev.filter((_, i) => i !== idx));
@@ -246,6 +245,7 @@ function StackCanvasFlow({
         onClose={popDrawer}
         onRemove={removeResource}
         onViewLogs={onViewLogs}
+        onOpenVolume={openVolume}
       />
     ) : frontEntry ? (
       <VolumeDrawer key={entryKey(frontEntry)} volumeName={frontEntry.name} session={session} onClose={popDrawer} />

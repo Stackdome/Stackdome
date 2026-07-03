@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { PlusCircle, GitBranch, Box, Trash2, Database, X } from "lucide-react";
+import { PlusCircle, GitBranch, Box, Trash2, Database, X, ArrowUpRight } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { DirtyField } from "@/pages/stacks/components/shared/dirty-field";
@@ -42,6 +42,8 @@ interface StackResourceConfigurationTabProps {
   /** When provided, the drawer offers inline volume creation (name+size+path)
    *  instead of only selecting a pre-existing volume. */
   onCreateVolume?: (input: { name: string; size: string; targetPath: string }) => void;
+  /** When provided, mount rows show a navigate button that pushes the volume's drawer. */
+  onOpenVolume?: (name: string) => void;
 }
 
 /** Subset of FormStackResourceData read by the Configuration tab. We pass this
@@ -102,6 +104,7 @@ function StackResourceConfigurationTabImpl({
   onDiscardField,
   onPatchResource,
   onCreateVolume,
+  onOpenVolume,
 }: StackResourceConfigurationTabProps) {
   const update = onPatchResource;
 
@@ -592,52 +595,67 @@ function StackResourceConfigurationTabImpl({
               compact
             >
               <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-start border p-3 rounded-md bg-muted/10">
-                <FieldShell
-                  label="Volume"
-                  htmlFor={`volume-name-${index}-${vmIdx}`}
-                  required
-                  error={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`)}
-                >
-                  <Select
-                    value={vm.source_volume_name || ""}
-                    onValueChange={(value) => updateVolumeMount(vmIdx, { source_volume_name: value })}
+                <div className="flex items-end gap-1.5">
+                  <FieldShell
+                    label="Volume"
+                    htmlFor={`volume-name-${index}-${vmIdx}`}
+                    required
+                    error={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`)}
                   >
-                    <SelectTrigger
-                      id={`volume-name-${index}-${vmIdx}`}
-                      className={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) ? "border-danger" : ""}
+                    <Select
+                      value={vm.source_volume_name || ""}
+                      onValueChange={(value) => updateVolumeMount(vmIdx, { source_volume_name: value })}
                     >
-                      <SelectValue placeholder="Select volume" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* A mount can reference a volume missing from the list
-                          (dangling data). Render it as a disabled item so the
-                          select still SHOWS the name instead of going blank. */}
-                      {vm.source_volume_name &&
-                        !(volumes || []).some((vol) => vol.name === vm.source_volume_name) && (
-                        <SelectItem value={vm.source_volume_name} disabled>
-                          <div className="flex items-center gap-2">
-                            <Database className="h-4 w-4" />
-                            <span>{vm.source_volume_name}</span>
-                            <span className="ml-1 text-xs text-muted-foreground">(missing)</span>
-                          </div>
-                        </SelectItem>
-                      )}
-                      {(volumes || []).filter((vol) => !!vol.name).length === 0 ? (
-                        <div className="p-2 text-sm text-muted-foreground">No volumes available</div>
-                      ) : (
-                        (volumes || []).filter((vol) => !!vol.name).map((vol, vidx) => (
-                          <SelectItem key={vidx} value={vol.name!}>
+                      <SelectTrigger
+                        id={`volume-name-${index}-${vmIdx}`}
+                        className={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) ? "border-danger" : ""}
+                      >
+                        <SelectValue placeholder="Select volume" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {/* A mount can reference a volume missing from the list
+                            (dangling data). Render it as a disabled item so the
+                            select still SHOWS the name instead of going blank. */}
+                        {vm.source_volume_name &&
+                          !(volumes || []).some((vol) => vol.name === vm.source_volume_name) && (
+                          <SelectItem value={vm.source_volume_name} disabled>
                             <div className="flex items-center gap-2">
                               <Database className="h-4 w-4" />
-                              <span>{vol.name}</span>
-                              {vol.spec?.size && <span className="ml-1 text-xs text-muted-foreground">({vol.spec.size})</span>}
+                              <span>{vm.source_volume_name}</span>
+                              <span className="ml-1 text-xs text-muted-foreground">(missing)</span>
                             </div>
                           </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </FieldShell>
+                        )}
+                        {(volumes || []).filter((vol) => !!vol.name).length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground">No volumes available</div>
+                        ) : (
+                          (volumes || []).filter((vol) => !!vol.name).map((vol, vidx) => (
+                            <SelectItem key={vidx} value={vol.name!}>
+                              <div className="flex items-center gap-2">
+                                <Database className="h-4 w-4" />
+                                <span>{vol.name}</span>
+                                {vol.spec?.size && <span className="ml-1 text-xs text-muted-foreground">({vol.spec.size})</span>}
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </FieldShell>
+                  {onOpenVolume && vm.source_volume_name && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 shrink-0 self-end text-fg-muted hover:text-brand"
+                      aria-label={`Open volume ${vm.source_volume_name}`}
+                      title="Open volume settings"
+                      onClick={() => onOpenVolume(vm.source_volume_name!)}
+                    >
+                      <ArrowUpRight className="size-3.5" />
+                    </Button>
+                  )}
+                </div>
                 <FieldShell label="Sub Path" htmlFor={`volume-subpath-${index}-${vmIdx}`}>
                   <Input
                     id={`volume-subpath-${index}-${vmIdx}`}

@@ -33,6 +33,8 @@ interface ResourceDrawerProps {
   onRemove: (index: number) => void;
   /** Open the stack's Logs view (from the footer "View logs"). */
   onViewLogs?: () => void;
+  /** Push a volume's drawer onto the floating drawer stack. */
+  onOpenVolume?: (name: string) => void;
 }
 
 /**
@@ -50,6 +52,7 @@ export function ResourceDrawer({
   onClose,
   onRemove,
   onViewLogs,
+  onOpenVolume,
 }: ResourceDrawerProps) {
   const resource = session.draft.resources[resourceIndex] ?? {};
   const baselineResource = baselineResources[resourceIndex];
@@ -125,6 +128,7 @@ export function ResourceDrawer({
         onDiscardField: (path) => session.discardResourceField(resourceIndex, path),
         onDiscardEnvRow: (envIdx) => session.discardEnvRow(resourceIndex, envIdx),
         onCreateVolume,
+        onOpenVolume,
       },
     });
 
