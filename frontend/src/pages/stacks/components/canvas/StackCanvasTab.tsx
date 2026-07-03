@@ -19,6 +19,7 @@ import { addBlockToStack } from "@/pages/stacks/lib/block-to-form";
 import { blockCatalog, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { CanvasEditor } from "./CanvasEditor";
 import { ResourceDrawer } from "./ResourceDrawer";
+import { VolumeDrawer } from "./VolumeDrawer";
 import { DrawerStack, type DrawerPanelDescriptor } from "./DrawerStack";
 import {
   replaceStack,
@@ -246,7 +247,9 @@ function StackCanvasFlow({
         onRemove={removeResource}
         onViewLogs={onViewLogs}
       />
-    ) : null; // volume front body arrives with VolumeDrawer (next task)
+    ) : frontEntry ? (
+      <VolumeDrawer key={entryKey(frontEntry)} volumeName={frontEntry.name} session={session} onClose={popDrawer} />
+    ) : null;
 
   return (
     <div className="flex h-full w-full">
