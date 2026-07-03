@@ -154,7 +154,7 @@ export function ResourceDrawer({
   const changeCount = [dirtyTabs.configuration, dirtyTabs.deployment, dirtyTabs.environment].filter(Boolean).length;
 
   const tabTriggerClass =
-    "flex-none rounded-none border-b-[1.5px] border-transparent bg-transparent px-[13px] py-3 font-mono text-[11px] uppercase tracking-[1.5px] text-fg-muted data-[state=active]:border-brand data-[state=active]:text-foreground data-[state=active]:shadow-none";
+    "flex-none rounded-none border-b-[1.5px] border-transparent bg-transparent px-[13px] py-3 text-sm font-medium text-fg-muted data-[state=active]:border-brand data-[state=active]:text-foreground data-[state=active]:shadow-none";
 
   return (
     <div
