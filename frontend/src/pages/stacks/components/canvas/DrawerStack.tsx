@@ -60,7 +60,7 @@ export function DrawerStack({ panels, front, onTruncate, onPop, onCloseAll }: Dr
           <aside
             key={entryKey(entry)}
             data-testid={`drawer-panel-${i}`}
-            className="fixed flex w-[600px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg animate-in slide-in-from-right-8 fade-in duration-[260ms]"
+            className="fixed flex w-[680px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg animate-in slide-in-from-right-8 fade-in duration-[260ms]"
             style={{
               top: BASE_INSET_PX + STAGGER_Y_PX * depth,
               bottom: BASE_INSET_PX + STAGGER_Y_PX * depth,

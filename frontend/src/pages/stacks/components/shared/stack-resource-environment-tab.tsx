@@ -508,7 +508,8 @@ function StackResourceEnvironmentTabImpl({
                       </span>
                       <Select value={aid || undefined} onValueChange={handleAddonChange}>
                         <SelectTrigger
-                          className="h-7 w-[180px] gap-2 text-xs"
+                          size="sm"
+                          className="w-[180px] gap-2 text-xs"
                           data-testid="addon-picker-trigger"
                         >
                           <span className="flex items-center gap-2 min-w-0">
@@ -550,7 +551,8 @@ function StackResourceEnvironmentTabImpl({
                           {databases.length > 1 ? (
                             <Select value={db || undefined} onValueChange={handleDbChange}>
                               <SelectTrigger
-                                className="h-7 w-[140px] text-xs"
+                                size="sm"
+                                className="w-[140px] text-xs"
                                 data-testid="database-picker-trigger"
                               >
                                 <SelectValue placeholder="Pick database" />

@@ -119,7 +119,7 @@ export function EnvRow({
             id={`env-name-${resourceIndex}-${index}`}
             value={row.name || ""}
             onChange={(e) => onChangeName(e.target.value)}
-            className={`h-8 w-full font-mono text-xs ${isOrphanAddon ? "opacity-60" : ""} ${
+            className={`h-8 w-full font-mono text-xs md:text-xs ${isOrphanAddon ? "opacity-60" : ""} ${
               rowErrors?.duplicate || rowErrors?.name ? "border-danger" : ""
             }`}
             placeholder="KEY"
@@ -138,7 +138,7 @@ export function EnvRow({
             <Input
               value={row.value || ""}
               onChange={(e) => onChangeValue(e.target.value)}
-              className="h-8 w-full font-mono text-xs"
+              className="h-8 w-full font-mono text-xs md:text-xs"
               placeholder="value"
             />
           )}
@@ -189,7 +189,7 @@ export function EnvRow({
             value={row.from}
             onValueChange={(v) => onChangeFrom(v as EnvFrom)}
           >
-            <SelectTrigger className="h-8 w-full text-xs">
+            <SelectTrigger size="sm" className="w-full text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -213,7 +213,7 @@ export function EnvRow({
               aria-label="Reset env var to original value"
               title="Reset to original value"
             >
-              <RotateCcw className="h-4 w-4" />
+              <RotateCcw className="size-3.5" />
             </Button>
           ) : (
             <Button
@@ -223,7 +223,7 @@ export function EnvRow({
               onClick={onRemove}
               aria-label="Remove env var"
             >
-              <X className="h-4 w-4" />
+              <X className="size-3.5" />
             </Button>
           )}
         </div>
@@ -261,7 +261,7 @@ function SecretValueCell({
         onValueChange={(value) => onChange(value, "")}
         disabled={loading || genericSecrets.length === 0}
       >
-        <SelectTrigger className="h-8 w-full text-xs">
+        <SelectTrigger size="sm" className="w-full text-xs">
           <SelectValue
             placeholder={
               genericSecrets.length === 0
@@ -289,7 +289,7 @@ function SecretValueCell({
           onValueChange={(value) => onChange(secretId, value)}
           disabled={availableKeys.length === 0}
         >
-          <SelectTrigger className="h-8 w-full text-xs">
+          <SelectTrigger size="sm" className="w-full text-xs">
             <SelectValue
               placeholder={
                 availableKeys.length === 0
@@ -331,7 +331,7 @@ function ResourceOutputCell({
         onValueChange={(v) => onChange(v, "")}
         disabled={resourceOptions.length === 0}
       >
-        <SelectTrigger className="h-8 w-full text-xs" data-testid="resource-picker-trigger">
+        <SelectTrigger size="sm" className="w-full text-xs" data-testid="resource-picker-trigger">
           <SelectValue placeholder={resourceOptions.length === 0 ? "No other resources" : "select resource..."} />
         </SelectTrigger>
         <SelectContent>
@@ -342,7 +342,7 @@ function ResourceOutputCell({
       </Select>
       {resourceName && (
         <Select value={output || ""} onValueChange={(v) => onChange(resourceName, v)} disabled={outputs.length === 0}>
-          <SelectTrigger className="h-8 w-full text-xs" data-testid="resource-output-trigger">
+          <SelectTrigger size="sm" className="w-full text-xs" data-testid="resource-output-trigger">
             <SelectValue placeholder={outputs.length === 0 ? "No outputs" : "select output..."} />
           </SelectTrigger>
           <SelectContent>
@@ -365,7 +365,7 @@ function SelfOutputCell({
 }) {
   return (
     <Select value={selfOutput || ""} onValueChange={onChange} disabled={outputs.length === 0}>
-      <SelectTrigger className="h-8 w-full text-xs" data-testid="self-output-trigger">
+      <SelectTrigger size="sm" className="w-full text-xs" data-testid="self-output-trigger">
         <SelectValue placeholder={outputs.length === 0 ? "No outputs declared" : "select output..."} />
       </SelectTrigger>
       <SelectContent>
@@ -411,7 +411,8 @@ function AddonCredFieldPicker({
         disabled={disabled}
       >
         <SelectTrigger
-          className={`h-8 w-full text-xs ${error ? "border-danger" : ""}`}
+          size="sm"
+          className={`w-full text-xs ${error ? "border-danger" : ""}`}
           data-testid="field-picker-trigger"
         >
           <SelectValue placeholder={disabled ? "Pick an addon first" : "Select field"} />
