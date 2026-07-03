@@ -34,6 +34,10 @@ export interface EditSessionStartOpts {
   /** Addon ids already bound to the stack (from its saved connections), so the
    *  edit session starts with them linked rather than wiping to empty. */
   linkedAddonIds?: Set<string>;
+  /** Seed the working draft separately from the baseline. Used when the diff
+   *  baseline is pinned to the deployed release but the server already holds
+   *  autosaved edits on top of it — those edits must open as dirty. */
+  draft?: EditSessionDraft;
 }
 
 const EMPTY_DRAFT: EditSessionDraft = { resources: [], volumes: [] };
@@ -84,9 +88,10 @@ export function useStackEditSession(): UseStackEditSession {
 
   const start = useCallback(
     (baseline: EditSessionDraft, opts?: EditSessionStartOpts) => {
+      const draftSource = opts?.draft ?? baseline;
       const cloned: EditSessionDraft = {
-        resources: cloneJson(baseline.resources),
-        volumes: cloneJson(baseline.volumes),
+        resources: cloneJson(draftSource.resources),
+        volumes: cloneJson(draftSource.volumes),
       };
       const baselineSnap: EditSessionDraft = {
         resources: cloneJson(baseline.resources),

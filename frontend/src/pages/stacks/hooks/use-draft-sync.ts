@@ -130,7 +130,6 @@ export function useDraftSync({
       const desired = buildDesiredState(snapshot);
       const ops = computeSyncOps(mirror, desired);
       if (ops.length === 0) {
-        s.rebase(snapshot);
         failuresRef.current = 0;
         setFailureCount(0);
         setStatus((prev) => (prev === SYNC_STATUS.idle ? SYNC_STATUS.idle : SYNC_STATUS.saved));
@@ -143,7 +142,9 @@ export function useDraftSync({
         const fresh = await getStackById(currentIds.orgId, currentIds.teamName, currentIds.stackId);
         mirrorRef.current = serverStateFromStack(fresh);
         onRefreshedRef.current(fresh);
-        sessionRef.current.rebase(snapshot);
+        // Deliberately NOT rebasing the session here: the diff baseline stays
+        // pinned to the deployed release so autosaved edits remain visibly
+        // dirty/revertable. Only deploy or discard moves the baseline.
         failuresRef.current = 0;
         setFailureCount(0);
         setStatus(SYNC_STATUS.saved);

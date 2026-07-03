@@ -14,6 +14,8 @@ import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditor
 import { DraftTabPlaceholder } from "@/pages/stacks/components/canvas/DraftTabPlaceholder";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
+import type { StackConnection } from "@/api/connections";
+import { alignBaselineToDraft } from "@/pages/stacks/lib/stack-diff";
 import { createStack, getStackById, deleteStack, updateStack } from "@/api/stacks";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import { USER_DEFINED_LABEL_KEY } from "@/pages/stacks/lib/constants";
@@ -76,6 +78,37 @@ function mapVolumeToFormData(volume: Volume): VolumeFormData {
   // Remove read-only fields before converting to form data
   const { id: _id, ...writableVolume } = volume;
   return convertApiVolumeToFormVolume(writableVolume as z.infer<typeof ApiVolumeSchema> & { status?: unknown });
+}
+
+/** Map a resource+connection set (live stack spec OR release snapshot — both use
+ *  the same server shapes) into form data, folding connection-backed env rows
+ *  and volume mounts into each resource. */
+function formResourcesFromSpec(
+  resources: StackResource[] | undefined,
+  connectionsIn: StackConnection[] | undefined,
+): FormStackResourceData[] {
+  const connections = connectionsIn ?? [];
+  return (resources || []).map((r) => {
+    const form = mapStackResourceToFormData(r);
+    const connRows = connectionsToEnvRows(form.name ?? "", connections) as FormEnvVarData[];
+    // Populate volume_mounts from volume_mount connections — the server always
+    // returns resource.volume_mounts as [] since mounts are stored in connections.
+    const mountRows = connectionsToMounts(form.name ?? "", connections);
+    // connectionsToMounts only emits rows with all required fields present (it
+    // skips malformed connections), so the cast to the strict form type is safe.
+    const withMounts: FormStackResourceData = { ...form, volume_mounts: mountRows as FormStackResourceData["volume_mounts"] };
+    if (connRows.length === 0) return withMounts;
+    return {
+      ...withMounts,
+      execution_config: {
+        ...(withMounts.execution_config ?? {}),
+        environment_variables: [
+          ...((withMounts.execution_config?.environment_variables ?? []) as FormEnvVarData[]),
+          ...connRows,
+        ],
+      },
+    };
+  });
 }
 
 export default function StackDetailPage() {
@@ -183,33 +216,73 @@ export default function StackDetailPage() {
     });
   }, [isDraft, effectiveStack, orgDomains]);
 
-  const baselineResources = useMemo<FormStackResourceData[]>(() => {
-    const connections = stackToShow?.spec?.connections ?? [];
-    return (stackToShow?.spec?.stack_resources || []).map((r) => {
-      const form = mapStackResourceToFormData(r);
-      const connRows = connectionsToEnvRows(form.name ?? "", connections) as FormEnvVarData[];
-      // Populate volume_mounts from volume_mount connections — the server always
-      // returns resource.volume_mounts as [] since mounts are stored in connections.
-      const mountRows = connectionsToMounts(form.name ?? "", connections);
-      // connectionsToMounts only emits rows with all required fields present (it
-      // skips malformed connections), so the cast to the strict form type is safe.
-      const withMounts: FormStackResourceData = { ...form, volume_mounts: mountRows as FormStackResourceData["volume_mounts"] };
-      if (connRows.length === 0) return withMounts;
-      return {
-        ...withMounts,
-        execution_config: {
-          ...(withMounts.execution_config ?? {}),
-          environment_variables: [
-            ...((withMounts.execution_config?.environment_variables ?? []) as FormEnvVarData[]),
-            ...connRows,
-          ],
-        },
-      };
-    });
-  }, [stackToShow]);
-  const baselineVolumes = useMemo<VolumeFormData[]>(
+  // ── Release plumbing (needed this early: the diff baseline is pinned to the
+  // latest release's snapshot, not the autosaved server state) ──
+  const deployIds = useMemo(() => ({
+    orgId: stackToShow?.organisation_id || getCurrentOrganizationId() || "",
+    teamName: (stackToShow ? teamNameById(stackToShow.team_id) : "") || defaultTeamName || "",
+    stackId: stackToShow?.id || "",
+  }), [stackToShow, teamNameById, defaultTeamName]);
+  const releasesResult = useReleases({ ...deployIds, enabled: !!deployIds.stackId });
+  const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.teamName, deployIds.stackId);
+
+  // Diff anchor: the latest release (the config last shipped via Deploy), falling
+  // back to the converged release until the releases list loads.
+  const baselineReleaseId =
+    releasesResult.activeRelease?.id ?? stackToShow?.status?.last_converged?.release_id;
+  useEffect(() => {
+    if (baselineReleaseId) releaseDetail.ensure(baselineReleaseId);
+  }, [baselineReleaseId, releaseDetail]);
+  const deployedSnapshot = releaseDetail.peek(baselineReleaseId).data?.snapshot;
+
+  // Current server state as form data — what the canvas displays and the edit
+  // session's working draft seeds from.
+  const draftResources = useMemo<FormStackResourceData[]>(
+    () => formResourcesFromSpec(stackToShow?.spec?.stack_resources, stackToShow?.spec?.connections),
+    [stackToShow],
+  );
+  const draftVolumes = useMemo<VolumeFormData[]>(
     () => (stackToShow?.spec?.volumes || []).map(mapVolumeToFormData),
     [stackToShow],
+  );
+
+  // Diff baseline: the deployed snapshot when one exists, so autosaved edits stay
+  // visibly dirty/revertable until deployed. Never-deployed stacks fall back to
+  // the server state (everything reads as staged for the first deploy).
+  const snapshotResources = useMemo<FormStackResourceData[] | null>(
+    () =>
+      deployedSnapshot
+        ? formResourcesFromSpec(
+          deployedSnapshot.resources as StackResource[] | undefined,
+          deployedSnapshot.connections as StackConnection[] | undefined,
+        )
+        : null,
+    [deployedSnapshot],
+  );
+  const snapshotVolumes = useMemo<VolumeFormData[] | null>(
+    () => (deployedSnapshot ? ((deployedSnapshot.volumes ?? []) as Volume[]).map(mapVolumeToFormData) : null),
+    [deployedSnapshot],
+  );
+
+  // All diffing downstream is positional, but the server returns resources in
+  // unstable order and the snapshot's order need not match — re-key the baseline
+  // onto the order of whatever the diffs actually run against: the live session
+  // draft when one is active, the server state otherwise.
+  const alignResources = session.isActive ? session.draft.resources : draftResources;
+  const alignVolumes = session.isActive ? session.draft.volumes : draftVolumes;
+  const baselineResources = useMemo<FormStackResourceData[]>(
+    () =>
+      (snapshotResources
+        ? alignBaselineToDraft(snapshotResources, alignResources)
+        : alignBaselineToDraft(draftResources, alignResources)) as FormStackResourceData[],
+    [snapshotResources, draftResources, alignResources],
+  );
+  const baselineVolumes = useMemo<VolumeFormData[]>(
+    () =>
+      (snapshotVolumes
+        ? alignBaselineToDraft(snapshotVolumes, alignVolumes)
+        : alignBaselineToDraft(draftVolumes, alignVolumes)) as VolumeFormData[],
+    [snapshotVolumes, draftVolumes, alignVolumes],
   );
 
   const draftSeeded = useRef(false);
@@ -250,23 +323,35 @@ export default function StackDetailPage() {
 
   // Autosave model: the canvas is always editable for writers. The session
   // starts as soon as the stack is loaded and restarts after discard/revert.
+  // Baseline = deployed snapshot (when loaded), draft = current server state:
+  // they differ when the server already holds autosaved-but-undeployed edits.
   useEffect(() => {
     if (isDraft || !stackToShow || !canWriteStack || session.isActive) return;
     session.start(
       { resources: baselineResources, volumes: baselineVolumes },
-      { linkedAddonIds: connectionAddonIds },
+      {
+        linkedAddonIds: connectionAddonIds,
+        draft: { resources: draftResources, volumes: draftVolumes },
+      },
     );
     // session.start is a stable useCallback; session.isActive is the only reactive
     // field we need from the session object itself.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDraft, stackToShow, canWriteStack, session.isActive, baselineResources, baselineVolumes, connectionAddonIds]);
+  }, [isDraft, stackToShow, canWriteStack, session.isActive, baselineResources, baselineVolumes, draftResources, draftVolumes, connectionAddonIds]);
 
-  // ── Deploy lifecycle (page-level: drives the status bar across all tabs) ──
-  const deployIds = useMemo(() => ({
-    orgId: stackToShow?.organisation_id || getCurrentOrganizationId() || "",
-    teamName: (stackToShow ? teamNameById(stackToShow.team_id) : "") || defaultTeamName || "",
-    stackId: stackToShow?.id || "",
-  }), [stackToShow, teamNameById, defaultTeamName]);
+  // When a release snapshot for a NEW anchor arrives — the lazy fetch landing, or
+  // a fresh deploy creating a new release — advance the session baseline to it so
+  // "dirty" always means "differs from the latest release". Guarded per release
+  // id: autosave stack refreshes must never move the baseline.
+  const rebasedReleaseRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!session.isActive || !deployedSnapshot || !baselineReleaseId) return;
+    if (rebasedReleaseRef.current === baselineReleaseId) return;
+    rebasedReleaseRef.current = baselineReleaseId;
+    session.rebase({ resources: baselineResources, volumes: baselineVolumes });
+    // session.rebase is a stable useCallback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.isActive, deployedSnapshot, baselineReleaseId, baselineResources, baselineVolumes]);
 
   // Autosave engine: debounces draft changes and syncs thin per-resource ops to
   // the server. Disabled for drafts (nothing exists server-side to sync yet).
@@ -299,8 +384,6 @@ export default function StackDetailPage() {
     return { resources, volumes: {} };
   }, [desiredState.resourceIssues]);
 
-  const releasesResult = useReleases({ ...deployIds, enabled: !!deployIds.stackId });
-  const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.teamName, deployIds.stackId);
   const lifecycle = useDeployLifecycle({
     stack: stackToShow ?? undefined,
     dirty: session.dirty,
@@ -661,6 +744,8 @@ export default function StackDetailPage() {
             session={session}
             baselineResources={baselineResources}
             baselineVolumes={baselineVolumes}
+            draftResources={draftResources}
+            draftVolumes={draftVolumes}
             connectionAddonIds={connectionAddonIds}
             addonNameById={addonNameById}
             errors={validationErrors.resources}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cloneJson, getAddonLinkCount, isPathDirty } from "../stack-diff";
+import { alignBaselineToDraft, cloneJson, getAddonLinkCount, isPathDirty } from "../stack-diff";
 import type { ResourceArr } from "../stack-diff";
 
 describe("cloneJson", () => {
@@ -145,5 +145,29 @@ describe("getAddonLinkCount", () => {
   it("handles resources with no execution_config", () => {
     const resources: ResourceArr = [{ name: "svc-1" }, { name: "svc-2" }];
     expect(getAddonLinkCount(new Set(["pg-1"]), resources)).toBe(1);
+  });
+});
+
+describe("alignBaselineToDraft", () => {
+  it("reorders the baseline to the draft's name order", () => {
+    const baseline = [{ name: "redis" }, { name: "web" }, { name: "mail" }];
+    const draft = [{ name: "web" }, { name: "redis" }, { name: "mail" }];
+    expect(alignBaselineToDraft(baseline, draft).map((r) => r?.name)).toEqual(["web", "redis", "mail"]);
+  });
+
+  it("leaves holes for draft-only entries and appends baseline-only ones", () => {
+    const baseline = [{ name: "web" }, { name: "gone" }];
+    const draft = [{ name: "web" }, { name: "brand-new" }];
+    const aligned = alignBaselineToDraft(baseline, draft);
+    expect(aligned[0]?.name).toBe("web");
+    expect(aligned[1]).toBeUndefined();
+    // deleted-from-draft baseline entry survives past the draft length so
+    // positional diffing still flags the deletion
+    expect(aligned[2]?.name).toBe("gone");
+  });
+
+  it("is the identity when baseline and draft share order", () => {
+    const baseline = [{ name: "a" }, { name: "b" }];
+    expect(alignBaselineToDraft(baseline, baseline).map((r) => r?.name)).toEqual(["a", "b"]);
   });
 });

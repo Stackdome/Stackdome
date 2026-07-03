@@ -37,8 +37,13 @@ import type { ResourceFlowNode } from "./nodes/ResourceNode";
 
 interface StackCanvasTabProps {
   session: UseStackEditSession;
+  /** Diff baseline (the deployed release snapshot when one exists). */
   baselineResources: Partial<FormStackResourceData>[];
   baselineVolumes: Partial<VolumeFormData>[];
+  /** Current server state — what the canvas shows when no session is active,
+   *  and what a lazily-started session's working draft seeds from. */
+  draftResources: Partial<FormStackResourceData>[];
+  draftVolumes: Partial<VolumeFormData>[];
   connectionAddonIds: ReadonlySet<string>;
   addonNameById: ReadonlyMap<string, string>;
   errors: { [index: number]: { [field: string]: string | undefined } };
@@ -50,13 +55,15 @@ function StackCanvasFlow({
   session,
   baselineResources,
   baselineVolumes,
+  draftResources,
+  draftVolumes,
   connectionAddonIds,
   addonNameById,
   errors,
   onViewLogs,
 }: StackCanvasTabProps) {
-  // Read from the live draft when the session is active, baseline otherwise.
-  const resources = session.isActive ? session.draft.resources : baselineResources;
+  // Read from the live draft when the session is active, server state otherwise.
+  const resources = session.isActive ? session.draft.resources : draftResources;
   const linkedAddonIds = session.isActive ? session.linkedAddonIds : connectionAddonIds;
 
   const dirty = useMemo(
@@ -119,12 +126,17 @@ function StackCanvasFlow({
       if (!session.isActive) {
         session.start(
           { resources: baselineResources, volumes: baselineVolumes },
-          { linkedAddonIds: new Set(connectionAddonIds), openResourceIdx: idx, openTab: "configuration" },
+          {
+            linkedAddonIds: new Set(connectionAddonIds),
+            openResourceIdx: idx,
+            openTab: "configuration",
+            draft: { resources: draftResources, volumes: draftVolumes },
+          },
         );
       }
       setDrawerStack(replaceStack({ kind: "resource", index: idx }));
     },
-    [session, baselineResources, baselineVolumes, connectionAddonIds],
+    [session, baselineResources, baselineVolumes, draftResources, draftVolumes, connectionAddonIds],
   );
 
   // Block ids already present in the stack (drives the picker's "added" badge).
@@ -141,7 +153,7 @@ function StackCanvasFlow({
       if (!block) return;
       const current = session.isActive
         ? { resources: session.draft.resources, volumes: session.draft.volumes }
-        : { resources: baselineResources, volumes: baselineVolumes };
+        : { resources: draftResources, volumes: draftVolumes };
       const working = { name: "", labels: [], spec: { stack_resources: current.resources, volumes: current.volumes } };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- WorkingStack uses full FormStackResourceData; the draft holds Partial, structurally compatible here
       const next = addBlockToStack(working as any, block);
@@ -150,15 +162,18 @@ function StackCanvasFlow({
       const nextVolumes = next.spec.volumes as unknown as VolumeFormData[];
       if (!session.isActive) {
         session.start(
-          { resources: next.spec.stack_resources, volumes: nextVolumes },
-          { linkedAddonIds: new Set(connectionAddonIds) },
+          { resources: baselineResources, volumes: baselineVolumes },
+          {
+            linkedAddonIds: new Set(connectionAddonIds),
+            draft: { resources: next.spec.stack_resources, volumes: nextVolumes },
+          },
         );
       } else {
         session.updateResources(() => next.spec.stack_resources);
         session.updateVolumes(() => nextVolumes);
       }
     },
-    [session, baselineResources, baselineVolumes, connectionAddonIds],
+    [session, baselineResources, baselineVolumes, draftResources, draftVolumes, connectionAddonIds],
   );
 
   const { addons: allAddons } = usePostgresAddons();
@@ -171,13 +186,16 @@ function StackCanvasFlow({
       if (!session.isActive) {
         session.start(
           { resources: baselineResources, volumes: baselineVolumes },
-          { linkedAddonIds: new Set([...connectionAddonIds, addonId]) },
+          {
+            linkedAddonIds: new Set([...connectionAddonIds, addonId]),
+            draft: { resources: draftResources, volumes: draftVolumes },
+          },
         );
       } else {
         session.setLinkedAddonIds((prev) => new Set(prev).add(addonId));
       }
     },
-    [session, baselineResources, baselineVolumes, connectionAddonIds],
+    [session, baselineResources, baselineVolumes, draftResources, draftVolumes, connectionAddonIds],
   );
 
   const popDrawer = useCallback(() => setDrawerStack((s) => popEntry(s)), []);
@@ -187,11 +205,11 @@ function StackCanvasFlow({
     (name: string) => {
       // Guard dangling mount references (mount rows can outlive a deleted
       // volume): pushing one would render an empty panel.
-      const volumes = session.isActive ? session.draft.volumes : baselineVolumes;
+      const volumes = session.isActive ? session.draft.volumes : draftVolumes;
       if (!volumes.some((v) => v.name === name)) return;
       setDrawerStack((s) => pushEntry(s, { kind: "volume", name }));
     },
-    [session, baselineVolumes],
+    [session, draftVolumes],
   );
   const removeResource = useCallback(
     (idx: number) => {
@@ -207,12 +225,12 @@ function StackCanvasFlow({
       const next = s.filter((e) =>
         e.kind === "resource"
           ? e.index < resources.length
-          : (session.isActive ? session.draft.volumes : baselineVolumes).some((v) => v.name === e.name),
+          : (session.isActive ? session.draft.volumes : draftVolumes).some((v) => v.name === e.name),
       );
       // Same-ref bailout: skip the state update (and re-render) when nothing was dropped.
       return next.length === s.length ? s : next;
     });
-  }, [resources.length, session.isActive, session.draft.volumes, baselineVolumes]);
+  }, [resources.length, session.isActive, session.draft.volumes, draftVolumes]);
 
   const panels: DrawerPanelDescriptor[] = useMemo(
     () =>

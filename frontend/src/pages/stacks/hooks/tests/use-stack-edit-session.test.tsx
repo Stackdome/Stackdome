@@ -23,3 +23,23 @@ describe("rebase", () => {
     expect(result.current.baseline.resources).toEqual([]);
   });
 });
+
+describe("start with a split draft", () => {
+  it("seeds draft and baseline independently so pre-existing autosaved edits open dirty", () => {
+    const { result } = renderHook(() => useStackEditSession());
+    // Baseline = deployed snapshot; draft = server state that already diverged.
+    act(() =>
+      result.current.start(
+        { resources: [{ name: "web", image_spec: { image: "nginx:1" } }], volumes: [] },
+        { draft: { resources: [{ name: "web", image_spec: { image: "nginx:2" } }], volumes: [] } },
+      ));
+    expect(result.current.draft.resources[0].image_spec?.image).toBe("nginx:2");
+    expect(result.current.baseline.resources[0].image_spec?.image).toBe("nginx:1");
+    expect(result.current.dirty.dirtyResourceIdx.size).toBe(1);
+
+    // Per-resource discard restores the deployed value, not the autosaved one.
+    act(() => result.current.discardResource(0));
+    expect(result.current.draft.resources[0].image_spec?.image).toBe("nginx:1");
+    expect(result.current.dirty.dirtyResourceIdx.size).toBe(0);
+  });
+});

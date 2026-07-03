@@ -278,13 +278,49 @@ export function revertResource(
   idx: number,
 ): { resources: ResourceArr; volumes: VolumeArr } {
   const next = { ...draft, resources: draft.resources.slice() };
-  if (idx < baseline.resources.length) {
-    next.resources[idx] = cloneJson(baseline.resources[idx]);
+  // A name-aligned baseline can carry nullish holes for draft-only resources
+  // (see alignBaselineToDraft) — treat those the same as "past the end".
+  const baselineEntry = idx < baseline.resources.length ? baseline.resources[idx] : undefined;
+  if (baselineEntry != null) {
+    next.resources[idx] = cloneJson(baselineEntry);
   } else {
     // The resource only exists in the draft — drop it.
     next.resources.splice(idx, 1);
   }
   return next;
+}
+
+/**
+ * Reorder a baseline array so it aligns positionally with the draft, matching
+ * entries by `name`. All downstream diffing (diffStack, per-drawer baselines)
+ * is positional, but the server returns stack_resources in unstable order and
+ * a release snapshot's order need not match the live stack's — so the baseline
+ * must be re-keyed onto the draft's order before any index-wise comparison.
+ *
+ * Draft entries with no baseline match get an `undefined` hole (they read as
+ * "added"); baseline entries missing from the draft are appended at the end so
+ * deletions still register as dirt.
+ */
+export function alignBaselineToDraft<T extends { name?: string }>(
+  baseline: T[],
+  draft: Array<{ name?: string }>,
+): (T | undefined)[] {
+  const byName = new Map<string, T>();
+  for (const b of baseline) {
+    // First occurrence wins on (malformed) duplicate names.
+    if (b?.name && !byName.has(b.name)) byName.set(b.name, b);
+  }
+  const used = new Set<string>();
+  const aligned: (T | undefined)[] = draft.map((d) => {
+    if (!d?.name) return undefined;
+    const match = byName.get(d.name);
+    if (match) used.add(d.name);
+    return match;
+  });
+  for (const b of baseline) {
+    if (!b?.name || !used.has(b.name)) aligned.push(b);
+  }
+  return aligned;
 }
 
 /**
@@ -566,8 +602,10 @@ export function revertVolume(
   idx: number,
 ): { resources: ResourceArr; volumes: VolumeArr } {
   const next = { ...draft, volumes: draft.volumes.slice() };
-  if (idx < baseline.volumes.length) {
-    next.volumes[idx] = cloneJson(baseline.volumes[idx]);
+  // Nullish holes from a name-aligned baseline mean "draft-only" — drop the row.
+  const baselineEntry = idx < baseline.volumes.length ? baseline.volumes[idx] : undefined;
+  if (baselineEntry != null) {
+    next.volumes[idx] = cloneJson(baselineEntry);
   } else {
     next.volumes.splice(idx, 1);
   }

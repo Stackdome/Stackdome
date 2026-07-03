@@ -91,8 +91,9 @@ describe("useDraftSync", () => {
     // One more microtask flush so React applies the batched state updates.
     await act(() => Promise.resolve());
     expect(hook.result.current.sync.status).toBe(SYNC_STATUS.saved);
-    // baseline advanced: no more dirt
-    expect(hook.result.current.session.dirty.dirtyResourceIdx.size).toBe(0);
+    // The session baseline stays pinned across autosaves — the edit must remain
+    // visibly dirty (revertable) until a deploy or discard moves the baseline.
+    expect(hook.result.current.session.dirty.dirtyResourceIdx.size).toBe(1);
   });
 
   it("coalesces rapid edits into one cycle", async () => {
