@@ -33,7 +33,7 @@ import { nodePresentation } from "@/pages/stacks/lib/canvas/node-presentation";
 import { NodeGlyph } from "./nodes/node-glyph";
 import { HardDrive } from "lucide-react";
 import { FIT_OPTIONS } from "./fit-options";
-import type { ResourceFlowNode } from "./nodes/ResourceNode";
+import type { CanvasFlowNode } from "./CanvasEditor";
 
 interface StackCanvasTabProps {
   session: UseStackEditSession;
@@ -86,7 +86,7 @@ function StackCanvasFlow({
     [dataGraph],
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<ResourceFlowNode>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [showConnections, setShowConnections] = useState(true);
   const [drawerStack, setDrawerStack] = useState<DrawerEntry[]>([]);
@@ -97,7 +97,7 @@ function StackCanvasFlow({
     const laid = layoutGraph(dataGraph);
     setNodes((prev) => {
       const posById = new Map(prev.map((n) => [n.id, n.position]));
-      return laid.nodes.map((n) => ({ ...n, position: posById.get(n.id) ?? n.position })) as ResourceFlowNode[];
+      return laid.nodes.map((n) => ({ ...n, position: posById.get(n.id) ?? n.position })) as CanvasFlowNode[];
     });
     setEdges(dataGraph.edges as Edge[]);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on topology only
@@ -106,7 +106,9 @@ function StackCanvasFlow({
   // Update node data (summary + dirty mark) in place, without moving nodes.
   useEffect(() => {
     const dataById = new Map(dataGraph.nodes.map((n) => [n.id, n.data]));
-    setNodes((prev) => prev.map((n) => (dataById.has(n.id) ? { ...n, data: dataById.get(n.id)! } : n)));
+    setNodes(
+      (prev) => prev.map((n) => (dataById.has(n.id) ? { ...n, data: dataById.get(n.id)! } : n)) as CanvasFlowNode[],
+    );
   }, [dataGraph, setNodes]);
 
   const toggleConnections = useCallback(() => setShowConnections((v) => !v), []);
@@ -114,12 +116,13 @@ function StackCanvasFlow({
   // Re-run auto-layout: reset every node to its fresh dagre position and re-fit.
   const autoLayout = useCallback(() => {
     const laid = layoutGraph(dataGraph);
-    setNodes(laid.nodes as ResourceFlowNode[]);
+    setNodes(laid.nodes as CanvasFlowNode[]);
     requestAnimationFrame(() => fitView(FIT_OPTIONS));
   }, [dataGraph, setNodes, fitView]);
 
-  const onNodeClick = useCallback<NodeMouseHandler<ResourceFlowNode>>(
+  const onNodeClick = useCallback<NodeMouseHandler<CanvasFlowNode>>(
     (_event, node) => {
+      if (node.type !== "resource") return; // attachment node — display-only, no drawer
       const idx = node.data.resourceIdx;
       if (idx == null) return; // addon node — managed via the Environment tab, no drawer in v1
       // Activate an edit session lazily so drawer edits land in a draft.

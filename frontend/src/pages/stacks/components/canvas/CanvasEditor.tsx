@@ -11,13 +11,17 @@ import {
 import "@xyflow/react/dist/style.css";
 import { Move } from "lucide-react";
 import { ResourceNode, type ResourceFlowNode } from "./nodes/ResourceNode";
+import { AttachmentNode, type AttachmentFlowNode } from "./nodes/AttachmentNode";
 import { ConnectionEdge } from "./edges/ConnectionEdge";
 import { CanvasControls } from "./CanvasControls";
 import { AddResourcePopover } from "./AddResourcePopover";
 import { FIT_OPTIONS } from "./fit-options";
 
+/** Workload nodes (service/addon) plus the compact attachment nodes (secret/volume/object store). */
+export type CanvasFlowNode = ResourceFlowNode | AttachmentFlowNode;
+
 /** Declared at module scope — a fresh object identity here re-renders every node. */
-const nodeTypes = { resource: ResourceNode };
+const nodeTypes = { resource: ResourceNode, attachment: AttachmentNode };
 const edgeTypes = { connection: ConnectionEdge };
 
 /** All derived edges are variable-reference connections (dashed amber). */
@@ -27,11 +31,11 @@ const DEFAULT_EDGE_OPTIONS = { type: "connection" };
 const SNAP_GRID: [number, number] = [16, 16];
 
 interface CanvasEditorProps {
-  nodes: ResourceFlowNode[];
+  nodes: CanvasFlowNode[];
   edges: Edge[];
-  onNodesChange: OnNodesChange<ResourceFlowNode>;
+  onNodesChange: OnNodesChange<CanvasFlowNode>;
   onEdgesChange: OnEdgesChange;
-  onNodeClick?: NodeMouseHandler<ResourceFlowNode>;
+  onNodeClick?: NodeMouseHandler<CanvasFlowNode>;
   showConnections: boolean;
   onToggleConnections: () => void;
   onAutoLayout: () => void;
@@ -98,7 +102,7 @@ export function CanvasEditor({
           <Panel position="bottom-center" className="pointer-events-none !mb-[18px]">
             <div className="flex items-center gap-2 text-[11.5px] text-fg-muted">
               <Move className="size-[13px]" aria-hidden />
-              drag to rearrange · click a node to configure · edges carry connection env vars
+              drag to rearrange · click a node to configure · edges show stack connections
             </div>
           </Panel>
         )}
