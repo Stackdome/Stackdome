@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { snapshotToUpdateRequest, volumesToDelete } from "../snapshot-to-update";
+import { snapshotToUpdateRequest, stackToUpdateRequest, volumesToDelete } from "../snapshot-to-update";
 import type { StackReleaseSnapshot } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 
@@ -76,5 +76,49 @@ describe("volumesToDelete", () => {
       spec: { volumes: [{ id: "v-1", name: "web-data" }, { id: "v-2", name: "scratch" }] },
     } as unknown as Stack;
     expect(volumesToDelete(stack, snap)).toEqual([{ id: "v-2", name: "scratch" }]);
+  });
+});
+
+describe("stackToUpdateRequest", () => {
+  const stack = {
+    id: "s1",
+    name: "acme",
+    labels: [{ key: "user", value: "old" }],
+    spec: {
+      stack_resources: [
+        {
+          id: "r1",
+          name: "web",
+          revision: "3",
+          status: { state: "Ready" },
+          outputs: [{ name: "url" }],
+          ports: [{ number: 80, exposed_to_public: true }],
+        },
+      ],
+      volumes: [{ name: "data", spec: { size: "1Gi" } }],
+      connections: [{ id: "c1", kind: "volume_mount" }],
+    },
+  } as unknown as Stack;
+
+  it("carries the full spec INCLUDING connections (PUT is replace-all)", () => {
+    const req = stackToUpdateRequest(stack, [{ key: "user", value: "prod" }]);
+    expect(req.spec?.connections).toEqual([{ id: "c1", kind: "volume_mount" }]);
+    expect(req.spec?.stack_resources).toHaveLength(1);
+    expect(req.spec?.volumes).toHaveLength(1);
+  });
+
+  it("applies the new labels and keeps the name", () => {
+    const req = stackToUpdateRequest(stack, [{ key: "user", value: "prod" }]);
+    expect(req.name).toBe("acme");
+    expect(req.labels).toEqual([{ key: "user", value: "prod" }]);
+  });
+
+  it("strips server-only resource fields (id/revision/status/outputs)", () => {
+    const req = stackToUpdateRequest(stack, []);
+    const r = req.spec!.stack_resources![0] as Record<string, unknown>;
+    expect(r.id).toBeUndefined();
+    expect(r.revision).toBeUndefined();
+    expect(r.status).toBeUndefined();
+    expect(r.outputs).toBeUndefined();
   });
 });

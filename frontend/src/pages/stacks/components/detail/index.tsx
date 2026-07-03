@@ -14,7 +14,7 @@ import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditor
 import { DraftTabPlaceholder } from "@/pages/stacks/components/canvas/DraftTabPlaceholder";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
-import { createStack, getStackById, deleteStack } from "@/api/stacks";
+import { createStack, getStackById, deleteStack, updateStack } from "@/api/stacks";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import { USER_DEFINED_LABEL_KEY } from "@/pages/stacks/lib/constants";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
@@ -37,6 +37,9 @@ import { useDraftSync } from "@/pages/stacks/hooks/use-draft-sync";
 import { useStackRevert } from "@/pages/stacks/hooks/use-stack-revert";
 import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
 import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
+import type { SyncStatus } from "@/pages/stacks/lib/draft-sync/constants";
+import { stackToUpdateRequest } from "@/pages/stacks/lib/draft-sync/snapshot-to-update";
+import { normalizeLabel } from "@/pages/stacks/lib/labels";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -86,6 +89,7 @@ export default function StackDetailPage() {
   );
   const [draftName, setDraftName] = useState(seed.name);
   const [draftLabels, setDraftLabels] = useState<FormStackData["labels"]>(seed.labels);
+  const [labelSync, setLabelSync] = useState<SyncStatus>(SYNC_STATUS.idle);
 
   const { stacks, setStacks } = useStacks();
   const [fetchedStack, setFetchedStack] = useState<Stack | null>(null);
@@ -463,11 +467,59 @@ export default function StackDetailPage() {
   }, []);
 
   const addDraftLabel = useCallback((value: string) => {
-    setDraftLabels((prev) => [...(prev ?? []), { key: USER_DEFINED_LABEL_KEY, value }]);
+    const normalized = normalizeLabel(value);
+    if (!normalized) return;
+    setDraftLabels((prev) => {
+      const cur = prev ?? [];
+      if (cur.some((l) => l.value === normalized)) return cur;
+      return [...cur, { key: USER_DEFINED_LABEL_KEY, value: normalized }];
+    });
   }, []);
   const removeDraftLabel = useCallback((idx: number) => {
     setDraftLabels((prev) => (prev ?? []).filter((_, i) => i !== idx));
   }, []);
+
+  // Deployed stacks: persist the new label set immediately via a full PUT
+  // (replace-all body built from the live server stack, labels swapped).
+  const persistLabels = useCallback(
+    async (next: NonNullable<Stack["labels"]>) => {
+      if (!stackToShow?.id || !deployIds.stackId) return;
+      setLabelSync(SYNC_STATUS.saving);
+      try {
+        const fresh = await updateStack(
+          deployIds.orgId,
+          deployIds.teamName,
+          deployIds.stackId,
+          stackToUpdateRequest(stackToShow, next),
+        );
+        setFetchedStack(fresh);
+        setStacks(stacks.map((s) => (s.id === fresh.id ? fresh : s)));
+        setLabelSync(SYNC_STATUS.saved);
+        setTimeout(() => setLabelSync(SYNC_STATUS.idle), 2000);
+      } catch {
+        setLabelSync(SYNC_STATUS.error);
+      }
+    },
+    [stackToShow, deployIds, setStacks, stacks],
+  );
+
+  const addStackLabel = useCallback(
+    (value: string) => {
+      const normalized = normalizeLabel(value);
+      if (!normalized) return;
+      const cur = stackToShow?.labels ?? [];
+      if (cur.some((l) => l.value === normalized)) return;
+      void persistLabels([...cur, { key: USER_DEFINED_LABEL_KEY, value: normalized }]);
+    },
+    [stackToShow, persistLabels],
+  );
+  const removeStackLabel = useCallback(
+    (idx: number) => {
+      const cur = stackToShow?.labels ?? [];
+      void persistLabels(cur.filter((_, i) => i !== idx));
+    },
+    [stackToShow, persistLabels],
+  );
 
   if (!isDraft && loading) {
     return (
@@ -563,9 +615,9 @@ export default function StackDetailPage() {
         onNameChange={handleNameChange}
         nameError={nameError}
         labels={(isDraft ? draftLabels : effectiveStack?.labels) ?? []}
-        labelsEditable={isDraft}
-        onAddLabel={addDraftLabel}
-        onRemoveLabel={removeDraftLabel}
+        labelsEditable={isDraft || canWriteStack}
+        onAddLabel={isDraft ? addDraftLabel : addStackLabel}
+        onRemoveLabel={isDraft ? removeDraftLabel : removeStackLabel}
         statusState={effectiveStack?.status?.state}
         subtitle={subtitleText}
         activeTab={activeTab}
@@ -574,7 +626,7 @@ export default function StackDetailPage() {
         dirtyResourceCount={session.dirty.dirtyResourceIdx.size}
         dirtyTotal={dirtyTotal}
         isStaged={lifecycle.phase === "staged"}
-        syncStatus={isDraft ? SYNC_STATUS.idle : draftSync.status}
+        syncStatus={isDraft ? SYNC_STATUS.idle : labelSync !== SYNC_STATUS.idle ? labelSync : draftSync.status}
         deployBusy={deployBusy}
         canWrite={canWriteStack}
         onCreate={() => void performCreate()}

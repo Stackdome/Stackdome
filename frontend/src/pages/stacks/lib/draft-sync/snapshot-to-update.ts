@@ -63,6 +63,29 @@ export function snapshotToUpdateRequest(
   } as StackUpdateRequest;
 }
 
+/**
+ * Whole-stack PUT body from the LIVE server stack with only the labels swapped.
+ * PUT replace-all semantics require the full resource/volume/connection set —
+ * an incomplete body silently wipes bindings.
+ */
+export function stackToUpdateRequest(stack: Stack, labels: Stack["labels"]): StackUpdateRequest {
+  const connections = stack.spec?.connections ?? [];
+  return {
+    name: stack.name,
+    labels,
+    spec: {
+      stack_resources: (stack.spec?.stack_resources ?? []).map((r) =>
+        withExplicitEmptyCollections(cleanServerResource(r as StackResource)),
+      ),
+      volumes:
+        (stack.spec?.volumes ?? []).length > 0
+          ? (stack.spec?.volumes ?? []).map((v) => cleanVolume(v as Volume))
+          : undefined,
+      ...(connections.length > 0 ? { connections } : {}),
+    },
+  };
+}
+
 /** Volumes on the stack that the deployed snapshot doesn't know — draft
  *  artifacts to remove after the PUT (which never deletes volumes). */
 export function volumesToDelete(stack: Stack, snap: StackReleaseSnapshot): { id: string; name: string }[] {
