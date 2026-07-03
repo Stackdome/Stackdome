@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { alignBaselineToDraft, cloneJson, getAddonLinkCount, isPathDirty } from "../stack-diff";
+import { alignBaselineToDraft, cloneJson, dirtyTabsForResource, getAddonLinkCount, isPathDirty, isResourceDirty, revertResource } from "../stack-diff";
 import type { ResourceArr } from "../stack-diff";
 
 describe("cloneJson", () => {
@@ -169,5 +169,28 @@ describe("alignBaselineToDraft", () => {
   it("is the identity when baseline and draft share order", () => {
     const baseline = [{ name: "a" }, { name: "b" }];
     expect(alignBaselineToDraft(baseline, baseline).map((r) => r?.name)).toEqual(["a", "b"]);
+  });
+});
+
+describe("status is server telemetry, never dirt", () => {
+  const deployed = { name: "web", image_spec: { image: "nginx:1" }, status: { state: "Pending" } };
+  const live = { name: "web", image_spec: { image: "nginx:1" }, status: { state: "Ready", public_ingress: [{}] } };
+
+  it("isResourceDirty ignores status drift", () => {
+    expect(isResourceDirty(live as never, deployed as never)).toBe(false);
+  });
+
+  it("dirtyTabsForResource does not light any tab for status drift", () => {
+    const tabs = dirtyTabsForResource(live as never, deployed as never);
+    expect(tabs).toEqual({ configuration: false, deployment: false, environment: false });
+  });
+
+  it("revertResource keeps the draft's live status", () => {
+    const draft = { resources: [{ ...live, image_spec: { image: "nginx:2" } }], volumes: [] };
+    const baseline = { resources: [deployed], volumes: [] };
+    const next = revertResource(draft as never, baseline as never, 0);
+    const r = next.resources[0] as typeof live;
+    expect(r.image_spec.image).toBe("nginx:1");
+    expect(r.status).toEqual(live.status);
   });
 });

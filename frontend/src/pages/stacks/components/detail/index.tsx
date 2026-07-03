@@ -386,8 +386,9 @@ export default function StackDetailPage() {
 
   const lifecycle = useDeployLifecycle({
     stack: stackToShow ?? undefined,
-    dirty: session.dirty,
-    isActive: session.isActive,
+    // "Editing" = autosave hasn't landed yet (in flight or retrying). Saved-but-
+    // undeployed content is detected by the staged-phase content diff instead.
+    unsaved: draftSync.status === SYNC_STATUS.saving || draftSync.failureCount > 0,
     releases: releasesResult.releases,
     activeRelease: releasesResult.activeRelease,
     detail: releaseDetail,

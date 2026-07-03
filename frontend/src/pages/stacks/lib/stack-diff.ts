@@ -85,23 +85,37 @@ function countChangedFields(
   const keys = new Set<string>([...Object.keys(ao), ...Object.keys(bo)]);
   let n = 0;
   for (const k of keys) {
+    if (k === "status") continue; // server telemetry, never user dirt
     if (!deepEqual(ao[k], bo[k])) n++;
   }
   return n;
+}
+
+/**
+ * Drop server-only telemetry before any dirt comparison. `status` is written by
+ * the cluster, not the user: the baseline may come from a release snapshot whose
+ * status was captured at deploy time while the draft carries the live status —
+ * that drift must never read as an undeployed change.
+ */
+function omitStatus<T>(x: T): T {
+  if (!x || typeof x !== "object" || Array.isArray(x)) return x;
+  const { status, ...rest } = x as Record<string, unknown>;
+  void status;
+  return rest as T;
 }
 
 export function isResourceDirty(
   draftResource: Partial<FormStackResourceData> | undefined,
   baselineResource: Partial<FormStackResourceData> | undefined,
 ): boolean {
-  return !deepEqual(draftResource, baselineResource);
+  return !deepEqual(omitStatus(draftResource), omitStatus(baselineResource));
 }
 
 export function isVolumeDirty(
   draftVolume: Partial<FormVolumeExtendedData> | undefined,
   baselineVolume: Partial<FormVolumeExtendedData> | undefined,
 ): boolean {
-  return !deepEqual(draftVolume, baselineVolume);
+  return !deepEqual(omitStatus(draftVolume), omitStatus(baselineVolume));
 }
 
 function getEnvVars(
@@ -282,7 +296,13 @@ export function revertResource(
   // (see alignBaselineToDraft) — treat those the same as "past the end".
   const baselineEntry = idx < baseline.resources.length ? baseline.resources[idx] : undefined;
   if (baselineEntry != null) {
-    next.resources[idx] = cloneJson(baselineEntry);
+    // Keep the draft's live status: the baseline's was captured at deploy time
+    // and restoring it would show stale telemetry until the next refresh.
+    const liveStatus = (draft.resources[idx] as { status?: unknown } | undefined)?.status;
+    next.resources[idx] = {
+      ...cloneJson(baselineEntry),
+      ...(liveStatus !== undefined ? { status: liveStatus } : {}),
+    } as (typeof next.resources)[number];
   } else {
     // The resource only exists in the draft — drop it.
     next.resources.splice(idx, 1);
@@ -443,6 +463,7 @@ export function dirtyTabsForResource(
   const keys = new Set<string>([...dKeys, ...bKeys]);
 
   for (const k of keys) {
+    if (k === "status") continue; // server telemetry, never user dirt
     const dv = (draft as Record<string, unknown> | undefined)?.[k];
     const bv = (baseline as Record<string, unknown> | undefined)?.[k];
     if (deepEqual(dv, bv)) continue;
@@ -532,7 +553,7 @@ export function dirtyPathsForResource(
   baseline: unknown,
 ): Set<string> {
   const acc = new Set<string>();
-  walkPaths(draft, baseline, "", acc);
+  walkPaths(omitStatus(draft), omitStatus(baseline), "", acc);
   return acc;
 }
 
@@ -605,7 +626,11 @@ export function revertVolume(
   // Nullish holes from a name-aligned baseline mean "draft-only" — drop the row.
   const baselineEntry = idx < baseline.volumes.length ? baseline.volumes[idx] : undefined;
   if (baselineEntry != null) {
-    next.volumes[idx] = cloneJson(baselineEntry);
+    const liveStatus = (draft.volumes[idx] as { status?: unknown } | undefined)?.status;
+    next.volumes[idx] = {
+      ...cloneJson(baselineEntry),
+      ...(liveStatus !== undefined ? { status: liveStatus } : {}),
+    } as (typeof next.volumes)[number];
   } else {
     next.volumes.splice(idx, 1);
   }
