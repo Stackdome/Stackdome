@@ -481,6 +481,9 @@ export default function StackDetailPage() {
 
   // Deployed stacks: persist the new label set immediately via a full PUT
   // (replace-all body built from the live server stack, labels swapped).
+  // The body snapshots stackToShow at call time: an autosave op in flight can
+  // land after this PUT and vice versa — bounded clobber window accepted by
+  // the spec (labels never touch resources; both writers are last-write-wins).
   const persistLabels = useCallback(
     async (next: NonNullable<Stack["labels"]>) => {
       if (!stackToShow?.id || !deployIds.stackId) return;
