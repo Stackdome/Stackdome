@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { Activity, LayoutGrid, Loader2, MoreHorizontal, Rocket, Save, Terminal, Trash2, Undo2, X } from "lucide-react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { Activity, ChevronDown, ChevronRight, LayoutGrid, Loader2, MoreHorizontal, Rocket, Save, Terminal, Trash2, Undo2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,9 @@ import {
 import { AutosaveStatus } from "./AutosaveStatus";
 import type { SyncStatus } from "@/pages/stacks/lib/draft-sync/constants";
 
+const COLLAPSE_KEY_PREFIX = "stackdome.editor-header-collapsed.";
+const DRAFT_COLLAPSE_ID = "draft";
+
 /** The four editor modes, in display order. Icons per the design bundle. */
 const EDITOR_TABS = [
   { id: "configuration", label: "Configuration", Icon: LayoutGrid },
@@ -33,6 +36,8 @@ const EDITOR_TABS = [
 
 export interface CanvasEditorShellProps {
   stackName: string;
+  /** Persistence key for header collapse; falls back to a shared draft key. */
+  stackId?: string;
   /** Raw stack status state (mapped to a pill variant), e.g. "Ready". */
   statusState?: string | null;
   /** Human subtitle, e.g. "3 services · 2 volumes". */
@@ -96,6 +101,7 @@ export interface CanvasEditorShellProps {
  */
 export function CanvasEditorShell({
   stackName,
+  stackId,
   statusState,
   subtitle,
   isDraft,
@@ -131,6 +137,37 @@ export function CanvasEditorShell({
   const [discardOpen, setDiscardOpen] = useState(false);
   const [labelInput, setLabelInput] = useState("");
 
+  const collapseKey = `${COLLAPSE_KEY_PREFIX}${stackId ?? DRAFT_COLLAPSE_ID}`;
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(collapseKey) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((c) => {
+      const next = !c;
+      try {
+        localStorage.setItem(collapseKey, next ? "1" : "0");
+      } catch {
+        /* storage unavailable — collapse stays session-local */
+      }
+      return next;
+    });
+  }, [collapseKey]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "." && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        toggleCollapsed();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [toggleCollapsed]);
+
   const hasUnsaved = isActive && dirtyTotal > 0;
 
   // The canvas (Configuration) stays mounted so its open drawer + node
@@ -159,129 +196,188 @@ export function CanvasEditorShell({
     </Button>
   );
 
+  const chevron = (
+    <button
+      type="button"
+      onClick={toggleCollapsed}
+      aria-label={collapsed ? "Expand header" : "Collapse header"}
+      title={`${collapsed ? "Expand" : "Collapse"} header (⌘.)`}
+      className="flex size-6 flex-none items-center justify-center rounded text-fg-muted hover:bg-muted hover:text-foreground"
+    >
+      {collapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+    </button>
+  );
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
-      {/* Stack-title header */}
-      <div className="flex-none px-7 pt-6">
-        <div className="flex items-center gap-3.5">
-          {nameEditable ? (
-            <Input
-              aria-label="Stack name"
-              aria-invalid={!!nameError}
-              value={stackName}
-              onChange={(e) => onNameChange?.(e.target.value)}
-              placeholder="name-your-stack"
+      {collapsed && (
+        <div className="flex h-11 flex-none items-center gap-3 border-b border-border px-4">
+          {chevron}
+          <span className="truncate text-[14px] font-medium text-foreground">{stackName}</span>
+          {statusState && (
+            <span
+              aria-label={`status ${statusState}`}
               className={cn(
-                "h-auto w-[22ch] bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none focus-visible:ring-0",
-                nameError ? "border border-danger ring-1 ring-danger" : "border-0",
+                "size-2 flex-none rounded-full",
+                variantFromState(statusState) === "ready" ? "bg-success" : "bg-warn",
               )}
             />
-          ) : (
-            <h1 className="truncate text-[29px] font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
           )}
-          {statusState && (
-            <StatusPill variant={variantFromState(statusState)} className="flex-none">
-              {statusState}
-            </StatusPill>
-          )}
-          {!isDraft && isStaged && (
-            <StatusPill variant="info" className="flex-none">DRAFT</StatusPill>
-          )}
+          <div className="mx-2 flex items-center gap-1">
+            {EDITOR_TABS.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onTabChange(id)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] font-medium transition-colors",
+                  activeTab === id
+                    ? "border-brand bg-brand-bg text-brand"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icon className="size-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="flex-1" />
+          {hasUnsaved && (
+            <span className="font-mono text-[11px] text-brand">
+              {dirtyTotal} unsaved {dirtyTotal === 1 ? "change" : "changes"}
+            </span>
+          )}
           {!isDraft && <AutosaveStatus status={syncStatus} />}
           {primaryButton}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="ghost" size="icon" aria-label="Stack actions">
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[180px]">
-              {hasUnsaved && (
-                <DropdownMenuItem onClick={() => setDiscardOpen(true)}>
-                  <Trash2 className="size-4" />
-                  Discard all changes
-                </DropdownMenuItem>
-              )}
-              {canDiscardDraft && onDiscardDraft && (
-                <DropdownMenuItem onClick={onDiscardDraft}>
-                  <Undo2 className="size-4" />
-                  Discard draft changes
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem
-                className="text-danger focus:text-danger"
-                onClick={onDelete}
-                disabled={!canDeleteStack}
-              >
-                <Trash2 className="size-4 text-danger" />
-                Delete stack
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
-        {nameEditable && nameError && (
-          <p className="mt-1 text-[12px] text-danger">{nameError}</p>
-        )}
-        <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
-        {(labelsEditable || labels.length > 0) && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {labels.map((l, i) => (
-              <span key={`${l.value}-${i}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                {l.value}
+      )}
+      {!collapsed && (
+        <>
+          {/* Stack-title header */}
+          <div className="flex-none px-7 pt-6">
+            <div className="flex items-center gap-3.5">
+              {chevron}
+              {nameEditable ? (
+                <Input
+                  aria-label="Stack name"
+                  aria-invalid={!!nameError}
+                  value={stackName}
+                  onChange={(e) => onNameChange?.(e.target.value)}
+                  placeholder="name-your-stack"
+                  className={cn(
+                    "h-auto w-[22ch] bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none focus-visible:ring-0",
+                    nameError ? "border border-danger ring-1 ring-danger" : "border-0",
+                  )}
+                />
+              ) : (
+                <h1 className="truncate text-[29px] font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
+              )}
+              {statusState && (
+                <StatusPill variant={variantFromState(statusState)} className="flex-none">
+                  {statusState}
+                </StatusPill>
+              )}
+              {!isDraft && isStaged && (
+                <StatusPill variant="info" className="flex-none">DRAFT</StatusPill>
+              )}
+              <div className="flex-1" />
+              {!isDraft && <AutosaveStatus status={syncStatus} />}
+              {primaryButton}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Stack actions">
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[180px]">
+                  {hasUnsaved && (
+                    <DropdownMenuItem onClick={() => setDiscardOpen(true)}>
+                      <Trash2 className="size-4" />
+                  Discard all changes
+                    </DropdownMenuItem>
+                  )}
+                  {canDiscardDraft && onDiscardDraft && (
+                    <DropdownMenuItem onClick={onDiscardDraft}>
+                      <Undo2 className="size-4" />
+                  Discard draft changes
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    className="text-danger focus:text-danger"
+                    onClick={onDelete}
+                    disabled={!canDeleteStack}
+                  >
+                    <Trash2 className="size-4 text-danger" />
+                Delete stack
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            {nameEditable && nameError && (
+              <p className="mt-1 text-[12px] text-danger">{nameError}</p>
+            )}
+            <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
+            {(labelsEditable || labels.length > 0) && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {labels.map((l, i) => (
+                  <span key={`${l.value}-${i}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                    {l.value}
+                    {labelsEditable && (
+                      <button type="button" aria-label={`Remove label ${l.value}`} onClick={() => onRemoveLabel?.(i)} className="rounded-full hover:text-foreground">
+                        <X className="size-3" />
+                      </button>
+                    )}
+                  </span>
+                ))}
                 {labelsEditable && (
-                  <button type="button" aria-label={`Remove label ${l.value}`} onClick={() => onRemoveLabel?.(i)} className="rounded-full hover:text-foreground">
-                    <X className="size-3" />
-                  </button>
+                  <Input
+                    value={labelInput}
+                    onChange={(e) => setLabelInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && labelInput.trim()) {
+                        e.preventDefault();
+                        onAddLabel?.(labelInput.trim());
+                        setLabelInput("");
+                      }
+                    }}
+                    placeholder="add label…"
+                    className="h-6 w-[14ch] border-0 bg-transparent px-0 text-[11px] shadow-none focus-visible:ring-0"
+                  />
                 )}
-              </span>
-            ))}
-            {labelsEditable && (
-              <Input
-                value={labelInput}
-                onChange={(e) => setLabelInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && labelInput.trim()) {
-                    e.preventDefault();
-                    onAddLabel?.(labelInput.trim());
-                    setLabelInput("");
-                  }
-                }}
-                placeholder="add label…"
-                className="h-6 w-[14ch] border-0 bg-transparent px-0 text-[11px] shadow-none focus-visible:ring-0"
-              />
+              </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Tab row */}
-      <div className="flex-none flex items-center gap-2 border-b border-border px-7 py-[18px]">
-        {EDITOR_TABS.map(({ id, label, Icon }) => {
-          const active = activeTab === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => onTabChange(id)}
-              className={cn(
-                "flex items-center gap-2 rounded-md border px-[15px] py-2 text-sm font-medium transition-colors",
-                active
-                  ? "border-brand bg-brand-bg text-brand"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <Icon className="size-[15px]" />
-              {label}
-              {id === "configuration" && dirtyResourceCount > 0 && (
-                <span className="ml-0.5 rounded-full bg-brand-bg px-1.5 py-px font-mono text-[9.5px] font-medium text-brand">
-                  {dirtyResourceCount}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+          {/* Tab row */}
+          <div className="flex-none flex items-center gap-2 border-b border-border px-7 py-[18px]">
+            {EDITOR_TABS.map(({ id, label, Icon }) => {
+              const active = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onTabChange(id)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md border px-[15px] py-2 text-sm font-medium transition-colors",
+                    active
+                      ? "border-brand bg-brand-bg text-brand"
+                      : "border-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Icon className="size-[15px]" />
+                  {label}
+                  {id === "configuration" && dirtyResourceCount > 0 && (
+                    <span className="ml-0.5 rounded-full bg-brand-bg px-1.5 py-px font-mono text-[9.5px] font-medium text-brand">
+                      {dirtyResourceCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+        </>
+      )}
 
       {/* Mode body. The canvas is always mounted (keeps its drawer/selection);
           ops views overlay it. Ops views own their own max-width + padding. */}

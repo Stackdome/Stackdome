@@ -130,3 +130,38 @@ describe("CanvasEditorShell primary button matrix", () => {
     expect(screen.queryByText("Editing")).toBeNull();
   });
 });
+
+describe("CanvasEditorShell collapse", () => {
+  afterEach(() => localStorage.clear());
+
+  it("collapses to a compact bar and hides labels/subtitle", () => {
+    render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1"
+      labels={[{ key: "user", value: "prod" }]} />);
+    expect(screen.getByText("prod")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Collapse header" }));
+    expect(screen.queryByText("prod")).toBeNull();
+    expect(screen.queryByText("0 services · 0 volumes")).toBeNull();
+    expect(screen.getByText("acme")).toBeInTheDocument(); // compact bar name
+    expect(screen.getByRole("button", { name: "Expand header" })).toBeInTheDocument();
+  });
+
+  it("persists collapsed state per stack id", () => {
+    localStorage.setItem("stackdome.editor-header-collapsed.s1", "1");
+    render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" />);
+    expect(screen.getByRole("button", { name: "Expand header" })).toBeInTheDocument();
+  });
+
+  it("toggles via Cmd+.", () => {
+    render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" />);
+    fireEvent.keyDown(window, { key: ".", metaKey: true });
+    expect(screen.getByRole("button", { name: "Expand header" })).toBeInTheDocument();
+  });
+
+  it("keeps tabs clickable while collapsed", () => {
+    const onTabChange = vi.fn();
+    render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" onTabChange={onTabChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "Collapse header" }));
+    fireEvent.click(screen.getByRole("button", { name: /Logs/ }));
+    expect(onTabChange).toHaveBeenCalledWith("logs");
+  });
+});

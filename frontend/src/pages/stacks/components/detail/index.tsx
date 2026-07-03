@@ -557,6 +557,7 @@ export default function StackDetailPage() {
     <>
       <CanvasEditorShell
         stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
+        stackId={effectiveStack?.id}
         isDraft={isDraft}
         nameEditable={isDraft}
         onNameChange={handleNameChange}
