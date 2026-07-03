@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AutosaveStatus } from "./AutosaveStatus";
 import type { SyncStatus } from "@/pages/stacks/lib/draft-sync/constants";
+import { PublicEndpointRow, type PublicEndpoint } from "./PublicEndpointRow";
 
 const COLLAPSE_KEY_PREFIX = "stackdome.editor-header-collapsed.";
 const DRAFT_COLLAPSE_ID = "draft";
@@ -82,6 +83,9 @@ export interface CanvasEditorShellProps {
   /** Whether Delete is enabled (false until Task 7 wires it fully, but shell respects the gate). */
   canDeleteStack: boolean;
 
+  /** Public endpoints to show in the expanded header (one pill per service). */
+  publicEndpoints?: PublicEndpoint[];
+
   // ── mode bodies (rendered by active tab) ──
   configuration: ReactNode;
   deployments: ReactNode;
@@ -129,6 +133,7 @@ export function CanvasEditorShell({
   canDiscardDraft,
   onDelete,
   canDeleteStack,
+  publicEndpoints,
   configuration,
   deployments,
   logs,
@@ -346,6 +351,7 @@ export function CanvasEditorShell({
                 )}
               </div>
             )}
+            <PublicEndpointRow endpoints={publicEndpoints ?? []} />
           </div>
 
           {/* Tab row */}

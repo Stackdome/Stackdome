@@ -29,6 +29,8 @@ import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useOrgDomains } from "@/hooks/use-org-domains";
+import { pickBestIngress } from "@/pages/stacks/lib/public-endpoints";
 import type { z } from "zod";
 import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
 import { useToast } from "@/components/ui/use-toast";
@@ -169,6 +171,17 @@ export default function StackDetailPage() {
     [isDraft, draftName, draftLabels, session.draft.resources, session.draft.volumes],
   );
   const effectiveStack = draftStackView ?? stackToShow;
+
+  // Publicly exposed services → best live ingress URL, for the header's
+  // PUBLIC row. Drafts have no live ingress, so the row stays empty.
+  const orgDomains = useOrgDomains(effectiveStack?.organisation_id ?? getCurrentOrganizationId() ?? undefined);
+  const publicEndpoints = useMemo(() => {
+    if (isDraft) return [];
+    return (effectiveStack?.spec.stack_resources ?? []).flatMap((r) => {
+      const best = pickBestIngress(r.status?.public_ingress ?? [], orgDomains);
+      return best && r.name ? [{ service: r.name, url: best.url, port: best.target_port }] : [];
+    });
+  }, [isDraft, effectiveStack, orgDomains]);
 
   const baselineResources = useMemo<FormStackResourceData[]>(() => {
     const connections = stackToShow?.spec?.connections ?? [];
@@ -640,6 +653,7 @@ export default function StackDetailPage() {
         onDiscardDraft={() => setRevertConfirmOpen(true)}
         canDeleteStack={canWriteStack}
         onDelete={() => setDeleteConfirmOpen(true)}
+        publicEndpoints={publicEndpoints}
         configuration={
           <StackCanvasTab
             session={session}
