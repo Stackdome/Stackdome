@@ -353,6 +353,9 @@ export default function StackDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.isActive, deployedSnapshot, baselineReleaseId, baselineResources, baselineVolumes]);
 
+  // Bumped on every autosave refresh to trigger a topology refetch.
+  const [topologyRefreshKey, setTopologyRefreshKey] = useState(0);
+
   // Autosave engine: debounces draft changes and syncs thin per-resource ops to
   // the server. Disabled for drafts (nothing exists server-side to sync yet).
   const draftSync = useDraftSync({
@@ -364,6 +367,7 @@ export default function StackDetailPage() {
       setFetchedStack(fresh);
       // Context write-through: stale currentStack must not win after a remote refresh.
       setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
+      setTopologyRefreshKey((k) => k + 1);
     },
   });
 
@@ -751,6 +755,8 @@ export default function StackDetailPage() {
             addonNameById={addonNameById}
             errors={validationErrors.resources}
             onViewLogs={() => setActiveTab("logs")}
+            topologyIds={!isDraft && deployIds.stackId ? deployIds : null}
+            topologyRefreshKey={topologyRefreshKey}
           />
         }
         deployments={deploymentsBody}

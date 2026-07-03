@@ -13,7 +13,10 @@ import type {
   FormVolumeExtendedData as VolumeFormData,
 } from "@/pages/stacks/schemas/form-schema";
 import type { UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
-import { deriveGraph } from "@/pages/stacks/lib/canvas/derive-graph";
+import { useSecrets } from "@/pages/stacks/hooks/use-secrets";
+import { useStackTopology } from "@/pages/stacks/hooks/use-stack-topology";
+import { deriveGraph } from "@/pages/stacks/lib/canvas/graph-from-connections";
+import { mergeTopology } from "@/pages/stacks/lib/canvas/merge-topology";
 import { layoutGraph } from "@/pages/stacks/lib/canvas/layout-graph";
 import { addBlockToStack } from "@/pages/stacks/lib/block-to-form";
 import { blockCatalog, getBlockById } from "@/pages/stacks/data/blocks/registry";
@@ -49,6 +52,10 @@ interface StackCanvasTabProps {
   errors: { [index: number]: { [field: string]: string | undefined } };
   /** Switch the editor to the Logs tab (from the drawer's "View logs"). */
   onViewLogs?: () => void;
+  /** Null for draft (unsaved) stacks — no server topology exists yet. */
+  topologyIds: { orgId: string; teamName: string; stackId: string } | null;
+  /** Bump to force a topology refetch (wired to autosave refreshes). */
+  topologyRefreshKey: number;
 }
 
 function StackCanvasFlow({
@@ -61,6 +68,8 @@ function StackCanvasFlow({
   addonNameById,
   errors,
   onViewLogs,
+  topologyIds,
+  topologyRefreshKey,
 }: StackCanvasTabProps) {
   // Read from the live draft when the session is active, server state otherwise.
   const resources = session.isActive ? session.draft.resources : draftResources;
@@ -75,15 +84,25 @@ function StackCanvasFlow({
     [session.dirty, baselineResources.length, connectionAddonIds],
   );
 
-  // Topology + node data (cheap, pure). Re-runs on any edit.
-  const dataGraph = useMemo(
-    () => deriveGraph({ resources, linkedAddonIds, addonNameById, dirty }),
-    [resources, linkedAddonIds, addonNameById, dirty],
+  const { secrets } = useSecrets();
+  const secretNameById = useMemo(
+    () => new Map(secrets.filter((s) => s.id && s.name).map((s) => [s.id!, s.name!])),
+    [secrets],
   );
+
+  const { topology } = useStackTopology({ ids: topologyIds, refreshKey: topologyRefreshKey });
+
+  // Local connection-derived data (cheap, pure). Re-runs on any edit.
+  const dataGraph = useMemo(
+    () => deriveGraph({ resources, linkedAddonIds, addonNameById, secretNameById, dirty }),
+    [resources, linkedAddonIds, addonNameById, secretNameById, dirty],
+  );
+  // Local graph enhanced with server-derived edges + runtime status.
+  const mergedGraph = useMemo(() => mergeTopology(dataGraph, topology), [dataGraph, topology]);
   // Signature of the node/edge id-set — changes only when topology changes.
   const topologySignature = useMemo(
-    () => `${dataGraph.nodes.map((n) => n.id).join("|")}::${dataGraph.edges.map((e) => e.id).join("|")}`,
-    [dataGraph],
+    () => `${mergedGraph.nodes.map((n) => n.id).join("|")}::${mergedGraph.edges.map((e) => e.id).join("|")}`,
+    [mergedGraph],
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>([]);
@@ -94,31 +113,31 @@ function StackCanvasFlow({
 
   // Re-layout ONLY when topology changes; preserve in-session drag positions by id.
   useEffect(() => {
-    const laid = layoutGraph(dataGraph);
+    const laid = layoutGraph(mergedGraph);
     setNodes((prev) => {
       const posById = new Map(prev.map((n) => [n.id, n.position]));
       return laid.nodes.map((n) => ({ ...n, position: posById.get(n.id) ?? n.position })) as CanvasFlowNode[];
     });
-    setEdges(dataGraph.edges as Edge[]);
+    setEdges(mergedGraph.edges as Edge[]);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on topology only
   }, [topologySignature, setNodes, setEdges]);
 
   // Update node data (summary + dirty mark) in place, without moving nodes.
   useEffect(() => {
-    const dataById = new Map(dataGraph.nodes.map((n) => [n.id, n.data]));
+    const dataById = new Map(mergedGraph.nodes.map((n) => [n.id, n.data]));
     setNodes(
       (prev) => prev.map((n) => (dataById.has(n.id) ? { ...n, data: dataById.get(n.id)! } : n)) as CanvasFlowNode[],
     );
-  }, [dataGraph, setNodes]);
+  }, [mergedGraph, setNodes]);
 
   const toggleConnections = useCallback(() => setShowConnections((v) => !v), []);
 
   // Re-run auto-layout: reset every node to its fresh dagre position and re-fit.
   const autoLayout = useCallback(() => {
-    const laid = layoutGraph(dataGraph);
+    const laid = layoutGraph(mergedGraph);
     setNodes(laid.nodes as CanvasFlowNode[]);
     requestAnimationFrame(() => fitView(FIT_OPTIONS));
-  }, [dataGraph, setNodes, fitView]);
+  }, [mergedGraph, setNodes, fitView]);
 
   const onNodeClick = useCallback<NodeMouseHandler<CanvasFlowNode>>(
     (_event, node) => {

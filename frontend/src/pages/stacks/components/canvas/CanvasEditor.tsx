@@ -24,7 +24,7 @@ export type CanvasFlowNode = ResourceFlowNode | AttachmentFlowNode;
 const nodeTypes = { resource: ResourceNode, attachment: AttachmentNode };
 const edgeTypes = { connection: ConnectionEdge };
 
-/** All derived edges are variable-reference connections (dashed amber). */
+/** Edges render as connection edges; styling comes from each edge's data. */
 const DEFAULT_EDGE_OPTIONS = { type: "connection" };
 
 /** Snap dragged nodes to a small grid for tidy, lower-frequency position updates. */

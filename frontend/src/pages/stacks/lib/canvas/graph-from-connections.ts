@@ -165,8 +165,8 @@ function servicePresentation(resource: Partial<FormStackResourceData>) {
 
 function volumeChips(resource: Partial<FormStackResourceData>): VolumeChip[] {
   return (resource.volume_mounts ?? []).map((m) => ({
-    name: (m.name ?? "") as string,
-    mountPath: m.mount_path as string | undefined,
+    name: (m.source_volume_name ?? "") as string,
+    mountPath: m.target_path as string | undefined,
   }));
 }
 

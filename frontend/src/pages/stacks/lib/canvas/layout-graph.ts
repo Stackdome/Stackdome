@@ -1,5 +1,5 @@
 import dagre from "dagre";
-import type { CanvasGraph } from "./derive-graph";
+import type { CanvasGraph } from "./graph-from-connections";
 
 /** Card dimensions dagre reserves per node (matches ResourceNode's box). */
 const NODE_WIDTH = 216;

@@ -11,6 +11,7 @@ const web = (envRows: unknown[] = [], extra: Partial<FormStackResourceData> = {}
   }) as Partial<FormStackResourceData>;
 
 const base = {
+  resources: [] as Partial<FormStackResourceData>[],
   linkedAddonIds: new Set<string>(),
   addonNameById: new Map<string, string>(),
   secretNameById: new Map<string, string>(),
@@ -85,5 +86,65 @@ describe("deriveGraph (connection projection)", () => {
     });
     expect(g.edges).toHaveLength(0);
     expect(g.nodes.filter((n) => n.type === "attachment")).toHaveLength(0);
+  });
+
+  it("adds addon nodes from linkedAddonIds with resolved names", () => {
+    const g = deriveGraph({
+      ...base,
+      linkedAddonIds: new Set(["a1"]),
+      addonNameById: new Map([["a1", "db"]]),
+    });
+    const addon = g.nodes.find((n) => n.id === "addon:a1");
+    expect(addon?.data).toMatchObject({ kind: NODE_KIND.addon, name: "db" });
+  });
+
+  it("falls back to the addon id when no name is known", () => {
+    const g = deriveGraph({ ...base, linkedAddonIds: new Set(["a9"]) });
+    expect(g.nodes.find((n) => n.id === "addon:a9")?.data.name).toBe("a9");
+  });
+
+  it("folds volume_mounts into node volume chips, keyed by source_volume_name", () => {
+    const g = deriveGraph({
+      ...base,
+      resources: [web([], { name: "db", volume_mounts: [{ name: "data", source_volume_name: "data", target_path: "/var/lib" }] })],
+    });
+    const dbNode = g.nodes.find((n) => n.id === "resource:db");
+    expect(dbNode?.data).toMatchObject({ volumes: [{ name: "data", mountPath: "/var/lib" }] });
+  });
+
+  it("leaves dirtyState undefined without dirty info", () => {
+    const g = deriveGraph({ ...base, resources: [web()] });
+    expect(g.nodes[0].data.dirtyState).toBeUndefined();
+  });
+
+  it("marks a resource beyond the baseline count as new", () => {
+    const g = deriveGraph({
+      ...base,
+      resources: [web(), { name: "fresh" } as Partial<FormStackResourceData>],
+      dirty: { baselineResourceCount: 1, dirtyResourceIdx: new Set() },
+    });
+    expect(g.nodes[0].data.dirtyState).toBeUndefined();
+    expect(g.nodes[1].data.dirtyState).toBe("new");
+  });
+
+  it("marks a changed existing resource as edited", () => {
+    const g = deriveGraph({
+      ...base,
+      resources: [web()],
+      dirty: { baselineResourceCount: 1, dirtyResourceIdx: new Set([0]) },
+    });
+    expect(g.nodes[0].data.dirtyState).toBe("edited");
+  });
+
+  it("marks a newly linked addon as new and a baseline addon as unchanged", () => {
+    const g = deriveGraph({
+      ...base,
+      linkedAddonIds: new Set(["a1", "a2"]),
+      dirty: { baselineAddonIds: new Set(["a1"]) },
+    });
+    const a1 = g.nodes.find((n) => n.id === "addon:a1");
+    const a2 = g.nodes.find((n) => n.id === "addon:a2");
+    expect(a1?.data.dirtyState).toBeUndefined();
+    expect(a2?.data.dirtyState).toBe("new");
   });
 });

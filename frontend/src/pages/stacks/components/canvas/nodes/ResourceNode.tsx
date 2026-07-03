@@ -2,7 +2,7 @@ import { memo } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { HardDrive } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ResourceNodeData } from "@/pages/stacks/lib/canvas/derive-graph";
+import type { ResourceNodeData } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import type { DotState } from "@/pages/stacks/lib/canvas/node-presentation";
 import { NodeGlyph } from "./node-glyph";
 

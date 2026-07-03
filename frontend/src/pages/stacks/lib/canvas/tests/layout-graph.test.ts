@@ -1,13 +1,31 @@
 import { describe, it, expect } from "vitest";
 import { layoutGraph } from "../layout-graph";
-import type { CanvasGraph } from "../derive-graph";
+import type { CanvasGraph } from "../graph-from-connections";
 
 const graph: CanvasGraph = {
   nodes: [
-    { id: "resource:web", type: "resource", data: { kind: "service", name: "web", summary: "", volumes: [] }, position: { x: 0, y: 0 } },
-    { id: "addon:a1", type: "resource", data: { kind: "addon", name: "db", summary: "", volumes: [] }, position: { x: 0, y: 0 } },
+    {
+      id: "resource:web",
+      type: "resource",
+      data: { kind: "service", name: "web", kindLabel: "Web", glyph: "web", dotState: "ok", summary: "", volumes: [] },
+      position: { x: 0, y: 0 },
+    },
+    {
+      id: "addon:a1",
+      type: "resource",
+      data: { kind: "addon", name: "db", kindLabel: "Postgres", glyph: "postgres", dotState: "ok", summary: "", volumes: [] },
+      position: { x: 0, y: 0 },
+    },
   ],
-  edges: [{ id: "resource:web->addon:a1", source: "resource:web", target: "addon:a1" }],
+  edges: [
+    {
+      id: "resource:web->addon:a1",
+      source: "resource:web",
+      target: "addon:a1",
+      type: "connection",
+      data: { kind: "env", sourceOfTruth: "connection" },
+    },
+  ],
 };
 
 describe("layoutGraph", () => {
