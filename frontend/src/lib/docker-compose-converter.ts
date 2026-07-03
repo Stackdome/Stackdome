@@ -668,7 +668,7 @@ function convertBuildSpec(
         context_path_within_source: build || './',
         dockerfile_path: 'Dockerfile',
         image_repository: {
-          external_image_repo_url: '', // User must provide
+          external_image_ref: '', // User must provide
         },
         insecure_registry: false,
         source_revision: {
@@ -687,7 +687,7 @@ function convertBuildSpec(
         context_path_within_source: build.context || './',
         dockerfile_path: build.dockerfile || 'Dockerfile',
         image_repository: {
-          external_image_repo_url: '', // User must provide
+          external_image_ref: '', // User must provide
         },
         insecure_registry: false,
         source_revision: {

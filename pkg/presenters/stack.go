@@ -135,7 +135,7 @@ func presentImageRepository(in *models.BuildConfigSpec) openapi.ImageRepository 
 		res.UseInternalRegistry = openapi.PtrBool(true)
 	} else {
 		res.UseInternalRegistry = openapi.PtrBool(false)
-		res.ExternalImageRepoUrl = &in.ImageRepositoryUrl
+		res.ExternalImageRef = &in.BuildImageRepository.ExternalImageRef
 	}
 	return res
 }
@@ -153,15 +153,16 @@ func presentSourceRevision(revision models.BuildSourceRevision) openapi.BuildSou
 		}
 
 		switch {
-		case revision.Git.Branch != nil:
-			res.GitRepoRevision.Branch = &openapi.GitRepoRevisionBranch{
-				Name: &revision.Git.Branch.Name,
-			}
-			if revision.Git.Branch.HeadSha != "" {
-				res.GitRepoRevision.Branch.HeadSha = &revision.Git.Branch.HeadSha
+		case revision.Git.Branch != "":
+			res.GitRepoRevision.Branch = &revision.Git.Branch
+			if revision.Git.Commit != "" {
+				res.GitRepoRevision.Commit = &revision.Git.Commit
 			}
 		case revision.Git.Tag != "":
 			res.GitRepoRevision.Tag = &revision.Git.Tag
+			if revision.Git.Commit != "" {
+				res.GitRepoRevision.Commit = &revision.Git.Commit
+			}
 		case revision.Git.Commit != "":
 			res.GitRepoRevision.Commit = &revision.Git.Commit
 		}
@@ -306,10 +307,15 @@ func presentResourceStatus(status *models.StackResourceStatus) *openapi.StackRes
 		return nil
 	}
 	return &openapi.StackResourceStatus{
-		State:            ptr.To(string(status.State)),
-		ObservedRevision: &status.ObservedCrRevision,
-		Conditions:       presentConditions(status.Conditions),
-		LastFailure:      presentStackResourceFailure(status.LastFailure),
+		State:             ptr.To(string(status.State)),
+		ObservedRevision:  &status.ObservedCrRevision,
+		Conditions:        presentConditions(status.Conditions),
+		LastFailure:       presentStackResourceFailure(status.LastFailure),
+		Replicas:          &status.Replicas,
+		AvailableReplicas: &status.AvailableReplicas,
+		UpdatedReplicas:   &status.UpdatedReplicas,
+		LastRunTime:       status.LastRunTime,
+		LastRunSucceeded:  status.LastRunSucceeded,
 	}
 }
 
@@ -458,7 +464,9 @@ func convertStackResource(r *openapi.StackResource) *models.StackResource {
 		DependsOn:       convertDependencies(r.DependsOn),
 		LifecycleConfig: convertLifecycleConfig(r.LifecycleConfig),
 		Ports:           convertPorts(r.Ports),
-		StateFul:        r.GetStateful(),
+		WorkloadType:    models.WorkloadType(r.GetWorkloadType()),
+		Schedule:        r.GetSchedule(),
+		Replicas:        r.Replicas,
 	}
 }
 
@@ -478,7 +486,7 @@ func convertBuildConfig(config *openapi.StackResourceBuildSpec) *models.BuildCon
 			InsecureRegistry:     true,
 		}
 	} else {
-		res.ImageRepositoryUrl = config.ImageRepository.GetExternalImageRepoUrl()
+		res.BuildImageRepository.ExternalImageRef = config.ImageRepository.GetExternalImageRef()
 	}
 	res.RegistrySecretRef = convertSecretRef(config.RegistryPushSecret)
 	return res
@@ -515,14 +523,13 @@ func convertSourceRevision(revision openapi.BuildSourceRevision) models.BuildSou
 		switch {
 		case revision.GitRepoRevision.Branch != nil:
 			res.Git = &models.GitRevision{
-				Branch: &models.GitBranch{
-					Name:    revision.GitRepoRevision.Branch.GetName(),
-					HeadSha: revision.GitRepoRevision.Branch.GetHeadSha(),
-				},
+				Branch: revision.GitRepoRevision.GetBranch(),
+				Commit: revision.GitRepoRevision.GetCommit(),
 			}
 		case revision.GitRepoRevision.Tag != nil:
 			res.Git = &models.GitRevision{
-				Tag: revision.GitRepoRevision.GetTag(),
+				Tag:    revision.GitRepoRevision.GetTag(),
+				Commit: revision.GitRepoRevision.GetCommit(),
 			}
 		case revision.GitRepoRevision.Commit != nil:
 			res.Git = &models.GitRevision{

@@ -631,11 +631,8 @@ func CreateStackWithBrokenBuildSource(name string, repoURL string, secretID stri
 	sourceContext := openapi.NewBuildSourceContext()
 	sourceContext.SetGitRepo(*gitRepo)
 
-	branchRevision := openapi.GitRepoRevisionBranch{
-		Name: openapi.PtrString(BrokenBuildSourceBranch),
-	}
 	gitRepoRevision := openapi.NewGitRepoRevision()
-	gitRepoRevision.SetBranch(branchRevision)
+	gitRepoRevision.SetBranch(BrokenBuildSourceBranch)
 
 	sourceRevision := openapi.NewBuildSourceRevision()
 	sourceRevision.SetGitRepoRevision(*gitRepoRevision)
@@ -822,11 +819,8 @@ func CreateStackWithBuildSource(name string, repoURL string, secretID string) *o
 	sourceContext.SetGitRepo(*gitRepo)
 
 	// Source revision — branch
-	branchRevision := openapi.GitRepoRevisionBranch{
-		Name: openapi.PtrString(BuildSourceBranch),
-	}
 	gitRepoRevision := openapi.NewGitRepoRevision()
-	gitRepoRevision.SetBranch(branchRevision)
+	gitRepoRevision.SetBranch(BuildSourceBranch)
 
 	sourceRevision := openapi.NewBuildSourceRevision()
 	sourceRevision.SetGitRepoRevision(*gitRepoRevision)

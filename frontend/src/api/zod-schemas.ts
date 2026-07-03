@@ -269,14 +269,7 @@ const BuildSourceContext = z
   .partial()
   .passthrough();
 const GitRepoRevision = z
-  .object({
-    branch: z
-      .object({ name: z.string(), head_sha: z.string() })
-      .partial()
-      .passthrough(),
-    commit: z.string(),
-    tag: z.string(),
-  })
+  .object({ branch: z.string(), tag: z.string(), commit: z.string() })
   .partial()
   .passthrough();
 const BuildSourceRevision = z
@@ -290,7 +283,7 @@ const BuildSourceRevision = z
   .passthrough();
 const ImageRepository = z
   .object({
-    external_image_repo_url: z.string(),
+    external_image_ref: z.string(),
     use_internal_registry: z.boolean(),
   })
   .partial();
@@ -418,6 +411,11 @@ const StackResourceStatus = z
     observed_revision: z.string(),
     conditions: z.array(Condition),
     last_failure: StackResourceFailure,
+    replicas: z.number().int(),
+    available_replicas: z.number().int(),
+    updated_replicas: z.number().int(),
+    last_run_time: z.string().datetime({ offset: true }),
+    last_run_succeeded: z.boolean(),
   })
   .partial()
   .passthrough();
@@ -438,7 +436,12 @@ const StackResource = z
     lifecycle_config: LifecycleConfig.optional(),
     ports: z.array(Port).optional(),
     outputs: z.array(OutputDescriptor).optional(),
-    stateful: z.boolean().optional(),
+    workload_type: z
+      .enum(["Service", "StatefulService", "Worker", "Job", "CronJob"])
+      .optional()
+      .default("Service"),
+    schedule: z.string().optional(),
+    replicas: z.number().int().gte(0).optional(),
     status: StackResourceStatus.optional(),
   })
   .passthrough();
@@ -639,9 +642,6 @@ const ClusterImageRegistrySpec = z
   .object({
     backend_storage_size: z.string(),
     backend_storage_class: z.string(),
-    max_repositories: z.number().int(),
-    tags_per_repository: z.number().int(),
-    delete_untagged: z.boolean(),
   })
   .partial()
   .passthrough();
@@ -1221,6 +1221,140 @@ const OrgInviteInfo = z
   })
   .partial()
   .passthrough();
+const PreviewGitRepository = z
+  .object({
+    repo_url: z.string(),
+    base_branch: z.string().optional(),
+    git_secret_ref: z.string().optional(),
+  })
+  .passthrough();
+const StackPreviewConfigCreate = z
+  .object({
+    name: z.string(),
+    git_repository: PreviewGitRepository,
+    description: z.string().optional(),
+    stackfile_path: z.string().optional(),
+    max_active_previews: z.number().int().optional(),
+    labels: z.array(Label).optional(),
+    annotations: z.array(Annotation).optional(),
+  })
+  .passthrough();
+const StackPreviewConfig = z
+  .object({
+    id: z.string(),
+    organisation_id: z.string(),
+    team_id: z.string(),
+    user_id: z.string(),
+    name: z.string(),
+    description: z.string(),
+    git_repository: PreviewGitRepository,
+    stackfile_path: z.string(),
+    max_active_previews: z.number().int(),
+    labels: z.array(Label),
+    annotations: z.array(Annotation),
+    created_at: z.string().datetime({ offset: true }),
+    updated_at: z.string().datetime({ offset: true }),
+  })
+  .partial()
+  .passthrough();
+const StackPreviewConfigList = z
+  .object({
+    items: z.array(StackPreviewConfig),
+    total: z.number().int(),
+    page: z.number().int(),
+    page_size: z.number().int(),
+    total_pages: z.number().int(),
+  })
+  .partial()
+  .passthrough();
+const StackPreviewConfigUpdate = z
+  .object({
+    description: z.string(),
+    stackfile_path: z.string(),
+    max_active_previews: z.number().int(),
+    git_repository: PreviewGitRepository,
+    labels: z.array(Label),
+    annotations: z.array(Annotation),
+  })
+  .partial()
+  .passthrough();
+const PreviewStackCreate = z
+  .object({
+    config_id: z.string(),
+    pr_number: z.string(),
+    branch: z.string(),
+    commit: z.string().optional(),
+    stackfile_content: z.string().optional(),
+    image_overrides: z.record(z.string()).optional(),
+  })
+  .passthrough();
+const PreviewStack = z
+  .object({
+    id: z.string(),
+    organisation_id: z.string(),
+    team_id: z.string(),
+    user_id: z.string(),
+    config_id: z.string(),
+    stack_id: z.string(),
+    name: z.string(),
+    pr_number: z.string(),
+    branch: z.string(),
+    commit: z.string(),
+    source: z.enum(["manual", "webhook"]),
+    status: z
+      .object({
+        phase: z.enum([
+          "Provisioning",
+          "Deploying",
+          "Ready",
+          "Failed",
+          "Deleting",
+        ]),
+        reason: z.string(),
+        message: z.string(),
+        outputs: z
+          .object({
+            commit_sha: z.string(),
+            urls: z.array(
+              z
+                .object({ resource: z.string(), url: z.string() })
+                .partial()
+                .passthrough()
+            ),
+          })
+          .partial()
+          .passthrough(),
+      })
+      .partial()
+      .passthrough(),
+    image_overrides: z.record(z.string()),
+    labels: z.array(Label),
+    annotations: z.array(Annotation),
+    deletion_timestamp: z.string().datetime({ offset: true }),
+    created_at: z.string().datetime({ offset: true }),
+    updated_at: z.string().datetime({ offset: true }),
+  })
+  .partial()
+  .passthrough();
+const PreviewStackList = z
+  .object({
+    items: z.array(PreviewStack),
+    total: z.number().int(),
+    page: z.number().int(),
+    page_size: z.number().int(),
+    total_pages: z.number().int(),
+  })
+  .partial()
+  .passthrough();
+const PreviewStackSync = z
+  .object({
+    commit: z.string(),
+    stackfile_content: z.string(),
+    force_sync: z.boolean(),
+    image_overrides: z.record(z.string()),
+  })
+  .partial()
+  .passthrough();
 const VolumeList = z
   .object({ items: z.array(Volume), total: z.number().int() })
   .partial()
@@ -1393,6 +1527,15 @@ export const schemas = {
   OrgInvite,
   OrgInviteList,
   OrgInviteInfo,
+  PreviewGitRepository,
+  StackPreviewConfigCreate,
+  StackPreviewConfig,
+  StackPreviewConfigList,
+  StackPreviewConfigUpdate,
+  PreviewStackCreate,
+  PreviewStack,
+  PreviewStackList,
+  PreviewStackSync,
   VolumeList,
   SSHConfig,
   List,
@@ -2375,6 +2518,11 @@ const endpoints = makeApi([
         name: "org_id",
         type: "Path",
         schema: z.string(),
+      },
+      {
+        name: "name",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: SecretList,
@@ -3520,6 +3668,256 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/preview-stacks",
+    alias: "createPreviewStack",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: PreviewStackCreate,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PreviewStack,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Preview stack already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/preview-stacks",
+    alias: "listPreviewStacks",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "page",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "page_size",
+        type: "Query",
+        schema: z.number().int().optional().default(20),
+      },
+      {
+        name: "config_id",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: PreviewStackList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/preview-stacks/:id",
+    alias: "getPreviewStack",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PreviewStack,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Preview stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/preview-stacks/:id",
+    alias: "deletePreviewStack",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PreviewStack,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Preview stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/preview-stacks/:id/sync",
+    alias: "syncPreviewStack",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: PreviewStackSync,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PreviewStack,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Preview stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/v1/organizations/:org_id/teams/:team_name/secrets",
     alias: "postApiv1organizationsOrg_idteamsTeam_namesecrets",
     requestFormat: "json",
@@ -3579,6 +3977,11 @@ const endpoints = makeApi([
         name: "team_name",
         type: "Path",
         schema: z.string(),
+      },
+      {
+        name: "name",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: SecretList,
@@ -3750,6 +4153,251 @@ const endpoints = makeApi([
         status: 500,
         description: `Internal server error`,
         schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stack-preview-configs",
+    alias: "createPreviewConfig",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackPreviewConfigCreate,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackPreviewConfig,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Preview config already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stack-preview-configs",
+    alias: "listPreviewConfigs",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "page",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "page_size",
+        type: "Query",
+        schema: z.number().int().optional().default(20),
+      },
+    ],
+    response: StackPreviewConfigList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stack-preview-configs/:id",
+    alias: "getPreviewConfig",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackPreviewConfig,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Preview config not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stack-preview-configs/:id",
+    alias: "updatePreviewConfig",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackPreviewConfigUpdate,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackPreviewConfig,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Preview config not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stack-preview-configs/:id",
+    alias: "deletePreviewConfig",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Preview config not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
       },
     ],
   },

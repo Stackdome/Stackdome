@@ -16,8 +16,8 @@ import (
 
 // ImageRepository The image repository to push the built image to
 type ImageRepository struct {
-	ExternalImageRepoUrl *string `json:"external_image_repo_url,omitempty"`
-	UseInternalRegistry  *bool   `json:"use_internal_registry,omitempty"`
+	ExternalImageRef    *string `json:"external_image_ref,omitempty"`
+	UseInternalRegistry *bool   `json:"use_internal_registry,omitempty"`
 }
 
 // NewImageRepository instantiates a new ImageRepository object
@@ -37,36 +37,36 @@ func NewImageRepositoryWithDefaults() *ImageRepository {
 	return &this
 }
 
-// GetExternalImageRepoUrl returns the ExternalImageRepoUrl field value if set, zero value otherwise.
-func (o *ImageRepository) GetExternalImageRepoUrl() string {
-	if o == nil || o.ExternalImageRepoUrl == nil {
+// GetExternalImageRef returns the ExternalImageRef field value if set, zero value otherwise.
+func (o *ImageRepository) GetExternalImageRef() string {
+	if o == nil || o.ExternalImageRef == nil {
 		var ret string
 		return ret
 	}
-	return *o.ExternalImageRepoUrl
+	return *o.ExternalImageRef
 }
 
-// GetExternalImageRepoUrlOk returns a tuple with the ExternalImageRepoUrl field value if set, nil otherwise
+// GetExternalImageRefOk returns a tuple with the ExternalImageRef field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *ImageRepository) GetExternalImageRepoUrlOk() (*string, bool) {
-	if o == nil || o.ExternalImageRepoUrl == nil {
+func (o *ImageRepository) GetExternalImageRefOk() (*string, bool) {
+	if o == nil || o.ExternalImageRef == nil {
 		return nil, false
 	}
-	return o.ExternalImageRepoUrl, true
+	return o.ExternalImageRef, true
 }
 
-// HasExternalImageRepoUrl returns a boolean if a field has been set.
-func (o *ImageRepository) HasExternalImageRepoUrl() bool {
-	if o != nil && o.ExternalImageRepoUrl != nil {
+// HasExternalImageRef returns a boolean if a field has been set.
+func (o *ImageRepository) HasExternalImageRef() bool {
+	if o != nil && o.ExternalImageRef != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetExternalImageRepoUrl gets a reference to the given string and assigns it to the ExternalImageRepoUrl field.
-func (o *ImageRepository) SetExternalImageRepoUrl(v string) {
-	o.ExternalImageRepoUrl = &v
+// SetExternalImageRef gets a reference to the given string and assigns it to the ExternalImageRef field.
+func (o *ImageRepository) SetExternalImageRef(v string) {
+	o.ExternalImageRef = &v
 }
 
 // GetUseInternalRegistry returns the UseInternalRegistry field value if set, zero value otherwise.
@@ -103,8 +103,8 @@ func (o *ImageRepository) SetUseInternalRegistry(v bool) {
 
 func (o ImageRepository) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if o.ExternalImageRepoUrl != nil {
-		toSerialize["external_image_repo_url"] = o.ExternalImageRepoUrl
+	if o.ExternalImageRef != nil {
+		toSerialize["external_image_ref"] = o.ExternalImageRef
 	}
 	if o.UseInternalRegistry != nil {
 		toSerialize["use_internal_registry"] = o.UseInternalRegistry

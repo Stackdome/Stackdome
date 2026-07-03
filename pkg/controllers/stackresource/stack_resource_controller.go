@@ -121,9 +121,17 @@ func mapClusterStatusToServerStatus(clusterInstance *corev1alpha1.StackResource)
 		ObservedCrRevision:     clusterInstance.Status.ObservedRevision,
 		InternalServiceName:    clusterInstance.Status.InternalAddress,
 		LastFailure:            controllers.MapLastFailureDetails(clusterInstance.Name, clusterInstance.Status.LastFailureDetails),
+		Replicas:               clusterInstance.Status.Replicas,
+		AvailableReplicas:      clusterInstance.Status.AvailableReplicas,
+		UpdatedReplicas:        clusterInstance.Status.UpdatedReplicas,
+		LastRunSucceeded:       clusterInstance.Status.LastRunSucceeded,
 	}
 	if clusterInstance.Status.LastRestartRequestProcessedAt != nil {
 		res.LastRestartRequestProcessedAt = ptr.To(clusterInstance.Status.LastRestartRequestProcessedAt.UTC())
+	}
+	if clusterInstance.Status.LastRunTime != nil {
+		t := clusterInstance.Status.LastRunTime.Time
+		res.LastRunTime = &t
 	}
 	return res
 }

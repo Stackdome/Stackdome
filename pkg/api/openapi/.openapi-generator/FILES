@@ -54,7 +54,6 @@ docs/ErrorList.md
 docs/ExecutionConfig.md
 docs/GCSCredentials.md
 docs/GitRepoRevision.md
-docs/GitRepoRevisionBranch.md
 docs/GitRepoSource.md
 docs/ImageBuild.md
 docs/ImageBuildList.md
@@ -252,7 +251,6 @@ model_error_list.go
 model_execution_config.go
 model_gcs_credentials.go
 model_git_repo_revision.go
-model_git_repo_revision_branch.go
 model_git_repo_source.go
 model_image_build.go
 model_image_build_list.go

@@ -27,13 +27,14 @@ type BuildConfigSpec struct {
 	DockerfilePath          string               `json:"dockerfile_path"`
 	SourceRevision          BuildSourceRevision  `json:"source_revision"`
 	BuildImageRepository    BuildImageRepository `json:"build_image_repository"`
-	ImageRepositoryUrl      string               `json:"image_repository_url"`
 	RegistrySecretRef       *SecretReference     `json:"registry_secret_ref,omitempty"` // Push credentials
 }
 
 type BuildImageRepository struct {
-	InsecureRegistry     bool `json:"insecure_registry"`
-	UseInClusterRegistry bool `json:"use_in_cluster_registry"`
+	InsecureRegistry     bool   `json:"insecure_registry"`
+	UseInClusterRegistry bool   `json:"use_in_cluster_registry"`
+	ClusterRegistryName  string `json:"cluster_registry_name,omitempty"`
+	ExternalImageRef     string `json:"external_image_ref,omitempty"`
 }
 
 func (b *BuildConfigSpec) Validate() error {
@@ -62,18 +63,19 @@ func (b *BuildConfigSpec) Validate() error {
 		}
 	}
 	if rev.Git != nil {
-		if rev.Git.Branch == nil && rev.Git.Tag == "" && rev.Git.Commit == "" {
-			return errors.New("source_revision.git: at least one of branch, tag, or commit is required")
+		if rev.Git.Branch == "" && rev.Git.Tag == "" {
+			return errors.New("source_revision.git: a branch or tag is required (the commit SHA is resolved at release time)")
+		}
+		if rev.Git.Branch != "" && rev.Git.Tag != "" {
+			return errors.New("source_revision.git: branch and tag cannot both be set")
 		}
 	}
 
-	if b.ImageRepositoryUrl != "" && b.BuildImageRepository.UseInClusterRegistry {
-		return errors.New("image_repository_url cannot be set if use_in_cluster_registry is true")
+	if b.BuildImageRepository.ExternalImageRef != "" && b.BuildImageRepository.UseInClusterRegistry {
+		return errors.New("external_image_ref cannot be set if use_in_cluster_registry is true")
 	}
-	if b.ImageRepositoryUrl == "" && !b.BuildImageRepository.UseInClusterRegistry {
-		// If the image repository URL is empty, we need to check if the in-cluster registry is set to true
-		// If it is not, we need to return an error
-		return errors.New("image_repository_url is required if use_in_cluster_registry is false")
+	if b.BuildImageRepository.ExternalImageRef == "" && !b.BuildImageRepository.UseInClusterRegistry {
+		return errors.New("external_image_ref is required if use_in_cluster_registry is false")
 	}
 	return nil
 }
@@ -89,9 +91,9 @@ type VolumeRevision struct {
 }
 
 type GitRevision struct {
-	Branch *GitBranch `json:"branch"`
-	Tag    string     `json:"tag"`
-	Commit string     `json:"commit"`
+	Branch string `json:"branch"`
+	Tag    string `json:"tag"`
+	Commit string `json:"commit"`
 }
 
 type BuildContextSource struct {

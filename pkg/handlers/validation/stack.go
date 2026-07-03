@@ -110,20 +110,16 @@ func validateBuildConfig(in *openapi.StackResourceBuildSpec) *errors.ServiceErro
 		return errors.BadRequest("stack_resource_build_spec.dockerfile_path: %s", "stack_resource_build_spec.dockerfile_path is required")
 	}
 
-	if in.ImageRepository.GetExternalImageRepoUrl() == "" && in.ImageRepository.UseInternalRegistry == nil {
-		return errors.BadRequest("stack_resource_build_spec.image_repository.external_image_repo_url or stack_resource_build_spec.image_repository.use_external_registry is required")
+	if in.ImageRepository.GetExternalImageRef() == "" && in.ImageRepository.UseInternalRegistry == nil {
+		return errors.BadRequest("stack_resource_build_spec.image_repository.external_image_ref or stack_resource_build_spec.image_repository.use_internal_registry is required")
 	}
 
-	if in.ImageRepository.GetExternalImageRepoUrl() == "" && !in.ImageRepository.GetUseInternalRegistry() {
-		// If external_image_repo_url is empty, we need to check if the in-cluster registry is set to true
-		// If it is not, we need to return an error
-		return errors.BadRequest("if external_image_repo_url is empty, use_internal_registry must be true")
+	if in.ImageRepository.GetExternalImageRef() == "" && !in.ImageRepository.GetUseInternalRegistry() {
+		return errors.BadRequest("if external_image_ref is empty, use_internal_registry must be true")
 	}
 
-	if in.ImageRepository.GetExternalImageRepoUrl() != "" && in.ImageRepository.GetUseInternalRegistry() {
-		// If external_image_repo_url is not empty, we need to check if the in-cluster registry is set to false
-		// If it is not, we need to return an error
-		return errors.BadRequest("if external_image_repo_url is not empty, use_internal_registry must be false")
+	if in.ImageRepository.GetExternalImageRef() != "" && in.ImageRepository.GetUseInternalRegistry() {
+		return errors.BadRequest("if external_image_ref is not empty, use_internal_registry must be false")
 	}
 
 	if err := validateBuildSourceContext(in.SourceContext); err != nil {

@@ -28,7 +28,7 @@
             {
                 "name": "db",
                 "image_spec": { "image": "postgres:14-alpine" },
-                "stateful": true,
+                "workload_type": "StatefulService",
                 "ports": [
                     { "name": "postgres", "number": 5432, "exposed_to_public": false, "protocol": "TCP" }
                 ],

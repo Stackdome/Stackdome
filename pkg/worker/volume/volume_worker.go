@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
+	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
@@ -64,6 +65,10 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	}
 
 	w.Logger().Infof("processing volume: %s", vol.ID)
+
+	if err := w.resolveGitRevision(ctx, vol); err != nil {
+		return worker.Result{}, w.WorkerError.NewError("failed to resolve git revision for volume '%s': %v", vol.ID, err)
+	}
 
 	// Resolve cluster ID through the stack-volume association.
 	clusterID, err := w.resolveClusterID(ctx, vol.ID)
@@ -137,18 +142,38 @@ func (w *volumeWorker) resolveClusterID(ctx context.Context, volumeID string) (s
 	return stack.ClusterID, nil
 }
 
+func (w *volumeWorker) resolveGitRevision(ctx context.Context, vol *models.Volume) error {
+	if vol.VolumeSource == nil || vol.VolumeSource.GitRepoSource == nil {
+		return nil
+	}
+
+	src := vol.VolumeSource.GitRepoSource
+	client, err := gitclient.NewGitClientForRepo(src.RepoUrl, gitclient.GitCredentials{})
+	if err != nil {
+		return fmt.Errorf("create git client: %w", err)
+	}
+
+	resolved, err := gitclient.ResolveGitRepoRevision(ctx, client, src.RepoUrl, src.Revision)
+	if err != nil {
+		return err
+	}
+	vol.VolumeSource.GitRepoSource.Revision = resolved
+	return nil
+}
+
 func buildGitRevision(rev models.GitRepoRevision) corev1alpha1.GitRepoRevision {
 	result := corev1alpha1.GitRepoRevision{}
 	switch rev.Type() {
 	case models.Branch:
-		result.Branch = &corev1alpha1.GitBranch{
-			Name: rev.Branch.Name,
-		}
-		if rev.Branch.HeadSha != "" {
-			result.Branch.HeadSha = rev.Branch.HeadSha
+		result.Branch = rev.Branch
+		if rev.Commit != "" {
+			result.Commit = rev.Commit
 		}
 	case models.Tag:
 		result.Tag = rev.Tag
+		if rev.Commit != "" {
+			result.Commit = rev.Commit
+		}
 	case models.Commit:
 		result.Commit = rev.Commit
 	}

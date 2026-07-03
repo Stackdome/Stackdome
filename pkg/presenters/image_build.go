@@ -32,7 +32,7 @@ func presentImageRepo(in models.BuildConfigSpec) string {
 	if in.BuildImageRepository.UseInClusterRegistry {
 		return "InClusterRegistry"
 	}
-	return in.ImageRepositoryUrl
+	return in.BuildImageRepository.ExternalImageRef
 }
 
 func presentImageBuildStatus(status *models.ImageBuildStatus) *openapi.ImageBuildStatus {

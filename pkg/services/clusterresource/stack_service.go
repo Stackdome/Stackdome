@@ -9,6 +9,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/google/go-containerregistry/pkg/name"
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -165,7 +166,7 @@ func (s *clusterStackService) desiredObjectInCluster(stack *models.Stack) (*core
 	}
 
 	for _, sr := range stack.StackResources {
-		spec, err := s.buildStackResourceSpec(sr)
+		spec, err := s.buildStackResourceSpec(sr, stack.OrganisationID, stack.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -181,13 +182,15 @@ func (s *clusterStackService) desiredObjectInCluster(stack *models.Stack) (*core
 	return stackCR, nil
 }
 
-func (s *clusterStackService) buildStackResourceSpec(stackResource *models.StackResource) (*corev1alpha1.StackResourceSpec, error) {
-	workloadType := corev1alpha1.WorkloadTypeService
-	if stackResource.StateFul {
-		workloadType = corev1alpha1.WorkloadTypeStatefulService
+func (s *clusterStackService) buildStackResourceSpec(stackResource *models.StackResource, orgID, stackName string) (*corev1alpha1.StackResourceSpec, error) {
+	workloadType := corev1alpha1.WorkloadType(stackResource.WorkloadType)
+	if workloadType == "" {
+		workloadType = corev1alpha1.WorkloadTypeService
 	}
 	spec := &corev1alpha1.StackResourceSpec{
 		WorkloadType: workloadType,
+		Schedule:     stackResource.Schedule,
+		Replicas:     stackResource.Replicas,
 		DependsOn:    stackResource.DependsOn,
 	}
 
@@ -200,7 +203,7 @@ func (s *clusterStackService) buildStackResourceSpec(stackResource *models.Stack
 		spec.RestartRequest = &metav1.Time{Time: stackResource.LifecycleConfig.RestartRequestTime.UTC()}
 	}
 
-	if err := s.setBuildSpec(spec, stackResource); err != nil {
+	if err := s.setBuildSpec(spec, stackResource, orgID, stackName); err != nil {
 		return nil, err
 	}
 	if err := s.setImageSpec(spec, stackResource); err != nil {
@@ -224,7 +227,7 @@ func hasTLSPorts(spec *corev1alpha1.StackResourceSpec) bool {
 	return false
 }
 
-func (s *clusterStackService) setBuildSpec(spec *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) error {
+func (s *clusterStackService) setBuildSpec(spec *corev1alpha1.StackResourceSpec, stackResource *models.StackResource, orgID, stackName string) error {
 	if stackResource.BuildConfig != nil {
 		buildSourceCtx, err := s.buildBuildSourceContext(stackResource.BuildConfig.SourceContext)
 		if err != nil {
@@ -236,25 +239,50 @@ func (s *clusterStackService) setBuildSpec(spec *corev1alpha1.StackResourceSpec,
 			SourceRevision: buildBuildSourceRevision(stackResource.BuildConfig.SourceRevision),
 			BuildContext:   stackResource.BuildConfig.ContextPathWithinSource,
 			DockerFilePath: stackResource.BuildConfig.DockerfilePath,
-			Registry: corev1alpha1.RegistrySpec{
-				RepositoryURL: stackResource.BuildConfig.ImageRepositoryUrl,
-			},
 		}
+
 		if stackResource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
-			spec.BuildSpec.Registry.Insecure = true
-		}
-		if stackResource.BuildConfig.RegistrySecretRef != nil {
-			secret, err := s.secretService.InternalGetByID(context.Background(), stackResource.BuildConfig.RegistrySecretRef.SecretID)
-			if err != nil {
-				return fmt.Errorf("failed to get registry secret: %w", err)
-			}
-			spec.BuildSpec.Registry.Auth = &corev1alpha1.RegistryAuth{
-				DockerConfigAuth: &corev1alpha1.DockerConfigAuth{
-					SecretKey: corev1.DockerConfigJsonKey,
-					SecretRef: &corev1.SecretReference{
-						Name: secret.ClusterSecretName(),
-					},
+			spec.BuildSpec.Repository = corev1alpha1.ImageRepositorySpec{
+				ClusterRegistryRef: &corev1.LocalObjectReference{
+					Name: stackResource.BuildConfig.BuildImageRepository.ClusterRegistryName,
 				},
+				Repository: fmt.Sprintf("%s/%s/%s", orgID, stackName, stackResource.Name),
+			}
+		} else {
+			var opts []name.Option
+			if stackResource.BuildConfig.BuildImageRepository.InsecureRegistry {
+				opts = append(opts, name.Insecure)
+			}
+			repo, err := name.NewRepository(stackResource.BuildConfig.BuildImageRepository.ExternalImageRef, opts...)
+			if err != nil {
+				return fmt.Errorf("failed to parse image repository URL: %w", err)
+			}
+
+			spec.BuildSpec.Repository = corev1alpha1.ImageRepositorySpec{
+				External: &corev1alpha1.ExternalRegistrySpec{
+					Host: repo.Registry.RegistryStr(),
+				},
+				Repository: repo.RepositoryStr(),
+			}
+
+			if stackResource.BuildConfig.BuildImageRepository.InsecureRegistry {
+				spec.BuildSpec.Repository.External.TLS = &corev1alpha1.RegistryTLSSpec{Insecure: true}
+			}
+
+			if stackResource.BuildConfig.RegistrySecretRef != nil {
+				secret, err := s.secretService.InternalGetByID(context.Background(), stackResource.BuildConfig.RegistrySecretRef.SecretID)
+				if err != nil {
+					return fmt.Errorf("failed to get registry secret: %w", err)
+				}
+				spec.BuildSpec.Repository.Auth = &corev1alpha1.RegistryCredentialsSpec{
+					Basic: &corev1alpha1.BasicAuthCredentials{
+						SecretRef: corev1.SecretReference{
+							Name: secret.ClusterSecretName(),
+						},
+						UsernameKey: models.UsernameSecretKey,
+						PasswordKey: models.PasswordSecretKey,
+					},
+				}
 			}
 		}
 	}
@@ -265,25 +293,20 @@ func buildBuildSourceRevision(sourceRevision models.BuildSourceRevision) corev1a
 	if sourceRevision.Volume != nil {
 		return corev1alpha1.SourceRevisionSpec{
 			Volume: &corev1alpha1.VolumeRevision{
-				CurrentVolumeHash: sourceRevision.Volume.CurrentVolumeHash,
+				RevisionString: sourceRevision.Volume.CurrentVolumeHash,
 			},
 		}
 	} else if sourceRevision.Git != nil {
 		res := corev1alpha1.SourceRevisionSpec{
 			GitRepo: &corev1alpha1.GitRepoRevision{},
 		}
-		switch {
-		case sourceRevision.Git.Branch != nil:
-			res.GitRepo.Branch = &corev1alpha1.GitBranch{
-				Name:    sourceRevision.Git.Branch.Name,
-				HeadSha: "head",
-			}
-			if sourceRevision.Git.Branch.HeadSha != "" {
-				res.GitRepo.Branch.HeadSha = sourceRevision.Git.Branch.HeadSha
-			}
-		case len(sourceRevision.Git.Tag) > 0:
+		if sourceRevision.Git.Branch != "" {
+			res.GitRepo.Branch = sourceRevision.Git.Branch
+		}
+		if sourceRevision.Git.Tag != "" {
 			res.GitRepo.Tag = sourceRevision.Git.Tag
-		case len(sourceRevision.Git.Commit) > 0:
+		}
+		if sourceRevision.Git.Commit != "" {
 			res.GitRepo.Commit = sourceRevision.Git.Commit
 		}
 		return res

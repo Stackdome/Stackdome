@@ -9,6 +9,7 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/google/go-containerregistry/pkg/name"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -19,7 +20,7 @@ import (
 type ClusterResourceBuilder interface {
 	BuildStackCR(stack *models.Stack) (*corev1alpha1.Stack, error)
 	GetStackCRHash(stack *models.Stack) (string, error)
-	BuildStackResourceCR(stackResource *models.StackResource, stackName string) (*corev1alpha1.StackResource, error)
+	BuildStackResourceCR(stackResource *models.StackResource, stackName, orgID string) (*corev1alpha1.StackResource, error)
 	BuildVolumeCR(ctx context.Context, volume *models.Volume) (*storagev1alpha1.Volume, error)
 }
 
@@ -53,7 +54,7 @@ func (b *clusterResourceBuilder) GetStackCRHash(stack *models.Stack) (string, er
 	printer.Fprintf(hasher, "%#v", stackCR)
 
 	for _, sr := range stack.StackResources {
-		srCR, err := b.BuildStackResourceCR(sr, stack.Name)
+		srCR, err := b.BuildStackResourceCR(sr, stack.Name, stack.OrganisationID)
 		if err != nil {
 			return "", fmt.Errorf("failed to build stack resource CR for '%s': %w", sr.Name, err)
 		}
@@ -67,7 +68,6 @@ func (b *clusterResourceBuilder) BuildVolumeCR(ctx context.Context, volume *mode
 	volumeCRLabels := volume.Labels.ToMap()
 	volumeCRLabels[models.VolumeIDLabel] = volume.ID
 	volumeCRLabels[models.CreatedForUserLabel] = volume.UserID
-	// storageCRLabels[models.ObjectServerGeneration] = fmt.Sprintf("%d", volume.Version)
 	res := storagev1alpha1.Volume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        volume.Name,
@@ -113,15 +113,19 @@ func (b *clusterResourceBuilder) BuildVolumeCR(ctx context.Context, volume *mode
 
 			switch volume.VolumeSource.GitRepoSource.Revision.Type() {
 			case models.Branch:
-				gitRevision.Branch = &corev1alpha1.GitBranch{
-					Name: volume.VolumeSource.GitRepoSource.Revision.Branch.Name,
-				}
+				gitRevision.Branch = volume.VolumeSource.GitRepoSource.Revision.Branch
+				gitRevision.Commit = volume.VolumeSource.GitRepoSource.Revision.Commit
 			case models.Tag:
 				gitRevision.Tag = volume.VolumeSource.GitRepoSource.Revision.Tag
+				gitRevision.Commit = volume.VolumeSource.GitRepoSource.Revision.Commit
 			case models.Commit:
 				gitRevision.Commit = volume.VolumeSource.GitRepoSource.Revision.Commit
 			default:
 				return nil, fmt.Errorf("unknown git revision type: %s", volume.VolumeSource.GitRepoSource.Revision.Type())
+			}
+
+			if gitRevision.Commit == "" {
+				return nil, fmt.Errorf("git revision for volume '%s' has no resolved commit SHA", volume.Name)
 			}
 
 			res.Spec.Source = &storagev1alpha1.VolumeSource{
@@ -162,8 +166,8 @@ func (b *clusterResourceBuilder) BuildStackCR(stack *models.Stack) (*corev1alpha
 	return stackCR, nil
 }
 
-func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.StackResource, stackName string) (*corev1alpha1.StackResource, error) {
-	stackResourceSpec, err := b.buildStackResourceSpec(stackResource)
+func (b *clusterResourceBuilder) BuildStackResourceCR(stackResource *models.StackResource, stackName, orgID string) (*corev1alpha1.StackResource, error) {
+	stackResourceSpec, err := b.buildStackResourceSpec(stackResource, stackName, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -203,13 +207,15 @@ func hasTLSPorts(spec *corev1alpha1.StackResourceSpec) bool {
 	return false
 }
 
-func (b *clusterResourceBuilder) buildStackResourceSpec(stackResource *models.StackResource) (*corev1alpha1.StackResourceSpec, error) {
-	workloadType := corev1alpha1.WorkloadTypeService
-	if stackResource.StateFul {
-		workloadType = corev1alpha1.WorkloadTypeStatefulService
+func (b *clusterResourceBuilder) buildStackResourceSpec(stackResource *models.StackResource, stackName, orgID string) (*corev1alpha1.StackResourceSpec, error) {
+	workloadType := corev1alpha1.WorkloadType(stackResource.WorkloadType)
+	if workloadType == "" {
+		workloadType = corev1alpha1.WorkloadTypeService
 	}
 	resourceSpec := corev1alpha1.StackResourceSpec{
 		WorkloadType: workloadType,
+		Schedule:     stackResource.Schedule,
+		Replicas:     stackResource.Replicas,
 		DependsOn:    stackResource.DependsOn,
 	}
 
@@ -222,7 +228,7 @@ func (b *clusterResourceBuilder) buildStackResourceSpec(stackResource *models.St
 		resourceSpec.RestartRequest = &metav1.Time{Time: stackResource.LifecycleConfig.RestartRequestTime.UTC()}
 	}
 
-	buildSpec, err := b.buildStackResourceBuildSpec(stackResource)
+	buildSpec, err := b.buildStackResourceBuildSpec(stackResource, stackName, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build stack resource build spec: %w", err)
 	}
@@ -239,16 +245,16 @@ func (b *clusterResourceBuilder) buildStackResourceSpec(stackResource *models.St
 	return &resourceSpec, nil
 }
 
-func (b *clusterResourceBuilder) buildStackResourceBuildSpec(stackResource *models.StackResource) (*corev1alpha1.StackResourceBuildSpec, error) {
+func (b *clusterResourceBuilder) buildStackResourceBuildSpec(stackResource *models.StackResource, stackName, orgID string) (*corev1alpha1.StackResourceBuildSpec, error) {
 	if stackResource.BuildConfig != nil {
 		buildSourceCtx, err := b.buildBuildSourceContext(stackResource.BuildConfig.SourceContext)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build source context: %w", err)
 		}
 
-		registrySpec, err := b.buildRegistrySpec(stackResource.BuildConfig)
+		repoSpec, err := b.buildImageRepositorySpec(stackResource.BuildConfig, orgID, stackName, stackResource.Name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to build registry spec: %w", err)
+			return nil, fmt.Errorf("failed to build image repository spec: %w", err)
 		}
 		sourceRevision, err := b.buildBuildSourceRevision(stackResource.BuildConfig.SourceRevision)
 		if err != nil {
@@ -260,7 +266,7 @@ func (b *clusterResourceBuilder) buildStackResourceBuildSpec(stackResource *mode
 			SourceRevision: sourceRevision,
 			BuildContext:   stackResource.BuildConfig.ContextPathWithinSource,
 			DockerFilePath: stackResource.BuildConfig.DockerfilePath,
-			Registry:       *registrySpec,
+			Repository:     repoSpec,
 		}
 		return res, nil
 	}
@@ -326,25 +332,48 @@ func (b *clusterResourceBuilder) buildBuildSourceContext(sourceContext models.Bu
 	return nil, fmt.Errorf("invalid build source context: must specify either volume or git")
 }
 
-func (b *clusterResourceBuilder) buildRegistrySpec(buildConfig *models.BuildConfigSpec) (*corev1alpha1.RegistrySpec, error) {
-	res := &corev1alpha1.RegistrySpec{
-		RepositoryURL: buildConfig.ImageRepositoryUrl,
+func (b *clusterResourceBuilder) buildImageRepositorySpec(buildConfig *models.BuildConfigSpec, orgID, stackName, resourceName string) (corev1alpha1.ImageRepositorySpec, error) {
+	if buildConfig.BuildImageRepository.UseInClusterRegistry {
+		return corev1alpha1.ImageRepositorySpec{
+			ClusterRegistryRef: &corev1.LocalObjectReference{
+				Name: buildConfig.BuildImageRepository.ClusterRegistryName,
+			},
+			Repository: fmt.Sprintf("%s/%s/%s", orgID, stackName, resourceName),
+		}, nil
 	}
+
+	var opts []name.Option
 	if buildConfig.BuildImageRepository.InsecureRegistry {
-		res.Insecure = buildConfig.BuildImageRepository.InsecureRegistry
+		opts = append(opts, name.Insecure)
+	}
+	repo, err := name.NewRepository(buildConfig.BuildImageRepository.ExternalImageRef, opts...)
+	if err != nil {
+		return corev1alpha1.ImageRepositorySpec{}, fmt.Errorf("failed to parse image repository URL: %w", err)
+	}
+
+	res := corev1alpha1.ImageRepositorySpec{
+		External: &corev1alpha1.ExternalRegistrySpec{
+			Host: repo.Registry.RegistryStr(),
+		},
+		Repository: repo.RepositoryStr(),
+	}
+
+	if buildConfig.BuildImageRepository.InsecureRegistry {
+		res.External.TLS = &corev1alpha1.RegistryTLSSpec{Insecure: true}
 	}
 
 	if buildConfig.RegistrySecretRef != nil {
 		pushSecret, err := b.secretService.InternalGetByID(context.Background(), buildConfig.RegistrySecretRef.SecretID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get registry secret: %w", err)
+			return corev1alpha1.ImageRepositorySpec{}, fmt.Errorf("failed to get registry secret: %w", err)
 		}
-		res.Auth = &corev1alpha1.RegistryAuth{
-			DockerConfigAuth: &corev1alpha1.DockerConfigAuth{
-				SecretKey: corev1.DockerConfigJsonKey,
-				SecretRef: &corev1.SecretReference{
+		res.Auth = &corev1alpha1.RegistryCredentialsSpec{
+			Basic: &corev1alpha1.BasicAuthCredentials{
+				SecretRef: corev1.SecretReference{
 					Name: pushSecret.ClusterSecretName(),
 				},
+				UsernameKey: models.UsernameSecretKey,
+				PasswordKey: models.PasswordSecretKey,
 			},
 		}
 	}
@@ -356,27 +385,23 @@ func (b *clusterResourceBuilder) buildBuildSourceRevision(sourceRevision models.
 	if sourceRevision.Volume != nil {
 		return corev1alpha1.SourceRevisionSpec{
 			Volume: &corev1alpha1.VolumeRevision{
-				CurrentVolumeHash: sourceRevision.Volume.CurrentVolumeHash,
+				RevisionString: sourceRevision.Volume.CurrentVolumeHash,
 			},
 		}, nil
 	} else if sourceRevision.Git != nil {
 		res := corev1alpha1.SourceRevisionSpec{
 			GitRepo: &corev1alpha1.GitRepoRevision{},
 		}
-		switch {
-		case sourceRevision.Git.Branch != nil:
-			res.GitRepo.Branch = &corev1alpha1.GitBranch{
-				Name:    sourceRevision.Git.Branch.Name,
-				HeadSha: "head",
-			}
-			if sourceRevision.Git.Branch.HeadSha != "" {
-				res.GitRepo.Branch.HeadSha = sourceRevision.Git.Branch.HeadSha
-			}
-		case len(sourceRevision.Git.Tag) > 0:
-			res.GitRepo.Tag = sourceRevision.Git.Tag
-		case len(sourceRevision.Git.Commit) > 0:
-			res.GitRepo.Commit = sourceRevision.Git.Commit
+		if sourceRevision.Git.Branch != "" {
+			res.GitRepo.Branch = sourceRevision.Git.Branch
 		}
+		if sourceRevision.Git.Tag != "" {
+			res.GitRepo.Tag = sourceRevision.Git.Tag
+		}
+		if sourceRevision.Git.Commit == "" {
+			return corev1alpha1.SourceRevisionSpec{}, fmt.Errorf("commit SHA is required but not available (unpinned snapshot)")
+		}
+		res.GitRepo.Commit = sourceRevision.Git.Commit
 		return res, nil
 	}
 	return corev1alpha1.SourceRevisionSpec{}, fmt.Errorf("invalid build source revision: must specify either volume or git")

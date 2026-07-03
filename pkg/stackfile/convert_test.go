@@ -88,7 +88,7 @@ func TestToStack_BuildFromSource(t *testing.T) {
 	if res.BuildSpec.SourceRevision.GitRepoRevision == nil {
 		t.Fatal("expected git repo revision")
 	}
-	if res.BuildSpec.SourceRevision.GitRepoRevision.Branch == nil || *res.BuildSpec.SourceRevision.GitRepoRevision.Branch.Name != "develop" {
+	if res.BuildSpec.SourceRevision.GitRepoRevision.Branch == nil || *res.BuildSpec.SourceRevision.GitRepoRevision.Branch != "develop" {
 		t.Errorf("expected branch 'develop', got %v", res.BuildSpec.SourceRevision.GitRepoRevision.Branch)
 	}
 }
@@ -114,7 +114,7 @@ func TestToStack_BuildDefaults(t *testing.T) {
 	if res.BuildSpec.DockerfilePath != "Dockerfile" {
 		t.Errorf("expected default dockerfile 'Dockerfile', got %q", res.BuildSpec.DockerfilePath)
 	}
-	if res.BuildSpec.SourceRevision.GitRepoRevision.Branch == nil || *res.BuildSpec.SourceRevision.GitRepoRevision.Branch.Name != "main" {
+	if res.BuildSpec.SourceRevision.GitRepoRevision.Branch == nil || *res.BuildSpec.SourceRevision.GitRepoRevision.Branch != "main" {
 		t.Error("expected default branch 'main'")
 	}
 	if res.BuildSpec.ImageRepository.UseInternalRegistry == nil || !*res.BuildSpec.ImageRepository.UseInternalRegistry {
@@ -397,7 +397,7 @@ func TestToStack_Volumes(t *testing.T) {
 				Volumes: []VolumeMountDef{
 					{Name: "pg-data", Path: "/var/lib/postgresql/data"},
 				},
-				Stateful: true,
+				WorkloadType: "StatefulService",
 			},
 		},
 		Volumes: map[string]VolumeDef{
@@ -451,9 +451,9 @@ func TestToStack_Volumes(t *testing.T) {
 		t.Error("expected volume_mount connection")
 	}
 
-	// Check stateful flag
-	if res.Stateful == nil || !*res.Stateful {
-		t.Error("expected stateful=true")
+	// Check workload type
+	if res.WorkloadType == nil || *res.WorkloadType != "StatefulService" {
+		t.Errorf("expected workload_type=StatefulService, got %v", res.WorkloadType)
 	}
 }
 
@@ -555,11 +555,11 @@ func TestToStack_FullInfisicalExample(t *testing.T) {
 				DependsOn: []string{"db", "redis"},
 			},
 			"db": {
-				Image:    "postgres:14-alpine",
-				Ports:    []PortDef{{Name: "postgres", Port: 5432, Protocol: "TCP"}},
-				Env:      map[string]string{"POSTGRES_USER": "infisical", "POSTGRES_PASSWORD": "infisical", "POSTGRES_DB": "infisical"},
-				Volumes:  []VolumeMountDef{{Name: "pg-data", Path: "/var/lib/postgresql/data"}},
-				Stateful: true,
+				Image:        "postgres:14-alpine",
+				Ports:        []PortDef{{Name: "postgres", Port: 5432, Protocol: "TCP"}},
+				Env:          map[string]string{"POSTGRES_USER": "infisical", "POSTGRES_PASSWORD": "infisical", "POSTGRES_DB": "infisical"},
+				Volumes:      []VolumeMountDef{{Name: "pg-data", Path: "/var/lib/postgresql/data"}},
+				WorkloadType: "StatefulService",
 			},
 			"redis": {
 				Image:   "redis:latest",
@@ -727,7 +727,7 @@ func TestToStack_MultipleVolumeMountsOnOneResource(t *testing.T) {
 					{Name: "pg-data", Path: "/var/lib/postgresql/data"},
 					{Name: "pg-wal", Path: "/var/lib/postgresql/wal"},
 				},
-				Stateful: true,
+				WorkloadType: "StatefulService",
 			},
 		},
 		Volumes: map[string]VolumeDef{

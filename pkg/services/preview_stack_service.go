@@ -394,9 +394,7 @@ func (s *previewStackService) applyBranchSwap(stack *openapi.Stack, repoURL, bra
 		res.BuildSpec.SourceRevision = openapi.BuildSourceRevision{
 			GitRepoRevision: &openapi.GitRepoRevision{
 				Commit: &commitSHA,
-				Branch: &openapi.GitRepoRevisionBranch{
-					Name: &branch,
-				},
+				Branch: &branch,
 			},
 		}
 	}

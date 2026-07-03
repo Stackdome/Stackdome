@@ -258,7 +258,7 @@ export default function StackResourceDetail({
                       <div>
                         <div className="mb-1 text-sm font-medium">Image Repository URL</div>
                         <div className="p-2 bg-muted/30 rounded-md overflow-x-auto">
-                          {resource.build_spec?.image_repository?.external_image_repo_url || "Not specified"}
+                          {resource.build_spec?.image_repository?.external_image_ref || "Not specified"}
                         </div>
                       </div>
                       {resource.gitRevisionType && (

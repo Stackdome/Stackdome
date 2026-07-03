@@ -54,9 +54,13 @@ func (sf *Stackfile) buildResources() []openapi.StackResource {
 			sr.BuildSpec = buildSpec(res.Build)
 		}
 
-		if res.Stateful {
-			sr.Stateful = ptr.To(true)
+		if res.WorkloadType != "" {
+			sr.WorkloadType = ptr.To(res.WorkloadType)
 		}
+		if res.Schedule != "" {
+			sr.Schedule = ptr.To(res.Schedule)
+		}
+		sr.Replicas = res.Replicas
 
 		sr.Ports = buildPorts(res.Ports)
 		sr.ExecutionConfig = buildExecutionConfig(res.Env, res.Command, res.Args)
@@ -96,9 +100,7 @@ func buildSpec(b *BuildConfig) *openapi.StackResourceBuildSpec {
 	revision := openapi.BuildSourceRevision{}
 	if b.Branch != "" {
 		revision.GitRepoRevision = &openapi.GitRepoRevision{
-			Branch: &openapi.GitRepoRevisionBranch{
-				Name: ptr.To(b.Branch),
-			},
+			Branch: ptr.To(b.Branch),
 		}
 	} else if b.Tag != "" {
 		revision.GitRepoRevision = &openapi.GitRepoRevision{
@@ -110,9 +112,7 @@ func buildSpec(b *BuildConfig) *openapi.StackResourceBuildSpec {
 		}
 	} else {
 		revision.GitRepoRevision = &openapi.GitRepoRevision{
-			Branch: &openapi.GitRepoRevisionBranch{
-				Name: ptr.To("main"),
-			},
+			Branch: ptr.To("main"),
 		}
 	}
 	spec.SourceRevision = revision

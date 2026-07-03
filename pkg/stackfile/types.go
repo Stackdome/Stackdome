@@ -22,10 +22,12 @@ type Resource struct {
 	// Secret Name -> Mapping of secret keys to env var names
 	Secrets map[string]SecretMapping `yaml:"secrets,omitempty"`
 	// Addon Name -> Connection Config
-	Addons    map[string]AddonConnectionConfig `yaml:"addons,omitempty"`
-	Volumes   []VolumeMountDef                 `yaml:"volumes,omitempty"`
-	DependsOn []string                         `yaml:"depends_on,omitempty"`
-	Stateful  bool                             `yaml:"stateful,omitempty"`
+	Addons       map[string]AddonConnectionConfig `yaml:"addons,omitempty"`
+	Volumes      []VolumeMountDef                 `yaml:"volumes,omitempty"`
+	DependsOn    []string                         `yaml:"depends_on,omitempty"`
+	WorkloadType string                           `yaml:"workload_type,omitempty"`
+	Schedule     string                           `yaml:"schedule,omitempty"`
+	Replicas     *int32                           `yaml:"replicas,omitempty"`
 }
 
 type BuildConfig struct {
