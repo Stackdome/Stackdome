@@ -1,6 +1,5 @@
 import { useEffect, type ReactNode } from "react";
-import type { DrawerEntry } from "@/pages/stacks/lib/canvas/drawer-stack";
-import { entryKey } from "@/pages/stacks/lib/canvas/drawer-stack";
+import { entryKey, type DrawerEntry } from "@/pages/stacks/lib/canvas/drawer-stack";
 
 const BASE_INSET_PX = 12;
 const STAGGER_Y_PX = 10;
@@ -18,7 +17,8 @@ interface DrawerStackProps {
   panels: DrawerPanelDescriptor[];
   /** Body for the front panel only. */
   front: ReactNode;
-  onTruncate: (depth: number) => void;
+  /** Truncate the stack back to the panel at this panels-array index (it becomes the front). */
+  onTruncate: (index: number) => void;
   onPop: () => void;
   onCloseAll: () => void;
 }

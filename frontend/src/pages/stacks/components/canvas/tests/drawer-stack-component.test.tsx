@@ -61,6 +61,15 @@ describe("DrawerStack", () => {
     expect(onCloseAll).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores Escape already consumed by a nested layer (defaultPrevented)", () => {
+    const { onPop, onCloseAll } = setup();
+    const ev = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
+    ev.preventDefault();
+    window.dispatchEvent(ev);
+    expect(onPop).not.toHaveBeenCalled();
+    expect(onCloseAll).not.toHaveBeenCalled();
+  });
+
   it("renders nothing when the stack is empty", () => {
     render(
       <DrawerStack panels={[]} front={null} onTruncate={vi.fn()} onPop={vi.fn()} onCloseAll={vi.fn()} />,
