@@ -118,9 +118,9 @@ func presentGitRepoSource(source *models.GitRepoSource) *openapi.GitRepoSource {
 	case models.Tag:
 		revision.Tag = &source.Revision.Tag
 	case models.Branch:
-		revision.Branch = &openapi.GitRepoRevisionBranch{
-			Name:    &source.Revision.Branch.Name,
-			HeadSha: &source.Revision.Branch.HeadSha,
+		revision.Branch = &source.Revision.Branch
+		if source.Revision.Commit != "" {
+			revision.Commit = &source.Revision.Commit
 		}
 	}
 	return &openapi.GitRepoSource{
@@ -303,11 +303,9 @@ func convertGitRepoSource(source *openapi.GitRepoSource) *models.GitRepoSource {
 	case source.Revision.Tag != nil:
 		revision.Tag = source.Revision.GetTag()
 	case source.Revision.Branch != nil:
-		revision.Branch = models.GitBranch{
-			Name: source.Revision.Branch.GetName(),
-		}
-		if source.Revision.Branch.HeadSha != nil {
-			revision.Branch.HeadSha = source.Revision.Branch.GetHeadSha()
+		revision.Branch = source.Revision.GetBranch()
+		if source.Revision.Commit != nil {
+			revision.Commit = source.Revision.GetCommit()
 		}
 	}
 	return &models.GitRepoSource{

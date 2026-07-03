@@ -32,8 +32,9 @@ type BuildConfigSpec struct {
 }
 
 type BuildImageRepository struct {
-	InsecureRegistry     bool `json:"insecure_registry"`
-	UseInClusterRegistry bool `json:"use_in_cluster_registry"`
+	InsecureRegistry     bool   `json:"insecure_registry"`
+	UseInClusterRegistry bool   `json:"use_in_cluster_registry"`
+	ClusterRegistryName  string `json:"cluster_registry_name,omitempty"`
 }
 
 func (b *BuildConfigSpec) Validate() error {
@@ -62,8 +63,11 @@ func (b *BuildConfigSpec) Validate() error {
 		}
 	}
 	if rev.Git != nil {
-		if rev.Git.Branch == nil && rev.Git.Tag == "" && rev.Git.Commit == "" {
-			return errors.New("source_revision.git: at least one of branch, tag, or commit is required")
+		if rev.Git.Branch == "" && rev.Git.Tag == "" {
+			return errors.New("source_revision.git: a branch or tag is required (the commit SHA is resolved at release time)")
+		}
+		if rev.Git.Branch != "" && rev.Git.Tag != "" {
+			return errors.New("source_revision.git: branch and tag cannot both be set")
 		}
 	}
 
@@ -89,9 +93,9 @@ type VolumeRevision struct {
 }
 
 type GitRevision struct {
-	Branch *GitBranch `json:"branch"`
-	Tag    string     `json:"tag"`
-	Commit string     `json:"commit"`
+	Branch string `json:"branch"`
+	Tag    string `json:"tag"`
+	Commit string `json:"commit"`
 }
 
 type BuildContextSource struct {

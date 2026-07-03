@@ -359,12 +359,12 @@ func (s *Stack) GetImagePullSecretIDMap() map[string]string {
 	return imagePullSecretMap
 }
 
-// GetImagePushSecretIDMap returns a map of image repository URLs to their push secret IDs.
+// GetImagePushSecretIDMap returns a map of resource names to their push secret IDs.
 func (s *Stack) GetImagePushSecretIDMap() map[string]string {
 	imagePushSecretMap := make(map[string]string)
 	for i := range s.StackResources {
 		if s.StackResources[i].BuildConfig != nil && s.StackResources[i].BuildConfig.RegistrySecretRef != nil {
-			imagePushSecretMap[s.StackResources[i].BuildConfig.ImageRepositoryUrl] = s.StackResources[i].BuildConfig.RegistrySecretRef.SecretID
+			imagePushSecretMap[s.StackResources[i].Name] = s.StackResources[i].BuildConfig.RegistrySecretRef.SecretID
 		}
 	}
 	return imagePushSecretMap

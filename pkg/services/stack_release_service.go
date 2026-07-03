@@ -378,13 +378,13 @@ func (s *stackReleaseService) resolveGitSHA(ctx context.Context, res *models.Sta
 		return sha, nil
 	}
 
-	if rev.Branch != nil {
-		if rev.Branch.HeadSha != "" && rev.Branch.HeadSha != "HEAD" {
-			return rev.Branch.HeadSha, nil
+	if rev.Branch != "" {
+		if rev.Commit != "" && rev.Commit != "HEAD" {
+			return rev.Commit, nil
 		}
-		result, err := gitClient.GetBranchHeadSHA(ctx, repoURL, rev.Branch.Name)
+		result, err := gitClient.GetBranchHeadSHA(ctx, repoURL, rev.Branch)
 		if err != nil {
-			return "", errors.GeneralError("resource '%s': cannot resolve branch '%s': %v", res.Name, rev.Branch.Name, err)
+			return "", errors.GeneralError("resource '%s': cannot resolve branch '%s': %v", res.Name, rev.Branch, err)
 		}
 		return result.HeadSHA, nil
 	}
@@ -423,11 +423,7 @@ func applyPinsToSnapshot(snapshot *models.StackSnapshot, pins models.ReleasePins
 		}
 		if rp.GitSHA != "" &&
 			resource.BuildConfig != nil &&
-			resource.BuildConfig.SourceRevision.Git != nil &&
-			resource.BuildConfig.SourceRevision.Git.Branch != nil {
-			resource.BuildConfig.SourceRevision.Git.Branch.HeadSha = rp.GitSHA
-		}
-		if rp.GitSHA != "" && resource.BuildConfig.SourceRevision.Git != nil {
+			resource.BuildConfig.SourceRevision.Git != nil {
 			resource.BuildConfig.SourceRevision.Git.Commit = rp.GitSHA
 		}
 	}
