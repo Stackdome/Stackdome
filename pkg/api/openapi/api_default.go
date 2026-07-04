@@ -1145,6 +1145,112 @@ func (a *DefaultApiService) ApiV1ConfigGetExecute(r ApiApiV1ConfigGetRequest) (*
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiApiV1GitIntegrationsGithubManifestCallbackGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	code       *string
+	state      *string
+}
+
+func (r ApiApiV1GitIntegrationsGithubManifestCallbackGetRequest) Code(code string) ApiApiV1GitIntegrationsGithubManifestCallbackGetRequest {
+	r.code = &code
+	return r
+}
+
+func (r ApiApiV1GitIntegrationsGithubManifestCallbackGetRequest) State(state string) ApiApiV1GitIntegrationsGithubManifestCallbackGetRequest {
+	r.state = &state
+	return r
+}
+
+func (r ApiApiV1GitIntegrationsGithubManifestCallbackGetRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1GitIntegrationsGithubManifestCallbackGetExecute(r)
+}
+
+/*
+ApiV1GitIntegrationsGithubManifestCallbackGet GitHub App manifest redirect target (unauthenticated, state-validated)
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiApiV1GitIntegrationsGithubManifestCallbackGetRequest
+*/
+func (a *DefaultApiService) ApiV1GitIntegrationsGithubManifestCallbackGet(ctx context.Context) ApiApiV1GitIntegrationsGithubManifestCallbackGetRequest {
+	return ApiApiV1GitIntegrationsGithubManifestCallbackGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+	}
+}
+
+// Execute executes the request
+func (a *DefaultApiService) ApiV1GitIntegrationsGithubManifestCallbackGetExecute(r ApiApiV1GitIntegrationsGithubManifestCallbackGetRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod = http.MethodGet
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1GitIntegrationsGithubManifestCallbackGet")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/git-integrations/github/manifest/callback"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.code == nil {
+		return nil, reportError("code is required and must be specified")
+	}
+	if r.state == nil {
+		return nil, reportError("state is required and must be specified")
+	}
+
+	localVarQueryParams.Add("code", parameterToString(*r.code, ""))
+	localVarQueryParams.Add("state", parameterToString(*r.state, ""))
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
 type ApiApiV1InvitesTokenInfoGetRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
@@ -2713,6 +2819,1243 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdClustersPostExecute(r ApiApiV
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiApiV1OrganizationsOrgIdGitIntegrationsGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsGetRequest) Execute() (*GitIntegrationList, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdGitIntegrationsGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdGitIntegrationsGet List git integrations for the organization
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@return ApiApiV1OrganizationsOrgIdGitIntegrationsGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsGet(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdGitIntegrationsGetRequest {
+	return ApiApiV1OrganizationsOrgIdGitIntegrationsGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return GitIntegrationList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsGetExecute(r ApiApiV1OrganizationsOrgIdGitIntegrationsGetRequest) (*GitIntegrationList, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *GitIntegrationList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdGitIntegrationsGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/git-integrations"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPostRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPostRequest) Execute() (*GitHubAppManifestFlow, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPost Start the GitHub App manifest flow for the organization
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@return ApiApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPost(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPostRequest {
+	return ApiApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return GitHubAppManifestFlow
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPostExecute(r ApiApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPostRequest) (*GitHubAppManifestFlow, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *GitHubAppManifestFlow
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/git-integrations/github/manifest"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdGitIntegrationsIdDeleteRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdDeleteRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdDeleteExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdGitIntegrationsIdDelete Delete a git integration
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdGitIntegrationsIdDeleteRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdDelete(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdGitIntegrationsIdDeleteRequest {
+	return ApiApiV1OrganizationsOrgIdGitIntegrationsIdDeleteRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdDeleteExecute(r ApiApiV1OrganizationsOrgIdGitIntegrationsIdDeleteRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod = http.MethodDelete
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdDelete")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/git-integrations/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdGitIntegrationsIdGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdGetRequest) Execute() (*GitIntegration, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdGitIntegrationsIdGet Get a git integration
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdGitIntegrationsIdGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdGet(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdGitIntegrationsIdGetRequest {
+	return ApiApiV1OrganizationsOrgIdGitIntegrationsIdGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return GitIntegration
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdGetExecute(r ApiApiV1OrganizationsOrgIdGitIntegrationsIdGetRequest) (*GitIntegration, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *GitIntegration
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/git-integrations/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+	refresh    *bool
+}
+
+// Re-list installations from GitHub before returning (covers missed webhooks)
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGetRequest) Refresh(refresh bool) ApiApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGetRequest {
+	r.refresh = &refresh
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGetRequest) Execute() (*GitInstallationList, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGet List GitHub App installations
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGet(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGetRequest {
+	return ApiApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return GitInstallationList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGetExecute(r ApiApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGetRequest) (*GitInstallationList, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *GitInstallationList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/git-integrations/{id}/installations"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.refresh != nil {
+		localVarQueryParams.Add("refresh", parameterToString(*r.refresh, ""))
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdGitIntegrationsIdPutRequest struct {
+	ctx            context.Context
+	ApiService     *DefaultApiService
+	orgId          string
+	id             string
+	gitIntegration *GitIntegration
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdPutRequest) GitIntegration(gitIntegration GitIntegration) ApiApiV1OrganizationsOrgIdGitIntegrationsIdPutRequest {
+	r.gitIntegration = &gitIntegration
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdPutRequest) Execute() (*GitIntegration, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdPutExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdGitIntegrationsIdPut Update a git integration (credential rotation)
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdGitIntegrationsIdPutRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdPut(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdGitIntegrationsIdPutRequest {
+	return ApiApiV1OrganizationsOrgIdGitIntegrationsIdPutRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return GitIntegration
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdPutExecute(r ApiApiV1OrganizationsOrgIdGitIntegrationsIdPutRequest) (*GitIntegration, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPut
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *GitIntegration
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdPut")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/git-integrations/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.gitIntegration == nil {
+		return localVarReturnValue, nil, reportError("gitIntegration is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.gitIntegration
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest struct {
+	ctx            context.Context
+	ApiService     *DefaultApiService
+	orgId          string
+	id             string
+	query          *string
+	page           *int32
+	installationId *int64
+}
+
+// Substring filter on the repository full name
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest) Query(query string) ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest {
+	r.query = &query
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest) Page(page int32) ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest {
+	r.page = &page
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest) InstallationId(installationId int64) ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest {
+	r.installationId = &installationId
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest) Execute() (*GitRepositoryPage, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet List repositories visible to the GitHub App installation
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest {
+	return ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return GitRepositoryPage
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetExecute(r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest) (*GitRepositoryPage, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *GitRepositoryPage
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/git-integrations/{id}/repositories"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.query != nil {
+		localVarQueryParams.Add("query", parameterToString(*r.query, ""))
+	}
+	if r.page != nil {
+		localVarQueryParams.Add("page", parameterToString(*r.page, ""))
+	}
+	if r.installationId != nil {
+		localVarQueryParams.Add("installation_id", parameterToString(*r.installationId, ""))
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+	owner      string
+	repo       string
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGetRequest) Execute() (*GitBranchList, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGet List repository branches through the GitHub App installation
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@param owner
+	@param repo
+	@return ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGet(ctx context.Context, orgId string, id string, owner string, repo string) ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGetRequest {
+	return ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+		owner:      owner,
+		repo:       repo,
+	}
+}
+
+// Execute executes the request
+//
+//	@return GitBranchList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGetExecute(r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGetRequest) (*GitBranchList, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *GitBranchList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}/branches"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"owner"+"}", url.PathEscape(parameterToString(r.owner, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"repo"+"}", url.PathEscape(parameterToString(r.repo, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+	owner      string
+	repo       string
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGetRequest) Execute() (*GitRepository, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet Get repository details through the GitHub App installation
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@param owner
+	@param repo
+	@return ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet(ctx context.Context, orgId string, id string, owner string, repo string) ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGetRequest {
+	return ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+		owner:      owner,
+		repo:       repo,
+	}
+}
+
+// Execute executes the request
+//
+//	@return GitRepository
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGetExecute(r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGetRequest) (*GitRepository, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *GitRepository
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"owner"+"}", url.PathEscape(parameterToString(r.owner, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"repo"+"}", url.PathEscape(parameterToString(r.repo, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPostRequest struct {
+	ctx                         context.Context
+	ApiService                  *DefaultApiService
+	orgId                       string
+	id                          string
+	gitIntegrationVerifyRequest *GitIntegrationVerifyRequest
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPostRequest) GitIntegrationVerifyRequest(gitIntegrationVerifyRequest GitIntegrationVerifyRequest) ApiApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPostRequest {
+	r.gitIntegrationVerifyRequest = &gitIntegrationVerifyRequest
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPostRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPost Verify a git integration against a repository
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPost(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPostRequest {
+	return ApiApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPostExecute(r ApiApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPostRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod = http.MethodPost
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPost")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/git-integrations/{id}/verify"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.gitIntegrationVerifyRequest == nil {
+		return nil, reportError("gitIntegrationVerifyRequest is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.gitIntegrationVerifyRequest
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarHTTPResponse, newErr
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdGitIntegrationsPostRequest struct {
+	ctx            context.Context
+	ApiService     *DefaultApiService
+	orgId          string
+	gitIntegration *GitIntegration
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsPostRequest) GitIntegration(gitIntegration GitIntegration) ApiApiV1OrganizationsOrgIdGitIntegrationsPostRequest {
+	r.gitIntegration = &gitIntegration
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsPostRequest) Execute() (*GitIntegration, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdGitIntegrationsPostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdGitIntegrationsPost Create a git integration for the organization
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@return ApiApiV1OrganizationsOrgIdGitIntegrationsPostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsPost(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdGitIntegrationsPostRequest {
+	return ApiApiV1OrganizationsOrgIdGitIntegrationsPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return GitIntegration
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsPostExecute(r ApiApiV1OrganizationsOrgIdGitIntegrationsPostRequest) (*GitIntegration, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *GitIntegration
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdGitIntegrationsPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/git-integrations"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.gitIntegration == nil {
+		return localVarReturnValue, nil, reportError("gitIntegration is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.gitIntegration
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 409 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiApiV1OrganizationsOrgIdInvitesGetRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
@@ -3365,16 +4708,694 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdObjectStoresGetExecute(r ApiA
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-type ApiApiV1OrganizationsOrgIdSecretsGetRequest struct {
+type ApiApiV1OrganizationsOrgIdRegistryCredentialsGetRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
 	orgId      string
-	name       *string
+}
+
+func (r ApiApiV1OrganizationsOrgIdRegistryCredentialsGetRequest) Execute() (*RegistryCredentialList, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdRegistryCredentialsGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdRegistryCredentialsGet List registry credentials for the organization
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@return ApiApiV1OrganizationsOrgIdRegistryCredentialsGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsGet(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdRegistryCredentialsGetRequest {
+	return ApiApiV1OrganizationsOrgIdRegistryCredentialsGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return RegistryCredentialList
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsGetExecute(r ApiApiV1OrganizationsOrgIdRegistryCredentialsGetRequest) (*RegistryCredentialList, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *RegistryCredentialList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdRegistryCredentialsGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/registry-credentials"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdRegistryCredentialsIdDeleteRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdRegistryCredentialsIdDeleteRequest) Execute() (*RegistryCredentialDeleteResponse, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdRegistryCredentialsIdDeleteExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete Delete a registry credential
+
+Deletion is never blocked; the response lists stacks that were implicitly resolving against this credential so rotations are visible.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdRegistryCredentialsIdDeleteRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdRegistryCredentialsIdDeleteRequest {
+	return ApiApiV1OrganizationsOrgIdRegistryCredentialsIdDeleteRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return RegistryCredentialDeleteResponse
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsIdDeleteExecute(r ApiApiV1OrganizationsOrgIdRegistryCredentialsIdDeleteRequest) (*RegistryCredentialDeleteResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodDelete
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *RegistryCredentialDeleteResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/registry-credentials/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdRegistryCredentialsIdGetRequest struct {
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	id         string
+}
+
+func (r ApiApiV1OrganizationsOrgIdRegistryCredentialsIdGetRequest) Execute() (*RegistryCredential, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdRegistryCredentialsIdGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdRegistryCredentialsIdGet Get a registry credential
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdRegistryCredentialsIdGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsIdGet(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdRegistryCredentialsIdGetRequest {
+	return ApiApiV1OrganizationsOrgIdRegistryCredentialsIdGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return RegistryCredential
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsIdGetExecute(r ApiApiV1OrganizationsOrgIdRegistryCredentialsIdGetRequest) (*RegistryCredential, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *RegistryCredential
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdRegistryCredentialsIdGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/registry-credentials/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdRegistryCredentialsIdPutRequest struct {
+	ctx                context.Context
+	ApiService         *DefaultApiService
+	orgId              string
+	id                 string
+	registryCredential *RegistryCredential
+}
+
+func (r ApiApiV1OrganizationsOrgIdRegistryCredentialsIdPutRequest) RegistryCredential(registryCredential RegistryCredential) ApiApiV1OrganizationsOrgIdRegistryCredentialsIdPutRequest {
+	r.registryCredential = &registryCredential
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdRegistryCredentialsIdPutRequest) Execute() (*RegistryCredential, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdRegistryCredentialsIdPutExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdRegistryCredentialsIdPut Update a registry credential (username/password rotation)
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdRegistryCredentialsIdPutRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsIdPut(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdRegistryCredentialsIdPutRequest {
+	return ApiApiV1OrganizationsOrgIdRegistryCredentialsIdPutRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+//
+//	@return RegistryCredential
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsIdPutExecute(r ApiApiV1OrganizationsOrgIdRegistryCredentialsIdPutRequest) (*RegistryCredential, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPut
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *RegistryCredential
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdRegistryCredentialsIdPut")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/registry-credentials/{id}"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.registryCredential == nil {
+		return localVarReturnValue, nil, reportError("registryCredential is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.registryCredential
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPostRequest struct {
+	ctx                             context.Context
+	ApiService                      *DefaultApiService
+	orgId                           string
+	id                              string
+	registryCredentialVerifyRequest *RegistryCredentialVerifyRequest
+}
+
+func (r ApiApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPostRequest) RegistryCredentialVerifyRequest(registryCredentialVerifyRequest RegistryCredentialVerifyRequest) ApiApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPostRequest {
+	r.registryCredentialVerifyRequest = &registryCredentialVerifyRequest
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPostRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPost Verify a registry credential against a repository
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param id The id of record
+	@return ApiApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPost(ctx context.Context, orgId string, id string) ApiApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPostRequest {
+	return ApiApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		id:         id,
+	}
+}
+
+// Execute executes the request
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPostExecute(r ApiApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPostRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod = http.MethodPost
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPost")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/registry-credentials/{id}/verify"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.registryCredentialVerifyRequest == nil {
+		return nil, reportError("registryCredentialVerifyRequest is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.registryCredentialVerifyRequest
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarHTTPResponse, newErr
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdRegistryCredentialsPostRequest struct {
+	ctx                context.Context
+	ApiService         *DefaultApiService
+	orgId              string
+	registryCredential *RegistryCredential
+}
+
+func (r ApiApiV1OrganizationsOrgIdRegistryCredentialsPostRequest) RegistryCredential(registryCredential RegistryCredential) ApiApiV1OrganizationsOrgIdRegistryCredentialsPostRequest {
+	r.registryCredential = &registryCredential
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdRegistryCredentialsPostRequest) Execute() (*RegistryCredential, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdRegistryCredentialsPostExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdRegistryCredentialsPost Create a registry credential for the organization
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@return ApiApiV1OrganizationsOrgIdRegistryCredentialsPostRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsPost(ctx context.Context, orgId string) ApiApiV1OrganizationsOrgIdRegistryCredentialsPostRequest {
+	return ApiApiV1OrganizationsOrgIdRegistryCredentialsPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return RegistryCredential
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsPostExecute(r ApiApiV1OrganizationsOrgIdRegistryCredentialsPostRequest) (*RegistryCredential, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodPost
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *RegistryCredential
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdRegistryCredentialsPost")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/registry-credentials"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.registryCredential == nil {
+		return localVarReturnValue, nil, reportError("registryCredential is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.registryCredential
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 409 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1OrganizationsOrgIdSecretsGetRequest struct {
+	ctx            context.Context
+	ApiService     *DefaultApiService
+	orgId          string
+	name           *string
+	includeManaged *bool
 }
 
 // Filter by secret name
 func (r ApiApiV1OrganizationsOrgIdSecretsGetRequest) Name(name string) ApiApiV1OrganizationsOrgIdSecretsGetRequest {
 	r.name = &name
+	return r
+}
+
+// Include system-managed secrets materialized from inline credentials
+func (r ApiApiV1OrganizationsOrgIdSecretsGetRequest) IncludeManaged(includeManaged bool) ApiApiV1OrganizationsOrgIdSecretsGetRequest {
+	r.includeManaged = &includeManaged
 	return r
 }
 
@@ -3424,6 +5445,9 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsGetExecute(r ApiApiV1O
 
 	if r.name != nil {
 		localVarQueryParams.Add("name", parameterToString(*r.name, ""))
+	}
+	if r.includeManaged != nil {
+		localVarQueryParams.Add("include_managed", parameterToString(*r.includeManaged, ""))
 	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
@@ -6684,16 +8708,23 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNamePutExecute(r Api
 }
 
 type ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest struct {
-	ctx        context.Context
-	ApiService *DefaultApiService
-	orgId      string
-	teamName   string
-	name       *string
+	ctx            context.Context
+	ApiService     *DefaultApiService
+	orgId          string
+	teamName       string
+	name           *string
+	includeManaged *bool
 }
 
 // Filter by secret name
 func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest) Name(name string) ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest {
 	r.name = &name
+	return r
+}
+
+// Include system-managed secrets materialized from inline credentials
+func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest) IncludeManaged(includeManaged bool) ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest {
+	r.includeManaged = &includeManaged
 	return r
 }
 
@@ -6744,6 +8775,9 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetExecut
 
 	if r.name != nil {
 		localVarQueryParams.Add("name", parameterToString(*r.name, ""))
+	}
+	if r.includeManaged != nil {
+		localVarQueryParams.Add("include_managed", parameterToString(*r.includeManaged, ""))
 	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
@@ -11602,4 +13636,101 @@ func (a *DefaultApiService) ApiV1UsersIdGetExecute(r ApiApiV1UsersIdGetRequest) 
 	}
 
 	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiApiV1WebhooksGithubPostRequest struct {
+	ctx         context.Context
+	ApiService  *DefaultApiService
+	requestBody *map[string]interface{}
+}
+
+func (r ApiApiV1WebhooksGithubPostRequest) RequestBody(requestBody map[string]interface{}) ApiApiV1WebhooksGithubPostRequest {
+	r.requestBody = &requestBody
+	return r
+}
+
+func (r ApiApiV1WebhooksGithubPostRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1WebhooksGithubPostExecute(r)
+}
+
+/*
+ApiV1WebhooksGithubPost GitHub webhook receiver (unauthenticated, HMAC-verified)
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiApiV1WebhooksGithubPostRequest
+*/
+func (a *DefaultApiService) ApiV1WebhooksGithubPost(ctx context.Context) ApiApiV1WebhooksGithubPostRequest {
+	return ApiApiV1WebhooksGithubPostRequest{
+		ApiService: a,
+		ctx:        ctx,
+	}
+}
+
+// Execute executes the request
+func (a *DefaultApiService) ApiV1WebhooksGithubPostExecute(r ApiApiV1WebhooksGithubPostRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod = http.MethodPost
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1WebhooksGithubPost")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/webhooks/github"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.requestBody == nil {
+		return nil, reportError("requestBody is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.requestBody
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
 }

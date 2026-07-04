@@ -32,6 +32,35 @@ const (
 	SecretIDAnnotation       = "stackdome.io/secret-id"
 )
 
+// ManagedSecretSlot identifies which credential slot of an owning resource a
+// managed secret materializes.
+type ManagedSecretSlot string
+
+const (
+	ManagedSecretSlotGit  ManagedSecretSlot = "git"
+	ManagedSecretSlotPull ManagedSecretSlot = "pull"
+	ManagedSecretSlotPush ManagedSecretSlot = "push"
+)
+
+// Kinds of resources that can own managed secrets.
+const (
+	ManagedByKindStackResource = "stack_resource"
+	ManagedByKindPreviewConfig = "preview_config"
+)
+
+// ManagedSecretName returns the deterministic name for a managed secret
+// materialized from inline credentials: managed-<stack>-<resource>-<slot>.
+func ManagedSecretName(stackName, resourceName string, slot ManagedSecretSlot) string {
+	return fmt.Sprintf("managed-%s-%s-%s", stackName, resourceName, slot)
+}
+
+// StackResourceManagedOwnerID is the managed_by_id for stack-resource-owned
+// managed secrets. It uses the stack ID plus resource name so it is stable
+// across resource re-creation within a stack.
+func StackResourceManagedOwnerID(stackID, resourceName string) string {
+	return fmt.Sprintf("%s/%s", stackID, resourceName)
+}
+
 type SecretKeys []string
 
 func (s *SecretKeys) Scan(value interface{}) error {
@@ -58,8 +87,16 @@ type Secret struct {
 	EncryptedData  string     `gorm:"type:text;not null"`
 	Keys           SecretKeys `gorm:"type:jsonb" json:"keys"`
 	DataHash       string     `gorm:"not null" ` // For change detection
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+
+	// Managed secrets are materialized from inline credentials and owned by
+	// another resource; they are hidden from default secret listings.
+	Managed       bool              `gorm:"not null;default:false"`
+	ManagedByKind string            `gorm:"column:managed_by_kind"`
+	ManagedByID   string            `gorm:"column:managed_by_id"`
+	ManagedSlot   ManagedSecretSlot `gorm:"column:managed_slot"`
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 
 	// Transient field for API responses (not stored in DB)
 	Data    map[string]string  `gorm:"-" json:"data,omitempty"`

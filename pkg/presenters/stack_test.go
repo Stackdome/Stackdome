@@ -174,8 +174,8 @@ func TestPresentAndConvertStackPreservesEnvVarSelfOutput(t *testing.T) {
 
 	spec := openapi.NewStackSpec([]openapi.StackResource{
 		{
-			Name:      "web",
-			ImageSpec: &openapi.ImageSpec{Image: "nginx:latest"},
+			Name:   "web",
+			Source: &openapi.SourceSpec{Image: openapi.NewImageSource("nginx:latest")},
 			Ports: []openapi.Port{
 				{Name: "http", Number: 8080, Protocol: openapi.PtrString("http"), ExposedToPublic: true},
 			},

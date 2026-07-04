@@ -19,6 +19,13 @@ type PreviewGitRepository struct {
 	RepoURL     string  `json:"repo_url"`
 	BaseBranch  string  `json:"base_branch"`
 	GitSecretID *string `json:"git_secret_id,omitempty"`
+	// IntegrationID pins an org-level git integration for clone auth.
+	// Resolution lands with git integrations.
+	IntegrationID string `json:"integration_id,omitempty"`
+
+	// InlineCredentials carries inline clone credentials from the API to the
+	// managed-secret materializer; never persisted.
+	InlineCredentials *InlineCredentials `json:"-" gorm:"-"`
 }
 
 func (r PreviewGitRepository) Value() (driver.Value, error) {

@@ -58,6 +58,33 @@ func (s *StackResource) HasGitCredentials() bool {
 	return false
 }
 
+// RegistryPullCredentialID returns the pinned org-level registry credential for
+// image pulls, or "" if none is set.
+func (s *StackResource) RegistryPullCredentialID() string {
+	if s.ImageConfig != nil {
+		return s.ImageConfig.RegistryCredentialID
+	}
+	return ""
+}
+
+// RegistryPushCredentialID returns the pinned org-level registry credential for
+// the push target, or "" if none is set.
+func (s *StackResource) RegistryPushCredentialID() string {
+	if s.BuildConfig != nil {
+		return s.BuildConfig.PushRegistryCredentialID
+	}
+	return ""
+}
+
+// GitIntegrationID returns the pinned org-level git integration for clone auth,
+// or "" if none is set.
+func (s *StackResource) GitIntegrationID() string {
+	if s.BuildConfig != nil && s.BuildConfig.SourceContext.Git != nil {
+		return s.BuildConfig.SourceContext.Git.IntegrationID
+	}
+	return ""
+}
+
 type StackResourceState string
 
 const (
@@ -154,6 +181,13 @@ type ImageConfigSpec struct {
 	Image           string           `json:"image"`
 	ImagePullPolicy string           `json:"image_pull_policy,omitempty"`
 	PullSecretRef   *SecretReference `json:"pull_secret_ref,omitempty"`
+	// RegistryCredentialID pins an org-level registry credential for image
+	// pulls, overriding host auto-attach.
+	RegistryCredentialID string `json:"registry_credential_id,omitempty"`
+
+	// InlineCredentials carries inline pull credentials from the API to the
+	// managed-secret materializer; never persisted.
+	InlineCredentials *InlineCredentials `json:"-" gorm:"-"`
 }
 
 func (i ImageConfigSpec) Validate() error {

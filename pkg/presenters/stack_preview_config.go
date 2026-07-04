@@ -21,13 +21,37 @@ func PresentStackPreviewConfig(c *models.StackPreviewConfig) openapi.StackPrevie
 		Annotations:       presentAnnotations(c.Annotations),
 		CreatedAt:         &c.CreatedAt,
 		UpdatedAt:         &c.UpdatedAt,
-		GitRepository: &openapi.PreviewGitRepository{
-			RepoUrl:      c.GitRepository.RepoURL,
-			BaseBranch:   &c.GitRepository.BaseBranch,
-			GitSecretRef: c.GitRepository.GitSecretID,
-		},
+		GitRepository:     presentPreviewGitRepository(c.GitRepository),
 	}
 	return result
+}
+
+// presentPreviewGitRepository never echoes credential material; configured
+// clone auth surfaces as credentials_configured.
+func presentPreviewGitRepository(repo models.PreviewGitRepository) *openapi.PreviewGitRepository {
+	res := &openapi.PreviewGitRepository{
+		RepoUrl:    repo.RepoURL,
+		BaseBranch: &repo.BaseBranch,
+	}
+	if repo.IntegrationID != "" {
+		res.SetIntegrationId(repo.IntegrationID)
+	}
+	if repo.GitSecretID != nil && *repo.GitSecretID != "" {
+		res.SetCredentialsConfigured(true)
+	}
+	return res
+}
+
+func convertPreviewGitRepository(in *openapi.PreviewGitRepository) models.PreviewGitRepository {
+	if in == nil {
+		return models.PreviewGitRepository{}
+	}
+	return models.PreviewGitRepository{
+		RepoURL:           in.RepoUrl,
+		BaseBranch:        in.GetBaseBranch(),
+		IntegrationID:     in.GetIntegrationId(),
+		InlineCredentials: convertInlineCredentials(in.Credentials),
+	}
 }
 
 func ConvertStackPreviewConfigCreate(req *openapi.StackPreviewConfigCreate) *models.StackPreviewConfig {
@@ -36,15 +60,9 @@ func ConvertStackPreviewConfigCreate(req *openapi.StackPreviewConfigCreate) *mod
 		Description:       req.GetDescription(),
 		StackfilePath:     req.GetStackfilePath(),
 		MaxActivePreviews: int(req.GetMaxActivePreviews()),
-		GitRepository: models.PreviewGitRepository{
-			RepoURL:    req.GitRepository.RepoUrl,
-			BaseBranch: req.GitRepository.GetBaseBranch(),
-		},
-		Labels:      convertLabels(req.Labels),
-		Annotations: convertAnnotations(req.Annotations),
-	}
-	if req.GitRepository.GitSecretRef != nil {
-		config.GitRepository.GitSecretID = req.GitRepository.GitSecretRef
+		GitRepository:     convertPreviewGitRepository(&req.GitRepository),
+		Labels:            convertLabels(req.Labels),
+		Annotations:       convertAnnotations(req.Annotations),
 	}
 	return config
 }
@@ -56,13 +74,7 @@ func ConvertStackPreviewConfigUpdate(req *openapi.StackPreviewConfigUpdate) *mod
 		MaxActivePreviews: int(req.GetMaxActivePreviews()),
 	}
 	if req.GitRepository != nil {
-		config.GitRepository = models.PreviewGitRepository{
-			RepoURL:    req.GitRepository.RepoUrl,
-			BaseBranch: req.GitRepository.GetBaseBranch(),
-		}
-		if req.GitRepository.GitSecretRef != nil {
-			config.GitRepository.GitSecretID = req.GitRepository.GitSecretRef
-		}
+		config.GitRepository = convertPreviewGitRepository(req.GitRepository)
 	}
 	if req.Labels != nil {
 		config.Labels = convertLabels(req.Labels)

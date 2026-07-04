@@ -16,25 +16,24 @@ import (
 
 // StackResource struct for StackResource
 type StackResource struct {
-	Id              *string                 `json:"id,omitempty"`
-	StackId         *string                 `json:"stack_id,omitempty"`
-	Name            string                  `json:"name"`
-	Labels          []Label                 `json:"labels,omitempty"`
-	Annotations     []Annotation            `json:"annotations,omitempty"`
-	Revision        *string                 `json:"revision,omitempty"`
-	BuildSpec       *StackResourceBuildSpec `json:"build_spec,omitempty"`
-	ImageSpec       *ImageSpec              `json:"image_spec,omitempty"`
-	InitSpec        *InitSpec               `json:"init_spec,omitempty"`
-	ExecutionConfig *ExecutionConfig        `json:"execution_config,omitempty"`
-	VolumeMounts    []VolumeMount           `json:"volume_mounts,omitempty"`
-	DependsOn       []string                `json:"depends_on,omitempty"`
-	LifecycleConfig *LifecycleConfig        `json:"lifecycle_config,omitempty"`
-	Ports           []Port                  `json:"ports,omitempty"`
-	Outputs         []OutputDescriptor      `json:"outputs,omitempty"`
-	WorkloadType    *string                 `json:"workload_type,omitempty"`
-	Schedule        *string                 `json:"schedule,omitempty"`
-	Replicas        *int32                  `json:"replicas,omitempty"`
-	Status          *StackResourceStatus    `json:"status,omitempty"`
+	Id              *string              `json:"id,omitempty"`
+	StackId         *string              `json:"stack_id,omitempty"`
+	Name            string               `json:"name"`
+	Labels          []Label              `json:"labels,omitempty"`
+	Annotations     []Annotation         `json:"annotations,omitempty"`
+	Revision        *string              `json:"revision,omitempty"`
+	Source          *SourceSpec          `json:"source,omitempty"`
+	InitSpec        *InitSpec            `json:"init_spec,omitempty"`
+	ExecutionConfig *ExecutionConfig     `json:"execution_config,omitempty"`
+	VolumeMounts    []VolumeMount        `json:"volume_mounts,omitempty"`
+	DependsOn       []string             `json:"depends_on,omitempty"`
+	LifecycleConfig *LifecycleConfig     `json:"lifecycle_config,omitempty"`
+	Ports           []Port               `json:"ports,omitempty"`
+	Outputs         []OutputDescriptor   `json:"outputs,omitempty"`
+	WorkloadType    *string              `json:"workload_type,omitempty"`
+	Schedule        *string              `json:"schedule,omitempty"`
+	Replicas        *int32               `json:"replicas,omitempty"`
+	Status          *StackResourceStatus `json:"status,omitempty"`
 }
 
 // NewStackResource instantiates a new StackResource object
@@ -243,68 +242,36 @@ func (o *StackResource) SetRevision(v string) {
 	o.Revision = &v
 }
 
-// GetBuildSpec returns the BuildSpec field value if set, zero value otherwise.
-func (o *StackResource) GetBuildSpec() StackResourceBuildSpec {
-	if o == nil || o.BuildSpec == nil {
-		var ret StackResourceBuildSpec
+// GetSource returns the Source field value if set, zero value otherwise.
+func (o *StackResource) GetSource() SourceSpec {
+	if o == nil || o.Source == nil {
+		var ret SourceSpec
 		return ret
 	}
-	return *o.BuildSpec
+	return *o.Source
 }
 
-// GetBuildSpecOk returns a tuple with the BuildSpec field value if set, nil otherwise
+// GetSourceOk returns a tuple with the Source field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StackResource) GetBuildSpecOk() (*StackResourceBuildSpec, bool) {
-	if o == nil || o.BuildSpec == nil {
+func (o *StackResource) GetSourceOk() (*SourceSpec, bool) {
+	if o == nil || o.Source == nil {
 		return nil, false
 	}
-	return o.BuildSpec, true
+	return o.Source, true
 }
 
-// HasBuildSpec returns a boolean if a field has been set.
-func (o *StackResource) HasBuildSpec() bool {
-	if o != nil && o.BuildSpec != nil {
+// HasSource returns a boolean if a field has been set.
+func (o *StackResource) HasSource() bool {
+	if o != nil && o.Source != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetBuildSpec gets a reference to the given StackResourceBuildSpec and assigns it to the BuildSpec field.
-func (o *StackResource) SetBuildSpec(v StackResourceBuildSpec) {
-	o.BuildSpec = &v
-}
-
-// GetImageSpec returns the ImageSpec field value if set, zero value otherwise.
-func (o *StackResource) GetImageSpec() ImageSpec {
-	if o == nil || o.ImageSpec == nil {
-		var ret ImageSpec
-		return ret
-	}
-	return *o.ImageSpec
-}
-
-// GetImageSpecOk returns a tuple with the ImageSpec field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *StackResource) GetImageSpecOk() (*ImageSpec, bool) {
-	if o == nil || o.ImageSpec == nil {
-		return nil, false
-	}
-	return o.ImageSpec, true
-}
-
-// HasImageSpec returns a boolean if a field has been set.
-func (o *StackResource) HasImageSpec() bool {
-	if o != nil && o.ImageSpec != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetImageSpec gets a reference to the given ImageSpec and assigns it to the ImageSpec field.
-func (o *StackResource) SetImageSpec(v ImageSpec) {
-	o.ImageSpec = &v
+// SetSource gets a reference to the given SourceSpec and assigns it to the Source field.
+func (o *StackResource) SetSource(v SourceSpec) {
+	o.Source = &v
 }
 
 // GetInitSpec returns the InitSpec field value if set, zero value otherwise.
@@ -679,11 +646,8 @@ func (o StackResource) MarshalJSON() ([]byte, error) {
 	if o.Revision != nil {
 		toSerialize["revision"] = o.Revision
 	}
-	if o.BuildSpec != nil {
-		toSerialize["build_spec"] = o.BuildSpec
-	}
-	if o.ImageSpec != nil {
-		toSerialize["image_spec"] = o.ImageSpec
+	if o.Source != nil {
+		toSerialize["source"] = o.Source
 	}
 	if o.InitSpec != nil {
 		toSerialize["init_spec"] = o.InitSpec

@@ -14,6 +14,7 @@ Method | HTTP request | Description
 [**ApiV1AuthLoginPost**](DefaultApi.md#ApiV1AuthLoginPost) | **Post** /api/v1/auth/login | User login
 [**ApiV1AuthRefreshPost**](DefaultApi.md#ApiV1AuthRefreshPost) | **Post** /api/v1/auth/refresh | Refresh JWT token
 [**ApiV1ConfigGet**](DefaultApi.md#ApiV1ConfigGet) | **Get** /api/v1/config | Get public application configuration
+[**ApiV1GitIntegrationsGithubManifestCallbackGet**](DefaultApi.md#ApiV1GitIntegrationsGithubManifestCallbackGet) | **Get** /api/v1/git-integrations/github/manifest/callback | GitHub App manifest redirect target (unauthenticated, state-validated)
 [**ApiV1InvitesTokenInfoGet**](DefaultApi.md#ApiV1InvitesTokenInfoGet) | **Get** /api/v1/invites/{token}/info | Get public invite info (unauthenticated)
 [**ApiV1OrganizationsIdGet**](DefaultApi.md#ApiV1OrganizationsIdGet) | **Get** /api/v1/organizations/{id} | Get an organization
 [**ApiV1OrganizationsIdPut**](DefaultApi.md#ApiV1OrganizationsIdPut) | **Put** /api/v1/organizations/{id} | Update an organization
@@ -28,12 +29,29 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdClustersIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersIdDelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{id} | Delete a cluster
 [**ApiV1OrganizationsOrgIdClustersIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersIdGet) | **Get** /api/v1/organizations/{org_id}/clusters/{id} | Get a specific cluster
 [**ApiV1OrganizationsOrgIdClustersPost**](DefaultApi.md#ApiV1OrganizationsOrgIdClustersPost) | **Post** /api/v1/organizations/{org_id}/clusters | Add a new cluster
+[**ApiV1OrganizationsOrgIdGitIntegrationsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsGet) | **Get** /api/v1/organizations/{org_id}/git-integrations | List git integrations for the organization
+[**ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPost**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPost) | **Post** /api/v1/organizations/{org_id}/git-integrations/github/manifest | Start the GitHub App manifest flow for the organization
+[**ApiV1OrganizationsOrgIdGitIntegrationsIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsIdDelete) | **Delete** /api/v1/organizations/{org_id}/git-integrations/{id} | Delete a git integration
+[**ApiV1OrganizationsOrgIdGitIntegrationsIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsIdGet) | **Get** /api/v1/organizations/{org_id}/git-integrations/{id} | Get a git integration
+[**ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGet) | **Get** /api/v1/organizations/{org_id}/git-integrations/{id}/installations | List GitHub App installations
+[**ApiV1OrganizationsOrgIdGitIntegrationsIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsIdPut) | **Put** /api/v1/organizations/{org_id}/git-integrations/{id} | Update a git integration (credential rotation)
+[**ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet) | **Get** /api/v1/organizations/{org_id}/git-integrations/{id}/repositories | List repositories visible to the GitHub App installation
+[**ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGet) | **Get** /api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}/branches | List repository branches through the GitHub App installation
+[**ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet) | **Get** /api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo} | Get repository details through the GitHub App installation
+[**ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPost**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPost) | **Post** /api/v1/organizations/{org_id}/git-integrations/{id}/verify | Verify a git integration against a repository
+[**ApiV1OrganizationsOrgIdGitIntegrationsPost**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsPost) | **Post** /api/v1/organizations/{org_id}/git-integrations | Create a git integration for the organization
 [**ApiV1OrganizationsOrgIdInvitesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdInvitesGet) | **Get** /api/v1/organizations/{org_id}/invites | List invites for an organization
 [**ApiV1OrganizationsOrgIdInvitesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdInvitesIdDelete) | **Delete** /api/v1/organizations/{org_id}/invites/{id} | Revoke a pending invite
 [**ApiV1OrganizationsOrgIdInvitesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdInvitesIdGet) | **Get** /api/v1/organizations/{org_id}/invites/{id} | Get an invite by ID
 [**ApiV1OrganizationsOrgIdInvitesIdResendPost**](DefaultApi.md#ApiV1OrganizationsOrgIdInvitesIdResendPost) | **Post** /api/v1/organizations/{org_id}/invites/{id}/resend | Re-queue invite email for delivery
 [**ApiV1OrganizationsOrgIdInvitesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdInvitesPost) | **Post** /api/v1/organizations/{org_id}/invites | Create an invite to the organization
 [**ApiV1OrganizationsOrgIdObjectStoresGet**](DefaultApi.md#ApiV1OrganizationsOrgIdObjectStoresGet) | **Get** /api/v1/organizations/{org_id}/object-stores | List all object stores the user has access to across all teams
+[**ApiV1OrganizationsOrgIdRegistryCredentialsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdRegistryCredentialsGet) | **Get** /api/v1/organizations/{org_id}/registry-credentials | List registry credentials for the organization
+[**ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete) | **Delete** /api/v1/organizations/{org_id}/registry-credentials/{id} | Delete a registry credential
+[**ApiV1OrganizationsOrgIdRegistryCredentialsIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdRegistryCredentialsIdGet) | **Get** /api/v1/organizations/{org_id}/registry-credentials/{id} | Get a registry credential
+[**ApiV1OrganizationsOrgIdRegistryCredentialsIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdRegistryCredentialsIdPut) | **Put** /api/v1/organizations/{org_id}/registry-credentials/{id} | Update a registry credential (username/password rotation)
+[**ApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPost**](DefaultApi.md#ApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPost) | **Post** /api/v1/organizations/{org_id}/registry-credentials/{id}/verify | Verify a registry credential against a repository
+[**ApiV1OrganizationsOrgIdRegistryCredentialsPost**](DefaultApi.md#ApiV1OrganizationsOrgIdRegistryCredentialsPost) | **Post** /api/v1/organizations/{org_id}/registry-credentials | Create a registry credential for the organization
 [**ApiV1OrganizationsOrgIdSecretsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdSecretsGet) | **Get** /api/v1/organizations/{org_id}/secrets | List all secrets the user has access to across all teams
 [**ApiV1OrganizationsOrgIdStacksGet**](DefaultApi.md#ApiV1OrganizationsOrgIdStacksGet) | **Get** /api/v1/organizations/{org_id}/stacks | List all stacks the user has access to across all teams
 [**ApiV1OrganizationsOrgIdTeamsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsGet) | **Get** /api/v1/organizations/{org_id}/teams | List all teams in an organization
@@ -100,6 +118,7 @@ Method | HTTP request | Description
 [**ApiV1UsersCurrentGet**](DefaultApi.md#ApiV1UsersCurrentGet) | **Get** /api/v1/users/current | Get the current authenticated user
 [**ApiV1UsersCurrentTeamsGet**](DefaultApi.md#ApiV1UsersCurrentTeamsGet) | **Get** /api/v1/users/current/teams | List teams for the current authenticated user
 [**ApiV1UsersIdGet**](DefaultApi.md#ApiV1UsersIdGet) | **Get** /api/v1/users/{id} | Get a user
+[**ApiV1WebhooksGithubPost**](DefaultApi.md#ApiV1WebhooksGithubPost) | **Post** /api/v1/webhooks/github | GitHub webhook receiver (unauthenticated, HMAC-verified)
 
 
 
@@ -735,6 +754,70 @@ No authorization required
 
 - **Content-Type**: Not defined
 - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1GitIntegrationsGithubManifestCallbackGet
+
+> ApiV1GitIntegrationsGithubManifestCallbackGet(ctx).Code(code).State(state).Execute()
+
+GitHub App manifest redirect target (unauthenticated, state-validated)
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    code := "code_example" // string | 
+    state := "state_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1GitIntegrationsGithubManifestCallbackGet(context.Background()).Code(code).State(state).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1GitIntegrationsGithubManifestCallbackGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1GitIntegrationsGithubManifestCallbackGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **code** | **string** |  | 
+ **state** | **string** |  | 
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
@@ -1724,6 +1807,800 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
+## ApiV1OrganizationsOrgIdGitIntegrationsGet
+
+> GitIntegrationList ApiV1OrganizationsOrgIdGitIntegrationsGet(ctx, orgId).Execute()
+
+List git integrations for the organization
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsGet(context.Background(), orgId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdGitIntegrationsGet`: GitIntegrationList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdGitIntegrationsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+### Return type
+
+[**GitIntegrationList**](GitIntegrationList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPost
+
+> GitHubAppManifestFlow ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPost(ctx, orgId).Execute()
+
+Start the GitHub App manifest flow for the organization
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPost(context.Background(), orgId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPost`: GitHubAppManifestFlow
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+### Return type
+
+[**GitHubAppManifestFlow**](GitHubAppManifestFlow.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdGitIntegrationsIdDelete
+
+> ApiV1OrganizationsOrgIdGitIntegrationsIdDelete(ctx, orgId, id).Execute()
+
+Delete a git integration
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdDelete(context.Background(), orgId, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdGitIntegrationsIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdGitIntegrationsIdGet
+
+> GitIntegration ApiV1OrganizationsOrgIdGitIntegrationsIdGet(ctx, orgId, id).Execute()
+
+Get a git integration
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdGet(context.Background(), orgId, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdGitIntegrationsIdGet`: GitIntegration
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdGitIntegrationsIdGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**GitIntegration**](GitIntegration.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGet
+
+> GitInstallationList ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGet(ctx, orgId, id).Refresh(refresh).Execute()
+
+List GitHub App installations
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+    refresh := true // bool | Re-list installations from GitHub before returning (covers missed webhooks) (optional) (default to false)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGet(context.Background(), orgId, id).Refresh(refresh).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGet`: GitInstallationList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **refresh** | **bool** | Re-list installations from GitHub before returning (covers missed webhooks) | [default to false]
+
+### Return type
+
+[**GitInstallationList**](GitInstallationList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdGitIntegrationsIdPut
+
+> GitIntegration ApiV1OrganizationsOrgIdGitIntegrationsIdPut(ctx, orgId, id).GitIntegration(gitIntegration).Execute()
+
+Update a git integration (credential rotation)
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+    gitIntegration := *openapiclient.NewGitIntegration("Host_example") // GitIntegration | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdPut(context.Background(), orgId, id).GitIntegration(gitIntegration).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdGitIntegrationsIdPut`: GitIntegration
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdPut`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdGitIntegrationsIdPutRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **gitIntegration** | [**GitIntegration**](GitIntegration.md) |  | 
+
+### Return type
+
+[**GitIntegration**](GitIntegration.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet
+
+> GitRepositoryPage ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet(ctx, orgId, id).Query(query).Page(page).InstallationId(installationId).Execute()
+
+List repositories visible to the GitHub App installation
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+    query := "query_example" // string | Substring filter on the repository full name (optional)
+    page := int32(56) // int32 |  (optional)
+    installationId := int64(789) // int64 |  (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet(context.Background(), orgId, id).Query(query).Page(page).InstallationId(installationId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet`: GitRepositoryPage
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **query** | **string** | Substring filter on the repository full name | 
+ **page** | **int32** |  | 
+ **installationId** | **int64** |  | 
+
+### Return type
+
+[**GitRepositoryPage**](GitRepositoryPage.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGet
+
+> GitBranchList ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGet(ctx, orgId, id, owner, repo).Execute()
+
+List repository branches through the GitHub App installation
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+    owner := "owner_example" // string | 
+    repo := "repo_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGet(context.Background(), orgId, id, owner, repo).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGet`: GitBranchList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+**owner** | **string** |  | 
+**repo** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+
+### Return type
+
+[**GitBranchList**](GitBranchList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet
+
+> GitRepository ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet(ctx, orgId, id, owner, repo).Execute()
+
+Get repository details through the GitHub App installation
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+    owner := "owner_example" // string | 
+    repo := "repo_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet(context.Background(), orgId, id, owner, repo).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet`: GitRepository
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+**owner** | **string** |  | 
+**repo** | **string** |  | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+
+### Return type
+
+[**GitRepository**](GitRepository.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPost
+
+> ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPost(ctx, orgId, id).GitIntegrationVerifyRequest(gitIntegrationVerifyRequest).Execute()
+
+Verify a git integration against a repository
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+    gitIntegrationVerifyRequest := *openapiclient.NewGitIntegrationVerifyRequest("RepoUrl_example") // GitIntegrationVerifyRequest | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPost(context.Background(), orgId, id).GitIntegrationVerifyRequest(gitIntegrationVerifyRequest).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **gitIntegrationVerifyRequest** | [**GitIntegrationVerifyRequest**](GitIntegrationVerifyRequest.md) |  | 
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdGitIntegrationsPost
+
+> GitIntegration ApiV1OrganizationsOrgIdGitIntegrationsPost(ctx, orgId).GitIntegration(gitIntegration).Execute()
+
+Create a git integration for the organization
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    gitIntegration := *openapiclient.NewGitIntegration("Host_example") // GitIntegration | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsPost(context.Background(), orgId).GitIntegration(gitIntegration).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdGitIntegrationsPost`: GitIntegration
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdGitIntegrationsPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **gitIntegration** | [**GitIntegration**](GitIntegration.md) |  | 
+
+### Return type
+
+[**GitIntegration**](GitIntegration.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## ApiV1OrganizationsOrgIdInvitesGet
 
 > OrgInviteList ApiV1OrganizationsOrgIdInvitesGet(ctx, orgId).Status(status).Execute()
@@ -2143,9 +3020,435 @@ Name | Type | Description  | Notes
 [[Back to README]](../README.md)
 
 
+## ApiV1OrganizationsOrgIdRegistryCredentialsGet
+
+> RegistryCredentialList ApiV1OrganizationsOrgIdRegistryCredentialsGet(ctx, orgId).Execute()
+
+List registry credentials for the organization
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsGet(context.Background(), orgId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdRegistryCredentialsGet`: RegistryCredentialList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdRegistryCredentialsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+### Return type
+
+[**RegistryCredentialList**](RegistryCredentialList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete
+
+> RegistryCredentialDeleteResponse ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete(ctx, orgId, id).Execute()
+
+Delete a registry credential
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete(context.Background(), orgId, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete`: RegistryCredentialDeleteResponse
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdRegistryCredentialsIdDeleteRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**RegistryCredentialDeleteResponse**](RegistryCredentialDeleteResponse.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdRegistryCredentialsIdGet
+
+> RegistryCredential ApiV1OrganizationsOrgIdRegistryCredentialsIdGet(ctx, orgId, id).Execute()
+
+Get a registry credential
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsIdGet(context.Background(), orgId, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsIdGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdRegistryCredentialsIdGet`: RegistryCredential
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsIdGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdRegistryCredentialsIdGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+### Return type
+
+[**RegistryCredential**](RegistryCredential.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdRegistryCredentialsIdPut
+
+> RegistryCredential ApiV1OrganizationsOrgIdRegistryCredentialsIdPut(ctx, orgId, id).RegistryCredential(registryCredential).Execute()
+
+Update a registry credential (username/password rotation)
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+    registryCredential := *openapiclient.NewRegistryCredential("Host_example", "Username_example") // RegistryCredential | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsIdPut(context.Background(), orgId, id).RegistryCredential(registryCredential).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsIdPut``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdRegistryCredentialsIdPut`: RegistryCredential
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsIdPut`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdRegistryCredentialsIdPutRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **registryCredential** | [**RegistryCredential**](RegistryCredential.md) |  | 
+
+### Return type
+
+[**RegistryCredential**](RegistryCredential.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPost
+
+> ApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPost(ctx, orgId, id).RegistryCredentialVerifyRequest(registryCredentialVerifyRequest).Execute()
+
+Verify a registry credential against a repository
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    id := "id_example" // string | The id of record
+    registryCredentialVerifyRequest := *openapiclient.NewRegistryCredentialVerifyRequest("Repository_example") // RegistryCredentialVerifyRequest | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPost(context.Background(), orgId, id).RegistryCredentialVerifyRequest(registryCredentialVerifyRequest).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **registryCredentialVerifyRequest** | [**RegistryCredentialVerifyRequest**](RegistryCredentialVerifyRequest.md) |  | 
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdRegistryCredentialsPost
+
+> RegistryCredential ApiV1OrganizationsOrgIdRegistryCredentialsPost(ctx, orgId).RegistryCredential(registryCredential).Execute()
+
+Create a registry credential for the organization
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    registryCredential := *openapiclient.NewRegistryCredential("Host_example", "Username_example") // RegistryCredential | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsPost(context.Background(), orgId).RegistryCredential(registryCredential).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdRegistryCredentialsPost`: RegistryCredential
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdRegistryCredentialsPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdRegistryCredentialsPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+ **registryCredential** | [**RegistryCredential**](RegistryCredential.md) |  | 
+
+### Return type
+
+[**RegistryCredential**](RegistryCredential.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## ApiV1OrganizationsOrgIdSecretsGet
 
-> SecretList ApiV1OrganizationsOrgIdSecretsGet(ctx, orgId).Name(name).Execute()
+> SecretList ApiV1OrganizationsOrgIdSecretsGet(ctx, orgId).Name(name).IncludeManaged(includeManaged).Execute()
 
 List all secrets the user has access to across all teams
 
@@ -2166,10 +3469,11 @@ import (
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
     name := "name_example" // string | Filter by secret name (optional)
+    includeManaged := true // bool | Include system-managed secrets materialized from inline credentials (optional) (default to false)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsGet(context.Background(), orgId).Name(name).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdSecretsGet(context.Background(), orgId).Name(name).IncludeManaged(includeManaged).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdSecretsGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -2196,6 +3500,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
  **name** | **string** | Filter by secret name | 
+ **includeManaged** | **bool** | Include system-managed secrets materialized from inline credentials | [default to false]
 
 ### Return type
 
@@ -4053,7 +5358,7 @@ Name | Type | Description  | Notes
 
 ## ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet
 
-> SecretList ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet(ctx, orgId, teamName).Name(name).Execute()
+> SecretList ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet(ctx, orgId, teamName).Name(name).IncludeManaged(includeManaged).Execute()
 
 List all secrets for a team
 
@@ -4073,10 +5378,11 @@ func main() {
     orgId := "orgId_example" // string | The ID of the organization
     teamName := "teamName_example" // string | The name of the team
     name := "name_example" // string | Filter by secret name (optional)
+    includeManaged := true // bool | Include system-managed secrets materialized from inline credentials (optional) (default to false)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet(context.Background(), orgId, teamName).Name(name).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet(context.Background(), orgId, teamName).Name(name).IncludeManaged(includeManaged).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -4105,6 +5411,7 @@ Name | Type | Description  | Notes
 
 
  **name** | **string** | Filter by secret name | 
+ **includeManaged** | **bool** | Include system-managed secrets materialized from inline credentials | [default to false]
 
 ### Return type
 
@@ -6991,6 +8298,68 @@ Name | Type | Description  | Notes
 
 - **Content-Type**: Not defined
 - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1WebhooksGithubPost
+
+> ApiV1WebhooksGithubPost(ctx).RequestBody(requestBody).Execute()
+
+GitHub webhook receiver (unauthenticated, HMAC-verified)
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    requestBody := map[string]interface{}{"key": interface{}(123)} // map[string]interface{} | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1WebhooksGithubPost(context.Background()).RequestBody(requestBody).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1WebhooksGithubPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1WebhooksGithubPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **requestBody** | **map[string]interface{}** |  | 
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)

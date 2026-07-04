@@ -21,6 +21,11 @@ type ImageBuild struct {
 	UpdatedAt         time.Time
 }
 
+const (
+	DefaultDockerfilePath = "Dockerfile"
+	DefaultBuildContext   = "."
+)
+
 type BuildConfigSpec struct {
 	SourceContext           BuildContextSource   `json:"source_context"`
 	ContextPathWithinSource string               `json:"context_path_within_source"`
@@ -28,6 +33,13 @@ type BuildConfigSpec struct {
 	SourceRevision          BuildSourceRevision  `json:"source_revision"`
 	BuildImageRepository    BuildImageRepository `json:"build_image_repository"`
 	RegistrySecretRef       *SecretReference     `json:"registry_secret_ref,omitempty"` // Push credentials
+	// PushRegistryCredentialID pins an org-level registry credential for the
+	// push target, overriding host auto-attach.
+	PushRegistryCredentialID string `json:"push_registry_credential_id,omitempty"`
+
+	// PushInlineCredentials carries inline push credentials from the API to
+	// the managed-secret materializer; never persisted.
+	PushInlineCredentials *InlineCredentials `json:"-" gorm:"-"`
 }
 
 type BuildImageRepository struct {
@@ -109,6 +121,22 @@ type VolumeBuildSource struct {
 type GitBuildSource struct {
 	RepoURL      string           `json:"repo_url"`
 	GitSecretRef *SecretReference `json:"git_secret_ref,omitempty"` // Git credentials for private repositories
+	// IntegrationID pins an org-level git integration for clone auth,
+	// overriding host auto-attach. Resolution lands with git integrations.
+	IntegrationID string `json:"integration_id,omitempty"`
+
+	// InlineCredentials carries inline clone credentials from the API to the
+	// managed-secret materializer; never persisted.
+	InlineCredentials *InlineCredentials `json:"-" gorm:"-"`
+}
+
+// InlineCredentials is transient credential material supplied inline on a
+// source slot. It is materialized into a managed secret before storage and is
+// never persisted or serialized itself.
+type InlineCredentials struct {
+	Username  string `json:"-"`
+	Password  string `json:"-"`
+	SaveToOrg bool   `json:"-"`
 }
 
 type ImageBuildStatus struct {

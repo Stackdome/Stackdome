@@ -16,9 +16,12 @@ import (
 
 // PreviewGitRepository struct for PreviewGitRepository
 type PreviewGitRepository struct {
-	RepoUrl      string  `json:"repo_url"`
-	BaseBranch   *string `json:"base_branch,omitempty"`
-	GitSecretRef *string `json:"git_secret_ref,omitempty"`
+	RepoUrl    string  `json:"repo_url"`
+	BaseBranch *string `json:"base_branch,omitempty"`
+	// Org-level git integration override for clone auth
+	IntegrationId         *string            `json:"integration_id,omitempty"`
+	Credentials           *InlineCredentials `json:"credentials,omitempty"`
+	CredentialsConfigured *bool              `json:"credentials_configured,omitempty"`
 }
 
 // NewPreviewGitRepository instantiates a new PreviewGitRepository object
@@ -95,36 +98,100 @@ func (o *PreviewGitRepository) SetBaseBranch(v string) {
 	o.BaseBranch = &v
 }
 
-// GetGitSecretRef returns the GitSecretRef field value if set, zero value otherwise.
-func (o *PreviewGitRepository) GetGitSecretRef() string {
-	if o == nil || o.GitSecretRef == nil {
+// GetIntegrationId returns the IntegrationId field value if set, zero value otherwise.
+func (o *PreviewGitRepository) GetIntegrationId() string {
+	if o == nil || o.IntegrationId == nil {
 		var ret string
 		return ret
 	}
-	return *o.GitSecretRef
+	return *o.IntegrationId
 }
 
-// GetGitSecretRefOk returns a tuple with the GitSecretRef field value if set, nil otherwise
+// GetIntegrationIdOk returns a tuple with the IntegrationId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *PreviewGitRepository) GetGitSecretRefOk() (*string, bool) {
-	if o == nil || o.GitSecretRef == nil {
+func (o *PreviewGitRepository) GetIntegrationIdOk() (*string, bool) {
+	if o == nil || o.IntegrationId == nil {
 		return nil, false
 	}
-	return o.GitSecretRef, true
+	return o.IntegrationId, true
 }
 
-// HasGitSecretRef returns a boolean if a field has been set.
-func (o *PreviewGitRepository) HasGitSecretRef() bool {
-	if o != nil && o.GitSecretRef != nil {
+// HasIntegrationId returns a boolean if a field has been set.
+func (o *PreviewGitRepository) HasIntegrationId() bool {
+	if o != nil && o.IntegrationId != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetGitSecretRef gets a reference to the given string and assigns it to the GitSecretRef field.
-func (o *PreviewGitRepository) SetGitSecretRef(v string) {
-	o.GitSecretRef = &v
+// SetIntegrationId gets a reference to the given string and assigns it to the IntegrationId field.
+func (o *PreviewGitRepository) SetIntegrationId(v string) {
+	o.IntegrationId = &v
+}
+
+// GetCredentials returns the Credentials field value if set, zero value otherwise.
+func (o *PreviewGitRepository) GetCredentials() InlineCredentials {
+	if o == nil || o.Credentials == nil {
+		var ret InlineCredentials
+		return ret
+	}
+	return *o.Credentials
+}
+
+// GetCredentialsOk returns a tuple with the Credentials field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PreviewGitRepository) GetCredentialsOk() (*InlineCredentials, bool) {
+	if o == nil || o.Credentials == nil {
+		return nil, false
+	}
+	return o.Credentials, true
+}
+
+// HasCredentials returns a boolean if a field has been set.
+func (o *PreviewGitRepository) HasCredentials() bool {
+	if o != nil && o.Credentials != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetCredentials gets a reference to the given InlineCredentials and assigns it to the Credentials field.
+func (o *PreviewGitRepository) SetCredentials(v InlineCredentials) {
+	o.Credentials = &v
+}
+
+// GetCredentialsConfigured returns the CredentialsConfigured field value if set, zero value otherwise.
+func (o *PreviewGitRepository) GetCredentialsConfigured() bool {
+	if o == nil || o.CredentialsConfigured == nil {
+		var ret bool
+		return ret
+	}
+	return *o.CredentialsConfigured
+}
+
+// GetCredentialsConfiguredOk returns a tuple with the CredentialsConfigured field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PreviewGitRepository) GetCredentialsConfiguredOk() (*bool, bool) {
+	if o == nil || o.CredentialsConfigured == nil {
+		return nil, false
+	}
+	return o.CredentialsConfigured, true
+}
+
+// HasCredentialsConfigured returns a boolean if a field has been set.
+func (o *PreviewGitRepository) HasCredentialsConfigured() bool {
+	if o != nil && o.CredentialsConfigured != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetCredentialsConfigured gets a reference to the given bool and assigns it to the CredentialsConfigured field.
+func (o *PreviewGitRepository) SetCredentialsConfigured(v bool) {
+	o.CredentialsConfigured = &v
 }
 
 func (o PreviewGitRepository) MarshalJSON() ([]byte, error) {
@@ -135,8 +202,14 @@ func (o PreviewGitRepository) MarshalJSON() ([]byte, error) {
 	if o.BaseBranch != nil {
 		toSerialize["base_branch"] = o.BaseBranch
 	}
-	if o.GitSecretRef != nil {
-		toSerialize["git_secret_ref"] = o.GitSecretRef
+	if o.IntegrationId != nil {
+		toSerialize["integration_id"] = o.IntegrationId
+	}
+	if o.Credentials != nil {
+		toSerialize["credentials"] = o.Credentials
+	}
+	if o.CredentialsConfigured != nil {
+		toSerialize["credentials_configured"] = o.CredentialsConfigured
 	}
 	return json.Marshal(toSerialize)
 }
