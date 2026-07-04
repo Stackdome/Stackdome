@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check, HardDrive, Plus, Search } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { blockCatalog, BLOCK_CATEGORY_META } from "@/pages/stacks/data/blocks/registry";
 import { BlockPicker } from "@/pages/stacks/components/wizard/block-picker";
@@ -75,25 +76,54 @@ export function AddResourcePopover({
               <div className="mb-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
                 Storage
               </div>
-              <button
-                type="button"
-                disabled={!canAddVolume}
-                title={canAddVolume ? undefined : "Add a service first — volumes attach to a service."}
-                onClick={() => {
-                  setOpen(false);
-                  onAddVolume();
-                }}
-                className="flex min-h-[60px] w-full items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
-                  <HardDrive className="size-[18px]" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-foreground">Volume</span>
-                  <span className="block truncate font-mono text-[11px] text-muted-foreground">persistent storage</span>
-                </span>
-                <Plus className="h-[17px] w-[17px] text-primary" />
-              </button>
+              {!canAddVolume ? (
+                <Tooltip delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <button
+                        type="button"
+                        disabled={!canAddVolume}
+                        onClick={() => {
+                          setOpen(false);
+                          onAddVolume();
+                        }}
+                        className="flex min-h-[60px] w-full items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
+                          <HardDrive className="size-[18px]" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-foreground">Volume</span>
+                          <span className="block truncate font-mono text-[11px] text-muted-foreground">persistent storage</span>
+                        </span>
+                        <Plus className="h-[17px] w-[17px] text-primary" />
+                      </button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    Add a service first — volumes attach to a service.
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!canAddVolume}
+                  onClick={() => {
+                    setOpen(false);
+                    onAddVolume();
+                  }}
+                  className="flex min-h-[60px] w-full items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
+                    <HardDrive className="size-[18px]" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-foreground">Volume</span>
+                    <span className="block truncate font-mono text-[11px] text-muted-foreground">persistent storage</span>
+                  </span>
+                  <Plus className="h-[17px] w-[17px] text-primary" />
+                </button>
+              )}
             </div>
           ) : null}
           {visibleAddons.length > 0 && (
