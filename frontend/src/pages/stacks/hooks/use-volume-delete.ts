@@ -93,6 +93,7 @@ export function useVolumeDelete({
         const fresh2 = await getStackById(ids.orgId, ids.teamName, ids.stackId);
         draftSync.notifyExternalUpdate(fresh2);
         onServerRefresh(fresh2);
+        toast({ title: "Volume deleted", description: `"${name}" and its data were deleted.` });
         return true;
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 409) {

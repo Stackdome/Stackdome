@@ -69,7 +69,7 @@ beforeEach(() => {
 
 describe("useVolumeDelete", () => {
   it("happy path: flush -> refetch (id lookup) -> deleteVolume(id) -> refetch -> notify+refresh, true", async () => {
-    const { args, flush, notifyExternalUpdate, onServerRefresh } = mkArgs();
+    const { args, flush, notifyExternalUpdate, onServerRefresh, toast } = mkArgs();
     mockedGetStack
       .mockResolvedValueOnce(mkStack([{ id: "vol-1", name: "data" }]))
       .mockResolvedValueOnce(mkStack([]));
@@ -87,6 +87,10 @@ describe("useVolumeDelete", () => {
     expect(mockedDelete).toHaveBeenCalledWith("org-1", "alpha", "vol-1");
     expect(notifyExternalUpdate).toHaveBeenCalledTimes(1);
     expect(onServerRefresh).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith({
+      title: "Volume deleted",
+      description: '"data" and its data were deleted.',
+    });
     expect(result.current.deleting).toBe(false);
   });
 
