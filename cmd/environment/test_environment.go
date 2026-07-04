@@ -299,6 +299,9 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		OAuthStateStore: pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
 			SessionFactory: te.DBSession,
 		}),
+		OrganisationStore: pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
+			SessionFactory: te.DBSession,
+		}),
 		GitHubAppClient: githubapp.NewClient(githubapp.ClientSpec{
 			BaseURL: te.Config.GitHubAPIBaseURL,
 		}),

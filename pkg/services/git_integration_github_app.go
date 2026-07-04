@@ -2,9 +2,6 @@ package services
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -15,7 +12,9 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/clients/githubapp"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/google/go-github/v88/github"
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 )
 
 const (
@@ -24,16 +23,17 @@ const (
 	// githubHost is the host github_app integrations cover.
 	githubHost = "github.com"
 
-	githubAppsBaseURL          = "https://github.com"
-	manifestCallbackPath       = "/api/v1/git-integrations/github/manifest/callback"
-	githubWebhookPath          = "/api/v1/webhooks/github"
-	githubWebhookSignaturePref = "sha256="
+	githubAppsBaseURL    = "https://github.com"
+	manifestCallbackPath = "/api/v1/git-integrations/github/manifest/callback"
+	githubWebhookPath    = "/api/v1/webhooks/github"
 
 	// GitHub webhook event and action names.
-	GitHubEventInstallation      = "installation"
-	GitHubEventPush              = "push"
-	githubInstallationActCreated = "created"
-	githubInstallationActDeleted = "deleted"
+	GitHubEventInstallation        = "installation"
+	GitHubEventPush                = "push"
+	githubInstallationActCreated   = "created"
+	githubInstallationActDeleted   = "deleted"
+	githubInstallationActSuspend   = "suspend"
+	githubInstallationActUnsuspend = "unsuspend"
 )
 
 // CreateGitHubAppManifest starts the manifest flow: it creates (or reuses) the
@@ -66,6 +66,11 @@ func (s *gitIntegrationService) CreateGitHubAppManifest(ctx context.Context, org
 		return nil, errors.Conflict("a GitHub App is already installed for this organisation")
 	}
 
+	org, serr := s.organisations.Get(ctx, organisationID)
+	if serr != nil {
+		return nil, serr
+	}
+
 	state := fmt.Sprintf("%s:%s", uuid.NewString(), integration.ID)
 	if serr := s.oauthStates.Create(ctx, &models.OAuthState{
 		State:     state,
@@ -76,35 +81,64 @@ func (s *gitIntegrationService) CreateGitHubAppManifest(ctx context.Context, org
 	}
 
 	hub := strings.TrimSuffix(s.externalURL, "/")
-	manifest := map[string]any{
-		"name":         githubAppName(organisationID),
-		"url":          hub,
-		"redirect_url": hub + manifestCallbackPath,
-		"setup_url":    hub,
-		"public":       true,
-		"hook_attributes": map[string]any{
-			"url": hub + githubWebhookPath,
+	manifest := githubapp.AppManifest{
+		Name:           githubAppName(org.Name, organisationID),
+		URL:            hub,
+		RedirectURL:    hub + manifestCallbackPath,
+		SetupURL:       hub,
+		Public:         true,
+		HookAttributes: githubapp.AppHookAttributes{URL: hub + githubWebhookPath},
+		DefaultPermissions: map[string]string{
+			githubapp.PermContents: githubapp.PermLevelRead,
+			githubapp.PermMetadata: githubapp.PermLevelRead,
 		},
-		"default_permissions": map[string]any{
-			"contents": "read",
-			"metadata": "read",
-		},
-		"default_events": []string{GitHubEventPush, GitHubEventInstallation},
+		DefaultEvents: []string{GitHubEventPush, GitHubEventInstallation},
+	}
+	// The API contract exposes the manifest as a free-form object, so marshal
+	// the typed manifest into the generic map the model carries.
+	manifestMap, err := manifestToMap(manifest)
+	if err != nil {
+		return nil, err
 	}
 
 	return &models.GitHubAppManifestFlow{
-		Manifest:  manifest,
+		Manifest:  manifestMap,
 		GitHubURL: fmt.Sprintf("%s/settings/apps/new?state=%s", githubAppsBaseURL, state),
 		State:     state,
 	}, nil
 }
 
-func githubAppName(organisationID string) string {
-	suffix := organisationID
-	if len(suffix) > 8 {
-		suffix = suffix[:8]
+func manifestToMap(manifest githubapp.AppManifest) (map[string]any, *errors.ServiceError) {
+	raw, err := json.Marshal(manifest)
+	if err != nil {
+		return nil, errors.GeneralError("failed to encode GitHub App manifest: %s", err.Error())
 	}
-	return "stackdome-" + suffix
+	var out map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, errors.GeneralError("failed to encode GitHub App manifest: %s", err.Error())
+	}
+	return out, nil
+}
+
+// githubAppName derives the default GitHub App name from the org name (the
+// user can edit it on GitHub's create page). GitHub App names are globally
+// unique and limited to ~34 chars of [a-z0-9-], so the org name is slugified
+// and the org id is a fallback when the name has no usable characters. In a
+// future shared-app (SaaS) mode this per-org naming is unused — one platform
+// app is named once.
+func githubAppName(orgName, organisationID string) string {
+	const prefix = "stackdome-"
+	s := slug.Make(orgName)
+	if max := 34 - len(prefix); len(s) > max {
+		s = strings.Trim(s[:max], "-")
+	}
+	if s == "" {
+		s = strings.ToLower(organisationID)
+		if len(s) > 8 {
+			s = s[:8]
+		}
+	}
+	return prefix + s
 }
 
 // HandleGitHubManifestCallback finishes the manifest flow: it validates the
@@ -200,7 +234,7 @@ func (s *gitIntegrationService) ListInstallations(ctx context.Context, integrati
 				GitIntegrationID:    integrationID,
 				InstallationID:      installation.ID,
 				AccountLogin:        installation.AccountLogin,
-				AccountType:         installation.AccountType,
+				AccountType:         models.GitAccountType(installation.AccountType),
 				RepositorySelection: installation.RepositorySelection,
 			}); serr != nil {
 				return nil, serr
@@ -272,60 +306,52 @@ func (s *gitIntegrationService) ListRepositoryBranches(ctx context.Context, inte
 	return branches, nil
 }
 
-// githubWebhookPayload is the subset of GitHub webhook payloads we act on.
-type githubWebhookPayload struct {
-	Action       string `json:"action"`
-	Installation struct {
-		ID    int64 `json:"id"`
-		AppID int64 `json:"app_id"`
-
-		Account struct {
-			Login string `json:"login"`
-			Type  string `json:"type"`
-		} `json:"account"`
-		RepositorySelection string `json:"repository_selection"`
-	} `json:"installation"`
-}
-
-// ProcessGitHubWebhook handles installation lifecycle deliveries. The
-// integration is located by the app ID in the payload and the delivery is
-// HMAC-verified against that integration's webhook secret before any state
-// changes. Unmatched or uninteresting events are dropped.
+// ProcessGitHubWebhook handles installation lifecycle deliveries. The event is
+// parsed with go-github, the integration is located by the app ID in the
+// payload, and the delivery is HMAC-verified against that integration's webhook
+// secret before any state changes. Unmatched or uninteresting events are
+// dropped. suspend/unsuspend are treated as uninstall/reinstall so a suspended
+// installation is never used to mint tokens.
 func (s *gitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event string, payload []byte, signature string) *errors.ServiceError {
 	if event != GitHubEventInstallation {
 		// push (and everything else) is accepted and dropped for now.
 		return nil
 	}
 
-	var parsed githubWebhookPayload
-	if err := json.Unmarshal(payload, &parsed); err != nil {
+	parsed, err := github.ParseWebHook(event, payload)
+	if err != nil {
 		return errors.BadRequest("malformed webhook payload: %s", err.Error())
 	}
-	if parsed.Installation.AppID == 0 {
+	installEvent, ok := parsed.(*github.InstallationEvent)
+	if !ok {
+		return nil
+	}
+	install := installEvent.GetInstallation()
+	if install.GetAppID() == 0 {
 		return errors.BadRequest("webhook payload has no installation app id")
 	}
 
-	integration, creds, serr := s.findAppByID(ctx, parsed.Installation.AppID)
+	integration, creds, serr := s.findAppByID(ctx, install.GetAppID())
 	if serr != nil {
 		return serr
 	}
-	if !verifyWebhookSignature(payload, signature, creds.WebhookSecret) {
+	if err := github.ValidateSignature(signature, payload, []byte(creds.WebhookSecret)); err != nil {
 		return errors.Forbidden("webhook signature verification failed")
 	}
 
-	switch parsed.Action {
-	case githubInstallationActCreated:
+	switch installEvent.GetAction() {
+	case githubInstallationActCreated, githubInstallationActUnsuspend:
 		if _, serr := s.installations.Upsert(ctx, &models.GitInstallation{
 			GitIntegrationID:    integration.ID,
-			InstallationID:      parsed.Installation.ID,
-			AccountLogin:        parsed.Installation.Account.Login,
-			AccountType:         parsed.Installation.Account.Type,
-			RepositorySelection: parsed.Installation.RepositorySelection,
+			InstallationID:      install.GetID(),
+			AccountLogin:        install.GetAccount().GetLogin(),
+			AccountType:         models.GitAccountType(install.GetAccount().GetType()),
+			RepositorySelection: install.GetRepositorySelection(),
 		}); serr != nil {
 			return serr
 		}
-	case githubInstallationActDeleted:
-		if serr := s.installations.DeleteByInstallationID(ctx, integration.ID, parsed.Installation.ID); serr != nil {
+	case githubInstallationActDeleted, githubInstallationActSuspend:
+		if serr := s.installations.DeleteByInstallationID(ctx, integration.ID, install.GetID()); serr != nil {
 			return serr
 		}
 	default:
@@ -333,16 +359,6 @@ func (s *gitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event 
 	}
 
 	return s.syncInstallationStatus(ctx, integration)
-}
-
-func verifyWebhookSignature(payload []byte, signature, secret string) bool {
-	if secret == "" || !strings.HasPrefix(signature, githubWebhookSignaturePref) {
-		return false
-	}
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(payload)
-	expected := hex.EncodeToString(mac.Sum(nil))
-	return hmac.Equal([]byte(expected), []byte(strings.TrimPrefix(signature, githubWebhookSignaturePref)))
 }
 
 // InternalMintForRepo mints an installation token for the org's installed

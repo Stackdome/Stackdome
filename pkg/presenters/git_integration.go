@@ -89,7 +89,7 @@ func PresentGitInstallation(in *models.GitInstallation) openapi.GitInstallation 
 	res.SetId(in.ID)
 	res.SetInstallationId(in.InstallationID)
 	res.SetAccountLogin(in.AccountLogin)
-	res.SetAccountType(in.AccountType)
+	res.SetAccountType(string(in.AccountType))
 	res.SetRepositorySelection(in.RepositorySelection)
 	res.SetCreatedAt(in.CreatedAt)
 	return res

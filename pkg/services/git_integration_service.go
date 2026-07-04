@@ -64,6 +64,7 @@ type GitIntegrationServiceSpec struct {
 	Store             stores.GitIntegrationStore
 	InstallationStore stores.GitInstallationStore
 	OAuthStateStore   stores.OAuthStateStore
+	OrganisationStore stores.OrganisationStore
 	GitHubAppClient   githubapp.Client
 	EncryptionService EncryptionService
 	Permissions       auth.PermissionService
@@ -79,6 +80,7 @@ type gitIntegrationService struct {
 	store             stores.GitIntegrationStore
 	installations     stores.GitInstallationStore
 	oauthStates       stores.OAuthStateStore
+	organisations     stores.OrganisationStore
 	githubApp         githubapp.Client
 	encryptionService EncryptionService
 	permissions       auth.PermissionService
@@ -96,6 +98,7 @@ func NewGitIntegrationService(spec GitIntegrationServiceSpec) GitIntegrationServ
 		store:             spec.Store,
 		installations:     spec.InstallationStore,
 		oauthStates:       spec.OAuthStateStore,
+		organisations:     spec.OrganisationStore,
 		githubApp:         spec.GitHubAppClient,
 		encryptionService: spec.EncryptionService,
 		permissions:       spec.Permissions,

@@ -419,6 +419,9 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OAuthStateStore: pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
 			SessionFactory: d.DBSession,
 		}),
+		OrganisationStore: pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
+			SessionFactory: d.DBSession,
+		}),
 		GitHubAppClient: githubapp.NewClient(githubapp.ClientSpec{
 			BaseURL: d.Config.GitHubAPIBaseURL,
 		}),

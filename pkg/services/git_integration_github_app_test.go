@@ -21,6 +21,7 @@ type githubAppServiceMocks struct {
 	store         *mocks.MockGitIntegrationStore
 	installations *mocks.MockGitInstallationStore
 	oauthStates   *mocks.MockOAuthStateStore
+	organisations *mocks.MockOrganisationStore
 	appClient     *mocks.MockGitHubAppClient
 	encryption    EncryptionService
 }
@@ -37,13 +38,17 @@ func newGitHubAppServiceForTest(t *testing.T) (GitIntegrationService, *githubApp
 		store:         mocks.NewMockGitIntegrationStore(ctrl),
 		installations: mocks.NewMockGitInstallationStore(ctrl),
 		oauthStates:   mocks.NewMockOAuthStateStore(ctrl),
+		organisations: mocks.NewMockOrganisationStore(ctrl),
 		appClient:     mocks.NewMockGitHubAppClient(ctrl),
 		encryption:    newTestEncryptionService(t),
 	}
+	deps.organisations.EXPECT().Get(gomock.Any(), gomock.Any()).
+		Return(&models.Organisation{ID: "org-1", Name: "Acme Corp"}, nil).AnyTimes()
 	svc := NewGitIntegrationService(GitIntegrationServiceSpec{
 		Store:             deps.store,
 		InstallationStore: deps.installations,
 		OAuthStateStore:   deps.oauthStates,
+		OrganisationStore: deps.organisations,
 		GitHubAppClient:   deps.appClient,
 		EncryptionService: deps.encryption,
 		Permissions:       permissions,
@@ -110,6 +115,9 @@ func TestCreateGitHubAppManifestShape(t *testing.T) {
 	}
 	if flow.Manifest["public"] != true {
 		t.Fatal("expected a public app manifest")
+	}
+	if flow.Manifest["name"] != "stackdome-acme-corp" {
+		t.Fatalf("expected name slugified from org name, got %v", flow.Manifest["name"])
 	}
 	if !strings.Contains(flow.GitHubURL, "state=") {
 		t.Fatalf("expected state in github url, got %q", flow.GitHubURL)
