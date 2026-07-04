@@ -3369,6 +3369,13 @@ type ApiApiV1OrganizationsOrgIdSecretsGetRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService
 	orgId      string
+	name       *string
+}
+
+// Filter by secret name
+func (r ApiApiV1OrganizationsOrgIdSecretsGetRequest) Name(name string) ApiApiV1OrganizationsOrgIdSecretsGetRequest {
+	r.name = &name
+	return r
 }
 
 func (r ApiApiV1OrganizationsOrgIdSecretsGetRequest) Execute() (*SecretList, *http.Response, error) {
@@ -3415,6 +3422,9 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsGetExecute(r ApiApiV1O
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 
+	if r.name != nil {
+		localVarQueryParams.Add("name", parameterToString(*r.name, ""))
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 
@@ -6678,6 +6688,13 @@ type ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest struct {
 	ApiService *DefaultApiService
 	orgId      string
 	teamName   string
+	name       *string
+}
+
+// Filter by secret name
+func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest) Name(name string) ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest {
+	r.name = &name
+	return r
 }
 
 func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest) Execute() (*SecretList, *http.Response, error) {
@@ -6725,6 +6742,9 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetExecut
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 
+	if r.name != nil {
+		localVarQueryParams.Add("name", parameterToString(*r.name, ""))
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 

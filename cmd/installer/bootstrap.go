@@ -279,9 +279,6 @@ func registerCluster(token, orgID, clusterURL, caData, saToken string) (string, 
 			"name": "default-registry",
 			"spec": map[string]interface{}{
 				"backend_storage_size": "50Gi",
-				"max_repositories":     10,
-				"tags_per_repository":  5,
-				"delete_untagged":      true,
 			},
 		},
 	})

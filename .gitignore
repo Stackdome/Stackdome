@@ -11,6 +11,7 @@ dev_env.yaml
 
 .superpowers/
 .worktrees/
+docs/superpowers/
 
 # Vite output. .gitkeep tracked so //go:embed succeeds before first build.
 pkg/web/dist/*

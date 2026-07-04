@@ -312,9 +312,6 @@ func (cm *ClientManager) registerClusterViaAPI(ctx context.Context, clusterURL, 
 			Spec: &openapi.ClusterImageRegistrySpec{
 				BackendStorageSize:  ptr.To("10Gi"),
 				BackendStorageClass: ptr.To("standard"),
-				MaxRepositories:     ptr.To(int32(100)),
-				TagsPerRepository:   ptr.To(int32(50)),
-				DeleteUntagged:      ptr.To(bool(true)),
 			},
 		},
 	}

@@ -925,7 +925,10 @@ export interface paths {
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Filter by secret name */
+                    name?: string;
+                };
                 header?: never;
                 path: {
                     /** @description The ID of the organization */
@@ -3764,7 +3767,10 @@ export interface paths {
         /** List all secrets for a team */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Filter by secret name */
+                    name?: string;
+                };
                 header?: never;
                 path: {
                     /** @description The ID of the organization */
@@ -5991,6 +5997,96 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List preview configs for a team */
+        get: operations["listPreviewConfigs"];
+        put?: never;
+        /** Create a new preview config */
+        post: operations["createPreviewConfig"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a specific preview config */
+        get: operations["getPreviewConfig"];
+        /** Update a preview config */
+        put: operations["updatePreviewConfig"];
+        post?: never;
+        /** Delete a preview config */
+        delete: operations["deletePreviewConfig"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List preview stacks for a team */
+        get: operations["listPreviewStacks"];
+        put?: never;
+        /** Create a new preview stack */
+        post: operations["createPreviewStack"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a specific preview stack */
+        get: operations["getPreviewStack"];
+        put?: never;
+        post?: never;
+        /** Delete a preview stack */
+        delete: operations["deletePreviewStack"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync a preview stack */
+        post: operations["syncPreviewStack"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6252,12 +6348,9 @@ export interface components {
             revision: components["schemas"]["GitRepoRevision"];
         };
         GitRepoRevision: {
-            branch?: {
-                name?: string;
-                head_sha?: string;
-            };
-            commit?: string;
+            branch?: string;
             tag?: string;
+            commit?: string;
         };
         RemoteSource: {
             path: string;
@@ -6353,7 +6446,14 @@ export interface components {
             lifecycle_config?: components["schemas"]["LifecycleConfig"];
             ports?: components["schemas"]["Port"][];
             readonly outputs?: components["schemas"]["OutputDescriptor"][];
-            stateful?: boolean;
+            /**
+             * @default Service
+             * @enum {string}
+             */
+            workload_type: "Service" | "StatefulService" | "Worker" | "Job" | "CronJob";
+            schedule?: string;
+            /** Format: int32 */
+            replicas?: number;
             readonly status?: components["schemas"]["StackResourceStatus"];
         };
         StackResourceList: {
@@ -6588,9 +6688,6 @@ export interface components {
         ClusterImageRegistrySpec: {
             backend_storage_size?: string;
             backend_storage_class?: string;
-            max_repositories?: number;
-            tags_per_repository?: number;
-            delete_untagged?: boolean;
         };
         ClusterImageRegistryStatus: {
             state?: components["schemas"]["ClusterImageRegistryState"];
@@ -6607,6 +6704,15 @@ export interface components {
             observed_revision?: string;
             conditions?: components["schemas"]["Condition"][];
             last_failure?: components["schemas"]["StackResourceFailure"];
+            /** Format: int32 */
+            readonly replicas?: number;
+            /** Format: int32 */
+            readonly available_replicas?: number;
+            /** Format: int32 */
+            readonly updated_replicas?: number;
+            /** Format: date-time */
+            readonly last_run_time?: string;
+            readonly last_run_succeeded?: boolean;
         };
         ContainerFailureDetail: {
             /** @enum {string} */
@@ -6670,7 +6776,7 @@ export interface components {
         };
         /** @description The image repository to push the built image to */
         ImageRepository: {
-            external_image_repo_url?: string;
+            external_image_ref?: string;
             use_internal_registry?: boolean;
         };
         BuildSourceContext: {
@@ -7306,6 +7412,123 @@ export interface components {
             missing?: boolean;
             message?: string;
         };
+        PreviewGitRepository: {
+            repo_url: string;
+            base_branch?: string;
+            git_secret_ref?: string;
+        };
+        StackPreviewConfig: {
+            readonly id?: string;
+            readonly organisation_id?: string;
+            readonly team_id?: string;
+            readonly user_id?: string;
+            name?: string;
+            description?: string;
+            git_repository?: components["schemas"]["PreviewGitRepository"];
+            stackfile_path?: string;
+            max_active_previews?: number;
+            labels?: components["schemas"]["Label"][];
+            annotations?: components["schemas"]["Annotation"][];
+            /** Format: date-time */
+            readonly created_at?: string;
+            /** Format: date-time */
+            readonly updated_at?: string;
+        };
+        StackPreviewConfigCreate: {
+            name: string;
+            git_repository: components["schemas"]["PreviewGitRepository"];
+            description?: string;
+            stackfile_path?: string;
+            max_active_previews?: number;
+            labels?: components["schemas"]["Label"][];
+            annotations?: components["schemas"]["Annotation"][];
+        };
+        StackPreviewConfigUpdate: {
+            description?: string;
+            stackfile_path?: string;
+            max_active_previews?: number;
+            git_repository?: components["schemas"]["PreviewGitRepository"];
+            labels?: components["schemas"]["Label"][];
+            annotations?: components["schemas"]["Annotation"][];
+        };
+        StackPreviewConfigList: {
+            items?: components["schemas"]["StackPreviewConfig"][];
+            /** @description Total number of records */
+            total?: number;
+            /** @description Current page number */
+            page?: number;
+            /** @description Number of items per page */
+            page_size?: number;
+            /** @description Total number of pages */
+            total_pages?: number;
+        };
+        PreviewStack: {
+            readonly id?: string;
+            readonly organisation_id?: string;
+            readonly team_id?: string;
+            readonly user_id?: string;
+            config_id?: string;
+            stack_id?: string;
+            name?: string;
+            pr_number?: string;
+            branch?: string;
+            readonly commit?: string;
+            /** @enum {string} */
+            source?: "manual" | "webhook";
+            readonly status?: {
+                /** @enum {string} */
+                phase?: "Provisioning" | "Deploying" | "Ready" | "Failed" | "Deleting";
+                reason?: string;
+                message?: string;
+                outputs?: {
+                    commit_sha?: string;
+                    urls?: {
+                        resource?: string;
+                        url?: string;
+                    }[];
+                };
+            };
+            image_overrides?: {
+                [key: string]: string;
+            };
+            labels?: components["schemas"]["Label"][];
+            annotations?: components["schemas"]["Annotation"][];
+            /** Format: date-time */
+            deletion_timestamp?: string;
+            /** Format: date-time */
+            readonly created_at?: string;
+            /** Format: date-time */
+            readonly updated_at?: string;
+        };
+        PreviewStackCreate: {
+            config_id: string;
+            pr_number: string;
+            branch: string;
+            commit?: string;
+            stackfile_content?: string;
+            image_overrides?: {
+                [key: string]: string;
+            };
+        };
+        PreviewStackSync: {
+            commit?: string;
+            stackfile_content?: string;
+            force_sync?: boolean;
+            image_overrides?: {
+                [key: string]: string;
+            };
+        };
+        PreviewStackList: {
+            items?: components["schemas"]["PreviewStack"][];
+            /** @description Total number of records */
+            total?: number;
+            /** @description Current page number */
+            page?: number;
+            /** @description Number of items per page */
+            page_size?: number;
+            /** @description Total number of pages */
+            total_pages?: number;
+        };
     };
     responses: never;
     parameters: {
@@ -7450,6 +7673,620 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    listPreviewConfigs: {
+        parameters: {
+            query?: {
+                /** @description Page number */
+                page?: number;
+                /** @description Number of items per page */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of preview configs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackPreviewConfigList"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createPreviewConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StackPreviewConfigCreate"];
+            };
+        };
+        responses: {
+            /** @description Preview config created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackPreviewConfig"];
+                };
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Preview config already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getPreviewConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackPreviewConfig"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Preview config not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    updatePreviewConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StackPreviewConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Preview config updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackPreviewConfig"];
+                };
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Preview config not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deletePreviewConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Preview config deleted successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Preview config not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listPreviewStacks: {
+        parameters: {
+            query?: {
+                /** @description Page number */
+                page?: number;
+                /** @description Number of items per page */
+                page_size?: number;
+                /** @description Filter by preview config ID */
+                config_id?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of preview stacks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewStackList"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createPreviewStack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewStackCreate"];
+            };
+        };
+        responses: {
+            /** @description Preview stack creation initiated */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewStack"];
+                };
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Preview stack already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getPreviewStack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewStack"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Preview stack not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deletePreviewStack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Preview stack deletion initiated */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewStack"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Preview stack not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    syncPreviewStack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PreviewStackSync"];
+            };
+        };
+        responses: {
+            /** @description Preview stack sync initiated */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewStack"];
+                };
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Preview stack not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
         };
     };

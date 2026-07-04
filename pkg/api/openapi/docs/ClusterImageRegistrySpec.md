@@ -6,9 +6,6 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **BackendStorageSize** | Pointer to **string** |  | [optional] 
 **BackendStorageClass** | Pointer to **string** |  | [optional] 
-**MaxRepositories** | Pointer to **int32** |  | [optional] 
-**TagsPerRepository** | Pointer to **int32** |  | [optional] 
-**DeleteUntagged** | Pointer to **bool** |  | [optional] 
 
 ## Methods
 
@@ -78,81 +75,6 @@ SetBackendStorageClass sets BackendStorageClass field to given value.
 `func (o *ClusterImageRegistrySpec) HasBackendStorageClass() bool`
 
 HasBackendStorageClass returns a boolean if a field has been set.
-
-### GetMaxRepositories
-
-`func (o *ClusterImageRegistrySpec) GetMaxRepositories() int32`
-
-GetMaxRepositories returns the MaxRepositories field if non-nil, zero value otherwise.
-
-### GetMaxRepositoriesOk
-
-`func (o *ClusterImageRegistrySpec) GetMaxRepositoriesOk() (*int32, bool)`
-
-GetMaxRepositoriesOk returns a tuple with the MaxRepositories field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetMaxRepositories
-
-`func (o *ClusterImageRegistrySpec) SetMaxRepositories(v int32)`
-
-SetMaxRepositories sets MaxRepositories field to given value.
-
-### HasMaxRepositories
-
-`func (o *ClusterImageRegistrySpec) HasMaxRepositories() bool`
-
-HasMaxRepositories returns a boolean if a field has been set.
-
-### GetTagsPerRepository
-
-`func (o *ClusterImageRegistrySpec) GetTagsPerRepository() int32`
-
-GetTagsPerRepository returns the TagsPerRepository field if non-nil, zero value otherwise.
-
-### GetTagsPerRepositoryOk
-
-`func (o *ClusterImageRegistrySpec) GetTagsPerRepositoryOk() (*int32, bool)`
-
-GetTagsPerRepositoryOk returns a tuple with the TagsPerRepository field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetTagsPerRepository
-
-`func (o *ClusterImageRegistrySpec) SetTagsPerRepository(v int32)`
-
-SetTagsPerRepository sets TagsPerRepository field to given value.
-
-### HasTagsPerRepository
-
-`func (o *ClusterImageRegistrySpec) HasTagsPerRepository() bool`
-
-HasTagsPerRepository returns a boolean if a field has been set.
-
-### GetDeleteUntagged
-
-`func (o *ClusterImageRegistrySpec) GetDeleteUntagged() bool`
-
-GetDeleteUntagged returns the DeleteUntagged field if non-nil, zero value otherwise.
-
-### GetDeleteUntaggedOk
-
-`func (o *ClusterImageRegistrySpec) GetDeleteUntaggedOk() (*bool, bool)`
-
-GetDeleteUntaggedOk returns a tuple with the DeleteUntagged field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetDeleteUntagged
-
-`func (o *ClusterImageRegistrySpec) SetDeleteUntagged(v bool)`
-
-SetDeleteUntagged sets DeleteUntagged field to given value.
-
-### HasDeleteUntagged
-
-`func (o *ClusterImageRegistrySpec) HasDeleteUntagged() bool`
-
-HasDeleteUntagged returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

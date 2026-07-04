@@ -16,9 +16,9 @@ import (
 
 // GitRepoRevision struct for GitRepoRevision
 type GitRepoRevision struct {
-	Branch *GitRepoRevisionBranch `json:"branch,omitempty"`
-	Commit *string                `json:"commit,omitempty"`
-	Tag    *string                `json:"tag,omitempty"`
+	Branch *string `json:"branch,omitempty"`
+	Tag    *string `json:"tag,omitempty"`
+	Commit *string `json:"commit,omitempty"`
 }
 
 // NewGitRepoRevision instantiates a new GitRepoRevision object
@@ -39,9 +39,9 @@ func NewGitRepoRevisionWithDefaults() *GitRepoRevision {
 }
 
 // GetBranch returns the Branch field value if set, zero value otherwise.
-func (o *GitRepoRevision) GetBranch() GitRepoRevisionBranch {
+func (o *GitRepoRevision) GetBranch() string {
 	if o == nil || o.Branch == nil {
-		var ret GitRepoRevisionBranch
+		var ret string
 		return ret
 	}
 	return *o.Branch
@@ -49,7 +49,7 @@ func (o *GitRepoRevision) GetBranch() GitRepoRevisionBranch {
 
 // GetBranchOk returns a tuple with the Branch field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GitRepoRevision) GetBranchOk() (*GitRepoRevisionBranch, bool) {
+func (o *GitRepoRevision) GetBranchOk() (*string, bool) {
 	if o == nil || o.Branch == nil {
 		return nil, false
 	}
@@ -65,41 +65,9 @@ func (o *GitRepoRevision) HasBranch() bool {
 	return false
 }
 
-// SetBranch gets a reference to the given GitRepoRevisionBranch and assigns it to the Branch field.
-func (o *GitRepoRevision) SetBranch(v GitRepoRevisionBranch) {
+// SetBranch gets a reference to the given string and assigns it to the Branch field.
+func (o *GitRepoRevision) SetBranch(v string) {
 	o.Branch = &v
-}
-
-// GetCommit returns the Commit field value if set, zero value otherwise.
-func (o *GitRepoRevision) GetCommit() string {
-	if o == nil || o.Commit == nil {
-		var ret string
-		return ret
-	}
-	return *o.Commit
-}
-
-// GetCommitOk returns a tuple with the Commit field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *GitRepoRevision) GetCommitOk() (*string, bool) {
-	if o == nil || o.Commit == nil {
-		return nil, false
-	}
-	return o.Commit, true
-}
-
-// HasCommit returns a boolean if a field has been set.
-func (o *GitRepoRevision) HasCommit() bool {
-	if o != nil && o.Commit != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetCommit gets a reference to the given string and assigns it to the Commit field.
-func (o *GitRepoRevision) SetCommit(v string) {
-	o.Commit = &v
 }
 
 // GetTag returns the Tag field value if set, zero value otherwise.
@@ -134,16 +102,48 @@ func (o *GitRepoRevision) SetTag(v string) {
 	o.Tag = &v
 }
 
+// GetCommit returns the Commit field value if set, zero value otherwise.
+func (o *GitRepoRevision) GetCommit() string {
+	if o == nil || o.Commit == nil {
+		var ret string
+		return ret
+	}
+	return *o.Commit
+}
+
+// GetCommitOk returns a tuple with the Commit field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GitRepoRevision) GetCommitOk() (*string, bool) {
+	if o == nil || o.Commit == nil {
+		return nil, false
+	}
+	return o.Commit, true
+}
+
+// HasCommit returns a boolean if a field has been set.
+func (o *GitRepoRevision) HasCommit() bool {
+	if o != nil && o.Commit != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetCommit gets a reference to the given string and assigns it to the Commit field.
+func (o *GitRepoRevision) SetCommit(v string) {
+	o.Commit = &v
+}
+
 func (o GitRepoRevision) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Branch != nil {
 		toSerialize["branch"] = o.Branch
 	}
-	if o.Commit != nil {
-		toSerialize["commit"] = o.Commit
-	}
 	if o.Tag != nil {
 		toSerialize["tag"] = o.Tag
+	}
+	if o.Commit != nil {
+		toSerialize["commit"] = o.Commit
 	}
 	return json.Marshal(toSerialize)
 }

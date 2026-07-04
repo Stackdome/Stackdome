@@ -41,9 +41,6 @@ func PresentClusterImageRegistrySpec(clusterImageRegistry *models.ClusterImageRe
 	}
 	res := &openapi.ClusterImageRegistrySpec{
 		BackendStorageSize: &clusterImageRegistry.BackendStorageSize,
-		MaxRepositories:    ptr.To(int32(clusterImageRegistry.MaxRepositories)),
-		TagsPerRepository:  ptr.To(int32(clusterImageRegistry.TagsPerRepository)),
-		DeleteUntagged:     &clusterImageRegistry.DeleteUntagged,
 	}
 
 	if clusterImageRegistry.BackendStorageClass != "" {
@@ -88,15 +85,6 @@ func ConvertClusterImageRegistry(in *openapi.ClusterImageRegistry) *models.Clust
 		}
 		if in.Spec.HasBackendStorageClass() {
 			res.BackendStorageClass = in.Spec.GetBackendStorageClass()
-		}
-		if in.Spec.HasMaxRepositories() {
-			res.MaxRepositories = int(in.Spec.GetMaxRepositories())
-		}
-		if in.Spec.HasTagsPerRepository() {
-			res.TagsPerRepository = int(in.Spec.GetTagsPerRepository())
-		}
-		if in.Spec.HasDeleteUntagged() {
-			res.DeleteUntagged = in.Spec.GetDeleteUntagged()
 		}
 	}
 	return res

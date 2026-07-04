@@ -51,6 +51,10 @@ type APIClient struct {
 
 	DefaultApi *DefaultApiService
 
+	PreviewConfigsApi *PreviewConfigsApiService
+
+	PreviewStacksApi *PreviewStacksApiService
+
 	ReleasesApi *ReleasesApiService
 }
 
@@ -71,6 +75,8 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 
 	// API Services
 	c.DefaultApi = (*DefaultApiService)(&c.common)
+	c.PreviewConfigsApi = (*PreviewConfigsApiService)(&c.common)
+	c.PreviewStacksApi = (*PreviewStacksApiService)(&c.common)
 	c.ReleasesApi = (*ReleasesApiService)(&c.common)
 
 	return c

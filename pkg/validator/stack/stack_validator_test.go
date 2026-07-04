@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/mocks"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
@@ -751,6 +752,369 @@ func TestValidateForCreateRejectsValueRefWithNeitherOutputNorTemplate(t *testing
 	err := v.ValidateForCreate(context.Background(), spec)
 	if err == nil {
 		t.Fatal("expected empty value ref to be rejected")
+	}
+}
+
+func TestValidateForCreateAcceptsValidWorkloadTypes(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	for _, wt := range []models.WorkloadType{
+		models.WorkloadTypeService,
+		models.WorkloadTypeStatefulService,
+		models.WorkloadTypeWorker,
+		models.WorkloadTypeJob,
+		models.WorkloadTypeCronJob,
+	} {
+		t.Run(string(wt), func(t *testing.T) {
+			sr := &models.StackResource{
+				Name:         "app",
+				WorkloadType: wt,
+				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
+			}
+			if wt == models.WorkloadTypeCronJob {
+				sr.Schedule = "*/5 * * * *"
+			}
+			if wt == models.WorkloadTypeService || wt == models.WorkloadTypeStatefulService {
+				sr.Ports = []models.Port{{Name: "http", Number: 8080, Protocol: "http"}}
+			}
+			spec := &models.Stack{
+				Name:           "test-stack",
+				OrganisationID: "org-1",
+				UserID:         "user-1",
+				StackResources: []*models.StackResource{sr},
+			}
+			err := v.ValidateForCreate(context.Background(), spec)
+			if err != nil {
+				t.Fatalf("expected workload type %s to be accepted, got %v", wt, err)
+			}
+		})
+	}
+}
+
+func TestValidateForCreateRejectsInvalidWorkloadType(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := &models.Stack{
+		Name:           "test-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{
+				Name:         "app",
+				WorkloadType: models.WorkloadType("InvalidType"),
+				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
+			},
+		},
+	}
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected invalid workload type to be rejected")
+	}
+	if got, want := err.Error(), "error: stack resource 'app' has unsupported workload_type 'InvalidType'"; got != want {
+		t.Fatalf("unexpected error: got %q want %q", got, want)
+	}
+}
+
+func TestValidateForCreateCronJobRequiresSchedule(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := &models.Stack{
+		Name:           "test-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{
+				Name:         "cron",
+				WorkloadType: models.WorkloadTypeCronJob,
+				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
+			},
+		},
+	}
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected CronJob without schedule to be rejected")
+	}
+	if got, want := err.Error(), "error: stack resource 'cron' requires schedule for workload_type 'CronJob'"; got != want {
+		t.Fatalf("unexpected error: got %q want %q", got, want)
+	}
+}
+
+func TestValidateForCreateRejectsScheduleForNonCronJob(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := &models.Stack{
+		Name:           "test-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{
+				Name:         "web",
+				WorkloadType: models.WorkloadTypeService,
+				Schedule:     "* * * * *",
+				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
+				Ports:        []models.Port{{Name: "http", Number: 8080, Protocol: "http"}},
+			},
+		},
+	}
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatal("expected schedule on non-CronJob to be rejected")
+	}
+	if got, want := err.Error(), "error: stack resource 'web' cannot set schedule for workload_type 'Service'"; got != want {
+		t.Fatalf("unexpected error: got %q want %q", got, want)
+	}
+}
+
+func TestValidateForCreateRejectsPortsOnWorkerJobCronJob(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	for _, wt := range []models.WorkloadType{
+		models.WorkloadTypeWorker,
+		models.WorkloadTypeJob,
+		models.WorkloadTypeCronJob,
+	} {
+		t.Run(string(wt), func(t *testing.T) {
+			sr := &models.StackResource{
+				Name:         "app",
+				WorkloadType: wt,
+				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
+				Ports:        []models.Port{{Name: "http", Number: 8080, Protocol: "http"}},
+			}
+			if wt == models.WorkloadTypeCronJob {
+				sr.Schedule = "*/5 * * * *"
+			}
+			spec := &models.Stack{
+				Name:           "test-stack",
+				OrganisationID: "org-1",
+				UserID:         "user-1",
+				StackResources: []*models.StackResource{sr},
+			}
+			err := v.ValidateForCreate(context.Background(), spec)
+			if err == nil {
+				t.Fatalf("expected ports on %s to be rejected", wt)
+			}
+		})
+	}
+}
+
+func TestValidateForCreateRejectsReplicasOnJobCronJob(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	replicas := int32(3)
+	for _, wt := range []models.WorkloadType{
+		models.WorkloadTypeJob,
+		models.WorkloadTypeCronJob,
+	} {
+		t.Run(string(wt), func(t *testing.T) {
+			sr := &models.StackResource{
+				Name:         "app",
+				WorkloadType: wt,
+				Replicas:     &replicas,
+				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
+			}
+			if wt == models.WorkloadTypeCronJob {
+				sr.Schedule = "*/5 * * * *"
+			}
+			spec := &models.Stack{
+				Name:           "test-stack",
+				OrganisationID: "org-1",
+				UserID:         "user-1",
+				StackResources: []*models.StackResource{sr},
+			}
+			err := v.ValidateForCreate(context.Background(), spec)
+			if err == nil {
+				t.Fatalf("expected replicas on %s to be rejected", wt)
+			}
+		})
+	}
+}
+
+func TestBuildConfigSpecValidateRejectsCommitOnly(t *testing.T) {
+	cfg := models.BuildConfigSpec{
+		SourceContext: models.BuildContextSource{
+			Volume: &models.VolumeBuildSource{SourceVolumeName: "src"},
+		},
+		SourceRevision: models.BuildSourceRevision{
+			Git: &models.GitRevision{Commit: "abc1234"},
+		},
+		BuildImageRepository: models.BuildImageRepository{UseInClusterRegistry: true},
+	}
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected commit-only git revision to be rejected")
+	}
+	if got, want := err.Error(), "a branch or tag is required"; got != want {
+		// The error message may include a prefix; check containment
+		if got != want && !containsSubstr(got, want) {
+			t.Fatalf("unexpected error: got %q want it to contain %q", got, want)
+		}
+	}
+}
+
+func TestBuildConfigSpecValidateAcceptsBranchAndCommit(t *testing.T) {
+	cfg := models.BuildConfigSpec{
+		SourceContext: models.BuildContextSource{
+			Volume: &models.VolumeBuildSource{SourceVolumeName: "src"},
+		},
+		SourceRevision: models.BuildSourceRevision{
+			Git: &models.GitRevision{
+				Branch: "main",
+				Commit: "abc1234",
+			},
+		},
+		BuildImageRepository: models.BuildImageRepository{UseInClusterRegistry: true},
+	}
+	err := cfg.Validate()
+	if err != nil {
+		t.Fatalf("expected branch+commit to validate, got %v", err)
+	}
+}
+
+func containsSubstr(s, sub string) bool {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
+}
+
+func TestValidateForCreatePushSecretHappyPath(t *testing.T) {
+	v, secrets := newValidatorWithMockedSecretService(t)
+	secrets.EXPECT().ValidateImageRegistrySecretForStackResource(gomock.Any(), "push-secret-1").Return(nil)
+
+	spec := &models.Stack{
+		Name:           "test",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{
+				Name: "api",
+				BuildConfig: &models.BuildConfigSpec{
+					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
+					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
+					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
+					RegistrySecretRef:    &models.SecretReference{SecretID: "push-secret-1"},
+				},
+			},
+		},
+	}
+	if err := v.ValidateForCreate(context.Background(), spec); err != nil {
+		t.Fatalf("expected push secret validation to pass, got %v", err)
+	}
+}
+
+func TestValidateForCreatePushSecretWrongType(t *testing.T) {
+	v, secrets := newValidatorWithMockedSecretService(t)
+	secrets.EXPECT().ValidateImageRegistrySecretForStackResource(gomock.Any(), "bad-secret").
+		Return(errors.BadRequest("secret type mismatch"))
+
+	spec := &models.Stack{
+		Name:           "test",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{
+				Name: "api",
+				BuildConfig: &models.BuildConfigSpec{
+					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
+					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
+					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
+					RegistrySecretRef:    &models.SecretReference{SecretID: "bad-secret"},
+				},
+			},
+		},
+	}
+	if err := v.ValidateForCreate(context.Background(), spec); err == nil {
+		t.Fatalf("expected push secret with wrong type to be rejected")
+	}
+}
+
+func TestValidateForCreatePushSecretEmptyID(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := &models.Stack{
+		Name:           "test",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{
+				Name: "api",
+				BuildConfig: &models.BuildConfigSpec{
+					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
+					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
+					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
+					RegistrySecretRef:    &models.SecretReference{SecretID: ""},
+				},
+			},
+		},
+	}
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatalf("expected empty push secret ID to be rejected")
+	}
+	if !containsSubstr(err.Error(), "empty push secret ID") {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+}
+
+func TestValidateForCreateRejectsNegativeReplicas(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	neg := int32(-1)
+	spec := &models.Stack{
+		Name:           "test",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{
+				Name:         "api",
+				WorkloadType: models.WorkloadTypeService,
+				Replicas:     &neg,
+				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
+			},
+		},
+	}
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err == nil {
+		t.Fatalf("expected negative replicas to be rejected")
+	}
+	if !containsSubstr(err.Error(), "cannot be negative") {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+}
+
+func TestValidateForCreateAcceptsCronDescriptorSchedule(t *testing.T) {
+	v := NewStackValidator(StackValidatorSpec{})
+	spec := &models.Stack{
+		Name:           "test",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{
+				Name:         "cleanup",
+				WorkloadType: models.WorkloadTypeCronJob,
+				Schedule:     "@daily",
+				ImageConfig:  &models.ImageConfigSpec{Image: "busybox:latest"},
+			},
+		},
+	}
+	if err := v.ValidateForCreate(context.Background(), spec); err != nil {
+		t.Fatalf("expected @daily schedule to be accepted, got %v", err)
+	}
+}
+
+func TestBuildConfigSpecValidateRejectsBranchAndTag(t *testing.T) {
+	cfg := models.BuildConfigSpec{
+		SourceContext: models.BuildContextSource{
+			Volume: &models.VolumeBuildSource{SourceVolumeName: "src"},
+		},
+		SourceRevision: models.BuildSourceRevision{
+			Git: &models.GitRevision{
+				Branch: "main",
+				Tag:    "v1.0.0",
+			},
+		},
+		BuildImageRepository: models.BuildImageRepository{UseInClusterRegistry: true},
+	}
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatalf("expected branch+tag to be rejected")
+	}
+	if !containsSubstr(err.Error(), "branch and tag cannot both be set") {
+		t.Fatalf("unexpected error: %s", err.Error())
 	}
 }
 

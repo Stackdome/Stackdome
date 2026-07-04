@@ -24,9 +24,6 @@ type ClusterImageRegistry struct {
 	Name                string `gorm:"not null;check:name <> ''" json:"name"`
 	BackendStorageSize  string `gorm:"not null;check:backend_storage_size <> ''" json:"backend_storage_size"`
 	BackendStorageClass string
-	MaxRepositories     int
-	TagsPerRepository   int
-	DeleteUntagged      bool
 	Status              *ClusterImageRegistryStatus `gorm:"type:jsonb" json:"status"`
 }
 

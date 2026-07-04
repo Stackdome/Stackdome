@@ -11,6 +11,11 @@ Name | Type | Description | Notes
 **ObservedRevision** | Pointer to **string** |  | [optional] 
 **Conditions** | Pointer to [**[]Condition**](Condition.md) |  | [optional] 
 **LastFailure** | Pointer to [**StackResourceFailure**](StackResourceFailure.md) |  | [optional] 
+**Replicas** | Pointer to **int32** |  | [optional] [readonly] 
+**AvailableReplicas** | Pointer to **int32** |  | [optional] [readonly] 
+**UpdatedReplicas** | Pointer to **int32** |  | [optional] [readonly] 
+**LastRunTime** | Pointer to **time.Time** |  | [optional] [readonly] 
+**LastRunSucceeded** | Pointer to **bool** |  | [optional] [readonly] 
 
 ## Methods
 
@@ -205,6 +210,131 @@ SetLastFailure sets LastFailure field to given value.
 `func (o *StackResourceStatus) HasLastFailure() bool`
 
 HasLastFailure returns a boolean if a field has been set.
+
+### GetReplicas
+
+`func (o *StackResourceStatus) GetReplicas() int32`
+
+GetReplicas returns the Replicas field if non-nil, zero value otherwise.
+
+### GetReplicasOk
+
+`func (o *StackResourceStatus) GetReplicasOk() (*int32, bool)`
+
+GetReplicasOk returns a tuple with the Replicas field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetReplicas
+
+`func (o *StackResourceStatus) SetReplicas(v int32)`
+
+SetReplicas sets Replicas field to given value.
+
+### HasReplicas
+
+`func (o *StackResourceStatus) HasReplicas() bool`
+
+HasReplicas returns a boolean if a field has been set.
+
+### GetAvailableReplicas
+
+`func (o *StackResourceStatus) GetAvailableReplicas() int32`
+
+GetAvailableReplicas returns the AvailableReplicas field if non-nil, zero value otherwise.
+
+### GetAvailableReplicasOk
+
+`func (o *StackResourceStatus) GetAvailableReplicasOk() (*int32, bool)`
+
+GetAvailableReplicasOk returns a tuple with the AvailableReplicas field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetAvailableReplicas
+
+`func (o *StackResourceStatus) SetAvailableReplicas(v int32)`
+
+SetAvailableReplicas sets AvailableReplicas field to given value.
+
+### HasAvailableReplicas
+
+`func (o *StackResourceStatus) HasAvailableReplicas() bool`
+
+HasAvailableReplicas returns a boolean if a field has been set.
+
+### GetUpdatedReplicas
+
+`func (o *StackResourceStatus) GetUpdatedReplicas() int32`
+
+GetUpdatedReplicas returns the UpdatedReplicas field if non-nil, zero value otherwise.
+
+### GetUpdatedReplicasOk
+
+`func (o *StackResourceStatus) GetUpdatedReplicasOk() (*int32, bool)`
+
+GetUpdatedReplicasOk returns a tuple with the UpdatedReplicas field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetUpdatedReplicas
+
+`func (o *StackResourceStatus) SetUpdatedReplicas(v int32)`
+
+SetUpdatedReplicas sets UpdatedReplicas field to given value.
+
+### HasUpdatedReplicas
+
+`func (o *StackResourceStatus) HasUpdatedReplicas() bool`
+
+HasUpdatedReplicas returns a boolean if a field has been set.
+
+### GetLastRunTime
+
+`func (o *StackResourceStatus) GetLastRunTime() time.Time`
+
+GetLastRunTime returns the LastRunTime field if non-nil, zero value otherwise.
+
+### GetLastRunTimeOk
+
+`func (o *StackResourceStatus) GetLastRunTimeOk() (*time.Time, bool)`
+
+GetLastRunTimeOk returns a tuple with the LastRunTime field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetLastRunTime
+
+`func (o *StackResourceStatus) SetLastRunTime(v time.Time)`
+
+SetLastRunTime sets LastRunTime field to given value.
+
+### HasLastRunTime
+
+`func (o *StackResourceStatus) HasLastRunTime() bool`
+
+HasLastRunTime returns a boolean if a field has been set.
+
+### GetLastRunSucceeded
+
+`func (o *StackResourceStatus) GetLastRunSucceeded() bool`
+
+GetLastRunSucceeded returns the LastRunSucceeded field if non-nil, zero value otherwise.
+
+### GetLastRunSucceededOk
+
+`func (o *StackResourceStatus) GetLastRunSucceededOk() (*bool, bool)`
+
+GetLastRunSucceededOk returns a tuple with the LastRunSucceeded field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetLastRunSucceeded
+
+`func (o *StackResourceStatus) SetLastRunSucceeded(v bool)`
+
+SetLastRunSucceeded sets LastRunSucceeded field to given value.
+
+### HasLastRunSucceeded
+
+`func (o *StackResourceStatus) HasLastRunSucceeded() bool`
+
+HasLastRunSucceeded returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

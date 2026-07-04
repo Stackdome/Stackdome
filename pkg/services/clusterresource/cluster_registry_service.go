@@ -97,10 +97,6 @@ func (s *clusterImageRegistryService) desiredObjectInCluster(registry *models.Cl
 			Storage: registryv1alpha1.RegistryStorageSpec{
 				Size: registry.BackendStorageSize,
 			},
-			RetentionPolicy: &registryv1alpha1.RetentionPolicySpec{
-				MaxRepositoryCount: ptr.To(int32(registry.MaxRepositories)),
-				TagsPerRepo:        ptr.To(int32(registry.TagsPerRepository)),
-			},
 			Port: int32(5000),
 		},
 	}

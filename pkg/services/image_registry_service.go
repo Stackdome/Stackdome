@@ -2,8 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
-	"net/url"
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
@@ -100,21 +98,8 @@ func (s *clusterImageRegistryService) PopulateInClusterRegistryUrlForResource(ct
 		}
 		return errors.GeneralError("failed to get cluster registry for organisation '%s': %s", orgID, err.Error())
 	}
-	if clusterRegistry.Status.State != models.RegistryStateRunning {
-		return errors.BadRequest("cluster registry '%s' is not running", clusterRegistry.Name)
-	}
-	registryURL := clusterRegistry.Status.RegistryUrl
-	if len(registryURL) == 0 {
-		return errors.BadRequest("cluster registry '%s' has no registry URL", clusterRegistry.Name)
-	}
 
-	urlObj, perr := url.Parse(registryURL)
-	if perr != nil {
-		return errors.BadRequest("invalid cluster registry URL '%s': %s", registryURL, perr.Error())
-	}
-
-	resource.BuildConfig.ImageRepositoryUrl = fmt.Sprintf(
-		"%s/%s/%s/%s", urlObj.Hostname(), orgID, stackName, resource.Name)
+	resource.BuildConfig.BuildImageRepository.ClusterRegistryName = clusterRegistry.Name
 	return nil
 }
 
@@ -280,15 +265,6 @@ func (s *clusterImageRegistryService) Delete(ctx context.Context, orgID, ID stri
 }
 
 func (s *clusterImageRegistryService) setDefaultValues(registry *models.ClusterImageRegistry) {
-	if registry.MaxRepositories == 0 {
-		registry.MaxRepositories = 10
-	}
-	if registry.TagsPerRepository == 0 {
-		registry.TagsPerRepository = 5
-	}
-	if !registry.DeleteUntagged {
-		registry.DeleteUntagged = true
-	}
 	if registry.BackendStorageSize == "" {
 		registry.BackendStorageSize = "50Gi"
 	}

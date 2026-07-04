@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
@@ -49,6 +50,11 @@ func NewVolumeClusterResourceService(spec VolumeClusterResourceServiceSpec) Volu
 }
 
 func (w *volumeClusterService) CreateVolumeInCluster(ctx context.Context, volume *models.Volume) *ClusterResourceError {
+	if err := w.resolveGitRevision(ctx, volume); err != nil {
+		w.logger.Errorf("failed to resolve git revision for volume '%s': %v", volume.ID, err)
+		return newError("failed to resolve git revision", err)
+	}
+
 	cluster, err := w.clusterService.GetClusterForOrg(ctx, volume.OrganisationID)
 	if err != nil {
 		w.logger.Errorf("failed to get cluster for org: %v", err)
@@ -117,6 +123,11 @@ func (w *volumeClusterService) UpdateVolumeGitRevisionInCluster(ctx context.Cont
 		return newError("git repo source is nil", fmt.Errorf("git repo source is nil"))
 	}
 
+	if err := w.resolveGitRevision(ctx, volume); err != nil {
+		w.logger.Errorf("failed to resolve git revision for volume '%s': %v", volume.ID, err)
+		return newError("failed to resolve git revision", err)
+	}
+
 	cluster, err := w.clusterService.GetClusterForOrg(ctx, volume.OrganisationID)
 	if err != nil {
 		w.logger.Errorf("failed to get cluster for org: %v", err)
@@ -143,14 +154,11 @@ func (w *volumeClusterService) UpdateVolumeGitRevisionInCluster(ctx context.Cont
 	updatedRevision := corev1alpha1.GitRepoRevision{}
 	switch volume.VolumeSource.GitRepoSource.Revision.Type() {
 	case models.Branch:
-		updatedRevision.Branch = &corev1alpha1.GitBranch{
-			Name: volume.VolumeSource.GitRepoSource.Revision.Branch.Name,
-		}
-		if volume.VolumeSource.GitRepoSource.Revision.Branch.HeadSha != "" {
-			updatedRevision.Branch.HeadSha = volume.VolumeSource.GitRepoSource.Revision.Branch.HeadSha
-		}
+		updatedRevision.Branch = volume.VolumeSource.GitRepoSource.Revision.Branch
+		updatedRevision.Commit = volume.VolumeSource.GitRepoSource.Revision.Commit
 	case models.Tag:
 		updatedRevision.Tag = volume.VolumeSource.GitRepoSource.Revision.Tag
+		updatedRevision.Commit = volume.VolumeSource.GitRepoSource.Revision.Commit
 	case models.Commit:
 		updatedRevision.Commit = volume.VolumeSource.GitRepoSource.Revision.Commit
 	default:
@@ -198,6 +206,23 @@ func (w *volumeClusterService) DeleteVolumeInCluster(ctx context.Context, volume
 		w.logger.Errorf("failed to delete  volume in cluster: %v", err)
 		return newError("failed to delete  volume in cluster", err)
 	}
+	return nil
+}
+
+func (w *volumeClusterService) resolveGitRevision(ctx context.Context, vol *models.Volume) error {
+	if vol.VolumeSource == nil || vol.VolumeSource.GitRepoSource == nil {
+		return nil
+	}
+	src := vol.VolumeSource.GitRepoSource
+	client, err := gitclient.NewGitClientForRepo(src.RepoUrl, gitclient.GitCredentials{})
+	if err != nil {
+		return fmt.Errorf("create git client: %w", err)
+	}
+	resolved, err := gitclient.ResolveGitRepoRevision(ctx, client, src.RepoUrl, src.Revision)
+	if err != nil {
+		return err
+	}
+	vol.VolumeSource.GitRepoSource.Revision = resolved
 	return nil
 }
 
@@ -251,11 +276,11 @@ func (w *volumeClusterService) desiredObjectInCluster(volume *models.Volume) (*s
 
 			switch volume.VolumeSource.GitRepoSource.Revision.Type() {
 			case models.Branch:
-				gitRevision.Branch = &corev1alpha1.GitBranch{
-					Name: volume.VolumeSource.GitRepoSource.Revision.Branch.Name,
-				}
+				gitRevision.Branch = volume.VolumeSource.GitRepoSource.Revision.Branch
+				gitRevision.Commit = volume.VolumeSource.GitRepoSource.Revision.Commit
 			case models.Tag:
 				gitRevision.Tag = volume.VolumeSource.GitRepoSource.Revision.Tag
+				gitRevision.Commit = volume.VolumeSource.GitRepoSource.Revision.Commit
 			case models.Commit:
 				gitRevision.Commit = volume.VolumeSource.GitRepoSource.Revision.Commit
 			default:

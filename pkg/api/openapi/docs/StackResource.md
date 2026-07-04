@@ -19,7 +19,9 @@ Name | Type | Description | Notes
 **LifecycleConfig** | Pointer to [**LifecycleConfig**](LifecycleConfig.md) |  | [optional] 
 **Ports** | Pointer to [**[]Port**](Port.md) |  | [optional] 
 **Outputs** | Pointer to [**[]OutputDescriptor**](OutputDescriptor.md) |  | [optional] [readonly] 
-**Stateful** | Pointer to **bool** |  | [optional] 
+**WorkloadType** | Pointer to **string** |  | [optional] [default to "Service"]
+**Schedule** | Pointer to **string** |  | [optional] 
+**Replicas** | Pointer to **int32** |  | [optional] 
 **Status** | Pointer to [**StackResourceStatus**](StackResourceStatus.md) |  | [optional] 
 
 ## Methods
@@ -411,30 +413,80 @@ SetOutputs sets Outputs field to given value.
 
 HasOutputs returns a boolean if a field has been set.
 
-### GetStateful
+### GetWorkloadType
 
-`func (o *StackResource) GetStateful() bool`
+`func (o *StackResource) GetWorkloadType() string`
 
-GetStateful returns the Stateful field if non-nil, zero value otherwise.
+GetWorkloadType returns the WorkloadType field if non-nil, zero value otherwise.
 
-### GetStatefulOk
+### GetWorkloadTypeOk
 
-`func (o *StackResource) GetStatefulOk() (*bool, bool)`
+`func (o *StackResource) GetWorkloadTypeOk() (*string, bool)`
 
-GetStatefulOk returns a tuple with the Stateful field if it's non-nil, zero value otherwise
+GetWorkloadTypeOk returns a tuple with the WorkloadType field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetStateful
+### SetWorkloadType
 
-`func (o *StackResource) SetStateful(v bool)`
+`func (o *StackResource) SetWorkloadType(v string)`
 
-SetStateful sets Stateful field to given value.
+SetWorkloadType sets WorkloadType field to given value.
 
-### HasStateful
+### HasWorkloadType
 
-`func (o *StackResource) HasStateful() bool`
+`func (o *StackResource) HasWorkloadType() bool`
 
-HasStateful returns a boolean if a field has been set.
+HasWorkloadType returns a boolean if a field has been set.
+
+### GetSchedule
+
+`func (o *StackResource) GetSchedule() string`
+
+GetSchedule returns the Schedule field if non-nil, zero value otherwise.
+
+### GetScheduleOk
+
+`func (o *StackResource) GetScheduleOk() (*string, bool)`
+
+GetScheduleOk returns a tuple with the Schedule field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetSchedule
+
+`func (o *StackResource) SetSchedule(v string)`
+
+SetSchedule sets Schedule field to given value.
+
+### HasSchedule
+
+`func (o *StackResource) HasSchedule() bool`
+
+HasSchedule returns a boolean if a field has been set.
+
+### GetReplicas
+
+`func (o *StackResource) GetReplicas() int32`
+
+GetReplicas returns the Replicas field if non-nil, zero value otherwise.
+
+### GetReplicasOk
+
+`func (o *StackResource) GetReplicasOk() (*int32, bool)`
+
+GetReplicasOk returns a tuple with the Replicas field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetReplicas
+
+`func (o *StackResource) SetReplicas(v int32)`
+
+SetReplicas sets Replicas field to given value.
+
+### HasReplicas
+
+`func (o *StackResource) HasReplicas() bool`
+
+HasReplicas returns a boolean if a field has been set.
 
 ### GetStatus
 

@@ -150,7 +150,7 @@ func (r *ImageBuildReconciler) createImageBuildInDB(
 		Spec: models.BuildConfigSpec{
 			DockerfilePath:          imageBuildCr.Spec.BuildContext.DockerfilePath,
 			ContextPathWithinSource: imageBuildCr.Spec.BuildContext.ContextPath,
-			ImageRepositoryUrl:      imageBuildCr.Spec.RegistryURL,
+			BuildImageRepository:    deriveImageRepository(imageBuildCr.Spec.Repository),
 			SourceContext:           *dbSourceContext,
 			SourceRevision:          dbSourceRevision,
 		},
@@ -172,24 +172,22 @@ func (r *ImageBuildReconciler) buildDBBuildSrcRevisionFromClusterObject(
 	switch {
 	case imageBuildCr.Spec.SourceRevision.Volume != nil:
 		res.Volume = &models.VolumeRevision{
-			CurrentVolumeHash: imageBuildCr.Spec.SourceRevision.Volume.CurrentVolumeHash,
+			CurrentVolumeHash: imageBuildCr.Spec.SourceRevision.Volume.RevisionString,
 		}
 	case imageBuildCr.Spec.SourceRevision.GitRepo != nil:
 		repoRevision := imageBuildCr.Spec.SourceRevision.GitRepo
-		res.Git = &models.GitRevision{}
-		switch {
-		case repoRevision.Tag != "":
+		res.Git = &models.GitRevision{
+			Commit: repoRevision.Commit,
+		}
+		if repoRevision.Branch != "" {
+			res.Git.Branch = repoRevision.Branch
+		}
+		if repoRevision.Tag != "" {
 			res.Git.Tag = repoRevision.Tag
-		case repoRevision.Branch != nil:
-			res.Git.Branch = &models.GitBranch{
-				Name:    repoRevision.Branch.Name,
-				HeadSha: repoRevision.Branch.HeadSha,
-			}
-		case repoRevision.Commit != "":
-			res.Git.Commit = repoRevision.Commit
-		default:
+		}
+		if repoRevision.Branch == "" && repoRevision.Tag == "" && repoRevision.Commit == "" {
 			return res, apperrors.GeneralError(
-				"exactly one of source_revision.git.tag, source_revision.git.branch or source_revision.git.commit must be specified",
+				"source_revision.git requires at least a branch or tag with a commit",
 			)
 		}
 	default:
@@ -289,4 +287,25 @@ func (r *ImageBuildReconciler) propagateBuildFailureToStackResource(
 		return serr.AsError()
 	}
 	return nil
+}
+
+func deriveImageRepository(repo corev1alpha1.ImageRepositorySpec) models.BuildImageRepository {
+	if repo.ClusterRegistryRef != nil {
+		return models.BuildImageRepository{
+			UseInClusterRegistry: true,
+			ClusterRegistryName:  repo.ClusterRegistryRef.Name,
+		}
+	}
+	insecure := false
+	if repo.External != nil && repo.External.TLS != nil {
+		insecure = repo.External.TLS.Insecure
+	}
+	var externalRef string
+	if repo.External != nil {
+		externalRef = repo.External.Host + "/" + repo.Repository
+	}
+	return models.BuildImageRepository{
+		InsecureRegistry: insecure,
+		ExternalImageRef: externalRef,
+	}
 }

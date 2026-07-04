@@ -94,16 +94,16 @@ func (g *GitRepoSource) Scan(value interface{}) error {
 }
 
 type GitRepoRevision struct {
-	Branch GitBranch `json:"branch"`
-	Tag    string    `json:"tag"`
-	Commit string    `json:"commit"`
+	Branch string `json:"branch"`
+	Tag    string `json:"tag"`
+	Commit string `json:"commit"`
 }
 
 // Valid
 func (g GitRepoRevision) IsValid() bool {
 	switch g.Type() {
 	case Branch:
-		return g.Branch.Name != ""
+		return g.Branch != ""
 	case Tag:
 		return g.Tag != ""
 	case Commit:
@@ -115,7 +115,7 @@ func (g GitRepoRevision) IsValid() bool {
 
 func (g GitRepoRevision) Type() GitRepoRevisionType {
 	switch {
-	case g.Branch.Name != "":
+	case g.Branch != "":
 		return Branch
 	case g.Tag != "":
 		return Tag
@@ -134,23 +134,6 @@ func (g *GitRepoRevision) Scan(value interface{}) error {
 	b, ok := value.([]byte)
 	if !ok {
 		return errors.New("type assertion to []byte for GitRepoRevision failed")
-	}
-	return json.Unmarshal(b, &g)
-}
-
-type GitBranch struct {
-	Name    string `json:"name"`
-	HeadSha string `json:"head_sha"`
-}
-
-func (g GitBranch) Value() (driver.Value, error) {
-	return json.Marshal(g)
-}
-
-func (g *GitBranch) Scan(value interface{}) error {
-	b, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte for GitBranch failed")
 	}
 	return json.Unmarshal(b, &g)
 }

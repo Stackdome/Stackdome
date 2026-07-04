@@ -288,6 +288,28 @@ func (s apiServer) routes() *mux.Router {
 	teamResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Update).Methods(http.MethodPut)
 	teamResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Delete).Methods(http.MethodDelete)
 
+	// Preview configs (team-scoped)
+	previewConfigHandler := handlers.NewStackPreviewConfigHandler(handlers.StackPreviewConfigHandlerSpec{
+		Service:     services.StackPreviewConfigService,
+		TeamService: services.TeamService,
+	})
+	teamResourceRouter.HandleFunc("/stack-preview-configs", previewConfigHandler.Create).Methods(http.MethodPost)
+	teamResourceRouter.HandleFunc("/stack-preview-configs", previewConfigHandler.List).Methods(http.MethodGet)
+	teamResourceRouter.HandleFunc("/stack-preview-configs/{id}", previewConfigHandler.Get).Methods(http.MethodGet)
+	teamResourceRouter.HandleFunc("/stack-preview-configs/{id}", previewConfigHandler.Update).Methods(http.MethodPut)
+	teamResourceRouter.HandleFunc("/stack-preview-configs/{id}", previewConfigHandler.Delete).Methods(http.MethodDelete)
+
+	// Preview stacks (team-scoped)
+	previewStackHandler := handlers.NewPreviewStackHandler(handlers.PreviewStackHandlerSpec{
+		Service:     services.PreviewStackService,
+		TeamService: services.TeamService,
+	})
+	teamResourceRouter.HandleFunc("/preview-stacks", previewStackHandler.Create).Methods(http.MethodPost)
+	teamResourceRouter.HandleFunc("/preview-stacks", previewStackHandler.List).Methods(http.MethodGet)
+	teamResourceRouter.HandleFunc("/preview-stacks/{id}", previewStackHandler.Get).Methods(http.MethodGet)
+	teamResourceRouter.HandleFunc("/preview-stacks/{id}", previewStackHandler.Delete).Methods(http.MethodDelete)
+	teamResourceRouter.HandleFunc("/preview-stacks/{id}/sync", previewStackHandler.Sync).Methods(http.MethodPost)
+
 	// Exclude /api/ and /health so unknown paths return JSON 404 instead of index.html.
 	mainRouter.PathPrefix("/").
 		MatcherFunc(func(r *http.Request, _ *mux.RouteMatch) bool {

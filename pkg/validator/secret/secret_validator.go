@@ -35,7 +35,11 @@ func (s *secretValidator) ValidateSecretData(secret *models.Secret) *errors.Serv
 		return errors.BadRequest("secret data cannot be empty")
 	}
 
-	switch secret.Type {
+	return s.ValidateSecretType(secret.Type, secret)
+}
+
+func (s *secretValidator) ValidateSecretType(secretType models.SecretType, secret *models.Secret) *errors.ServiceError {
+	switch secretType {
 	case models.SecretTypeDockerRegistry:
 		return s.validateDockerRegistrySecret(secret)
 	case models.SecretTypeGitCredentials:
@@ -49,13 +53,13 @@ func (s *secretValidator) ValidateSecretData(secret *models.Secret) *errors.Serv
 	case models.SecretTypeGeneric:
 		return s.validateGenericSecret(secret)
 	default:
-		return errors.BadRequest("unsupported secret type: %s", secret.Type)
+		return errors.BadRequest("unsupported secret type: %s", secretType)
 	}
 }
 
 // validateDockerRegistrySecret validates Docker registry secret data
 func (s *secretValidator) validateDockerRegistrySecret(secret *models.Secret) *errors.ServiceError {
-	requiredFields := []string{models.RegistrySecretKey, models.UsernameSecretKey, models.PasswordSecretKey}
+	requiredFields := []string{models.UsernameSecretKey, models.PasswordSecretKey}
 
 	for _, field := range requiredFields {
 		if value, exists := secret.Data[field]; !exists || strings.TrimSpace(value) == "" {
@@ -63,8 +67,8 @@ func (s *secretValidator) validateDockerRegistrySecret(secret *models.Secret) *e
 		}
 	}
 
-	// Validate registry URL format
-	registry := secret.Data["registry"]
+	// Validate registry URL format if provided
+	registry := secret.Data[models.RegistrySecretKey]
 	if registry != "" {
 		// Basic validation - should not contain protocol if it's a domain
 		if strings.HasPrefix(registry, "http://") || strings.HasPrefix(registry, "https://") {
@@ -91,6 +95,10 @@ func (s *secretValidator) validateGitCredentialsSecret(secret *models.Secret) *e
 	}
 
 	return nil
+}
+
+func (s *secretValidator) ValidateGitCredentialsSecret(secret *models.Secret) *errors.ServiceError {
+	return s.validateGitCredentialsSecret(secret)
 }
 
 // validateUsernamePasswordSecret validates username/password secret data

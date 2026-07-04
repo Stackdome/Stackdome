@@ -22,7 +22,7 @@ func presentStackResourceStatus(status *models.StackResourceStatus) *openapi.Sta
 	if status == nil {
 		return nil
 	}
-	return &openapi.StackResourceStatus{
+	res := &openapi.StackResourceStatus{
 		State:                         ptr.To(string(status.State)),
 		ObservedRevision:              &status.ObservedCrRevision,
 		Conditions:                    presentConditions(status.Conditions),
@@ -30,7 +30,13 @@ func presentStackResourceStatus(status *models.StackResourceStatus) *openapi.Sta
 		InternalServiceName:           status.InternalServiceName,
 		LastRestartRequestProcessedAt: status.LastRestartRequestProcessedAt,
 		LastFailure:                   presentStackResourceFailure(status.LastFailure),
+		Replicas:                      &status.Replicas,
+		AvailableReplicas:             &status.AvailableReplicas,
+		UpdatedReplicas:               &status.UpdatedReplicas,
+		LastRunTime:                   status.LastRunTime,
+		LastRunSucceeded:              status.LastRunSucceeded,
 	}
+	return res
 }
 
 func presentStackResourceFailure(f *models.StackResourceFailure) *openapi.StackResourceFailure {
@@ -97,7 +103,9 @@ func presentStackResource(r *models.StackResource) openapi.StackResource {
 		LifecycleConfig: presentLifecycleConfig(r.LifecycleConfig),
 		Ports:           presentPorts(r.Ports),
 		Outputs:         presentOutputDescriptors(r.EnsureDeclaredOutputs()),
-		Stateful:        &r.StateFul,
+		WorkloadType:    (*string)(&r.WorkloadType),
+		Schedule:        &r.Schedule,
+		Replicas:        r.Replicas,
 		Status:          presentStackResourceStatus(r.Status),
 	}
 }

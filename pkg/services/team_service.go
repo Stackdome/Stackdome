@@ -227,7 +227,7 @@ func (s *teamService) checkTeamDependencies(ctx context.Context, teamID string) 
 		blocking = append(blocking, fmt.Sprintf("stacks (%d)", len(stacks)))
 	}
 
-	secrets, err := s.secretStore.ListByTeamID(ctx, teamID)
+	secrets, err := s.secretStore.ListByTeamID(ctx, teamID, stores.ListParams{})
 	if err != nil {
 		return errors.InternalServerError("failed to check team dependencies: %s", err.Reason)
 	}

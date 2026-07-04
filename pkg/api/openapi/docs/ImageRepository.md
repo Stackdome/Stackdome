@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**ExternalImageRepoUrl** | Pointer to **string** |  | [optional] 
+**ExternalImageRef** | Pointer to **string** |  | [optional] 
 **UseInternalRegistry** | Pointer to **bool** |  | [optional] 
 
 ## Methods
@@ -26,30 +26,30 @@ NewImageRepositoryWithDefaults instantiates a new ImageRepository object
 This constructor will only assign default values to properties that have it defined,
 but it doesn't guarantee that properties required by API are set
 
-### GetExternalImageRepoUrl
+### GetExternalImageRef
 
-`func (o *ImageRepository) GetExternalImageRepoUrl() string`
+`func (o *ImageRepository) GetExternalImageRef() string`
 
-GetExternalImageRepoUrl returns the ExternalImageRepoUrl field if non-nil, zero value otherwise.
+GetExternalImageRef returns the ExternalImageRef field if non-nil, zero value otherwise.
 
-### GetExternalImageRepoUrlOk
+### GetExternalImageRefOk
 
-`func (o *ImageRepository) GetExternalImageRepoUrlOk() (*string, bool)`
+`func (o *ImageRepository) GetExternalImageRefOk() (*string, bool)`
 
-GetExternalImageRepoUrlOk returns a tuple with the ExternalImageRepoUrl field if it's non-nil, zero value otherwise
+GetExternalImageRefOk returns a tuple with the ExternalImageRef field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetExternalImageRepoUrl
+### SetExternalImageRef
 
-`func (o *ImageRepository) SetExternalImageRepoUrl(v string)`
+`func (o *ImageRepository) SetExternalImageRef(v string)`
 
-SetExternalImageRepoUrl sets ExternalImageRepoUrl field to given value.
+SetExternalImageRef sets ExternalImageRef field to given value.
 
-### HasExternalImageRepoUrl
+### HasExternalImageRef
 
-`func (o *ImageRepository) HasExternalImageRepoUrl() bool`
+`func (o *ImageRepository) HasExternalImageRef() bool`
 
-HasExternalImageRepoUrl returns a boolean if a field has been set.
+HasExternalImageRef returns a boolean if a field has been set.
 
 ### GetUseInternalRegistry
 

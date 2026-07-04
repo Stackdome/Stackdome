@@ -24,6 +24,11 @@ type StackResourceStatus struct {
 	ObservedRevision              *string               `json:"observed_revision,omitempty"`
 	Conditions                    []Condition           `json:"conditions,omitempty"`
 	LastFailure                   *StackResourceFailure `json:"last_failure,omitempty"`
+	Replicas                      *int32                `json:"replicas,omitempty"`
+	AvailableReplicas             *int32                `json:"available_replicas,omitempty"`
+	UpdatedReplicas               *int32                `json:"updated_replicas,omitempty"`
+	LastRunTime                   *time.Time            `json:"last_run_time,omitempty"`
+	LastRunSucceeded              *bool                 `json:"last_run_succeeded,omitempty"`
 }
 
 // NewStackResourceStatus instantiates a new StackResourceStatus object
@@ -267,6 +272,166 @@ func (o *StackResourceStatus) SetLastFailure(v StackResourceFailure) {
 	o.LastFailure = &v
 }
 
+// GetReplicas returns the Replicas field value if set, zero value otherwise.
+func (o *StackResourceStatus) GetReplicas() int32 {
+	if o == nil || o.Replicas == nil {
+		var ret int32
+		return ret
+	}
+	return *o.Replicas
+}
+
+// GetReplicasOk returns a tuple with the Replicas field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackResourceStatus) GetReplicasOk() (*int32, bool) {
+	if o == nil || o.Replicas == nil {
+		return nil, false
+	}
+	return o.Replicas, true
+}
+
+// HasReplicas returns a boolean if a field has been set.
+func (o *StackResourceStatus) HasReplicas() bool {
+	if o != nil && o.Replicas != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetReplicas gets a reference to the given int32 and assigns it to the Replicas field.
+func (o *StackResourceStatus) SetReplicas(v int32) {
+	o.Replicas = &v
+}
+
+// GetAvailableReplicas returns the AvailableReplicas field value if set, zero value otherwise.
+func (o *StackResourceStatus) GetAvailableReplicas() int32 {
+	if o == nil || o.AvailableReplicas == nil {
+		var ret int32
+		return ret
+	}
+	return *o.AvailableReplicas
+}
+
+// GetAvailableReplicasOk returns a tuple with the AvailableReplicas field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackResourceStatus) GetAvailableReplicasOk() (*int32, bool) {
+	if o == nil || o.AvailableReplicas == nil {
+		return nil, false
+	}
+	return o.AvailableReplicas, true
+}
+
+// HasAvailableReplicas returns a boolean if a field has been set.
+func (o *StackResourceStatus) HasAvailableReplicas() bool {
+	if o != nil && o.AvailableReplicas != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetAvailableReplicas gets a reference to the given int32 and assigns it to the AvailableReplicas field.
+func (o *StackResourceStatus) SetAvailableReplicas(v int32) {
+	o.AvailableReplicas = &v
+}
+
+// GetUpdatedReplicas returns the UpdatedReplicas field value if set, zero value otherwise.
+func (o *StackResourceStatus) GetUpdatedReplicas() int32 {
+	if o == nil || o.UpdatedReplicas == nil {
+		var ret int32
+		return ret
+	}
+	return *o.UpdatedReplicas
+}
+
+// GetUpdatedReplicasOk returns a tuple with the UpdatedReplicas field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackResourceStatus) GetUpdatedReplicasOk() (*int32, bool) {
+	if o == nil || o.UpdatedReplicas == nil {
+		return nil, false
+	}
+	return o.UpdatedReplicas, true
+}
+
+// HasUpdatedReplicas returns a boolean if a field has been set.
+func (o *StackResourceStatus) HasUpdatedReplicas() bool {
+	if o != nil && o.UpdatedReplicas != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetUpdatedReplicas gets a reference to the given int32 and assigns it to the UpdatedReplicas field.
+func (o *StackResourceStatus) SetUpdatedReplicas(v int32) {
+	o.UpdatedReplicas = &v
+}
+
+// GetLastRunTime returns the LastRunTime field value if set, zero value otherwise.
+func (o *StackResourceStatus) GetLastRunTime() time.Time {
+	if o == nil || o.LastRunTime == nil {
+		var ret time.Time
+		return ret
+	}
+	return *o.LastRunTime
+}
+
+// GetLastRunTimeOk returns a tuple with the LastRunTime field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackResourceStatus) GetLastRunTimeOk() (*time.Time, bool) {
+	if o == nil || o.LastRunTime == nil {
+		return nil, false
+	}
+	return o.LastRunTime, true
+}
+
+// HasLastRunTime returns a boolean if a field has been set.
+func (o *StackResourceStatus) HasLastRunTime() bool {
+	if o != nil && o.LastRunTime != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLastRunTime gets a reference to the given time.Time and assigns it to the LastRunTime field.
+func (o *StackResourceStatus) SetLastRunTime(v time.Time) {
+	o.LastRunTime = &v
+}
+
+// GetLastRunSucceeded returns the LastRunSucceeded field value if set, zero value otherwise.
+func (o *StackResourceStatus) GetLastRunSucceeded() bool {
+	if o == nil || o.LastRunSucceeded == nil {
+		var ret bool
+		return ret
+	}
+	return *o.LastRunSucceeded
+}
+
+// GetLastRunSucceededOk returns a tuple with the LastRunSucceeded field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackResourceStatus) GetLastRunSucceededOk() (*bool, bool) {
+	if o == nil || o.LastRunSucceeded == nil {
+		return nil, false
+	}
+	return o.LastRunSucceeded, true
+}
+
+// HasLastRunSucceeded returns a boolean if a field has been set.
+func (o *StackResourceStatus) HasLastRunSucceeded() bool {
+	if o != nil && o.LastRunSucceeded != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLastRunSucceeded gets a reference to the given bool and assigns it to the LastRunSucceeded field.
+func (o *StackResourceStatus) SetLastRunSucceeded(v bool) {
+	o.LastRunSucceeded = &v
+}
+
 func (o StackResourceStatus) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.PublicIngress != nil {
@@ -289,6 +454,21 @@ func (o StackResourceStatus) MarshalJSON() ([]byte, error) {
 	}
 	if o.LastFailure != nil {
 		toSerialize["last_failure"] = o.LastFailure
+	}
+	if o.Replicas != nil {
+		toSerialize["replicas"] = o.Replicas
+	}
+	if o.AvailableReplicas != nil {
+		toSerialize["available_replicas"] = o.AvailableReplicas
+	}
+	if o.UpdatedReplicas != nil {
+		toSerialize["updated_replicas"] = o.UpdatedReplicas
+	}
+	if o.LastRunTime != nil {
+		toSerialize["last_run_time"] = o.LastRunTime
+	}
+	if o.LastRunSucceeded != nil {
+		toSerialize["last_run_succeeded"] = o.LastRunSucceeded
 	}
 	return json.Marshal(toSerialize)
 }

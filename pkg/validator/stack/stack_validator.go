@@ -9,6 +9,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stackdeploy"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
+	"github.com/robfig/cron/v3"
 )
 
 //go:generate mockgen -source=stack_validator.go -destination=../../mocks/mock_stack_validator_dependencies.go -package=mocks
@@ -68,6 +69,9 @@ func (v *stackValidator) ValidateForCreate(ctx context.Context, spec *models.Sta
 	if err := v.validateStackPorts(spec); err != nil {
 		return err
 	}
+	if err := validateWorkloadTypes(spec); err != nil {
+		return err
+	}
 	if err := v.validateVolumeMounts(spec); err != nil {
 		return err
 	}
@@ -111,6 +115,9 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 	if err := v.validateStackPorts(spec); err != nil {
 		return err
 	}
+	if err := validateWorkloadTypes(spec); err != nil {
+		return err
+	}
 	if err := v.validateVolumeMounts(spec); err != nil {
 		return err
 	}
@@ -145,6 +152,53 @@ func validateStackSettings(spec *models.Stack) *errors.ServiceError {
 	}
 	if s.MinSuccessfulReleases > 0 && s.ReleaseRetentionLimit > 0 && s.MinSuccessfulReleases > s.ReleaseRetentionLimit {
 		return errors.BadRequest("min_successful_releases (%d) must not exceed release_retention_limit (%d)", s.MinSuccessfulReleases, s.ReleaseRetentionLimit)
+	}
+	return nil
+}
+
+var cronParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+
+func validateWorkloadTypes(spec *models.Stack) *errors.ServiceError {
+	for _, r := range spec.StackResources {
+		wt := r.WorkloadType
+		if wt == "" {
+			wt = models.WorkloadTypeService
+		}
+
+		switch wt {
+		case models.WorkloadTypeService, models.WorkloadTypeStatefulService, models.WorkloadTypeWorker, models.WorkloadTypeJob, models.WorkloadTypeCronJob:
+		default:
+			return errors.BadRequest("stack resource '%s' has unsupported workload_type '%s'", r.Name, wt)
+		}
+
+		if wt == models.WorkloadTypeCronJob {
+			if r.Schedule == "" {
+				return errors.BadRequest("stack resource '%s' requires schedule for workload_type '%s'", r.Name, wt)
+			}
+			if _, err := cronParser.Parse(r.Schedule); err != nil {
+				return errors.BadRequest("stack resource '%s' has invalid cron schedule '%s': %s", r.Name, r.Schedule, err.Error())
+			}
+		} else if r.Schedule != "" {
+			return errors.BadRequest("stack resource '%s' cannot set schedule for workload_type '%s'", r.Name, wt)
+		}
+
+		switch wt {
+		case models.WorkloadTypeWorker, models.WorkloadTypeJob, models.WorkloadTypeCronJob:
+			if len(r.Ports) > 0 {
+				return errors.BadRequest("stack resource '%s' with workload_type '%s' cannot declare ports", r.Name, wt)
+			}
+		}
+
+		if r.Replicas != nil && *r.Replicas < 0 {
+			return errors.BadRequest("stack resource '%s' replicas cannot be negative", r.Name)
+		}
+
+		switch wt {
+		case models.WorkloadTypeJob, models.WorkloadTypeCronJob:
+			if r.Replicas != nil {
+				return errors.BadRequest("stack resource '%s' with workload_type '%s' cannot set replicas", r.Name, wt)
+			}
+		}
 	}
 	return nil
 }
@@ -253,7 +307,29 @@ func (v *stackValidator) validateBuildConfig(resource *models.StackResource) *er
 	}
 
 	if resource.BuildConfig.SourceContext.Git != nil {
-		return v.validateGitSource(resource)
+		if err := v.validateGitSource(resource); err != nil {
+			return err
+		}
+	}
+
+	if resource.BuildConfig.RegistrySecretRef != nil {
+		if err := v.validatePushSecret(resource); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (v *stackValidator) validatePushSecret(resource *models.StackResource) *errors.ServiceError {
+	secretRef := resource.BuildConfig.RegistrySecretRef
+
+	if secretRef.SecretID == "" {
+		return errors.BadRequest("stack resource '%s' has empty push secret ID", resource.Name)
+	}
+
+	if err := v.secretService.ValidateImageRegistrySecretForStackResource(context.Background(), secretRef.SecretID); err != nil {
+		return errors.BadRequest("stack resource '%s' has invalid push secret: %s", resource.Name, err.Error())
 	}
 
 	return nil

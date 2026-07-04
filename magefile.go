@@ -102,7 +102,7 @@ const (
 	PnpmVersion      = "v10.33.2"
 
 	// Stackdome agent Helm chart
-	DefaultStackdomeChartVersion = "0.6.2-alpha"
+	DefaultStackdomeChartVersion = "0.6.5-alpha"
 	StackdomeChartRepo           = "oci://quay.io/stackdome/charts/stackdome-agent"
 	StackdomeChartReleaseName    = "stackdome-agent"
 	StackdomeChartNamespace      = "stackdome-control-plane"

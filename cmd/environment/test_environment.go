@@ -29,6 +29,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	inviteworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/invite"
 	postgresaddonworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/postgresaddon"
+	previewworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/preview"
 	releaseworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/release"
 	releasegcworker "github.com/ashishmax31/stackdome-api-server/pkg/worker/releasegc"
 	"github.com/ashishmax31/stackdome-api-server/pkg/worker/stack"
@@ -451,6 +452,29 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 
 	stackService.SetReleaseService(stackReleaseService)
 
+	stackPreviewConfigStore := pgstore.NewStackPreviewConfigStore(pgstore.StackPreviewConfigStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+	previewStackStore := pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+
+	stackPreviewConfigService := services.NewStackPreviewConfigService(services.StackPreviewConfigServiceSpec{
+		Store:             stackPreviewConfigStore,
+		PreviewStackStore: previewStackStore,
+		SecretService:     secretService,
+		Permissions:       te.PermissionService,
+	})
+
+	previewStackService := services.NewPreviewStackService(services.PreviewStackServiceSpec{
+		Store:          previewStackStore,
+		ConfigStore:    stackPreviewConfigStore,
+		StackService:   stackService,
+		ReleaseService: stackReleaseService,
+		SecretService:  secretService,
+		Permissions:    te.PermissionService,
+	})
+
 	te.Services = Services{
 		UserService:                 userService,
 		WorkspaceUserService:        workspaceUserService,
@@ -478,6 +502,8 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SignupService:               signupService,
 		StackReleaseService:         stackReleaseService,
 		ReferenceService:            referenceService,
+		StackPreviewConfigService:   stackPreviewConfigService,
+		PreviewStackService:         previewStackService,
 	}
 
 	return nil
@@ -655,6 +681,20 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 	})
 	te.WorkerManager.RegisterWorker(inviteCleanupWorker, &inviteworker.InviteCleanupBatch{})
 
+	previewWorker := previewworker.NewPreviewWorker(previewworker.PreviewWorkerSpec{
+		PreviewStackService: te.Services.PreviewStackService,
+		PreviewStackStore: pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
+			SessionFactory: te.DBSession,
+		}),
+		ConfigStore: pgstore.NewStackPreviewConfigStore(pgstore.StackPreviewConfigStoreSpec{
+			SessionFactory: te.DBSession,
+		}),
+		ReleaseService: te.Services.StackReleaseService,
+		StackService:   te.Services.StackService,
+		Env:            te.Env.Name,
+	})
+	te.WorkerManager.RegisterWorker(previewWorker, &models.PreviewStack{})
+
 	return nil
 }
 
@@ -728,6 +768,7 @@ func (te *testEnvironment) injectClusterResourceServices(ctx context.Context) er
 	te.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
 	te.Services.OrgInviteService.InjectBackgroundJobEnqueuer(dep)
 	te.Services.StackReleaseService.InjectBackgroundJobEnqueuer(dep)
+	te.Services.PreviewStackService.InjectBackgroundJobEnqueuer(dep)
 	return nil
 }
 

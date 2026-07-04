@@ -1,0 +1,61 @@
+name: kitchen-sink
+
+resources:
+  api:
+    image: api:latest
+    ports:
+      - name: http
+        port: 3000
+        public: true
+        subdomain: api
+    env:
+      SITE_URL: "{{ self.public.http.url }}"
+      CACHE_HOST: "{{ redis.host }}"
+      CACHE_URL: "redis://{{ redis.host }}:6379"
+      LOG_LEVEL: info
+    secrets:
+      jwt-secret:
+        JWT_SECRET: jwt_signing_key
+      smtp-creds:
+        SMTP_USER: username
+        SMTP_PASS: password
+    addons:
+      main-db:
+        type: postgres
+        database: api_production
+        env:
+          DATABASE_URL: "postgres://{{ username }}:{{ password }}@{{ host }}:{{ port }}/{{ database }}"
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - name: redis
+        port: 6379
+        protocol: TCP
+    volumes:
+      - name: redis-data
+        path: /data
+    stateful: true
+
+  worker:
+    image: api:latest
+    env:
+      ROLE: worker
+      CACHE_URL: "redis://{{ redis.host }}:6379"
+    secrets:
+      jwt-secret:
+        JWT_SECRET: jwt_signing_key
+    addons:
+      main-db:
+        type: postgres
+        database: api_production
+        env:
+          DATABASE_URL: "postgres://{{ username }}:{{ password }}@{{ host }}:{{ port }}/{{ database }}"
+    depends_on:
+      - redis
+
+volumes:
+  redis-data:
+    size: 2Gi
