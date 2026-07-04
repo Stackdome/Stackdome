@@ -113,13 +113,17 @@ func TestListInstallationsPaginatesWithAppJWT(t *testing.T) {
 		{"id": 101, "account": map[string]any{"login": "acct-101", "type": "User"}, "repository_selection": "selected"},
 	}
 
+	var serverURL string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/app/installations" {
 			t.Fatalf("unexpected path %s", r.URL.Path)
 		}
 		requireAppJWT(t, r, key, creds.AppID)
+		// go-github discovers the next page from the Link header rather than
+		// from page-fullness, and omits page= on the first request.
 		switch r.URL.Query().Get("page") {
-		case "1":
+		case "", "1":
+			w.Header().Set("Link", fmt.Sprintf(`<%s/app/installations?page=2&per_page=100>; rel="next"`, serverURL))
 			_ = json.NewEncoder(w).Encode(pageOne)
 		case "2":
 			_ = json.NewEncoder(w).Encode(pageTwo)
@@ -127,6 +131,7 @@ func TestListInstallationsPaginatesWithAppJWT(t *testing.T) {
 			t.Fatalf("unexpected page %q", r.URL.Query().Get("page"))
 		}
 	}))
+	serverURL = srv.URL
 	defer srv.Close()
 
 	client := NewClient(ClientSpec{BaseURL: srv.URL})
@@ -182,7 +187,7 @@ func TestListInstallationReposFiltersByQuery(t *testing.T) {
 				"expires_at": time.Now().Add(time.Hour).Format(time.RFC3339),
 			})
 		case r.URL.Path == "/installation/repositories":
-			if got := r.Header.Get("Authorization"); got != "Bearer ghs_repo_token" {
+			if got := r.Header.Get("Authorization"); got != "token ghs_repo_token" {
 				t.Fatalf("expected installation token auth, got %q", got)
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
