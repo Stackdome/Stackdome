@@ -112,7 +112,7 @@ func normalizeDockerHubHost(host string) string {
 	return host
 }
 
-//go:generate mockgen -destination=../mocks/mock_registry_client.go -package=mocks github.com/ashishmax31/stackdome-api-server/pkg/clients RegistryClient
+//go:generate mockgen -destination=../mocks/mock_registry_client.go -package=mocks github.com/Stackdome/stackdome/pkg/clients RegistryClient
 type RegistryClient interface {
 	CheckImage(ctx context.Context, imageRef string) (bool, error)
 	// CheckPushAccess verifies that the client's credentials can authorize a

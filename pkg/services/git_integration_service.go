@@ -7,13 +7,13 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
-	"github.com/ashishmax31/stackdome-api-server/pkg/clients/githubapp"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
+	"github.com/Stackdome/stackdome/pkg/clients/githubapp"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
 )
 
 //go:generate mockgen -source=git_integration_service.go -destination=git_integration_service_mock_test.go -package=services -exclude_interfaces GitIntegrationService
@@ -27,7 +27,7 @@ func (defaultVerifyGitClientProvider) ClientFor(repoURL string, creds gitclient.
 	return gitclient.NewGitClientForRepo(repoURL, creds)
 }
 
-//go:generate mockgen -destination=../mocks/mock_git_integration_service.go -package=mocks github.com/ashishmax31/stackdome-api-server/pkg/services GitIntegrationService
+//go:generate mockgen -destination=../mocks/mock_git_integration_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services GitIntegrationService
 type GitIntegrationService interface {
 	Create(ctx context.Context, integration *models.GitIntegration) (*models.GitIntegration, *errors.ServiceError)
 	GetByID(ctx context.Context, ID string) (*models.GitIntegration, *errors.ServiceError)

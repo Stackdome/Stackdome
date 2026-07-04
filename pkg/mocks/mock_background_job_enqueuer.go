@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	worker "github.com/ashishmax31/stackdome-api-server/pkg/worker"
+	worker "github.com/Stackdome/stackdome/pkg/worker"
 	gomock "go.uber.org/mock/gomock"
 )
 

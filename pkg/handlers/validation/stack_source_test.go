@@ -3,7 +3,7 @@ package validation
 import (
 	"testing"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
 )
 
 func gitSourceSpec(mutate func(*openapi.GitSource)) *openapi.SourceSpec {

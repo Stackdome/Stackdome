@@ -7,8 +7,8 @@ import "time"
 type GitInstallation struct {
 	ID                  string `gorm:"primary_key;default:gen_random_uuid()"`
 	GitIntegrationID    string `gorm:"not null;index"`
-	InstallationID      int64          `gorm:"not null"`
-	AccountLogin        string         `gorm:"not null"`
+	InstallationID      int64  `gorm:"not null"`
+	AccountLogin        string `gorm:"not null"`
 	AccountType         GitAccountType
 	RepositorySelection string
 	CreatedAt           time.Time

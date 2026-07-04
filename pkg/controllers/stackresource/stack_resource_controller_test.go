@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"

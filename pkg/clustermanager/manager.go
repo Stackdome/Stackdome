@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cnpgv1 "github.com/cloudnative-pg/cloudnative-pg/api/v1"
 	barmancloudv1 "github.com/cloudnative-pg/plugin-barman-cloud/api/v1"

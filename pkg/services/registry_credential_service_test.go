@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/mocks"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/mocks"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/google/go-containerregistry/pkg/name"
 	"go.uber.org/mock/gomock"
 )

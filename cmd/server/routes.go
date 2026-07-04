@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api"
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/handlers"
-	"github.com/ashishmax31/stackdome-api-server/pkg/web"
+	"github.com/Stackdome/stackdome/pkg/api"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/handlers"
+	"github.com/Stackdome/stackdome/pkg/web"
 	"github.com/gorilla/mux"
 )
 

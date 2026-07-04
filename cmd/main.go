@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 
-	"github.com/ashishmax31/stackdome-api-server/cmd/migratecmd"
-	"github.com/ashishmax31/stackdome-api-server/cmd/servecmd"
+	"github.com/Stackdome/stackdome/cmd/migratecmd"
+	"github.com/Stackdome/stackdome/cmd/servecmd"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )

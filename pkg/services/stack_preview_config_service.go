@@ -3,14 +3,14 @@ package services
 import (
 	"context"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
-	"github.com/ashishmax31/stackdome-api-server/pkg/credentials"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
-	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
-	"github.com/ashishmax31/stackdome-api-server/pkg/validator/secret"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
+	"github.com/Stackdome/stackdome/pkg/credentials"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/validator"
+	"github.com/Stackdome/stackdome/pkg/validator/secret"
 	"github.com/google/uuid"
 )
 

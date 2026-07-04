@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/golang/glog"
 )
 

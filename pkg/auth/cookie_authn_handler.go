@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/golang-jwt/jwt"
 )
 

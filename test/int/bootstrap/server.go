@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/cmd/environment"
-	"github.com/ashishmax31/stackdome-api-server/cmd/server"
-	"github.com/ashishmax31/stackdome-api-server/config"
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
+	"github.com/Stackdome/stackdome/cmd/environment"
+	"github.com/Stackdome/stackdome/cmd/server"
+	"github.com/Stackdome/stackdome/config"
+	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/go-logr/logr"
 )
 

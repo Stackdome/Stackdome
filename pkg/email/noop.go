@@ -3,7 +3,7 @@ package email
 import (
 	"context"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/logger"
 )
 
 type noopEmailService struct {

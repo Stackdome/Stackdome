@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/clustermanager"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
 	barmanapi "github.com/cloudnative-pg/barman-cloud/pkg/api"
 	machineryapi "github.com/cloudnative-pg/machinery/pkg/api"
 	barmancloudv1 "github.com/cloudnative-pg/plugin-barman-cloud/api/v1"

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/log"
 	"github.com/casbin/casbin/v2/model"

@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/ashishmax31/stackdome-api-server/config"
+	"github.com/Stackdome/stackdome/config"
 )
 
 type Session struct {

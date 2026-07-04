@@ -19,8 +19,8 @@ import (
 	"k8s.io/client-go/transport/spdy"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
 	addonsv1alpha1 "stackdome.io/cluster-agent/api/addons/v1alpha1"
 	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"

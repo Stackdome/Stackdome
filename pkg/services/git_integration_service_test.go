@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/mocks"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/mocks"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
 )
 

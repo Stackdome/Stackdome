@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/ashishmax31/stackdome-api-server/test/int/bootstrap"
+	"github.com/Stackdome/stackdome/test/int/bootstrap"
 )
 
 var env = &bootstrap.Environment{}

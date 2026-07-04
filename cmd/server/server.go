@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/cmd/environment"
-	"github.com/ashishmax31/stackdome-api-server/config/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	"github.com/Stackdome/stackdome/cmd/environment"
+	"github.com/Stackdome/stackdome/config/openapi"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	applogger "github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/golang/glog"
 	gorillahandlers "github.com/gorilla/handlers"
 )

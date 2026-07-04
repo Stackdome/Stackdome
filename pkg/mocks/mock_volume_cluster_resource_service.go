@@ -13,8 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	models "github.com/ashishmax31/stackdome-api-server/pkg/models"
-	clusterresource "github.com/ashishmax31/stackdome-api-server/pkg/services/clusterresource"
+	models "github.com/Stackdome/stackdome/pkg/models"
+	clusterresource "github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	gomock "go.uber.org/mock/gomock"
 )
 

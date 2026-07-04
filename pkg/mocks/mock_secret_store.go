@@ -13,9 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	errors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	models "github.com/ashishmax31/stackdome-api-server/pkg/models"
-	stores "github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	errors "github.com/Stackdome/stackdome/pkg/errors"
+	models "github.com/Stackdome/stackdome/pkg/models"
+	stores "github.com/Stackdome/stackdome/pkg/stores"
 	gomock "go.uber.org/mock/gomock"
 )
 

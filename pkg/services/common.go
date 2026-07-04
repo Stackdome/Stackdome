@@ -1,8 +1,8 @@
 package services
 
 import (
-	"github.com/ashishmax31/stackdome-api-server/pkg/services/clusterresource"
-	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
+	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
+	"github.com/Stackdome/stackdome/pkg/worker/workermanager"
 )
 
 type ClusterResourceServiceInjectable interface {

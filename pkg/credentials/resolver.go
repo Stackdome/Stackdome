@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 // Source identifies where a resolved credential came from.
@@ -179,7 +179,7 @@ type RegistryAuthSelector struct {
 // precedence: explicit secret ref > explicit integration/credential ID >
 // org-level integration matched by host > anonymous.
 //
-//go:generate mockgen -destination=../mocks/mock_credential_resolver.go -package=mocks -mock_names Resolver=MockCredentialResolver github.com/ashishmax31/stackdome-api-server/pkg/credentials Resolver
+//go:generate mockgen -destination=../mocks/mock_credential_resolver.go -package=mocks -mock_names Resolver=MockCredentialResolver github.com/Stackdome/stackdome/pkg/credentials Resolver
 type Resolver interface {
 	GitCredentials(ctx context.Context, orgID, repoURL string, selector GitAuthSelector) (*ResolvedGitCredential, *errors.ServiceError)
 	RegistryCredentials(ctx context.Context, orgID, ref string, purpose RegistryPurpose, selector RegistryAuthSelector) (*ResolvedRegistryCredential, *errors.ServiceError)

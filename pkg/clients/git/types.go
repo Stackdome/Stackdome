@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-//go:generate mockgen -destination=../../mocks/mock_git_client.go -package=mocks github.com/ashishmax31/stackdome-api-server/pkg/clients/git GitClient
+//go:generate mockgen -destination=../../mocks/mock_git_client.go -package=mocks github.com/Stackdome/stackdome/pkg/clients/git GitClient
 type GitClient interface {
 	CheckAccess(ctx context.Context, repoURL string) (bool, error)
 	GetTagSHA(ctx context.Context, repoURL, tag string) (string, error)

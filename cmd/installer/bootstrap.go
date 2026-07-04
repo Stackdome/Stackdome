@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/install"
+	"github.com/Stackdome/stackdome/install"
 )
 
 var apiBaseURL string

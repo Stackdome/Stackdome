@@ -1,8 +1,8 @@
 package validation
 
 import (
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/errors"
 	k8sresource "k8s.io/apimachinery/pkg/api/resource"
 )
 

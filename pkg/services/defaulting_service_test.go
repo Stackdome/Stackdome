@@ -3,7 +3,7 @@ package services
 import (
 	"testing"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/stretchr/testify/assert"
 )
 

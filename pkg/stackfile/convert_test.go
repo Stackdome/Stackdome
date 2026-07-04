@@ -3,7 +3,7 @@ package stackfile
 import (
 	"testing"
 
-	openapi "github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	openapi "github.com/Stackdome/stackdome/pkg/api/openapi"
 )
 
 func TestToStack_BasicImageResource(t *testing.T) {

@@ -4,14 +4,14 @@ import (
 	"context"
 	stderrors "errors"
 
-	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
-	"github.com/ashishmax31/stackdome-api-server/pkg/credentials"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
+	"github.com/Stackdome/stackdome/pkg/credentials"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
-//go:generate mockgen -destination=../mocks/mock_source_credential_service.go -package=mocks github.com/ashishmax31/stackdome-api-server/pkg/services SourceCredentialService
+//go:generate mockgen -destination=../mocks/mock_source_credential_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services SourceCredentialService
 
 // SourceRollback reverts the managed-secret mutations performed by a reversible
 // prepare. The type is declared in pkg/credentials to keep generated mocks free

@@ -1,4 +1,4 @@
-module github.com/ashishmax31/stackdome-api-server
+module github.com/Stackdome/stackdome
 
 go 1.25.0
 

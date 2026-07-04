@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/credentials"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/credentials"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/go-containerregistry/pkg/name"
 	corev1 "k8s.io/api/core/v1"

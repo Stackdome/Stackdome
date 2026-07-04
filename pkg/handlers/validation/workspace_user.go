@@ -1,6 +1,6 @@
 package validation
 
-import "github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+import "github.com/Stackdome/stackdome/pkg/api/openapi"
 
 func ValidateWorkspaceUser(in *openapi.WorkspaceUser) Validate {
 	return ValidateAll([]Validate{

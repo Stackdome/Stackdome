@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
-	"github.com/ashishmax31/stackdome-api-server/pkg/mocks"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	stackvalidator "github.com/ashishmax31/stackdome-api-server/pkg/validator/stack"
+	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
+	"github.com/Stackdome/stackdome/pkg/mocks"
+	"github.com/Stackdome/stackdome/pkg/models"
+	stackvalidator "github.com/Stackdome/stackdome/pkg/validator/stack"
 	"go.uber.org/mock/gomock"
 )
 

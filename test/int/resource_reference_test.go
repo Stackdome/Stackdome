@@ -1,16 +1,15 @@
 package int
 
 import (
-	"context"
 	"net/http"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/test/int/shared"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/test/int/shared"
 )
 
 var _ = Describe("Resource Reference Delete Protection", func() {
@@ -23,51 +22,6 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 		Expect(testEnv).NotTo(BeNil(), "Test environment should be initialized")
 		client = testEnv.Client
 		orgID = testEnv.OrgID
-	})
-
-	Context("Implicit references", func() {
-		It("should block deletion of a managed secret materialized from inline pull credentials", func() {
-			By("Creating a stack with an image source carrying inline pull credentials")
-			resource := openapi.NewStackResource("web")
-			imageSource := openapi.NewImageSource("nginx:1.25-alpine")
-			imageSource.SetCredentials(*openapi.NewInlineCredentials("user", "pass"))
-			resource.SetSource(openapi.SourceSpec{Image: imageSource})
-			resource.SetPorts([]openapi.Port{*openapi.NewPort("http", 80, false)})
-
-			stack := shared.CreateSkipProvisioningStack("test-pull-ref", []openapi.StackResource{*resource})
-			createdStack := shared.CreateStack(client, orgID, teamName, stack)
-			stackID := createdStack.GetId()
-
-			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, teamName, stackID)
-				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
-			})
-
-			By("Finding the materialized managed secret")
-			managedName := models.ManagedSecretName(createdStack.GetName(), "web", models.ManagedSecretSlotPull)
-			list, _, err := client.DefaultApi.ApiV1OrganizationsOrgIdSecretsGet(context.Background(), orgID).
-				IncludeManaged(true).Execute()
-			Expect(err).NotTo(HaveOccurred())
-			var secretID string
-			for _, s := range list.GetItems() {
-				if s.GetName() == managedName {
-					secretID = s.GetId()
-				}
-			}
-			Expect(secretID).NotTo(BeEmpty(), "expected a managed pull secret to be materialized")
-
-			By("Verifying the managed secret is hidden from the default listing")
-			visible, _, err := client.DefaultApi.ApiV1OrganizationsOrgIdSecretsGet(context.Background(), orgID).Execute()
-			Expect(err).NotTo(HaveOccurred())
-			for _, s := range visible.GetItems() {
-				Expect(s.GetId()).NotTo(Equal(secretID))
-			}
-
-			By("Attempting to delete the managed secret — expecting 409")
-			httpResp, err := shared.DeleteSecretRaw(client, orgID, teamName, secretID)
-			Expect(err).To(HaveOccurred(), "expected delete to fail")
-			Expect(httpResp.StatusCode).To(Equal(http.StatusConflict))
-		})
 	})
 
 	Context("Explicit connection references", func() {

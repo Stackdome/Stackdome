@@ -3,8 +3,8 @@ package validator
 import (
 	"context"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 type SecretValidator interface {
@@ -16,7 +16,7 @@ type InterpolationValidation interface {
 	ValidateStackInterpolations(in *models.Stack) error
 }
 
-//go:generate mockgen -destination=../mocks/mock_stack_validator.go -package=mocks github.com/ashishmax31/stackdome-api-server/pkg/validator StackValidator
+//go:generate mockgen -destination=../mocks/mock_stack_validator.go -package=mocks github.com/Stackdome/stackdome/pkg/validator StackValidator
 type StackValidator interface {
 	ValidateForCreate(ctx context.Context, spec *models.Stack) *errors.ServiceError
 	ValidateForUpdate(ctx context.Context, existing *models.Stack, spec *models.Stack) *errors.ServiceError

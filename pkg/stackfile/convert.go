@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	openapi "github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	openapi "github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/samber/lo"
 	"k8s.io/utils/ptr"
 )
