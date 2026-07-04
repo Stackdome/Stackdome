@@ -24,16 +24,19 @@ const DefaultAPIBaseURL = "https://api.github.com"
 const CloneUsername = "x-access-token"
 
 // AppCredentials are the app-level credentials produced by the manifest flow.
+// Every field is a secret; the PEM in particular is the app's RSA private key
+// used to sign app JWTs.
 type AppCredentials struct {
-	AppID         int64
-	Slug          string
-	PEM           string
-	WebhookSecret string
-	ClientID      string
-	ClientSecret  string
+	AppID         int64  // numeric GitHub App ID
+	Slug          string // URL slug, e.g. "stackdome-ci"
+	PEM           string // RSA private key (PEM) used to sign app JWTs
+	WebhookSecret string // secret for verifying webhook payload signatures
+	ClientID      string // OAuth client ID
+	ClientSecret  string // OAuth client secret
 }
 
-// Token is a minted installation access token.
+// Token is a minted installation access token. Installation tokens are
+// short-lived (~1h), so ExpiresAt is what drives refresh scheduling.
 type Token struct {
 	Value     string
 	ExpiresAt time.Time
@@ -42,22 +45,24 @@ type Token struct {
 // Installation is a GitHub App installation on a user or org account.
 type Installation struct {
 	ID                  int64
-	AccountLogin        string
-	AccountType         string
-	RepositorySelection string
+	AccountLogin        string // account (user or org) the app is installed on
+	AccountType         string // "User" or "Organization"
+	RepositorySelection string // "all" or "selected"
 }
 
 // Repo is a repository visible to an installation.
 type Repo struct {
-	FullName      string
-	CloneURL      string
+	FullName      string // "owner/name"
+	CloneURL      string // HTTPS clone URL
 	DefaultBranch string
 	Private       bool
-	PushedAt      *time.Time
+	PushedAt      *time.Time // last push time; nil if never pushed
 	OwnerLogin    string
 }
 
-// RepoPage is one page of installation repositories.
+// RepoPage is one page of installation repositories. TotalCount is GitHub's
+// unfiltered total for the installation, so when a query filter is applied
+// len(Repos) may be smaller — even zero — while HasNext is still true.
 type RepoPage struct {
 	Repos      []Repo
 	Page       int
@@ -84,18 +89,28 @@ type Client interface {
 	ListBranches(ctx context.Context, creds *AppCredentials, installationID int64, owner, repo string) ([]string, error)
 }
 
+// ClientSpec configures a Client.
 type ClientSpec struct {
-	// BaseURL is optional; it defaults to the public GitHub API.
-	BaseURL    string
+	// BaseURL is optional; it defaults to the public GitHub API. Set it to a
+	// GitHub Enterprise or test-server URL to point the client elsewhere.
+	BaseURL string
+	// HTTPClient is optional. Its Transport is used as the base round-tripper
+	// beneath the app-JWT / installation-token auth transports, and its Timeout
+	// (when set) overrides the 30s default.
 	HTTPClient *http.Client
 }
 
+// client is the default Client. It holds no per-request auth state: each call
+// builds a short-lived go-github client from the AppCredentials passed in.
 type client struct {
 	baseURL       string
 	baseTransport http.RoundTripper
 	timeout       time.Duration
 }
 
+// NewClient returns a GitHub App client. Because credentials are supplied per
+// call rather than stored, a single instance is safe to share across orgs and
+// goroutines.
 func NewClient(spec ClientSpec) Client {
 	baseURL := strings.TrimSuffix(spec.BaseURL, "/")
 	if baseURL == "" {
@@ -231,6 +246,9 @@ func (c *client) ListInstallationRepos(ctx context.Context, creds *AppCredential
 		TotalCount: list.GetTotalCount(),
 		HasNext:    resp.NextPage != 0,
 	}
+	// The installation-repositories endpoint has no server-side search, so the
+	// query is applied client-side over the fetched page; TotalCount and HasNext
+	// still reflect the unfiltered listing.
 	query = strings.ToLower(strings.TrimSpace(query))
 	for _, r := range list.Repositories {
 		if query != "" && !strings.Contains(strings.ToLower(r.GetFullName()), query) {
