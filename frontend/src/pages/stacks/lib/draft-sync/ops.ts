@@ -8,8 +8,11 @@ import type { DesiredStackState } from "./desired-state";
  * One thin-endpoint mutation. Op order is a correctness invariant:
  * volumes exist before resources mount them; a resource exists before its
  * connections; connections die before their resource (the backend does not
- * cascade). Volume update/delete are intentionally absent — no thin endpoint
- * and no canvas affordance; revert handles removal wholesale.
+ * cascade). Volume update/delete are intentionally absent from autosave — no
+ * thin endpoint for size edits, and deletion is handled outside this engine
+ * entirely by the confirm-gated `use-volume-delete` flow (immediate,
+ * synchronous `DELETE /volumes/{id}`, not a staged sync op) plus revert
+ * (wholesale removal of draft-only volumes).
  */
 export type SyncOp =
   | { kind: "createVolume"; volume: VolumeUpdateRequest }

@@ -7,7 +7,7 @@ export async function createStackVolume(orgId: string, teamName: string, stackId
   return response.data;
 }
 
-/** Destroys the cluster volume synchronously — confirm-gated callers only (revert). */
+/** Destroys the cluster volume synchronously — confirm-gated callers only (revert, canvas delete). */
 export async function deleteVolume(orgId: string, teamName: string, volumeId: string): Promise<void> {
   await api.delete(`/organizations/${orgId}/teams/${teamName}/volumes/${volumeId}`);
 }

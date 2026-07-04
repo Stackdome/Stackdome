@@ -39,6 +39,7 @@ import { useToast } from "@/components/ui/use-toast";
 import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/schemas/api-schema";
 import { useDraftSync } from "@/pages/stacks/hooks/use-draft-sync";
 import { useStackRevert } from "@/pages/stacks/hooks/use-stack-revert";
+import { useVolumeDelete } from "@/pages/stacks/hooks/use-volume-delete";
 import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
 import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 import {
@@ -419,6 +420,22 @@ export default function StackDetailPage() {
     },
   });
 
+  // Immediate, confirm-gated volume deletion (canvas). Only wired for saved
+  // stacks — the wizard (`/stacks/new`) has nothing server-side to delete yet.
+  const volumeDelete = useVolumeDelete({
+    ids: deployIds.stackId ? deployIds : null,
+    draftSync,
+    onServerRefresh: (fresh) => {
+      setFetchedStack(fresh);
+      setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
+      setTopologyRefreshKey((k) => k + 1);
+    },
+    onRestoreVolume: (vol) => {
+      session.updateVolumes((vs) => [...vs, mapVolumeToFormData(vol)]);
+    },
+    toast,
+  });
+
   const [deployBusy, setDeployBusy] = useState(false);
   const refetchReleases = releasesResult.refetch;
   const runDeploy = useCallback(async (fn: () => Promise<unknown>, ok: string) => {
@@ -708,6 +725,8 @@ export default function StackDetailPage() {
             onViewLogs={() => setActiveTab("logs")}
             topologyIds={!isDraft && deployIds.stackId ? deployIds : null}
             topologyRefreshKey={topologyRefreshKey}
+            onDeleteVolume={deployIds.stackId ? volumeDelete.deleteVolume : undefined}
+            deletingVolume={volumeDelete.deleting}
           />
         }
         deployments={deploymentsBody}

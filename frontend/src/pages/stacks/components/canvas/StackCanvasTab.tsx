@@ -78,6 +78,11 @@ interface StackCanvasTabProps {
   topologyIds: { orgId: string; teamName: string; stackId: string } | null;
   /** Bump to force a topology refetch (wired to autosave refreshes). */
   topologyRefreshKey: number;
+  /** Immediate, confirm-gated server-side volume deletion. Undefined for draft
+   *  (unsaved) stacks — nothing exists server-side to delete yet. */
+  onDeleteVolume?: (name: string) => Promise<boolean>;
+  /** Gates double-confirm while the delete is in flight. */
+  deletingVolume?: boolean;
 }
 
 function StackCanvasFlow({
@@ -92,6 +97,8 @@ function StackCanvasFlow({
   onViewLogs,
   topologyIds,
   topologyRefreshKey,
+  onDeleteVolume,
+  deletingVolume,
 }: StackCanvasTabProps) {
   // Read from the live draft when the session is active, server state otherwise.
   const resources = session.isActive ? session.draft.resources : draftResources;
@@ -377,9 +384,13 @@ function StackCanvasFlow({
         resources: removeMountsOf(draft.resources, volumeName),
         volumes: draft.volumes.filter((v) => v.name !== volumeName),
       }));
-      setPendingDeleteVolume(null);
+      // Saved stacks: destroy the volume server-side now (confirm dialog already
+      // carried the data-loss warning). Draft stacks have nothing to delete yet —
+      // onDeleteVolume is undefined and the local edit above is the whole story.
+      void onDeleteVolume?.(volumeName).then(() => setPendingDeleteVolume(null));
+      if (!onDeleteVolume) setPendingDeleteVolume(null);
     },
-    [applyDraft],
+    [applyDraft, onDeleteVolume],
   );
 
   const onDeleteResourceConfirmed = useCallback(
@@ -609,19 +620,23 @@ function StackCanvasFlow({
       <AlertDialog open={pendingDeleteVolume != null} onOpenChange={(o) => !o && setPendingDeleteVolume(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete volume “{pendingDeleteVolume}”?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {topologyIds == null ? "Remove volume" : "Delete volume"} "{pendingDeleteVolume}"?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              The volume and its data are removed when the stack deploys. If it is mounted, the mount is removed too.
-              This cannot be undone after deploy.
+              {topologyIds == null
+                ? "This volume hasn't been created yet. It will be removed from your draft."
+                : "This immediately and permanently destroys the volume and all data stored on it. Any mounts are removed first. This cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deletingVolume}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-danger text-white hover:bg-danger/90"
+              disabled={!!deletingVolume}
               onClick={() => pendingDeleteVolume && onDeleteVolumeConfirmed(pendingDeleteVolume)}
             >
-              Delete volume
+              {deletingVolume ? "Deleting…" : topologyIds == null ? "Remove volume" : "Delete volume"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
