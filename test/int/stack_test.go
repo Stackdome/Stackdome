@@ -52,13 +52,13 @@ var _ = Describe("Stack", func() {
 
 		It("should manage explicit connections independently and project them into topology", func() {
 			api := openapi.NewStackResource("api")
-			api.SetImageSpec(*openapi.NewImageSpec("nginx:1.25-alpine"))
+			api.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 			api.SetPorts([]openapi.Port{
 				*openapi.NewPort("http", 8080, false),
 			})
 
 			web := openapi.NewStackResource("web")
-			web.SetImageSpec(*openapi.NewImageSpec("nginx:1.25-alpine"))
+			web.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 
 			spec := openapi.NewStackSpec([]openapi.StackResource{*api, *web})
 			stack := openapi.NewStack("test-connections", *spec)
@@ -165,7 +165,7 @@ var _ = Describe("Stack", func() {
 	Context("Validation", func() {
 		It("should reject a stack with empty name", func() {
 			resource := openapi.NewStackResource("web")
-			resource.SetImageSpec(*openapi.NewImageSpec("nginx:1.25-alpine"))
+			resource.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 			spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
 			stack := openapi.NewStack("", *spec)
 
@@ -189,9 +189,9 @@ var _ = Describe("Stack", func() {
 
 		It("should reject duplicate resource names", func() {
 			resource1 := openapi.NewStackResource("web")
-			resource1.SetImageSpec(*openapi.NewImageSpec("nginx:1.25-alpine"))
+			resource1.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 			resource2 := openapi.NewStackResource("web")
-			resource2.SetImageSpec(*openapi.NewImageSpec("nginx:1.25-alpine"))
+			resource2.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 
 			spec := openapi.NewStackSpec([]openapi.StackResource{*resource1, *resource2})
 			stack := openapi.NewStack("test-dup-resources", *spec)

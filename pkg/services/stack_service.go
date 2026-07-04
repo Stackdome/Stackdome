@@ -14,6 +14,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
 	stackvalidator "github.com/ashishmax31/stackdome-api-server/pkg/validator/stack"
+	"github.com/google/uuid"
 	"k8s.io/utils/ptr"
 )
 
@@ -56,18 +57,20 @@ type releaseServiceForStack interface {
 }
 
 type StackServiceSpec struct {
-	SessionFactory       db.SessionFactory
-	VolumeService        VolumeService
-	ClusterService       ClusterService
-	OrganisationService  OrganisationService
-	StackResourceService StackResourceService
-	NamespaceService     NamespaceService
-	SecretService        SecretService
-	PostgresAddonService PostgresAddonService
-	TeamService          TeamService
-	Permissions          auth.PermissionService
-	Logger               logger.Logger
-	ReferenceService     ReferenceService
+	SessionFactory          db.SessionFactory
+	VolumeService           VolumeService
+	ClusterService          ClusterService
+	OrganisationService     OrganisationService
+	StackResourceService    StackResourceService
+	NamespaceService        NamespaceService
+	SecretService           SecretService
+	PostgresAddonService    PostgresAddonService
+	TeamService             TeamService
+	Permissions             auth.PermissionService
+	Logger                  logger.Logger
+	ReferenceService        ReferenceService
+	CredentialResolver      CredentialResolver
+	SourceCredentialService SourceCredentialService
 }
 
 type stackService struct {
@@ -86,6 +89,7 @@ type stackService struct {
 	permissions          auth.PermissionService
 	releaseService       releaseServiceForStack
 	referenceService     ReferenceService
+	sourceCredentials    SourceCredentialService
 	defaultingService    DefaultingService[*models.Stack]
 	ClusterResourceServiceDeps
 	BackgroundJobEnqueuerDep
@@ -109,6 +113,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 			DomainService:        organisationDomainService,
 			SecretService:        spec.SecretService,
 			PostgresAddonService: spec.PostgresAddonService,
+			CredentialResolver:   spec.CredentialResolver,
 		}),
 		stackResourceService: spec.StackResourceService,
 		namespaceService:     spec.NamespaceService,
@@ -117,6 +122,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 		teamService:          spec.TeamService,
 		permissions:          spec.Permissions,
 		referenceService:     spec.ReferenceService,
+		sourceCredentials:    spec.SourceCredentialService,
 		defaultingService:    NewStackDefaultingService(),
 	}
 }
@@ -137,8 +143,26 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 	if existingStack != nil {
 		return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
 	}
+	// Pre-generate the stack ID so managed secrets can reference their owner
+	// before the row exists.
+	if spec.ID == "" {
+		spec.ID = uuid.NewString()
+	}
+	// Materializing managed secrets mutates persistent state before validation,
+	// so hold a rollback handle and undo it if any step before the store write
+	// commits fails.
+	var sourceRollback SourceRollback
+	if s.sourceCredentials != nil {
+		rollback, err := s.sourceCredentials.PrepareStackSources(ctx, spec)
+		if err != nil {
+			return nil, err
+		}
+		sourceRollback = rollback
+	}
+
 	s.logger.Infof("running validation for stack creation: %s", spec.Name)
 	if err := s.stackValidator.ValidateForCreate(ctx, spec); err != nil {
+		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 	s.logger.Infof("validation passed for stack creation: %s", spec.Name)
@@ -148,12 +172,14 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 	// Setup namespace
 	namespaceForStack, err := s.namespaceService.PrepareNamespaceForStack(ctx, spec)
 	if err != nil {
+		rollbackSources(ctx, sourceRollback)
 		return nil, errors.GeneralError("failed to prepare namespace for stack '%s': %s", spec.Name, err.Error())
 	}
 	spec.Namespace = namespaceForStack.Name
 
 	cluster, err := s.clusterService.GetClusterForOrg(ctx, spec.OrganisationID)
 	if err != nil {
+		rollbackSources(ctx, sourceRollback)
 		return nil, errors.GeneralError("failed to get cluster for organisation '%s': %s", spec.OrganisationID, err.Error())
 	}
 	spec.ClusterID = cluster.ID
@@ -172,6 +198,7 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 		return nil
 	})
 	if err != nil {
+		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.Stack{ID: createdStack.ID}); err != nil {
@@ -245,18 +272,33 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 		return nil, err
 	}
 
-	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
-		return nil, err
-	}
-
-	spec, _ = s.defaultingService.PopulateDefaultValues(spec)
-
 	// set namespace
+	spec.ID = existingStack.ID
 	spec.Namespace = existingStack.Namespace
 	spec.ClusterID = existingStack.ClusterID
 	spec.OrganisationID = existingStack.OrganisationID
 	spec.TeamID = existingStack.TeamID
 	spec.UserID = existingStack.UserID
+
+	// Preparing sources upserts managed secrets in place; a rejected update
+	// would otherwise leave the previously-working secret overwritten. Capture
+	// a rollback handle and restore prior data if a later step fails before the
+	// update commits.
+	var sourceRollback SourceRollback
+	if s.sourceCredentials != nil {
+		rollback, err := s.sourceCredentials.PrepareStackSources(ctx, spec)
+		if err != nil {
+			return nil, err
+		}
+		sourceRollback = rollback
+	}
+
+	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
+		rollbackSources(ctx, sourceRollback)
+		return nil, err
+	}
+
+	spec, _ = s.defaultingService.PopulateDefaultValues(spec)
 
 	// Update stack and domains within transaction
 	var updatedStack *models.Stack
@@ -268,6 +310,7 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 		return nil
 	})
 	if err != nil {
+		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 
@@ -279,6 +322,18 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 		if _, existed := existingVolumeIDs[v.ID]; !existed {
 			if enqErr := s.BackgroundJobEnqueuer.Enqueue(&models.Volume{ID: v.ID}); enqErr != nil {
 				return nil, errors.GeneralError("failed to enqueue volume '%s': %s", v.ID, enqErr.Error())
+			}
+		}
+	}
+
+	if s.sourceCredentials != nil {
+		desired := spec.ResourcesMap()
+		for _, existing := range existingStack.StackResources {
+			if _, kept := desired[existing.Name]; kept {
+				continue
+			}
+			if cleanupErr := s.sourceCredentials.CleanupResourceSources(ctx, existingStack.ID, existing.Name); cleanupErr != nil {
+				s.logger.Errorf("failed to clean up managed secrets for removed resource '%s': %v", existing.Name, cleanupErr)
 			}
 		}
 	}
@@ -633,6 +688,16 @@ func (s *stackService) InternalDeleteStack(ctx context.Context, stack *models.St
 }
 
 func (s *stackService) InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError {
+	// GC managed secrets before the rows go away; best-effort so a cleanup
+	// failure never blocks deletion.
+	if s.sourceCredentials != nil {
+		if stack, gerr := s.stackStore.GetByID(ctx, ID); gerr == nil {
+			if cleanupErr := s.sourceCredentials.CleanupStackSources(ctx, stack); cleanupErr != nil {
+				s.logger.Errorf("failed to clean up managed secrets for stack '%s': %v", ID, cleanupErr)
+			}
+		}
+	}
+
 	err := s.stackStore.Delete(ctx, ID)
 	if err != nil {
 		if err.Is404() {
@@ -657,6 +722,15 @@ func (s *stackService) UpdateStackCrRevision(ctx context.Context, ID string, rev
 		return err
 	}
 	return nil
+}
+
+// rollbackSources reverts managed-secret mutations made while preparing a
+// stack's sources when a later step fails before the changes are persisted.
+// It is a no-op when no sources were prepared.
+func rollbackSources(ctx context.Context, rollback SourceRollback) {
+	if rollback != nil {
+		rollback.Rollback(ctx)
+	}
 }
 
 func connectionNodeLabel(ref models.TopologyNodeRef) string {

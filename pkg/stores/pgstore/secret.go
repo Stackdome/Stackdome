@@ -168,6 +168,9 @@ func (s *secretStore) ListByOrganisation(ctx context.Context, organisationID str
 	query := s.sessionFactory.New(ctx).
 		Where("organisation_id = ?", organisationID).
 		Order("created_at DESC")
+	if !params.IncludeManaged {
+		query = query.Where("managed = ?", false)
+	}
 	query = params.ApplyFiltersOnly(query)
 	if err := query.Find(&secrets).Error; err != nil {
 		return nil, errors.GeneralError("failed to list secrets: %s", err.Error())
@@ -182,6 +185,9 @@ func (s *secretStore) ListByTeamID(ctx context.Context, teamID string, params st
 	query := s.sessionFactory.New(ctx).
 		Where("team_id = ?", teamID).
 		Order("created_at DESC")
+	if !params.IncludeManaged {
+		query = query.Where("managed = ?", false)
+	}
 	query = params.ApplyFiltersOnly(query)
 	if err := query.Find(&secrets).Error; err != nil {
 		return nil, errors.GeneralError("failed to list secrets by team: %s", err.Error())
@@ -198,6 +204,9 @@ func (s *secretStore) ListByTeamIDs(ctx context.Context, teamIDs []string, param
 	query := s.sessionFactory.New(ctx).
 		Where("team_id IN ?", teamIDs).
 		Order("created_at DESC")
+	if !params.IncludeManaged {
+		query = query.Where("managed = ?", false)
+	}
 	query = params.ApplyFiltersOnly(query)
 	if err := query.Find(&secrets).Error; err != nil {
 		return nil, errors.GeneralError("failed to list secrets by teams: %s", err.Error())
@@ -287,4 +296,29 @@ func (s *secretStore) GetSecretsByIDs(ctx context.Context, secretIDs []string) (
 	}
 
 	return secrets, nil
+}
+
+func (s *secretStore) GetManagedByOwner(ctx context.Context, ownerKind, ownerID string, slot models.ManagedSecretSlot) (*models.Secret, *errors.ServiceError) {
+	var secret models.Secret
+	if err := s.sessionFactory.New(ctx).
+		Where("managed = ? AND managed_by_kind = ? AND managed_by_id = ? AND managed_slot = ?", true, ownerKind, ownerID, slot).
+		First(&secret).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.NotFound("no managed secret for %s '%s' slot '%s'", ownerKind, ownerID, slot)
+		}
+		return nil, errors.GeneralError("failed to get managed secret: %s", err.Error())
+	}
+	return &secret, nil
+}
+
+func (s *secretStore) DeleteManagedByOwner(ctx context.Context, ownerKind, ownerID string, slots []models.ManagedSecretSlot) *errors.ServiceError {
+	query := s.sessionFactory.New(ctx).
+		Where("managed = ? AND managed_by_kind = ? AND managed_by_id = ?", true, ownerKind, ownerID)
+	if len(slots) > 0 {
+		query = query.Where("managed_slot IN ?", slots)
+	}
+	if err := query.Delete(&models.Secret{}).Error; err != nil {
+		return errors.GeneralError("failed to delete managed secrets: %s", err.Error())
+	}
+	return nil
 }

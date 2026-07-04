@@ -39,6 +39,10 @@ var _ = Describe("SecretStore", func() {
 				encrypted_data TEXT NOT NULL,
 				keys TEXT,
 				data_hash TEXT NOT NULL,
+				managed BOOLEAN NOT NULL DEFAULT false,
+				managed_by_kind TEXT,
+				managed_by_id TEXT,
+				managed_slot TEXT,
 				created_at DATETIME,
 				updated_at DATETIME
 			)

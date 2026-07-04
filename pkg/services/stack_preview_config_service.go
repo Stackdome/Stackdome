@@ -5,11 +5,13 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
+	"github.com/ashishmax31/stackdome-api-server/pkg/credentials"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
 	"github.com/ashishmax31/stackdome-api-server/pkg/validator/secret"
+	"github.com/google/uuid"
 )
 
 type StackPreviewConfigService interface {
@@ -21,27 +23,33 @@ type StackPreviewConfigService interface {
 }
 
 type StackPreviewConfigServiceSpec struct {
-	Store             stores.StackPreviewConfigStore
-	PreviewStackStore stores.PreviewStackStore
-	SecretService     SecretService
-	Permissions       auth.PermissionService
+	Store                   stores.StackPreviewConfigStore
+	PreviewStackStore       stores.PreviewStackStore
+	SecretService           SecretService
+	CredentialResolver      CredentialResolver
+	SourceCredentialService SourceCredentialService
+	Permissions             auth.PermissionService
 }
 
 type stackPreviewConfigService struct {
-	store             stores.StackPreviewConfigStore
-	previewStackStore stores.PreviewStackStore
-	secretService     SecretService
-	secretValidator   validator.SecretValidator
-	permissions       auth.PermissionService
+	store              stores.StackPreviewConfigStore
+	previewStackStore  stores.PreviewStackStore
+	secretService      SecretService
+	credentialResolver CredentialResolver
+	sourceCredentials  SourceCredentialService
+	secretValidator    validator.SecretValidator
+	permissions        auth.PermissionService
 }
 
 func NewStackPreviewConfigService(spec StackPreviewConfigServiceSpec) StackPreviewConfigService {
 	return &stackPreviewConfigService{
-		store:             spec.Store,
-		previewStackStore: spec.PreviewStackStore,
-		secretService:     spec.SecretService,
-		secretValidator:   secret.NewSecretValidator(),
-		permissions:       spec.Permissions,
+		store:              spec.Store,
+		previewStackStore:  spec.PreviewStackStore,
+		secretService:      spec.SecretService,
+		credentialResolver: spec.CredentialResolver,
+		sourceCredentials:  spec.SourceCredentialService,
+		secretValidator:    secret.NewSecretValidator(),
+		permissions:        spec.Permissions,
 	}
 }
 
@@ -56,15 +64,40 @@ func (s *stackPreviewConfigService) Create(ctx context.Context, config *models.S
 		config.GitRepository.BaseBranch = models.DefaultBaseBranch
 	}
 
+	// Pre-generate the config ID so managed secrets can reference their owner
+	// before the row exists.
+	if config.ID == "" {
+		config.ID = uuid.NewString()
+	}
+	// PreparePreviewConfig materializes managed secrets before validation, so
+	// keep a rollback handle and undo the credential rows if validation or the
+	// store write fails — otherwise they orphan under a config that never
+	// existed.
+	var sourceRollback SourceRollback
+	if s.sourceCredentials != nil {
+		rollback, err := s.sourceCredentials.PreparePreviewConfig(ctx, config)
+		if err != nil {
+			return nil, err
+		}
+		sourceRollback = rollback
+	}
+
 	if err := s.validate(ctx, config); err != nil {
+		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 
 	if err := s.validateGitRepo(ctx, config); err != nil {
+		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 
-	return s.store.Create(ctx, config)
+	created, err := s.store.Create(ctx, config)
+	if err != nil {
+		rollbackSources(ctx, sourceRollback)
+		return nil, err
+	}
+	return created, nil
 }
 
 func (s *stackPreviewConfigService) Get(ctx context.Context, id string) (*models.StackPreviewConfig, *errors.ServiceError) {
@@ -94,15 +127,32 @@ func (s *stackPreviewConfigService) Update(ctx context.Context, id string, updat
 	updated.TeamID = existing.TeamID
 	updated.UserID = existing.UserID
 	updated.Name = existing.Name
+
+	var sourceRollback SourceRollback
+	if s.sourceCredentials != nil {
+		rollback, err := s.sourceCredentials.PreparePreviewConfig(ctx, updated)
+		if err != nil {
+			return nil, err
+		}
+		sourceRollback = rollback
+	}
+
 	if err := s.validate(ctx, updated); err != nil {
+		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 
 	if err := s.validateGitRepo(ctx, updated); err != nil {
+		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 
-	return s.store.Update(ctx, updated)
+	result, err := s.store.Update(ctx, updated)
+	if err != nil {
+		rollbackSources(ctx, sourceRollback)
+		return nil, err
+	}
+	return result, nil
 }
 
 func (s *stackPreviewConfigService) Delete(ctx context.Context, id string) *errors.ServiceError {
@@ -123,7 +173,20 @@ func (s *stackPreviewConfigService) Delete(ctx context.Context, id string) *erro
 		return errors.Conflict("cannot delete preview config with %d active preview stack(s)", activeCount)
 	}
 
-	return s.store.Delete(ctx, id)
+	// Clean up managed secrets before deleting the row. Cleanup is idempotent
+	// (a no-op once the secrets are gone), so a retry after a partial failure
+	// re-runs cleanup harmlessly and then deletes the row. Doing it in this
+	// order means a cleanup failure leaves the row intact for the retry rather
+	// than orphaning the secrets forever.
+	if s.sourceCredentials != nil {
+		if cleanupErr := s.sourceCredentials.CleanupPreviewConfig(ctx, id); cleanupErr != nil {
+			return cleanupErr
+		}
+	}
+	if err := s.store.Delete(ctx, id); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *stackPreviewConfigService) List(ctx context.Context, teamID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError) {
@@ -190,22 +253,16 @@ func (s *stackPreviewConfigService) validateGitRepo(ctx context.Context, config 
 }
 
 func (s *stackPreviewConfigService) gitClientForConfig(ctx context.Context, config *models.StackPreviewConfig) (gitclient.GitClient, error) {
-	if !config.UsesGitSecret() {
-		return gitclient.NewGitClientForRepo(config.GitRepository.RepoURL, gitclient.GitCredentials{})
+	selector := credentials.GitAuthSelector{
+		IntegrationID: config.GitRepository.IntegrationID,
 	}
-	secret, sErr := s.secretService.InternalGetByID(ctx, *config.GitSecretID())
+	if config.UsesGitSecret() {
+		selector.SecretRef = &models.SecretReference{SecretID: *config.GitSecretID()}
+	}
+
+	resolved, sErr := s.credentialResolver.GitCredentials(ctx, config.OrganisationID, config.GitRepository.RepoURL, selector)
 	if sErr != nil {
 		return nil, sErr
 	}
-	if token, ok := secret.Data[models.TokenSecretKey]; ok && token != "" {
-		return gitclient.NewGitClientForRepo(config.GitRepository.RepoURL, gitclient.GitCredentials{Token: token})
-	}
-
-	return gitclient.NewGitClientForRepo(
-		config.GitRepository.RepoURL,
-		gitclient.GitCredentials{
-			Username: secret.Data[models.UsernameSecretKey],
-			Password: secret.Data[models.PasswordSecretKey],
-		},
-	)
+	return gitclient.NewGitClientForRepo(config.GitRepository.RepoURL, resolved.Credentials)
 }

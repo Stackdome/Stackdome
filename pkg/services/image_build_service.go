@@ -12,6 +12,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
 )
 
+//go:generate mockgen -destination=../mocks/mock_image_build_service.go -package=mocks github.com/ashishmax31/stackdome-api-server/pkg/services ImageBuildService
 type ImageBuildService interface {
 	InternalCreate(ctx context.Context, resourceBuild *models.ImageBuild) (*models.ImageBuild, *errors.ServiceError)
 	InternalUpdateStatus(ctx context.Context, BuildID string, status *models.ImageBuildStatus) *errors.ServiceError

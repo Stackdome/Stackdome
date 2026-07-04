@@ -23,4 +23,6 @@ type SecretStore interface {
 	ValidateSecretExists(ctx context.Context, secretID string) (bool, *errors.ServiceError)
 	GetSecretKeys(ctx context.Context, secretID string) ([]string, *errors.ServiceError)
 	ValidateSecretHasKeys(ctx context.Context, secretID string, requiredKeys []string) (bool, []string, *errors.ServiceError)
+	GetManagedByOwner(ctx context.Context, ownerKind, ownerID string, slot models.ManagedSecretSlot) (*models.Secret, *errors.ServiceError)
+	DeleteManagedByOwner(ctx context.Context, ownerKind, ownerID string, slots []models.ManagedSecretSlot) *errors.ServiceError
 }

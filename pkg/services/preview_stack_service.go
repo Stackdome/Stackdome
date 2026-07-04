@@ -12,6 +12,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
 	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
 	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
+	"github.com/ashishmax31/stackdome-api-server/pkg/credentials"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
@@ -32,21 +33,23 @@ type PreviewStackService interface {
 }
 
 type PreviewStackServiceSpec struct {
-	Store          stores.PreviewStackStore
-	ConfigStore    stores.StackPreviewConfigStore
-	StackService   StackService
-	ReleaseService StackReleaseService
-	SecretService  SecretService
-	Permissions    auth.PermissionService
+	Store              stores.PreviewStackStore
+	ConfigStore        stores.StackPreviewConfigStore
+	StackService       StackService
+	ReleaseService     StackReleaseService
+	SecretService      SecretService
+	CredentialResolver CredentialResolver
+	Permissions        auth.PermissionService
 }
 
 type previewStackService struct {
-	store          stores.PreviewStackStore
-	configStore    stores.StackPreviewConfigStore
-	stackService   StackService
-	releaseService StackReleaseService
-	secretService  SecretService
-	permissions    auth.PermissionService
+	store              stores.PreviewStackStore
+	configStore        stores.StackPreviewConfigStore
+	stackService       StackService
+	releaseService     StackReleaseService
+	secretService      SecretService
+	credentialResolver CredentialResolver
+	permissions        auth.PermissionService
 	BackgroundJobEnqueuerDep
 }
 
@@ -59,12 +62,13 @@ type PreviewSyncOpts struct {
 
 func NewPreviewStackService(spec PreviewStackServiceSpec) PreviewStackService {
 	return &previewStackService{
-		store:          spec.Store,
-		configStore:    spec.ConfigStore,
-		stackService:   spec.StackService,
-		releaseService: spec.ReleaseService,
-		secretService:  spec.SecretService,
-		permissions:    spec.Permissions,
+		store:              spec.Store,
+		configStore:        spec.ConfigStore,
+		stackService:       spec.StackService,
+		releaseService:     spec.ReleaseService,
+		secretService:      spec.SecretService,
+		credentialResolver: spec.CredentialResolver,
+		permissions:        spec.Permissions,
 	}
 }
 
@@ -282,25 +286,18 @@ func (s *previewStackService) List(ctx context.Context, teamID string, params st
 }
 
 func (s *previewStackService) gitClientForConfig(ctx context.Context, config *models.StackPreviewConfig) (gitclient.GitClient, error) {
-	if !config.UsesGitSecret() {
-		return gitclient.NewGitClientForRepo(config.GitRepository.RepoURL, gitclient.GitCredentials{})
+	selector := credentials.GitAuthSelector{
+		IntegrationID: config.GitRepository.IntegrationID,
+	}
+	if config.UsesGitSecret() {
+		selector.SecretRef = &models.SecretReference{SecretID: *config.GitSecretID()}
 	}
 
-	secret, sErr := s.secretService.InternalGetByID(ctx, *config.GitSecretID())
+	resolved, sErr := s.credentialResolver.GitCredentials(ctx, config.OrganisationID, config.GitRepository.RepoURL, selector)
 	if sErr != nil {
-		return nil, fmt.Errorf("git secret: %v", sErr)
+		return nil, sErr
 	}
-
-	if token, ok := secret.Data[models.TokenSecretKey]; ok && token != "" {
-		return gitclient.NewGitClientForRepo(config.GitRepository.RepoURL, gitclient.GitCredentials{Token: token})
-	}
-	return gitclient.NewGitClientForRepo(
-		config.GitRepository.RepoURL,
-		gitclient.GitCredentials{
-			Username: secret.Data[models.UsernameSecretKey],
-			Password: secret.Data[models.PasswordSecretKey],
-		},
-	)
+	return gitclient.NewGitClientForRepo(config.GitRepository.RepoURL, resolved.Credentials)
 }
 
 // InternalFetchStackfile retrieves the stackfile from git and returns its content along
@@ -345,7 +342,10 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 		return nil, errors.Permanent("InvalidStackfile", fmt.Sprintf("failed to parse stackfile: %v", err))
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		return nil, errors.Permanent("InvalidStackfile", fmt.Sprintf("failed to convert stackfile: %v", err))
+	}
 
 	resolver := &previewSecretResolver{
 		ctx:           ctx,
@@ -357,12 +357,12 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 			fmt.Sprintf("failed to resolve stackfile references: %v", err))
 	}
 
-	s.applyGitSecretFromConfig(&stack, config)
 	s.applyBranchSwap(&stack, config.GitRepository.RepoURL, preview.Branch, preview.CommitSHA)
 	s.applyImageOverrides(&stack, preview.ImageOverrides)
 	s.applyDomainPrefix(&stack, preview.PRNumber)
 
 	model := presenters.ConvertStack(&stack)
+	s.applyGitSecretFromConfig(model, config)
 	model.Name = preview.Name
 	model.OrganisationID = config.OrganisationID
 	model.TeamID = config.TeamID
@@ -382,25 +382,19 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 func (s *previewStackService) applyBranchSwap(stack *openapi.Stack, repoURL, branch, commitSHA string) {
 	for i := range stack.Spec.StackResources {
 		res := &stack.Spec.StackResources[i]
-		if res.BuildSpec == nil {
+		if res.Source == nil || res.Source.Git == nil {
 			continue
 		}
-		if res.BuildSpec.SourceContext.GitRepo == nil {
+		if normalizeRepoURL(res.Source.Git.RepoUrl) != normalizeRepoURL(repoURL) {
 			continue
 		}
-		if normalizeRepoURL(res.BuildSpec.SourceContext.GitRepo.RepoUrl) != normalizeRepoURL(repoURL) {
-			continue
-		}
-		res.BuildSpec.SourceRevision = openapi.BuildSourceRevision{
-			GitRepoRevision: &openapi.GitRepoRevision{
-				Commit: &commitSHA,
-				Branch: &branch,
-			},
-		}
+		res.Source.Git.SetBranch(branch)
+		res.Source.Git.SetCommit(commitSHA)
+		res.Source.Git.Tag = nil
 	}
 }
 
-// applyImageOverrides replaces build specs with image specs for matching resources.
+// applyImageOverrides replaces build sources with image sources for matching resources.
 func (s *previewStackService) applyImageOverrides(stack *openapi.Stack, overrides models.ImageOverrides) {
 	if len(overrides) == 0 {
 		return
@@ -411,10 +405,7 @@ func (s *previewStackService) applyImageOverrides(stack *openapi.Stack, override
 		if !ok {
 			continue
 		}
-		res.BuildSpec = nil
-		res.ImageSpec = &openapi.ImageSpec{
-			Image: image,
-		}
+		res.Source = &openapi.SourceSpec{Image: openapi.NewImageSource(image)}
 	}
 }
 
@@ -434,25 +425,27 @@ func (s *previewStackService) applyDomainPrefix(stack *openapi.Stack, prNumber s
 	}
 }
 
-// applyGitSecretFromConfig injects the preview config's git_secret_id into build
-// specs that match the config's repo URL and don't already have a git secret set.
-func (s *previewStackService) applyGitSecretFromConfig(stack *openapi.Stack, config *models.StackPreviewConfig) {
+// applyGitSecretFromConfig injects the preview config's git secret into build
+// configs that match the config's repo URL and don't already have clone auth.
+// This runs on the converted model since explicit secret refs are no longer
+// part of the API shape.
+func (s *previewStackService) applyGitSecretFromConfig(stack *models.Stack, config *models.StackPreviewConfig) {
 	if !config.UsesGitSecret() {
 		return
 	}
 	secretID := *config.GitSecretID()
-	for i := range stack.Spec.StackResources {
-		res := &stack.Spec.StackResources[i]
-		if res.BuildSpec == nil || res.BuildSpec.SourceContext.GitRepo == nil {
+	for _, res := range stack.StackResources {
+		if res.BuildConfig == nil || res.BuildConfig.SourceContext.Git == nil {
 			continue
 		}
-		if res.BuildSpec.SourceContext.GitRepo.GitSecret != nil {
+		git := res.BuildConfig.SourceContext.Git
+		if git.GitSecretRef != nil || git.IntegrationID != "" {
 			continue
 		}
-		if normalizeRepoURL(res.BuildSpec.SourceContext.GitRepo.RepoUrl) != normalizeRepoURL(config.GitRepository.RepoURL) {
+		if normalizeRepoURL(git.RepoURL) != normalizeRepoURL(config.GitRepository.RepoURL) {
 			continue
 		}
-		res.BuildSpec.SourceContext.GitRepo.GitSecret = &openapi.SecretRef{SecretId: secretID}
+		git.GitSecretRef = &models.SecretReference{SecretID: secretID}
 	}
 }
 

@@ -19,7 +19,10 @@ func TestToStack_BasicImageResource(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	if stack.Name != "my-stack" {
 		t.Errorf("expected name 'my-stack', got %q", stack.Name)
@@ -32,10 +35,10 @@ func TestToStack_BasicImageResource(t *testing.T) {
 	if res.Name != "web" {
 		t.Errorf("expected resource name 'web', got %q", res.Name)
 	}
-	if res.ImageSpec == nil || res.ImageSpec.Image != "nginx:latest" {
-		t.Errorf("expected image 'nginx:latest', got %v", res.ImageSpec)
+	if res.Source == nil || res.Source.Image == nil || res.Source.Image.Ref != "nginx:latest" {
+		t.Errorf("expected image 'nginx:latest', got %v", res.Source)
 	}
-	if res.BuildSpec != nil {
+	if res.Source != nil && res.Source.Git != nil {
 		t.Error("expected no build spec for image resource")
 	}
 	if len(res.Ports) != 1 {
@@ -64,32 +67,35 @@ func TestToStack_BuildFromSource(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 	res := stack.Spec.StackResources[0]
 
-	if res.ImageSpec != nil {
+	if res.Source != nil && res.Source.Image != nil {
 		t.Error("expected no image spec for build resource")
 	}
-	if res.BuildSpec == nil {
+	if res.Source == nil || res.Source.Git == nil {
 		t.Fatal("expected build spec")
 	}
-	if res.BuildSpec.SourceContext.GitRepo == nil {
+	if false {
 		t.Fatal("expected git repo source context")
 	}
-	if res.BuildSpec.SourceContext.GitRepo.RepoUrl != "https://github.com/myorg/myapp.git" {
-		t.Errorf("unexpected repo url: %s", res.BuildSpec.SourceContext.GitRepo.RepoUrl)
+	if res.Source.Git.RepoUrl != "https://github.com/myorg/myapp.git" {
+		t.Errorf("unexpected repo url: %s", res.Source.Git.RepoUrl)
 	}
-	if res.BuildSpec.ContextPathWithinSource != "./backend" {
-		t.Errorf("expected context './backend', got %q", res.BuildSpec.ContextPathWithinSource)
+	if res.Source.Git.GetBuildContext() != "./backend" {
+		t.Errorf("expected context './backend', got %q", res.Source.Git.GetBuildContext())
 	}
-	if res.BuildSpec.DockerfilePath != "docker/Dockerfile.prod" {
-		t.Errorf("expected dockerfile 'docker/Dockerfile.prod', got %q", res.BuildSpec.DockerfilePath)
+	if res.Source.Git.GetDockerfilePath() != "docker/Dockerfile.prod" {
+		t.Errorf("expected dockerfile 'docker/Dockerfile.prod', got %q", res.Source.Git.GetDockerfilePath())
 	}
-	if res.BuildSpec.SourceRevision.GitRepoRevision == nil {
+	if false {
 		t.Fatal("expected git repo revision")
 	}
-	if res.BuildSpec.SourceRevision.GitRepoRevision.Branch == nil || *res.BuildSpec.SourceRevision.GitRepoRevision.Branch != "develop" {
-		t.Errorf("expected branch 'develop', got %v", res.BuildSpec.SourceRevision.GitRepoRevision.Branch)
+	if res.Source.Git.GetBranch() != "develop" {
+		t.Errorf("expected branch 'develop', got %v", res.Source.Git.Branch)
 	}
 }
 
@@ -105,20 +111,26 @@ func TestToStack_BuildDefaults(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 	res := stack.Spec.StackResources[0]
 
-	if res.BuildSpec.ContextPathWithinSource != "." {
-		t.Errorf("expected default context '.', got %q", res.BuildSpec.ContextPathWithinSource)
+	// The generated GitSource constructor applies the schema defaults for
+	// build context and dockerfile path; the default branch is resolved
+	// server-side.
+	if res.Source.Git.GetBuildContext() != "." {
+		t.Errorf("expected default context '.', got %q", res.Source.Git.GetBuildContext())
 	}
-	if res.BuildSpec.DockerfilePath != "Dockerfile" {
-		t.Errorf("expected default dockerfile 'Dockerfile', got %q", res.BuildSpec.DockerfilePath)
+	if res.Source.Git.GetDockerfilePath() != "Dockerfile" {
+		t.Errorf("expected default dockerfile 'Dockerfile', got %q", res.Source.Git.GetDockerfilePath())
 	}
-	if res.BuildSpec.SourceRevision.GitRepoRevision.Branch == nil || *res.BuildSpec.SourceRevision.GitRepoRevision.Branch != "main" {
-		t.Error("expected default branch 'main'")
+	if res.Source.Git.GetBranch() != "" {
+		t.Errorf("expected unset branch (server resolves the default), got %q", res.Source.Git.GetBranch())
 	}
-	if res.BuildSpec.ImageRepository.UseInternalRegistry == nil || !*res.BuildSpec.ImageRepository.UseInternalRegistry {
-		t.Error("expected internal registry to be true by default")
+	if res.Source.Git.Push != nil {
+		t.Error("expected internal registry to be used by default")
 	}
 }
 
@@ -130,8 +142,11 @@ func TestToStack_BuildWithTag(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
-	rev := stack.Spec.StackResources[0].BuildSpec.SourceRevision.GitRepoRevision
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
+	rev := stack.Spec.StackResources[0].Source.Git
 	if rev.Tag == nil || *rev.Tag != "v1.0.0" {
 		t.Errorf("expected tag 'v1.0.0', got %v", rev.Tag)
 	}
@@ -148,8 +163,11 @@ func TestToStack_BuildWithCommit(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
-	rev := stack.Spec.StackResources[0].BuildSpec.SourceRevision.GitRepoRevision
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
+	rev := stack.Spec.StackResources[0].Source.Git
 	if rev.Commit == nil || *rev.Commit != "abc123" {
 		t.Errorf("expected commit 'abc123', got %v", rev.Commit)
 	}
@@ -169,7 +187,10 @@ func TestToStack_EnvLiterals(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 	res := stack.Spec.StackResources[0]
 
 	if res.ExecutionConfig == nil {
@@ -201,7 +222,10 @@ func TestToStack_SelfOutputEnv(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 	res := stack.Spec.StackResources[0]
 
 	envMap := envVarsToMap(res.ExecutionConfig.EnvironmentVariables)
@@ -231,7 +255,10 @@ func TestToStack_ResourceRefSimpleOutput(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	for _, res := range stack.Spec.StackResources {
 		if res.Name == "app" && res.ExecutionConfig != nil {
@@ -277,7 +304,10 @@ func TestToStack_ResourceRefTemplate(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	for _, res := range stack.Spec.StackResources {
 		if res.Name == "app" && res.ExecutionConfig != nil {
@@ -330,7 +360,10 @@ func TestToStack_MultipleResourceRefs(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	sources := make(map[string]bool)
 	for _, conn := range stack.Spec.Connections {
@@ -362,7 +395,10 @@ func TestToStack_Secrets(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	found := false
 	for _, conn := range stack.Spec.Connections {
@@ -405,7 +441,10 @@ func TestToStack_Volumes(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	// Check volume definition
 	if len(stack.Spec.Volumes) != 1 {
@@ -468,7 +507,10 @@ func TestToStack_CustomAccessMode(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 	if stack.Spec.Volumes[0].Spec.AccessMode != "ReadWriteMany" {
 		t.Errorf("expected ReadWriteMany, got %q", stack.Spec.Volumes[0].Spec.AccessMode)
 	}
@@ -487,7 +529,10 @@ func TestToStack_DependsOn(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 	for _, res := range stack.Spec.StackResources {
 		if res.Name == "app" {
 			if len(res.DependsOn) != 2 {
@@ -510,7 +555,10 @@ func TestToStack_PortProtocol(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 	port := stack.Spec.StackResources[0].Ports[0]
 	if port.Protocol == nil || *port.Protocol != "TCP" {
 		t.Errorf("expected protocol TCP, got %v", port.Protocol)
@@ -528,7 +576,10 @@ func TestToStack_NoEnv(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 	if stack.Spec.StackResources[0].ExecutionConfig != nil {
 		t.Error("expected nil execution config when no env")
 	}
@@ -574,7 +625,10 @@ func TestToStack_FullInfisicalExample(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	if stack.Name != "infisical" {
 		t.Errorf("expected name 'infisical', got %q", stack.Name)
@@ -650,7 +704,10 @@ func TestToStack_MultipleSecrets(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	secretConns := 0
 	for _, conn := range stack.Spec.Connections {
@@ -704,7 +761,10 @@ func TestToStack_SecretOnMultipleResources(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	targets := make(map[string]bool)
 	for _, conn := range stack.Spec.Connections {
@@ -736,7 +796,10 @@ func TestToStack_MultipleVolumeMountsOnOneResource(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	res := stack.Spec.StackResources[0]
 	if len(res.VolumeMounts) != 2 {
@@ -786,7 +849,10 @@ func TestToStack_SharedVolumeBetweenResources(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	if len(stack.Spec.Volumes) != 1 {
 		t.Fatalf("expected 1 volume definition, got %d", len(stack.Spec.Volumes))
@@ -821,7 +887,10 @@ func TestToStack_VolumeMountConnectionHasCorrectNodeTypes(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	for _, conn := range stack.Spec.Connections {
 		if conn.Kind != "volume_mount" {
@@ -842,7 +911,7 @@ func TestToStack_VolumeMountConnectionHasCorrectNodeTypes(t *testing.T) {
 	}
 }
 
-func TestToStack_BuildWithGitSecret(t *testing.T) {
+func TestToStack_BuildWithGitSecretIsRejected(t *testing.T) {
 	sf := &Stackfile{
 		Name: "private-build",
 		Resources: map[string]Resource{
@@ -856,21 +925,8 @@ func TestToStack_BuildWithGitSecret(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
-	res := stack.Spec.StackResources[0]
-
-	if res.BuildSpec == nil {
-		t.Fatal("expected build spec")
-	}
-	gitRepo := res.BuildSpec.SourceContext.GitRepo
-	if gitRepo == nil {
-		t.Fatal("expected git repo source context")
-	}
-	if gitRepo.GitSecret == nil {
-		t.Fatal("expected git secret ref")
-	}
-	if gitRepo.GitSecret.SecretId != "my-git-token" {
-		t.Errorf("expected git secret name 'my-git-token', got %q", gitRepo.GitSecret.SecretId)
+	if _, err := sf.ToStack(); err == nil {
+		t.Fatal("expected git_secret to be rejected")
 	}
 }
 
@@ -887,10 +943,16 @@ func TestToStack_BuildWithoutGitSecret(t *testing.T) {
 		},
 	}
 
-	stack := sf.ToStack()
-	gitRepo := stack.Spec.StackResources[0].BuildSpec.SourceContext.GitRepo
-	if gitRepo.GitSecret != nil {
-		t.Errorf("expected no git secret for public repo, got %v", gitRepo.GitSecret)
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
+	git := stack.Spec.StackResources[0].Source.Git
+	if git == nil {
+		t.Fatal("expected git source")
+	}
+	if git.Credentials != nil {
+		t.Errorf("expected no credentials for public repo, got %v", git.Credentials)
 	}
 }
 

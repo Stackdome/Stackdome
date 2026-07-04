@@ -636,17 +636,8 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 			ctx := context.Background()
 
-			By("Creating a GitCredentials secret with the GitHub token")
-			gitSecret := shared.CreateGitCredentialsSecret(shared.BuildSourceSecretName, githubToken)
-			createdSecret := shared.CreateSecret(client, orgID, teamName, gitSecret)
-			secretID := createdSecret.GetId()
-
-			DeferCleanup(func() {
-				shared.DeleteSecret(client, orgID, teamName, secretID)
-			})
-
 			By("Creating a stack with build source and exposed port, then deploying")
-			stack := shared.CreateStackWithBuildSource("test-build-source", shared.BuildSourceRepoURL, secretID)
+			stack := shared.CreateStackWithBuildSource("test-build-source", shared.BuildSourceRepoURL, "git", githubToken)
 			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()
@@ -734,17 +725,8 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			clusterClient := testEnv.Cluster.GetClient()
 			ctx := context.Background()
 
-			By("Creating a GitCredentials secret with the GitHub token")
-			gitSecret := shared.CreateGitCredentialsSecret("test-build-fail-creds", githubToken)
-			createdSecret := shared.CreateSecret(client, orgID, teamName, gitSecret)
-			secretID := createdSecret.GetId()
-
-			DeferCleanup(func() {
-				shared.DeleteSecret(client, orgID, teamName, secretID)
-			})
-
 			By("Creating a stack with a build source pointing to a branch with a broken Dockerfile and deploying")
-			stack := shared.CreateStackWithBrokenBuildSource("test-build-fail", shared.BuildSourceRepoURL, secretID)
+			stack := shared.CreateStackWithBrokenBuildSource("test-build-fail", shared.BuildSourceRepoURL, "git", githubToken)
 			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()

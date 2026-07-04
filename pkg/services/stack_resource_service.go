@@ -35,16 +35,17 @@ type StackResourceService interface {
 }
 
 type StackResourceServiceSpec struct {
-	SessionFactory         db.SessionFactory
-	WorkspaceUserService   WorkspaceUserService
-	StorageService         StackStorageService
-	Logger                 logger.Logger
-	Permissions            auth.PermissionService
-	StackStore             stores.StackStore
-	StackResourceStore     stores.StackResourceStore
-	ClusterRegistryService ImageRegistryService
-	StackDomainService     StackDomainsService
-	ReferenceService       ReferenceService
+	SessionFactory          db.SessionFactory
+	WorkspaceUserService    WorkspaceUserService
+	StorageService          StackStorageService
+	Logger                  logger.Logger
+	Permissions             auth.PermissionService
+	StackStore              stores.StackStore
+	StackResourceStore      stores.StackResourceStore
+	ClusterRegistryService  ImageRegistryService
+	StackDomainService      StackDomainsService
+	ReferenceService        ReferenceService
+	SourceCredentialService SourceCredentialService
 }
 
 type stackResourceService struct {
@@ -59,6 +60,7 @@ type stackResourceService struct {
 	clusterRegistryService ImageRegistryService
 	domainNameService      StackDomainsService
 	referenceService       ReferenceService
+	sourceCredentials      SourceCredentialService
 }
 
 func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService {
@@ -79,6 +81,7 @@ func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService
 		clusterRegistryService: spec.ClusterRegistryService,
 		domainNameService:      spec.StackDomainService,
 		referenceService:       spec.ReferenceService,
+		sourceCredentials:      spec.SourceCredentialService,
 	}
 }
 
@@ -93,6 +96,12 @@ func (s *stackResourceService) Create(ctx context.Context, resource *models.Stac
 	}
 	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, resource.StackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
+	}
+
+	if s.sourceCredentials != nil {
+		if err := s.sourceCredentials.PrepareResourceSource(ctx, stack, resource); err != nil {
+			return nil, err
+		}
 	}
 
 	var created *models.StackResource
@@ -127,6 +136,12 @@ func (s *stackResourceService) Update(ctx context.Context, stackID, resourceName
 	resource.StackID = stackID
 	resource.ID = existing.ID
 	resource.Name = resourceName
+
+	if s.sourceCredentials != nil {
+		if err := s.sourceCredentials.PrepareResourceSource(ctx, stack, resource); err != nil {
+			return nil, err
+		}
+	}
 
 	var updated *models.StackResource
 	if txErr := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
@@ -253,12 +268,21 @@ func (s *stackResourceService) Delete(ctx context.Context, stackID, resourceName
 		return err
 	}
 
-	return s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 		if err := s.InternalDeleteWithTx(txCtx, existing.ID); err != nil {
 			return err
 		}
 		return s.referenceService.ReprojectSpec(txCtx, stackID)
-	})
+	}); err != nil {
+		return err
+	}
+
+	if s.sourceCredentials != nil {
+		if cleanupErr := s.sourceCredentials.CleanupResourceSources(ctx, stackID, resourceName); cleanupErr != nil {
+			s.logger.Errorf("failed to clean up managed secrets for resource '%s': %v", resourceName, cleanupErr)
+		}
+	}
+	return nil
 }
 
 func (s *stackResourceService) GetByStackID(ctx context.Context, stackID string) ([]*models.StackResource, *errors.ServiceError) {

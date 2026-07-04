@@ -1,6 +1,7 @@
 package stackfile
 
 import (
+	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -20,19 +21,23 @@ var (
 	addonVarPattern = regexp.MustCompile(`\{\{\s*([\w-]+)\s*\}\}`)
 )
 
-func (sf *Stackfile) ToStack() openapi.Stack {
+func (sf *Stackfile) ToStack() (openapi.Stack, error) {
+	resources, err := sf.buildResources()
+	if err != nil {
+		return openapi.Stack{}, err
+	}
 	spec := openapi.StackSpec{
-		StackResources: sf.buildResources(),
+		StackResources: resources,
 		Volumes:        sf.buildVolumes(),
 		Connections:    sf.buildConnections(),
 	}
 	return openapi.Stack{
 		Name: sf.Name,
 		Spec: spec,
-	}
+	}, nil
 }
 
-func (sf *Stackfile) buildResources() []openapi.StackResource {
+func (sf *Stackfile) buildResources() ([]openapi.StackResource, error) {
 	resources := make([]openapi.StackResource, 0, len(sf.Resources))
 	names := make([]string, 0, len(sf.Resources))
 	for name := range sf.Resources {
@@ -47,11 +52,15 @@ func (sf *Stackfile) buildResources() []openapi.StackResource {
 		}
 
 		if res.Image != "" {
-			sr.ImageSpec = &openapi.ImageSpec{Image: res.Image}
+			sr.Source = &openapi.SourceSpec{Image: openapi.NewImageSource(res.Image)}
 		}
 
 		if res.Build != nil {
-			sr.BuildSpec = buildSpec(res.Build)
+			source, err := buildGitSource(res.Build)
+			if err != nil {
+				return nil, fmt.Errorf("resource %q: %w", name, err)
+			}
+			sr.Source = &openapi.SourceSpec{Git: source}
 		}
 
 		if res.WorkloadType != "" {
@@ -68,56 +77,37 @@ func (sf *Stackfile) buildResources() []openapi.StackResource {
 
 		resources = append(resources, sr)
 	}
-	return resources
+	return resources, nil
 }
 
-func buildSpec(b *BuildConfig) *openapi.StackResourceBuildSpec {
-	spec := &openapi.StackResourceBuildSpec{
-		ContextPathWithinSource: ".",
-		DockerfilePath:          "Dockerfile",
-		ImageRepository: openapi.ImageRepository{
-			UseInternalRegistry: ptr.To(true),
-		},
+func buildGitSource(b *BuildConfig) (*openapi.GitSource, error) {
+	if b.GitSecret != "" {
+		return nil, fmt.Errorf("git_secret is no longer supported; configure clone credentials on the preview config or an org-level git integration")
 	}
 
+	source := openapi.NewGitSource(b.Repo)
 	if b.Context != "" {
-		spec.ContextPathWithinSource = b.Context
+		source.SetBuildContext(b.Context)
 	}
 	if b.Dockerfile != "" {
-		spec.DockerfilePath = b.Dockerfile
+		source.SetDockerfilePath(b.Dockerfile)
 	}
-
-	gitRepo := &openapi.BuildSourceContextGitRepo{
-		RepoUrl: b.Repo,
-	}
-	if b.GitSecret != "" {
-		gitRepo.GitSecret = &openapi.SecretRef{SecretId: b.GitSecret}
-	}
-	spec.SourceContext = openapi.BuildSourceContext{
-		GitRepo: gitRepo,
-	}
-
-	revision := openapi.BuildSourceRevision{}
-	if b.Branch != "" {
-		revision.GitRepoRevision = &openapi.GitRepoRevision{
-			Branch: ptr.To(b.Branch),
+	switch {
+	case b.Branch != "":
+		source.SetBranch(b.Branch)
+		if b.Commit != "" {
+			source.SetCommit(b.Commit)
 		}
-	} else if b.Tag != "" {
-		revision.GitRepoRevision = &openapi.GitRepoRevision{
-			Tag: ptr.To(b.Tag),
+	case b.Tag != "":
+		source.SetTag(b.Tag)
+		if b.Commit != "" {
+			source.SetCommit(b.Commit)
 		}
-	} else if b.Commit != "" {
-		revision.GitRepoRevision = &openapi.GitRepoRevision{
-			Commit: ptr.To(b.Commit),
-		}
-	} else {
-		revision.GitRepoRevision = &openapi.GitRepoRevision{
-			Branch: ptr.To("main"),
-		}
+	case b.Commit != "":
+		source.SetCommit(b.Commit)
 	}
-	spec.SourceRevision = revision
-
-	return spec
+	// No branch or tag: the server resolves the repository's default branch.
+	return source, nil
 }
 
 func buildPorts(ports []PortDef) []openapi.Port {

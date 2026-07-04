@@ -8,6 +8,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 )
 
+//go:generate mockgen -source=oauth_state_store.go -destination=../mocks/mock_oauth_state_store.go -package=mocks
 type OAuthStateStore interface {
 	Create(ctx context.Context, state *models.OAuthState) *errors.ServiceError
 	Consume(ctx context.Context, state, provider string) (*models.OAuthState, *errors.ServiceError)

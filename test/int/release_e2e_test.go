@@ -88,7 +88,7 @@ var _ = Describe("Release E2E", Ordered, func() {
 
 			By("Updating the stack resource image")
 			updateStack := shared.CreateSimpleStack("test-release-update")
-			updateStack.Spec.StackResources[0].ImageSpec.SetImage("nginx:1.26-alpine")
+			updateStack.Spec.StackResources[0].Source.Image.Ref = "nginx:1.26-alpine"
 			shared.UpdateStack(client, orgID, teamName, stackID, updateStack)
 
 			By("Creating release #2")
@@ -129,7 +129,7 @@ var _ = Describe("Release E2E", Ordered, func() {
 
 			By("Updating image to nginx:1.26 + deploying release #2")
 			updateStack := shared.CreateSimpleStack("test-release-rollback")
-			updateStack.Spec.StackResources[0].ImageSpec.SetImage("nginx:1.26-alpine")
+			updateStack.Spec.StackResources[0].Source.Image.Ref = "nginx:1.26-alpine"
 			shared.UpdateStack(client, orgID, teamName, stackID, updateStack)
 			rel2 := shared.CreateRelease(client, orgID, teamName, stackID)
 			shared.WaitForReleaseReleased(client, orgID, teamName, stackID, rel2.GetId(), 5*time.Minute)

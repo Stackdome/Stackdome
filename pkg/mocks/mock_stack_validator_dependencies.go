@@ -13,6 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
+	clients "github.com/ashishmax31/stackdome-api-server/pkg/clients"
+	git "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
+	credentials "github.com/ashishmax31/stackdome-api-server/pkg/credentials"
 	errors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	models "github.com/ashishmax31/stackdome-api-server/pkg/models"
 	gomock "go.uber.org/mock/gomock"
@@ -192,4 +195,82 @@ func (m *MockpostgresAddonService) GetPostgresAddon(ctx context.Context, id stri
 func (mr *MockpostgresAddonServiceMockRecorder) GetPostgresAddon(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPostgresAddon", reflect.TypeOf((*MockpostgresAddonService)(nil).GetPostgresAddon), ctx, id)
+}
+
+// MockregistryClientProvider is a mock of registryClientProvider interface.
+type MockregistryClientProvider struct {
+	ctrl     *gomock.Controller
+	recorder *MockregistryClientProviderMockRecorder
+	isgomock struct{}
+}
+
+// MockregistryClientProviderMockRecorder is the mock recorder for MockregistryClientProvider.
+type MockregistryClientProviderMockRecorder struct {
+	mock *MockregistryClientProvider
+}
+
+// NewMockregistryClientProvider creates a new mock instance.
+func NewMockregistryClientProvider(ctrl *gomock.Controller) *MockregistryClientProvider {
+	mock := &MockregistryClientProvider{ctrl: ctrl}
+	mock.recorder = &MockregistryClientProviderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockregistryClientProvider) EXPECT() *MockregistryClientProviderMockRecorder {
+	return m.recorder
+}
+
+// ClientFor mocks base method.
+func (m *MockregistryClientProvider) ClientFor(resolved *credentials.ResolvedRegistryCredential) (clients.RegistryClient, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClientFor", resolved)
+	ret0, _ := ret[0].(clients.RegistryClient)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ClientFor indicates an expected call of ClientFor.
+func (mr *MockregistryClientProviderMockRecorder) ClientFor(resolved any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClientFor", reflect.TypeOf((*MockregistryClientProvider)(nil).ClientFor), resolved)
+}
+
+// MockgitClientProvider is a mock of gitClientProvider interface.
+type MockgitClientProvider struct {
+	ctrl     *gomock.Controller
+	recorder *MockgitClientProviderMockRecorder
+	isgomock struct{}
+}
+
+// MockgitClientProviderMockRecorder is the mock recorder for MockgitClientProvider.
+type MockgitClientProviderMockRecorder struct {
+	mock *MockgitClientProvider
+}
+
+// NewMockgitClientProvider creates a new mock instance.
+func NewMockgitClientProvider(ctrl *gomock.Controller) *MockgitClientProvider {
+	mock := &MockgitClientProvider{ctrl: ctrl}
+	mock.recorder = &MockgitClientProviderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockgitClientProvider) EXPECT() *MockgitClientProviderMockRecorder {
+	return m.recorder
+}
+
+// ClientFor mocks base method.
+func (m *MockgitClientProvider) ClientFor(repoURL string, creds git.GitCredentials) (git.GitClient, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClientFor", repoURL, creds)
+	ret0, _ := ret[0].(git.GitClient)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ClientFor indicates an expected call of ClientFor.
+func (mr *MockgitClientProviderMockRecorder) ClientFor(repoURL, creds any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClientFor", reflect.TypeOf((*MockgitClientProvider)(nil).ClientFor), repoURL, creds)
 }

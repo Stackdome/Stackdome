@@ -19,6 +19,9 @@ type ListParams struct {
 	Page     int
 	PageSize int
 	OrderBy  string
+	// IncludeManaged includes system-managed secrets in secret listings;
+	// ignored by other stores.
+	IncludeManaged bool
 }
 
 func (p ListParams) Limit() int {

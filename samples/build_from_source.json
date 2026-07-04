@@ -1,35 +1,35 @@
 {
-    "name": "test-build",
-    "labels": [
-        { "key": "app", "value": "test-build" }
-    ],
-    "spec": {
-        "stack_resources": [
-            {
-                "name": "web",
-                "build_spec": {
-                    "source_context": {
-                        "git_repo": {
-                            "repo_url": "https://github.com/Stackdome/test-repo.git"
-                        }
-                    },
-                    "context_path_within_source": ".",
-                    "dockerfile_path": "docker/Dockerfile.prod",
-                    "source_revision": {
-                        "git_repo_revision": {
-                            "branch": {
-                                "name": "main"
-                            }
-                        }
-                    },
-                    "image_repository": {
-                        "use_internal_registry": true
-                    }
-                },
-                "ports": [
-                    { "name": "http", "number": 3000, "exposed_to_public": true, "subdomain_prefix": "test-build", "protocol": "HTTP" }
-                ]
-            }
-        ]
+  "name": "test-build",
+  "labels": [
+    {
+      "key": "app",
+      "value": "test-build"
     }
+  ],
+  "spec": {
+    "stack_resources": [
+      {
+        "name": "web",
+        "ports": [
+          {
+            "name": "http",
+            "number": 3000,
+            "exposed_to_public": true,
+            "subdomain_prefix": "test-build",
+            "protocol": "HTTP"
+          }
+        ],
+        "source": {
+          "git": {
+            "repo_url": "https://github.com/Stackdome/test-repo.git",
+            "branch": {
+              "name": "main"
+            },
+            "dockerfile_path": "docker/Dockerfile.prod",
+            "build_context": "."
+          }
+        }
+      }
+    ]
+  }
 }
