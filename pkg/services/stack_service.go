@@ -348,15 +348,24 @@ func (s *stackService) CreateStackVolume(ctx context.Context, stackID string, vo
 	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
-	for _, existing := range stack.Volumes {
-		if existing.Name == volume.Name {
-			return nil, errors.Conflict("a volume named '%s' already exists in this stack", volume.Name)
-		}
-	}
-
 	var created *models.Volume
 	txErr := s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		var serr *errors.ServiceError
+		// Lock the stack row so concurrent creates serialize; the duplicate-name
+		// check below then observes any volume a competing request committed.
+		// There is no DB unique constraint on volume name within a stack (the
+		// association lives in a join table), so the lock IS the invariant.
+		if lockErr := s.stackStore.LockByID(ctx, stackID); lockErr != nil {
+			return lockErr
+		}
+		lockedStack, serr := s.stackStore.GetByID(ctx, stackID)
+		if serr != nil {
+			return serr
+		}
+		for _, existing := range lockedStack.Volumes {
+			if existing.Name == volume.Name {
+				return errors.Conflict("a volume named '%s' already exists in this stack", volume.Name)
+			}
+		}
 		created, serr = s.volumeService.InternalCreateWithTx(ctx, stack, volume)
 		return serr
 	})

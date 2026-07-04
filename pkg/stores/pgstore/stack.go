@@ -238,6 +238,20 @@ func (w *stackStore) GetByID(ctx context.Context, id string) (*models.Stack, *er
 	return &stack, nil
 }
 
+func (w *stackStore) LockByID(ctx context.Context, id string) *errors.ServiceError {
+	var stack models.Stack
+	if err := w.sessionFactory.New(ctx).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Select("id").
+		First(&stack, "id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.NotFound("stack with id %s not found", id)
+		}
+		return errors.GeneralError("failed to lock stack: %s", err.Error())
+	}
+	return nil
+}
+
 func (w *stackStore) GetByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError) {
 	var stack models.Stack
 	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).First(&stack, "name = ? AND user_id = ?", name, userID).Error; err != nil {

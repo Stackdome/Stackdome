@@ -13,10 +13,13 @@ interface VolumeDrawerProps {
   /** When provided, "Remove volume" defers to a caller-owned confirm dialog
    *  instead of removing immediately (e.g. StackCanvasTab's shared confirm). */
   onRequestRemove?: (name: string) => void;
+  /** True when the volume already exists server-side — its spec (size) is
+   *  immutable once the PVC is provisioned. */
+  persisted?: boolean;
 }
 
 /** Drawer body for a volume pushed from a service's mount row. */
-export function VolumeDrawer({ volumeName, session, onClose, onRequestRemove }: VolumeDrawerProps) {
+export function VolumeDrawer({ volumeName, session, onClose, onRequestRemove, persisted = false }: VolumeDrawerProps) {
   const volumes = session.draft.volumes;
   const index = volumes.findIndex((v) => v.name === volumeName);
   const volume = (volumes[index] ?? {}) as Partial<VolumeFormData>;
@@ -73,6 +76,7 @@ export function VolumeDrawer({ volumeName, session, onClose, onRequestRemove }: 
           allVolumes={volumes}
           allStackResources={session.draft.resources}
           nameReadOnly
+          specReadOnly={persisted}
         />
       </div>
     </div>

@@ -356,6 +356,18 @@ export default function StackDetailPage() {
   // Bumped on every autosave refresh to trigger a topology refetch.
   const [topologyRefreshKey, setTopologyRefreshKey] = useState(0);
 
+  // Volumes that exist server-side; their spec (PVC size) is immutable, so the
+  // drawer renders those fields read-only.
+  const persistedVolumeNames = useMemo(
+    () =>
+      new Set(
+        (stackToShow?.spec?.volumes ?? [])
+          .map((v) => v.name)
+          .filter((n): n is string => !!n),
+      ),
+    [stackToShow?.spec?.volumes],
+  );
+
   // Autosave engine: debounces draft changes and syncs thin per-resource ops to
   // the server. Disabled for drafts (nothing exists server-side to sync yet).
   const draftSync = useDraftSync({
@@ -413,6 +425,8 @@ export default function StackDetailPage() {
     void getStackById(deployIds.orgId, deployIds.teamName, deployIds.stackId).then((fresh) => {
       setFetchedStack(fresh);
       setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
+      // Server topology may have changed with the new release; re-derive edges.
+      setTopologyRefreshKey((k) => k + 1);
     }).catch(() => {
       // Poll-driven refresh; the next release poll retries naturally.
       convergedFetchRef.current = undefined;
@@ -765,6 +779,7 @@ export default function StackDetailPage() {
             topologyRefreshKey={topologyRefreshKey}
             onDeleteVolume={deployIds.stackId ? volumeDelete.deleteVolume : undefined}
             deletingVolume={volumeDelete.deleting}
+            persistedVolumeNames={persistedVolumeNames}
           />
         }
         deployments={deploymentsBody}

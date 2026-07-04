@@ -13,6 +13,10 @@ type StackStore interface {
 	Create(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.Stack, *errors.ServiceError)
+	// LockByID takes a row-level lock on the stack (SELECT ... FOR UPDATE).
+	// Only meaningful inside WithTransaction; serializes concurrent mutations
+	// that must observe each other (e.g. duplicate-name checks on create).
+	LockByID(ctx context.Context, id string) *errors.ServiceError
 	GetByName(ctx context.Context, Name string, userID string) (*models.Stack, *errors.ServiceError)
 	Update(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateRevision(ctx context.Context, id string, revision string) *errors.ServiceError

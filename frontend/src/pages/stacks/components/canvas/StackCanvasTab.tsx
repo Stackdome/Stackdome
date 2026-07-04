@@ -82,6 +82,8 @@ interface StackCanvasTabProps {
   onDeleteVolume?: (name: string) => Promise<boolean>;
   /** Gates double-confirm while the delete is in flight. */
   deletingVolume?: boolean;
+  /** Names of volumes that already exist server-side; their spec is immutable. */
+  persistedVolumeNames?: ReadonlySet<string>;
 }
 
 function StackCanvasFlow({
@@ -98,6 +100,7 @@ function StackCanvasFlow({
   topologyRefreshKey,
   onDeleteVolume,
   deletingVolume,
+  persistedVolumeNames,
 }: StackCanvasTabProps) {
   // Read from the live draft when the session is active, server state otherwise.
   const resources = session.isActive ? session.draft.resources : draftResources;
@@ -531,6 +534,7 @@ function StackCanvasFlow({
         session={session}
         onClose={popDrawer}
         onRequestRemove={setPendingDeleteVolume}
+        persisted={persistedVolumeNames?.has(frontEntry.name) ?? false}
       />
     ) : null;
 

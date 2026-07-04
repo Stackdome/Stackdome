@@ -5,6 +5,13 @@ import { convertDockerComposeToStackData } from '@/lib/docker-compose-converter'
 import { parseAndValidateDockerCompose } from '@/lib/docker-compose-parser';
 import type { DockerComposeFile } from '@/types/docker-compose';
 
+/** First few warning messages joined for a toast body; the rest summarized as a count. */
+export function summarizeWarnings(messages: string[], max = 3): string {
+  const shown = messages.slice(0, max).join(' · ');
+  const rest = messages.length - max;
+  return rest > 0 ? `${shown} · and ${rest} more` : shown;
+}
+
 export interface ImportState {
   isLoading: boolean;
   error: string | null;
@@ -75,12 +82,19 @@ export function useDockerComposeImport(): ImportState & ImportActions {
         },
       });
 
-      // Show simple success message
-      toast({
-        title: 'Import successful',
-        description: 'Docker Compose services imported. Please review and configure as needed.',
-        variant: 'success',
-      });
+      const warnings = conversionResult.warnings ?? [];
+      if (warnings.length > 0) {
+        toast({
+          title: `Imported with ${warnings.length} warning${warnings.length === 1 ? '' : 's'}`,
+          description: summarizeWarnings(warnings.map((w) => w.message)),
+        });
+      } else {
+        toast({
+          title: 'Import successful',
+          description: 'Docker Compose services imported. Please review and configure as needed.',
+          variant: 'success',
+        });
+      }
 
       return true;
     } catch (err) {

@@ -36,6 +36,12 @@ interface VolumeFieldsProps {
    * entry and close the drawer mid-edit.
    */
   nameReadOnly?: boolean;
+  /**
+   * Render the spec inputs (size) read-only. Used for server-persisted
+   * volumes: PVC size is immutable once provisioned, and the autosave engine
+   * has no volume-update op — an edit here would silently go nowhere.
+   */
+  specReadOnly?: boolean;
 }
 
 /** Shared form body for a volume: spec grid, mount details, and remove footer. */
@@ -48,6 +54,7 @@ export function VolumeFields({
   allVolumes,
   allStackResources = [],
   nameReadOnly = false,
+  specReadOnly = false,
 }: VolumeFieldsProps): ReactNode {
   const update = (patch: Partial<VolumeFormData>) => {
     onChange(index, { ...volume, ...patch });
@@ -85,7 +92,7 @@ export function VolumeFields({
               label="Size"
               htmlFor={`volume-size-${index}`}
               required
-              hint="e.g., 1Gi, 500Mi."
+              hint={specReadOnly ? "Size is fixed once the volume is provisioned." : "e.g., 1Gi, 500Mi."}
               error={errors["spec.size"]}
             >
               <Input
@@ -102,6 +109,7 @@ export function VolumeFields({
                     },
                   })
                 }
+                disabled={specReadOnly}
                 className={`font-mono ${errors["spec.size"] ? "border-danger" : ""}`}
                 aria-invalid={!!errors["spec.size"]}
               />

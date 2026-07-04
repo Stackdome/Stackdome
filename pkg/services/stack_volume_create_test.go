@@ -44,6 +44,9 @@ func TestStackService_CreateStackVolume(t *testing.T) {
 			func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
 				return fn(ctx)
 			})
+		// Inside the transaction: lock, then re-read for the duplicate check.
+		mockStackStore.EXPECT().LockByID(ctx, stackID).Return(nil)
+		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
 		created := &models.Volume{ID: "v-1", Name: "web-data"}
 		mockVolumeService.EXPECT().InternalCreateWithTx(ctx, stack, newVolume).Return(created, nil)
 		mockEnqueuer.EXPECT().Enqueue(&models.Volume{ID: "v-1"}).Return(nil)
@@ -64,6 +67,12 @@ func TestStackService_CreateStackVolume(t *testing.T) {
 		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
 		mockPermissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionRead).Return(nil)
 		mockPermissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
+		mockStackStore.EXPECT().WithTransaction(ctx, gomock.Any()).DoAndReturn(
+			func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+				return fn(ctx)
+			})
+		mockStackStore.EXPECT().LockByID(ctx, stackID).Return(nil)
+		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
 
 		_, serr := svc.CreateStackVolume(ctx, stackID, &models.Volume{Name: "existing-data"})
 		assert.NotNil(t, serr)
