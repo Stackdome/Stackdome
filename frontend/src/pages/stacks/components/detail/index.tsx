@@ -755,8 +755,18 @@ export default function StackDetailPage() {
         onDiscardResource={discardResourceByName}
         onDiscardVolume={discardVolumeByName}
         onDiscardAll={() => {
-          session.discard();
           setViewChangesOpen(false);
+          // Everything the modal lists is already autosaved server-side, so a
+          // local session reset discards nothing. Route through the revert
+          // flow (PUT of the release snapshot), which carries its own
+          // data-loss confirm. Without a deployed snapshot to restore there is
+          // nothing saved to roll back — clearing the local session is all
+          // "discard" can mean.
+          if (lifecycle.phase === "staged" && liveSnapshot) {
+            setRevertConfirmOpen(true);
+          } else {
+            session.discard();
+          }
         }}
         onDeploy={onDeploy}
         deployBusy={deployBusy}
@@ -767,7 +777,7 @@ export default function StackDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Discard draft changes?</AlertDialogTitle>
             <AlertDialogDescription>
-            This restores the stack to its last deployment. Volumes added since then are deleted — their data is destroyed. This cannot be undone.
+            This restores the stack to its last deployment. Volumes added since then are deleted, and volumes deleted since then are recreated empty — lost volume data cannot be recovered. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
