@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { LazyLog } from 'react-lazylog';
-import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -96,23 +95,23 @@ export function LogViewer({ stackId, organizationId, resources = [], className =
   ];
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`mx-auto max-w-[1100px] px-[30px] py-6 ${className}`}>
       {/* Header with integrated filter controls */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-4">
-          <h3 className="text-lg font-semibold">Stack Logs</h3>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h2 className="text-[18px] font-medium tracking-[-0.01em] text-foreground">Stack logs</h2>
           <StatusPill variant={statusInfo.variant}>{statusInfo.label}</StatusPill>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {/* Resources Multi-Select */}
           {availableSources.length > 0 && (
             <Popover open={sourceSelectOpen} onOpenChange={setSourceSelectOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 w-48 justify-start">
-                  <Layers className="h-4 w-4" />
+                <Button variant="outline" size="sm" className="h-8 w-48 justify-start rounded-sm text-[12.5px] font-medium">
+                  <Layers className="h-3.5 w-3.5" />
                   Resources
-                  <ChevronDown className="ml-auto h-4 w-4" />
+                  <ChevronDown className="ml-auto h-3.5 w-3.5" />
                   {filters.sources.length > 0 && (
                     <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
                       {filters.sources.length}
@@ -146,8 +145,8 @@ export function LogViewer({ stackId, organizationId, resources = [], className =
 
           {/* Time Range Selector */}
           <Select value={filters.timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-48 h-8">
-              <Clock className="h-4 w-4" />
+            <SelectTrigger className="h-8 w-48 rounded-sm text-[12.5px] font-medium">
+              <Clock className="h-3.5 w-3.5" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -163,35 +162,34 @@ export function LogViewer({ stackId, organizationId, resources = [], className =
 
       {/* Error Display */}
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      {/* Log Display */}
+      {/* Log Display — near-black terminal panel */}
       {logText ? (
-        <Card>
-          <CardContent className="p-0">
-            <div className="h-96 border rounded-md bg-gray-900">
-              <LazyLog
-                text={logText}
-                extraLines={1}
-                enableSearch
-                caseInsensitive
-                selectableLines
-                follow={filters.timeRange === 'live-4h'}
-                height={384}
-                style={{
-                  backgroundColor: '#111827',
-                  color: '#f9fafb',
-                  fontSize: '13px',
-                  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                }}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <div className="overflow-hidden rounded-md border border-border bg-[#070a0f]">
+          <div className="h-[560px]">
+            <LazyLog
+              text={logText}
+              extraLines={1}
+              enableSearch
+              caseInsensitive
+              selectableLines
+              follow={filters.timeRange === 'live-4h'}
+              height={560}
+              style={{
+                backgroundColor: '#070a0f',
+                color: '#94a3b8',
+                fontSize: '12px',
+                lineHeight: '1.7',
+                fontFamily: 'var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace',
+              }}
+            />
+          </div>
+        </div>
       ) : connectionStatus === 'connecting' ? (
         <EmptyState
           icon={<Loader2 className="h-6 w-6 animate-spin" />}

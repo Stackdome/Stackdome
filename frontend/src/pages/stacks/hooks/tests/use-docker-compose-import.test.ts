@@ -30,7 +30,17 @@ describe("useDockerComposeImport", () => {
       ok = await result.current.handleImport(VALID_YAML);
     });
     expect(ok!).toBe(true);
-    expect(navigate).toHaveBeenCalledWith("/stacks/create", expect.objectContaining({ state: expect.anything() }));
+    expect(navigate).toHaveBeenCalledWith(
+      "/stacks/new",
+      expect.objectContaining({
+        state: expect.objectContaining({
+          seed: expect.objectContaining({
+            resources: expect.any(Array),
+            linkedAddonIds: expect.any(Array),
+          }),
+        }),
+      }),
+    );
   });
 
   it("handleImport returns false and does NOT navigate on invalid YAML", async () => {

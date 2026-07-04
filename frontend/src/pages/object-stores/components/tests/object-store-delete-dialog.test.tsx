@@ -92,12 +92,12 @@ describe("ObjectStoreDeleteDialog", () => {
     expect(mockedDelete).toHaveBeenCalledWith("org-1", "alpha", "os-1");
     await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    // success toast fired exactly once, with destructive variant
+    // success toast fired exactly once, with success variant
     const successCalls = toastMock.mock.calls.filter(
-      ([arg]) => arg?.title === "Object Store deleted",
+      ([arg]) => arg?.title === "Object store deleted",
     );
     expect(successCalls).toHaveLength(1);
-    expect(successCalls[0][0].variant).toBe("destructive");
+    expect(successCalls[0][0].variant).toBe("success");
   });
 
   it("409 conflict: shows in-dialog banner, disables Delete, does NOT call onDeleted/onOpenChange(false)", async () => {

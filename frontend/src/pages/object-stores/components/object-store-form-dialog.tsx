@@ -173,14 +173,14 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
           return;
         }
         await updateObjectStore(orgId, teamName, editing.id, payload);
-        toast({ title: "Object Store updated" });
+        toast({ title: "Object store updated", variant: "success" });
       } else {
         if (!defaultTeamName) {
           toast({ title: "Failed to save Object Store", description: "You don't have a team to create object stores in.", variant: "destructive" });
           return;
         }
         await createObjectStore(orgId, defaultTeamName, payload);
-        toast({ title: "Object Store created" });
+        toast({ title: "Object store created", variant: "success" });
       }
       onSaved();
       onOpenChange(false);

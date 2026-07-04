@@ -19,7 +19,7 @@ export function NavStacks() {
         <SidebarMenuButton
           tooltip="Stacks"
           asChild
-          isActive={isStacksActive && !location.pathname.includes('/stacks/create')}
+          isActive={isStacksActive && !location.pathname.includes('/stacks/new')}
         >
           <Link to="/stacks">
             <Layers />

@@ -213,9 +213,9 @@ export function deriveReleaseTitle(release: StackRelease, failing: FailingResour
   const state = release.state ?? "";
   const build = failing.find((f) => f.type === "build_failure");
   const crash = failing.find((f) => f.type === "runtime_crash");
-  if (build) return `Build failed — ${build.name}`;
+  if (build) return `Build failed: ${build.name}`;
   // A terminal Failed crash reads as "Deploy failed"; an in-flight one names the resource.
-  if (crash && state !== ReleaseState.Failed) return `Runtime crash — ${crash.name}`;
+  if (crash && state !== ReleaseState.Failed) return `Runtime crash: ${crash.name}`;
   switch (state) {
     case ReleaseState.Pending: return stages.build === "active" ? "Build queued" : "Deploying";
     case ReleaseState.InProgress: return "Deploying";

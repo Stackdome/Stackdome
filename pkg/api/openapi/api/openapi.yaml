@@ -2498,6 +2498,65 @@ paths:
       security:
       - Bearer: []
       summary: Update stack connection
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/volumes:
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Volume'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Volume'
+          description: Volume created and associated with the stack
+        "400":
+          description: Invalid request payload
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Stack not found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: A volume with this name already exists in the stack
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Create a volume and associate it with the stack
   /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases:
     get:
       operationId: listReleases

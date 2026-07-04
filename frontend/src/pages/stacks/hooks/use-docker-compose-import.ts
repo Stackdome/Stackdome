@@ -4,7 +4,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { convertDockerComposeToStackData } from '@/lib/docker-compose-converter';
 import { parseAndValidateDockerCompose } from '@/lib/docker-compose-parser';
 import type { DockerComposeFile } from '@/types/docker-compose';
-import { ImportSource } from '@/pages/stacks/lib/import-source';
 
 export interface ImportState {
   isLoading: boolean;
@@ -63,21 +62,24 @@ export function useDockerComposeImport(): ImportState & ImportActions {
         throw new Error(errorMessages);
       }
 
-      // Close dialog and navigate to create page with imported data
       setIsDialogOpen(false);
-
-      navigate('/stacks/create', {
+      navigate('/stacks/new', {
         state: {
-          importedData: conversionResult.data,
-          importSource: ImportSource.DockerCompose,
-          importWarnings: conversionResult.warnings
-        }
+          seed: {
+            name: conversionResult.data.name ?? "",
+            labels: conversionResult.data.labels ?? [],
+            resources: conversionResult.data.spec?.stack_resources ?? [],
+            volumes: conversionResult.data.spec?.volumes ?? [],
+            linkedAddonIds: [],
+          },
+        },
       });
 
       // Show simple success message
       toast({
-        title: 'Import Successful',
+        title: 'Import successful',
         description: 'Docker Compose services imported. Please review and configure as needed.',
+        variant: 'success',
       });
 
       return true;
@@ -86,7 +88,7 @@ export function useDockerComposeImport(): ImportState & ImportActions {
       setError(errorMessage);
 
       toast({
-        title: 'Import Failed',
+        title: 'Import failed',
         description: errorMessage,
         variant: 'destructive',
       });

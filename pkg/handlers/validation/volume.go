@@ -7,15 +7,16 @@ import (
 )
 
 func ValidateVolume(in *openapi.Volume) Validate {
+	// NOTE: validate only fields that exist on the generated openapi.Volume —
+	// reflect.FieldByName on a missing field yields an invalid Value whose
+	// String() is "<invalid Value>", making validateEmpty fail unconditionally.
 	return ValidateAll([]Validate{
 		validateEmpty(in, "Id", "id"),
-		validateEmpty(in, "OrganisationId", "organisation_id"),
+		validateEmpty(in, "TeamId", "team_id"),
 		validateEmpty(in, "Status", "status"),
 		validateLabels(&in.Labels),
 		validateAnnotations(&in.Annotations),
 		validateNotEmpty(in, "Name", "name"),
-		validateNotEmpty(in, "WorkspaceName", "workspace_name"),
-		validateEmpty(in, "Namespace", "namespace"),
 		func() *errors.ServiceError {
 			if !ValidateName(in.Name) {
 				return errors.Validation("name is not a valid name")

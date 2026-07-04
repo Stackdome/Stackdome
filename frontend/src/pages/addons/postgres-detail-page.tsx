@@ -159,7 +159,7 @@ export default function PostgresDetailPage() {
     setTriggering(true);
     try {
       await triggerPostgresBackup(orgId, addon.id);
-      toast({ title: "Backup triggered" });
+      toast({ title: "Backup triggered", variant: "success" });
       await refetchBackups();
     } catch (e) {
       toast({
@@ -187,7 +187,7 @@ export default function PostgresDetailPage() {
       toast({
         title: "Addon deleted",
         description: `"${addon.name}" is being torn down.`,
-        variant: "destructive",
+        variant: "success",
       });
       navigate("/addons", { replace: true });
     } catch (e) {

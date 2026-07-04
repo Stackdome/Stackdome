@@ -254,6 +254,7 @@ func (s apiServer) routes() *mux.Router {
 	teamResourceRouter.HandleFunc("/secrets/{id}", secretHandler.Delete).Methods(http.MethodDelete)
 
 	// Stack-scoped volumes
+	teamResourceRouter.HandleFunc("/stacks/{id}/volumes", stackHandler.CreateVolume).Methods(http.MethodPost)
 	teamResourceRouter.HandleFunc("/stacks/{id}/volumes", volumeHandler.ListByStackID).Methods(http.MethodGet)
 
 	// Volumes (team-scoped)

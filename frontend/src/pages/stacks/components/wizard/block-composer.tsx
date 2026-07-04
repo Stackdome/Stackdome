@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { blockCatalog, BLOCK_CATEGORY_META, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { addBlockToStack, emptyStack } from "@/pages/stacks/lib/block-to-form";
-import { ImportSource } from "@/pages/stacks/lib/import-source";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
+import { emptyDraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
+import type { FormStackResourceData, FormVolumeExtendedData } from "@/pages/stacks/schemas/form-schema";
 import { BlockPicker } from "./block-picker";
 import { BlockGlyph } from "./block-glyph";
 import { WizardFooter } from "./wizard-footer";
@@ -57,15 +58,18 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
   const q = query.trim().toLowerCase();
   const availableAddons = addons.filter((a) => a.id && (!q || a.name.toLowerCase().includes(q)));
 
-  const openEditor = () => {
-    navigate("/stacks/create", {
-      state: {
-        importedData: stack,
-        importSource: ImportSource.Blocks,
-        linkedAddonIds: Array.from(selectedAddonIds),
-      },
-    });
+  const openCanvas = () => {
+    const seed = {
+      ...emptyDraftSeed(),
+      // The wizard's stack type uses a lighter API shape; cast to the form
+      // seed types that draft-seed expects so downstream code is type-safe.
+      resources: stack.spec.stack_resources as unknown as FormStackResourceData[],
+      volumes: (stack.spec.volumes ?? []) as unknown as FormVolumeExtendedData[],
+      labels: stack.labels ?? [],
+      linkedAddonIds: Array.from(selectedAddonIds),
+    };
     onClose();
+    navigate("/stacks/new", { state: { seed } });
   };
 
   const count = stack.spec.stack_resources.length + selectedAddonIds.size;
@@ -195,9 +199,9 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
       </div>
       <WizardFooter
         onBack={onBack}
-        onContinue={openEditor}
+        onContinue={openCanvas}
         continueDisabled={count === 0}
-        hint="Review & configure your resources"
+        hint="Open in the canvas editor"
       />
     </div>
   );

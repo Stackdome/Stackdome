@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PlusCircle, X, Upload, FileText, Copy } from "lucide-react";
+import { Plus, Plug, X, Upload, FileText, Copy } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { envRowsDiff } from "@/pages/stacks/lib/stack-diff";
 
@@ -43,6 +43,20 @@ interface StackResourceEnvironmentTabProps {
   onChangeEnvVars: (next: FormEnvVarData[]) => void;
   /** Reset a single env row to its baseline value. */
   onDiscardEnvRow?: (envIdx: number) => void;
+}
+
+/** Full-width dashed "add row" affordance shared by the variable list and each addon group. */
+function AddRowButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong px-3 py-2 text-[12.5px] font-medium text-foreground/80 transition-colors hover:bg-muted/30"
+    >
+      <Plus className="size-3.5" />
+      {label}
+    </button>
+  );
 }
 
 function StackResourceEnvironmentTabImpl({
@@ -101,7 +115,7 @@ function StackResourceEnvironmentTabImpl({
     if (newVars.length === 0) {
       toast({
         title: "No new variables added",
-        description: "All variables already exist or are invalid",
+        description: "All variables already exist or are invalid.",
         variant: "destructive",
       });
       return;
@@ -109,8 +123,8 @@ function StackResourceEnvironmentTabImpl({
     onChangeEnvVars([...(envVars || []), ...newVars]);
     toast({
       title: "Environment variables added",
-      description: `Added ${newVars.length} new environment variables`,
-      variant: "default",
+      description: `Added ${newVars.length} new environment variables.`,
+      variant: "success",
     });
   };
 
@@ -186,133 +200,135 @@ function StackResourceEnvironmentTabImpl({
     event.target.value = "";
   };
 
+  // Design ghost chip: mono 11px bordered pill, hover swings to brand.
+  const ghostChip =
+    "inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-brand hover:text-brand disabled:pointer-events-none disabled:opacity-50";
+
   return (
     <TabsContent value="environment" className="pt-4">
-      <div className="flex items-center mb-3">
-        <h3 className="text-sm font-semibold text-foreground">Environment Variables</h3>
-        <div className="ml-auto flex gap-2">
-          <Button
-            variant="ghost"
-            className="text-danger hover:text-danger hover:bg-danger-bg"
-            size="sm"
-            onClick={() => {
-              if (envVars?.length) {
-                onChangeEnvVars([]);
-                toast({
-                  title: "Environment variables cleared",
-                  description: "All environment variables have been removed",
-                });
-              }
-            }}
-            disabled={!envVars?.length}
-          >
-            <X className="h-4 w-4 mr-1" />
-            <span>Clear All</span>
-          </Button>
-          {/* Paste Variables button */}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Copy className="h-4 w-4" />
-                <span>Paste Variables</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="w-[95vw] max-w-4xl p-0 overflow-auto">
-              <div className="p-6">
-                <DialogHeader>
-                  <DialogTitle className="text-lg font-medium">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[12.5px] text-muted-foreground">
+          Environment{" "}
+            <span className="font-mono text-muted-foreground/70">
+            · {(envVars || []).length} variables
+            </span>
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-danger hover:text-danger disabled:pointer-events-none disabled:opacity-50"
+              onClick={() => {
+                if (envVars?.length) {
+                  onChangeEnvVars([]);
+                  toast({
+                    title: "Environment variables cleared",
+                    description: "All environment variables have been removed.",
+                    variant: "success",
+                  });
+                }
+              }}
+              disabled={!envVars?.length}
+            >
+              <X className="size-3.5" />
+            clear all
+            </button>
+            {/* Paste .env button */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <button type="button" className={ghostChip}>
+                  <Copy className="size-3.5" />
+                paste .env
+                </button>
+              </DialogTrigger>
+              <DialogContent className="w-[95vw] max-w-4xl p-0 overflow-auto">
+                <div className="p-6">
+                  <DialogHeader>
+                    <DialogTitle className="text-lg font-medium">
                     Paste Environment Variables
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor={`env-paste-${index}`} className="text-sm font-medium">
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor={`env-paste-${index}`} className="text-sm font-medium">
                       Paste in KEY=VALUE format (one per line)
-                    </Label>
-                    <div className="relative">
-                      <Textarea
-                        id={`env-paste-${index}`}
-                        placeholder={
-                          "DATABASE_URL=postgres://user:pass@localhost:5432/db\n" +
+                      </Label>
+                      <div className="relative">
+                        <Textarea
+                          id={`env-paste-${index}`}
+                          placeholder={
+                            "DATABASE_URL=postgres://user:pass@localhost:5432/db\n" +
                           "API_KEY=your_api_key\n" +
                           "# NODE_ENV=development"
-                        }
-                        className="font-mono text-sm min-h-[180px] w-full"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Lines starting with # will be ignored as comments
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      const textarea = document.getElementById(
-                        `env-paste-${index}`,
-                      ) as HTMLTextAreaElement | null;
-                      if (textarea) {
-                        const content = textarea.value.trim();
-                        if (content) {
-                          addMultipleEnvVars(parseEnvContent(content));
-                        }
-                      }
-                    }}
-                  >
-                    Add Variables
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-          {/* Import from file button */}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <Upload className="h-4 w-4 mr-2" /> Import File
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Import Environment Variables</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor={`env-file-upload-${index}`} className="text-sm font-medium">
-                    Upload .env File
-                  </Label>
-                  <div className="flex items-center justify-center w-full">
-                    <label
-                      htmlFor={`env-file-upload-${index}`}
-                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 hover:bg-muted/30"
-                    >
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <FileText className="w-8 h-8 mb-2 text-muted-foreground" />
-                        <p className="mb-2 text-sm text-muted-foreground">Click to upload or drag and drop</p>
-                        <p className="text-xs text-muted-foreground">Supports .env files</p>
+                          }
+                          className="font-mono text-sm min-h-[180px] w-full"
+                        />
                       </div>
-                      <input
-                        id={`env-file-upload-${index}`}
-                        type="file"
-                        accept=".env,text/plain"
-                        className="hidden"
-                        onChange={handleFileUpload}
-                      />
-                    </label>
+                      <p className="text-xs text-muted-foreground">
+                      Lines starting with # will be ignored as comments
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        const textarea = document.getElementById(
+                          `env-paste-${index}`,
+                        ) as HTMLTextAreaElement | null;
+                        if (textarea) {
+                          const content = textarea.value.trim();
+                          if (content) {
+                            addMultipleEnvVars(parseEnvContent(content));
+                          }
+                        }
+                      }}
+                    >
+                    Add Variables
+                    </Button>
                   </div>
                 </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+            {/* Import from file button */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <button type="button" className={ghostChip}>
+                  <Upload className="size-3.5" />
+                import file
+                </button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Import Environment Variables</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor={`env-file-upload-${index}`} className="text-sm font-medium">
+                    Upload .env File
+                    </Label>
+                    <div className="flex items-center justify-center w-full">
+                      <label
+                        htmlFor={`env-file-upload-${index}`}
+                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/20 hover:bg-muted/30"
+                      >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <FileText className="w-8 h-8 mb-2 text-muted-foreground" />
+                          <p className="mb-2 text-sm text-muted-foreground">Click to upload or drag and drop</p>
+                          <p className="text-xs text-muted-foreground">Supports .env files</p>
+                        </div>
+                        <input
+                          id={`env-file-upload-${index}`}
+                          type="file"
+                          accept=".env,text/plain"
+                          className="hidden"
+                          onChange={handleFileUpload}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
-      </div>
-      <div className="border border-muted rounded-md">
-        {/* Header Row */}
-        <div className="grid grid-cols-12 gap-2 p-3 border-b bg-muted/30 text-sm font-medium">
-          <div className="col-span-3">Key</div>
-          <div className="col-span-6">Value</div>
-          <div className="col-span-2 text-center">From</div>
-          <div className="col-span-1"></div>
-        </div>
-
         {/* Environment Variables Rows */}
         {(() => {
           // Live duplicate detection (always on, regardless of dirty state)
@@ -345,27 +361,14 @@ function StackResourceEnvironmentTabImpl({
           // "Add variable" appends a literal row; its own "From" selector then
           // switches the source. Shared by the empty state and the populated list.
           const addVariableButton = (
-            <div className="px-3 py-1.5 flex justify-end border-t border-border first:border-t-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-[12.5px]"
-                onClick={() => addEnvVar({ from: "stack", name: "", value: "" })}
-              >
-                <PlusCircle className="h-3 w-3 mr-1" />Add variable
-              </Button>
-            </div>
+            <AddRowButton
+              label="Add variable"
+              onClick={() => addEnvVar({ from: "stack", name: "", value: "" })}
+            />
           );
 
           if (envVars.length === 0) {
-            return (
-              <>
-                <div className="p-8 text-center text-muted-foreground">
-                  No environment variables defined
-                </div>
-                {addVariableButton}
-              </>
-            );
+            return addVariableButton;
           }
 
           // Partition rows so all ungrouped (non-addon) rows render FIRST (in
@@ -438,7 +441,9 @@ function StackResourceEnvironmentTabImpl({
 
           return (
             <>
-              {plainItems.length > 0 && <div>{plainItems.map(renderRow)}</div>}
+              {plainItems.length > 0 && (
+                <div className="flex flex-col gap-1.5">{plainItems.map(renderRow)}</div>
+              )}
               {/* Sits directly below the plain rows so a new var appears at the click point. */}
               {addVariableButton}
               {addonGroups.map((g, gIdx) => {
@@ -504,13 +509,18 @@ function StackResourceEnvironmentTabImpl({
                 return (
                   <div
                     key={`a-${gIdx}-${aid}-${db}`}
-                    className="relative border-y border-dashed border-border-strong mt-4 mb-1 pt-7 pb-1"
+                    className="relative mt-2 rounded-lg border border-border-strong bg-muted/20 px-2.5 pb-2.5 pt-6"
                     data-testid="env-addon-group"
                   >
-                    <div className="absolute -top-3.5 left-3 inline-flex items-center gap-2 bg-background px-2 py-0.5">
+                    <div className="absolute -top-3.5 left-3 inline-flex items-center gap-2 rounded-md bg-background px-1.5 py-0.5">
+                      <span className="inline-flex items-center gap-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.15em] text-foreground/80">
+                        <Plug className="size-3" />
+                        Addon
+                      </span>
                       <Select value={aid || undefined} onValueChange={handleAddonChange}>
                         <SelectTrigger
-                          className="h-7 w-[200px] text-[12.5px] font-semibold gap-2"
+                          size="sm"
+                          className="w-[180px] gap-2 text-xs"
                           data-testid="addon-picker-trigger"
                         >
                           <span className="flex items-center gap-2 min-w-0">
@@ -552,7 +562,8 @@ function StackResourceEnvironmentTabImpl({
                           {databases.length > 1 ? (
                             <Select value={db || undefined} onValueChange={handleDbChange}>
                               <SelectTrigger
-                                className="h-7 w-[160px] text-[12.5px]"
+                                size="sm"
+                                className="w-[140px] text-xs"
                                 data-testid="database-picker-trigger"
                               >
                                 <SelectValue placeholder="Pick database" />
@@ -577,23 +588,16 @@ function StackResourceEnvironmentTabImpl({
                               </SelectContent>
                             </Select>
                           ) : (
-                            <span className="text-[12px] text-muted-foreground">
+                            <span className="font-mono text-[11px] text-muted-foreground">
                           db: {db || databases[0]?.name || "—"}
                             </span>
                           )}
                         </>
                       )}
                     </div>
-                    {g.items.map(renderRow)}
-                    <div className="px-3 py-1.5 flex justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleAddBinding}
-                        className="h-7 text-[12.5px]"
-                      >
-                        <PlusCircle className="h-3 w-3 mr-1" /> Add binding
-                      </Button>
+                    <div className="flex flex-col gap-1.5">{g.items.map(renderRow)}</div>
+                    <div className="pt-1.5">
+                      <AddRowButton label="Add binding" onClick={handleAddBinding} />
                     </div>
                   </div>
                 );

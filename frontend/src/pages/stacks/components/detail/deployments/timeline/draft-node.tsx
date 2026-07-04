@@ -11,8 +11,6 @@ export interface DraftNodeProps {
   diff?: SnapshotDiff;
   /** Sequence the draft is diffed against — live, or the in-flight release when superseding it. */
   vsSeq?: number;
-  /** Sequence the draft would ship as once deployed. */
-  nextSeq: number;
   /** True when no release nodes follow (hides the rail connector). */
   isLast?: boolean;
   defaultOpen?: boolean;
@@ -34,7 +32,7 @@ function changedNames(diff?: SnapshotDiff): string[] {
  * Leads the rail when there are saved-but-undeployed changes. Mirrors a release node's
  * shape but with a dashed amber ring/border ("not deployed") and shows the staged diff.
  */
-export function DraftNode({ phase, diff, vsSeq, nextSeq, isLast, defaultOpen = true }: DraftNodeProps) {
+export function DraftNode({ phase, diff, vsSeq, isLast, defaultOpen = true }: DraftNodeProps) {
   const [open, setOpen] = useState(defaultOpen);
   const names = changedNames(diff);
   const hasChanges = names.length > 0;
@@ -68,10 +66,6 @@ export function DraftNode({ phase, diff, vsSeq, nextSeq, isLast, defaultOpen = t
             ) : (
               <div className="text-[12.5px] text-fg-muted">Saved changes are staged for deploy.</div>
             )}
-            <div className="mt-3.5 flex items-center gap-1.5 font-mono text-[11px] text-fg-muted">
-              <span className="text-brand">↑</span>
-              <span>Deploy from the bar above to ship as release #{nextSeq}.</span>
-            </div>
           </div>
         )}
       </div>

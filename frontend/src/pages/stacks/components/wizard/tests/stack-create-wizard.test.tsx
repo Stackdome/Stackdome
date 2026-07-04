@@ -30,12 +30,12 @@ describe("StackCreateWizard", () => {
     expect(screen.getByText(/What's in your stack\?/i)).toBeInTheDocument();
   });
 
-  it("blank slate navigates straight to the empty form", async () => {
+  it("blank slate navigates to the draft canvas", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
     render(<StackCreateWizard open onOpenChange={onOpenChange} />);
     await user.click(screen.getByRole("button", { name: /blank slate/i }));
-    expect(navigate).toHaveBeenCalledWith("/stacks/create");
+    expect(navigate).toHaveBeenCalledWith("/stacks/new");
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 

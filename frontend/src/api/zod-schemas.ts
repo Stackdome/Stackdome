@@ -4795,6 +4795,67 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/volumes",
+    alias: "postApiv1organizationsOrg_idteamsTeam_namestacksIdvolumes",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Volume,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Volume,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request payload`,
+        schema: z.void(),
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `A volume with this name already exists in the stack`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/v1/organizations/:org_id/teams/:team_name/volumes",
     alias: "postApiv1organizationsOrg_idteamsTeam_namevolumes",
     requestFormat: "json",

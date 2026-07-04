@@ -64,8 +64,10 @@ export function deepEqual(a: unknown, b: unknown): boolean {
 
   const ao = a as Record<string, unknown>;
   const bo = b as Record<string, unknown>;
-  const aKeys = Object.keys(ao).filter((k) => ao[k] !== undefined);
-  const bKeys = Object.keys(bo).filter((k) => bo[k] !== undefined);
+  // Exclude structurally-empty values (undefined, [], {}) so that server fields
+  // like `depends_on: []` compare equal to missing form fields.
+  const aKeys = Object.keys(ao).filter((k) => !isStructurallyEmpty(ao[k]));
+  const bKeys = Object.keys(bo).filter((k) => !isStructurallyEmpty(bo[k]));
   if (aKeys.length !== bKeys.length) return false;
   for (const k of aKeys) {
     if (!deepEqual(ao[k], bo[k])) return false;
@@ -83,23 +85,37 @@ function countChangedFields(
   const keys = new Set<string>([...Object.keys(ao), ...Object.keys(bo)]);
   let n = 0;
   for (const k of keys) {
+    if (k === "status") continue; // server telemetry, never user dirt
     if (!deepEqual(ao[k], bo[k])) n++;
   }
   return n;
+}
+
+/**
+ * Drop server-only telemetry before any dirt comparison. `status` is written by
+ * the cluster, not the user: the baseline may come from a release snapshot whose
+ * status was captured at deploy time while the draft carries the live status —
+ * that drift must never read as an undeployed change.
+ */
+function omitStatus<T>(x: T): T {
+  if (!x || typeof x !== "object" || Array.isArray(x)) return x;
+  const { status, ...rest } = x as Record<string, unknown>;
+  void status;
+  return rest as T;
 }
 
 export function isResourceDirty(
   draftResource: Partial<FormStackResourceData> | undefined,
   baselineResource: Partial<FormStackResourceData> | undefined,
 ): boolean {
-  return !deepEqual(draftResource, baselineResource);
+  return !deepEqual(omitStatus(draftResource), omitStatus(baselineResource));
 }
 
 export function isVolumeDirty(
   draftVolume: Partial<FormVolumeExtendedData> | undefined,
   baselineVolume: Partial<FormVolumeExtendedData> | undefined,
 ): boolean {
-  return !deepEqual(draftVolume, baselineVolume);
+  return !deepEqual(omitStatus(draftVolume), omitStatus(baselineVolume));
 }
 
 function getEnvVars(
@@ -157,8 +173,15 @@ export function getAddonLinkCount(
  * Each entry stores both the dirty flag and the per-X stats; on a cache
  * hit we return both without walking.
  */
-type ResourceDiffEntry = { dirty: false } | { dirty: true; stats: PerResourceDirty };
-type VolumeDiffEntry = { dirty: false } | { dirty: true; stats: PerVolumeDirty };
+// Each entry also records the baseline reference it was computed against.
+// When the baseline changes (e.g. after a rebase), the cache key is the
+// same draft object but the baseline ref differs, so we recompute.
+type ResourceDiffEntry =
+  | { dirty: false; baseline: unknown }
+  | { dirty: true; baseline: unknown; stats: PerResourceDirty };
+type VolumeDiffEntry =
+  | { dirty: false; baseline: unknown }
+  | { dirty: true; baseline: unknown; stats: PerVolumeDirty };
 const resourceDiffCache = new WeakMap<object, ResourceDiffEntry>();
 const volumeDiffCache = new WeakMap<object, VolumeDiffEntry>();
 
@@ -168,12 +191,13 @@ function diffOneResource(
 ): ResourceDiffEntry {
   if (d && typeof d === "object") {
     const cached = resourceDiffCache.get(d);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined && cached.baseline === b) return cached;
   }
   const dirty = isResourceDirty(d, b);
   const entry: ResourceDiffEntry = dirty
     ? {
       dirty: true,
+      baseline: b,
       stats: {
         rowsChanged: countEnvRowsChanged(d, b),
         fieldsChanged: countChangedFields(
@@ -182,7 +206,7 @@ function diffOneResource(
         ),
       },
     }
-    : { dirty: false };
+    : { dirty: false, baseline: b };
   if (d && typeof d === "object") resourceDiffCache.set(d, entry);
   return entry;
 }
@@ -193,12 +217,13 @@ function diffOneVolume(
 ): VolumeDiffEntry {
   if (d && typeof d === "object") {
     const cached = volumeDiffCache.get(d);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined && cached.baseline === b) return cached;
   }
   const dirty = isVolumeDirty(d, b);
   const entry: VolumeDiffEntry = dirty
     ? {
       dirty: true,
+      baseline: b,
       stats: {
         fieldsChanged: countChangedFields(
             d as Record<string, unknown> | undefined,
@@ -206,7 +231,7 @@ function diffOneVolume(
         ),
       },
     }
-    : { dirty: false };
+    : { dirty: false, baseline: b };
   if (d && typeof d === "object") volumeDiffCache.set(d, entry);
   return entry;
 }
@@ -267,13 +292,64 @@ export function revertResource(
   idx: number,
 ): { resources: ResourceArr; volumes: VolumeArr } {
   const next = { ...draft, resources: draft.resources.slice() };
-  if (idx < baseline.resources.length) {
-    next.resources[idx] = cloneJson(baseline.resources[idx]);
+  // A name-aligned baseline can carry nullish holes for draft-only resources
+  // (see alignBaselineToDraft) — treat those the same as "past the end".
+  const baselineEntry = idx < baseline.resources.length ? baseline.resources[idx] : undefined;
+  if (baselineEntry != null) {
+    // Keep the draft's live status: the baseline's was captured at deploy time
+    // and restoring it would show stale telemetry until the next refresh.
+    const liveStatus = (draft.resources[idx] as { status?: unknown } | undefined)?.status;
+    const restored = {
+      ...cloneJson(baselineEntry),
+      ...(liveStatus !== undefined ? { status: liveStatus } : {}),
+    } as (typeof next.resources)[number];
+    // A restored mount may reference a volume the draft has since deleted —
+    // reattaching it would create a dangling mount, so drop those rows.
+    if (Array.isArray(restored.volume_mounts)) {
+      const draftVolumeNames = new Set(draft.volumes.map((v) => v?.name).filter(Boolean));
+      restored.volume_mounts = restored.volume_mounts.filter(
+        (m) => m?.source_volume_name && draftVolumeNames.has(m.source_volume_name),
+      );
+    }
+    next.resources[idx] = restored;
   } else {
     // The resource only exists in the draft — drop it.
     next.resources.splice(idx, 1);
   }
   return next;
+}
+
+/**
+ * Reorder a baseline array so it aligns positionally with the draft, matching
+ * entries by `name`. All downstream diffing (diffStack, per-drawer baselines)
+ * is positional, but the server returns stack_resources in unstable order and
+ * a release snapshot's order need not match the live stack's — so the baseline
+ * must be re-keyed onto the draft's order before any index-wise comparison.
+ *
+ * Draft entries with no baseline match get an `undefined` hole (they read as
+ * "added"); baseline entries missing from the draft are appended at the end so
+ * deletions still register as dirt.
+ */
+export function alignBaselineToDraft<T extends { name?: string }>(
+  baseline: T[],
+  draft: Array<{ name?: string }>,
+): (T | undefined)[] {
+  const byName = new Map<string, T>();
+  for (const b of baseline) {
+    // First occurrence wins on (malformed) duplicate names.
+    if (b?.name && !byName.has(b.name)) byName.set(b.name, b);
+  }
+  const used = new Set<string>();
+  const aligned: (T | undefined)[] = draft.map((d) => {
+    if (!d?.name) return undefined;
+    const match = byName.get(d.name);
+    if (match) used.add(d.name);
+    return match;
+  });
+  for (const b of baseline) {
+    if (!b?.name || !used.has(b.name)) aligned.push(b);
+  }
+  return aligned;
 }
 
 /**
@@ -396,6 +472,7 @@ export function dirtyTabsForResource(
   const keys = new Set<string>([...dKeys, ...bKeys]);
 
   for (const k of keys) {
+    if (k === "status") continue; // server telemetry, never user dirt
     const dv = (draft as Record<string, unknown> | undefined)?.[k];
     const bv = (baseline as Record<string, unknown> | undefined)?.[k];
     if (deepEqual(dv, bv)) continue;
@@ -485,7 +562,7 @@ export function dirtyPathsForResource(
   baseline: unknown,
 ): Set<string> {
   const acc = new Set<string>();
-  walkPaths(draft, baseline, "", acc);
+  walkPaths(omitStatus(draft), omitStatus(baseline), "", acc);
   return acc;
 }
 
@@ -555,8 +632,14 @@ export function revertVolume(
   idx: number,
 ): { resources: ResourceArr; volumes: VolumeArr } {
   const next = { ...draft, volumes: draft.volumes.slice() };
-  if (idx < baseline.volumes.length) {
-    next.volumes[idx] = cloneJson(baseline.volumes[idx]);
+  // Nullish holes from a name-aligned baseline mean "draft-only" — drop the row.
+  const baselineEntry = idx < baseline.volumes.length ? baseline.volumes[idx] : undefined;
+  if (baselineEntry != null) {
+    const liveStatus = (draft.volumes[idx] as { status?: unknown } | undefined)?.status;
+    next.volumes[idx] = {
+      ...cloneJson(baselineEntry),
+      ...(liveStatus !== undefined ? { status: liveStatus } : {}),
+    } as (typeof next.volumes)[number];
   } else {
     next.volumes.splice(idx, 1);
   }

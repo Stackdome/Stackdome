@@ -226,6 +226,7 @@ export default function PostgresFormPage() {
         toast({
           title: "Addon updated",
           description: "Changes have been applied.",
+          variant: "success",
         });
       } else {
         if (!defaultTeamName) {
@@ -236,6 +237,7 @@ export default function PostgresFormPage() {
         toast({
           title: "Addon created",
           description: "Provisioning has started; status will update as it's ready.",
+          variant: "success",
         });
       }
       setConfirmAdvancedOpen(false);

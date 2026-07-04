@@ -32,6 +32,10 @@ function AppLayoutContent({
   // Parse the current path for breadcrumbs
   const pathSegments = location.pathname.split('/').filter(Boolean);
 
+  // Full-bleed layout for the canvas stack editor: /stacks/new (draft) and
+  // /stacks/<id> (existing). A single trailing segment only — not /stacks.
+  const isFullBleed = /^\/stacks\/[^/]+$/.test(location.pathname);
+
   // Create breadcrumb items based on the current path
   const breadcrumbItems: BreadcrumbItemType[] = [
     { name: 'Home', path: '/', clickable: true },
@@ -100,14 +104,22 @@ function AppLayoutContent({
               The page-sticky-bar slot lives at the top of the scroll container
               so a sticky element inside it pins flush under the topnav and
               spans the full width of the inset (no max-w cap). Pages portal
-              into it via #page-sticky-bar. */}
+              into it via #page-sticky-bar.
+
+              The canvas stack editor opts out of the centered max-width column
+              and renders full-bleed (edge-to-edge, full height) for the stack
+              detail route; every other page keeps the standard layout. */}
           <div className="flex-grow overflow-auto scrollbar-hide rounded-bl-lg rounded-br-lg">
             <div id="page-sticky-bar" className="sticky top-0 z-30" />
-            <div className="flex justify-center items-start p-6">
-              <div className="w-full max-w-6xl">
-                {children ? children : <Outlet />}
+            {isFullBleed ? (
+              <div className="h-full">{children ? children : <Outlet />}</div>
+            ) : (
+              <div className="flex justify-center items-start p-6">
+                <div className="w-full max-w-6xl">
+                  {children ? children : <Outlet />}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </SidebarInset>
       </div>

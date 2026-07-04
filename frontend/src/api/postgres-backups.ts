@@ -8,7 +8,7 @@ export type PostgresBackupPhase = NonNullable<PostgresBackup["phase"]>;
 export type PostgresBackupType = NonNullable<PostgresBackup["type"]>;
 
 type TriggerBackupOp =
-  paths["/api/v1/organizations/{org_id}/addons/postgres/{id}/actions/backup"]["post"];
+  paths["/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/backup"]["post"];
 
 export type TriggerBackupPayload = NonNullable<
   TriggerBackupOp["requestBody"]

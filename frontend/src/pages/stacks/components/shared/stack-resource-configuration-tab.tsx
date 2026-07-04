@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { PlusCircle, GitBranch, Box, Trash2, Database, X } from "lucide-react";
+import { PlusCircle, GitBranch, Box, Trash2, Database, X, ArrowUpRight, HardDrive } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { DirtyField } from "@/pages/stacks/components/shared/dirty-field";
@@ -39,6 +39,13 @@ interface StackResourceConfigurationTabProps {
   onDiscardField?: (path: string) => void;
   /** Patch any subset of resource fields. Identity must be stable across renders. */
   onPatchResource: (patch: Partial<FormStackResourceData>) => void;
+  /** When provided, the drawer offers inline volume creation (name+size+path)
+   *  instead of only selecting a pre-existing volume. */
+  onCreateVolume?: (input: { name: string; size: string; targetPath: string }) => void;
+  /** When provided, mount rows show a navigate button that pushes the volume's drawer. */
+  onOpenVolume?: (name: string) => void;
+  /** When true, render mounts as read-only rows (canvas drives mounts via drag/connect). */
+  mountsReadOnly?: boolean;
 }
 
 /** Subset of FormStackResourceData read by the Configuration tab. We pass this
@@ -98,6 +105,9 @@ function StackResourceConfigurationTabImpl({
   secrets,
   onDiscardField,
   onPatchResource,
+  onCreateVolume,
+  onOpenVolume,
+  mountsReadOnly = false,
 }: StackResourceConfigurationTabProps) {
   const update = onPatchResource;
 
@@ -156,7 +166,7 @@ function StackResourceConfigurationTabImpl({
       );
       if (isDuplicate) {
         toast({
-          title: "Duplicate Target Path",
+          title: "Duplicate target path",
           description: "Each volume mount must have a unique target path within a resource.",
           variant: "destructive",
         });
@@ -212,7 +222,7 @@ function StackResourceConfigurationTabImpl({
             label="Resource Name"
             htmlFor={`resource-name-${index}`}
             required
-            hint="A unique identifier within this stack — lowercase, no spaces."
+            hint="A unique identifier within this stack. Use lowercase letters with no spaces."
             error={getError(errors, "name")}
           >
             <DirtyField
@@ -577,101 +587,166 @@ function StackResourceConfigurationTabImpl({
       {/* Volume Mounts Section */}
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-3">Volume Mounts</h3>
-        <div className="grid gap-5 max-w-3xl">
-          {(draft.volume_mounts || []).map((vm: VolumeMount, vmIdx: number) => (
-            <DirtyField
-              key={vmIdx}
-              draft={draft}
-              baseline={baseline}
-              path={`volume_mounts.${vmIdx}`}
-              onReset={onDiscardField ? () => onDiscardField(`volume_mounts.${vmIdx}`) : undefined}
-              compact
-            >
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-start border p-3 rounded-md bg-muted/10">
-                <FieldShell
-                  label="Volume"
-                  htmlFor={`volume-name-${index}-${vmIdx}`}
-                  required
-                  error={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`)}
-                >
-                  <Select
-                    value={vm.source_volume_name || ""}
-                    onValueChange={(value) => updateVolumeMount(vmIdx, { source_volume_name: value })}
-                  >
-                    <SelectTrigger
-                      id={`volume-name-${index}-${vmIdx}`}
-                      className={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) ? "border-danger" : ""}
-                    >
-                      <SelectValue placeholder="Select volume" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(volumes || []).filter((vol) => !!vol.name).length === 0 ? (
-                        <div className="p-2 text-sm text-muted-foreground">No volumes available</div>
-                      ) : (
-                        (volumes || []).filter((vol) => !!vol.name).map((vol, vidx) => (
-                          <SelectItem key={vidx} value={vol.name!}>
-                            <div className="flex items-center gap-2">
-                              <Database className="h-4 w-4" />
-                              <span>{vol.name}</span>
-                              {vol.spec?.size && <span className="ml-1 text-xs text-muted-foreground">({vol.spec.size})</span>}
-                            </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </FieldShell>
-                <FieldShell label="Sub Path" htmlFor={`volume-subpath-${index}-${vmIdx}`}>
-                  <Input
-                    id={`volume-subpath-${index}-${vmIdx}`}
-                    value={vm.source_sub_path || ""}
-                    onChange={(e) => updateVolumeMount(vmIdx, { source_sub_path: e.target.value })}
-                    placeholder="e.g., data/config"
-                  />
-                </FieldShell>
-                <FieldShell
-                  label="Target Path"
-                  htmlFor={`volume-target-${index}-${vmIdx}`}
-                  required
-                  error={getError(errors, `volume_mounts.${vmIdx}.target_path`)}
-                >
-                  <Input
-                    id={`volume-target-${index}-${vmIdx}`}
-                    value={vm.target_path || ""}
-                    onChange={(e) => updateVolumeMount(vmIdx, { target_path: e.target.value })}
-                    placeholder="e.g., /mnt/data"
-                    className={getError(errors, `volume_mounts.${vmIdx}.target_path`) ? "border-danger" : ""}
-                    required
-                  />
-                </FieldShell>
-                <div className="pt-[26px]">
+        {mountsReadOnly ? (
+          <div className="grid gap-1.5 max-w-3xl">
+            {(draft.volume_mounts || []).length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No volumes mounted. Add one from the canvas using “+ Add resource → Volume”.
+              </p>
+            )}
+            {(draft.volume_mounts || []).map((vm: VolumeMount, vmIdx: number) => (
+              <div
+                key={vmIdx}
+                className="flex items-center gap-2 rounded-md border border-border bg-muted/10 px-3 py-2"
+              >
+                <HardDrive className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
+                <span className="truncate font-mono text-[12.5px] text-foreground">{vm.source_volume_name}</span>
+                <code className="ml-auto shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                  {vm.target_path}
+                </code>
+                {onOpenVolume && vm.source_volume_name && (
                   <Button
+                    type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => removeVolumeMount(vmIdx)}
-                    title="Remove volume mount"
-                    className="text-danger hover:text-danger hover:bg-danger-bg"
+                    className="size-7 shrink-0 text-fg-muted hover:text-brand"
+                    aria-label={`Open volume ${vm.source_volume_name}`}
+                    title="Open volume settings"
+                    onClick={() => onOpenVolume(vm.source_volume_name!)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <ArrowUpRight className="size-3.5" />
                   </Button>
-                </div>
+                )}
               </div>
-            </DirtyField>
-          ))}
-          <div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={addVolumeMount}
-              disabled={(volumes || []).length === 0}
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />Add mount
-            </Button>
-            {(volumes || []).length === 0 && (
-              <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
+            ))}
+            <p className="mt-1 text-[12.5px] text-muted-foreground">
+              Manage mounts on the canvas: right-click a volume to disconnect, drag a floating volume onto a service to attach.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-5 max-w-3xl">
+            {(draft.volume_mounts || []).map((vm: VolumeMount, vmIdx: number) => (
+              <DirtyField
+                key={vmIdx}
+                draft={draft}
+                baseline={baseline}
+                path={`volume_mounts.${vmIdx}`}
+                onReset={onDiscardField ? () => onDiscardField(`volume_mounts.${vmIdx}`) : undefined}
+                compact
+              >
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-start border p-3 rounded-md bg-muted/10">
+                  <div className="flex items-end gap-1.5">
+                    <FieldShell
+                      label="Volume"
+                      htmlFor={`volume-name-${index}-${vmIdx}`}
+                      required
+                      error={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`)}
+                    >
+                      <Select
+                        value={vm.source_volume_name || ""}
+                        onValueChange={(value) => updateVolumeMount(vmIdx, { source_volume_name: value })}
+                      >
+                        <SelectTrigger
+                          id={`volume-name-${index}-${vmIdx}`}
+                          className={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) ? "border-danger" : ""}
+                        >
+                          <SelectValue placeholder="Select volume" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {/* A mount can reference a volume missing from the list
+                            (dangling data). Render it as a disabled item so the
+                            select still SHOWS the name instead of going blank. */}
+                          {vm.source_volume_name &&
+                          !(volumes || []).some((vol) => vol.name === vm.source_volume_name) && (
+                            <SelectItem value={vm.source_volume_name} disabled>
+                              <div className="flex items-center gap-2">
+                                <Database className="h-4 w-4" />
+                                <span>{vm.source_volume_name}</span>
+                                <span className="ml-1 text-xs text-muted-foreground">(missing)</span>
+                              </div>
+                            </SelectItem>
+                          )}
+                          {(volumes || []).filter((vol) => !!vol.name).length === 0 ? (
+                            <div className="p-2 text-sm text-muted-foreground">No volumes available</div>
+                          ) : (
+                            (volumes || []).filter((vol) => !!vol.name).map((vol, vidx) => (
+                              <SelectItem key={vidx} value={vol.name!}>
+                                <div className="flex items-center gap-2">
+                                  <Database className="h-4 w-4" />
+                                  <span>{vol.name}</span>
+                                  {vol.spec?.size && <span className="ml-1 text-xs text-muted-foreground">({vol.spec.size})</span>}
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </FieldShell>
+                    {onOpenVolume && vm.source_volume_name && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 shrink-0 self-end text-fg-muted hover:text-brand"
+                        aria-label={`Open volume ${vm.source_volume_name}`}
+                        title="Open volume settings"
+                        onClick={() => onOpenVolume(vm.source_volume_name!)}
+                      >
+                        <ArrowUpRight className="size-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                  <FieldShell label="Sub Path" htmlFor={`volume-subpath-${index}-${vmIdx}`}>
+                    <Input
+                      id={`volume-subpath-${index}-${vmIdx}`}
+                      value={vm.source_sub_path || ""}
+                      onChange={(e) => updateVolumeMount(vmIdx, { source_sub_path: e.target.value })}
+                      placeholder="e.g., data/config"
+                    />
+                  </FieldShell>
+                  <FieldShell
+                    label="Target Path"
+                    htmlFor={`volume-target-${index}-${vmIdx}`}
+                    required
+                    error={getError(errors, `volume_mounts.${vmIdx}.target_path`)}
+                  >
+                    <Input
+                      id={`volume-target-${index}-${vmIdx}`}
+                      value={vm.target_path || ""}
+                      onChange={(e) => updateVolumeMount(vmIdx, { target_path: e.target.value })}
+                      placeholder="e.g., /mnt/data"
+                      className={getError(errors, `volume_mounts.${vmIdx}.target_path`) ? "border-danger" : ""}
+                      required
+                    />
+                  </FieldShell>
+                  <div className="pt-[26px]">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeVolumeMount(vmIdx)}
+                      title="Remove volume mount"
+                      className="text-danger hover:text-danger hover:bg-danger-bg"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </DirtyField>
+            ))}
+            {onCreateVolume ? (
+              <InlineVolumeAdder onCreate={onCreateVolume} />
+            ) : (
+              <div>
+                <Button variant="ghost" size="sm" onClick={addVolumeMount} disabled={(volumes || []).length === 0}>
+                  <PlusCircle className="h-4 w-4 mr-2" />Add mount
+                </Button>
+                {(volumes || []).length === 0 && (
+                  <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
+                )}
+              </div>
             )}
           </div>
-        </div>
+        )}
       </div>
       <Separator className="my-6" />
       {/* Ports Section */}
@@ -754,6 +829,32 @@ function StackResourceConfigurationTabImpl({
         </div>
       </div>
     </TabsContent>
+  );
+}
+
+function InlineVolumeAdder({ onCreate }: { onCreate: (i: { name: string; size: string; targetPath: string }) => void }) {
+  const [name, setName] = React.useState("");
+  const [size, setSize] = React.useState("1Gi");
+  const [targetPath, setTargetPath] = React.useState("/mnt/data");
+  const canAdd = name.trim() !== "" && size.trim() !== "" && targetPath.trim() !== "";
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end border border-dashed p-3 rounded-md">
+      <FieldShell label="Volume name" htmlFor="inline-vol-name">
+        <Input id="inline-vol-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., data" />
+      </FieldShell>
+      <FieldShell label="Size" htmlFor="inline-vol-size">
+        <Input id="inline-vol-size" value={size} onChange={(e) => setSize(e.target.value)} placeholder="e.g., 1Gi" />
+      </FieldShell>
+      <FieldShell label="Mount path" htmlFor="inline-vol-path">
+        <Input id="inline-vol-path" value={targetPath} onChange={(e) => setTargetPath(e.target.value)} placeholder="/mnt/data" />
+      </FieldShell>
+      <Button
+        variant="ghost" size="sm" disabled={!canAdd}
+        onClick={() => { onCreate({ name: name.trim(), size: size.trim(), targetPath: targetPath.trim() }); setName(""); setSize("1Gi"); setTargetPath("/mnt/data"); }}
+      >
+        <PlusCircle className="h-4 w-4 mr-2" />Add volume
+      </Button>
+    </div>
   );
 }
 
