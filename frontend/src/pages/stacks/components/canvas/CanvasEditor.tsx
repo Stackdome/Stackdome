@@ -7,6 +7,7 @@ import {
   type OnNodesChange,
   type OnEdgesChange,
   type NodeMouseHandler,
+  type OnNodeDrag,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Move } from "lucide-react";
@@ -37,6 +38,9 @@ interface CanvasEditorProps {
   onEdgesChange: OnEdgesChange;
   onNodeClick?: NodeMouseHandler<CanvasFlowNode>;
   onNodeContextMenu?: NodeMouseHandler<CanvasFlowNode>;
+  onNodeDragStart?: OnNodeDrag<CanvasFlowNode>;
+  onNodeDrag?: OnNodeDrag<CanvasFlowNode>;
+  onNodeDragStop?: OnNodeDrag<CanvasFlowNode>;
   showConnections: boolean;
   onToggleConnections: () => void;
   onAutoLayout: () => void;
@@ -60,6 +64,9 @@ export function CanvasEditor({
   onEdgesChange,
   onNodeClick,
   onNodeContextMenu,
+  onNodeDragStart,
+  onNodeDrag,
+  onNodeDragStop,
   showConnections,
   onToggleConnections,
   onAutoLayout,
@@ -83,6 +90,9 @@ export function CanvasEditor({
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         onNodeContextMenu={onNodeContextMenu}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
         fitView
         fitViewOptions={FIT_OPTIONS}
         colorMode="system"

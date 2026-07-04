@@ -37,6 +37,7 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
         "relative w-[216px] cursor-grab overflow-hidden rounded-lg border bg-card shadow-xs transition-colors",
         borderClass,
         selected && "ring-[3px] ring-brand/20",
+        data.dropTarget && "border-brand ring-[3px] ring-brand/30",
         dirty === "removed" && "opacity-60",
       )}
     >

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import {
   ReactFlowProvider,
@@ -7,6 +7,8 @@ import {
   useReactFlow,
   type Edge,
   type NodeMouseHandler,
+  type OnNodeDrag,
+  type XYPosition,
 } from "@xyflow/react";
 import type {
   FormStackResourceData,
@@ -27,7 +29,12 @@ import { AddVolumeDialog } from "./AddVolumeDialog";
 import { CanvasContextMenu, type CanvasMenuTarget } from "./CanvasContextMenu";
 import { MountPathDialog } from "./MountPathDialog";
 import { addMount, newVolume, removeMountsOf } from "@/pages/stacks/lib/canvas/volume-ops";
-import { NODE_KIND, type AttachmentNodeData, type ResourceNodeData } from "@/pages/stacks/lib/canvas/graph-from-connections";
+import {
+  NODE_KIND,
+  NODE_ID_PREFIX,
+  type AttachmentNodeData,
+  type ResourceNodeData,
+} from "@/pages/stacks/lib/canvas/graph-from-connections";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -131,7 +138,65 @@ function StackCanvasFlow({
   const [drawerStack, setDrawerStack] = useState<DrawerEntry[]>([]);
   const [menuTarget, setMenuTarget] = useState<CanvasMenuTarget | null>(null);
   const [pendingDeleteVolume, setPendingDeleteVolume] = useState<string | null>(null);
-  const { fitView } = useReactFlow();
+  const { fitView, getIntersectingNodes } = useReactFlow();
+  const dragStartPos = useRef<XYPosition | null>(null);
+
+  const isFloatingVolume = (node: CanvasFlowNode) =>
+    node.type === "attachment" && (node.data as AttachmentNodeData).kind === NODE_KIND.volume;
+
+  /** First intersecting service card (addons have no resourceIdx and never qualify). */
+  const dropTargetFor = useCallback(
+    (node: CanvasFlowNode): CanvasFlowNode | null => {
+      const hit = getIntersectingNodes(node).find(
+        (n) => n.type === "resource" && (n.data as ResourceNodeData).resourceIdx != null,
+      );
+      return (hit as CanvasFlowNode) ?? null;
+    },
+    [getIntersectingNodes],
+  );
+
+  const onNodeDragStart = useCallback<OnNodeDrag<CanvasFlowNode>>((_event, node) => {
+    dragStartPos.current = isFloatingVolume(node) ? { ...node.position } : null;
+  }, []);
+
+  const onNodeDrag = useCallback<OnNodeDrag<CanvasFlowNode>>(
+    (_event, node) => {
+      if (!isFloatingVolume(node)) return;
+      const target = dropTargetFor(node);
+      setNodes((prev) =>
+        prev.map((n) => {
+          const isTarget = n.id === target?.id;
+          const current = (n.data as ResourceNodeData).dropTarget ?? false;
+          if (current === isTarget) return n;
+          return { ...n, data: { ...n.data, dropTarget: isTarget } } as CanvasFlowNode;
+        }),
+      );
+    },
+    [dropTargetFor, setNodes],
+  );
+
+  const onNodeDragStop = useCallback<OnNodeDrag<CanvasFlowNode>>(
+    (_event, node) => {
+      if (!isFloatingVolume(node)) return;
+      const target = dropTargetFor(node);
+      // Clear all rings.
+      setNodes((prev) =>
+        prev.map((n) =>
+          (n.data as ResourceNodeData).dropTarget
+            ? ({ ...n, data: { ...n.data, dropTarget: false } } as CanvasFlowNode)
+            : n,
+        ),
+      );
+      if (!target) {
+        dragStartPos.current = null;
+        return; // plain reposition
+      }
+      const volumeName = node.id.slice(NODE_ID_PREFIX.volume.length);
+      const resourceIdx = (target.data as ResourceNodeData).resourceIdx!;
+      setAttachRequest({ volumeName, resourceIdx });
+    },
+    [dropTargetFor, setNodes],
+  );
 
   const onNodeContextMenu = useCallback<NodeMouseHandler<CanvasFlowNode>>(
     (event, node) => {
@@ -334,6 +399,7 @@ function StackCanvasFlow({
           targetPath: input.targetPath,
         }),
       }));
+      dragStartPos.current = null;
       setAttachRequest(null);
     },
     [applyDraft],
@@ -450,6 +516,9 @@ function StackCanvasFlow({
           onEdgesChange={onEdgesChange}
           onNodeClick={onNodeClick}
           onNodeContextMenu={onNodeContextMenu}
+          onNodeDragStart={onNodeDragStart}
+          onNodeDrag={onNodeDrag}
+          onNodeDragStop={onNodeDragStop}
           showConnections={showConnections}
           onToggleConnections={toggleConnections}
           onAutoLayout={autoLayout}
@@ -501,7 +570,17 @@ function StackCanvasFlow({
         volumeName={attachRequest?.volumeName ?? null}
         resources={resources}
         resourceIdx={attachRequest?.resourceIdx ?? null}
-        onCancel={() => setAttachRequest(null)}
+        onCancel={() => {
+          const req = attachRequest;
+          setAttachRequest(null);
+          const start = dragStartPos.current;
+          dragStartPos.current = null;
+          if (req && start) {
+            setNodes((prev) =>
+              prev.map((n) => (n.id === NODE_ID_PREFIX.volume + req.volumeName ? { ...n, position: start } : n)),
+            );
+          }
+        }}
         onAttach={onAttachConfirm}
       />
       <AlertDialog open={pendingDeleteVolume != null} onOpenChange={(o) => !o && setPendingDeleteVolume(null)}>

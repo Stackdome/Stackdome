@@ -71,6 +71,8 @@ export interface ResourceNodeData {
   dirtyState?: DirtyState;
   /** Index into the edit session's resource array; absent for addon nodes. */
   resourceIdx?: number;
+  /** Transient: true while a dragged volume hovers this card as a valid drop target. */
+  dropTarget?: boolean;
   [key: string]: unknown; // satisfies React Flow's Record<string, unknown> node data
 }
 
