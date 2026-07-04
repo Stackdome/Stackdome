@@ -48,13 +48,26 @@ describe("deriveGraph (connection projection)", () => {
     expect(g.edges.map((e) => e.id)).toContain("env:secret:s1->resource:web");
   });
 
-  it("projects volume mounts into a volume node plus volume_mount edge", () => {
+  it("renders mounted volumes as card chips only — no volume node, no volume_mount edge", () => {
     const g = deriveGraph({
       ...base,
       resources: [web([], { volume_mounts: [{ name: "data", source_volume_name: "data", target_path: "/var/data" }] })],
+      volumeNames: ["data"],
     });
-    expect(g.nodes.find((n) => n.id === "volume:data")?.data).toMatchObject({ kind: NODE_KIND.volume, name: "data" });
-    expect(g.edges.map((e) => e.id)).toContain("volume_mount:volume:data->resource:web");
+    expect(g.nodes.find((n) => n.id === "volume:data")).toBeUndefined();
+    expect(g.edges).toHaveLength(0);
+  });
+
+  it("renders unmounted volumes as free attachment nodes with no edges", () => {
+    const g = deriveGraph({
+      ...base,
+      resources: [web()],
+      volumeNames: ["orphan"],
+    });
+    const volumeNode = g.nodes.find((n) => n.id === "volume:orphan");
+    expect(volumeNode?.type).toBe("attachment");
+    expect(volumeNode?.data).toMatchObject({ kind: NODE_KIND.volume, name: "orphan" });
+    expect(g.edges).toHaveLength(0);
   });
 
   it("emits depends_on edges as derived and skips unknown deps", () => {

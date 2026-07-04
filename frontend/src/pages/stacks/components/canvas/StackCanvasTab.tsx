@@ -74,6 +74,11 @@ function StackCanvasFlow({
   // Read from the live draft when the session is active, server state otherwise.
   const resources = session.isActive ? session.draft.resources : draftResources;
   const linkedAddonIds = session.isActive ? session.linkedAddonIds : connectionAddonIds;
+  const volumes = session.isActive ? session.draft.volumes : draftVolumes;
+  const volumeNames = useMemo(
+    () => volumes.map((v) => v.name).filter((n): n is string => !!n),
+    [volumes],
+  );
 
   const dirty = useMemo(
     () => ({
@@ -94,8 +99,8 @@ function StackCanvasFlow({
 
   // Local connection-derived data (cheap, pure). Re-runs on any edit.
   const dataGraph = useMemo(
-    () => deriveGraph({ resources, linkedAddonIds, addonNameById, secretNameById, dirty }),
-    [resources, linkedAddonIds, addonNameById, secretNameById, dirty],
+    () => deriveGraph({ resources, linkedAddonIds, addonNameById, secretNameById, volumeNames, dirty }),
+    [resources, linkedAddonIds, addonNameById, secretNameById, volumeNames, dirty],
   );
   // Local graph enhanced with server-derived edges + runtime status.
   const mergedGraph = useMemo(() => mergeTopology(dataGraph, topology), [dataGraph, topology]);

@@ -1,6 +1,6 @@
 import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import { nodePresentation, type GlyphKind, type DotState } from "./node-presentation";
-import { splitEnvRows, mountsToConnections, type FormMountRow, type FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
+import { splitEnvRows, type FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
 import type { StackConnection } from "@/api/connections";
 
 /**
@@ -122,6 +122,8 @@ export interface DeriveGraphInput {
   linkedAddonIds: ReadonlySet<string>;
   addonNameById: ReadonlyMap<string, string>;
   secretNameById: ReadonlyMap<string, string>;
+  /** All volume names in the draft — only UNMOUNTED ones render as free attachment nodes. */
+  volumeNames?: readonly string[];
   dirty?: DirtyInput;
 }
 
@@ -198,10 +200,12 @@ function nodeIdOfConnRef(ref: StackConnection["from"] | undefined): string | nul
  * env rows.
  *
  * - service node per resource, addon node per linked addon id
- * - secret/volume attachment nodes created on demand from connection producers
- * - edges projected from each resource's authored connections
- *   (`splitEnvRows` + `mountsToConnections`), plus derived `depends_on` edges
- * - volumes folded into their owning resource node as chips
+ * - secret attachment nodes created on demand from connection producers
+ * - edges projected from each resource's authored env connections
+ *   (`splitEnvRows`), plus derived `depends_on` edges
+ * - MOUNTED volumes render only as chips docked on their owning resource
+ *   card (no separate node, no edge); UNMOUNTED volumes render as free
+ *   attachment nodes so they stay visible and re-attachable
  *
  * Positions are left at the origin; `layoutGraph` assigns real coordinates.
  * No React/React Flow imports — this is unit-testable in isolation.
@@ -282,23 +286,31 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
 
   for (const resource of input.resources) {
     const name = resource.name ?? "";
-    const conns: StackConnection[] = [
-      ...splitEnvRows(name, envVarsOf(resource) as FormEnvRow[]).connections,
-      ...mountsToConnections(name, (resource.volume_mounts ?? []) as FormMountRow[]),
-    ];
+    const conns: StackConnection[] = splitEnvRows(name, envVarsOf(resource) as FormEnvRow[]).connections;
     for (const conn of conns) {
-      // Secret/volume producers materialize as attachment nodes on demand.
+      // Secret producers materialize as attachment nodes on demand.
       if (conn.from?.type === "secret" && conn.from.id) {
         ensureAttachment(
           NODE_ID_PREFIX.secret + conn.from.id,
           NODE_KIND.secret,
           input.secretNameById.get(conn.from.id) ?? conn.from.id,
         );
-      } else if (conn.from?.type === "volume" && conn.from.name) {
-        ensureAttachment(NODE_ID_PREFIX.volume + conn.from.name, NODE_KIND.volume, conn.from.name);
       }
       addEdge(conn.kind as EdgeKind, EDGE_SOURCE_OF_TRUTH.connection, nodeIdOfConnRef(conn.from), nodeIdOfConnRef(conn.to));
     }
+  }
+
+  // Unmounted volumes float as free attachment nodes; mounted ones are
+  // already represented by the chip on their owning resource card.
+  const mountedVolumes = new Set<string>();
+  for (const resource of input.resources) {
+    for (const m of resource.volume_mounts ?? []) {
+      if (m.source_volume_name) mountedVolumes.add(m.source_volume_name as string);
+    }
+  }
+  for (const volumeName of input.volumeNames ?? []) {
+    if (!volumeName || mountedVolumes.has(volumeName)) continue;
+    ensureAttachment(NODE_ID_PREFIX.volume + volumeName, NODE_KIND.volume, volumeName);
   }
 
   for (const resource of input.resources) {
