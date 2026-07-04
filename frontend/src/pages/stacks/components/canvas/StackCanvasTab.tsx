@@ -24,7 +24,19 @@ import { CanvasEditor } from "./CanvasEditor";
 import { ResourceDrawer } from "./ResourceDrawer";
 import { VolumeDrawer } from "./VolumeDrawer";
 import { AddVolumeDialog } from "./AddVolumeDialog";
-import { addMount, newVolume } from "@/pages/stacks/lib/canvas/volume-ops";
+import { CanvasContextMenu, type CanvasMenuTarget } from "./CanvasContextMenu";
+import { addMount, newVolume, removeMountsOf } from "@/pages/stacks/lib/canvas/volume-ops";
+import { NODE_KIND, type AttachmentNodeData, type ResourceNodeData } from "@/pages/stacks/lib/canvas/graph-from-connections";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DrawerStack, type DrawerPanelDescriptor } from "./DrawerStack";
 import {
   replaceStack,
@@ -116,7 +128,30 @@ function StackCanvasFlow({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [showConnections, setShowConnections] = useState(true);
   const [drawerStack, setDrawerStack] = useState<DrawerEntry[]>([]);
+  const [menuTarget, setMenuTarget] = useState<CanvasMenuTarget | null>(null);
+  const [pendingDeleteVolume, setPendingDeleteVolume] = useState<string | null>(null);
   const { fitView } = useReactFlow();
+
+  const onNodeContextMenu = useCallback<NodeMouseHandler<CanvasFlowNode>>(
+    (event, node) => {
+      event.preventDefault();
+      const { clientX: x, clientY: y } = event;
+      const chipEl = (event.target as HTMLElement).closest("[data-volume-chip]");
+      if (chipEl) {
+        setMenuTarget({ kind: "volume-chip", volumeName: chipEl.getAttribute("data-volume-chip")!, x, y });
+        return;
+      }
+      if (node.type === "attachment" && (node.data as AttachmentNodeData).kind === NODE_KIND.volume) {
+        setMenuTarget({ kind: "volume-node", volumeName: (node.data as AttachmentNodeData).name, x, y });
+        return;
+      }
+      if (node.type === "resource") {
+        const idx = (node.data as ResourceNodeData).resourceIdx;
+        if (idx != null) setMenuTarget({ kind: "resource", resourceIdx: idx, x, y });
+      }
+    },
+    [],
+  );
 
   // Re-layout ONLY when topology changes; preserve in-session drag positions by id.
   useEffect(() => {
@@ -146,11 +181,8 @@ function StackCanvasFlow({
     requestAnimationFrame(() => fitView(FIT_OPTIONS));
   }, [mergedGraph, setNodes, fitView]);
 
-  const onNodeClick = useCallback<NodeMouseHandler<CanvasFlowNode>>(
-    (_event, node) => {
-      if (node.type !== "resource") return; // attachment node — display-only, no drawer
-      const idx = node.data.resourceIdx;
-      if (idx == null) return; // addon node — managed via the Environment tab, no drawer in v1
+  const openResourceDrawer = useCallback(
+    (idx: number) => {
       // Activate an edit session lazily so drawer edits land in a draft.
       if (!session.isActive) {
         session.start(
@@ -166,6 +198,34 @@ function StackCanvasFlow({
       setDrawerStack(replaceStack({ kind: "resource", index: idx }));
     },
     [session, baselineResources, baselineVolumes, draftResources, draftVolumes, connectionAddonIds],
+  );
+
+  const openVolumeFromCanvas = useCallback(
+    (volumeName: string) => {
+      // The volume drawer reads session.draft — make sure a session exists first.
+      if (!session.isActive) {
+        session.start(
+          { resources: baselineResources, volumes: baselineVolumes },
+          { linkedAddonIds: new Set(connectionAddonIds), draft: { resources: draftResources, volumes: draftVolumes } },
+        );
+      }
+      setDrawerStack((s) => pushEntry(s, { kind: "volume", name: volumeName }));
+    },
+    [session, baselineResources, baselineVolumes, draftResources, draftVolumes, connectionAddonIds],
+  );
+
+  const onNodeClick = useCallback<NodeMouseHandler<CanvasFlowNode>>(
+    (_event, node) => {
+      if (node.type === "attachment") {
+        const data = node.data as AttachmentNodeData;
+        if (data.kind === NODE_KIND.volume) openVolumeFromCanvas(data.name);
+        return; // secret/object-store attachments stay display-only
+      }
+      const idx = (node.data as ResourceNodeData).resourceIdx;
+      if (idx == null) return; // addon node — managed via the Environment tab, no drawer in v1
+      openResourceDrawer(idx);
+    },
+    [openResourceDrawer, openVolumeFromCanvas],
   );
 
   // Block ids already present in the stack (drives the picker's "added" badge).
@@ -226,6 +286,24 @@ function StackCanvasFlow({
       }
     },
     [session, baselineResources, baselineVolumes, draftResources, draftVolumes, connectionAddonIds],
+  );
+
+  const onDisconnectVolume = useCallback(
+    (volumeName: string) => {
+      applyDraft((draft) => ({ ...draft, resources: removeMountsOf(draft.resources, volumeName) }));
+    },
+    [applyDraft],
+  );
+
+  const onDeleteVolumeConfirmed = useCallback(
+    (volumeName: string) => {
+      applyDraft((draft) => ({
+        resources: removeMountsOf(draft.resources, volumeName),
+        volumes: draft.volumes.filter((v) => v.name !== volumeName),
+      }));
+      setPendingDeleteVolume(null);
+    },
+    [applyDraft],
   );
 
   const onCreateVolume = useCallback(
@@ -351,6 +429,7 @@ function StackCanvasFlow({
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={onNodeClick}
+          onNodeContextMenu={onNodeContextMenu}
           showConnections={showConnections}
           onToggleConnections={toggleConnections}
           onAutoLayout={autoLayout}
@@ -381,6 +460,43 @@ function StackCanvasFlow({
         initialResourceIdx={addVolumeResourceIdx}
         onCreate={onCreateVolume}
       />
+      <CanvasContextMenu
+        target={menuTarget}
+        onClose={() => setMenuTarget(null)}
+        onOpenResource={openResourceDrawer}
+        onAddVolumeToResource={(idx) => {
+          setAddVolumeResourceIdx(idx);
+          setAddVolumeOpen(true);
+        }}
+        onDeleteResource={(idx) => {
+          applyDraft((draft) => ({ ...draft, resources: draft.resources.filter((_, i) => i !== idx) }));
+          setDrawerStack([]);
+        }}
+        onDisconnectVolume={onDisconnectVolume}
+        onOpenVolume={openVolumeFromCanvas}
+        onRequestDeleteVolume={setPendingDeleteVolume}
+        onRequestAttach={() => {}}
+      />
+      <AlertDialog open={pendingDeleteVolume != null} onOpenChange={(o) => !o && setPendingDeleteVolume(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete volume “{pendingDeleteVolume}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The volume and its data are removed when the stack deploys. If it is mounted, the mount is removed too.
+              This cannot be undone after deploy.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-danger text-white hover:bg-danger/90"
+              onClick={() => pendingDeleteVolume && onDeleteVolumeConfirmed(pendingDeleteVolume)}
+            >
+              Delete volume
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

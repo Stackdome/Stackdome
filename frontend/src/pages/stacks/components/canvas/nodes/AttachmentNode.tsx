@@ -15,14 +15,15 @@ const ICON: Record<AttachmentKind, LucideIcon> = {
 };
 
 /**
- * Compact display-only node for connection endpoints that aren't workloads —
- * secrets, volumes, object stores. Same card language as ResourceNode, one
- * line, visually lighter. Not clickable (no drawer).
+ * Compact node for connection endpoints that aren't workloads — secrets,
+ * volumes, object stores. Same card language as ResourceNode, one line,
+ * visually lighter. Volume nodes open the volume drawer on click; secret/
+ * object-store nodes stay display-only for now.
  */
 function AttachmentNodeImpl({ data }: NodeProps<AttachmentFlowNode>) {
   const Icon = ICON[data.kind];
   return (
-    <div className="w-[180px] cursor-default rounded-lg border border-border bg-card px-[13px] py-2.5 shadow-xs">
+    <div className="w-[180px] cursor-pointer rounded-lg border border-border bg-card px-[13px] py-2.5 shadow-xs transition-colors hover:border-brand/60">
       <Handle type="target" position={Position.Left} style={HIDDEN_HANDLE} isConnectable={false} />
       <Handle type="source" position={Position.Right} style={HIDDEN_HANDLE} isConnectable={false} />
       <div className="flex items-center gap-2.5">

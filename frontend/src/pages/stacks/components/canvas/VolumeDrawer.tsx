@@ -3,6 +3,7 @@ import { X, HardDrive } from "lucide-react";
 import type { UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 import type { FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 import { VolumeFields } from "@/pages/stacks/components/shared/volume-fields";
+import { removeMountsOf } from "@/pages/stacks/lib/canvas/volume-ops";
 
 interface VolumeDrawerProps {
   /** Draft volume name — the stack entry's identity. */
@@ -26,10 +27,12 @@ export function VolumeDrawer({ volumeName, session, onClose }: VolumeDrawerProps
 
   const onRemove = useCallback(
     (idx: number) => {
+      const name = volumes[idx]?.name;
       session.updateVolumes((prev) => prev.filter((_, i) => i !== idx));
+      if (name) session.updateResources((prev) => removeMountsOf(prev, name));
       onClose();
     },
-    [session, onClose],
+    [session, volumes, onClose],
   );
 
   if (index < 0) return null;

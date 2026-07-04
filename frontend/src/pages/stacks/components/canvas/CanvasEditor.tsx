@@ -36,6 +36,7 @@ interface CanvasEditorProps {
   onNodesChange: OnNodesChange<CanvasFlowNode>;
   onEdgesChange: OnEdgesChange;
   onNodeClick?: NodeMouseHandler<CanvasFlowNode>;
+  onNodeContextMenu?: NodeMouseHandler<CanvasFlowNode>;
   showConnections: boolean;
   onToggleConnections: () => void;
   onAutoLayout: () => void;
@@ -58,6 +59,7 @@ export function CanvasEditor({
   onNodesChange,
   onEdgesChange,
   onNodeClick,
+  onNodeContextMenu,
   showConnections,
   onToggleConnections,
   onAutoLayout,
@@ -80,6 +82,7 @@ export function CanvasEditor({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
+        onNodeContextMenu={onNodeContextMenu}
         fitView
         fitViewOptions={FIT_OPTIONS}
         colorMode="system"

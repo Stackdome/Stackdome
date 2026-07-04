@@ -60,6 +60,7 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
         <div
           key={v.name}
           title={v.mountPath}
+          data-volume-chip={v.name}
           className="flex items-center gap-2 border-t border-border bg-background px-[13px] py-2"
         >
           <HardDrive className="size-[13px] shrink-0 text-fg-muted" aria-hidden />
