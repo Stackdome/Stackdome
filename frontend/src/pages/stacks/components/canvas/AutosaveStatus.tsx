@@ -14,7 +14,7 @@ export function AutosaveStatus({ status }: { status: SyncStatus }) {
   if (status === SYNC_STATUS.error) {
     return (
       <span className="flex flex-none items-center gap-1.5 font-mono text-[11.5px] text-danger">
-        <TriangleAlert className="size-3" aria-hidden /> Save failed — retrying
+        <TriangleAlert className="size-3" aria-hidden /> Save failed, retrying
       </span>
     );
   }

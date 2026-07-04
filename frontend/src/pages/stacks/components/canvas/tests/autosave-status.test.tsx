@@ -20,6 +20,6 @@ describe("AutosaveStatus", () => {
   });
   it("shows error", () => {
     render(<AutosaveStatus status={SYNC_STATUS.error} />);
-    expect(screen.getByText("Save failed — retrying")).toBeInTheDocument();
+    expect(screen.getByText("Save failed, retrying")).toBeInTheDocument();
   });
 });

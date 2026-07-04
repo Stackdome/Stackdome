@@ -222,7 +222,7 @@ function StackResourceConfigurationTabImpl({
             label="Resource Name"
             htmlFor={`resource-name-${index}`}
             required
-            hint="A unique identifier within this stack — lowercase, no spaces."
+            hint="A unique identifier within this stack. Use lowercase letters with no spaces."
             error={getError(errors, "name")}
           >
             <DirtyField
@@ -591,7 +591,7 @@ function StackResourceConfigurationTabImpl({
           <div className="grid gap-1.5 max-w-3xl">
             {(draft.volume_mounts || []).length === 0 && (
               <p className="text-sm text-muted-foreground">
-                No volumes mounted. Add one from the canvas — “+ Add resource → Volume”.
+                No volumes mounted. Add one from the canvas using “+ Add resource → Volume”.
               </p>
             )}
             {(draft.volume_mounts || []).map((vm: VolumeMount, vmIdx: number) => (

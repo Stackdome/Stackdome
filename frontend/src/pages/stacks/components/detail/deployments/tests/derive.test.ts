@@ -208,8 +208,8 @@ describe("deriveReleaseTitle", () => {
   const stages = { build: "done", deploy: "done", ready: "done" } as const;
 
   it("names the failing resource for build / runtime crashes", () => {
-    expect(deriveReleaseTitle(release({ state: "InProgress" }), [buildFail], stages)).toBe("Build failed — api");
-    expect(deriveReleaseTitle(release({ state: "InProgress" }), [crash], stages)).toBe("Runtime crash — tooljet");
+    expect(deriveReleaseTitle(release({ state: "InProgress" }), [buildFail], stages)).toBe("Build failed: api");
+    expect(deriveReleaseTitle(release({ state: "InProgress" }), [crash], stages)).toBe("Runtime crash: tooljet");
   });
   it("a terminal crash reads as Deploy failed", () => {
     expect(deriveReleaseTitle(release({ state: "Failed" }), [crash], stages)).toBe("Deploy failed");

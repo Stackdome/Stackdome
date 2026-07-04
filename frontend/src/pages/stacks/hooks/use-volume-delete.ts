@@ -73,7 +73,7 @@ export function useVolumeDelete({
           await refetchAndRestore(name);
           toast({
             title: "Delete blocked",
-            description: `Draft changes failed to save — "${name}" was not deleted.`,
+            description: `Draft changes couldn't be saved, so "${name}" was not deleted.`,
             variant: "destructive",
           });
           return false;

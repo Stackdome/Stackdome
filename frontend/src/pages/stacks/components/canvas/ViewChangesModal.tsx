@@ -235,7 +235,7 @@ export function ViewChangesModal({
                   note={v.note}
                   sections={[{ rows: v.rows }]}
                   onDiscard={() => onDiscardVolume(v.name)}
-                  discardHint="Deleted volume data can't be restored — Discard all recreates it empty"
+                  discardHint="Deleted volume data can't be restored. Discard all recreates this volume empty."
                 />
               ))}
               {diff!.connections.length > 0 && <GroupLabel>Connections</GroupLabel>}

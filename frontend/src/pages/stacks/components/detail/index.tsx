@@ -22,6 +22,7 @@ import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stac
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
 import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
+import { ReleaseState } from "@/pages/stacks/components/detail/deployments/release-states";
 import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
 import {
   connectionsToEnvRows,
@@ -396,6 +397,27 @@ export default function StackDetailPage() {
     activeRelease: releasesResult.activeRelease,
     detail: releaseDetail,
   });
+
+  // When a release converges, the server moves status.last_converged but the
+  // client's stack copy still points at the previous release, so the staged
+  // panel keeps diffing against the old snapshot until a manual page refresh.
+  // Refetch the stack once per newly-released release to pick up the pointer.
+  const convergedFetchRef = useRef<string | undefined>(undefined);
+  const activeRelease = releasesResult.activeRelease;
+  useEffect(() => {
+    if (!deployIds.stackId || !activeRelease) return;
+    if (activeRelease.state !== ReleaseState.Released) return;
+    if (stackToShow?.status?.last_converged?.release_id === activeRelease.id) return;
+    if (convergedFetchRef.current === activeRelease.id) return;
+    convergedFetchRef.current = activeRelease.id;
+    void getStackById(deployIds.orgId, deployIds.teamName, deployIds.stackId).then((fresh) => {
+      setFetchedStack(fresh);
+      setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
+    }).catch(() => {
+      // Poll-driven refresh; the next release poll retries naturally.
+      convergedFetchRef.current = undefined;
+    });
+  }, [deployIds, activeRelease, stackToShow?.status?.last_converged?.release_id, setStacks]);
 
   // Live snapshot: already lazily fetched by useDeployLifecycle via detail.ensure;
   // peek here to gate canDiscardDraft and pass to the revert hook.
@@ -777,7 +799,7 @@ export default function StackDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Discard draft changes?</AlertDialogTitle>
             <AlertDialogDescription>
-            This restores the stack to its last deployment. Volumes added since then are deleted, and volumes deleted since then are recreated empty — lost volume data cannot be recovered. This cannot be undone.
+            This restores the stack to its last deployment. Volumes added since the last deployment will be deleted, and previously deleted volumes will be recreated empty. Lost volume data cannot be recovered. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
