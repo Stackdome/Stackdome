@@ -30,6 +30,7 @@ import (
 	volumecontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/volume"
 	workspaceusercontroller "github.com/ashishmax31/stackdome-api-server/pkg/controllers/workspaceuser"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/clients/githubapp"
 	"github.com/ashishmax31/stackdome-api-server/pkg/db"
 	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
@@ -114,10 +115,12 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		StackService:         d.Services.StackService,
 		ClusterManager:       d.ClusterManager,
 		SecretService:        d.Services.SecretService,
+		CredentialResolver:   d.Services.CredentialResolver,
 		PostgresAddonService: d.Services.PostgresAddonService,
 		VolumeService:        d.Services.VolumeService,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
-			SecretService: d.Services.SecretService,
+			SecretService:      d.Services.SecretService,
+			CredentialResolver: d.Services.CredentialResolver,
 		}),
 		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{
 			SecretFetcher: d.Services.SecretService,
@@ -282,9 +285,10 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 			},
 			func() clustermanager.Controller {
 				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
-					Log:                 applogger.NewLoggerWithPrefix(ctx, "image-build-controller").SetLevel(d.Logger.GetLevel()),
-					DBImageBuildService: d.Services.ImageBuildService,
-					DBResourceService:   d.Services.StackResourceService,
+					Log:                   applogger.NewLoggerWithPrefix(ctx, "image-build-controller").SetLevel(d.Logger.GetLevel()),
+					DBImageBuildService:   d.Services.ImageBuildService,
+					DBResourceService:     d.Services.StackResourceService,
+					GitIntegrationService: d.Services.GitIntegrationService,
 				})
 			},
 			func() clustermanager.Controller {
@@ -394,6 +398,50 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		ReferenceService:  referenceService,
 	})
 
+	registryCredentialService := services.NewRegistryCredentialService(services.RegistryCredentialServiceSpec{
+		Store: pgstore.NewRegistryCredentialStore(pgstore.RegistryCredentialStoreSpec{
+			SessionFactory: d.DBSession,
+		}),
+		StackStore:        stackStore,
+		ReferenceService:  referenceService,
+		EncryptionService: encryptionService,
+		Permissions:       d.PermissionService,
+		Logger:            d.Logger,
+	})
+
+	gitIntegrationService := services.NewGitIntegrationService(services.GitIntegrationServiceSpec{
+		Store: pgstore.NewGitIntegrationStore(pgstore.GitIntegrationStoreSpec{
+			SessionFactory: d.DBSession,
+		}),
+		InstallationStore: pgstore.NewGitInstallationStore(pgstore.GitInstallationStoreSpec{
+			SessionFactory: d.DBSession,
+		}),
+		OAuthStateStore: pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
+			SessionFactory: d.DBSession,
+		}),
+		GitHubAppClient: githubapp.NewClient(githubapp.ClientSpec{
+			BaseURL: d.Config.GitHubAPIBaseURL,
+		}),
+		ExternalURL:       d.Config.ServerExternalURL,
+		EncryptionService: encryptionService,
+		Permissions:       d.PermissionService,
+		Logger:            d.Logger,
+	})
+
+	credentialResolver := services.NewCredentialResolver(services.CredentialResolverSpec{
+		SecretService:             secretService,
+		RegistryCredentialService: registryCredentialService,
+		GitIntegrationService:     gitIntegrationService,
+	})
+
+	sourceCredentialService := services.NewSourceCredentialService(services.SourceCredentialServiceSpec{
+		SecretService:             secretService,
+		RegistryCredentialService: registryCredentialService,
+		GitIntegrationService:     gitIntegrationService,
+		CredentialResolver:        credentialResolver,
+		Logger:                    d.Logger,
+	})
+
 	d.RefreshTokenStore = pgstore.NewRefreshTokenStore(pgstore.RefreshTokenStoreSpec{
 		SessionFactory: d.DBSession,
 	})
@@ -441,14 +489,15 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
-		SessionFactory:         d.DBSession,
-		Logger:                 d.Logger,
-		WorkspaceUserService:   workspaceUserService,
-		Permissions:            d.PermissionService,
-		StackStore:             stackStore,
-		ClusterRegistryService: imageRegistryService,
-		StackDomainService:     stackDomainService,
-		ReferenceService:       referenceService,
+		SessionFactory:          d.DBSession,
+		Logger:                  d.Logger,
+		WorkspaceUserService:    workspaceUserService,
+		Permissions:             d.PermissionService,
+		StackStore:              stackStore,
+		ClusterRegistryService:  imageRegistryService,
+		StackDomainService:      stackDomainService,
+		ReferenceService:        referenceService,
+		SourceCredentialService: sourceCredentialService,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
@@ -498,18 +547,20 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	stackService := services.NewStackService(services.StackServiceSpec{
-		SessionFactory:       d.DBSession,
-		Logger:               d.Logger,
-		VolumeService:        volumeService,
-		OrganisationService:  organisationService,
-		StackResourceService: stackResourceService,
-		ClusterService:       clusterService,
-		NamespaceService:     namespaceService,
-		SecretService:        secretService,
-		PostgresAddonService: postgresAddonService,
-		TeamService:          teamService,
-		Permissions:          d.PermissionService,
-		ReferenceService:     referenceService,
+		SessionFactory:          d.DBSession,
+		Logger:                  d.Logger,
+		VolumeService:           volumeService,
+		OrganisationService:     organisationService,
+		StackResourceService:    stackResourceService,
+		ClusterService:          clusterService,
+		NamespaceService:        namespaceService,
+		SecretService:           secretService,
+		PostgresAddonService:    postgresAddonService,
+		TeamService:             teamService,
+		Permissions:             d.PermissionService,
+		ReferenceService:        referenceService,
+		CredentialResolver:      credentialResolver,
+		SourceCredentialService: sourceCredentialService,
 	})
 
 	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
@@ -575,11 +626,11 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	stackReleaseService := services.NewStackReleaseService(services.StackReleaseServiceSpec{
-		Store:            stackReleaseStore,
-		StackService:     stackService,
-		SecretService:    secretService,
-		Permissions:      d.PermissionService,
-		ReferenceService: referenceService,
+		Store:              stackReleaseStore,
+		StackService:       stackService,
+		CredentialResolver: credentialResolver,
+		Permissions:        d.PermissionService,
+		ReferenceService:   referenceService,
 	})
 
 	stackService.SetReleaseService(stackReleaseService)
@@ -592,19 +643,22 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	stackPreviewConfigService := services.NewStackPreviewConfigService(services.StackPreviewConfigServiceSpec{
-		Store:             stackPreviewConfigStore,
-		PreviewStackStore: previewStackStore,
-		SecretService:     secretService,
-		Permissions:       d.PermissionService,
+		Store:                   stackPreviewConfigStore,
+		PreviewStackStore:       previewStackStore,
+		SecretService:           secretService,
+		CredentialResolver:      credentialResolver,
+		SourceCredentialService: sourceCredentialService,
+		Permissions:             d.PermissionService,
 	})
 
 	previewStackService := services.NewPreviewStackService(services.PreviewStackServiceSpec{
-		Store:          previewStackStore,
-		ConfigStore:    stackPreviewConfigStore,
-		StackService:   stackService,
-		ReleaseService: stackReleaseService,
-		SecretService:  secretService,
-		Permissions:    d.PermissionService,
+		Store:              previewStackStore,
+		ConfigStore:        stackPreviewConfigStore,
+		StackService:       stackService,
+		ReleaseService:     stackReleaseService,
+		SecretService:      secretService,
+		CredentialResolver: credentialResolver,
+		Permissions:        d.PermissionService,
 	})
 
 	d.Services = Services{
@@ -625,6 +679,9 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		MetricsService:              metricsService,
 		EncryptionService:           encryptionService,
 		SecretService:               secretService,
+		CredentialResolver:          credentialResolver,
+		RegistryCredentialService:   registryCredentialService,
+		GitIntegrationService:       gitIntegrationService,
 		ObjectStoreService:          objectStoreService,
 		PostgresAddonService:        postgresAddonService,
 		PostgresBackupService:       postgresBackupService,
@@ -656,13 +713,6 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 		WorkspaceUserService: d.Services.WorkspaceUserService,
 	})
 
-	clusterStackService := clusterresource.NewClusterStackService(clusterresource.ClusterStackServiceSpec{
-		ClusterManager:      d.ClusterManager,
-		OrganisationService: d.Services.OrganisationService,
-		Logger:              d.Logger,
-		ClusterService:      d.Services.ClusterService,
-	})
-
 	clusterImageRegistryService := clusterresource.NewClusterImageRegistryService(clusterresource.ClusterImageRegistryServiceSpec{
 		ClusterManager: d.ClusterManager,
 		Logger:         d.Logger,
@@ -688,7 +738,6 @@ func (d *developmentEnvironment) injectClusterResourceServices(ctx context.Conte
 	})
 
 	deps := services.ClusterResourceServiceDeps{
-		ClusterStackService:     clusterStackService,
 		ClusterNamespaceService: clusterNamespaceService,
 		ClusterVolumeService:    volumeClusterResourceService,
 		ClusterLoggingService:   clusterLoggingService,

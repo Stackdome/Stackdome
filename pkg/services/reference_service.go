@@ -119,6 +119,9 @@ func extractReferences(stack *models.Stack) []models.ResourceReference {
 		if r.HasImagePushSecrets() {
 			add(models.ReferentSecret, r.BuildConfig.RegistrySecretRef.SecretID, models.RelationImagePush)
 		}
+		add(models.ReferentRegistryCredential, r.RegistryPullCredentialID(), models.RelationImagePull)
+		add(models.ReferentRegistryCredential, r.RegistryPushCredentialID(), models.RelationImagePush)
+		add(models.ReferentGitIntegration, r.GitIntegrationID(), models.RelationGitCredential)
 	}
 	return refs
 }

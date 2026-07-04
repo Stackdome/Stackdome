@@ -12,6 +12,9 @@ var (
 
 	// Server
 	EnvServerHostname    = StringVar("SERVER_HOSTNAME", "Server hostname/domain", nil, false)
+	EnvServerExternalURL = StringVar("SERVER_EXTERNAL_URL", "Externally reachable base URL of the hub (used for GitHub App callbacks and webhooks)", nil, false)
+	// GitHub API base URL override (httptest stubs / GHES)
+	EnvGitHubAPIBaseURL  = StringVar("GITHUB_API_BASE_URL", "GitHub API base URL", ptr("https://api.github.com"), false)
 	EnvServerBindAddress = StringVar("SERVER_BIND_ADDRESS", "Server bind address and port", ptr("0.0.0.0:8000"), false)
 
 	// Database

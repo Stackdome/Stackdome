@@ -68,6 +68,9 @@ type Services struct {
 	LoggingService              services.LoggingService
 	MetricsService              services.MetricsService
 	SecretService               services.SecretService
+	CredentialResolver          services.CredentialResolver
+	RegistryCredentialService   services.RegistryCredentialService
+	GitIntegrationService       services.GitIntegrationService
 	EncryptionService           services.EncryptionService
 	ObjectStoreService          services.ObjectStoreService
 	PostgresAddonService        services.PostgresAddonService

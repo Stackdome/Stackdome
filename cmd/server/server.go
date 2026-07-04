@@ -101,6 +101,8 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 			"^/api/v1/auth",
 			"^/api/v1/config$",
 			"^/api/v1/invites/[^/]+/info$",
+			"^/api/v1/git-integrations/github/manifest/callback$",
+			"^/api/v1/webhooks/github$",
 			"^/health",
 		},
 		// Set JWT authentication as the default handler.

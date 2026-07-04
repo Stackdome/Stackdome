@@ -1,6 +1,7 @@
 package int
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -25,22 +26,12 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 	})
 
 	Context("Implicit references", func() {
-		It("should block deletion of a secret used as an image pull secret", func() {
-			By("Creating a DockerRegistry secret for image pull")
-			secret := openapi.NewSecret("test-pull-secret", openapi.DOCKER_REGISTRY, []openapi.SecretData{
-				*openapi.NewSecretData("registry", "docker.io"),
-				*openapi.NewSecretData("username", "user"),
-				*openapi.NewSecretData("password", "pass"),
-			})
-			created := shared.CreateSecret(client, orgID, teamName, secret)
-			secretID := created.GetId()
-
-			By("Creating a stack with a resource that uses the secret as a pull secret")
+		It("should block deletion of a managed secret materialized from inline pull credentials", func() {
+			By("Creating a stack with an image source carrying inline pull credentials")
 			resource := openapi.NewStackResource("web")
-			imageSpec := openapi.NewImageSpec("nginx:1.25-alpine")
-			pullSecret := openapi.NewSecretRef(secretID)
-			imageSpec.SetPullSecret(*pullSecret)
-			resource.SetImageSpec(*imageSpec)
+			imageSource := openapi.NewImageSource("nginx:1.25-alpine")
+			imageSource.SetCredentials(*openapi.NewInlineCredentials("user", "pass"))
+			resource.SetSource(openapi.SourceSpec{Image: imageSource})
 			resource.SetPorts([]openapi.Port{*openapi.NewPort("http", 80, false)})
 
 			stack := shared.CreateSkipProvisioningStack("test-pull-ref", []openapi.StackResource{*resource})
@@ -50,10 +41,29 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 			DeferCleanup(func() {
 				shared.DeleteStack(client, orgID, teamName, stackID)
 				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
-				shared.DeleteSecret(client, orgID, teamName, secretID)
 			})
 
-			By("Attempting to delete the secret — expecting 409")
+			By("Finding the materialized managed secret")
+			managedName := models.ManagedSecretName(createdStack.GetName(), "web", models.ManagedSecretSlotPull)
+			list, _, err := client.DefaultApi.ApiV1OrganizationsOrgIdSecretsGet(context.Background(), orgID).
+				IncludeManaged(true).Execute()
+			Expect(err).NotTo(HaveOccurred())
+			var secretID string
+			for _, s := range list.GetItems() {
+				if s.GetName() == managedName {
+					secretID = s.GetId()
+				}
+			}
+			Expect(secretID).NotTo(BeEmpty(), "expected a managed pull secret to be materialized")
+
+			By("Verifying the managed secret is hidden from the default listing")
+			visible, _, err := client.DefaultApi.ApiV1OrganizationsOrgIdSecretsGet(context.Background(), orgID).Execute()
+			Expect(err).NotTo(HaveOccurred())
+			for _, s := range visible.GetItems() {
+				Expect(s.GetId()).NotTo(Equal(secretID))
+			}
+
+			By("Attempting to delete the managed secret — expecting 409")
 			httpResp, err := shared.DeleteSecretRaw(client, orgID, teamName, secretID)
 			Expect(err).To(HaveOccurred(), "expected delete to fail")
 			Expect(httpResp.StatusCode).To(Equal(http.StatusConflict))
@@ -71,8 +81,8 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 
 			By("Creating a stack with an env connection to the secret")
 			resource := openapi.NewStackResource("web")
-			imageSpec := openapi.NewImageSpec("nginx:1.25-alpine")
-			resource.SetImageSpec(*imageSpec)
+			imageSpecSource := openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")}
+			resource.SetSource(imageSpecSource)
 			resource.SetPorts([]openapi.Port{*openapi.NewPort("http", 80, false)})
 
 			conn := shared.SecretEnvConnection(secretID, "web", "API_KEY", "api_key")
@@ -116,8 +126,8 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 
 			By("Creating a stack with a connection to the secret (simulated Released)")
 			resource := openapi.NewStackResource("web")
-			imageSpec := openapi.NewImageSpec(shared.TestImage)
-			resource.SetImageSpec(*imageSpec)
+			imageSpecSource := openapi.SourceSpec{Image: openapi.NewImageSource(shared.TestImage)}
+			resource.SetSource(imageSpecSource)
 			resource.SetPorts([]openapi.Port{*openapi.NewPort("http", 80, false)})
 
 			conn := shared.SecretEnvConnection(secretID, "web", "DB_URL", "db_url")
@@ -145,8 +155,8 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 
 			By("Updating the stack to remove the secret connection")
 			updatedResource := openapi.NewStackResource("web")
-			updatedImageSpec := openapi.NewImageSpec(shared.TestImage)
-			updatedResource.SetImageSpec(*updatedImageSpec)
+			updatedImageSpecSource := openapi.SourceSpec{Image: openapi.NewImageSource(shared.TestImage)}
+			updatedResource.SetSource(updatedImageSpecSource)
 			updatedResource.SetPorts([]openapi.Port{*openapi.NewPort("http", 80, false)})
 			updatedSpec := openapi.NewStackSpec([]openapi.StackResource{*updatedResource})
 			updatedStack := openapi.NewStack("test-release-ref", *updatedSpec)
@@ -183,8 +193,8 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 
 			By("Creating a stack with a connection to the secret (simulated Failed)")
 			resource := openapi.NewStackResource("web")
-			imageSpec := openapi.NewImageSpec(shared.TestImage)
-			resource.SetImageSpec(*imageSpec)
+			imageSpecSource := openapi.SourceSpec{Image: openapi.NewImageSource(shared.TestImage)}
+			resource.SetSource(imageSpecSource)
 			resource.SetPorts([]openapi.Port{*openapi.NewPort("http", 80, false)})
 
 			conn := shared.SecretEnvConnection(secretID, "web", "DB_URL", "db_url")
@@ -211,8 +221,8 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 
 			By("Updating the stack to remove the secret connection")
 			updatedResource := openapi.NewStackResource("web")
-			updatedImageSpec := openapi.NewImageSpec(shared.TestImage)
-			updatedResource.SetImageSpec(*updatedImageSpec)
+			updatedImageSpecSource := openapi.SourceSpec{Image: openapi.NewImageSource(shared.TestImage)}
+			updatedResource.SetSource(updatedImageSpecSource)
 			updatedResource.SetPorts([]openapi.Port{*openapi.NewPort("http", 80, false)})
 			updatedSpec := openapi.NewStackSpec([]openapi.StackResource{*updatedResource})
 			updatedStack := openapi.NewStack("test-failed-ref", *updatedSpec)

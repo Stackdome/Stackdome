@@ -18,6 +18,11 @@ type ApplicationConfig struct {
 	EncryptionKey string             `json:"encryption_key"`
 	LogLevel      string             `json:"log_level"`
 	GitHubOAuth   *GitHubOAuthConfig `json:"github_oauth"`
+	// ServerExternalURL is the externally reachable base URL of the hub,
+	// required for the GitHub App manifest flow (browser redirects, webhooks).
+	ServerExternalURL string `json:"server_external_url"`
+	// GitHubAPIBaseURL overrides the GitHub API endpoint (tests, GHES).
+	GitHubAPIBaseURL string `json:"github_api_base_url"`
 }
 
 func (c *ApplicationConfig) LoadEnvVariables() {
@@ -37,6 +42,13 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 	}
 
 	c.GitHubOAuth.LoadEnvVariables()
+
+	if val, ok := EnvServerExternalURL.Lookup(); ok {
+		c.ServerExternalURL = val
+	}
+	if val, ok := EnvGitHubAPIBaseURL.Lookup(); ok {
+		c.GitHubAPIBaseURL = val
+	}
 }
 
 func (c *ApplicationConfig) Validate() error {
