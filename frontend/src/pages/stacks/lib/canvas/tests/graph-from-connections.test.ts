@@ -14,7 +14,6 @@ const base = {
   resources: [] as Partial<FormStackResourceData>[],
   linkedAddonIds: new Set<string>(),
   addonNameById: new Map<string, string>(),
-  secretNameById: new Map<string, string>(),
 };
 
 describe("deriveGraph (connection projection)", () => {
@@ -36,16 +35,13 @@ describe("deriveGraph (connection projection)", () => {
     ]);
   });
 
-  it("creates a secret attachment node on demand and labels it from secretNameById", () => {
+  it("never renders secret references as nodes or edges", () => {
     const g = deriveGraph({
       ...base,
       resources: [web([{ from: "secret", name: "TOKEN", secretId: "s1", secretKey: "token" }])],
-      secretNameById: new Map([["s1", "api-creds"]]),
     });
-    const secretNode = g.nodes.find((n) => n.id === "secret:s1");
-    expect(secretNode?.type).toBe("attachment");
-    expect(secretNode?.data).toMatchObject({ kind: NODE_KIND.secret, name: "api-creds" });
-    expect(g.edges.map((e) => e.id)).toContain("env:secret:s1->resource:web");
+    expect(g.nodes.find((n) => n.id === "secret:s1")).toBeUndefined();
+    expect(g.edges).toEqual([]);
   });
 
   it("renders mounted volumes as card chips only — no volume node, no volume_mount edge", () => {
@@ -174,7 +170,6 @@ describe("deriveGraph (connection projection)", () => {
       ],
       linkedAddonIds: new Set(),
       addonNameById: new Map(),
-      secretNameById: new Map(),
       volumeNames: ["data"],
     });
     const web = graph.nodes.find((n) => n.id === "resource:web");

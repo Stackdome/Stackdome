@@ -42,7 +42,7 @@ describe("mergeTopology", () => {
     ]);
   });
 
-  it("skips derived edges whose resource endpoint is gone locally, materializes missing secret endpoints", () => {
+  it("skips derived edges whose resource endpoint is gone locally and never materializes secret endpoints", () => {
     const server = {
       nodes: [{ ref: { type: "secret", id: "s9" }, label: "legacy-creds" }],
       edges: [
@@ -52,8 +52,8 @@ describe("mergeTopology", () => {
     } as unknown as StackTopology;
     const merged = mergeTopology(localGraph(), server);
     expect(merged.edges.map((e) => e.id)).not.toContain("depends_on:resource:ghost->resource:web");
-    expect(merged.nodes.find((n) => n.id === "secret:s9")?.data).toMatchObject({ kind: "secret", name: "legacy-creds" });
-    expect(merged.edges.map((e) => e.id)).toContain("env:secret:s9->resource:web");
+    expect(merged.nodes.find((n) => n.id === "secret:s9")).toBeUndefined();
+    expect(merged.edges.map((e) => e.id)).not.toContain("env:secret:s9->resource:web");
   });
 
   it("overlays server node state onto matching resource nodes as status", () => {

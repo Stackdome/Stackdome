@@ -123,7 +123,6 @@ export interface DeriveGraphInput {
   resources: Partial<FormStackResourceData>[];
   linkedAddonIds: ReadonlySet<string>;
   addonNameById: ReadonlyMap<string, string>;
-  secretNameById: ReadonlyMap<string, string>;
   /** All volume names in the draft — only UNMOUNTED ones render as free attachment nodes. */
   volumeNames?: readonly string[];
   dirty?: DirtyInput;
@@ -207,7 +206,7 @@ function nodeIdOfConnRef(ref: StackConnection["from"] | undefined): string | nul
  * env rows.
  *
  * - service node per resource, addon node per linked addon id
- * - secret attachment nodes created on demand from connection producers
+ * - secret references never render as nodes or edges (drawer-only concern)
  * - edges projected from each resource's authored env connections
  *   (`splitEnvRows`), plus derived `depends_on` edges
  * - MOUNTED volumes render only as chips docked on their owning resource
@@ -298,14 +297,9 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
     const name = resource.name ?? "";
     const conns: StackConnection[] = splitEnvRows(name, envVarsOf(resource) as FormEnvRow[]).connections;
     for (const conn of conns) {
-      // Secret producers materialize as attachment nodes on demand.
-      if (conn.from?.type === "secret" && conn.from.id) {
-        ensureAttachment(
-          NODE_ID_PREFIX.secret + conn.from.id,
-          NODE_KIND.secret,
-          input.secretNameById.get(conn.from.id) ?? conn.from.id,
-        );
-      }
+      // Secret producers deliberately don't materialize as nodes: secret
+      // references stay a drawer concern, so their edges drop out here
+      // (addEdge skips edges whose endpoint node doesn't exist).
       addEdge(conn.kind as EdgeKind, EDGE_SOURCE_OF_TRUTH.connection, nodeIdOfConnRef(conn.from), nodeIdOfConnRef(conn.to));
     }
   }

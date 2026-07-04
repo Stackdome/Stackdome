@@ -15,7 +15,6 @@ import type {
   FormVolumeExtendedData as VolumeFormData,
 } from "@/pages/stacks/schemas/form-schema";
 import type { EditSessionDraft, UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
-import { useSecrets } from "@/pages/stacks/hooks/use-secrets";
 import { useStackTopology } from "@/pages/stacks/hooks/use-stack-topology";
 import { deriveGraph } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import { mergeTopology } from "@/pages/stacks/lib/canvas/merge-topology";
@@ -118,18 +117,12 @@ function StackCanvasFlow({
     [session.dirty, baselineResources.length, connectionAddonIds],
   );
 
-  const { secrets } = useSecrets();
-  const secretNameById = useMemo(
-    () => new Map(secrets.filter((s) => s.id && s.name).map((s) => [s.id!, s.name!])),
-    [secrets],
-  );
-
   const { topology } = useStackTopology({ ids: topologyIds, refreshKey: topologyRefreshKey });
 
   // Local connection-derived data (cheap, pure). Re-runs on any edit.
   const dataGraph = useMemo(
-    () => deriveGraph({ resources, linkedAddonIds, addonNameById, secretNameById, volumeNames, dirty }),
-    [resources, linkedAddonIds, addonNameById, secretNameById, volumeNames, dirty],
+    () => deriveGraph({ resources, linkedAddonIds, addonNameById, volumeNames, dirty }),
+    [resources, linkedAddonIds, addonNameById, volumeNames, dirty],
   );
   // Local graph enhanced with server-derived edges + runtime status.
   const mergedGraph = useMemo(() => mergeTopology(dataGraph, topology), [dataGraph, topology]);

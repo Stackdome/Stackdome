@@ -6,8 +6,9 @@ import {
   type AttachmentKind, type CanvasGraph, type CanvasNode, type EdgeKind,
 } from "./graph-from-connections";
 
+// Secrets are intentionally absent: secret references never render on the
+// canvas, so server-derived secret endpoints (and their edges) are skipped.
 const ATTACHMENT_BY_REF_TYPE: Partial<Record<string, { kind: AttachmentKind; prefix: string }>> = {
-  secret: { kind: NODE_KIND.secret, prefix: NODE_ID_PREFIX.secret },
   volume: { kind: NODE_KIND.volume, prefix: NODE_ID_PREFIX.volume },
   object_store: { kind: NODE_KIND.objectStore, prefix: NODE_ID_PREFIX.objectstore },
 };
