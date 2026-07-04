@@ -16,6 +16,7 @@ type InterpolationValidation interface {
 	ValidateStackInterpolations(in *models.Stack) error
 }
 
+//go:generate mockgen -destination=../mocks/mock_stack_validator.go -package=mocks github.com/ashishmax31/stackdome-api-server/pkg/validator StackValidator
 type StackValidator interface {
 	ValidateForCreate(ctx context.Context, spec *models.Stack) *errors.ServiceError
 	ValidateForUpdate(ctx context.Context, existing *models.Stack, spec *models.Stack) *errors.ServiceError

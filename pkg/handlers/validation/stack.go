@@ -47,19 +47,8 @@ func validateStackResource(in *openapi.StackResource, stack *openapi.Stack) *err
 		return err
 	}
 
-	if in.BuildSpec == nil && in.ImageSpec == nil {
-		return errors.BadRequest("build_spec or image_spec is required")
-	}
-
-	if in.BuildSpec != nil {
-		if err := validateBuildConfig(in.BuildSpec); err != nil {
-			return err
-		}
-	}
-	if in.ImageSpec != nil {
-		if err := validateImageConfig(in.ImageSpec); err != nil {
-			return err
-		}
+	if err := validateSource(in.Source); err != nil {
+		return err
 	}
 
 	if in.InitSpec != nil {
@@ -99,108 +88,91 @@ func validateStackResource(in *openapi.StackResource, stack *openapi.Stack) *err
 	return nil
 }
 
-func validateBuildConfig(in *openapi.StackResourceBuildSpec) *errors.ServiceError {
+func validateSource(in *openapi.SourceSpec) *errors.ServiceError {
 	if in == nil {
-		return errors.BadRequest("stack_resource_build_spec: %s", "stack_resource_build_spec is required")
-	}
-	if in.ContextPathWithinSource == "" {
-		return errors.BadRequest("stack_resource_build_spec.context_path_within_source: %s", "stack_resource_build_spec.context_path_within_source is required")
-	}
-	if in.DockerfilePath == "" {
-		return errors.BadRequest("stack_resource_build_spec.dockerfile_path: %s", "stack_resource_build_spec.dockerfile_path is required")
-	}
-
-	if in.ImageRepository.GetExternalImageRef() == "" && in.ImageRepository.UseInternalRegistry == nil {
-		return errors.BadRequest("stack_resource_build_spec.image_repository.external_image_ref or stack_resource_build_spec.image_repository.use_internal_registry is required")
-	}
-
-	if in.ImageRepository.GetExternalImageRef() == "" && !in.ImageRepository.GetUseInternalRegistry() {
-		return errors.BadRequest("if external_image_ref is empty, use_internal_registry must be true")
-	}
-
-	if in.ImageRepository.GetExternalImageRef() != "" && in.ImageRepository.GetUseInternalRegistry() {
-		return errors.BadRequest("if external_image_ref is not empty, use_internal_registry must be false")
-	}
-
-	if err := validateBuildSourceContext(in.SourceContext); err != nil {
-		return err
-	}
-	if err := validateBuildSourceRevision(in.SourceRevision); err != nil {
-		return err
-	}
-	return nil
-}
-
-func validateBuildSourceRevision(in openapi.BuildSourceRevision) *errors.ServiceError {
-	if in.VolumeSourceRevision == nil && in.GitRepoRevision == nil {
-		return errors.BadRequest("stack_resource_build_spec.source_revision: %s", "stack_resource_build_spec.source_revision is required")
+		return errors.BadRequest("source: %s", "source is required")
 	}
 
 	setValues := 0
-
-	if in.VolumeSourceRevision != nil {
+	if in.Git != nil {
 		setValues++
 	}
-	if in.GitRepoRevision != nil {
+	if in.Image != nil {
 		setValues++
 	}
-	if setValues > 1 {
-		return errors.BadRequest(
-			"stack_resource_build_spec.source_revision: %s",
-			"stack_resource_build_spec.source_revision can only have one of volume_source_revision or git_repo_revision",
-		)
+	if in.Volume != nil {
+		setValues++
+	}
+	if setValues != 1 {
+		return errors.BadRequest("source: %s", "exactly one of git, image, or volume must be set")
 	}
 
-	if in.VolumeSourceRevision != nil {
-		if in.VolumeSourceRevision.CurrentVolumeHash == "" {
-			return errors.BadRequest(
-				"stack_resource_build_spec.source_revision.volume_source_revision.current_volume_hash: %s",
-				"stack_resource_build_spec.source_revision.volume_source_revision.current_volume_hash is required",
-			)
-		}
+	switch {
+	case in.Git != nil:
+		return validateGitSource(in.Git)
+	case in.Image != nil:
+		return validateImageSource(in.Image)
+	default:
+		return validateVolumeSource(in.Volume)
 	}
-	if in.GitRepoRevision != nil {
-		return validateGitRepoRevision(in.GitRepoRevision)
-	}
-	return nil
 }
 
-func validateBuildSourceContext(in openapi.BuildSourceContext) *errors.ServiceError {
-	if in.Volume == nil && in.GitRepo == nil {
-		return errors.BadRequest("stack_resource_build_spec.source_context: %s", "stack_resource_build_spec.source_context is required")
+func validateGitSource(in *openapi.GitSource) *errors.ServiceError {
+	if in.RepoUrl == "" {
+		return errors.BadRequest("source.git.repo_url: %s", "source.git.repo_url is required")
 	}
-
-	setValues := 0
-
-	if in.Volume != nil {
-		setValues++
+	if in.GetBranch() != "" && in.GetTag() != "" {
+		return errors.BadRequest("source.git: %s", "branch and tag cannot both be set")
 	}
-	if in.GitRepo != nil {
-		setValues++
+	if in.GetCommit() != "" && in.GetBranch() == "" && in.GetTag() == "" {
+		return errors.BadRequest("source.git: %s", "commit requires a branch or tag")
 	}
-	if setValues > 1 {
-		return errors.BadRequest("stack_resource_build_spec.source_context: %s", "stack_resource_build_spec.source_context can only have one of volume or git_repo")
+	if err := validateInlineCredentials(in.Credentials, "source.git.credentials"); err != nil {
+		return err
 	}
-
-	if in.Volume != nil {
-		if in.Volume.Id == "" {
-			return errors.BadRequest("stack_resource_build_spec.source_context.volume.id: %s", "stack_resource_build_spec.source_context.volume.id is required")
+	if in.Credentials != nil && in.GetIntegrationId() != "" {
+		return errors.BadRequest("source.git: %s", "credentials and integration_id are mutually exclusive")
+	}
+	if in.Push != nil {
+		if in.Push.Repository == "" {
+			return errors.BadRequest("source.git.push.repository: %s", "source.git.push.repository is required")
 		}
-	}
-	if in.GitRepo != nil {
-		if in.GitRepo.RepoUrl == "" {
-			return errors.BadRequest("stack_resource_build_spec.source_context.git.repo_url: %s", "stack_resource_build_spec.source_context.git.repo_url is required")
+		if err := validateInlineCredentials(in.Push.Credentials, "source.git.push.credentials"); err != nil {
+			return err
+		}
+		if in.Push.Credentials != nil && in.Push.GetRegistryCredentialsId() != "" {
+			return errors.BadRequest("source.git.push: %s", "credentials and registry_credentials_id are mutually exclusive")
 		}
 	}
 	return nil
 }
 
-func validateImageConfig(in *openapi.ImageSpec) *errors.ServiceError {
+func validateImageSource(in *openapi.ImageSource) *errors.ServiceError {
+	if in.Ref == "" {
+		return errors.BadRequest("source.image.ref: %s", "source.image.ref is required")
+	}
+	if err := validateInlineCredentials(in.Credentials, "source.image.credentials"); err != nil {
+		return err
+	}
+	if in.Credentials != nil && in.GetRegistryCredentialsId() != "" {
+		return errors.BadRequest("source.image: %s", "credentials and registry_credentials_id are mutually exclusive")
+	}
+	return nil
+}
+
+func validateVolumeSource(in *openapi.VolumeBuildSource) *errors.ServiceError {
+	if in.GetVolumeId() == "" && in.GetVolumeName() == "" {
+		return errors.BadRequest("source.volume: %s", "volume_id or volume_name is required")
+	}
+	return nil
+}
+
+func validateInlineCredentials(in *openapi.InlineCredentials, field string) *errors.ServiceError {
 	if in == nil {
-		return errors.BadRequest("image_spec: %s", "image_spec is required")
+		return nil
 	}
-	if in.Image == "" {
-		return errors.BadRequest("image_spec.image: %s", "image_spec.image is required")
+	if in.Username == "" || in.Password == "" {
+		return errors.BadRequest("%s: %s", field, "username and password are required")
 	}
 	return nil
 }
