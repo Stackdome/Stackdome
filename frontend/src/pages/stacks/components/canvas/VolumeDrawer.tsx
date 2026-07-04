@@ -10,10 +10,13 @@ interface VolumeDrawerProps {
   volumeName: string;
   session: UseStackEditSession;
   onClose: () => void;
+  /** When provided, "Remove volume" defers to a caller-owned confirm dialog
+   *  instead of removing immediately (e.g. StackCanvasTab's shared confirm). */
+  onRequestRemove?: (name: string) => void;
 }
 
 /** Drawer body for a volume pushed from a service's mount row. */
-export function VolumeDrawer({ volumeName, session, onClose }: VolumeDrawerProps) {
+export function VolumeDrawer({ volumeName, session, onClose, onRequestRemove }: VolumeDrawerProps) {
   const volumes = session.draft.volumes;
   const index = volumes.findIndex((v) => v.name === volumeName);
   const volume = (volumes[index] ?? {}) as Partial<VolumeFormData>;
@@ -28,11 +31,15 @@ export function VolumeDrawer({ volumeName, session, onClose }: VolumeDrawerProps
   const onRemove = useCallback(
     (idx: number) => {
       const name = volumes[idx]?.name;
+      if (onRequestRemove) {
+        if (name) onRequestRemove(name);
+        return;
+      }
       session.updateVolumes((prev) => prev.filter((_, i) => i !== idx));
       if (name) session.updateResources((prev) => removeMountsOf(prev, name));
       onClose();
     },
-    [session, volumes, onClose],
+    [session, volumes, onClose, onRequestRemove],
   );
 
   if (index < 0) return null;

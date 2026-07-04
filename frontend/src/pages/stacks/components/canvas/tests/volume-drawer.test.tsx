@@ -74,4 +74,25 @@ describe("VolumeDrawer", () => {
 
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("defers to onRequestRemove when provided, instead of removing directly", () => {
+    const { session, updateVolumes, updateResources } = makeSession([{ name: "data", spec: { size: "1Gi" } }]);
+    const onClose = vi.fn();
+    const onRequestRemove = vi.fn();
+    render(
+      <VolumeDrawer
+        volumeName="data"
+        session={session}
+        onClose={onClose}
+        onRequestRemove={onRequestRemove}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Remove volume"));
+
+    expect(onRequestRemove).toHaveBeenCalledWith("data");
+    expect(updateVolumes).not.toHaveBeenCalled();
+    expect(updateResources).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

@@ -41,6 +41,9 @@ export function AddResourcePopover({
   const visibleAddons = addons.filter(
     (a) => !query.trim() || a.name.toLowerCase().includes(query.trim().toLowerCase()),
   );
+  const trimmedQuery = query.trim().toLowerCase();
+  // "Storage" is the section header shown for the Volume tile — match either name.
+  const showStorageSection = !trimmedQuery || "volume".includes(trimmedQuery) || "storage".includes(trimmedQuery);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -71,7 +74,7 @@ export function AddResourcePopover({
             query={query}
             onAdd={onAdd}
           />
-          {"volume".includes(query.trim().toLowerCase()) || !query.trim() ? (
+          {showStorageSection ? (
             <div className="mt-5">
               <div className="mb-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
                 Storage

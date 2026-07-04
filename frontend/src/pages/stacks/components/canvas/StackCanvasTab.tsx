@@ -138,6 +138,7 @@ function StackCanvasFlow({
   const [drawerStack, setDrawerStack] = useState<DrawerEntry[]>([]);
   const [menuTarget, setMenuTarget] = useState<CanvasMenuTarget | null>(null);
   const [pendingDeleteVolume, setPendingDeleteVolume] = useState<string | null>(null);
+  const [pendingDeleteResource, setPendingDeleteResource] = useState<string | null>(null);
   const { fitView, getIntersectingNodes } = useReactFlow();
   const dragStartPos = useRef<XYPosition | null>(null);
 
@@ -373,6 +374,15 @@ function StackCanvasFlow({
     [applyDraft],
   );
 
+  const onDeleteResourceConfirmed = useCallback(
+    (resourceName: string) => {
+      applyDraft((draft) => ({ ...draft, resources: draft.resources.filter((r) => r.name !== resourceName) }));
+      setDrawerStack([]);
+      setPendingDeleteResource(null);
+    },
+    [applyDraft],
+  );
+
   const onCreateVolume = useCallback(
     (input: { name: string; size: string; resourceIdx: number; targetPath: string }) => {
       applyDraft((draft) => ({
@@ -503,7 +513,13 @@ function StackCanvasFlow({
         onOpenVolume={openVolume}
       />
     ) : frontEntry ? (
-      <VolumeDrawer key={entryKey(frontEntry)} volumeName={frontEntry.name} session={session} onClose={popDrawer} />
+      <VolumeDrawer
+        key={entryKey(frontEntry)}
+        volumeName={frontEntry.name}
+        session={session}
+        onClose={popDrawer}
+        onRequestRemove={setPendingDeleteVolume}
+      />
     ) : null;
 
   return (
@@ -557,10 +573,7 @@ function StackCanvasFlow({
           setAddVolumeResourceIdx(idx);
           setAddVolumeOpen(true);
         }}
-        onDeleteResource={(resourceName) => {
-          applyDraft((draft) => ({ ...draft, resources: draft.resources.filter((r) => r.name !== resourceName) }));
-          setDrawerStack([]);
-        }}
+        onDeleteResource={setPendingDeleteResource}
         onDisconnectVolume={onDisconnectVolume}
         onOpenVolume={openVolumeFromCanvas}
         onRequestDeleteVolume={setPendingDeleteVolume}
@@ -599,6 +612,26 @@ function StackCanvasFlow({
               onClick={() => pendingDeleteVolume && onDeleteVolumeConfirmed(pendingDeleteVolume)}
             >
               Delete volume
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={pendingDeleteResource != null} onOpenChange={(o) => !o && setPendingDeleteResource(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete service “{pendingDeleteResource}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The service and its configuration are removed when the stack deploys. This cannot be undone after
+              deploy.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-danger text-white hover:bg-danger/90"
+              onClick={() => pendingDeleteResource && onDeleteResourceConfirmed(pendingDeleteResource)}
+            >
+              Delete service
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

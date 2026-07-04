@@ -45,3 +45,57 @@ describe("AddResourcePopover managed addons", () => {
     expect(tile.querySelector(".text-primary")).toBeNull();
   });
 });
+
+describe("AddResourcePopover storage tile search", () => {
+  it("shows the Storage section when searching 'storage', matching its header", () => {
+    render(
+      <AddResourcePopover
+        addedIds={[]}
+        onAdd={() => {}}
+        addons={[]}
+        linkedAddonIds={new Set()}
+        onLinkAddon={() => {}}
+        canAddVolume
+        onAddVolume={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Add resource/i }));
+    fireEvent.change(screen.getByPlaceholderText(/Search services/i), { target: { value: "storage" } });
+    expect(screen.getByText("Storage")).toBeInTheDocument();
+    expect(screen.getByText("Volume")).toBeInTheDocument();
+  });
+
+  it("still shows the Storage section when searching 'volume'", () => {
+    render(
+      <AddResourcePopover
+        addedIds={[]}
+        onAdd={() => {}}
+        addons={[]}
+        linkedAddonIds={new Set()}
+        onLinkAddon={() => {}}
+        canAddVolume
+        onAddVolume={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Add resource/i }));
+    fireEvent.change(screen.getByPlaceholderText(/Search services/i), { target: { value: "volume" } });
+    expect(screen.getByText("Storage")).toBeInTheDocument();
+  });
+
+  it("hides the Storage section for unrelated queries", () => {
+    render(
+      <AddResourcePopover
+        addedIds={[]}
+        onAdd={() => {}}
+        addons={[]}
+        linkedAddonIds={new Set()}
+        onLinkAddon={() => {}}
+        canAddVolume
+        onAddVolume={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Add resource/i }));
+    fireEvent.change(screen.getByPlaceholderText(/Search services/i), { target: { value: "postgres" } });
+    expect(screen.queryByText("Storage")).toBeNull();
+  });
+});
