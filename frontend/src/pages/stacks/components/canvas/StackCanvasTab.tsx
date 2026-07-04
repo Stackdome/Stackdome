@@ -336,6 +336,14 @@ function StackCanvasFlow({
   const [addVolumeOpen, setAddVolumeOpen] = useState(false);
   const [addVolumeResourceIdx, setAddVolumeResourceIdx] = useState<number | null>(null);
 
+  /** Radix modal-from-menu race: opening a Dialog/AlertDialog in the same commit
+   *  that closes the modal DropdownMenu makes the dialog save the menu's
+   *  `pointer-events: none` body lock as the value to restore on close, wedging
+   *  the page. Defer the open one tick so the menu's lock is released first. */
+  const deferOpen = useCallback((fn: () => void) => {
+    setTimeout(fn, 0);
+  }, []);
+
   /** Apply a pure draft mutation, starting a session lazily when needed. */
   const applyDraft = useCallback(
     (fn: (draft: EditSessionDraft) => EditSessionDraft) => {
@@ -570,14 +578,16 @@ function StackCanvasFlow({
         onClose={() => setMenuTarget(null)}
         onOpenResource={openResourceDrawer}
         onAddVolumeToResource={(idx) => {
-          setAddVolumeResourceIdx(idx);
-          setAddVolumeOpen(true);
+          deferOpen(() => {
+            setAddVolumeResourceIdx(idx);
+            setAddVolumeOpen(true);
+          });
         }}
-        onDeleteResource={setPendingDeleteResource}
+        onDeleteResource={(name) => deferOpen(() => setPendingDeleteResource(name))}
         onDisconnectVolume={onDisconnectVolume}
         onOpenVolume={openVolumeFromCanvas}
-        onRequestDeleteVolume={setPendingDeleteVolume}
-        onRequestAttach={(volumeName) => setAttachRequest({ volumeName, resourceIdx: null })}
+        onRequestDeleteVolume={(name) => deferOpen(() => setPendingDeleteVolume(name))}
+        onRequestAttach={(volumeName) => deferOpen(() => setAttachRequest({ volumeName, resourceIdx: null }))}
       />
       <MountPathDialog
         volumeName={attachRequest?.volumeName ?? null}
