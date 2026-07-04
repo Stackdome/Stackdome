@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from "react";
-import { addInlineVolume } from "@/pages/stacks/lib/canvas/inline-volume";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { X, ScrollText, Trash2 } from "lucide-react";
@@ -7,10 +6,7 @@ import { useSecrets } from "@/pages/stacks/hooks/use-secrets";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
 import type { UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
-import type {
-  FormStackResourceData,
-  FormVolumeExtendedData as VolumeFormData,
-} from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 import { StackResourceConfigurationTab } from "@/pages/stacks/components/shared/stack-resource-configuration-tab";
 import { StackResourceDeploymentTab } from "@/pages/stacks/components/shared/stack-resource-deployment-tab";
 import { StackResourceEnvironmentTab } from "@/pages/stacks/components/shared/stack-resource-environment-tab";
@@ -90,25 +86,6 @@ export function ResourceDrawer({
     [session],
   );
 
-  const onCreateVolume = useCallback(
-    (input: { name: string; size: string; targetPath: string }) => {
-      const currentMounts = session.draft.resources[resourceIndex]?.volume_mounts ?? [];
-      const { volumes, mounts } = addInlineVolume(
-        // session holds Partial<FormVolumeExtendedData>[]; addInlineVolume works in the extended form — structurally equivalent at runtime (fields are always present on creation).
-        session.draft.volumes as unknown as VolumeFormData[],
-        // Partial resource mounts are structurally compatible with the VolumeMount type — all required fields exist at runtime.
-        currentMounts as unknown as NonNullable<FormStackResourceData["volume_mounts"]>,
-        input,
-      );
-      // FormVolumeExtendedData[] widens safely to Partial<FormVolumeExtendedData>[] (VolumeArr) — the session type is the broader Partial form.
-      session.updateVolumes(() => volumes as unknown as Partial<VolumeFormData>[]);
-      session.updateResources((prev) =>
-        prev.map((r, i) => (i === resourceIndex ? { ...r, volume_mounts: mounts } : r)),
-      );
-    },
-    [session, resourceIndex],
-  );
-
   const { dirtyTabs, isDirty, statusDotColor, configurationProps, deploymentProps, environmentProps } =
     useResourceTabProps({
       resource,
@@ -127,7 +104,7 @@ export function ResourceDrawer({
         addonNameById,
         onDiscardField: (path) => session.discardResourceField(resourceIndex, path),
         onDiscardEnvRow: (envIdx) => session.discardEnvRow(resourceIndex, envIdx),
-        onCreateVolume,
+        mountsReadOnly: true,
         onOpenVolume,
       },
     });

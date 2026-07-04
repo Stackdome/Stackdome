@@ -35,6 +35,8 @@ export interface ResourceTabContext {
   onCreateVolume?: (input: { name: string; size: string; targetPath: string }) => void;
   /** When provided, mount rows show a navigate button that pushes the volume's drawer. */
   onOpenVolume?: (name: string) => void;
+  /** When true, the Configuration tab renders mounts as read-only rows. */
+  mountsReadOnly?: boolean;
 }
 
 type ConfigurationProps = React.ComponentProps<typeof StackResourceConfigurationTab>;
@@ -185,6 +187,7 @@ export function useResourceTabProps(args: {
       onPatchResource,
       onCreateVolume: context.onCreateVolume,
       onOpenVolume: context.onOpenVolume,
+      mountsReadOnly: context.mountsReadOnly,
     },
     deploymentProps: {
       index,

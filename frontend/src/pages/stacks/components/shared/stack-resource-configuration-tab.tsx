@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { PlusCircle, GitBranch, Box, Trash2, Database, X, ArrowUpRight } from "lucide-react";
+import { PlusCircle, GitBranch, Box, Trash2, Database, X, ArrowUpRight, HardDrive } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { DirtyField } from "@/pages/stacks/components/shared/dirty-field";
@@ -44,6 +44,8 @@ interface StackResourceConfigurationTabProps {
   onCreateVolume?: (input: { name: string; size: string; targetPath: string }) => void;
   /** When provided, mount rows show a navigate button that pushes the volume's drawer. */
   onOpenVolume?: (name: string) => void;
+  /** When true, render mounts as read-only rows (canvas drives mounts via drag/connect). */
+  mountsReadOnly?: boolean;
 }
 
 /** Subset of FormStackResourceData read by the Configuration tab. We pass this
@@ -105,6 +107,7 @@ function StackResourceConfigurationTabImpl({
   onPatchResource,
   onCreateVolume,
   onOpenVolume,
+  mountsReadOnly = false,
 }: StackResourceConfigurationTabProps) {
   const update = onPatchResource;
 
@@ -584,6 +587,43 @@ function StackResourceConfigurationTabImpl({
       {/* Volume Mounts Section */}
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-3">Volume Mounts</h3>
+        {mountsReadOnly ? (
+          <div className="grid gap-1.5 max-w-3xl">
+            {(draft.volume_mounts || []).length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No volumes mounted. Add one from the canvas — “+ Add resource → Volume”.
+              </p>
+            )}
+            {(draft.volume_mounts || []).map((vm: VolumeMount, vmIdx: number) => (
+              <div
+                key={vmIdx}
+                className="flex items-center gap-2 rounded-md border border-border bg-muted/10 px-3 py-2"
+              >
+                <HardDrive className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
+                <span className="truncate font-mono text-[12.5px] text-foreground">{vm.source_volume_name}</span>
+                <code className="ml-auto shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                  {vm.target_path}
+                </code>
+                {onOpenVolume && vm.source_volume_name && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 shrink-0 text-fg-muted hover:text-brand"
+                    aria-label={`Open volume ${vm.source_volume_name}`}
+                    title="Open volume settings"
+                    onClick={() => onOpenVolume(vm.source_volume_name!)}
+                  >
+                    <ArrowUpRight className="size-3.5" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <p className="mt-1 text-[12.5px] text-muted-foreground">
+              Manage mounts on the canvas: right-click a volume to disconnect, drag a floating volume onto a service to attach.
+            </p>
+          </div>
+        ) : (
         <div className="grid gap-5 max-w-3xl">
           {(draft.volume_mounts || []).map((vm: VolumeMount, vmIdx: number) => (
             <DirtyField
@@ -706,6 +746,7 @@ function StackResourceConfigurationTabImpl({
             </div>
           )}
         </div>
+        )}
       </div>
       <Separator className="my-6" />
       {/* Ports Section */}
