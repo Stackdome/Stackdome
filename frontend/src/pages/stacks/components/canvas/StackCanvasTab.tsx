@@ -146,8 +146,9 @@ function StackCanvasFlow({
         return;
       }
       if (node.type === "resource") {
-        const idx = (node.data as ResourceNodeData).resourceIdx;
-        if (idx != null) setMenuTarget({ kind: "resource", resourceIdx: idx, x, y });
+        const data = node.data as ResourceNodeData;
+        const idx = data.resourceIdx;
+        if (idx != null) setMenuTarget({ kind: "resource", resourceIdx: idx, resourceName: data.name, x, y });
       }
     },
     [],
@@ -468,8 +469,8 @@ function StackCanvasFlow({
           setAddVolumeResourceIdx(idx);
           setAddVolumeOpen(true);
         }}
-        onDeleteResource={(idx) => {
-          applyDraft((draft) => ({ ...draft, resources: draft.resources.filter((_, i) => i !== idx) }));
+        onDeleteResource={(resourceName) => {
+          applyDraft((draft) => ({ ...draft, resources: draft.resources.filter((r) => r.name !== resourceName) }));
           setDrawerStack([]);
         }}
         onDisconnectVolume={onDisconnectVolume}

@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export type CanvasMenuTarget =
-  | { kind: "resource"; resourceIdx: number; x: number; y: number }
+  | { kind: "resource"; resourceIdx: number; resourceName: string; x: number; y: number }
   | { kind: "volume-chip"; volumeName: string; x: number; y: number }
   | { kind: "volume-node"; volumeName: string; x: number; y: number };
 
@@ -17,7 +17,7 @@ interface CanvasContextMenuProps {
   onClose: () => void;
   onOpenResource: (resourceIdx: number) => void;
   onAddVolumeToResource: (resourceIdx: number) => void;
-  onDeleteResource: (resourceIdx: number) => void;
+  onDeleteResource: (resourceName: string) => void;
   onDisconnectVolume: (volumeName: string) => void;
   onOpenVolume: (volumeName: string) => void;
   onRequestDeleteVolume: (volumeName: string) => void;
@@ -76,7 +76,7 @@ export function CanvasContextMenu({
               <HardDrive className="size-4" /> Add volume…
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className={DANGER_ITEM} onSelect={() => onDeleteResource(target.resourceIdx)}>
+            <DropdownMenuItem className={DANGER_ITEM} onSelect={() => onDeleteResource(target.resourceName)}>
               <Trash2 className="size-4" /> Delete service
             </DropdownMenuItem>
           </>

@@ -44,10 +44,10 @@ describe("CanvasContextMenu", () => {
   });
 
   it("shows resource items and fires delete", () => {
-    const h = renderMenu({ kind: "resource", resourceIdx: 2, x: 10, y: 10 });
+    const h = renderMenu({ kind: "resource", resourceIdx: 2, resourceName: "web", x: 10, y: 10 });
     expect(screen.getByText("Open settings")).toBeInTheDocument();
     expect(screen.getByText("Add volume…")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Delete service"));
-    expect(h.onDeleteResource).toHaveBeenCalledWith(2);
+    expect(h.onDeleteResource).toHaveBeenCalledWith("web");
   });
 });

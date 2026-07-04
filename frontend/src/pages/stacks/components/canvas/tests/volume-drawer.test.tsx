@@ -18,6 +18,7 @@ function makeSession(volumes: { name: string; spec?: { size?: string } }[]) {
       updateResources,
     } as unknown as UseStackEditSession,
     updateVolumes,
+    updateResources,
   };
 }
 
@@ -51,6 +52,26 @@ describe("VolumeDrawer", () => {
     const onClose = vi.fn();
     render(<VolumeDrawer volumeName="data" session={session} onClose={onClose} />);
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("remove cascades: drops the volume and strips its mounts from resources", () => {
+    const { session, updateVolumes, updateResources } = makeSession([{ name: "data", spec: { size: "1Gi" } }]);
+    const onClose = vi.fn();
+    render(<VolumeDrawer volumeName="data" session={session} onClose={onClose} />);
+
+    fireEvent.click(screen.getByText("Remove volume"));
+
+    expect(updateVolumes).toHaveBeenCalled();
+    const volumesUpdater = updateVolumes.mock.calls[0][0];
+    expect(volumesUpdater(session.draft.volumes)).toEqual([]);
+
+    expect(updateResources).toHaveBeenCalled();
+    const resourcesUpdater = updateResources.mock.calls[0][0];
+    expect(resourcesUpdater(session.draft.resources)).toEqual([
+      { name: "web", volume_mounts: [] },
+    ]);
+
     expect(onClose).toHaveBeenCalled();
   });
 });
