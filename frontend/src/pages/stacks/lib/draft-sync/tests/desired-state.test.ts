@@ -60,7 +60,8 @@ describe("buildDesiredState", () => {
       ...validResource,
       volume_mounts: [{ source_volume_name: "web-data", target_path: "/data" }],
     };
-    const d = buildDesiredState({ resources: [r], volumes: [] } as unknown as EditSessionDraft);
+    const vol = { name: "web-data", sourceType: "None" as const, spec: { size: "1Gi", access_mode: "ReadWriteOnce" }, labels: [] };
+    const d = buildDesiredState({ resources: [r], volumes: [vol] } as unknown as EditSessionDraft);
     // 1 env-row secret connection + 1 volume_mount connection
     expect(d.connections.size).toBe(2);
     const vmConn = [...d.connections.values()].find((c) => c.kind === "volume_mount");
@@ -94,5 +95,25 @@ describe("buildDesiredState", () => {
     const d = buildDesiredState({ resources: [r], volumes: [] } as unknown as EditSessionDraft);
     const web = d.resources.get("web")!;
     expect(web.volume_mounts).toBeUndefined();
+  });
+
+  it("skips volume_mount connections whose volume is missing from the draft", () => {
+    const draft = {
+      resources: [
+        {
+          name: "web",
+          image_spec: { image: "nginx" },
+          volume_mounts: [
+            { source_volume_name: "ghost", source_sub_path: "", target_path: "/g" },
+            { source_volume_name: "data", source_sub_path: "", target_path: "/d" },
+          ],
+        },
+      ],
+      volumes: [{ name: "data", spec: { size: "1Gi", access_mode: "ReadWriteOnce", needs_sync_before_use: false } }],
+    };
+    const state = buildDesiredState(draft as never);
+    const mountConns = [...state.connections.values()].filter((c) => c.kind === "volume_mount");
+    expect(mountConns).toHaveLength(1);
+    expect(mountConns[0].from?.name).toBe("data");
   });
 });

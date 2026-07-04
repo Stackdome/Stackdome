@@ -160,4 +160,24 @@ describe("deriveGraph (connection projection)", () => {
     expect(a1?.data.dirtyState).toBeUndefined();
     expect(a2?.data.dirtyState).toBe("new");
   });
+
+  it("omits chips for mounts whose volume is missing from volumeNames", () => {
+    const graph = deriveGraph({
+      resources: [
+        {
+          name: "web",
+          volume_mounts: [
+            { source_volume_name: "data", source_sub_path: "", target_path: "/d" },
+            { source_volume_name: "ghost", source_sub_path: "", target_path: "/g" },
+          ],
+        },
+      ],
+      linkedAddonIds: new Set(),
+      addonNameById: new Map(),
+      secretNameById: new Map(),
+      volumeNames: ["data"],
+    });
+    const web = graph.nodes.find((n) => n.id === "resource:web");
+    expect((web?.data as { volumes: { name: string }[] }).volumes.map((v) => v.name)).toEqual(["data"]);
+  });
 });

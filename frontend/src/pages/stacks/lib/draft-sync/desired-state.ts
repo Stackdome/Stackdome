@@ -69,9 +69,11 @@ export function buildDesiredState(draft: EditSessionDraft): DesiredStackState {
   for (const conn of buildDesiredConnections(validForConnections)) {
     connections.set(connectionIdentityKey(conn), conn);
   }
-  // Add volume mount connections for each valid resource.
+  // Add volume mount connections for each valid resource. Mounts referencing
+  // volumes absent from the draft are dangling — never emit them.
   for (const { name, mounts } of validForMounts) {
-    for (const conn of mountsToConnections(name, mounts)) {
+    const liveMounts = mounts.filter((m) => volumes.has((m as { source_volume_name?: string }).source_volume_name ?? ""));
+    for (const conn of mountsToConnections(name, liveMounts)) {
       connections.set(connectionIdentityKey(conn), conn);
     }
   }

@@ -165,11 +165,16 @@ function servicePresentation(resource: Partial<FormStackResourceData>) {
   });
 }
 
-function volumeChips(resource: Partial<FormStackResourceData>): VolumeChip[] {
-  return (resource.volume_mounts ?? []).map((m) => ({
-    name: (m.source_volume_name ?? "") as string,
-    mountPath: m.target_path as string | undefined,
-  }));
+function volumeChips(
+  resource: Partial<FormStackResourceData>,
+  knownVolumes: ReadonlySet<string> | null,
+): VolumeChip[] {
+  return (resource.volume_mounts ?? [])
+    .filter((m) => !knownVolumes || knownVolumes.has((m.source_volume_name ?? "") as string))
+    .map((m) => ({
+      name: (m.source_volume_name ?? "") as string,
+      mountPath: m.target_path as string | undefined,
+    }));
 }
 
 export function edgeKey(kind: string, source: string, target: string): string {
@@ -213,6 +218,9 @@ function nodeIdOfConnRef(ref: StackConnection["from"] | undefined): string | nul
 export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
   const nodes: CanvasNode[] = [];
 
+  // null = caller didn't supply volumeNames (tests, older callers): no filtering.
+  const knownVolumes = input.volumeNames ? new Set(input.volumeNames) : null;
+
   input.resources.forEach((resource, idx) => {
     const name = resource.name ?? "";
     const pres = servicePresentation(resource);
@@ -228,7 +236,7 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         dotState: pres.dotState,
         summary: pres.summary,
         status: resource.status as string | undefined,
-        volumes: volumeChips(resource),
+        volumes: volumeChips(resource, knownVolumes),
         dirtyState: serviceDirtyState(idx, input.dirty),
         resourceIdx: idx,
       },
