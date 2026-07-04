@@ -12,7 +12,7 @@ import type {
   FormStackResourceData,
   FormVolumeExtendedData as VolumeFormData,
 } from "@/pages/stacks/schemas/form-schema";
-import type { UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
+import type { EditSessionDraft, UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { useSecrets } from "@/pages/stacks/hooks/use-secrets";
 import { useStackTopology } from "@/pages/stacks/hooks/use-stack-topology";
 import { deriveGraph } from "@/pages/stacks/lib/canvas/graph-from-connections";
@@ -23,6 +23,8 @@ import { blockCatalog, getBlockById } from "@/pages/stacks/data/blocks/registry"
 import { CanvasEditor } from "./CanvasEditor";
 import { ResourceDrawer } from "./ResourceDrawer";
 import { VolumeDrawer } from "./VolumeDrawer";
+import { AddVolumeDialog } from "./AddVolumeDialog";
+import { addMount, newVolume } from "@/pages/stacks/lib/canvas/volume-ops";
 import { DrawerStack, type DrawerPanelDescriptor } from "./DrawerStack";
 import {
   replaceStack,
@@ -203,6 +205,42 @@ function StackCanvasFlow({
     [session, baselineResources, baselineVolumes, draftResources, draftVolumes, connectionAddonIds],
   );
 
+  const [addVolumeOpen, setAddVolumeOpen] = useState(false);
+  const [addVolumeResourceIdx, setAddVolumeResourceIdx] = useState<number | null>(null);
+
+  /** Apply a pure draft mutation, starting a session lazily when needed. */
+  const applyDraft = useCallback(
+    (fn: (draft: EditSessionDraft) => EditSessionDraft) => {
+      const current: EditSessionDraft = session.isActive
+        ? { resources: session.draft.resources, volumes: session.draft.volumes }
+        : { resources: draftResources, volumes: draftVolumes };
+      const next = fn(current);
+      if (!session.isActive) {
+        session.start(
+          { resources: baselineResources, volumes: baselineVolumes },
+          { linkedAddonIds: new Set(connectionAddonIds), draft: next },
+        );
+      } else {
+        session.updateResources(() => next.resources);
+        session.updateVolumes(() => next.volumes);
+      }
+    },
+    [session, baselineResources, baselineVolumes, draftResources, draftVolumes, connectionAddonIds],
+  );
+
+  const onCreateVolume = useCallback(
+    (input: { name: string; size: string; resourceIdx: number; targetPath: string }) => {
+      applyDraft((draft) => ({
+        resources: addMount(draft.resources, input.resourceIdx, {
+          volumeName: input.name,
+          targetPath: input.targetPath,
+        }),
+        volumes: [...draft.volumes, newVolume({ name: input.name, size: input.size })],
+      }));
+    },
+    [applyDraft],
+  );
+
   const { addons: allAddons } = usePostgresAddons();
   const pickableAddons = useMemo(
     () => allAddons.filter((a) => a.id && a.name).map((a) => ({ id: a.id!, name: a.name! })),
@@ -321,6 +359,8 @@ function StackCanvasFlow({
           addons={pickableAddons}
           linkedAddonIds={linkedAddonIds}
           onLinkAddon={onLinkAddon}
+          canAddVolume={resources.length > 0}
+          onAddVolume={() => setAddVolumeOpen(true)}
         />
       </div>
       <DrawerStack
@@ -329,6 +369,17 @@ function StackCanvasFlow({
         onTruncate={truncateDrawers}
         onPop={popDrawer}
         onCloseAll={closeAllDrawers}
+      />
+      <AddVolumeDialog
+        open={addVolumeOpen}
+        onOpenChange={(o) => {
+          setAddVolumeOpen(o);
+          if (!o) setAddVolumeResourceIdx(null);
+        }}
+        resources={resources}
+        volumes={volumes}
+        initialResourceIdx={addVolumeResourceIdx}
+        onCreate={onCreateVolume}
       />
     </div>
   );

@@ -44,6 +44,8 @@ interface CanvasEditorProps {
   addons: { id: string; name: string }[];
   linkedAddonIds: ReadonlySet<string>;
   onLinkAddon: (addonId: string) => void;
+  canAddVolume: boolean;
+  onAddVolume: () => void;
 }
 
 /**
@@ -64,6 +66,8 @@ export function CanvasEditor({
   addons,
   linkedAddonIds,
   onLinkAddon,
+  canAddVolume,
+  onAddVolume,
 }: CanvasEditorProps) {
   return (
     <div className="relative h-full w-full" data-testid="stack-canvas">
@@ -96,6 +100,8 @@ export function CanvasEditor({
             addons={addons}
             linkedAddonIds={linkedAddonIds}
             onLinkAddon={onLinkAddon}
+            canAddVolume={canAddVolume}
+            onAddVolume={onAddVolume}
           />
         </Panel>
         {nodes.length > 0 && (

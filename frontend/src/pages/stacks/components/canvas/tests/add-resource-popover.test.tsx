@@ -16,6 +16,8 @@ describe("AddResourcePopover managed addons", () => {
         addons={[{ id: "a1", name: "prod-db" }]}
         linkedAddonIds={new Set()}
         onLinkAddon={onLinkAddon}
+        canAddVolume
+        onAddVolume={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: /Add resource/i }));
@@ -31,6 +33,8 @@ describe("AddResourcePopover managed addons", () => {
         addons={[{ id: "a1", name: "prod-db" }]}
         linkedAddonIds={new Set(["a1"])}
         onLinkAddon={() => {}}
+        canAddVolume
+        onAddVolume={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: /Add resource/i }));
