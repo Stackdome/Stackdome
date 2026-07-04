@@ -156,7 +156,9 @@ export function CanvasEditorShell({
   const hasUnsaved = isActive && dirtyTotal > 0;
   // Undeployed changes exist (either mid-session dirt or a saved-but-undeployed
   // diff). Draft stacks have nothing server-side to review, so never for drafts.
-  const hasChanges = !isDraft && (isStaged || hasUnsaved);
+  // A staged phase with a zero count means the changes net out — nothing to
+  // review, so the entry hides rather than advertise a phantom change.
+  const hasChanges = !isDraft && dirtyTotal > 0 && (isStaged || isActive);
 
   // The canvas (Configuration) stays mounted so its open drawer + node
   // selection survive tab switches; ops views render as an opaque overlay on

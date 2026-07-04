@@ -96,6 +96,11 @@ describe("CanvasEditorShell View changes entry", () => {
     render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isStaged dirtyTotal={1} />);
     expect(screen.getByRole("button", { name: /view changes/i })).toHaveTextContent("1");
   });
+
+  it("hides 'View changes' when staged but the change count is zero", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isStaged dirtyTotal={0} />);
+    expect(screen.queryByRole("button", { name: /view changes/i })).toBeNull();
+  });
 });
 
 describe("CanvasEditorShell actions menu", () => {

@@ -37,7 +37,14 @@ describe("ViewChangesModal", () => {
     expect(screen.getByText("web")).toBeInTheDocument();
     expect(screen.getByText("cache")).toBeInTheDocument();
     expect(screen.getByText("data")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /deploy 3 changes/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Deploy" })).toBeInTheDocument();
+  });
+
+  it("renders group labels for populated groups only", () => {
+    render(<ViewChangesModal {...base} />);
+    expect(screen.getByText("Resources")).toBeInTheDocument();
+    expect(screen.getByText("Volumes")).toBeInTheDocument();
+    expect(screen.queryByText("Connections")).toBeNull();
   });
 
   it("discards a modified resource by name", () => {
@@ -51,7 +58,7 @@ describe("ViewChangesModal", () => {
 
   it("disables per-card discard for removed entries", () => {
     render(<ViewChangesModal {...base} />);
-    const cacheCard = screen.getByText("cache").closest("div.flex.items-start") as HTMLElement;
+    const cacheCard = screen.getByText("cache").closest("[data-change-card]") as HTMLElement;
     expect(within(cacheCard).getByRole("button", { name: "Discard" })).toBeDisabled();
   });
 
@@ -59,7 +66,7 @@ describe("ViewChangesModal", () => {
     const onDeploy = vi.fn();
     const onOpenChange = vi.fn();
     render(<ViewChangesModal {...base} onDeploy={onDeploy} onOpenChange={onOpenChange} />);
-    fireEvent.click(screen.getByRole("button", { name: /deploy 3 changes/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Deploy" }));
     expect(onDeploy).toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
