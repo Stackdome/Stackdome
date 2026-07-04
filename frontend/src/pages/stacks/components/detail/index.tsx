@@ -658,7 +658,7 @@ export default function StackDetailPage() {
   const volumeCount = effectiveStack?.spec?.volumes?.length || 0;
   const addonCount = connectionAddonIds.size;
   const subtitleText = [
-    `${resourceCount} ${resourceCount === 1 ? "service" : "services"}`,
+    `${resourceCount} ${resourceCount === 1 ? "resource" : "resources"}`,
     `${volumeCount} ${volumeCount === 1 ? "volume" : "volumes"}`,
     ...(addonCount > 0 ? [`${addonCount} ${addonCount === 1 ? "addon" : "addons"}`] : []),
   ].join(" · ");
