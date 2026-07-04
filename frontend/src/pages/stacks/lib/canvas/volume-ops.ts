@@ -34,16 +34,16 @@ export function addMount(
   return resources.map((r, i) =>
     i === resourceIdx
       ? {
-          ...r,
-          volume_mounts: [
-            ...(r.volume_mounts ?? []),
+        ...r,
+        volume_mounts: [
+          ...(r.volume_mounts ?? []),
             {
               source_volume_name: mount.volumeName,
               source_sub_path: mount.subPath ?? "",
               target_path: mount.targetPath,
             } as Mount,
-          ],
-        }
+        ],
+      }
       : r,
   );
 }

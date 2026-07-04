@@ -624,128 +624,128 @@ function StackResourceConfigurationTabImpl({
             </p>
           </div>
         ) : (
-        <div className="grid gap-5 max-w-3xl">
-          {(draft.volume_mounts || []).map((vm: VolumeMount, vmIdx: number) => (
-            <DirtyField
-              key={vmIdx}
-              draft={draft}
-              baseline={baseline}
-              path={`volume_mounts.${vmIdx}`}
-              onReset={onDiscardField ? () => onDiscardField(`volume_mounts.${vmIdx}`) : undefined}
-              compact
-            >
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-start border p-3 rounded-md bg-muted/10">
-                <div className="flex items-end gap-1.5">
-                  <FieldShell
-                    label="Volume"
-                    htmlFor={`volume-name-${index}-${vmIdx}`}
-                    required
-                    error={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`)}
-                  >
-                    <Select
-                      value={vm.source_volume_name || ""}
-                      onValueChange={(value) => updateVolumeMount(vmIdx, { source_volume_name: value })}
+          <div className="grid gap-5 max-w-3xl">
+            {(draft.volume_mounts || []).map((vm: VolumeMount, vmIdx: number) => (
+              <DirtyField
+                key={vmIdx}
+                draft={draft}
+                baseline={baseline}
+                path={`volume_mounts.${vmIdx}`}
+                onReset={onDiscardField ? () => onDiscardField(`volume_mounts.${vmIdx}`) : undefined}
+                compact
+              >
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-start border p-3 rounded-md bg-muted/10">
+                  <div className="flex items-end gap-1.5">
+                    <FieldShell
+                      label="Volume"
+                      htmlFor={`volume-name-${index}-${vmIdx}`}
+                      required
+                      error={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`)}
                     >
-                      <SelectTrigger
-                        id={`volume-name-${index}-${vmIdx}`}
-                        className={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) ? "border-danger" : ""}
+                      <Select
+                        value={vm.source_volume_name || ""}
+                        onValueChange={(value) => updateVolumeMount(vmIdx, { source_volume_name: value })}
                       >
-                        <SelectValue placeholder="Select volume" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {/* A mount can reference a volume missing from the list
+                        <SelectTrigger
+                          id={`volume-name-${index}-${vmIdx}`}
+                          className={getError(errors, `volume_mounts.${vmIdx}.source_volume_name`) ? "border-danger" : ""}
+                        >
+                          <SelectValue placeholder="Select volume" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {/* A mount can reference a volume missing from the list
                             (dangling data). Render it as a disabled item so the
                             select still SHOWS the name instead of going blank. */}
-                        {vm.source_volume_name &&
+                          {vm.source_volume_name &&
                           !(volumes || []).some((vol) => vol.name === vm.source_volume_name) && (
-                          <SelectItem value={vm.source_volume_name} disabled>
-                            <div className="flex items-center gap-2">
-                              <Database className="h-4 w-4" />
-                              <span>{vm.source_volume_name}</span>
-                              <span className="ml-1 text-xs text-muted-foreground">(missing)</span>
-                            </div>
-                          </SelectItem>
-                        )}
-                        {(volumes || []).filter((vol) => !!vol.name).length === 0 ? (
-                          <div className="p-2 text-sm text-muted-foreground">No volumes available</div>
-                        ) : (
-                          (volumes || []).filter((vol) => !!vol.name).map((vol, vidx) => (
-                            <SelectItem key={vidx} value={vol.name!}>
+                            <SelectItem value={vm.source_volume_name} disabled>
                               <div className="flex items-center gap-2">
                                 <Database className="h-4 w-4" />
-                                <span>{vol.name}</span>
-                                {vol.spec?.size && <span className="ml-1 text-xs text-muted-foreground">({vol.spec.size})</span>}
+                                <span>{vm.source_volume_name}</span>
+                                <span className="ml-1 text-xs text-muted-foreground">(missing)</span>
                               </div>
                             </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                          )}
+                          {(volumes || []).filter((vol) => !!vol.name).length === 0 ? (
+                            <div className="p-2 text-sm text-muted-foreground">No volumes available</div>
+                          ) : (
+                            (volumes || []).filter((vol) => !!vol.name).map((vol, vidx) => (
+                              <SelectItem key={vidx} value={vol.name!}>
+                                <div className="flex items-center gap-2">
+                                  <Database className="h-4 w-4" />
+                                  <span>{vol.name}</span>
+                                  {vol.spec?.size && <span className="ml-1 text-xs text-muted-foreground">({vol.spec.size})</span>}
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </FieldShell>
+                    {onOpenVolume && vm.source_volume_name && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 shrink-0 self-end text-fg-muted hover:text-brand"
+                        aria-label={`Open volume ${vm.source_volume_name}`}
+                        title="Open volume settings"
+                        onClick={() => onOpenVolume(vm.source_volume_name!)}
+                      >
+                        <ArrowUpRight className="size-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                  <FieldShell label="Sub Path" htmlFor={`volume-subpath-${index}-${vmIdx}`}>
+                    <Input
+                      id={`volume-subpath-${index}-${vmIdx}`}
+                      value={vm.source_sub_path || ""}
+                      onChange={(e) => updateVolumeMount(vmIdx, { source_sub_path: e.target.value })}
+                      placeholder="e.g., data/config"
+                    />
                   </FieldShell>
-                  {onOpenVolume && vm.source_volume_name && (
+                  <FieldShell
+                    label="Target Path"
+                    htmlFor={`volume-target-${index}-${vmIdx}`}
+                    required
+                    error={getError(errors, `volume_mounts.${vmIdx}.target_path`)}
+                  >
+                    <Input
+                      id={`volume-target-${index}-${vmIdx}`}
+                      value={vm.target_path || ""}
+                      onChange={(e) => updateVolumeMount(vmIdx, { target_path: e.target.value })}
+                      placeholder="e.g., /mnt/data"
+                      className={getError(errors, `volume_mounts.${vmIdx}.target_path`) ? "border-danger" : ""}
+                      required
+                    />
+                  </FieldShell>
+                  <div className="pt-[26px]">
                     <Button
-                      type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-7 shrink-0 self-end text-fg-muted hover:text-brand"
-                      aria-label={`Open volume ${vm.source_volume_name}`}
-                      title="Open volume settings"
-                      onClick={() => onOpenVolume(vm.source_volume_name!)}
+                      onClick={() => removeVolumeMount(vmIdx)}
+                      title="Remove volume mount"
+                      className="text-danger hover:text-danger hover:bg-danger-bg"
                     >
-                      <ArrowUpRight className="size-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  )}
+                  </div>
                 </div>
-                <FieldShell label="Sub Path" htmlFor={`volume-subpath-${index}-${vmIdx}`}>
-                  <Input
-                    id={`volume-subpath-${index}-${vmIdx}`}
-                    value={vm.source_sub_path || ""}
-                    onChange={(e) => updateVolumeMount(vmIdx, { source_sub_path: e.target.value })}
-                    placeholder="e.g., data/config"
-                  />
-                </FieldShell>
-                <FieldShell
-                  label="Target Path"
-                  htmlFor={`volume-target-${index}-${vmIdx}`}
-                  required
-                  error={getError(errors, `volume_mounts.${vmIdx}.target_path`)}
-                >
-                  <Input
-                    id={`volume-target-${index}-${vmIdx}`}
-                    value={vm.target_path || ""}
-                    onChange={(e) => updateVolumeMount(vmIdx, { target_path: e.target.value })}
-                    placeholder="e.g., /mnt/data"
-                    className={getError(errors, `volume_mounts.${vmIdx}.target_path`) ? "border-danger" : ""}
-                    required
-                  />
-                </FieldShell>
-                <div className="pt-[26px]">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeVolumeMount(vmIdx)}
-                    title="Remove volume mount"
-                    className="text-danger hover:text-danger hover:bg-danger-bg"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+              </DirtyField>
+            ))}
+            {onCreateVolume ? (
+              <InlineVolumeAdder onCreate={onCreateVolume} />
+            ) : (
+              <div>
+                <Button variant="ghost" size="sm" onClick={addVolumeMount} disabled={(volumes || []).length === 0}>
+                  <PlusCircle className="h-4 w-4 mr-2" />Add mount
+                </Button>
+                {(volumes || []).length === 0 && (
+                  <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
+                )}
               </div>
-            </DirtyField>
-          ))}
-          {onCreateVolume ? (
-            <InlineVolumeAdder onCreate={onCreateVolume} />
-          ) : (
-            <div>
-              <Button variant="ghost" size="sm" onClick={addVolumeMount} disabled={(volumes || []).length === 0}>
-                <PlusCircle className="h-4 w-4 mr-2" />Add mount
-              </Button>
-              {(volumes || []).length === 0 && (
-                <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
         )}
       </div>
       <Separator className="my-6" />
