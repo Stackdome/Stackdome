@@ -25,6 +25,7 @@ import { ResourceDrawer } from "./ResourceDrawer";
 import { VolumeDrawer } from "./VolumeDrawer";
 import { AddVolumeDialog } from "./AddVolumeDialog";
 import { CanvasContextMenu, type CanvasMenuTarget } from "./CanvasContextMenu";
+import { MountPathDialog } from "./MountPathDialog";
 import { addMount, newVolume, removeMountsOf } from "@/pages/stacks/lib/canvas/volume-ops";
 import { NODE_KIND, type AttachmentNodeData, type ResourceNodeData } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import {
@@ -320,6 +321,24 @@ function StackCanvasFlow({
     [applyDraft],
   );
 
+  const [attachRequest, setAttachRequest] = useState<{ volumeName: string; resourceIdx: number | null } | null>(
+    null,
+  );
+
+  const onAttachConfirm = useCallback(
+    (input: { volumeName: string; resourceIdx: number; targetPath: string }) => {
+      applyDraft((draft) => ({
+        ...draft,
+        resources: addMount(draft.resources, input.resourceIdx, {
+          volumeName: input.volumeName,
+          targetPath: input.targetPath,
+        }),
+      }));
+      setAttachRequest(null);
+    },
+    [applyDraft],
+  );
+
   const { addons: allAddons } = usePostgresAddons();
   const pickableAddons = useMemo(
     () => allAddons.filter((a) => a.id && a.name).map((a) => ({ id: a.id!, name: a.name! })),
@@ -476,7 +495,14 @@ function StackCanvasFlow({
         onDisconnectVolume={onDisconnectVolume}
         onOpenVolume={openVolumeFromCanvas}
         onRequestDeleteVolume={setPendingDeleteVolume}
-        onRequestAttach={() => {}}
+        onRequestAttach={(volumeName) => setAttachRequest({ volumeName, resourceIdx: null })}
+      />
+      <MountPathDialog
+        volumeName={attachRequest?.volumeName ?? null}
+        resources={resources}
+        resourceIdx={attachRequest?.resourceIdx ?? null}
+        onCancel={() => setAttachRequest(null)}
+        onAttach={onAttachConfirm}
       />
       <AlertDialog open={pendingDeleteVolume != null} onOpenChange={(o) => !o && setPendingDeleteVolume(null)}>
         <AlertDialogContent>
