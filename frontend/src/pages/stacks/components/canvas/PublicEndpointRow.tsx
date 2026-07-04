@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Globe, ExternalLink, Copy, Check } from "lucide-react";
+import { ExternalLink, Copy, Check } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const COPY_FLASH_MS = 1400;
@@ -49,44 +49,48 @@ export function PublicEndpointRow({ endpoints }: { endpoints: PublicEndpoint[] }
   if (endpoints.length === 0) return null;
 
   return (
-    <div className="mt-2.5 flex flex-wrap items-center gap-2">
-      <span className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-muted">PUBLIC</span>
-      {endpoints.map(({ service, url, port }) => (
-        <span
-          key={`${service}-${url}`}
-          className="inline-flex items-stretch overflow-hidden rounded-md border border-border bg-muted/40 text-[12px]"
-        >
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger asChild>
-              <span className="flex items-center gap-1.5 border-r border-border px-2 py-1 font-mono text-fg-muted">
-                <Globe className="size-3" />
-                {service}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top">
+    <div className="mt-3.5">
+      <div className="mb-2 font-mono text-[9.5px] font-medium uppercase tracking-[0.16em] text-fg-muted">
+        PUBLIC
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {endpoints.map(({ service, url, port }) => (
+          <span
+            key={`${service}-${url}`}
+            className="group inline-flex items-center gap-2 rounded-lg border border-border/60 bg-muted/25 py-1 pl-2.5 pr-1.5 font-mono text-[12px] transition-colors hover:border-border hover:bg-muted/40"
+          >
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <span className="flex items-center gap-1.5 text-fg-muted">
+                  <span aria-hidden className="size-[5px] rounded-full bg-success" />
+                  {service}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top">
               Mapped to {service}{port != null ? ` · :${port}` : ""}
-            </TooltipContent>
-          </Tooltip>
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 px-2 py-1 font-mono text-foreground hover:bg-muted"
-          >
-            <span aria-hidden className="size-[5px] rounded-full bg-success" />
-            {hostOf(url)}
-            <ExternalLink className="size-3 text-fg-muted" />
-          </a>
-          <button
-            type="button"
-            onClick={() => onCopy(url)}
-            aria-label={copiedUrl === url ? "Copied" : `Copy ${url}`}
-            className="flex items-center border-l border-border px-1.5 text-fg-muted hover:bg-muted hover:text-foreground"
-          >
-            {copiedUrl === url ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
-          </button>
-        </span>
-      ))}
+              </TooltipContent>
+            </Tooltip>
+            <span aria-hidden className="text-border">|</span>
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 text-foreground/90 hover:text-foreground hover:underline"
+            >
+              {hostOf(url)}
+              <ExternalLink className="size-3 text-fg-muted" />
+            </a>
+            <button
+              type="button"
+              onClick={() => onCopy(url)}
+              aria-label={copiedUrl === url ? "Copied" : `Copy ${url}`}
+              className="flex size-5 items-center justify-center rounded text-fg-muted opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+            >
+              {copiedUrl === url ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
+            </button>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

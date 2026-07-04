@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode } from "react";
-import { Activity, ChevronDown, ChevronRight, LayoutGrid, Loader2, MoreHorizontal, Rocket, Save, Terminal, Trash2, Undo2, X } from "lucide-react";
+import { Activity, ChevronDown, ChevronRight, FileDiff, History, LayoutGrid, Loader2, MoreHorizontal, Rocket, Save, ScrollText, Trash2, Undo2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -10,16 +10,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { AutosaveStatus } from "./AutosaveStatus";
 import type { SyncStatus } from "@/pages/stacks/lib/draft-sync/constants";
 import { PublicEndpointRow, type PublicEndpoint } from "./PublicEndpointRow";
@@ -30,8 +20,8 @@ const DRAFT_COLLAPSE_ID = "draft";
 /** The four editor modes, in display order. Icons per the design bundle. */
 const EDITOR_TABS = [
   { id: "configuration", label: "Configuration", Icon: LayoutGrid },
-  { id: "deployments", label: "Deployments", Icon: Rocket },
-  { id: "logs", label: "Logs", Icon: Terminal },
+  { id: "deployments", label: "Deployments", Icon: History },
+  { id: "logs", label: "Logs", Icon: ScrollText },
   { id: "metrics", label: "Metrics", Icon: Activity },
 ] as const;
 
@@ -45,15 +35,11 @@ export interface CanvasEditorShellProps {
   subtitle: string;
   /** Draft (unsaved) stack — primary action is always Create (nothing exists server-side until it runs). */
   isDraft?: boolean;
-  /** Render the title as an editable input (draft, or a rename-capable stack). */
+  /** Render the title as an editable input (draft only). */
   nameEditable: boolean;
   onNameChange?: (name: string) => void;
   /** Validation error message for the stack name — shown when nameEditable and set. */
   nameError?: string;
-  labels: { key: string; value: string }[];
-  labelsEditable: boolean;
-  onAddLabel?: (value: string) => void;
-  onRemoveLabel?: (index: number) => void;
   activeTab: string;
   onTabChange: (tab: string) => void;
 
@@ -62,10 +48,12 @@ export interface CanvasEditorShellProps {
   isActive: boolean;
   /** Count of resources with pending changes — drives the Configuration tab badge. */
   dirtyResourceCount: number;
-  /** Total dirty entities (resources + volumes + addon links) — drives "N unsaved changes". */
+  /** Total dirty entities (resources + volumes + addon links) — drives "View changes (N)". */
   dirtyTotal: number;
   /** A saved-but-undeployed diff exists (lifecycle.phase === "staged"). */
   isStaged: boolean;
+  /** Open the review-and-discard modal for undeployed changes. */
+  onViewChanges: () => void;
   /** Autosave status for existing stacks (idle/saving/saved/error). */
   syncStatus: SyncStatus;
   deployBusy: boolean;
@@ -74,16 +62,15 @@ export interface CanvasEditorShellProps {
   onCreate?: () => void;
   isCreating?: boolean;
   onDeploy: () => void;
-  onDiscardAll: () => void;
-  /** Session-scope discard of server-persisted draft changes (wired in Task 6). */
+  /** Session-scope discard of server-persisted draft changes. */
   onDiscardDraft?: () => void;
   /** Whether the "Discard draft changes" menu item should appear. */
   canDiscardDraft: boolean;
   onDelete: () => void;
-  /** Whether Delete is enabled (false until Task 7 wires it fully, but shell respects the gate). */
+  /** Whether Delete is enabled. */
   canDeleteStack: boolean;
 
-  /** Public endpoints to show in the expanded header (one pill per service). */
+  /** Public endpoints to show in the expanded header (one row of chips). */
   publicEndpoints?: PublicEndpoint[];
 
   // ── mode bodies (rendered by active tab) ──
@@ -94,14 +81,13 @@ export interface CanvasEditorShellProps {
 }
 
 /**
- * Full-bleed editor chrome shown when the canvas flag is on. Replaces the
- * standard PageHeader + Radix tabs + sticky action bar with the design's
- * compact top bar and icon tab row, and lets the active mode body fill the
- * viewport edge-to-edge.
+ * Full-bleed editor chrome shown when the canvas flag is on. The title row is
+ * identity only (name + single status pill + autosave); all actions live on the
+ * tab rail: tabs on the left, then the "View changes" review entry, Deploy, and
+ * the actions menu on the right.
  *
- * Presentation only: it owns no stack state. The autosave indicator and
- * Deploy button are wired straight to the caller's session + deploy
- * lifecycle — no save/deploy logic lives here.
+ * Presentation only: it owns no stack state. The autosave indicator and Deploy
+ * button are wired straight to the caller's session + deploy lifecycle.
  */
 export function CanvasEditorShell({
   stackName,
@@ -112,23 +98,19 @@ export function CanvasEditorShell({
   nameEditable,
   onNameChange,
   nameError,
-  labels,
-  labelsEditable,
-  onAddLabel,
-  onRemoveLabel,
   activeTab,
   onTabChange,
   isActive,
   dirtyResourceCount,
   dirtyTotal,
   isStaged,
+  onViewChanges,
   syncStatus,
   deployBusy,
   canWrite,
   onCreate,
   isCreating,
   onDeploy,
-  onDiscardAll,
   onDiscardDraft,
   canDiscardDraft,
   onDelete,
@@ -139,9 +121,6 @@ export function CanvasEditorShell({
   logs,
   metrics,
 }: CanvasEditorShellProps) {
-  const [discardOpen, setDiscardOpen] = useState(false);
-  const [labelInput, setLabelInput] = useState("");
-
   const collapseKey = `${COLLAPSE_KEY_PREFIX}${stackId ?? DRAFT_COLLAPSE_ID}`;
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
@@ -175,6 +154,9 @@ export function CanvasEditorShell({
   }, [toggleCollapsed]);
 
   const hasUnsaved = isActive && dirtyTotal > 0;
+  // Undeployed changes exist (either mid-session dirt or a saved-but-undeployed
+  // diff). Draft stacks have nothing server-side to review, so never for drafts.
+  const hasChanges = !isDraft && (isStaged || hasUnsaved);
 
   // The canvas (Configuration) stays mounted so its open drawer + node
   // selection survive tab switches; ops views render as an opaque overlay on
@@ -202,6 +184,46 @@ export function CanvasEditorShell({
     </Button>
   );
 
+  // "View changes (N)" — warn-toned entry to the review/discard modal. Shown on
+  // the action rail only when there are undeployed changes on an existing stack.
+  const viewChanges = hasChanges && (
+    <button
+      type="button"
+      onClick={onViewChanges}
+      className="flex flex-none items-center gap-1.5 rounded-md border border-warn-border bg-warn-bg px-2.5 py-1.5 text-[13px] font-medium text-warn transition-colors hover:bg-warn-bg/70"
+    >
+      <FileDiff className="size-3.5" />
+      View changes
+      <span className="rounded-full bg-warn px-1.5 py-px font-mono text-[10px] font-bold text-background">{dirtyTotal}</span>
+    </button>
+  );
+
+  const actionsMenu = !isDraft && (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="ghost" size="icon" aria-label="Stack actions">
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-[180px]">
+        {canDiscardDraft && onDiscardDraft && (
+          <DropdownMenuItem onClick={onDiscardDraft}>
+            <Undo2 className="size-4" />
+            Discard draft changes
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem
+          className="text-danger focus:text-danger"
+          onClick={onDelete}
+          disabled={!canDeleteStack}
+        >
+          <Trash2 className="size-4 text-danger" />
+          Delete stack
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   const chevron = (
     <button
       type="button"
@@ -218,7 +240,6 @@ export function CanvasEditorShell({
     <div className="flex h-full flex-col overflow-hidden bg-background">
       {collapsed && (
         <div className="flex h-11 flex-none items-center gap-3 border-b border-border px-4 animate-in fade-in slide-in-from-top-1 duration-300">
-          {chevron}
           <span className="truncate text-[14px] font-medium text-foreground">{stackName}</span>
           {statusState && (
             <span
@@ -252,21 +273,18 @@ export function CanvasEditorShell({
             ))}
           </div>
           <div className="flex-1" />
-          {hasUnsaved && (
-            <span className="font-mono text-[11px] text-brand">
-              {dirtyTotal} unsaved {dirtyTotal === 1 ? "change" : "changes"}
-            </span>
-          )}
-          {!isDraft && <AutosaveStatus status={syncStatus} />}
+          {viewChanges}
           {primaryButton}
+          {chevron}
         </div>
       )}
       {!collapsed && (
         <>
-          {/* Stack-title header (fade/translate on expand per design sd-fade) */}
+          {/* Stack-title header — identity only (fade/translate on expand per design sd-fade) */}
           <div className="flex-none px-7 pt-6 animate-in fade-in slide-in-from-top-1 duration-300">
+            {/* Chevron sits at the row's right so the title stays flush-left with
+                the subtitle + endpoints below it (no collapse-toggle indent). */}
             <div className="flex items-center gap-3.5">
-              {chevron}
               {nameEditable ? (
                 <Input
                   aria-label="Stack name"
@@ -287,89 +305,18 @@ export function CanvasEditorShell({
                   {statusState}
                 </StatusPill>
               )}
-              {!isDraft && isStaged && (
-                <StatusPill variant="info" className="flex-none">DRAFT</StatusPill>
-              )}
               <div className="flex-1" />
               {!isDraft && <AutosaveStatus status={syncStatus} />}
-              {primaryButton}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon" aria-label="Stack actions">
-                    <MoreHorizontal className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[180px]">
-                  {hasUnsaved && (
-                    <DropdownMenuItem onClick={() => setDiscardOpen(true)}>
-                      <Trash2 className="size-4" />
-                  Discard all changes
-                    </DropdownMenuItem>
-                  )}
-                  {canDiscardDraft && onDiscardDraft && (
-                    <DropdownMenuItem onClick={onDiscardDraft}>
-                      <Undo2 className="size-4" />
-                  Discard draft changes
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem
-                    className="text-danger focus:text-danger"
-                    onClick={onDelete}
-                    disabled={!canDeleteStack}
-                  >
-                    <Trash2 className="size-4 text-danger" />
-                Delete stack
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {chevron}
             </div>
             {nameEditable && nameError && (
               <p className="mt-1 text-[12px] text-danger">{nameError}</p>
             )}
             <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
-            {(labelsEditable || labels.length > 0) && (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                {labels.map((l, i) => (
-                  <span key={`${l.value}-${i}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                    {l.value}
-                    {labelsEditable && (
-                      <button type="button" aria-label={`Remove label ${l.value}`} onClick={() => onRemoveLabel?.(i)} className="rounded-full hover:text-foreground">
-                        <X className="size-3" />
-                      </button>
-                    )}
-                  </span>
-                ))}
-                {labelsEditable && (
-                  <Input
-                    value={labelInput}
-                    onChange={(e) => setLabelInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && labelInput.trim()) {
-                        e.preventDefault();
-                        onAddLabel?.(labelInput.trim());
-                        setLabelInput("");
-                      } else if (e.key === "Escape" && labelInput) {
-                        // Cancel the pending label. preventDefault marks the
-                        // event consumed so an open drawer doesn't pop on it.
-                        e.preventDefault();
-                        setLabelInput("");
-                      }
-                    }}
-                    onBlur={() => {
-                      // Design rule: blur commits (Enter chains, Esc cancels).
-                      if (labelInput.trim()) onAddLabel?.(labelInput.trim());
-                      setLabelInput("");
-                    }}
-                    placeholder="add label…"
-                    className="h-6 w-[14ch] border-0 bg-transparent px-0 text-[11px] shadow-none focus-visible:ring-0"
-                  />
-                )}
-              </div>
-            )}
             <PublicEndpointRow endpoints={publicEndpoints ?? []} />
           </div>
 
-          {/* Tab row */}
+          {/* Tab + action rail */}
           <div className="flex-none flex items-center gap-2 border-b border-border px-7 py-[18px] animate-in fade-in slide-in-from-top-1 duration-300">
             {EDITOR_TABS.map(({ id, label, Icon }) => {
               const active = activeTab === id;
@@ -395,8 +342,11 @@ export function CanvasEditorShell({
                 </button>
               );
             })}
+            <div className="flex-1" />
+            {viewChanges}
+            {primaryButton}
+            {actionsMenu}
           </div>
-
         </>
       )}
 
@@ -406,29 +356,6 @@ export function CanvasEditorShell({
         <div className="absolute inset-0">{configuration}</div>
         {opsBody && <div className="absolute inset-0 overflow-auto bg-background">{opsBody}</div>}
       </div>
-
-      <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Discard all changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved edits across {dirtyTotal} {dirtyTotal === 1 ? "item" : "items"}. This will revert every
-              change in this session.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setDiscardOpen(false);
-                onDiscardAll();
-              }}
-            >
-              Discard all
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

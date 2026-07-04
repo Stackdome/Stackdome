@@ -11,14 +11,14 @@ import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-
 import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
 import { StackCanvasTab } from "@/pages/stacks/components/canvas/StackCanvasTab";
 import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditorShell";
+import { ViewChangesModal } from "@/pages/stacks/components/canvas/ViewChangesModal";
 import { DraftTabPlaceholder } from "@/pages/stacks/components/canvas/DraftTabPlaceholder";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
 import { alignBaselineToDraft } from "@/pages/stacks/lib/stack-diff";
-import { createStack, getStackById, deleteStack, updateStack } from "@/api/stacks";
+import { createStack, getStackById, deleteStack } from "@/api/stacks";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
-import { USER_DEFINED_LABEL_KEY } from "@/pages/stacks/lib/constants";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
 import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
@@ -41,9 +41,6 @@ import { useDraftSync } from "@/pages/stacks/hooks/use-draft-sync";
 import { useStackRevert } from "@/pages/stacks/hooks/use-stack-revert";
 import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
 import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
-import type { SyncStatus } from "@/pages/stacks/lib/draft-sync/constants";
-import { stackToUpdateRequest } from "@/pages/stacks/lib/draft-sync/snapshot-to-update";
-import { normalizeLabel } from "@/pages/stacks/lib/labels";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -123,8 +120,9 @@ export default function StackDetailPage() {
     [],
   );
   const [draftName, setDraftName] = useState(seed.name);
-  const [draftLabels, setDraftLabels] = useState<FormStackData["labels"]>(seed.labels);
-  const [labelSync, setLabelSync] = useState<SyncStatus>(SYNC_STATUS.idle);
+  // Draft labels are seeded into the create payload; there is no in-canvas label
+  // editor, so the setter is intentionally dropped.
+  const [draftLabels] = useState<FormStackData["labels"]>(seed.labels);
 
   const { stacks, setStacks } = useStacks();
   const [fetchedStack, setFetchedStack] = useState<Stack | null>(null);
@@ -404,6 +402,7 @@ export default function StackDetailPage() {
   const liveSnapshot = releaseDetail.peek(liveReleaseId).data?.snapshot;
 
   const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
+  const [viewChangesOpen, setViewChangesOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -567,64 +566,20 @@ export default function StackDetailPage() {
     setNameError(undefined);
   }, []);
 
-  const addDraftLabel = useCallback((value: string) => {
-    const normalized = normalizeLabel(value);
-    if (!normalized) return;
-    setDraftLabels((prev) => {
-      const cur = prev ?? [];
-      if (cur.some((l) => l.value === normalized)) return cur;
-      return [...cur, { key: USER_DEFINED_LABEL_KEY, value: normalized }];
-    });
-  }, []);
-  const removeDraftLabel = useCallback((idx: number) => {
-    setDraftLabels((prev) => (prev ?? []).filter((_, i) => i !== idx));
-  }, []);
-
-  // Deployed stacks: persist the new label set immediately via a full PUT
-  // (replace-all body built from the live server stack, labels swapped).
-  // The PUT body snapshots stackToShow at call time: an autosave op in flight
-  // can land after this PUT and vice versa — bounded clobber window accepted
-  // by the spec (labels never touch resources; both writers are
-  // last-write-wins). The context list itself is updated functionally, so the
-  // response can never clobber the list with a stale render snapshot.
-  const persistLabels = useCallback(
-    async (next: NonNullable<Stack["labels"]>) => {
-      if (!stackToShow?.id || !deployIds.stackId) return;
-      setLabelSync(SYNC_STATUS.saving);
-      try {
-        const fresh = await updateStack(
-          deployIds.orgId,
-          deployIds.teamName,
-          deployIds.stackId,
-          stackToUpdateRequest(stackToShow, next),
-        );
-        setFetchedStack(fresh);
-        setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
-        setLabelSync(SYNC_STATUS.saved);
-        setTimeout(() => setLabelSync(SYNC_STATUS.idle), 2000);
-      } catch {
-        setLabelSync(SYNC_STATUS.error);
-      }
+  // Revert one resource/volume from the View-changes modal by name → session index.
+  const discardResourceByName = useCallback(
+    (name: string) => {
+      const idx = session.draft.resources.findIndex((r) => (r as { name?: string }).name === name);
+      if (idx >= 0) session.discardResource(idx);
     },
-    [stackToShow, deployIds, setStacks],
+    [session],
   );
-
-  const addStackLabel = useCallback(
-    (value: string) => {
-      const normalized = normalizeLabel(value);
-      if (!normalized) return;
-      const cur = stackToShow?.labels ?? [];
-      if (cur.some((l) => l.value === normalized)) return;
-      void persistLabels([...cur, { key: USER_DEFINED_LABEL_KEY, value: normalized }]);
+  const discardVolumeByName = useCallback(
+    (name: string) => {
+      const idx = session.draft.volumes.findIndex((v) => (v as { name?: string }).name === name);
+      if (idx >= 0) session.discardVolume(idx);
     },
-    [stackToShow, persistLabels],
-  );
-  const removeStackLabel = useCallback(
-    (idx: number) => {
-      const cur = stackToShow?.labels ?? [];
-      void persistLabels(cur.filter((_, i) => i !== idx));
-    },
-    [stackToShow, persistLabels],
+    [session],
   );
 
   if (!isDraft && loading) {
@@ -720,10 +675,6 @@ export default function StackDetailPage() {
         nameEditable={isDraft}
         onNameChange={handleNameChange}
         nameError={nameError}
-        labels={(isDraft ? draftLabels : effectiveStack?.labels) ?? []}
-        labelsEditable={isDraft || canWriteStack}
-        onAddLabel={isDraft ? addDraftLabel : addStackLabel}
-        onRemoveLabel={isDraft ? removeDraftLabel : removeStackLabel}
         statusState={effectiveStack?.status?.state}
         subtitle={subtitleText}
         activeTab={activeTab}
@@ -732,13 +683,13 @@ export default function StackDetailPage() {
         dirtyResourceCount={session.dirty.dirtyResourceIdx.size}
         dirtyTotal={dirtyTotal}
         isStaged={lifecycle.phase === "staged"}
-        syncStatus={isDraft ? SYNC_STATUS.idle : labelSync !== SYNC_STATUS.idle ? labelSync : draftSync.status}
+        onViewChanges={() => setViewChangesOpen(true)}
+        syncStatus={isDraft ? SYNC_STATUS.idle : draftSync.status}
         deployBusy={deployBusy}
         canWrite={canWriteStack}
         onCreate={() => void performCreate()}
         isCreating={isCreating}
         onDeploy={onDeploy}
-        onDiscardAll={() => session.discard()}
         canDiscardDraft={lifecycle.phase === "staged" && !!liveSnapshot && canWriteStack}
         onDiscardDraft={() => setRevertConfirmOpen(true)}
         canDeleteStack={canWriteStack}
@@ -762,6 +713,22 @@ export default function StackDetailPage() {
         deployments={deploymentsBody}
         logs={logsBody}
         metrics={metricsBody}
+      />
+      <ViewChangesModal
+        open={viewChangesOpen}
+        onOpenChange={setViewChangesOpen}
+        diff={lifecycle.stagedDiff}
+        count={dirtyTotal}
+        stackName={effectiveStack?.name ?? ""}
+        onDiscardResource={discardResourceByName}
+        onDiscardVolume={discardVolumeByName}
+        onDiscardAll={() => {
+          session.discard();
+          setViewChangesOpen(false);
+        }}
+        onDeploy={onDeploy}
+        deployBusy={deployBusy}
+        canWrite={canWriteStack}
       />
       <AlertDialog open={revertConfirmOpen} onOpenChange={setRevertConfirmOpen}>
         <AlertDialogContent>
