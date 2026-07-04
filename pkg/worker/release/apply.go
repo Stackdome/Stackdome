@@ -9,6 +9,7 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
+	"github.com/ashishmax31/stackdome-api-server/pkg/credentials"
 	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -62,6 +63,7 @@ type applyReconciler struct {
 	clusterManager       clustermanager.ClusterManager
 	secretBuilder        builders.SecretBuilder
 	secretService        secretService
+	credentialResolver   credentials.Resolver
 	postgresAddonService postgresAddonService
 	volumeService        volumeService
 	logger               logger.Logger
@@ -74,6 +76,7 @@ func newApplyReconciler(spec ReleaseWorkerSpec) *applyReconciler {
 		clusterManager:       spec.ClusterManager,
 		secretBuilder:        spec.SecretBuilder,
 		secretService:        spec.SecretService,
+		credentialResolver:   spec.CredentialResolver,
 		postgresAddonService: spec.PostgresAddonService,
 		volumeService:        spec.VolumeService,
 		logger:               logger.NewLoggerWithPrefix(context.Background(), "release-apply"),

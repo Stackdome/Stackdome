@@ -5,8 +5,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/credentials"
 	pkgerrors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/ashishmax31/stackdome-api-server/pkg/mocks"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
 
@@ -192,18 +196,18 @@ func TestBuildImageRepositorySpec(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if got.Auth == nil || got.Auth.Basic == nil {
-			t.Fatal("expected Auth.Basic to be set")
+		if got.Auth == nil || got.Auth.DockerConfig == nil {
+			t.Fatal("expected Auth.DockerConfig to be set")
+		}
+		if got.Auth.Basic != nil {
+			t.Error("expected Auth.Basic to be nil for an explicit push secret ref")
 		}
 		wantName := fetcher.secrets["secret-1"].ClusterSecretName()
-		if got.Auth.Basic.SecretRef.Name != wantName {
-			t.Errorf("SecretRef.Name = %q, want %q", got.Auth.Basic.SecretRef.Name, wantName)
+		if got.Auth.DockerConfig.SecretRef == nil || got.Auth.DockerConfig.SecretRef.Name != wantName {
+			t.Errorf("SecretRef.Name = %v, want %q", got.Auth.DockerConfig.SecretRef, wantName)
 		}
-		if got.Auth.Basic.UsernameKey != models.UsernameSecretKey {
-			t.Errorf("UsernameKey = %q, want %q", got.Auth.Basic.UsernameKey, models.UsernameSecretKey)
-		}
-		if got.Auth.Basic.PasswordKey != models.PasswordSecretKey {
-			t.Errorf("PasswordKey = %q, want %q", got.Auth.Basic.PasswordKey, models.PasswordSecretKey)
+		if got.Auth.DockerConfig.SecretKey != corev1.DockerConfigJsonKey {
+			t.Errorf("SecretKey = %q, want %q", got.Auth.DockerConfig.SecretKey, corev1.DockerConfigJsonKey)
 		}
 	})
 
@@ -346,6 +350,75 @@ func TestBuildStackResourceCR_AnnotationMerge(t *testing.T) {
 		}
 		if _, ok := cr.Annotations[corev1alpha1.ClusterIssuerAnnotation]; !ok {
 			t.Fatal("expected cluster issuer annotation to be set")
+		}
+	})
+}
+
+// TestBuildCR_OrgCredentialSecretNames asserts that org-level (integration)
+// registry credentials reference purpose-distinct cluster-secret names in the
+// CR, matching exactly what the release worker syncs. A pull credential and a
+// push credential on the same host must resolve to different names.
+func TestBuildCR_OrgCredentialSecretNames(t *testing.T) {
+	const host = "reg.example.com"
+
+	t.Run("pull image auto-attach", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		resolver := mocks.NewMockCredentialResolver(ctrl)
+		resolver.EXPECT().
+			RegistryCredentials(gomock.Any(), "org-1", "reg.example.com/team/app:v1", credentials.RegistryPurposePull, gomock.Any()).
+			Return(&credentials.ResolvedRegistryCredential{
+				Source:  credentials.SourceIntegration,
+				Host:    host,
+				Purpose: credentials.RegistryPurposePull,
+			}, nil)
+
+		b := &clusterResourceBuilder{credentialResolver: resolver}
+		sr := &models.StackResource{
+			ImageConfig: &models.ImageConfigSpec{Image: "reg.example.com/team/app:v1"},
+		}
+		got, err := b.buildStackResourceImageSpec(sr, "org-1")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.PullAuth == nil || got.PullAuth.DockerConfigAuth == nil {
+			t.Fatal("expected PullAuth.DockerConfigAuth to be set")
+		}
+		want := credentials.ClusterSecretNameForRegistryHost(host, credentials.RegistryPurposePull)
+		if got := got.PullAuth.DockerConfigAuth.SecretRef.Name; got != want {
+			t.Errorf("pull SecretRef.Name = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("push repo auto-attach", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		resolver := mocks.NewMockCredentialResolver(ctrl)
+		resolver.EXPECT().
+			RegistryCredentials(gomock.Any(), "org-1", "reg.example.com/team/app", credentials.RegistryPurposePush, gomock.Any()).
+			Return(&credentials.ResolvedRegistryCredential{
+				Source:  credentials.SourceIntegration,
+				Host:    host,
+				Purpose: credentials.RegistryPurposePush,
+			}, nil)
+
+		b := &clusterResourceBuilder{credentialResolver: resolver}
+		cfg := &models.BuildConfigSpec{
+			BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "reg.example.com/team/app"},
+		}
+		got, err := b.buildImageRepositorySpec(cfg, "org-1", "stack", "res")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Auth == nil || got.Auth.DockerConfig == nil {
+			t.Fatal("expected Auth.DockerConfig to be set")
+		}
+		want := credentials.ClusterSecretNameForRegistryHost(host, credentials.RegistryPurposePush)
+		if got := got.Auth.DockerConfig.SecretRef.Name; got != want {
+			t.Errorf("push SecretRef.Name = %q, want %q", got, want)
+		}
+		// Pull and push on the same host must not collide.
+		pullName := credentials.ClusterSecretNameForRegistryHost(host, credentials.RegistryPurposePull)
+		if want == pullName {
+			t.Fatalf("push name %q collides with pull name", want)
 		}
 	})
 }

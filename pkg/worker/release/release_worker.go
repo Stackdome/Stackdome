@@ -6,6 +6,7 @@ import (
 
 	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
 	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
+	"github.com/ashishmax31/stackdome-api-server/pkg/credentials"
 	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stackdeploy"
@@ -26,6 +27,7 @@ type ReleaseWorkerSpec struct {
 	CRBuilder             builders.ClusterResourceBuilder
 	SecretBuilder         builders.SecretBuilder
 	SecretService         secretService
+	CredentialResolver    credentials.Resolver
 	PostgresAddonService  postgresAddonService
 	VolumeService         volumeService
 	Resolver              *stackdeploy.Resolver

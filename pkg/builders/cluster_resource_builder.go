@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ashishmax31/stackdome-api-server/pkg/credentials"
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -25,17 +26,42 @@ type ClusterResourceBuilder interface {
 }
 
 type clusterResourceBuilder struct {
-	secretService secretFetcher
+	secretService      secretFetcher
+	credentialResolver credentials.Resolver
 }
 
 type ClusterResourceBuilderSpec struct {
 	SecretService secretFetcher
+	// CredentialResolver is optional; when set, org-level registry credentials
+	// auto-attach to image pull / push specs that have no explicit secret ref.
+	CredentialResolver credentials.Resolver
 }
 
 func NewClusterResourceBuilder(spec ClusterResourceBuilderSpec) ClusterResourceBuilder {
 	return &clusterResourceBuilder{
-		secretService: spec.SecretService,
+		secretService:      spec.SecretService,
+		credentialResolver: spec.CredentialResolver,
 	}
+}
+
+// resolveIntegrationCredential returns the org-level registry credential for
+// the given ref when one attaches (explicit credential ID or host match), or
+// nil when resolution is anonymous, an explicit secret ref exists elsewhere,
+// or no resolver is wired.
+func (b *clusterResourceBuilder) resolveIntegrationCredential(orgID, ref string, purpose credentials.RegistryPurpose, registryCredentialID string) (*credentials.ResolvedRegistryCredential, error) {
+	if b.credentialResolver == nil {
+		return nil, nil
+	}
+	resolved, serr := b.credentialResolver.RegistryCredentials(context.Background(), orgID, ref, purpose, credentials.RegistryAuthSelector{
+		RegistryCredentialID: registryCredentialID,
+	})
+	if serr != nil {
+		return nil, fmt.Errorf("failed to resolve registry credentials for '%s': %w", ref, serr)
+	}
+	if resolved.Source != credentials.SourceIntegration {
+		return nil, nil
+	}
+	return resolved, nil
 }
 
 func (b *clusterResourceBuilder) GetStackCRHash(stack *models.Stack) (string, error) {
@@ -233,7 +259,7 @@ func (b *clusterResourceBuilder) buildStackResourceSpec(stackResource *models.St
 		return nil, fmt.Errorf("failed to build stack resource build spec: %w", err)
 	}
 	resourceSpec.BuildSpec = buildSpec
-	imageSpec, err := b.buildStackResourceImageSpec(stackResource)
+	imageSpec, err := b.buildStackResourceImageSpec(stackResource, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build stack resource image spec: %w", err)
 	}
@@ -247,7 +273,7 @@ func (b *clusterResourceBuilder) buildStackResourceSpec(stackResource *models.St
 
 func (b *clusterResourceBuilder) buildStackResourceBuildSpec(stackResource *models.StackResource, stackName, orgID string) (*corev1alpha1.StackResourceBuildSpec, error) {
 	if stackResource.BuildConfig != nil {
-		buildSourceCtx, err := b.buildBuildSourceContext(stackResource.BuildConfig.SourceContext)
+		buildSourceCtx, err := b.buildBuildSourceContext(stackResource.BuildConfig.SourceContext, orgID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build source context: %w", err)
 		}
@@ -272,7 +298,7 @@ func (b *clusterResourceBuilder) buildStackResourceBuildSpec(stackResource *mode
 	}
 	return nil, nil
 }
-func (b *clusterResourceBuilder) buildStackResourceImageSpec(stackResource *models.StackResource) (*corev1alpha1.ImageSpec, error) {
+func (b *clusterResourceBuilder) buildStackResourceImageSpec(stackResource *models.StackResource, orgID string) (*corev1alpha1.ImageSpec, error) {
 	if stackResource.ImageConfig != nil {
 		res := &corev1alpha1.ImageSpec{
 			Image: stackResource.ImageConfig.Image,
@@ -292,13 +318,33 @@ func (b *clusterResourceBuilder) buildStackResourceImageSpec(stackResource *mode
 				//TODO: This is not required. Refactor crd to remove this field.
 				Type: corev1alpha1.RegistryAuthTypeDockerHub,
 			}
+			return res, nil
+		}
+
+		// No explicit ref: auto-attach an org-level registry credential when
+		// one matches the image's registry host.
+		resolved, err := b.resolveIntegrationCredential(orgID, stackResource.ImageConfig.Image, credentials.RegistryPurposePull, stackResource.ImageConfig.RegistryCredentialID)
+		if err != nil {
+			return nil, err
+		}
+		if resolved != nil {
+			res.PullAuth = &corev1alpha1.RegistryAuth{
+				DockerConfigAuth: &corev1alpha1.DockerConfigAuth{
+					SecretKey: corev1.DockerConfigJsonKey,
+					SecretRef: &corev1.SecretReference{
+						Name: credentials.ClusterSecretNameForRegistryHost(resolved.Host, resolved.Purpose),
+					},
+				},
+				//TODO: This is not required. Refactor crd to remove this field.
+				Type: corev1alpha1.RegistryAuthTypeDockerHub,
+			}
 		}
 		return res, nil
 	}
 	return nil, nil
 }
 
-func (b *clusterResourceBuilder) buildBuildSourceContext(sourceContext models.BuildContextSource) (*corev1alpha1.BuildContextSource, error) {
+func (b *clusterResourceBuilder) buildBuildSourceContext(sourceContext models.BuildContextSource, orgID string) (*corev1alpha1.BuildContextSource, error) {
 	if sourceContext.Volume != nil {
 		return &corev1alpha1.BuildContextSource{
 			Volume: &corev1alpha1.VolumeSource{
@@ -326,6 +372,28 @@ func (b *clusterResourceBuilder) buildBuildSourceContext(sourceContext models.Bu
 				},
 			}
 			return &res, nil
+		}
+
+		// No explicit ref: auto-attach an org-level git integration (or a
+		// minted GitHub App token) when one covers the repository.
+		if b.credentialResolver != nil {
+			resolved, serr := b.credentialResolver.GitCredentials(context.Background(), orgID, sourceContext.Git.RepoURL, credentials.GitAuthSelector{
+				IntegrationID: sourceContext.Git.IntegrationID,
+			})
+			if serr != nil {
+				return nil, fmt.Errorf("failed to resolve git credentials for '%s': %w", sourceContext.Git.RepoURL, serr)
+			}
+			if resolved.Source == credentials.SourceIntegration {
+				res.Git.Auth = &corev1alpha1.GitAuth{
+					UsernamePasswordAuthRef: &corev1alpha1.CredentialSecretKeyPair{
+						SecretRef: corev1.SecretReference{
+							Name: credentials.ClusterSecretNameForGitHost(resolved.Host),
+						},
+						UsernameKey: models.UsernameSecretKey,
+						PasswordKey: models.PasswordSecretKey,
+					},
+				}
+			}
 		}
 		return &res, nil
 	}
@@ -368,12 +436,29 @@ func (b *clusterResourceBuilder) buildImageRepositorySpec(buildConfig *models.Bu
 			return corev1alpha1.ImageRepositorySpec{}, fmt.Errorf("failed to get registry secret: %w", err)
 		}
 		res.Auth = &corev1alpha1.RegistryCredentialsSpec{
-			Basic: &corev1alpha1.BasicAuthCredentials{
-				SecretRef: corev1.SecretReference{
+			DockerConfig: &corev1alpha1.DockerConfigAuth{
+				SecretKey: corev1.DockerConfigJsonKey,
+				SecretRef: &corev1.SecretReference{
 					Name: pushSecret.ClusterSecretName(),
 				},
-				UsernameKey: models.UsernameSecretKey,
-				PasswordKey: models.PasswordSecretKey,
+			},
+		}
+		return res, nil
+	}
+
+	// No explicit ref: auto-attach an org-level registry credential when one
+	// matches the push repository's registry host.
+	resolved, err := b.resolveIntegrationCredential(orgID, buildConfig.BuildImageRepository.ExternalImageRef, credentials.RegistryPurposePush, buildConfig.PushRegistryCredentialID)
+	if err != nil {
+		return corev1alpha1.ImageRepositorySpec{}, err
+	}
+	if resolved != nil {
+		res.Auth = &corev1alpha1.RegistryCredentialsSpec{
+			DockerConfig: &corev1alpha1.DockerConfigAuth{
+				SecretKey: corev1.DockerConfigJsonKey,
+				SecretRef: &corev1.SecretReference{
+					Name: credentials.ClusterSecretNameForRegistryHost(resolved.Host, resolved.Purpose),
+				},
 			},
 		}
 	}
