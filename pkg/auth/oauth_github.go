@@ -14,7 +14,7 @@ import (
 	"github.com/ashishmax31/stackdome-api-server/pkg/models"
 	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
 	"github.com/golang-jwt/jwt"
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v88/github"
 	"golang.org/x/oauth2"
 	githubOAuth "golang.org/x/oauth2/github"
 )
@@ -155,7 +155,11 @@ func (h *gitHubOAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	ghClient := github.NewClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(token)))
+	ghClient, err := github.NewClient(github.WithHTTPClient(oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))))
+	if err != nil {
+		handleError(w, errors.ErrorGeneral, "failed to create github client")
+		return
+	}
 
 	ghUser, _, err := ghClient.Users.Get(ctx, "")
 	if err != nil {

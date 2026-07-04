@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v88/github"
 	"github.com/mt-sre/devkube/dev"
 	"golang.org/x/oauth2"
 )
@@ -32,7 +32,8 @@ func createGitHubClient(ctx context.Context) *github.Client {
 	}
 	if token == "" {
 		// Return unauthenticated client
-		return github.NewClient(nil)
+		client, _ := github.NewClient()
+		return client
 	}
 
 	// Create authenticated client
@@ -40,7 +41,8 @@ func createGitHubClient(ctx context.Context) *github.Client {
 		&oauth2.Token{AccessToken: token},
 	)
 	tc := oauth2.NewClient(ctx, ts)
-	return github.NewClient(tc)
+	client, _ := github.NewClient(github.WithHTTPClient(tc))
+	return client
 }
 
 // checkTagExists verifies if a tag exists in the repository
@@ -75,7 +77,7 @@ func (g *githubLoader) checkTagExists(ctx context.Context) (bool, error) {
 	}
 
 	// If tag not found, also check if it exists as a branch
-	_, _, err = g.client.Repositories.GetBranch(ctx, g.owner, g.repo, strings.TrimPrefix(g.tag, "v"), true)
+	_, _, err = g.client.Repositories.GetBranch(ctx, g.owner, g.repo, strings.TrimPrefix(g.tag, "v"), 1)
 	if err == nil {
 		return true, nil
 	}

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing/transport"
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v88/github"
 )
 
 // GitHubClient provides GitHub-specific API operations.
@@ -18,7 +18,9 @@ type gitHubClient struct {
 var _ GitClient = (*gitHubClient)(nil)
 
 func newGitHubClientWithToken(token string) *gitHubClient {
-	return &gitHubClient{client: github.NewTokenClient(context.Background(), token)}
+	// No URL option, so NewClient cannot error.
+	client, _ := github.NewClient(github.WithAuthToken(token))
+	return &gitHubClient{client: client}
 }
 
 func newGitHubClientWithBasicAuth(username, password string) *gitHubClient {
@@ -26,11 +28,13 @@ func newGitHubClientWithBasicAuth(username, password string) *gitHubClient {
 		Username: username,
 		Password: password,
 	}
-	return &gitHubClient{client: github.NewClient(transport.Client())}
+	client, _ := github.NewClient(github.WithHTTPClient(transport.Client()))
+	return &gitHubClient{client: client}
 }
 
 func newGitHubClientAnonymous() *gitHubClient {
-	return &gitHubClient{client: github.NewClient(&http.Client{})}
+	client, _ := github.NewClient()
+	return &gitHubClient{client: client}
 }
 
 func (g *gitHubClient) CheckAccess(ctx context.Context, repoURL string) (bool, error) {
@@ -120,7 +124,7 @@ func (g *gitHubClient) GetBranchHeadSHA(ctx context.Context, repoURL, branch str
 		return nil, fmt.Errorf("not a GitHub repository URL: %s", repoURL)
 	}
 
-	ref, resp, err := g.client.Repositories.GetBranch(ctx, owner, repo, branch, true)
+	ref, resp, err := g.client.Repositories.GetBranch(ctx, owner, repo, branch, 1)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, fmt.Errorf("branch '%s' not found in repository: %w", branch, ErrNotFound)

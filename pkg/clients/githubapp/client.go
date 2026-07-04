@@ -9,12 +9,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v88/github"
 )
 
 // DefaultAPIBaseURL is the public GitHub API endpoint.
@@ -115,21 +114,24 @@ func NewClient(spec ClientSpec) Client {
 	return &client{baseURL: baseURL, baseTransport: baseTransport, timeout: timeout}
 }
 
-// withBaseURL points a go-github client at c.baseURL. go-github resolves each
-// endpoint's relative path against BaseURL, which must end in a slash.
-func (c *client) withBaseURL(gh *github.Client) (*github.Client, error) {
-	u, err := url.Parse(c.baseURL + "/")
-	if err != nil {
-		return nil, fmt.Errorf("invalid github base url %q: %w", c.baseURL, err)
+// newGitHubClient builds a go-github client with the given auth transport (nil
+// for unauthenticated) pointed at c.baseURL.
+func (c *client) newGitHubClient(transport http.RoundTripper) (*github.Client, error) {
+	opts := []github.ClientOptionsFunc{github.WithTimeout(c.timeout)}
+	if transport != nil {
+		opts = append(opts, github.WithTransport(transport))
 	}
-	gh.BaseURL = u
-	return gh, nil
+	if c.baseURL != DefaultAPIBaseURL {
+		base := c.baseURL + "/"
+		opts = append(opts, github.WithURLs(&base, &base))
+	}
+	return github.NewClient(opts...)
 }
 
 // anonClient is unauthenticated — used for the manifest conversion, which is
 // authorized by the one-time code in the path.
 func (c *client) anonClient() (*github.Client, error) {
-	return c.withBaseURL(github.NewClient(&http.Client{Timeout: c.timeout}))
+	return c.newGitHubClient(nil)
 }
 
 // appClient authenticates as the app itself (signed app JWT) — used to list
@@ -140,7 +142,7 @@ func (c *client) appClient(creds *AppCredentials) (*github.Client, error) {
 		return nil, fmt.Errorf("failed to build app transport: %w", err)
 	}
 	atr.BaseURL = c.baseURL
-	return c.withBaseURL(github.NewClient(&http.Client{Transport: atr, Timeout: c.timeout}))
+	return c.newGitHubClient(atr)
 }
 
 // installationClient authenticates as a specific installation. The transport
@@ -151,7 +153,7 @@ func (c *client) installationClient(creds *AppCredentials, installationID int64)
 		return nil, fmt.Errorf("failed to build installation transport: %w", err)
 	}
 	itr.BaseURL = c.baseURL
-	return c.withBaseURL(github.NewClient(&http.Client{Transport: itr, Timeout: c.timeout}))
+	return c.newGitHubClient(itr)
 }
 
 func (c *client) ConvertManifestCode(ctx context.Context, code string) (*AppCredentials, error) {
