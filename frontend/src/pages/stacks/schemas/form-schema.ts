@@ -336,9 +336,9 @@ function convertApiResourceToFormResource(
     if (rev?.commit) {
       gitRevisionType = "commit";
       gitRevisionValue = rev.commit;
-    } else if (rev?.branch?.name) {
+    } else if (rev?.branch) {
       gitRevisionType = "branch";
-      gitRevisionValue = rev.branch.name;
+      gitRevisionValue = rev.branch;
     } else if (rev?.tag) {
       gitRevisionType = "tag";
       gitRevisionValue = rev.tag;

@@ -184,6 +184,7 @@ export function convertServiceToStackResource(
     // Basic resource structure
     const resource: FormStackResourceData = {
       name: serviceName,
+      workload_type: "Service",
       sourceType: service.build ? "git" : "image",
       labels: convertLabels(service.labels, warnings),
       depends_on: Array.isArray(service.depends_on) ? service.depends_on :

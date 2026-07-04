@@ -44,7 +44,13 @@ export function cleanServerResource(r: StackResource): StackResourceUpdateReques
   // table was dropped. The server always returns volume_mounts: [] on resources,
   // while the desired state strips them too — both sides must be undefined so
   // deepEqual sees no phantom diff on every autosave cycle.
-  return { ...rest, volume_mounts: undefined } as StackResourceUpdateRequest;
+  // workload_type is zod-defaulted to "Service" on the form side; mirror that
+  // default here so a server resource without it doesn't read as dirty.
+  return {
+    ...rest,
+    volume_mounts: undefined,
+    workload_type: rest.workload_type ?? "Service",
+  } as StackResourceUpdateRequest;
 }
 
 function cleanServerVolume(v: Volume): VolumeUpdateRequest {
