@@ -656,9 +656,12 @@ export default function StackDetailPage() {
 
   const resourceCount = effectiveStack?.spec?.stack_resources?.length || 0;
   const volumeCount = effectiveStack?.spec?.volumes?.length || 0;
-  const subtitleText = `${resourceCount} ${resourceCount === 1 ? "service" : "services"} · ${volumeCount} ${
-    volumeCount === 1 ? "volume" : "volumes"
-  }`;
+  const addonCount = connectionAddonIds.size;
+  const subtitleText = [
+    `${resourceCount} ${resourceCount === 1 ? "service" : "services"}`,
+    `${volumeCount} ${volumeCount === 1 ? "volume" : "volumes"}`,
+    ...(addonCount > 0 ? [`${addonCount} ${addonCount === 1 ? "addon" : "addons"}`] : []),
+  ].join(" · ");
 
   // Ops-view bodies — rendered inside the canvas shell; gated on isDraft so
   // the user sees a placeholder until the stack is saved for the first time.
