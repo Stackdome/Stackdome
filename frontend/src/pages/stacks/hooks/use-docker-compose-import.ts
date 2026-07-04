@@ -77,8 +77,9 @@ export function useDockerComposeImport(): ImportState & ImportActions {
 
       // Show simple success message
       toast({
-        title: 'Import Successful',
+        title: 'Import successful',
         description: 'Docker Compose services imported. Please review and configure as needed.',
+        variant: 'success',
       });
 
       return true;
@@ -87,7 +88,7 @@ export function useDockerComposeImport(): ImportState & ImportActions {
       setError(errorMessage);
 
       toast({
-        title: 'Import Failed',
+        title: 'Import failed',
         description: errorMessage,
         variant: 'destructive',
       });

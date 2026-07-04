@@ -166,7 +166,7 @@ function StackResourceConfigurationTabImpl({
       );
       if (isDuplicate) {
         toast({
-          title: "Duplicate Target Path",
+          title: "Duplicate target path",
           description: "Each volume mount must have a unique target path within a resource.",
           variant: "destructive",
         });

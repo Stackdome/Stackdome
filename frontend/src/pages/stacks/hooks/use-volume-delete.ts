@@ -4,7 +4,7 @@ import type { Stack, Volume } from "@/api/stacks";
 import { getStackById } from "@/api/stacks";
 import { deleteVolume } from "@/api/volumes";
 
-export type VolumeDeleteToast = (t: { title: string; description?: string; variant?: "destructive" }) => void;
+export type VolumeDeleteToast = (t: { title: string; description?: string; variant?: "destructive" | "success" }) => void;
 
 export interface UseVolumeDeleteArgs {
   ids: { orgId: string; teamName: string; stackId: string } | null;
@@ -93,7 +93,7 @@ export function useVolumeDelete({
         const fresh2 = await getStackById(ids.orgId, ids.teamName, ids.stackId);
         draftSync.notifyExternalUpdate(fresh2);
         onServerRefresh(fresh2);
-        toast({ title: "Volume deleted", description: `"${name}" and its data were deleted.` });
+        toast({ title: "Volume deleted", description: `"${name}" and its data were deleted.`, variant: "success" });
         return true;
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 409) {

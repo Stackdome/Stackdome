@@ -78,7 +78,7 @@ export default function DomainsPage() {
     } catch (err) {
       console.error("Failed to update domains:", err);
       toast({
-        title: "Error",
+        title: "Failed to update domains",
         description: getErrorMessage(err),
         variant: "destructive",
       });
@@ -99,6 +99,7 @@ export default function DomainsPage() {
     toast({
       title: "Domain added",
       description: "Domain configuration added successfully.",
+      variant: "success",
     });
   };
 
@@ -113,7 +114,7 @@ export default function DomainsPage() {
     toast({
       title: "Domain deleted",
       description: "The domain configuration removed from your configuration.",
-      variant: "destructive",
+      variant: "success",
     });
   };
 

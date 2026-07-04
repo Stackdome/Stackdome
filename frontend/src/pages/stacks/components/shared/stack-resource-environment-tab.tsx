@@ -115,7 +115,7 @@ function StackResourceEnvironmentTabImpl({
     if (newVars.length === 0) {
       toast({
         title: "No new variables added",
-        description: "All variables already exist or are invalid",
+        description: "All variables already exist or are invalid.",
         variant: "destructive",
       });
       return;
@@ -123,8 +123,8 @@ function StackResourceEnvironmentTabImpl({
     onChangeEnvVars([...(envVars || []), ...newVars]);
     toast({
       title: "Environment variables added",
-      description: `Added ${newVars.length} new environment variables`,
-      variant: "default",
+      description: `Added ${newVars.length} new environment variables.`,
+      variant: "success",
     });
   };
 
@@ -223,7 +223,8 @@ function StackResourceEnvironmentTabImpl({
                   onChangeEnvVars([]);
                   toast({
                     title: "Environment variables cleared",
-                    description: "All environment variables have been removed",
+                    description: "All environment variables have been removed.",
+                    variant: "success",
                   });
                 }
               }}

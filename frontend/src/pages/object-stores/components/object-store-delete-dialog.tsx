@@ -55,7 +55,7 @@ export function ObjectStoreDeleteDialog({ store, onOpenChange, onDeleted }: Prop
     setConflictMessage(null);
     try {
       await deleteObjectStore(orgId, teamName, store.id);
-      toast({ title: "Object Store deleted", variant: "destructive" });
+      toast({ title: "Object store deleted", variant: "success" });
       onDeleted();
       onOpenChange(false);
     } catch (e: unknown) {

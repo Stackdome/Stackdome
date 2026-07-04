@@ -416,7 +416,7 @@ export default function StackDetailPage() {
       setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
       draftSync.notifyExternalUpdate(fresh);
       session.discard(); // auto-start effect restarts the session on the reverted baseline
-      toast({ title: "Draft discarded", description: "Stack restored to the last deployment." });
+      toast({ title: "Draft discarded", description: "Stack restored to the last deployment.", variant: "success" });
     },
   });
 
@@ -442,7 +442,7 @@ export default function StackDetailPage() {
     setDeployBusy(true);
     try {
       await fn();
-      toast({ title: ok });
+      toast({ title: ok, variant: "success" });
       refetchReleases();
     } catch (e) {
       toast({ title: "Action failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
@@ -568,7 +568,7 @@ export default function StackDetailPage() {
     try {
       await deleteStack(deployIds.orgId, deployIds.teamName, deployIds.stackId);
       setStacks((prev) => prev.filter((s) => s.id !== deployIds.stackId));
-      toast({ title: "Stack deleted", description: `"${stackToShow?.name}" was deleted.` });
+      toast({ title: "Stack deleted", description: `"${stackToShow?.name}" was deleted.`, variant: "success" });
       navigate("/stacks");
     } catch {
       toast({ title: "Delete failed", description: "The stack could not be deleted.", variant: "destructive" });

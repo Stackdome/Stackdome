@@ -25,7 +25,7 @@ export default function ClusterCreatePage() {
       const errorMessage = "No organization selected";
       setError(errorMessage);
       toast({
-        title: "Error",
+        title: "Failed to create cluster",
         description: errorMessage,
         variant: "destructive",
       });
@@ -46,8 +46,8 @@ export default function ClusterCreatePage() {
 
       // Show success toast notification
       toast({
-        title: "Success",
-        description: "Cluster created successfully",
+        title: "Cluster created",
+        description: "The cluster has been created successfully.",
         variant: "success",
         duration: 3000,
       });

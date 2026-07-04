@@ -90,6 +90,7 @@ describe("useVolumeDelete", () => {
     expect(toast).toHaveBeenCalledWith({
       title: "Volume deleted",
       description: '"data" and its data were deleted.',
+      variant: "success",
     });
     expect(result.current.deleting).toBe(false);
   });

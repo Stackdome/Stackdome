@@ -26,11 +26,11 @@ export function PendingRowMenu({ row, onChanged }: PendingRowMenuProps) {
     setBusy(true);
     try {
       await resend(row.id);
-      toast({ title: "Invite resent", description: `Resent invite to ${row.email}` });
+      toast({ title: "Invite resent", description: `Resent invite to ${row.email}.`, variant: "success" });
       onChanged();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to resend invite.";
-      toast({ title: "Error", description: msg, variant: "destructive" });
+      toast({ title: "Failed to resend invite", description: msg, variant: "destructive" });
     } finally {
       setBusy(false);
     }
@@ -41,11 +41,11 @@ export function PendingRowMenu({ row, onChanged }: PendingRowMenuProps) {
     setBusy(true);
     try {
       await revoke(row.id);
-      toast({ title: "Invite revoked", description: `Invite for ${row.email} has been revoked.` });
+      toast({ title: "Invite revoked", description: `Invite for ${row.email} has been revoked.`, variant: "success" });
       onChanged();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to revoke invite.";
-      toast({ title: "Error", description: msg, variant: "destructive" });
+      toast({ title: "Failed to revoke invite", description: msg, variant: "destructive" });
     } finally {
       setBusy(false);
     }
