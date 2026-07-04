@@ -71,12 +71,3 @@ func (s *gitInstallationStore) DeleteByInstallationID(ctx context.Context, integ
 	}
 	return nil
 }
-
-func (s *gitInstallationStore) DeleteByIntegrationID(ctx context.Context, integrationID string) *errors.ServiceError {
-	if err := s.sessionFactory.New(ctx).
-		Where("git_integration_id = ?", integrationID).
-		Delete(&models.GitInstallation{}).Error; err != nil {
-		return errors.GeneralError("failed to delete git installations: %s", err.Error())
-	}
-	return nil
-}

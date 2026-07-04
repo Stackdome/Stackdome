@@ -48,6 +48,7 @@ type Installation struct {
 	AccountLogin        string // account (user or org) the app is installed on
 	AccountType         string // "User" or "Organization"
 	RepositorySelection string // "all" or "selected"
+	Suspended           bool   // true when the installation is suspended and cannot be used
 }
 
 // Repo is a repository visible to an installation.
@@ -208,6 +209,7 @@ func (c *client) ListInstallations(ctx context.Context, creds *AppCredentials) (
 				AccountLogin:        in.GetAccount().GetLogin(),
 				AccountType:         in.GetAccount().GetType(),
 				RepositorySelection: in.GetRepositorySelection(),
+				Suspended:           !in.GetSuspendedAt().IsZero(),
 			})
 		}
 		if resp.NextPage == 0 {

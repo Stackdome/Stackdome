@@ -15,5 +15,4 @@ type GitInstallationStore interface {
 	ListByIntegrationID(ctx context.Context, integrationID string) ([]*models.GitInstallation, *errors.ServiceError)
 	GetByIntegrationAndAccount(ctx context.Context, integrationID, accountLogin string) (*models.GitInstallation, *errors.ServiceError)
 	DeleteByInstallationID(ctx context.Context, integrationID string, installationID int64) *errors.ServiceError
-	DeleteByIntegrationID(ctx context.Context, integrationID string) *errors.ServiceError
 }

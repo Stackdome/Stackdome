@@ -22,6 +22,7 @@ type githubAppServiceMocks struct {
 	installations *mocks.MockGitInstallationStore
 	oauthStates   *mocks.MockOAuthStateStore
 	organisations *mocks.MockOrganisationStore
+	atomic        *mocks.MockAtomicExecutor
 	appClient     *mocks.MockGitHubAppClient
 	encryption    EncryptionService
 }
@@ -39,16 +40,23 @@ func newGitHubAppServiceForTest(t *testing.T) (GitIntegrationService, *githubApp
 		installations: mocks.NewMockGitInstallationStore(ctrl),
 		oauthStates:   mocks.NewMockOAuthStateStore(ctrl),
 		organisations: mocks.NewMockOrganisationStore(ctrl),
+		atomic:        mocks.NewMockAtomicExecutor(ctrl),
 		appClient:     mocks.NewMockGitHubAppClient(ctrl),
 		encryption:    newTestEncryptionService(t),
 	}
 	deps.organisations.EXPECT().Get(gomock.Any(), gomock.Any()).
 		Return(&models.Organisation{ID: "org-1", Name: "Acme Corp"}, nil).AnyTimes()
+	// Pass-through: run the transaction body against the mocked stores.
+	deps.atomic.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+			return fn(ctx)
+		}).AnyTimes()
 	svc := NewGitIntegrationService(GitIntegrationServiceSpec{
 		Store:             deps.store,
 		InstallationStore: deps.installations,
 		OAuthStateStore:   deps.oauthStates,
 		OrganisationStore: deps.organisations,
+		AtomicExecutor:    deps.atomic,
 		GitHubAppClient:   deps.appClient,
 		EncryptionService: deps.encryption,
 		Permissions:       permissions,
@@ -166,6 +174,36 @@ func TestHandleGitHubManifestCallbackSealsCredentials(t *testing.T) {
 	}
 	if stored.Status != models.GitIntegrationStatusPendingInstall {
 		t.Fatalf("expected pending_install until the webhook, got %q", stored.Status)
+	}
+}
+
+func TestListInstallationsRefreshPrunesSuspendedAndStale(t *testing.T) {
+	svc, deps := newGitHubAppServiceForTest(t)
+	integration := sealedGitHubApp(t, deps.encryption, models.GitHubAppCredentials{AppID: 4242, Slug: "s", PEM: "PEM"})
+
+	deps.store.EXPECT().GetByID(gomock.Any(), "gi-app").Return(integration, nil)
+	deps.appClient.EXPECT().ListInstallations(gomock.Any(), gomock.Any()).Return([]githubapp.Installation{
+		{ID: 77, AccountLogin: "acme", AccountType: string(models.GitAccountTypeOrganization), RepositorySelection: "all"},
+		{ID: 88, AccountLogin: "suspended-acct", Suspended: true},
+	}, nil)
+
+	// Only the live installation is upserted; the suspended one is skipped.
+	deps.installations.EXPECT().Upsert(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, in *models.GitInstallation) (*models.GitInstallation, *errors.ServiceError) {
+			if in.InstallationID != 77 {
+				t.Fatalf("only the live installation should be upserted, got %d", in.InstallationID)
+			}
+			return in, nil
+		})
+	// Local table holds a stale row (99) and the now-suspended one (88); both pruned.
+	deps.installations.EXPECT().ListByIntegrationID(gomock.Any(), "gi-app").Return([]*models.GitInstallation{
+		{InstallationID: 77}, {InstallationID: 99}, {InstallationID: 88},
+	}, nil).AnyTimes()
+	deps.installations.EXPECT().DeleteByInstallationID(gomock.Any(), "gi-app", int64(99)).Return(nil)
+	deps.installations.EXPECT().DeleteByInstallationID(gomock.Any(), "gi-app", int64(88)).Return(nil)
+
+	if _, serr := svc.ListInstallations(context.Background(), "gi-app", true); serr != nil {
+		t.Fatalf("unexpected error: %v", serr)
 	}
 }
 

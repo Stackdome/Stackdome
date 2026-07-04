@@ -422,6 +422,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OrganisationStore: pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
 			SessionFactory: d.DBSession,
 		}),
+		AtomicExecutor: pgstore.NewAtomicExecutor(d.DBSession),
 		GitHubAppClient: githubapp.NewClient(githubapp.ClientSpec{
 			BaseURL: d.Config.GitHubAPIBaseURL,
 		}),

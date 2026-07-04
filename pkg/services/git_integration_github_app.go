@@ -218,29 +218,7 @@ func (s *gitIntegrationService) ListInstallations(ctx context.Context, integrati
 	}
 
 	if refresh {
-		creds, serr := s.appCredentials(integration)
-		if serr != nil {
-			return nil, serr
-		}
-		installations, err := s.githubApp.ListInstallations(ctx, creds)
-		if err != nil {
-			return nil, errors.BadRequest("failed to list installations from GitHub: %s", err.Error())
-		}
-		if serr := s.installations.DeleteByIntegrationID(ctx, integrationID); serr != nil {
-			return nil, serr
-		}
-		for _, installation := range installations {
-			if _, serr := s.installations.Upsert(ctx, &models.GitInstallation{
-				GitIntegrationID:    integrationID,
-				InstallationID:      installation.ID,
-				AccountLogin:        installation.AccountLogin,
-				AccountType:         models.GitAccountType(installation.AccountType),
-				RepositorySelection: installation.RepositorySelection,
-			}); serr != nil {
-				return nil, serr
-			}
-		}
-		if serr := s.syncInstallationStatus(ctx, integration); serr != nil {
+		if serr := s.reconcileInstallations(ctx, integration); serr != nil {
 			return nil, serr
 		}
 	}
@@ -486,6 +464,57 @@ func (s *gitIntegrationService) findAppByID(ctx context.Context, appID int64) (*
 		}
 	}
 	return nil, nil, errors.NotFound("no GitHub App integration matches app id %d", appID)
+}
+
+// reconcileInstallations re-lists installations from GitHub (the webhook-miss
+// fallback) and reconciles the local table to match, atomically: live
+// installations are upserted in place, suspended or removed ones are deleted,
+// and the integration status is synced. The GitHub call runs outside the
+// transaction so a slow API response never holds the DB transaction open.
+func (s *gitIntegrationService) reconcileInstallations(ctx context.Context, integration *models.GitIntegration) *errors.ServiceError {
+	creds, serr := s.appCredentials(integration)
+	if serr != nil {
+		return serr
+	}
+	remote, err := s.githubApp.ListInstallations(ctx, creds)
+	if err != nil {
+		return errors.BadRequest("failed to list installations from GitHub: %s", err.Error())
+	}
+
+	return s.atomic.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		live := make(map[int64]bool, len(remote))
+		for _, in := range remote {
+			if in.Suspended {
+				// Suspended installations can't mint tokens; treat as absent so
+				// they are pruned below, matching the webhook suspend handling.
+				continue
+			}
+			live[in.ID] = true
+			if _, serr := s.installations.Upsert(ctx, &models.GitInstallation{
+				GitIntegrationID:    integration.ID,
+				InstallationID:      in.ID,
+				AccountLogin:        in.AccountLogin,
+				AccountType:         models.GitAccountType(in.AccountType),
+				RepositorySelection: in.RepositorySelection,
+			}); serr != nil {
+				return serr
+			}
+		}
+
+		local, serr := s.installations.ListByIntegrationID(ctx, integration.ID)
+		if serr != nil {
+			return serr
+		}
+		for _, l := range local {
+			if !live[l.InstallationID] {
+				if serr := s.installations.DeleteByInstallationID(ctx, integration.ID, l.InstallationID); serr != nil {
+					return serr
+				}
+			}
+		}
+
+		return s.syncInstallationStatus(ctx, integration)
+	})
 }
 
 // syncInstallationStatus flips the integration between installed and
