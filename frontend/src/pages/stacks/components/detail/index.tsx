@@ -683,6 +683,19 @@ export default function StackDetailPage() {
   const dirtyTotal =
     session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size + session.dirty.addonLinkCount;
 
+  // "View changes" badge + modal count must agree with the modal's BODY, which
+  // renders lifecycle.stagedDiff (saved spec vs release). Session dirt can
+  // diverge from it — e.g. a mount added and disconnected after the deploy nets
+  // to zero staged changes while the session still reads dirty. Once a staged
+  // diff exists, count its rows; fall back to session dirt only while an edit
+  // is still syncing (stagedDiff undefined).
+  const stagedCount = lifecycle.stagedDiff
+    ? lifecycle.stagedDiff.resources.length +
+      lifecycle.stagedDiff.volumes.length +
+      lifecycle.stagedDiff.connections.length
+    : null;
+  const changeCount = stagedCount ?? dirtyTotal;
+
   return (
     <>
       <CanvasEditorShell
@@ -698,7 +711,7 @@ export default function StackDetailPage() {
         onTabChange={setActiveTab}
         isActive={session.isActive}
         dirtyResourceCount={session.dirty.dirtyResourceIdx.size}
-        dirtyTotal={dirtyTotal}
+        dirtyTotal={changeCount}
         isStaged={lifecycle.phase === "staged"}
         onViewChanges={() => setViewChangesOpen(true)}
         syncStatus={isDraft ? SYNC_STATUS.idle : draftSync.status}
@@ -737,7 +750,7 @@ export default function StackDetailPage() {
         open={viewChangesOpen}
         onOpenChange={setViewChangesOpen}
         diff={lifecycle.stagedDiff}
-        count={dirtyTotal}
+        count={changeCount}
         stackName={effectiveStack?.name ?? ""}
         onDiscardResource={discardResourceByName}
         onDiscardVolume={discardVolumeByName}
