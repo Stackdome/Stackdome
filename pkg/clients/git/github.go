@@ -56,6 +56,32 @@ func (g *gitHubClient) CheckAccess(ctx context.Context, repoURL string) (bool, e
 	return true, nil
 }
 
+func (g *gitHubClient) GetDefaultBranch(ctx context.Context, repoURL string) (string, error) {
+	owner, repo, ok := ParseGitHubRepoURL(repoURL)
+	if !ok {
+		return "", fmt.Errorf("not a GitHub repository URL: %s", repoURL)
+	}
+	repository, resp, err := g.client.Repositories.Get(ctx, owner, repo)
+	if err != nil {
+		if resp != nil {
+			if isRateLimited(resp) {
+				return "", fmt.Errorf("rate limited: %v: %w", err, ErrRateLimited)
+			}
+			switch resp.StatusCode {
+			case http.StatusNotFound:
+				return "", fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
+			case http.StatusUnauthorized, http.StatusForbidden:
+				return "", fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
+			}
+		}
+		return "", fmt.Errorf("failed to get repository: %w", err)
+	}
+	if repository.GetDefaultBranch() == "" {
+		return "", fmt.Errorf("repository has no default branch")
+	}
+	return repository.GetDefaultBranch(), nil
+}
+
 func (g *gitHubClient) GetTagSHA(ctx context.Context, repoURL, tag string) (string, error) {
 	owner, repo, ok := ParseGitHubRepoURL(repoURL)
 	if !ok {

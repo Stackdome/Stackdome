@@ -105,6 +105,54 @@ func (g *gitClient) GetBranchHeadSHA(ctx context.Context, repoURL, branch string
 	return nil, fmt.Errorf("branch '%s' not found in repository: %w", branch, ErrNotFound)
 }
 
+// GetDefaultBranch resolves the remote's default branch from the HEAD symref
+// (ls-remote --symref equivalent), falling back to matching HEAD's hash
+// against a branch ref.
+func (g *gitClient) GetDefaultBranch(ctx context.Context, repoURL string) (string, error) {
+	rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{repoURL},
+	})
+
+	refs, err := rem.List(&git.ListOptions{
+		Auth: g.auth,
+	})
+	if err != nil {
+		if isGitAuthError(err) {
+			return "", fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
+		} else if isGitNotFoundError(err) {
+			return "", fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
+		}
+		return "", fmt.Errorf("failed to list remote refs: %w", err)
+	}
+
+	var head *plumbing.Reference
+	for _, ref := range refs {
+		if ref.Name() == plumbing.HEAD {
+			head = ref
+			break
+		}
+	}
+	if head == nil {
+		return "", fmt.Errorf("remote has no HEAD reference")
+	}
+
+	if head.Type() == plumbing.SymbolicReference {
+		target := head.Target()
+		if target.IsBranch() {
+			return target.Short(), nil
+		}
+	}
+
+	// Fall back to the first branch pointing at HEAD's hash.
+	for _, ref := range refs {
+		if ref.Name().IsBranch() && ref.Hash() == head.Hash() {
+			return ref.Name().Short(), nil
+		}
+	}
+	return "", fmt.Errorf("could not determine the repository's default branch")
+}
+
 func (g *gitClient) GetTagSHA(ctx context.Context, repoURL, tag string) (string, error) {
 	rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: "origin",
