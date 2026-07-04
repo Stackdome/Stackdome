@@ -299,10 +299,19 @@ export function revertResource(
     // Keep the draft's live status: the baseline's was captured at deploy time
     // and restoring it would show stale telemetry until the next refresh.
     const liveStatus = (draft.resources[idx] as { status?: unknown } | undefined)?.status;
-    next.resources[idx] = {
+    const restored = {
       ...cloneJson(baselineEntry),
       ...(liveStatus !== undefined ? { status: liveStatus } : {}),
     } as (typeof next.resources)[number];
+    // A restored mount may reference a volume the draft has since deleted —
+    // reattaching it would create a dangling mount, so drop those rows.
+    if (Array.isArray(restored.volume_mounts)) {
+      const draftVolumeNames = new Set(draft.volumes.map((v) => v?.name).filter(Boolean));
+      restored.volume_mounts = restored.volume_mounts.filter(
+        (m) => m?.source_volume_name && draftVolumeNames.has(m.source_volume_name),
+      );
+    }
+    next.resources[idx] = restored;
   } else {
     // The resource only exists in the draft — drop it.
     next.resources.splice(idx, 1);

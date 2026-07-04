@@ -194,3 +194,38 @@ describe("status is server telemetry, never dirt", () => {
     expect(r.status).toEqual(live.status);
   });
 });
+
+describe("revertResource dangling-mount guard", () => {
+  it("drops restored mounts whose volume no longer exists in the draft", () => {
+    const baseline = {
+      resources: [
+        { name: "web", volume_mounts: [{ source_volume_name: "data", source_sub_path: "", target_path: "/data" }] },
+      ],
+      volumes: [{ name: "data" }],
+    };
+    // Draft deleted the volume (cascade already removed the mount) and edited the resource.
+    const draft = {
+      resources: [{ name: "web", image_spec: { image: "nginx:2" }, volume_mounts: [] }],
+      volumes: [],
+    };
+    const next = revertResource(draft as never, baseline as never, 0);
+    expect(next.resources[0].volume_mounts).toEqual([]);
+  });
+
+  it("keeps restored mounts whose volume still exists", () => {
+    const baseline = {
+      resources: [
+        { name: "web", volume_mounts: [{ source_volume_name: "data", source_sub_path: "", target_path: "/data" }] },
+      ],
+      volumes: [{ name: "data" }],
+    };
+    const draft = {
+      resources: [{ name: "web", volume_mounts: [] }],
+      volumes: [{ name: "data" }],
+    };
+    const next = revertResource(draft as never, baseline as never, 0);
+    expect(next.resources[0].volume_mounts).toEqual([
+      { source_volume_name: "data", source_sub_path: "", target_path: "/data" },
+    ]);
+  });
+});
