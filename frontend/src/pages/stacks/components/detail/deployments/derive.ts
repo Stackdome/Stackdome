@@ -2,6 +2,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import type { components } from "@/api/types/openapi";
 import type { StackRelease } from "@/api/releases";
 import type { Stages } from "@/components/branded";
+import { statusVariant, type StatusVariant } from "@/components/branded/status-variant";
 import { ReleaseState } from "./release-states";
 
 export type Stack = components["schemas"]["Stack"];
@@ -229,22 +230,24 @@ export function deriveReleaseTitle(release: StackRelease, failing: FailingResour
 
 export type Tone = "ok" | "amber" | "err" | "muted";
 
+/** Timeline render vocabulary. Derived from the canonical variant so the
+ *  timeline can never drift from the rest of the app again. */
+export function toneFromVariant(v: StatusVariant): Tone {
+  switch (v) {
+    case "ready": return "ok";
+    case "pending": return "amber";
+    case "error": return "err";
+    default: return "muted"; // info | neutral
+  }
+}
+
 export function phaseTone(phase: string): Tone {
-  if (/ready|available|running|healthy/i.test(phase)) return "ok";
-  if (/progress|building|deploying|pending.*build/i.test(phase)) return "amber";
-  if (/crash|oom|error|failed|imagepull|backoff/i.test(phase)) return "err";
-  return "muted";
+  return toneFromVariant(statusVariant("rollout", phase));
 }
 
 /** Tone for a release's rail dot, keyed off its lifecycle state. */
 export function stateTone(state: string): Tone {
-  switch (state) {
-    case ReleaseState.Released: return "ok";
-    case ReleaseState.Failed: return "err";
-    case ReleaseState.Pending:
-    case ReleaseState.InProgress: return "amber";
-    default: return "muted"; // Superseded, Cancelled, unknown
-  }
+  return toneFromVariant(statusVariant("release", state));
 }
 
 export function toneTextClass(t: Tone): string {

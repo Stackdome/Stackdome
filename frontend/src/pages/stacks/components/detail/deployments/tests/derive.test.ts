@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { Stack } from "@/api/stacks";
 import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime } from "../derive";
-import { deriveStages, deriveReleaseTitle, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone } from "../derive";
+import { deriveStages, deriveReleaseTitle, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone, toneFromVariant } from "../derive";
 import type { FailingResource } from "../derive";
 import type { StackRelease } from "@/api/releases";
 
@@ -82,6 +82,33 @@ describe("causeLabel", () => {
   it("extracts the sequence from the backend's sentence detail", () => {
     // Backend sends detail as "rollback to release #1" — must not double-prefix.
     expect(causeLabel({ kind: "rollback", detail: "rollback to release #1" })).toBe("Rollback to #1");
+  });
+});
+
+describe("tones derive from statusVariant", () => {
+  it("toneFromVariant collapses 5 variants to 4 tones", () => {
+    expect(toneFromVariant("ready")).toBe("ok");
+    expect(toneFromVariant("pending")).toBe("amber");
+    expect(toneFromVariant("error")).toBe("err");
+    expect(toneFromVariant("info")).toBe("muted");
+    expect(toneFromVariant("neutral")).toBe("muted");
+  });
+
+  it("rollout phases — the real 4-word vocabulary", () => {
+    expect(phaseTone("Pending")).toBe("amber");   // was muted under the old regex
+    expect(phaseTone("Ready")).toBe("ok");
+    expect(phaseTone("Degraded")).toBe("err");    // was muted under the old regex
+    expect(phaseTone("Failed")).toBe("err");
+    expect(phaseTone("SomethingNew")).toBe("muted"); // unknown → info → muted
+  });
+
+  it("release states unchanged", () => {
+    expect(stateTone("Released")).toBe("ok");
+    expect(stateTone("Failed")).toBe("err");
+    expect(stateTone("Pending")).toBe("amber");
+    expect(stateTone("InProgress")).toBe("amber");
+    expect(stateTone("Superseded")).toBe("muted");
+    expect(stateTone("Cancelled")).toBe("muted");
   });
 });
 
@@ -231,14 +258,12 @@ describe("releaseGitSha", () => {
 });
 
 describe("phaseTone", () => {
-  it("maps phases to tones", () => {
+  it("maps phases from rollout domain via statusVariant", () => {
     expect(phaseTone("Ready")).toBe("ok");
-    expect(phaseTone("Progressing")).toBe("amber");
-    expect(phaseTone("Building")).toBe("amber");
-    expect(phaseTone("CrashLoopBackOff")).toBe("err");
-    expect(phaseTone("OOMKilled")).toBe("err");
-    expect(phaseTone("ImagePullBackOff")).toBe("err");
-    expect(phaseTone("Pending")).toBe("muted");
+    expect(phaseTone("Pending")).toBe("amber");
+    expect(phaseTone("Degraded")).toBe("err");
+    expect(phaseTone("Failed")).toBe("err");
+    expect(phaseTone("Unknown")).toBe("muted");
   });
   it("maps tones to brand token classes", () => {
     expect(toneTextClass("ok")).toBe("text-success");
