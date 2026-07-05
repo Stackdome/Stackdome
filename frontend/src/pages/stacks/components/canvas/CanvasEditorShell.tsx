@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
-import { Activity, ChevronDown, ChevronRight, FileDiff, History, LayoutGrid, Loader2, MoreHorizontal, Pencil, Rocket, ScrollText, Trash2, Undo2 } from "lucide-react";
+import { Activity, ChevronDown, ChevronRight, History, LayoutGrid, MoreHorizontal, Pencil, ScrollText, Trash2, Undo2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AutosaveStatus } from "./AutosaveStatus";
+import { DeployPill } from "./DeployPill";
 import { DrawerInsetContext } from "@/pages/stacks/lib/canvas/drawer-inset";
 import type { SyncStatus } from "@/pages/stacks/lib/draft-sync/constants";
 import { PublicEndpointRow, type PublicEndpoint } from "./PublicEndpointRow";
@@ -35,6 +36,8 @@ export interface CanvasEditorShellProps {
   statusState?: string | null;
   /** Human subtitle, e.g. "3 services · 2 volumes". */
   subtitle: string;
+  /** At least one resource exists on the canvas — gates the draft deploy pill. */
+  hasResources: boolean;
   /** Draft (unsaved) stack — primary action is always Create (nothing exists server-side until it runs). */
   isDraft?: boolean;
   /** Render the title as an editable input (draft only). */
@@ -84,18 +87,20 @@ export interface CanvasEditorShellProps {
 
 /**
  * Full-bleed editor chrome shown when the canvas flag is on. The title row is
- * identity only (name + single status pill + autosave); all actions live on the
- * tab rail: tabs on the left, then the "View changes" review entry, Deploy, and
- * the actions menu on the right.
+ * identity only (name + single status pill); deploy actions now live in the
+ * floating canvas deploy pill (see DeployPill) rather than the rail. The rail
+ * keeps tabs on the left and, on the right, the autosave indicator, the stack
+ * ⋮ actions menu, and the collapse chevron.
  *
- * Presentation only: it owns no stack state. The autosave indicator and Deploy
- * button are wired straight to the caller's session + deploy lifecycle.
+ * Presentation only: it owns no stack state. The autosave indicator and
+ * deploy pill are wired straight to the caller's session + deploy lifecycle.
  */
 export function CanvasEditorShell({
   stackName,
   stackId,
   statusState,
   subtitle,
+  hasResources,
   isDraft,
   nameEditable,
   onNameChange,
@@ -161,52 +166,11 @@ export function CanvasEditorShell({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [toggleCollapsed]);
 
-  const hasUnsaved = isActive && dirtyTotal > 0;
-  // Undeployed changes exist (either mid-session dirt or a saved-but-undeployed
-  // diff). Draft stacks have nothing server-side to review, so never for drafts.
-  // A staged phase with a zero count means the changes net out — nothing to
-  // review, so the entry hides rather than advertise a phantom change.
-  const hasChanges = !isDraft && dirtyTotal > 0 && (isStaged || isActive);
-
   // The canvas (Configuration) stays mounted so its open drawer + node
   // selection survive tab switches; ops views render as an opaque overlay on
   // top when active.
   const opsBody =
     activeTab === "deployments" ? deployments : activeTab === "logs" ? logs : activeTab === "metrics" ? metrics : null;
-
-  // The primary action is always Deploy. On a draft it creates the stack and
-  // starts the first release in one go — nothing exists server-side until then.
-  const primaryButton = isDraft ? (
-    <Button type="button" variant="default" size="sm" onClick={onDraftDeploy} disabled={draftDeploying}>
-      {draftDeploying ? <Loader2 className="size-3.5 animate-spin" /> : <Rocket className="size-3.5" />}
-      {draftDeploying ? "Deploying" : "Deploy"}
-    </Button>
-  ) : (
-    <Button
-      type="button"
-      variant="default"
-      size="sm"
-      onClick={onDeploy}
-      disabled={deployBusy || !canWrite || !(isStaged || hasUnsaved)}
-    >
-      {deployBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Rocket className="size-3.5" />}
-      {deployBusy ? "Deploying" : "Deploy"}
-    </Button>
-  );
-
-  // "View changes (N)" — warn-toned entry to the review/discard modal. Shown on
-  // the action rail only when there are undeployed changes on an existing stack.
-  const viewChanges = hasChanges && (
-    <button
-      type="button"
-      onClick={onViewChanges}
-      className="flex flex-none items-center gap-1.5 rounded-md border border-warn-border bg-warn-bg px-2.5 py-1.5 text-[13px] font-medium text-warn transition-colors hover:bg-warn-bg/70"
-    >
-      <FileDiff className="size-3.5" />
-      View changes
-      <span className="rounded-full bg-warn px-1.5 py-px font-mono text-[10px] font-bold text-background">{dirtyTotal}</span>
-    </button>
-  );
 
   const actionsMenu = !isDraft && (
     <DropdownMenu>
@@ -286,8 +250,6 @@ export function CanvasEditorShell({
             ))}
           </div>
           <div className="flex-1" />
-          {viewChanges}
-          {primaryButton}
           {chevron}
         </div>
       )}
@@ -329,8 +291,6 @@ export function CanvasEditorShell({
                 </StatusPill>
               )}
               <div className="flex-1" />
-              {!isDraft && <AutosaveStatus status={syncStatus} />}
-              {chevron}
             </div>
             {nameEditable && nameError && (
               <p className="mt-1 text-[12px] text-danger">{nameError}</p>
@@ -369,9 +329,9 @@ export function CanvasEditorShell({
               );
             })}
             <div className="flex-1" />
-            {viewChanges}
-            {primaryButton}
+            {!isDraft && <AutosaveStatus status={syncStatus} />}
             {actionsMenu}
+            {chevron}
           </div>
         </>
       )}
@@ -381,6 +341,23 @@ export function CanvasEditorShell({
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <div className="absolute inset-y-0 left-0 transition-[right] duration-[260ms]" style={{ right: drawerInset }}>
           <DrawerInsetContext.Provider value={drawerInsetCtx}>{architecture}</DrawerInsetContext.Provider>
+          {activeTab === "architecture" && (
+            <DeployPill
+              isDraft={isDraft}
+              hasResources={hasResources}
+              dirtyTotal={dirtyTotal}
+              isStaged={isStaged}
+              isActive={isActive}
+              deployBusy={deployBusy}
+              draftDeploying={draftDeploying}
+              canWrite={canWrite}
+              onDeploy={onDeploy}
+              onDraftDeploy={onDraftDeploy}
+              onViewChanges={onViewChanges}
+              canDiscardDraft={canDiscardDraft}
+              onDiscardDraft={onDiscardDraft}
+            />
+          )}
         </div>
         {opsBody && <div className="absolute inset-0 overflow-auto bg-background">{opsBody}</div>}
       </div>

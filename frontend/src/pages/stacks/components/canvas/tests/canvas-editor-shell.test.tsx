@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, within, fireEvent, cleanup } from "@testing-library/react";
 import { CanvasEditorShell } from "../CanvasEditorShell";
 import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 
@@ -11,6 +11,7 @@ const base = {
   statusState: null, subtitle: "0 services · 0 volumes",
   activeTab: "architecture", onTabChange: () => {},
   isActive: true, dirtyResourceCount: 0, dirtyTotal: 0, isStaged: false,
+  hasResources: true,
   onViewChanges: () => {},
   syncStatus: SYNC_STATUS.idle,
   deployBusy: false, canWrite: true,
@@ -42,70 +43,60 @@ describe("CanvasEditorShell header", () => {
   });
 });
 
-describe("CanvasEditorShell primary button matrix", () => {
-  it("draft mode shows Deploy and no View changes / actions menu", () => {
+describe("CanvasEditorShell deploy pill", () => {
+  it("draft with resources shows the pill Deploy wired to onDraftDeploy, no Details/menu", () => {
     const onDraftDeploy = vi.fn();
     render(
-      <CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" isStaged dirtyTotal={3} onDraftDeploy={onDraftDeploy} />,
+      <CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" onDraftDeploy={onDraftDeploy} />,
     );
-    const btn = screen.getByRole("button", { name: "Deploy" });
-    expect(btn).not.toBeDisabled();
-    fireEvent.click(btn);
+    // Scoped to the pill: the tab rail's "Deployments" tab also matches /deploy/i.
+    const pill = within(screen.getByTestId("deploy-pill"));
+    fireEvent.click(pill.getByRole("button", { name: /deploy/i }));
     expect(onDraftDeploy).toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: /create stack/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /view changes/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Details" })).toBeNull();
     expect(screen.queryByLabelText("Stack actions")).toBeNull();
   });
 
-  it("draft mode shows 'Deploying' while the draft deploy runs", () => {
+  it("empty draft shows no pill at all", () => {
+    render(<CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" hasResources={false} />);
+    expect(screen.queryByTestId("deploy-pill")).toBeNull();
+  });
+
+  it("draft shows 'Deploying' while the draft deploy runs", () => {
     render(<CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" draftDeploying />);
     expect(screen.getByRole("button", { name: /deploying/i })).toBeDisabled();
   });
 
-  it("existing stack with isStaged shows enabled Deploy", () => {
-    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isStaged />);
-    const btn = screen.getByRole("button", { name: "Deploy" });
-    expect(btn).toBeInTheDocument();
-    expect(btn).not.toBeDisabled();
+  it("existing clean stack renders no pill and no rail Deploy", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" />);
+    expect(screen.queryByTestId("deploy-pill")).toBeNull();
+    // Exact match — the tab rail's "Deployments" tab also matches a /deploy/i regex.
+    expect(screen.queryByRole("button", { name: "Deploy" })).toBeNull();
   });
 
-  it("existing stack clean (no staged, no unsaved) shows disabled Deploy and no View changes", () => {
-    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isStaged={false} dirtyTotal={0} />);
-    expect(screen.getByRole("button", { name: "Deploy" })).toBeDisabled();
-    expect(screen.queryByRole("button", { name: /view changes/i })).toBeNull();
-  });
-
-  it("existing stack with hasUnsaved shows enabled Deploy", () => {
-    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isActive dirtyTotal={2} isStaged={false} />);
-    expect(screen.getByRole("button", { name: "Deploy" })).not.toBeDisabled();
-  });
-
-  it("syncStatus saving shows 'Saving…' for existing stacks", () => {
-    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" syncStatus={SYNC_STATUS.saving} />);
-    expect(screen.getByText("Saving…")).toBeInTheDocument();
-  });
-});
-
-describe("CanvasEditorShell View changes entry", () => {
-  it("shows 'View changes' with the count and calls onViewChanges when there are changes", () => {
+  it("existing dirty stack shows count + Details wired to onViewChanges", () => {
     const onViewChanges = vi.fn();
     render(
       <CanvasEditorShell {...base} nameEditable={false} stackName="api" isActive dirtyTotal={3} onViewChanges={onViewChanges} />,
     );
-    const btn = screen.getByRole("button", { name: /view changes/i });
-    expect(btn).toHaveTextContent("3");
-    fireEvent.click(btn);
+    expect(screen.getByText("3 changes")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
     expect(onViewChanges).toHaveBeenCalled();
   });
 
-  it("shows 'View changes' when staged even with no session dirt is driven by dirtyTotal", () => {
-    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isStaged dirtyTotal={1} />);
-    expect(screen.getByRole("button", { name: /view changes/i })).toHaveTextContent("1");
+  it("pill persists with 'Deploying' while deployBusy even at zero dirt", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" deployBusy />);
+    expect(screen.getByRole("button", { name: /deploying/i })).toBeInTheDocument();
   });
 
-  it("hides 'View changes' when staged but the change count is zero", () => {
+  it("pill hidden when an ops tab is active", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isActive dirtyTotal={2} activeTab="logs" />);
+    expect(screen.queryByTestId("deploy-pill")).toBeNull();
+  });
+
+  it("staged-but-zero-count nets out — no pill", () => {
     render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isStaged dirtyTotal={0} />);
-    expect(screen.queryByRole("button", { name: /view changes/i })).toBeNull();
+    expect(screen.queryByTestId("deploy-pill")).toBeNull();
   });
 });
 
@@ -149,5 +140,13 @@ describe("CanvasEditorShell collapse", () => {
     fireEvent.click(screen.getByRole("button", { name: "Collapse header" }));
     fireEvent.click(screen.getByRole("button", { name: /Logs/ }));
     expect(onTabChange).toHaveBeenCalledWith("logs");
+  });
+
+  it("collapsed mini-row has no deploy actions, only tabs + expand chevron", () => {
+    render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" isActive dirtyTotal={2} />);
+    fireEvent.click(screen.getByRole("button", { name: "Collapse header" }));
+    // The pill still serves deploys; the mini-row itself carries no buttons besides tabs + chevron.
+    expect(screen.getByTestId("deploy-pill")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expand header" })).toBeInTheDocument();
   });
 });
