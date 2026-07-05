@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
-import { Activity, ChevronDown, ChevronRight, History, LayoutGrid, MoreHorizontal, Pencil, ScrollText, Trash2, Undo2 } from "lucide-react";
+import { Activity, ChevronDown, ChevronRight, History, LayoutGrid, MoreHorizontal, Pencil, ScrollText, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,7 @@ export interface CanvasEditorShellProps {
   subtitle: string;
   /** At least one resource exists on the canvas — gates the draft deploy pill. */
   hasResources: boolean;
-  /** Draft (unsaved) stack — primary action is always Create (nothing exists server-side until it runs). */
+  /** Draft (unsaved) stack — Deploy creates the stack and starts the first release in one go. */
   isDraft?: boolean;
   /** Render the title as an editable input (draft only). */
   nameEditable: boolean;
@@ -180,12 +180,6 @@ export function CanvasEditorShell({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[180px]">
-        {canDiscardDraft && onDiscardDraft && (
-          <DropdownMenuItem onClick={onDiscardDraft}>
-            <Undo2 className="size-4" />
-            Discard draft changes
-          </DropdownMenuItem>
-        )}
         <DropdownMenuItem
           className="text-danger focus:text-danger"
           onClick={onDelete}
