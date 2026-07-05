@@ -12,8 +12,8 @@ import {
 } from "./api-schema";
 import type { StackUpdateRequest, StackResourceUpdateRequest, VolumeUpdateRequest } from "@/api/stacks";
 import { ADDON_OUTPUT_FIELDS } from "@/pages/stacks/lib/addon-presets";
-import { buildDesiredConnections } from "@/pages/stacks/lib/connection-mapping";
-import type { FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
+import { buildDesiredConnections, mountsToConnections } from "@/pages/stacks/lib/connection-mapping";
+import type { FormEnvRow, FormMountRow } from "@/pages/stacks/lib/connection-mapping";
 
 /**
  * Form-specific UI schema additions
@@ -440,8 +440,15 @@ function convertFormStackToApiStack(
     return hasName && (hasImage || hasBuildSpec);
   });
 
-  // Process all valid stack resources by removing UI-only fields
-  const apiStackResources = validResources.map(prepareFormResourceForApi);
+  // Process all valid stack resources by removing UI-only fields. Volume
+  // mounts persist server-side only as volume_mount connections (the
+  // volume_mounts table was dropped; the resource field is derived and
+  // ignored on write), so strip it here and emit connections below —
+  // mirroring what draft-sync does for saved stacks.
+  const apiStackResources = validResources.map((r) => ({
+    ...prepareFormResourceForApi(r),
+    volume_mounts: undefined,
+  }));
 
   // Filter out empty or invalid volumes (volumes with empty names)
   const validVolumes = stackData.spec.volumes?.filter(volume => {
@@ -462,6 +469,16 @@ function convertFormStackToApiStack(
       rows: (r.execution_config?.environment_variables ?? []) as FormEnvRow[],
     })),
   );
+
+  // Volume mounts become volume_mount connections. Mounts referencing volumes
+  // absent from the spec are dangling — never emit them.
+  const volumeNames = new Set((validVolumes ?? []).map((v) => v.name));
+  for (const r of validResources) {
+    const liveMounts = ((r.volume_mounts ?? []) as FormMountRow[]).filter(
+      (m) => m.source_volume_name && volumeNames.has(m.source_volume_name),
+    );
+    connections.push(...mountsToConnections(r.name ?? "", liveMounts));
+  }
 
   // Create a new clean spec object that will only include API-expected fields
   const apiSpec = {

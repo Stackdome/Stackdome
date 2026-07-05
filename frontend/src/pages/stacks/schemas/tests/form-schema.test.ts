@@ -129,6 +129,55 @@ describe("convertFormStackToApiStack — spec.connections", () => {
     api.spec.connections!.forEach((c) => expect(c.to).toEqual({ type: "stack_resource", name: "web" }));
   });
 
+  it("emits volume_mount connections from resource volume_mounts and strips the dead field", () => {
+    const form = {
+      name: "tooljet",
+      labels: [],
+      spec: {
+        stack_resources: [
+          {
+            name: "db",
+            sourceType: "image" as const,
+            image_spec: { image: "postgres:16" },
+            volume_mounts: [{ source_volume_name: "pgdata", target_path: "/var/lib/postgresql/data" }],
+          },
+        ],
+        volumes: [{ name: "pgdata", spec: { size: "1Gi", access_mode: "ReadWriteOnce", needs_sync_before_use: false } }],
+      },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    expect(api.spec.connections).toEqual([
+      {
+        kind: "volume_mount",
+        from: { type: "volume", name: "pgdata" },
+        to: { type: "stack_resource", name: "db" },
+        config: { mount_path: "/var/lib/postgresql/data" },
+      },
+    ]);
+    // Mounts persist only as connections — the resource field is server-ignored.
+    expect(api.spec.stack_resources[0].volume_mounts).toBeUndefined();
+  });
+
+  it("skips volume_mount connections whose volume is missing from the spec", () => {
+    const form = {
+      name: "tooljet",
+      labels: [],
+      spec: {
+        stack_resources: [
+          {
+            name: "db",
+            sourceType: "image" as const,
+            image_spec: { image: "postgres:16" },
+            volume_mounts: [{ source_volume_name: "ghost", target_path: "/data" }],
+          },
+        ],
+        volumes: [],
+      },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    expect(api.spec.connections).toBeUndefined();
+  });
+
   it("omits spec.connections when there are no secret/addon/resource rows", () => {
     const form = {
       name: "s", labels: [],
