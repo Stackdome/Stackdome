@@ -549,12 +549,12 @@ func VerifyGitCredentialsSecretExists(ctx context.Context, clusterClient client.
 
 	found := false
 	for _, secret := range secretList.Items {
-		if strings.HasPrefix(secret.Name, "git-credentials-") {
+		if strings.HasPrefix(secret.Name, "git-integration-") {
 			found = true
 			break
 		}
 	}
-	Expect(found).To(BeTrue(), "expected a git-credentials secret with stack ID label in namespace %s", namespace)
+	Expect(found).To(BeTrue(), "expected a git-integration credential secret with stack ID label in namespace %s", namespace)
 }
 
 func GetIngressForStackResource(ctx context.Context, clusterClient client.Client, namespace, resourceName string) (*networkingv1.Ingress, error) {
