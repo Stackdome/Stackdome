@@ -1,9 +1,10 @@
 // Pure merge of the local (instant, authored) graph with server topology
 // (derived edges + runtime state). Local is never mutated.
 import type { StackTopology, TopologyNodeRef } from "@/api/topology";
+import { statusVariant } from "@/components/branded/status-variant";
 import {
   ATTACHMENT_LABEL, EDGE_SOURCE_OF_TRUTH, NODE_ID_PREFIX, NODE_KIND, edgeKey,
-  type AttachmentKind, type CanvasGraph, type CanvasNode, type EdgeKind,
+  type AttachmentKind, type CanvasGraph, type CanvasNode, type EdgeKind, type ResourceNodeData,
 } from "./graph-from-connections";
 
 // Secrets are intentionally absent: secret references never render on the
@@ -35,14 +36,16 @@ export function mergeTopology(local: CanvasGraph, server: StackTopology | null |
   );
   let changed = false;
 
-  // Runtime-state overlay onto matching local resource nodes.
+  // Runtime-state overlay: the fresher server topology state wins over the
+  // dot colour derived at graph-build time.
   for (const [id, serverNode] of serverNodeByListId) {
     if (!serverNode.state) continue;
     const idx = nodes.findIndex((n) => n.id === id && n.type === "resource");
     if (idx === -1) continue;
     const node = nodes[idx];
-    if ((node.data as { status?: string }).status === serverNode.state) continue;
-    const next: CanvasNode = { ...node, data: { ...node.data, status: serverNode.state } };
+    const dotVariant = statusVariant("resource", serverNode.state);
+    if ((node.data as ResourceNodeData).dotVariant === dotVariant) continue;
+    const next: CanvasNode = { ...node, data: { ...node.data, dotVariant } };
     nodes[idx] = next;
     nodeById.set(id!, next);
     changed = true;
