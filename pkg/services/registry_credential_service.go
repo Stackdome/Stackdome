@@ -407,13 +407,13 @@ func (s *registryCredentialService) affectedStacks(ctx context.Context, credenti
 func stackResolvesAgainstCredential(stack *models.Stack, credential *models.RegistryCredential) bool {
 	for _, resource := range stack.StackResources {
 		if credential.Purpose.Covers(models.RegistryCredentialPurposePull) &&
-			resource.ImageConfig != nil && resource.ImageConfig.PullSecretRef == nil {
+			resource.ImageConfig != nil && resource.ImageConfig.RegistryCredentialID == "" {
 			if host, err := clients.NormalizeRegistryHost(resource.ImageConfig.Image); err == nil && host == credential.Host {
 				return true
 			}
 		}
 		if credential.Purpose.Covers(models.RegistryCredentialPurposePush) &&
-			resource.BuildConfig != nil && resource.BuildConfig.RegistrySecretRef == nil &&
+			resource.BuildConfig != nil && resource.BuildConfig.PushRegistryCredentialID == "" &&
 			!resource.BuildConfig.BuildImageRepository.UseInClusterRegistry &&
 			resource.BuildConfig.BuildImageRepository.ExternalImageRef != "" {
 			if host, err := clients.NormalizeRegistryHost(resource.BuildConfig.BuildImageRepository.ExternalImageRef); err == nil && host == credential.Host {

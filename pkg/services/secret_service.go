@@ -35,8 +35,6 @@ type SecretService interface {
 	ValidateSecretExists(ctx context.Context, secretID string) (bool, *errors.ServiceError)
 	GetSecretKeys(ctx context.Context, secretID string) ([]string, *errors.ServiceError)
 	ValidateSecretHasKeys(ctx context.Context, secretID string, requiredKeys []string) (bool, []string, *errors.ServiceError)
-	ValidateGitSecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError
-	ValidateImageRegistrySecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError
 }
 
 type ClusterClientGetter interface {
@@ -329,53 +327,4 @@ func (s *secretService) generateDataHash(data map[string]string) string {
 	jsonData, _ := json.Marshal(data)
 	hash := sha256.Sum256(jsonData)
 	return base64.StdEncoding.EncodeToString(hash[:])
-}
-
-func (s *secretService) ValidateImageRegistrySecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError {
-	secret, err := s.secretStore.GetByID(ctx, secretID)
-	if err != nil {
-		return err
-	}
-
-	if secret.Type != models.SecretTypeDockerRegistry {
-		return errors.BadRequest("secret must be of type %s, got %s", models.SecretTypeDockerRegistry, secret.Type)
-	}
-
-	requiredKeys := []string{models.UsernameSecretKey, models.PasswordSecretKey}
-	hasKeys, missingKeys, storeErr := s.ValidateSecretHasKeys(ctx, secretID, requiredKeys)
-	if storeErr != nil {
-		return storeErr
-	}
-
-	if !hasKeys {
-		return errors.BadRequest("docker registry secret missing required keys: %v", missingKeys)
-	}
-
-	return nil
-}
-
-func (s *secretService) ValidateGitSecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError {
-	keys, err := s.GetSecretKeys(ctx, secretID)
-	if err != nil {
-		return err
-	}
-
-	// Git secrets must have either token OR username/password.
-	hasToken := s.containsKey(keys, "token")
-	hasUsernamePassword := s.containsKey(keys, "username") && s.containsKey(keys, "password")
-
-	if !hasToken && !hasUsernamePassword {
-		return errors.BadRequest("git secret must contain either 'token' or 'username'+'password'")
-	}
-
-	return nil
-}
-
-func (s *secretService) containsKey(keys []string, key string) bool {
-	for _, k := range keys {
-		if k == key {
-			return true
-		}
-	}
-	return false
 }

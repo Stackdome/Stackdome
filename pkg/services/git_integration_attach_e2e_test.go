@@ -53,9 +53,7 @@ func TestGitIntegrationAttachesThroughStackValidation(t *testing.T) {
 		Permissions:       permissions,
 	})
 
-	secrets := NewMockcredentialSecretFetcher(ctrl)
 	resolver := NewCredentialResolver(CredentialResolverSpec{
-		SecretService:         secrets,
 		GitIntegrationService: gitIntegrationService,
 	})
 

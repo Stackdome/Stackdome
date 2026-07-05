@@ -222,20 +222,20 @@ func (ws *Stack) SecretsInUse() []string {
 	for _, resource := range ws.StackResources {
 		if resource.HasGitCredentials() {
 			if resource.BuildConfig != nil && resource.BuildConfig.SourceContext.Git != nil &&
-				resource.BuildConfig.SourceContext.Git.GitSecretRef != nil {
-				res = append(res, resource.BuildConfig.SourceContext.Git.GitSecretRef.SecretID)
+				resource.BuildConfig.SourceContext.Git.IntegrationID != "" {
+				res = append(res, resource.BuildConfig.SourceContext.Git.IntegrationID)
 			}
 		}
 
 		if resource.HasImagePullSecrets() {
-			if resource.ImageConfig != nil && resource.ImageConfig.PullSecretRef != nil {
-				res = append(res, resource.ImageConfig.PullSecretRef.SecretID)
+			if resource.ImageConfig != nil && resource.ImageConfig.RegistryCredentialID != "" {
+				res = append(res, resource.ImageConfig.RegistryCredentialID)
 			}
 		}
 
 		if resource.HasImagePushSecrets() {
-			if resource.BuildConfig != nil && resource.BuildConfig.RegistrySecretRef != nil {
-				res = append(res, resource.BuildConfig.RegistrySecretRef.SecretID)
+			if resource.BuildConfig != nil && resource.BuildConfig.PushRegistryCredentialID != "" {
+				res = append(res, resource.BuildConfig.PushRegistryCredentialID)
 			}
 		}
 
@@ -252,14 +252,14 @@ func (ws *Stack) DirectConfigSecretsInUse() []string {
 	var res []string
 	for _, resource := range ws.StackResources {
 		if resource.BuildConfig != nil && resource.BuildConfig.SourceContext.Git != nil &&
-			resource.BuildConfig.SourceContext.Git.GitSecretRef != nil {
-			res = append(res, resource.BuildConfig.SourceContext.Git.GitSecretRef.SecretID)
+			resource.BuildConfig.SourceContext.Git.IntegrationID != "" {
+			res = append(res, resource.BuildConfig.SourceContext.Git.IntegrationID)
 		}
-		if resource.ImageConfig != nil && resource.ImageConfig.PullSecretRef != nil {
-			res = append(res, resource.ImageConfig.PullSecretRef.SecretID)
+		if resource.ImageConfig != nil && resource.ImageConfig.RegistryCredentialID != "" {
+			res = append(res, resource.ImageConfig.RegistryCredentialID)
 		}
-		if resource.BuildConfig != nil && resource.BuildConfig.RegistrySecretRef != nil {
-			res = append(res, resource.BuildConfig.RegistrySecretRef.SecretID)
+		if resource.BuildConfig != nil && resource.BuildConfig.PushRegistryCredentialID != "" {
+			res = append(res, resource.BuildConfig.PushRegistryCredentialID)
 		}
 	}
 	return lo.Uniq(res)
@@ -341,8 +341,8 @@ func (s *Stack) GetGitCredentialsMap() map[string]string {
 	for i := range s.StackResources {
 		if s.StackResources[i].BuildConfig != nil &&
 			s.StackResources[i].BuildConfig.SourceContext.Git != nil &&
-			s.StackResources[i].BuildConfig.SourceContext.Git.GitSecretRef != nil {
-			gitCredentialsMap[s.StackResources[i].BuildConfig.SourceContext.Git.RepoURL] = s.StackResources[i].BuildConfig.SourceContext.Git.GitSecretRef.SecretID
+			s.StackResources[i].BuildConfig.SourceContext.Git.IntegrationID != "" {
+			gitCredentialsMap[s.StackResources[i].BuildConfig.SourceContext.Git.RepoURL] = s.StackResources[i].BuildConfig.SourceContext.Git.IntegrationID
 		}
 	}
 	return gitCredentialsMap
@@ -352,8 +352,8 @@ func (s *Stack) GetGitCredentialsMap() map[string]string {
 func (s *Stack) GetImagePullSecretIDMap() map[string]string {
 	imagePullSecretMap := make(map[string]string)
 	for i := range s.StackResources {
-		if s.StackResources[i].ImageConfig != nil && s.StackResources[i].ImageConfig.PullSecretRef != nil {
-			imagePullSecretMap[s.StackResources[i].ImageConfig.Image] = s.StackResources[i].ImageConfig.PullSecretRef.SecretID
+		if s.StackResources[i].ImageConfig != nil && s.StackResources[i].ImageConfig.RegistryCredentialID != "" {
+			imagePullSecretMap[s.StackResources[i].ImageConfig.Image] = s.StackResources[i].ImageConfig.RegistryCredentialID
 		}
 	}
 	return imagePullSecretMap
@@ -363,8 +363,8 @@ func (s *Stack) GetImagePullSecretIDMap() map[string]string {
 func (s *Stack) GetImagePushSecretIDMap() map[string]string {
 	imagePushSecretMap := make(map[string]string)
 	for i := range s.StackResources {
-		if s.StackResources[i].BuildConfig != nil && s.StackResources[i].BuildConfig.RegistrySecretRef != nil {
-			imagePushSecretMap[s.StackResources[i].Name] = s.StackResources[i].BuildConfig.RegistrySecretRef.SecretID
+		if s.StackResources[i].BuildConfig != nil && s.StackResources[i].BuildConfig.PushRegistryCredentialID != "" {
+			imagePushSecretMap[s.StackResources[i].Name] = s.StackResources[i].BuildConfig.PushRegistryCredentialID
 		}
 	}
 	return imagePushSecretMap

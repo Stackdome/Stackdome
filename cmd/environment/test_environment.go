@@ -313,7 +313,6 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	credentialResolver := services.NewCredentialResolver(services.CredentialResolverSpec{
-		SecretService:             secretService,
 		RegistryCredentialService: registryCredentialService,
 		GitIntegrationService:     gitIntegrationService,
 	})
@@ -672,12 +671,9 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 		PostgresAddonService: te.Services.PostgresAddonService,
 		VolumeService:        te.Services.VolumeService,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
-			SecretService:      te.Services.SecretService,
 			CredentialResolver: te.Services.CredentialResolver,
 		}),
-		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{
-			SecretFetcher: te.Services.SecretService,
-		}),
+		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{}),
 		Resolver: stackdeploy.NewResolver(stackdeploy.ResolverSpec{
 			VolumeService:        te.Services.VolumeService,
 			PostgresAddonService: te.Services.PostgresAddonService,
@@ -702,10 +698,8 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 		StackVolumeStore: pgstore.NewStackVolumeStore(pgstore.StackVolumeStoreSpec{
 			SessionFactory: te.DBSession,
 		}),
-		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
-			SecretService: te.Services.SecretService,
-		}),
-		Env: te.Env.Name,
+		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
+		Env:             te.Env.Name,
 	})
 	te.WorkerManager.RegisterWorker(volumeWorker, &models.Volume{})
 

@@ -357,7 +357,6 @@ Class | Method | HTTP request | Description
  - [Secret](docs/Secret.md)
  - [SecretData](docs/SecretData.md)
  - [SecretList](docs/SecretList.md)
- - [SecretRef](docs/SecretRef.md)
  - [SecretReference](docs/SecretReference.md)
  - [SecretType](docs/SecretType.md)
  - [SourceSpec](docs/SourceSpec.md)

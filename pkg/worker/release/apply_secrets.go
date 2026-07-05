@@ -37,7 +37,6 @@ func (r *applyReconciler) syncHubSecrets(ctx context.Context, clusterClient clie
 		imageUrl := resource.ImageConfig.Image
 		resolved, serr := r.credentialResolver.RegistryCredentials(ctx, stack.OrganisationID, imageUrl,
 			credentials.RegistryPurposePull, credentials.RegistryAuthSelector{
-				SecretRef:            resource.ImageConfig.PullSecretRef,
 				RegistryCredentialID: resource.ImageConfig.RegistryCredentialID,
 			})
 		if serr != nil {
@@ -53,13 +52,11 @@ func (r *applyReconciler) syncHubSecrets(ctx context.Context, clusterClient clie
 			continue
 		}
 		repo := resource.BuildConfig.BuildImageRepository
-		override := resource.BuildConfig.RegistrySecretRef
-		if override == nil && (repo.UseInClusterRegistry || repo.ExternalImageRef == "") {
+		if repo.UseInClusterRegistry || repo.ExternalImageRef == "" {
 			continue
 		}
 		resolved, serr := r.credentialResolver.RegistryCredentials(ctx, stack.OrganisationID, repo.ExternalImageRef,
 			credentials.RegistryPurposePush, credentials.RegistryAuthSelector{
-				SecretRef:            override,
 				RegistryCredentialID: resource.BuildConfig.PushRegistryCredentialID,
 			})
 		if serr != nil {
@@ -76,7 +73,7 @@ func (r *applyReconciler) syncHubSecrets(ctx context.Context, clusterClient clie
 		}
 		git := resource.BuildConfig.SourceContext.Git
 		resolved, serr := r.credentialResolver.GitCredentials(ctx, stack.OrganisationID, git.RepoURL,
-			credentials.GitAuthSelector{SecretRef: git.GitSecretRef, IntegrationID: git.IntegrationID})
+			credentials.GitAuthSelector{IntegrationID: git.IntegrationID})
 		if serr != nil {
 			return fmt.Errorf("failed to resolve git credentials for '%s': %w", git.RepoURL, serr)
 		}
@@ -112,12 +109,6 @@ func (r *applyReconciler) collectGitCredentialSecret(
 	var err error
 
 	switch resolved.Source {
-	case credentials.SourceSecretRef:
-		clusterSecret, err = r.secretBuilder.BuildGitCredentialsSecret(ctx, resolved.Secret, repoURL)
-		if err != nil {
-			return err
-		}
-		clusterSecret.Annotations[models.SecretIDAnnotation] = resolved.SecretID
 	case credentials.SourceIntegration:
 		secretName := credentials.ClusterSecretNameForGitHost(resolved.Host)
 		clusterSecret, err = r.secretBuilder.BuildGitCredentialsSecretFromCredentials(ctx, secretName, resolved.Credentials)
@@ -168,19 +159,6 @@ func (r *applyReconciler) collectRegistrySecret(
 	var err error
 
 	switch resolved.Source {
-	case credentials.SourceSecretRef:
-		if forRepository {
-			// Push target: synthesize a dockerconfigjson from the resolved raw
-			// credentials keyed by the real push repository's auth URL, so the
-			// synced secret matches the DockerConfigAuth the CR builder emits.
-			clusterSecret, err = r.secretBuilder.BuildDockerConfigJsonSecret(ctx, resolved.Secret.ClusterSecretName(), resolved.Username, resolved.Password, ref, insecure)
-		} else {
-			clusterSecret, err = r.secretBuilder.BuildDockerConfigJsonSecretForImage(ctx, resolved.Secret, ref)
-		}
-		if err != nil {
-			return err
-		}
-		clusterSecret.Annotations[models.SecretIDAnnotation] = resolved.SecretID
 	case credentials.SourceIntegration:
 		secretName := credentials.ClusterSecretNameForRegistryHost(resolved.Host, resolved.Purpose)
 		clusterSecret, err = r.secretBuilder.BuildDockerConfigJsonSecret(ctx, secretName, resolved.Username, resolved.Password, ref, insecure)

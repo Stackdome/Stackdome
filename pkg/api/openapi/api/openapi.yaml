@@ -10196,8 +10196,6 @@ components:
             id: id
           git_repo:
             repo_url: repo_url
-            git_secret:
-              secret_id: secret_id
         id: id
         stack_resource_name: stack_resource_name
         status:
@@ -10314,8 +10312,6 @@ components:
               id: id
             git_repo:
               repo_url: repo_url
-              git_secret:
-                secret_id: secret_id
           id: id
           stack_resource_name: stack_resource_name
           status:
@@ -10360,8 +10356,6 @@ components:
               id: id
             git_repo:
               repo_url: repo_url
-              git_secret:
-                secret_id: secret_id
           id: id
           stack_resource_name: stack_resource_name
           status:
@@ -11502,8 +11496,6 @@ components:
           id: id
         git_repo:
           repo_url: repo_url
-          git_secret:
-            secret_id: secret_id
       properties:
         volume:
           $ref: '#/components/schemas/BuildSourceContext_volume'
@@ -11523,16 +11515,6 @@ components:
           $ref: '#/components/schemas/BuildSourceRevision_volume_source_revision'
         git_repo_revision:
           $ref: '#/components/schemas/GitRepoRevision'
-      type: object
-    SecretRef:
-      additionalProperties: false
-      example:
-        secret_id: secret_id
-      properties:
-        secret_id:
-          type: string
-      required:
-      - secret_id
       type: object
     InitSpec:
       additionalProperties: false
@@ -14223,13 +14205,9 @@ components:
     BuildSourceContext_git_repo:
       example:
         repo_url: repo_url
-        git_secret:
-          secret_id: secret_id
       properties:
         repo_url:
           type: string
-        git_secret:
-          $ref: '#/components/schemas/SecretRef'
       required:
       - repo_url
       type: object

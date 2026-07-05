@@ -218,20 +218,10 @@ func presentSourceContext(context models.BuildContextSource) openapi.BuildSource
 		}
 	case context.Git != nil:
 		res.GitRepo = &openapi.BuildSourceContextGitRepo{
-			RepoUrl:   context.Git.RepoURL,
-			GitSecret: presentSecretRef(context.Git.GitSecretRef),
+			RepoUrl: context.Git.RepoURL,
 		}
 	}
 	return res
-}
-
-func presentSecretRef(ref *models.SecretReference) *openapi.SecretRef {
-	if ref == nil {
-		return nil
-	}
-	return &openapi.SecretRef{
-		SecretId: ref.SecretID,
-	}
 }
 
 func presentInitConfig(config *models.InitConfig) *openapi.InitSpec {

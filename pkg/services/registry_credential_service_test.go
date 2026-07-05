@@ -193,8 +193,8 @@ func TestRegistryCredentialDeleteReportsAffectedStacks(t *testing.T) {
 			ID: "stack-explicit-ref", Name: "explicit-ref",
 			StackResources: []*models.StackResource{
 				{Name: "web", ImageConfig: &models.ImageConfigSpec{
-					Image:         "ghcr.io/acme/app:1",
-					PullSecretRef: &models.SecretReference{SecretID: "sec-1"},
+					Image:                "ghcr.io/acme/app:1",
+					RegistryCredentialID: "rc-other",
 				}},
 			},
 		},

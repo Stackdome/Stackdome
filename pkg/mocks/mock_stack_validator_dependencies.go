@@ -99,34 +99,6 @@ func (mr *MocksecretServiceMockRecorder) InternalGetByID(ctx, ID any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetByID", reflect.TypeOf((*MocksecretService)(nil).InternalGetByID), ctx, ID)
 }
 
-// ValidateGitSecretForStackResource mocks base method.
-func (m *MocksecretService) ValidateGitSecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateGitSecretForStackResource", ctx, secretID)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// ValidateGitSecretForStackResource indicates an expected call of ValidateGitSecretForStackResource.
-func (mr *MocksecretServiceMockRecorder) ValidateGitSecretForStackResource(ctx, secretID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateGitSecretForStackResource", reflect.TypeOf((*MocksecretService)(nil).ValidateGitSecretForStackResource), ctx, secretID)
-}
-
-// ValidateImageRegistrySecretForStackResource mocks base method.
-func (m *MocksecretService) ValidateImageRegistrySecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateImageRegistrySecretForStackResource", ctx, secretID)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// ValidateImageRegistrySecretForStackResource indicates an expected call of ValidateImageRegistrySecretForStackResource.
-func (mr *MocksecretServiceMockRecorder) ValidateImageRegistrySecretForStackResource(ctx, secretID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateImageRegistrySecretForStackResource", reflect.TypeOf((*MocksecretService)(nil).ValidateImageRegistrySecretForStackResource), ctx, secretID)
-}
-
 // ValidateSecretExists mocks base method.
 func (m *MocksecretService) ValidateSecretExists(ctx context.Context, secretID string) (bool, *errors.ServiceError) {
 	m.ctrl.T.Helper()

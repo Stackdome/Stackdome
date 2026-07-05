@@ -110,15 +110,6 @@ func extractReferences(stack *models.Stack) []models.ResourceReference {
 	}
 
 	for _, r := range stack.StackResources {
-		if r.HasGitCredentials() {
-			add(models.ReferentSecret, r.BuildConfig.SourceContext.Git.GitSecretRef.SecretID, models.RelationGitCredential)
-		}
-		if r.HasImagePullSecrets() {
-			add(models.ReferentSecret, r.ImageConfig.PullSecretRef.SecretID, models.RelationImagePull)
-		}
-		if r.HasImagePushSecrets() {
-			add(models.ReferentSecret, r.BuildConfig.RegistrySecretRef.SecretID, models.RelationImagePush)
-		}
 		add(models.ReferentRegistryCredential, r.RegistryPullCredentialID(), models.RelationImagePull)
 		add(models.ReferentRegistryCredential, r.RegistryPushCredentialID(), models.RelationImagePush)
 		add(models.ReferentGitIntegration, r.GitIntegrationID(), models.RelationGitCredential)

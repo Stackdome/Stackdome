@@ -18,8 +18,8 @@ func TestExtractReferences(t *testing.T) {
 			{Kind: models.ConnectionKindVolumeMount, From: models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "uploads"}, To: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"}},
 		},
 		StackResources: []*models.StackResource{
-			{Name: "web", ImageConfig: &models.ImageConfigSpec{Image: "x", PullSecretRef: &models.SecretReference{SecretID: "sec-pull"}}},
-			{Name: "web", ImageConfig: &models.ImageConfigSpec{Image: "x", PullSecretRef: &models.SecretReference{SecretID: "sec-pull"}}}, // dup => deduped
+			{Name: "web", ImageConfig: &models.ImageConfigSpec{Image: "x", RegistryCredentialID: "rc-web"}},
+			{Name: "web", ImageConfig: &models.ImageConfigSpec{Image: "x", RegistryCredentialID: "rc-web"}}, // dup => deduped
 			{Name: "api", ImageConfig: &models.ImageConfigSpec{Image: "x", RegistryCredentialID: "rc-pull"}},
 			{Name: "builder", BuildConfig: &models.BuildConfigSpec{
 				PushRegistryCredentialID: "rc-push",
@@ -34,7 +34,7 @@ func TestExtractReferences(t *testing.T) {
 		"secret|sec-1|env":                       true,
 		"postgres_addon|pg-1|env":                true,
 		"volume|vol-1|volume_mount":              true,
-		"secret|sec-pull|image_pull":             true,
+		"registry_credential|rc-web|image_pull":  true,
 		"registry_credential|rc-pull|image_pull": true,
 		"registry_credential|rc-push|image_push": true,
 		"git_integration|gi-1|git_credential":    true,

@@ -119,12 +119,9 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		PostgresAddonService: d.Services.PostgresAddonService,
 		VolumeService:        d.Services.VolumeService,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
-			SecretService:      d.Services.SecretService,
 			CredentialResolver: d.Services.CredentialResolver,
 		}),
-		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{
-			SecretFetcher: d.Services.SecretService,
-		}),
+		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{}),
 		Resolver: stackdeploy.NewResolver(stackdeploy.ResolverSpec{
 			VolumeService:        d.Services.VolumeService,
 			PostgresAddonService: d.Services.PostgresAddonService,
@@ -149,10 +146,8 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		StackVolumeStore: pgstore.NewStackVolumeStore(pgstore.StackVolumeStoreSpec{
 			SessionFactory: d.DBSession,
 		}),
-		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
-			SecretService: d.Services.SecretService,
-		}),
-		Env: d.Env.Name,
+		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
+		Env:             d.Env.Name,
 	})
 	d.WorkerManager.RegisterWorker(volumeWorker, &models.Volume{})
 
@@ -433,7 +428,6 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	credentialResolver := services.NewCredentialResolver(services.CredentialResolverSpec{
-		SecretService:             secretService,
 		RegistryCredentialService: registryCredentialService,
 		GitIntegrationService:     gitIntegrationService,
 	})

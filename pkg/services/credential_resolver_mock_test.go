@@ -18,45 +18,6 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockcredentialSecretFetcher is a mock of credentialSecretFetcher interface.
-type MockcredentialSecretFetcher struct {
-	ctrl     *gomock.Controller
-	recorder *MockcredentialSecretFetcherMockRecorder
-	isgomock struct{}
-}
-
-// MockcredentialSecretFetcherMockRecorder is the mock recorder for MockcredentialSecretFetcher.
-type MockcredentialSecretFetcherMockRecorder struct {
-	mock *MockcredentialSecretFetcher
-}
-
-// NewMockcredentialSecretFetcher creates a new mock instance.
-func NewMockcredentialSecretFetcher(ctrl *gomock.Controller) *MockcredentialSecretFetcher {
-	mock := &MockcredentialSecretFetcher{ctrl: ctrl}
-	mock.recorder = &MockcredentialSecretFetcherMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockcredentialSecretFetcher) EXPECT() *MockcredentialSecretFetcherMockRecorder {
-	return m.recorder
-}
-
-// InternalGetByID mocks base method.
-func (m *MockcredentialSecretFetcher) InternalGetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalGetByID", ctx, ID)
-	ret0, _ := ret[0].(*models.Secret)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// InternalGetByID indicates an expected call of InternalGetByID.
-func (mr *MockcredentialSecretFetcherMockRecorder) InternalGetByID(ctx, ID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetByID", reflect.TypeOf((*MockcredentialSecretFetcher)(nil).InternalGetByID), ctx, ID)
-}
-
 // MockgitIntegrationResolverSource is a mock of gitIntegrationResolverSource interface.
 type MockgitIntegrationResolverSource struct {
 	ctrl     *gomock.Controller

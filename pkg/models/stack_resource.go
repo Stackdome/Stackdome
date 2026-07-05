@@ -35,7 +35,7 @@ type StackResource struct {
 }
 
 func (s *StackResource) HasImagePullSecrets() bool {
-	if s.ImageConfig != nil && s.ImageConfig.PullSecretRef != nil {
+	if s.ImageConfig != nil && s.ImageConfig.RegistryCredentialID != "" {
 		return true
 	}
 	return false
@@ -43,7 +43,7 @@ func (s *StackResource) HasImagePullSecrets() bool {
 
 // HasImagePushSecrets checks if any stack resource has an image push secret configured.
 func (s *StackResource) HasImagePushSecrets() bool {
-	if s.BuildConfig != nil && s.BuildConfig.RegistrySecretRef != nil {
+	if s.BuildConfig != nil && s.BuildConfig.PushRegistryCredentialID != "" {
 		return true
 	}
 	return false
@@ -52,7 +52,7 @@ func (s *StackResource) HasImagePushSecrets() bool {
 func (s *StackResource) HasGitCredentials() bool {
 	if s.BuildConfig != nil &&
 		s.BuildConfig.SourceContext.Git != nil &&
-		s.BuildConfig.SourceContext.Git.GitSecretRef != nil {
+		s.BuildConfig.SourceContext.Git.IntegrationID != "" {
 		return true
 	}
 	return false
@@ -178,9 +178,8 @@ type LifecycleConfig struct {
 }
 
 type ImageConfigSpec struct {
-	Image           string           `json:"image"`
-	ImagePullPolicy string           `json:"image_pull_policy,omitempty"`
-	PullSecretRef   *SecretReference `json:"pull_secret_ref,omitempty"`
+	Image           string `json:"image"`
+	ImagePullPolicy string `json:"image_pull_policy,omitempty"`
 	// RegistryCredentialID pins an org-level registry credential for image
 	// pulls, overriding host auto-attach.
 	RegistryCredentialID string `json:"registry_credential_id,omitempty"`

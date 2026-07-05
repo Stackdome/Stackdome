@@ -24,8 +24,6 @@ type organisationDomainService interface {
 }
 
 type secretService interface {
-	ValidateImageRegistrySecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError
-	ValidateGitSecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError
 	ValidateSecretHasKeys(ctx context.Context, secretID string, requiredKeys []string) (bool, []string, *errors.ServiceError)
 	ValidateSecretExists(ctx context.Context, secretID string) (bool, *errors.ServiceError)
 	InternalGetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError)
@@ -337,7 +335,6 @@ func resourceNeedsSourceProbe(existing, desired *models.StackResource) bool {
 type imageSourceView struct {
 	present              bool
 	image                string
-	pullSecretID         string
 	registryCredentialID string
 }
 
@@ -345,15 +342,11 @@ func imageSourceOf(r *models.StackResource) imageSourceView {
 	if r == nil || r.ImageConfig == nil {
 		return imageSourceView{}
 	}
-	view := imageSourceView{
+	return imageSourceView{
 		present:              true,
 		image:                r.ImageConfig.Image,
 		registryCredentialID: r.ImageConfig.RegistryCredentialID,
 	}
-	if r.ImageConfig.PullSecretRef != nil {
-		view.pullSecretID = r.ImageConfig.PullSecretRef.SecretID
-	}
-	return view
 }
 
 // buildSourceView is a flat, comparable projection of the push/git-probe-relevant
@@ -361,7 +354,6 @@ func imageSourceOf(r *models.StackResource) imageSourceView {
 type buildSourceView struct {
 	present            bool
 	gitRepoURL         string
-	gitSecretID        string
 	gitIntegrationID   string
 	volumeSourceName   string
 	revBranch          string
@@ -374,7 +366,6 @@ type buildSourceView struct {
 	useInClusterReg    bool
 	clusterRegName     string
 	externalImageRef   string
-	pushSecretID       string
 	pushRegistryCredID string
 }
 
@@ -396,9 +387,6 @@ func buildSourceOf(r *models.StackResource) buildSourceView {
 	if git := b.SourceContext.Git; git != nil {
 		view.gitRepoURL = git.RepoURL
 		view.gitIntegrationID = git.IntegrationID
-		if git.GitSecretRef != nil {
-			view.gitSecretID = git.GitSecretRef.SecretID
-		}
 	}
 	if vol := b.SourceContext.Volume; vol != nil {
 		view.volumeSourceName = vol.SourceVolumeName
@@ -410,9 +398,6 @@ func buildSourceOf(r *models.StackResource) buildSourceView {
 	}
 	if rev := b.SourceRevision.Volume; rev != nil {
 		view.revVolumeHash = rev.CurrentVolumeHash
-	}
-	if b.RegistrySecretRef != nil {
-		view.pushSecretID = b.RegistrySecretRef.SecretID
 	}
 	return view
 }
@@ -435,12 +420,6 @@ func (v *stackValidator) validateImageConfig(ctx context.Context, orgID string, 
 		return errors.BadRequest("stack resource '%s' has invalid image config: %s", resource.Name, err.Error())
 	}
 
-	if resource.ImageConfig.PullSecretRef != nil {
-		if err := v.validateRegistrySecretRef(ctx, resource, resource.ImageConfig.PullSecretRef, credentials.RegistryPurposePull); err != nil {
-			return err
-		}
-	}
-
 	if !probe {
 		return nil
 	}
@@ -455,7 +434,6 @@ func (v *stackValidator) validateImagePullable(ctx context.Context, orgID string
 	}
 
 	resolved, serr := v.credentialResolver.RegistryCredentials(ctx, orgID, imageRef, credentials.RegistryPurposePull, credentials.RegistryAuthSelector{
-		SecretRef:            resource.ImageConfig.PullSecretRef,
 		RegistryCredentialID: resource.ImageConfig.RegistryCredentialID,
 	})
 	if serr != nil {
@@ -513,28 +491,10 @@ func (v *stackValidator) validateBuildConfig(ctx context.Context, orgID string, 
 		}
 	}
 
-	if resource.BuildConfig.RegistrySecretRef != nil {
-		if err := v.validateRegistrySecretRef(ctx, resource, resource.BuildConfig.RegistrySecretRef, credentials.RegistryPurposePush); err != nil {
-			return err
-		}
-	}
-
 	if !probe {
 		return nil
 	}
 	return v.validatePushAccess(ctx, orgID, resource)
-}
-
-func (v *stackValidator) validateRegistrySecretRef(ctx context.Context, resource *models.StackResource, secretRef *models.SecretReference, purpose credentials.RegistryPurpose) *errors.ServiceError {
-	if secretRef.SecretID == "" {
-		return errors.BadRequest("stack resource '%s' has empty %s secret ID", resource.Name, purpose)
-	}
-
-	if err := v.secretService.ValidateImageRegistrySecretForStackResource(ctx, secretRef.SecretID); err != nil {
-		return errors.BadRequest("stack resource '%s' has invalid %s secret: %s", resource.Name, purpose, err.Error())
-	}
-
-	return nil
 }
 
 func (v *stackValidator) validatePushAccess(ctx context.Context, orgID string, resource *models.StackResource) *errors.ServiceError {
@@ -546,7 +506,6 @@ func (v *stackValidator) validatePushAccess(ctx context.Context, orgID string, r
 	}
 
 	resolved, serr := v.credentialResolver.RegistryCredentials(ctx, orgID, repo.ExternalImageRef, credentials.RegistryPurposePush, credentials.RegistryAuthSelector{
-		SecretRef:            resource.BuildConfig.RegistrySecretRef,
 		RegistryCredentialID: resource.BuildConfig.PushRegistryCredentialID,
 	})
 	if serr != nil {
@@ -599,14 +558,6 @@ func isClusterLocalRegistryRef(ref string) bool {
 }
 
 func (v *stackValidator) validateGitSource(ctx context.Context, orgID string, resource *models.StackResource, probe bool) *errors.ServiceError {
-	git := resource.BuildConfig.SourceContext.Git
-
-	if git.GitSecretRef != nil {
-		if err := v.validateGitWithSecret(ctx, resource); err != nil {
-			return err
-		}
-	}
-
 	if !probe {
 		return nil
 	}
@@ -617,7 +568,6 @@ func (v *stackValidator) validateGitCloneAccess(ctx context.Context, orgID strin
 	git := resource.BuildConfig.SourceContext.Git
 
 	resolved, serr := v.credentialResolver.GitCredentials(ctx, orgID, git.RepoURL, credentials.GitAuthSelector{
-		SecretRef:     git.GitSecretRef,
 		IntegrationID: git.IntegrationID,
 	})
 	if serr != nil {
@@ -651,20 +601,6 @@ func (v *stackValidator) validateGitCloneAccess(ctx context.Context, orgID strin
 			return errors.GeneralError("failed to check git access for stack resource '%s': %s", resource.Name, err.Error())
 		}
 	}
-	return nil
-}
-
-func (v *stackValidator) validateGitWithSecret(ctx context.Context, resource *models.StackResource) *errors.ServiceError {
-	secretRef := resource.BuildConfig.SourceContext.Git.GitSecretRef
-
-	if secretRef.SecretID == "" {
-		return errors.BadRequest("stack resource '%s' has empty git secret ID", resource.Name)
-	}
-
-	if err := v.secretService.ValidateGitSecretForStackResource(ctx, secretRef.SecretID); err != nil {
-		return errors.BadRequest("stack resource '%s' has invalid git secret: %s", resource.Name, err.Error())
-	}
-
 	return nil
 }
 

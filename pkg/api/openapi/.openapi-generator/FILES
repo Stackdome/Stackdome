@@ -159,7 +159,6 @@ docs/ScopeResource.md
 docs/Secret.md
 docs/SecretData.md
 docs/SecretList.md
-docs/SecretRef.md
 docs/SecretReference.md
 docs/SecretType.md
 docs/SourceSpec.md
@@ -372,7 +371,6 @@ model_scope_resource.go
 model_secret.go
 model_secret_data.go
 model_secret_list.go
-model_secret_ref.go
 model_secret_reference.go
 model_secret_type.go
 model_source_spec.go

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
-	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/google/go-containerregistry/pkg/name"
 	corev1 "k8s.io/api/core/v1"
@@ -20,11 +19,8 @@ import (
 const tokenAuthPlaceholderUsername = "username"
 
 type SecretBuilder interface {
-	BuildDockerConfigJsonSecretForImage(ctx context.Context, secret *models.Secret, imageUrl string) (*corev1.Secret, error)
-	BuildGitCredentialsSecret(ctx context.Context, secret *models.Secret, repoUrl string) (*corev1.Secret, error)
 	// BuildDockerConfigJsonSecret synthesizes a dockerconfigjson secret from
-	// raw credentials — used for org-level registry credentials and explicit
-	// push secret refs that resolve to raw username/password. ref may be an
+	// raw credentials — used for org-level registry credentials. ref may be an
 	// image or repository reference; insecure derives an http:// auth URL for
 	// in-cluster/plain-HTTP registries.
 	BuildDockerConfigJsonSecret(ctx context.Context, secretName, username, password, ref string, insecure bool) (*corev1.Secret, error)
@@ -34,124 +30,12 @@ type SecretBuilder interface {
 	BuildGitCredentialsSecretFromCredentials(ctx context.Context, secretName string, creds gitclient.GitCredentials) (*corev1.Secret, error)
 }
 
-type secretBuilder struct {
-	secretFetcher secretFetcher
-}
+type secretBuilder struct{}
 
-type secretFetcher interface {
-	InternalGetByID(ctx context.Context, secretID string) (*models.Secret, *errors.ServiceError)
-}
-
-type SecretBuilderSpec struct {
-	SecretFetcher secretFetcher
-}
+type SecretBuilderSpec struct{}
 
 func NewSecretBuilder(spec SecretBuilderSpec) SecretBuilder {
-	return &secretBuilder{
-		secretFetcher: spec.SecretFetcher,
-	}
-}
-
-func (b *secretBuilder) BuildDockerConfigJsonSecretForImage(ctx context.Context, secret *models.Secret, imageUrl string) (*corev1.Secret, error) {
-	secretID := secret.ID
-	if secret.Type != models.SecretTypeDockerRegistry {
-		return nil, fmt.Errorf("secret with ID %s is not a Docker Registry secret", secretID)
-	}
-	authURL, err := getAuthURLFromImage(imageUrl, false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get auth URL from image: %w", err)
-	}
-
-	userName, ok := secret.Data[models.UsernameSecretKey]
-	if !ok {
-		return nil, fmt.Errorf("secret with ID %s does not contain username", secretID)
-	}
-	password, ok := secret.Data[models.PasswordSecretKey]
-	if !ok {
-		return nil, fmt.Errorf("secret with ID %s does not contain password", secretID)
-	}
-	if len(userName) == 0 || len(password) == 0 {
-		return nil, fmt.Errorf("username or password is empty in secret with ID %s", secretID)
-	}
-
-	dockerConfig := map[string]interface{}{
-		"auths": map[string]interface{}{
-			authURL: map[string]interface{}{
-				"username": userName,
-				"password": password,
-				"auth":     base64.StdEncoding.EncodeToString([]byte(userName + ":" + password)),
-			},
-		},
-	}
-
-	dockerConfigJson, err := json.Marshal(dockerConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal docker config JSON: %w", err)
-	}
-
-	// Namespace is not added, the caller is supposed to add it
-	res := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        secret.ClusterSecretName(),
-			Annotations: map[string]string{},
-			Labels:      map[string]string{},
-		},
-		Type: corev1.SecretTypeDockerConfigJson,
-		Data: map[string][]byte{
-			corev1.DockerConfigJsonKey: dockerConfigJson,
-		},
-	}
-	return res, nil
-}
-
-func (b *secretBuilder) BuildGitCredentialsSecret(ctx context.Context, secret *models.Secret, repoUrl string) (*corev1.Secret, error) {
-	secretID := secret.ID
-
-	if secret.Type != models.SecretTypeGitCredentials {
-		return nil, fmt.Errorf("secret with ID %s is not a Git Credentials secret", secretID)
-	}
-
-	token, ok := secret.Data[models.TokenSecretKey]
-	if ok && len(token) > 0 {
-		// If token is present, use it for authentication
-		userName := tokenAuthPlaceholderUsername // token-based auth doesn't require a username
-		res := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        secret.ClusterSecretName(),
-				Annotations: map[string]string{},
-				Labels:      map[string]string{},
-			},
-			StringData: map[string]string{
-				models.UsernameSecretKey: userName,
-				models.PasswordSecretKey: token,
-			},
-		}
-		return res, nil
-	}
-
-	userName, ok := secret.Data[models.UsernameSecretKey]
-	if !ok {
-		return nil, fmt.Errorf("secret with ID %s does not contain username", secretID)
-	}
-	password, ok := secret.Data[models.PasswordSecretKey]
-	if !ok {
-		return nil, fmt.Errorf("secret with ID %s does not contain password", secretID)
-	}
-	if len(userName) == 0 || len(password) == 0 {
-		return nil, fmt.Errorf("username or password is empty in secret with ID %s", secretID)
-	}
-
-	res := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        secret.ClusterSecretName(),
-			Annotations: map[string]string{},
-		},
-		StringData: map[string]string{
-			models.UsernameSecretKey: userName,
-			models.PasswordSecretKey: password,
-		},
-	}
-	return res, nil
+	return &secretBuilder{}
 }
 
 func (b *secretBuilder) BuildDockerConfigJsonSecret(ctx context.Context, secretName, username, password, ref string, insecure bool) (*corev1.Secret, error) {

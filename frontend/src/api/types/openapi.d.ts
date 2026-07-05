@@ -8184,7 +8184,6 @@ export interface components {
             };
             git_repo?: {
                 repo_url: string;
-                git_secret?: components["schemas"]["SecretRef"];
             };
         };
         BuildSourceRevision: {
@@ -8192,9 +8191,6 @@ export interface components {
                 current_volume_hash: string;
             };
             git_repo_revision?: components["schemas"]["GitRepoRevision"];
-        };
-        SecretRef: {
-            secret_id: string;
         };
         InitSpec: {
             command?: string[];

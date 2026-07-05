@@ -68,7 +68,6 @@ func (s *defaultBranchResolver) ResolveDefaultBranch(ctx context.Context, stack 
 
 	git := resource.BuildConfig.SourceContext.Git
 	resolved, serr := s.resolver.GitCredentials(ctx, stack.OrganisationID, git.RepoURL, credentials.GitAuthSelector{
-		SecretRef:     git.GitSecretRef,
 		IntegrationID: git.IntegrationID,
 	})
 	if serr != nil {

@@ -12,17 +12,14 @@ import (
 
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
 	"github.com/Stackdome/stackdome/pkg/errors"
-	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 // Source identifies where a resolved credential came from.
 type Source string
 
 const (
-	// SourceSecretRef is an explicit per-resource secret reference.
-	SourceSecretRef Source = "secret_ref"
 	// SourceIntegration is an org-level integration matched by host
-	// (registry credentials / git integrations; filled in by later phases).
+	// (registry credentials / git integrations).
 	SourceIntegration Source = "integration"
 	// SourceAnonymous means no credentials apply.
 	SourceAnonymous Source = "anonymous"
@@ -39,7 +36,6 @@ const (
 type ResolvedGitCredential struct {
 	Source      Source
 	Credentials gitclient.GitCredentials // zero value == anonymous
-	SecretID    string                   // set when Source == SourceSecretRef
 	DataHash    string                   // for SecretDataHashAnnotation / release freezing
 
 	// IntegrationID and Host identify the org-level git integration when
@@ -51,18 +47,12 @@ type ResolvedGitCredential struct {
 	// GitHub App installation token; they drive hub-side refresh.
 	TokenMintedAt  *time.Time
 	TokenExpiresAt *time.Time
-
-	// Secret is the backing secret when Source == SourceSecretRef. The
-	// cluster secret builders still consume models.Secret; this goes away
-	// once they take raw credentials instead.
-	Secret *models.Secret
 }
 
 type ResolvedRegistryCredential struct {
 	Source   Source
 	Username string
 	Password string
-	SecretID string
 	DataHash string
 
 	// CredentialID and Host identify the org-level registry credential when
@@ -75,10 +65,6 @@ type ResolvedRegistryCredential struct {
 	// org-level credentials: a pull credential and a push credential can share
 	// the same host but hold different accounts, so they must not collide.
 	Purpose RegistryPurpose
-
-	// Secret is the backing secret when Source == SourceSecretRef; see
-	// ResolvedGitCredential.Secret.
-	Secret *models.Secret
 }
 
 const maxClusterSecretNameLen = 63
@@ -150,7 +136,6 @@ func sanitizeHostForSecretName(host string) string {
 // GitAuthSelector carries the explicit per-resource overrides for git
 // credential resolution. The zero value selects no override.
 type GitAuthSelector struct {
-	SecretRef *models.SecretReference
 	// IntegrationID pins an org-level git integration; resolution lands with
 	// git integrations.
 	IntegrationID string
@@ -159,7 +144,6 @@ type GitAuthSelector struct {
 // RegistryAuthSelector carries the explicit per-resource overrides for
 // registry credential resolution. The zero value selects no override.
 type RegistryAuthSelector struct {
-	SecretRef *models.SecretReference
 	// RegistryCredentialID pins an org-level registry credential, overriding
 	// host auto-attach.
 	RegistryCredentialID string

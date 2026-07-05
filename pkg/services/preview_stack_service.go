@@ -436,7 +436,7 @@ func (s *previewStackService) applyIntegrationFromConfig(stack *models.Stack, co
 			continue
 		}
 		git := res.BuildConfig.SourceContext.Git
-		if git.GitSecretRef != nil || git.IntegrationID != "" {
+		if git.IntegrationID != "" {
 			continue
 		}
 		if normalizeRepoURL(git.RepoURL) != normalizeRepoURL(config.GitRepository.RepoURL) {

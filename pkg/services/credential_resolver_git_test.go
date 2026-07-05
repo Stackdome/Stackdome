@@ -13,18 +13,16 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func newResolverWithGitIntegrations(t *testing.T) (CredentialResolver, *MockcredentialSecretFetcher, *MockgitIntegrationResolverSource) {
+func newResolverWithGitIntegrations(t *testing.T) (CredentialResolver, *MockgitIntegrationResolverSource) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
-	secrets := NewMockcredentialSecretFetcher(ctrl)
 	gitIntegrations := NewMockgitIntegrationResolverSource(ctrl)
 	resolver := NewCredentialResolver(CredentialResolverSpec{
-		SecretService:         secrets,
 		GitIntegrationService: gitIntegrations,
 	})
-	return resolver, secrets, gitIntegrations
+	return resolver, gitIntegrations
 }
 
 func TestGitCredentialsAttachesIntegrationByHost(t *testing.T) {
@@ -41,7 +39,7 @@ func TestGitCredentialsAttachesIntegrationByHost(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			resolver, _, gitIntegrations := newResolverWithGitIntegrations(t)
+			resolver, gitIntegrations := newResolverWithGitIntegrations(t)
 
 			gitIntegrations.EXPECT().
 				InternalGetForHost(gomock.Any(), "org-1", tc.host).
@@ -72,7 +70,7 @@ func TestGitCredentialsAttachesIntegrationByHost(t *testing.T) {
 }
 
 func TestGitCredentialsExplicitIntegrationIDWins(t *testing.T) {
-	resolver, _, gitIntegrations := newResolverWithGitIntegrations(t)
+	resolver, gitIntegrations := newResolverWithGitIntegrations(t)
 
 	// Strict mock: no InternalGetForHost expectation — the explicit ID must win.
 	gitIntegrations.EXPECT().
@@ -99,28 +97,8 @@ func TestGitCredentialsExplicitIntegrationIDWins(t *testing.T) {
 	}
 }
 
-func TestGitCredentialsSecretRefWinsOverIntegration(t *testing.T) {
-	resolver, secrets, _ := newResolverWithGitIntegrations(t)
-
-	// Strict mock: no integration lookups — the secret ref tier must win.
-	secrets.EXPECT().InternalGetByID(gomock.Any(), "sec-1").Return(&models.Secret{
-		ID:   "sec-1",
-		Data: map[string]string{models.TokenSecretKey: "sec-token"},
-	}, nil)
-
-	resolved, serr := resolver.GitCredentials(context.Background(), "org-1", "https://gitlab.example.com/acme/api", credentials.GitAuthSelector{
-		SecretRef: &models.SecretReference{SecretID: "sec-1"},
-	})
-	if serr != nil {
-		t.Fatalf("unexpected error: %v", serr)
-	}
-	if resolved.Source != CredentialSourceSecretRef {
-		t.Fatalf("expected secret ref to win, got %q", resolved.Source)
-	}
-}
-
 func TestGitCredentialsIntegrationOrgMismatchIsNotFound(t *testing.T) {
-	resolver, _, gitIntegrations := newResolverWithGitIntegrations(t)
+	resolver, gitIntegrations := newResolverWithGitIntegrations(t)
 
 	gitIntegrations.EXPECT().
 		InternalGetByID(gomock.Any(), "gi-other").
@@ -137,7 +115,7 @@ func TestGitCredentialsIntegrationOrgMismatchIsNotFound(t *testing.T) {
 }
 
 func TestGitCredentialsMintsGitHubAppTokenByOwner(t *testing.T) {
-	resolver, _, gitIntegrations := newResolverWithGitIntegrations(t)
+	resolver, gitIntegrations := newResolverWithGitIntegrations(t)
 
 	mintedAt := time.Now().UTC()
 	expiresAt := mintedAt.Add(time.Hour)
@@ -171,7 +149,7 @@ func TestGitCredentialsMintsGitHubAppTokenByOwner(t *testing.T) {
 }
 
 func TestGitCredentialsGitHubAppFallsThroughToCredentials(t *testing.T) {
-	resolver, _, gitIntegrations := newResolverWithGitIntegrations(t)
+	resolver, gitIntegrations := newResolverWithGitIntegrations(t)
 
 	// No installation covers the owner; a git_credentials row for github.com
 	// still applies.
@@ -198,7 +176,7 @@ func TestGitCredentialsGitHubAppFallsThroughToCredentials(t *testing.T) {
 }
 
 func TestGitCredentialsFallsBackToAnonymousWhenNoIntegration(t *testing.T) {
-	resolver, _, gitIntegrations := newResolverWithGitIntegrations(t)
+	resolver, gitIntegrations := newResolverWithGitIntegrations(t)
 
 	gitIntegrations.EXPECT().
 		InternalMintForRepo(gomock.Any(), "org-1", "https://github.com/acme/api").

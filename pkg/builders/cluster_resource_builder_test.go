@@ -1,29 +1,15 @@
 package builders
 
 import (
-	"context"
 	"strings"
 	"testing"
 
 	"github.com/Stackdome/stackdome/pkg/credentials"
-	pkgerrors "github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
-	corev1 "k8s.io/api/core/v1"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
-
-type stubSecretFetcher struct {
-	secrets map[string]*models.Secret
-}
-
-func (s *stubSecretFetcher) InternalGetByID(_ context.Context, secretID string) (*models.Secret, *pkgerrors.ServiceError) {
-	if sec, ok := s.secrets[secretID]; ok {
-		return sec, nil
-	}
-	return nil, pkgerrors.NotFound("secret %s not found", secretID)
-}
 
 func TestShouldEnableTLS(t *testing.T) {
 	tests := []struct {
@@ -180,34 +166,6 @@ func TestBuildImageRepositorySpec(t *testing.T) {
 		}
 		if !got.External.TLS.Insecure {
 			t.Error("expected TLS.Insecure to be true")
-		}
-	})
-
-	t.Run("external with push secret", func(t *testing.T) {
-		fetcher := &stubSecretFetcher{secrets: map[string]*models.Secret{
-			"secret-1": {Name: "push-secret", Type: models.SecretTypeUsernamePassword},
-		}}
-		b := &clusterResourceBuilder{secretService: fetcher}
-		cfg := &models.BuildConfigSpec{
-			BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
-			RegistrySecretRef:    &models.SecretReference{SecretID: "secret-1"},
-		}
-		got, err := b.buildImageRepositorySpec(cfg, "org", "stack", "res")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got.Auth == nil || got.Auth.DockerConfig == nil {
-			t.Fatal("expected Auth.DockerConfig to be set")
-		}
-		if got.Auth.Basic != nil {
-			t.Error("expected Auth.Basic to be nil for an explicit push secret ref")
-		}
-		wantName := fetcher.secrets["secret-1"].ClusterSecretName()
-		if got.Auth.DockerConfig.SecretRef == nil || got.Auth.DockerConfig.SecretRef.Name != wantName {
-			t.Errorf("SecretRef.Name = %v, want %q", got.Auth.DockerConfig.SecretRef, wantName)
-		}
-		if got.Auth.DockerConfig.SecretKey != corev1.DockerConfigJsonKey {
-			t.Errorf("SecretKey = %q, want %q", got.Auth.DockerConfig.SecretKey, corev1.DockerConfigJsonKey)
 		}
 	})
 

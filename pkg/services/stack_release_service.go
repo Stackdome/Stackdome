@@ -371,7 +371,6 @@ func (s *stackReleaseService) resolveGitSHA(ctx context.Context, orgID string, r
 	gitSource := res.BuildConfig.SourceContext.Git
 	repoURL := gitSource.RepoURL
 	resolved, serr := s.credentialResolver.GitCredentials(ctx, orgID, repoURL, credentials.GitAuthSelector{
-		SecretRef:     gitSource.GitSecretRef,
 		IntegrationID: gitSource.IntegrationID,
 	})
 	if serr != nil {

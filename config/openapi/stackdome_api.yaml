@@ -5617,8 +5617,6 @@ components:
           properties:
             repo_url:
               type: string
-            git_secret:
-              $ref: '#/components/schemas/SecretRef'
     BuildSourceRevision:
       type: object
       properties:
@@ -5631,15 +5629,6 @@ components:
               type: string
         git_repo_revision:
           $ref: '#/components/schemas/GitRepoRevision'
-
-    SecretRef:
-      type: object
-      additionalProperties: false
-      required:
-        - secret_id
-      properties:
-        secret_id:
-          type: string
 
     InitSpec:
       type: object

@@ -1020,84 +1020,6 @@ func containsSubstr(s, sub string) bool {
 	return false
 }
 
-func TestValidateForCreatePushSecretHappyPath(t *testing.T) {
-	v, secrets := newValidatorWithMockedSecretService(t)
-	secrets.EXPECT().ValidateImageRegistrySecretForStackResource(gomock.Any(), "push-secret-1").Return(nil)
-
-	spec := &models.Stack{
-		Name:           "test",
-		OrganisationID: "org-1",
-		UserID:         "user-1",
-		StackResources: []*models.StackResource{
-			{
-				Name: "api",
-				BuildConfig: &models.BuildConfigSpec{
-					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
-					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
-					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
-					RegistrySecretRef:    &models.SecretReference{SecretID: "push-secret-1"},
-				},
-			},
-		},
-	}
-	if err := v.ValidateForCreate(context.Background(), spec); err != nil {
-		t.Fatalf("expected push secret validation to pass, got %v", err)
-	}
-}
-
-func TestValidateForCreatePushSecretWrongType(t *testing.T) {
-	v, secrets := newValidatorWithMockedSecretService(t)
-	secrets.EXPECT().ValidateImageRegistrySecretForStackResource(gomock.Any(), "bad-secret").
-		Return(errors.BadRequest("secret type mismatch"))
-
-	spec := &models.Stack{
-		Name:           "test",
-		OrganisationID: "org-1",
-		UserID:         "user-1",
-		StackResources: []*models.StackResource{
-			{
-				Name: "api",
-				BuildConfig: &models.BuildConfigSpec{
-					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
-					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
-					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
-					RegistrySecretRef:    &models.SecretReference{SecretID: "bad-secret"},
-				},
-			},
-		},
-	}
-	if err := v.ValidateForCreate(context.Background(), spec); err == nil {
-		t.Fatalf("expected push secret with wrong type to be rejected")
-	}
-}
-
-func TestValidateForCreatePushSecretEmptyID(t *testing.T) {
-	v := newTestValidator(t)
-	spec := &models.Stack{
-		Name:           "test",
-		OrganisationID: "org-1",
-		UserID:         "user-1",
-		StackResources: []*models.StackResource{
-			{
-				Name: "api",
-				BuildConfig: &models.BuildConfigSpec{
-					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
-					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
-					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
-					RegistrySecretRef:    &models.SecretReference{SecretID: ""},
-				},
-			},
-		},
-	}
-	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatalf("expected empty push secret ID to be rejected")
-	}
-	if !containsSubstr(err.Error(), "empty push secret ID") {
-		t.Fatalf("unexpected error: %s", err.Error())
-	}
-}
-
 func TestValidateForCreateRejectsNegativeReplicas(t *testing.T) {
 	v := newTestValidator(t)
 	neg := int32(-1)
@@ -1208,7 +1130,7 @@ func permissiveGitProbes(t *testing.T, resolver *mocks.MockCredentialResolver) g
 	return gitClients
 }
 
-func stackWithBuildResource(repo models.BuildImageRepository, pushSecretRef *models.SecretReference) *models.Stack {
+func stackWithBuildResource(repo models.BuildImageRepository) *models.Stack {
 	return &models.Stack{
 		Name:           "test-stack",
 		OrganisationID: "org-1",
@@ -1224,41 +1146,9 @@ func stackWithBuildResource(repo models.BuildImageRepository, pushSecretRef *mod
 						Git: &models.GitRevision{Branch: "main"},
 					},
 					BuildImageRepository: repo,
-					RegistrySecretRef:    pushSecretRef,
 				},
 			},
 		},
-	}
-}
-
-func TestValidateForCreateVerifiesPrivateImageWithCredentials(t *testing.T) {
-	resolver, provider, registryClient, secrets := newProbeMocks(t)
-
-	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
-	spec.StackResources[0].ImageConfig.Image = "ghcr.io/acme/private:latest"
-	spec.StackResources[0].ImageConfig.PullSecretRef = &models.SecretReference{SecretID: "sec-1"}
-
-	resolved := &credentials.ResolvedRegistryCredential{
-		Source:   credentials.SourceSecretRef,
-		Username: "alice",
-		Password: "s3cret",
-		SecretID: "sec-1",
-	}
-	secrets.EXPECT().ValidateImageRegistrySecretForStackResource(gomock.Any(), "sec-1").Return(nil)
-	resolver.EXPECT().
-		RegistryCredentials(gomock.Any(), "org-1", "ghcr.io/acme/private:latest", credentials.RegistryPurposePull, credentials.RegistryAuthSelector{SecretRef: spec.StackResources[0].ImageConfig.PullSecretRef}).
-		Return(resolved, nil)
-	provider.EXPECT().ClientFor(resolved).Return(registryClient, nil)
-	registryClient.EXPECT().CheckImage(gomock.Any(), "ghcr.io/acme/private:latest").Return(true, nil)
-
-	v := NewStackValidator(StackValidatorSpec{
-		SecretService:      secrets,
-		CredentialResolver: resolver,
-		RegistryClients:    provider,
-	})
-
-	if err := v.ValidateForCreate(context.Background(), spec); err != nil {
-		t.Fatalf("expected private image with credentials to validate, got %v", err)
 	}
 }
 
@@ -1282,36 +1172,6 @@ func TestValidateForCreateSoftPassesAnonymousRateLimit(t *testing.T) {
 
 	if err := v.ValidateForCreate(context.Background(), spec); err != nil {
 		t.Fatalf("expected anonymous rate-limited image check to soft-pass, got %v", err)
-	}
-}
-
-func TestValidateForCreateFailsAuthenticatedRateLimit(t *testing.T) {
-	resolver, provider, registryClient, secrets := newProbeMocks(t)
-
-	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
-	spec.StackResources[0].ImageConfig.PullSecretRef = &models.SecretReference{SecretID: "sec-1"}
-
-	resolved := &credentials.ResolvedRegistryCredential{
-		Source:   credentials.SourceSecretRef,
-		Username: "alice",
-		Password: "s3cret",
-	}
-	secrets.EXPECT().ValidateImageRegistrySecretForStackResource(gomock.Any(), "sec-1").Return(nil)
-	resolver.EXPECT().
-		RegistryCredentials(gomock.Any(), "org-1", "nginx:latest", credentials.RegistryPurposePull, credentials.RegistryAuthSelector{SecretRef: spec.StackResources[0].ImageConfig.PullSecretRef}).
-		Return(resolved, nil)
-	provider.EXPECT().ClientFor(resolved).Return(registryClient, nil)
-	registryClient.EXPECT().CheckImage(gomock.Any(), "nginx:latest").
-		Return(false, fmt.Errorf("failed to check image: %w", clients.ErrRateLimited))
-
-	v := NewStackValidator(StackValidatorSpec{
-		SecretService:      secrets,
-		CredentialResolver: resolver,
-		RegistryClients:    provider,
-	})
-
-	if err := v.ValidateForCreate(context.Background(), spec); err == nil {
-		t.Fatal("expected rate-limited authenticated image check to fail validation")
 	}
 }
 
@@ -1341,53 +1201,15 @@ func TestValidateForCreateRejectsNonExistentImage(t *testing.T) {
 	}
 }
 
-func TestValidateForCreatePushProbeFailureNamesHost(t *testing.T) {
-	resolver, provider, registryClient, secrets := newProbeMocks(t)
-
-	pushRef := &models.SecretReference{SecretID: "push-sec"}
-	spec := stackWithBuildResource(models.BuildImageRepository{ExternalImageRef: "ghcr.io/acme/app"}, pushRef)
-
-	resolved := &credentials.ResolvedRegistryCredential{
-		Source:   credentials.SourceSecretRef,
-		Username: "alice",
-		Password: "s3cret",
-	}
-	secrets.EXPECT().ValidateImageRegistrySecretForStackResource(gomock.Any(), "push-sec").Return(nil)
-	resolver.EXPECT().
-		RegistryCredentials(gomock.Any(), "org-1", "ghcr.io/acme/app", credentials.RegistryPurposePush, credentials.RegistryAuthSelector{SecretRef: pushRef}).
-		Return(resolved, nil)
-	provider.EXPECT().ClientFor(resolved).Return(registryClient, nil)
-	registryClient.EXPECT().CheckPushAccess(gomock.Any(), "ghcr.io/acme/app").
-		Return(fmt.Errorf("push access check failed: denied"))
-
-	v := NewStackValidator(StackValidatorSpec{
-		SecretService:      secrets,
-		CredentialResolver: resolver,
-		RegistryClients:    provider,
-		GitClients:         permissiveGitProbes(t, resolver),
-	})
-
-	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatal("expected failing push probe to be rejected")
-	}
-	if !containsSubstr(err.Error(), "ghcr.io") {
-		t.Fatalf("expected error to name the registry host, got %q", err.Error())
-	}
-}
-
 func TestValidateForCreateSkipsPushProbeForInClusterRegistry(t *testing.T) {
-	resolver, provider, _, secrets := newProbeMocks(t)
+	resolver, provider, _, _ := newProbeMocks(t)
 
-	pushRef := &models.SecretReference{SecretID: "push-sec"}
-	spec := stackWithBuildResource(models.BuildImageRepository{UseInClusterRegistry: true}, pushRef)
+	spec := stackWithBuildResource(models.BuildImageRepository{UseInClusterRegistry: true})
 
 	// No registry resolver/provider expectations: the push probe must be
 	// skipped entirely. The git clone probe still runs.
-	secrets.EXPECT().ValidateImageRegistrySecretForStackResource(gomock.Any(), "push-sec").Return(nil)
 
 	v := NewStackValidator(StackValidatorSpec{
-		SecretService:      secrets,
 		CredentialResolver: resolver,
 		RegistryClients:    provider,
 		GitClients:         permissiveGitProbes(t, resolver),
@@ -1434,7 +1256,7 @@ func TestValidateForCreateAnonymousPrivateImageReturnsCredentialsRequired(t *tes
 }
 
 func TestValidateForCreateRejectsMalformedCommitSHA(t *testing.T) {
-	spec := stackWithBuildResource(models.BuildImageRepository{UseInClusterRegistry: true}, nil)
+	spec := stackWithBuildResource(models.BuildImageRepository{UseInClusterRegistry: true})
 	spec.StackResources[0].BuildConfig.SourceRevision.Git.Commit = "NOT-A-SHA"
 
 	err := newTestValidator(t).ValidateForCreate(context.Background(), spec)
@@ -1455,7 +1277,7 @@ func buildPushProbeValidator(t *testing.T, source credentials.Source, pushErr er
 	t.Helper()
 	resolver, provider, registryClient, _ := newProbeMocks(t)
 
-	spec := stackWithBuildResource(models.BuildImageRepository{ExternalImageRef: "ghcr.io/acme/app"}, nil)
+	spec := stackWithBuildResource(models.BuildImageRepository{ExternalImageRef: "ghcr.io/acme/app"})
 
 	resolved := &credentials.ResolvedRegistryCredential{Source: source}
 	if source != credentials.SourceAnonymous {
@@ -1517,7 +1339,7 @@ func TestValidateForCreatePushAnonymousAuthFailureReturnsCredentialsRequired(t *
 }
 
 func TestValidateForCreatePushConfiguredCredsAuthFailureReturnsCredentialsInvalid(t *testing.T) {
-	v, spec := buildPushProbeValidator(t, credentials.SourceSecretRef,
+	v, spec := buildPushProbeValidator(t, credentials.SourceIntegration,
 		fmt.Errorf("push denied: %w", clients.ErrAuthFailed))
 
 	err := v.ValidateForCreate(context.Background(), spec)
@@ -1683,7 +1505,7 @@ func TestValidateForCreateAnonymousPrivateRepoReturnsCredentialsRequired(t *test
 	gitClient := mocks.NewMockGitClient(ctrl)
 	gitClients := mocks.NewMockgitClientProvider(ctrl)
 
-	spec := stackWithBuildResource(models.BuildImageRepository{UseInClusterRegistry: true}, nil)
+	spec := stackWithBuildResource(models.BuildImageRepository{UseInClusterRegistry: true})
 
 	resolver.EXPECT().
 		GitCredentials(gomock.Any(), "org-1", "https://github.com/acme/api", credentials.GitAuthSelector{}).

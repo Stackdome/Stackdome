@@ -842,15 +842,12 @@ const BuildSourceRevision = z
   })
   .partial()
   .passthrough();
-const SecretRef = z.object({ secret_id: z.string() });
 const BuildSourceContext = z
   .object({
     volume: z
       .object({ id: z.string(), name: z.string().optional() })
       .passthrough(),
-    git_repo: z
-      .object({ repo_url: z.string(), git_secret: SecretRef.optional() })
-      .passthrough(),
+    git_repo: z.object({ repo_url: z.string() }).passthrough(),
   })
   .partial()
   .passthrough();
@@ -1608,7 +1605,6 @@ export const schemas = {
   ResourceMetrics,
   StackResourceList,
   BuildSourceRevision,
-  SecretRef,
   BuildSourceContext,
   ImageBuildStatus,
   ImageBuild,

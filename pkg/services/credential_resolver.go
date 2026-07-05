@@ -24,7 +24,6 @@ type (
 )
 
 const (
-	CredentialSourceSecretRef   = credentials.SourceSecretRef
 	CredentialSourceIntegration = credentials.SourceIntegration
 	CredentialSourceAnonymous   = credentials.SourceAnonymous
 
@@ -33,9 +32,6 @@ const (
 )
 
 //go:generate mockgen -source=credential_resolver.go -destination=credential_resolver_mock_test.go -package=services
-type credentialSecretFetcher interface {
-	InternalGetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError)
-}
 
 // gitIntegrationResolverSource is the org-level git integration tier.
 type gitIntegrationResolverSource interface {
@@ -55,56 +51,31 @@ type registryCredentialResolverSource interface {
 }
 
 type CredentialResolverSpec struct {
-	SecretService credentialSecretFetcher
 	// RegistryCredentialService is optional; when unset, registry resolution
-	// falls through from explicit refs straight to anonymous.
+	// falls through to anonymous.
 	RegistryCredentialService registryCredentialResolverSource
 	// GitIntegrationService is optional; when unset, git resolution falls
-	// through from explicit refs straight to anonymous.
+	// through to anonymous.
 	GitIntegrationService gitIntegrationResolverSource
 }
 
 type credentialResolver struct {
-	secretService       credentialSecretFetcher
 	registryCredentials registryCredentialResolverSource
 	gitIntegrations     gitIntegrationResolverSource
 }
 
 func NewCredentialResolver(spec CredentialResolverSpec) CredentialResolver {
 	return &credentialResolver{
-		secretService:       spec.SecretService,
 		registryCredentials: spec.RegistryCredentialService,
 		gitIntegrations:     spec.GitIntegrationService,
 	}
 }
 
 // GitCredentials resolves git auth for repoURL with fixed precedence:
-// explicit secret ref > explicit integration ID > org-level integration
-// (GitHub App mint, then host match) > anonymous.
+// explicit integration ID > org-level integration (GitHub App mint, then host
+// match) > anonymous.
 func (r *credentialResolver) GitCredentials(ctx context.Context, orgID, repoURL string, selector credentials.GitAuthSelector) (*ResolvedGitCredential, *errors.ServiceError) {
 	switch {
-	case selector.SecretRef != nil:
-		secret, serr := r.secretService.InternalGetByID(ctx, selector.SecretRef.SecretID)
-		if serr != nil {
-			return nil, serr
-		}
-
-		resolved := &ResolvedGitCredential{
-			Source:   CredentialSourceSecretRef,
-			SecretID: secret.ID,
-			DataHash: secret.DataHash,
-			Secret:   secret,
-		}
-		if token, ok := secret.Data[models.TokenSecretKey]; ok && token != "" {
-			resolved.Credentials = gitclient.GitCredentials{Token: token}
-			return resolved, nil
-		}
-		resolved.Credentials = gitclient.GitCredentials{
-			Username: secret.Data[models.UsernameSecretKey],
-			Password: secret.Data[models.PasswordSecretKey],
-		}
-		return resolved, nil
-
 	case selector.IntegrationID != "":
 		if r.gitIntegrations == nil {
 			return nil, errors.GeneralError("git integration resolution is not configured")
@@ -184,27 +155,9 @@ func resolvedFromGitHubAppMint(mint *models.GitHubAppMintResult) *ResolvedGitCre
 }
 
 // RegistryCredentials resolves registry auth for an image or repository ref
-// with fixed precedence: explicit secret ref > explicit org registry
-// credential ID > org-level registry credential matched by normalized host >
-// anonymous.
+// with fixed precedence: explicit org registry credential ID > org-level
+// registry credential matched by normalized host > anonymous.
 func (r *credentialResolver) RegistryCredentials(ctx context.Context, orgID, ref string, purpose RegistryPurpose, selector credentials.RegistryAuthSelector) (*ResolvedRegistryCredential, *errors.ServiceError) {
-	if selector.SecretRef != nil {
-		secret, serr := r.secretService.InternalGetByID(ctx, selector.SecretRef.SecretID)
-		if serr != nil {
-			return nil, serr
-		}
-
-		return &ResolvedRegistryCredential{
-			Source:   CredentialSourceSecretRef,
-			Username: secret.Data[models.UsernameSecretKey],
-			Password: secret.Data[models.PasswordSecretKey],
-			SecretID: secret.ID,
-			DataHash: secret.DataHash,
-			Secret:   secret,
-			Purpose:  purpose,
-		}, nil
-	}
-
 	if selector.RegistryCredentialID != "" {
 		if r.registryCredentials == nil {
 			return nil, errors.GeneralError("registry credential resolution is not configured")

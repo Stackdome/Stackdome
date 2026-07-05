@@ -16,8 +16,7 @@ import (
 
 // BuildSourceContextGitRepo struct for BuildSourceContextGitRepo
 type BuildSourceContextGitRepo struct {
-	RepoUrl   string     `json:"repo_url"`
-	GitSecret *SecretRef `json:"git_secret,omitempty"`
+	RepoUrl string `json:"repo_url"`
 }
 
 // NewBuildSourceContextGitRepo instantiates a new BuildSourceContextGitRepo object
@@ -62,45 +61,10 @@ func (o *BuildSourceContextGitRepo) SetRepoUrl(v string) {
 	o.RepoUrl = v
 }
 
-// GetGitSecret returns the GitSecret field value if set, zero value otherwise.
-func (o *BuildSourceContextGitRepo) GetGitSecret() SecretRef {
-	if o == nil || o.GitSecret == nil {
-		var ret SecretRef
-		return ret
-	}
-	return *o.GitSecret
-}
-
-// GetGitSecretOk returns a tuple with the GitSecret field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *BuildSourceContextGitRepo) GetGitSecretOk() (*SecretRef, bool) {
-	if o == nil || o.GitSecret == nil {
-		return nil, false
-	}
-	return o.GitSecret, true
-}
-
-// HasGitSecret returns a boolean if a field has been set.
-func (o *BuildSourceContextGitRepo) HasGitSecret() bool {
-	if o != nil && o.GitSecret != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetGitSecret gets a reference to the given SecretRef and assigns it to the GitSecret field.
-func (o *BuildSourceContextGitRepo) SetGitSecret(v SecretRef) {
-	o.GitSecret = &v
-}
-
 func (o BuildSourceContextGitRepo) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["repo_url"] = o.RepoUrl
-	}
-	if o.GitSecret != nil {
-		toSerialize["git_secret"] = o.GitSecret
 	}
 	return json.Marshal(toSerialize)
 }
