@@ -311,6 +311,16 @@ export default function StackDetailPage() {
       ),
     [allAddons],
   );
+  // addonId → live state, for canvas addon node dots.
+  const addonStateById = useMemo(
+    () =>
+      new Map(
+        allAddons
+          .filter((a: PostgresAddon) => a.id)
+          .map((a: PostgresAddon) => [a.id!, a.status?.state ?? ""] as [string, string]),
+      ),
+    [allAddons],
+  );
 
   const connectionAddonIds = useMemo<Set<string>>(
     () =>
@@ -789,6 +799,7 @@ export default function StackDetailPage() {
             draftVolumes={draftVolumes}
             connectionAddonIds={connectionAddonIds}
             addonNameById={addonNameById}
+            addonStateById={addonStateById}
             errors={validationErrors.resources}
             onViewLogs={() => setActiveTab("logs")}
             topologyIds={!isDraft && deployIds.stackId ? deployIds : null}

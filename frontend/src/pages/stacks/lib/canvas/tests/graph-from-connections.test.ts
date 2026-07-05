@@ -175,4 +175,35 @@ describe("deriveGraph (connection projection)", () => {
     const web = graph.nodes.find((n) => n.id === "resource:web");
     expect((web?.data as { volumes: { name: string }[] }).volumes.map((v) => v.name)).toEqual(["data"]);
   });
+
+  it("maps live resource status to dotVariant", () => {
+    const g = deriveGraph({
+      resources: [
+        { name: "ok", image_spec: { image: "nginx" }, status: { state: "Ready" } },
+        { name: "mid", image_spec: { image: "nginx" }, status: { state: "Pending" } },
+        { name: "bad", image_spec: { image: "nginx" }, status: { state: "Failed" } },
+        { name: "draft", image_spec: { image: "nginx" } }, // no status yet
+      ] as never,
+      linkedAddonIds: [],
+      addonNameById: new Map(),
+    });
+    const dot = (name: string) => g.nodes.find((n) => n.data.name === name)?.data.dotVariant;
+    expect(dot("ok")).toBe("ready");
+    expect(dot("mid")).toBe("pending");
+    expect(dot("bad")).toBe("error");
+    expect(dot("draft")).toBe("neutral");
+  });
+
+  it("maps addon state to dotVariant via addonStateById", () => {
+    const g = deriveGraph({
+      resources: [],
+      linkedAddonIds: ["a1", "a2", "a3"],
+      addonNameById: new Map([["a1", "db"], ["a2", "cache"], ["a3", "ghost"]]),
+      addonStateById: new Map([["a1", "Ready"], ["a2", "Backing Up"]]),
+    });
+    const dot = (name: string) => g.nodes.find((n) => n.data.name === name)?.data.dotVariant;
+    expect(dot("db")).toBe("ready");
+    expect(dot("cache")).toBe("pending");
+    expect(dot("ghost")).toBe("neutral"); // no state known
+  });
 });

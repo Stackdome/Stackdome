@@ -5,8 +5,8 @@ import type { StackTopology } from "@/api/topology";
 
 const localGraph = (): CanvasGraph => ({
   nodes: [
-    { id: "resource:web", type: "resource", position: { x: 0, y: 0 }, data: { kind: "service", name: "web", kindLabel: "WEB", glyph: "web", dotState: "ok", summary: "", volumes: [] } },
-    { id: "resource:api", type: "resource", position: { x: 0, y: 0 }, data: { kind: "service", name: "api", kindLabel: "WEB", glyph: "web", dotState: "ok", summary: "", volumes: [] } },
+    { id: "resource:web", type: "resource", position: { x: 0, y: 0 }, data: { kind: "service", name: "web", kindLabel: "WEB", glyph: "web", summary: "", volumes: [] } },
+    { id: "resource:api", type: "resource", position: { x: 0, y: 0 }, data: { kind: "service", name: "api", kindLabel: "WEB", glyph: "web", summary: "", volumes: [] } },
   ],
   edges: [
     { id: "env:resource:api->resource:web", source: "resource:api", target: "resource:web", type: "connection", data: { kind: "env", sourceOfTruth: "connection" } },

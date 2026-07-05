@@ -323,7 +323,7 @@ export function CanvasEditorShell({
               <p className="mt-1 text-[12px] text-danger">{nameError}</p>
             )}
             <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
-            <PublicEndpointRow endpoints={publicEndpoints ?? []} />
+            <PublicEndpointRow endpoints={publicEndpoints ?? []} statusState={statusState} />
           </div>
 
           {/* Tab + action rail */}

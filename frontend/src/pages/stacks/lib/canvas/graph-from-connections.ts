@@ -1,7 +1,8 @@
 import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
-import { nodePresentation, type GlyphKind, type DotState } from "./node-presentation";
+import { nodePresentation, type GlyphKind } from "./node-presentation";
 import { splitEnvRows, type FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
 import type { StackConnection } from "@/api/connections";
+import { statusVariant, type StatusVariant } from "@/components/branded/status-variant";
 
 /**
  * Canvas node kinds. Workload kinds (service, addon) plus the compact
@@ -63,10 +64,9 @@ export interface ResourceNodeData {
   kindLabel: string;
   /** Glyph identifier for the node icon. */
   glyph: GlyphKind;
-  /** Status-dot colour bucket. */
-  dotState: DotState;
+  /** Live status-dot colour bucket, from the resource/addon's runtime state. */
+  dotVariant: StatusVariant;
   summary: string;
-  status?: string;
   volumes: VolumeChip[];
   dirtyState?: DirtyState;
   /** Index into the edit session's resource array; absent for addon nodes. */
@@ -121,10 +121,13 @@ export interface DirtyInput {
 
 export interface DeriveGraphInput {
   resources: Partial<FormStackResourceData>[];
-  linkedAddonIds: ReadonlySet<string>;
+  /** A Set in production callers; tests may pass any string iterable. */
+  linkedAddonIds: Iterable<string>;
   addonNameById: ReadonlyMap<string, string>;
   /** All volume names in the draft — only UNMOUNTED ones render as free attachment nodes. */
   volumeNames?: readonly string[];
+  /** addonId → live state (e.g. "Ready"), for addon node dots. */
+  addonStateById?: ReadonlyMap<string, string>;
   dirty?: DirtyInput;
 }
 
@@ -234,9 +237,11 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         name,
         kindLabel: pres.kindLabel,
         glyph: pres.glyph,
-        dotState: pres.dotState,
+        dotVariant: statusVariant(
+          "resource",
+          (resource.status as { state?: string } | undefined)?.state,
+        ),
         summary: pres.summary,
-        status: resource.status as string | undefined,
         volumes: volumeChips(resource, knownVolumes),
         dirtyState: serviceDirtyState(idx, input.dirty),
         resourceIdx: idx,
@@ -255,7 +260,7 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         name: input.addonNameById.get(addonId) ?? addonId,
         kindLabel: pres.kindLabel,
         glyph: pres.glyph,
-        dotState: pres.dotState,
+        dotVariant: statusVariant("addon", input.addonStateById?.get(addonId)),
         summary: pres.summary,
         volumes: [],
         dirtyState: addonDirtyState(addonId, input.dirty),

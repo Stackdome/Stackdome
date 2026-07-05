@@ -70,6 +70,8 @@ interface StackCanvasTabProps {
   draftVolumes: Partial<VolumeFormData>[];
   connectionAddonIds: ReadonlySet<string>;
   addonNameById: ReadonlyMap<string, string>;
+  /** addonId → live state (e.g. "Ready"), for canvas addon node dots. */
+  addonStateById?: ReadonlyMap<string, string>;
   errors: { [index: number]: { [field: string]: string | undefined } };
   /** Switch the editor to the Logs tab (from the drawer's "View logs"). */
   onViewLogs?: () => void;
@@ -94,6 +96,7 @@ function StackCanvasFlow({
   draftVolumes,
   connectionAddonIds,
   addonNameById,
+  addonStateById,
   errors,
   onViewLogs,
   topologyIds,
@@ -124,8 +127,8 @@ function StackCanvasFlow({
 
   // Local connection-derived data (cheap, pure). Re-runs on any edit.
   const dataGraph = useMemo(
-    () => deriveGraph({ resources, linkedAddonIds, addonNameById, volumeNames, dirty }),
-    [resources, linkedAddonIds, addonNameById, volumeNames, dirty],
+    () => deriveGraph({ resources, linkedAddonIds, addonNameById, addonStateById, volumeNames, dirty }),
+    [resources, linkedAddonIds, addonNameById, addonStateById, volumeNames, dirty],
   );
   // Local graph enhanced with server-derived edges + runtime status.
   const mergedGraph = useMemo(() => mergeTopology(dataGraph, topology), [dataGraph, topology]);

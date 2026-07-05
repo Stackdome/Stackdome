@@ -1,8 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExternalLink, Copy, Check } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { statusVariant } from "@/components/branded/status-variant";
+import { cn } from "@/lib/utils";
 
 const COPY_FLASH_MS = 1400;
+
+/** Stack status variant → endpoint dot colour (semantic tokens only). */
+const DOT_CLASS: Record<ReturnType<typeof statusVariant>, string> = {
+  ready: "bg-success",
+  pending: "bg-warn",
+  error: "bg-danger",
+  info: "bg-info",
+  neutral: "bg-fg-muted",
+};
 
 export interface PublicEndpoint {
   service: string;
@@ -33,8 +44,16 @@ async function copyText(text: string): Promise<void> {
 }
 
 /** Header row mapping each publicly exposed service to its best live URL. */
-export function PublicEndpointRow({ endpoints }: { endpoints: PublicEndpoint[] }) {
+export function PublicEndpointRow({
+  endpoints,
+  statusState,
+}: {
+  endpoints: PublicEndpoint[];
+  /** Raw stack status state (mapped to the dot colour), e.g. "Ready". */
+  statusState?: string | null;
+}) {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const dotClass = DOT_CLASS[statusVariant("stack", statusState)];
   const timer = useRef<ReturnType<typeof setTimeout>>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
@@ -62,7 +81,7 @@ export function PublicEndpointRow({ endpoints }: { endpoints: PublicEndpoint[] }
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
                 <span className="flex items-center gap-1.5 text-fg-muted">
-                  <span aria-hidden className="size-[5px] rounded-full bg-success" />
+                  <span aria-hidden className={cn("size-[5px] rounded-full", dotClass)} />
                   {service}
                 </span>
               </TooltipTrigger>
