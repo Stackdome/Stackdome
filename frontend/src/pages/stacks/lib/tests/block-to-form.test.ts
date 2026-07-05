@@ -30,6 +30,51 @@ describe("block-to-form", () => {
     expect(volumes).toHaveLength(0);
   });
 
+  it("web block exposes port 80 as public http in the API Port shape", () => {
+    const { resources } = blockToResources(getBlockById(BlockId.Web)!);
+    expect(resources[0].ports).toEqual([
+      { name: "http-80", number: 80, protocol: "http", exposed_to_public: true },
+    ]);
+  });
+
+  it("data-store ports are internal tcp, never public http", () => {
+    for (const block of blockCatalog.filter((b) => b.category === "data")) {
+      const { resources } = blockToResources(block);
+      for (const r of resources) {
+        for (const p of r.ports ?? []) {
+          expect(p.exposed_to_public, `${block.id} port ${p.number} must be internal`).toBe(false);
+          expect(p.protocol, `${block.id} port ${p.number} protocol`).toBe("tcp");
+          expect(p.name).toBe(`tcp-${p.number}`);
+        }
+      }
+    }
+  });
+
+  it("fills empty password env values with a generated secret so containers boot", () => {
+    for (const id of [BlockId.Postgres, BlockId.Mysql, BlockId.Mariadb, BlockId.Mssql, BlockId.Couchdb]) {
+      const { resources } = blockToResources(getBlockById(id)!);
+      const env = (resources[0].execution_config?.environment_variables ?? []) as { name?: string; value?: string }[];
+      for (const row of env) {
+        expect(row.value, `${id} env ${row.name} must not be empty`).not.toBe("");
+      }
+      // MSSQL requires upper+lower+digit complexity — the generator guarantees it.
+      const values = env.map((r) => r.value ?? "");
+      for (const v of values.filter((val) => val.startsWith("Sd1"))) {
+        expect(v).toMatch(/[A-Z]/);
+        expect(v).toMatch(/[a-z]/);
+        expect(v).toMatch(/[0-9]/);
+        expect(v.length).toBeGreaterThanOrEqual(16);
+      }
+    }
+  });
+
+  it("two adds of the same data block generate distinct passwords", () => {
+    const pg = getBlockById(BlockId.Postgres)!;
+    const first = blockToResources(pg).resources[0].execution_config?.environment_variables as { value?: string }[];
+    const second = blockToResources(pg).resources[0].execution_config?.environment_variables as { value?: string }[];
+    expect(first[0].value).not.toBe(second[0].value);
+  });
+
   it("de-duplicates resource names when the same block is added twice", () => {
     let stack = emptyStack();
     stack = addBlockToStack(stack, getBlockById(BlockId.Postgres)!);

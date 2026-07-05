@@ -9,14 +9,22 @@ interface BlockPickerProps {
   addedIds: string[];
   onAdd: (id: string) => void;
   query: string;
+  /** Suppress the "No matches" note — for callers that render several pickers
+   *  and show a single combined empty state instead. */
+  hideEmptyMessage?: boolean;
 }
 
-export function BlockPicker({ catalog, categories, addedIds, onAdd, query }: BlockPickerProps) {
+/** Shared query predicate so split-picker callers can pre-compute matches. */
+export function blockMatchesQuery(b: BlockPreset, query: string): boolean {
   const q = query.trim().toLowerCase();
-  const match = (b: BlockPreset) => !q || b.name.toLowerCase().includes(q) || b.summary.toLowerCase().includes(q);
-  const visible = catalog.filter(match);
+  return !q || b.name.toLowerCase().includes(q) || b.summary.toLowerCase().includes(q);
+}
+
+export function BlockPicker({ catalog, categories, addedIds, onAdd, query, hideEmptyMessage }: BlockPickerProps) {
+  const visible = catalog.filter((b) => blockMatchesQuery(b, query));
 
   if (visible.length === 0) {
+    if (hideEmptyMessage) return null;
     return (
       <p className="px-1 py-6 text-sm text-muted-foreground">
         No matches for "{query}"

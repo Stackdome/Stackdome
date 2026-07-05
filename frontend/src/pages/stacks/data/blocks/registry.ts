@@ -6,7 +6,7 @@ export const BLOCK_CATEGORY_META: BlockCategoryMeta[] = [
 ];
 
 export const blockCatalog: BlockPreset[] = [
-  { id: BlockId.Web, name: "Web service", category: "services", icon: "globe", summary: "your image · :8080" },
+  { id: BlockId.Web, name: "Web service", category: "services", icon: "globe", summary: "your image · :80 · public" },
   { id: BlockId.Custom, name: "Custom", category: "services", icon: "box", summary: "empty container shape" },
   {
     id: BlockId.Postgres, name: "Postgres", category: "data", icon: "postgres", summary: "postgres:16 · :5432",
@@ -25,7 +25,10 @@ export const blockCatalog: BlockPreset[] = [
   },
   {
     id: BlockId.Redis, name: "Redis", category: "data", icon: "redis", summary: "redis:7 · :6379",
-    compose: ["services:", "  redis:", "    image: redis:7", '    ports: ["6379:6379"]', ""].join("\n"),
+    compose: [
+      "services:", "  redis:", "    image: redis:7", '    ports: ["6379:6379"]',
+      '    volumes: ["redis-data:/data"]', "volumes:", "  redis-data: {}", "",
+    ].join("\n"),
   },
   {
     id: BlockId.Mysql, name: "MySQL", category: "data", icon: "mysql", summary: "mysql:8 · :3306",

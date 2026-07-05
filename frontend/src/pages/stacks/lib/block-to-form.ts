@@ -15,15 +15,65 @@ export function emptyStack(): WorkingStack {
   return { name: "", labels: [], spec: { stack_resources: [], volumes: [] } };
 }
 
-/** Generic blocks have no compose snippet — produce a minimal resource skeleton. */
+/** Generic blocks have no compose snippet — produce a minimal resource skeleton.
+ *  Web gets the conventional public HTTP port 80; Custom starts portless. */
 function genericResource(block: BlockPreset): FormStackResourceData {
   const base = {
     name: block.id,
     sourceType: "image" as const,
     image_spec: { image: "" },
-    ports: block.id === BlockId.Web ? [{ container_port: 8080, protocol: "TCP" }] : [],
+    ports:
+      block.id === BlockId.Web
+        ? [{ name: "http-80", number: 80, protocol: "http", exposed_to_public: true }]
+        : [],
   };
   return base as unknown as FormStackResourceData;
+}
+
+/** Random secret for data-store blocks whose images refuse to boot with an
+ *  empty password (postgres/mysql/mariadb/mssql/couchdb). Alphanumeric with a
+ *  guaranteed upper+lower+digit mix so even MSSQL's complexity check passes. */
+function generatedPassword(): string {
+  const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint32Array(17);
+  crypto.getRandomValues(bytes);
+  const body = Array.from(bytes, (b) => charset[b % charset.length]).join("");
+  return `Sd1${body}`;
+}
+
+type FormPort = { name?: string; number?: number; protocol?: string; exposed_to_public?: boolean };
+
+/** Data stores are internal dependencies: their ports must never be published
+ *  as public HTTP ingresses (the compose converter defaults every published
+ *  port to http/public — right for web services, wrong for databases). */
+function internalizePorts(resource: FormStackResourceData): FormStackResourceData {
+  const ports = (resource.ports ?? []) as FormPort[];
+  if (ports.length === 0) return resource;
+  return {
+    ...resource,
+    ports: ports.map((p) => ({
+      ...p,
+      name: `tcp-${p.number}`,
+      protocol: "tcp",
+      exposed_to_public: false,
+    })),
+  } as FormStackResourceData;
+}
+
+/** Fill empty env values (the registry's password placeholders) with a
+ *  generated secret so the container actually boots on first deploy. */
+function fillEmptyEnvValues(resource: FormStackResourceData): FormStackResourceData {
+  const env = resource.execution_config?.environment_variables as
+    | { name?: string; value?: string; from?: string }[]
+    | undefined;
+  if (!env?.some((r) => r.value === "")) return resource;
+  return {
+    ...resource,
+    execution_config: {
+      ...resource.execution_config,
+      environment_variables: env.map((r) => (r.value === "" ? { ...r, value: generatedPassword() } : r)),
+    },
+  } as FormStackResourceData;
 }
 
 export function blockToResources(block: BlockPreset): {
@@ -40,8 +90,11 @@ export function blockToResources(block: BlockPreset): {
       `Block "${block.id}" failed to convert: ${result.errors?.[0]?.message ?? "unknown"}`
     );
   }
+  const resources = (result.data.spec.stack_resources ?? []).map((r) =>
+    block.category === "data" ? fillEmptyEnvValues(internalizePorts(r)) : r,
+  );
   return {
-    resources: result.data.spec.stack_resources ?? [],
+    resources,
     volumes: (result.data.spec.volumes ?? []) as FormVolumeData[],
   };
 }

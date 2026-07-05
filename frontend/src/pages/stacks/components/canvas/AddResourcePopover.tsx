@@ -4,7 +4,10 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { blockCatalog, BLOCK_CATEGORY_META } from "@/pages/stacks/data/blocks/registry";
-import { BlockPicker } from "@/pages/stacks/components/wizard/block-picker";
+import { BlockPicker, blockMatchesQuery } from "@/pages/stacks/components/wizard/block-picker";
+
+const SERVICE_CATEGORIES = BLOCK_CATEGORY_META.filter((c) => c.id === "services");
+const DATA_CATEGORIES = BLOCK_CATEGORY_META.filter((c) => c.id === "data");
 import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 
 interface AddResourcePopoverProps {
@@ -44,6 +47,8 @@ export function AddResourcePopover({
   const trimmedQuery = query.trim().toLowerCase();
   // "Storage" is the section header shown for the Volume tile — match either name.
   const showStorageSection = !trimmedQuery || "volume".includes(trimmedQuery) || "storage".includes(trimmedQuery);
+  const anyBlockMatches = blockCatalog.some((b) => blockMatchesQuery(b, query));
+  const nothingMatches = !anyBlockMatches && !showStorageSection && visibleAddons.length === 0;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -56,7 +61,7 @@ export function AddResourcePopover({
           Add resource
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[420px] p-0">
+      <PopoverContent align="start" className="w-[560px] p-0">
         <div className="relative border-b border-border p-2">
           <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -66,13 +71,19 @@ export function AddResourcePopover({
             className="pl-9"
           />
         </div>
-        <div className="max-h-[360px] overflow-y-auto p-3">
+        <div className="max-h-[440px] overflow-y-auto p-3">
+          {/* Section order: services first, storage + managed add-ons next, and the
+              long data-store list last so the common picks stay above the fold. */}
+          {nothingMatches && (
+            <p className="px-1 py-6 text-sm text-muted-foreground">No matches for "{query}"</p>
+          )}
           <BlockPicker
             catalog={blockCatalog}
-            categories={BLOCK_CATEGORY_META}
+            categories={SERVICE_CATEGORIES}
             addedIds={addedIds}
             query={query}
             onAdd={onAdd}
+            hideEmptyMessage
           />
           {showStorageSection ? (
             <div className="mt-5">
@@ -166,6 +177,16 @@ export function AddResourcePopover({
               </div>
             </div>
           )}
+          <div className="mt-5">
+            <BlockPicker
+              catalog={blockCatalog}
+              categories={DATA_CATEGORIES}
+              addedIds={addedIds}
+              query={query}
+              onAdd={onAdd}
+              hideEmptyMessage
+            />
+          </div>
         </div>
       </PopoverContent>
     </Popover>
