@@ -72,20 +72,6 @@ func (mr *MockSecretStoreMockRecorder) Delete(ctx, ID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSecretStore)(nil).Delete), ctx, ID)
 }
 
-// DeleteManagedByOwner mocks base method.
-func (m *MockSecretStore) DeleteManagedByOwner(ctx context.Context, ownerKind, ownerID string, slots []models.ManagedSecretSlot) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteManagedByOwner", ctx, ownerKind, ownerID, slots)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// DeleteManagedByOwner indicates an expected call of DeleteManagedByOwner.
-func (mr *MockSecretStoreMockRecorder) DeleteManagedByOwner(ctx, ownerKind, ownerID, slots any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteManagedByOwner", reflect.TypeOf((*MockSecretStore)(nil).DeleteManagedByOwner), ctx, ownerKind, ownerID, slots)
-}
-
 // GetByID mocks base method.
 func (m *MockSecretStore) GetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError) {
 	m.ctrl.T.Helper()
@@ -114,21 +100,6 @@ func (m *MockSecretStore) GetByName(ctx context.Context, organisationID, name st
 func (mr *MockSecretStoreMockRecorder) GetByName(ctx, organisationID, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockSecretStore)(nil).GetByName), ctx, organisationID, name)
-}
-
-// GetManagedByOwner mocks base method.
-func (m *MockSecretStore) GetManagedByOwner(ctx context.Context, ownerKind, ownerID string, slot models.ManagedSecretSlot) (*models.Secret, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetManagedByOwner", ctx, ownerKind, ownerID, slot)
-	ret0, _ := ret[0].(*models.Secret)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// GetManagedByOwner indicates an expected call of GetManagedByOwner.
-func (mr *MockSecretStoreMockRecorder) GetManagedByOwner(ctx, ownerKind, ownerID, slot any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetManagedByOwner", reflect.TypeOf((*MockSecretStore)(nil).GetManagedByOwner), ctx, ownerKind, ownerID, slot)
 }
 
 // GetSecretKeys mocks base method.

@@ -26,11 +26,8 @@ type GitSource struct {
 	DockerfilePath *string `json:"dockerfile_path,omitempty"`
 	BuildContext   *string `json:"build_context,omitempty"`
 	// Org-level git integration override for clone auth
-	IntegrationId *string            `json:"integration_id,omitempty"`
-	Credentials   *InlineCredentials `json:"credentials,omitempty"`
-	// True when clone credentials are configured for this source
-	CredentialsConfigured *bool       `json:"credentials_configured,omitempty"`
-	Push                  *PushTarget `json:"push,omitempty"`
+	IntegrationId *string     `json:"integration_id,omitempty"`
+	Push          *PushTarget `json:"push,omitempty"`
 }
 
 // NewGitSource instantiates a new GitSource object
@@ -275,70 +272,6 @@ func (o *GitSource) SetIntegrationId(v string) {
 	o.IntegrationId = &v
 }
 
-// GetCredentials returns the Credentials field value if set, zero value otherwise.
-func (o *GitSource) GetCredentials() InlineCredentials {
-	if o == nil || o.Credentials == nil {
-		var ret InlineCredentials
-		return ret
-	}
-	return *o.Credentials
-}
-
-// GetCredentialsOk returns a tuple with the Credentials field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *GitSource) GetCredentialsOk() (*InlineCredentials, bool) {
-	if o == nil || o.Credentials == nil {
-		return nil, false
-	}
-	return o.Credentials, true
-}
-
-// HasCredentials returns a boolean if a field has been set.
-func (o *GitSource) HasCredentials() bool {
-	if o != nil && o.Credentials != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetCredentials gets a reference to the given InlineCredentials and assigns it to the Credentials field.
-func (o *GitSource) SetCredentials(v InlineCredentials) {
-	o.Credentials = &v
-}
-
-// GetCredentialsConfigured returns the CredentialsConfigured field value if set, zero value otherwise.
-func (o *GitSource) GetCredentialsConfigured() bool {
-	if o == nil || o.CredentialsConfigured == nil {
-		var ret bool
-		return ret
-	}
-	return *o.CredentialsConfigured
-}
-
-// GetCredentialsConfiguredOk returns a tuple with the CredentialsConfigured field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *GitSource) GetCredentialsConfiguredOk() (*bool, bool) {
-	if o == nil || o.CredentialsConfigured == nil {
-		return nil, false
-	}
-	return o.CredentialsConfigured, true
-}
-
-// HasCredentialsConfigured returns a boolean if a field has been set.
-func (o *GitSource) HasCredentialsConfigured() bool {
-	if o != nil && o.CredentialsConfigured != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetCredentialsConfigured gets a reference to the given bool and assigns it to the CredentialsConfigured field.
-func (o *GitSource) SetCredentialsConfigured(v bool) {
-	o.CredentialsConfigured = &v
-}
-
 // GetPush returns the Push field value if set, zero value otherwise.
 func (o *GitSource) GetPush() PushTarget {
 	if o == nil || o.Push == nil {
@@ -393,12 +326,6 @@ func (o GitSource) MarshalJSON() ([]byte, error) {
 	}
 	if o.IntegrationId != nil {
 		toSerialize["integration_id"] = o.IntegrationId
-	}
-	if o.Credentials != nil {
-		toSerialize["credentials"] = o.Credentials
-	}
-	if o.CredentialsConfigured != nil {
-		toSerialize["credentials_configured"] = o.CredentialsConfigured
 	}
 	if o.Push != nil {
 		toSerialize["push"] = o.Push

@@ -5,8 +5,6 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Ref** | **string** |  | 
-**Credentials** | Pointer to [**InlineCredentials**](InlineCredentials.md) |  | [optional] 
-**CredentialsConfigured** | Pointer to **bool** |  | [optional] [readonly] 
 **RegistryCredentialsId** | Pointer to **string** | Org-level registry credential override for pull auth | [optional] 
 
 ## Methods
@@ -47,56 +45,6 @@ and a boolean to check if the value has been set.
 
 SetRef sets Ref field to given value.
 
-
-### GetCredentials
-
-`func (o *ImageSource) GetCredentials() InlineCredentials`
-
-GetCredentials returns the Credentials field if non-nil, zero value otherwise.
-
-### GetCredentialsOk
-
-`func (o *ImageSource) GetCredentialsOk() (*InlineCredentials, bool)`
-
-GetCredentialsOk returns a tuple with the Credentials field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetCredentials
-
-`func (o *ImageSource) SetCredentials(v InlineCredentials)`
-
-SetCredentials sets Credentials field to given value.
-
-### HasCredentials
-
-`func (o *ImageSource) HasCredentials() bool`
-
-HasCredentials returns a boolean if a field has been set.
-
-### GetCredentialsConfigured
-
-`func (o *ImageSource) GetCredentialsConfigured() bool`
-
-GetCredentialsConfigured returns the CredentialsConfigured field if non-nil, zero value otherwise.
-
-### GetCredentialsConfiguredOk
-
-`func (o *ImageSource) GetCredentialsConfiguredOk() (*bool, bool)`
-
-GetCredentialsConfiguredOk returns a tuple with the CredentialsConfigured field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetCredentialsConfigured
-
-`func (o *ImageSource) SetCredentialsConfigured(v bool)`
-
-SetCredentialsConfigured sets CredentialsConfigured field to given value.
-
-### HasCredentialsConfigured
-
-`func (o *ImageSource) HasCredentialsConfigured() bool`
-
-HasCredentialsConfigured returns a boolean if a field has been set.
 
 ### GetRegistryCredentialsId
 

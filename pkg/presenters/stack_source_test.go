@@ -27,7 +27,6 @@ func TestConvertSourceGitWithPushRoundTrip(t *testing.T) {
 	git.SetCommit("abcdef1234")
 	git.SetDockerfilePath("build/Dockerfile")
 	git.SetBuildContext("./svc")
-	git.SetCredentials(*openapi.NewInlineCredentials("alice", "s3cret"))
 	push := openapi.NewPushTarget("ghcr.io/acme/api")
 	push.SetRegistryCredentialsId("rc-1")
 	git.SetPush(*push)
@@ -47,9 +46,6 @@ func TestConvertSourceGitWithPushRoundTrip(t *testing.T) {
 	if bc.DockerfilePath != "build/Dockerfile" || bc.ContextPathWithinSource != "./svc" {
 		t.Fatalf("unexpected paths %q %q", bc.DockerfilePath, bc.ContextPathWithinSource)
 	}
-	if bc.SourceContext.Git.InlineCredentials == nil || bc.SourceContext.Git.InlineCredentials.Username != "alice" {
-		t.Fatalf("expected inline credentials to be carried, got %+v", bc.SourceContext.Git.InlineCredentials)
-	}
 	if bc.BuildImageRepository.UseInClusterRegistry || bc.BuildImageRepository.ExternalImageRef != "ghcr.io/acme/api" {
 		t.Fatalf("unexpected push repository %+v", bc.BuildImageRepository)
 	}
@@ -57,9 +53,6 @@ func TestConvertSourceGitWithPushRoundTrip(t *testing.T) {
 		t.Fatalf("expected push registry credential id, got %q", bc.PushRegistryCredentialID)
 	}
 
-	// Simulate materialization then present back.
-	bc.SourceContext.Git.InlineCredentials = nil
-	bc.SourceContext.Git.GitSecretRef = &models.SecretReference{SecretID: "managed-1"}
 	presented := presenters.PresentStackResource(resource)
 	if presented.Source == nil || presented.Source.Git == nil {
 		t.Fatal("expected presented git source")
@@ -68,21 +61,8 @@ func TestConvertSourceGitWithPushRoundTrip(t *testing.T) {
 	if pg.RepoUrl != "https://github.com/acme/api" || pg.GetBranch() != "main" || pg.GetCommit() != "abcdef1234" {
 		t.Fatalf("unexpected presented git %+v", pg)
 	}
-	if !pg.GetCredentialsConfigured() {
-		t.Fatal("expected credentials_configured to be set")
-	}
 	if pg.Push == nil || pg.Push.Repository != "ghcr.io/acme/api" || pg.Push.GetRegistryCredentialsId() != "rc-1" {
 		t.Fatalf("unexpected presented push %+v", pg.Push)
-	}
-
-	raw, err := json.Marshal(presented)
-	if err != nil {
-		t.Fatalf("marshal failed: %v", err)
-	}
-	for _, leaked := range []string{"alice", "s3cret", "managed-1"} {
-		if strings.Contains(string(raw), leaked) {
-			t.Fatalf("presented resource leaks %q: %s", leaked, raw)
-		}
 	}
 }
 
@@ -123,9 +103,6 @@ func TestConvertSourceImageRoundTrip(t *testing.T) {
 	}
 	if presented.Source.Image.Ref != "redis:7" || presented.Source.Image.GetRegistryCredentialsId() != "rc-2" {
 		t.Fatalf("unexpected presented image %+v", presented.Source.Image)
-	}
-	if presented.Source.Image.GetCredentialsConfigured() {
-		t.Fatal("expected credentials_configured to be false without a ref")
 	}
 }
 
@@ -170,8 +147,8 @@ func TestPresentPreviewGitRepositoryNeverEchoesCredentials(t *testing.T) {
 		},
 	}
 	presented := presenters.PresentStackPreviewConfig(config)
-	if presented.GitRepository == nil || !presented.GitRepository.GetCredentialsConfigured() {
-		t.Fatal("expected credentials_configured for wired git secret")
+	if presented.GitRepository == nil {
+		t.Fatal("expected presented git repository")
 	}
 	raw, err := json.Marshal(presented)
 	if err != nil {

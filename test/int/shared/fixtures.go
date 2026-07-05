@@ -626,7 +626,7 @@ func CreateStackWithBrokenBuildSource(name string, repoURL string, username, pas
 	gitSource.SetBranch(BrokenBuildSourceBranch)
 	gitSource.SetBuildContext(BuildSourceContextPath)
 	gitSource.SetDockerfilePath(BrokenBuildSourceDockerfile)
-	gitSource.SetCredentials(*openapi.NewInlineCredentials(username, password))
+	_, _ = username, password
 	// push omitted: builds go to the internal cluster registry
 	resource.SetSource(openapi.SourceSpec{Git: gitSource})
 
@@ -791,13 +791,12 @@ func HostMapping() openapi.ConnectionMapping {
 func CreateStackWithBuildSource(name string, repoURL string, username, password string) *openapi.Stack {
 	resource := openapi.NewStackResource(BuildSourceResourceName)
 
-	// Git source with inline credentials for private access; push omitted so
-	// builds go to the internal (in-cluster Zot) registry.
+	// push omitted so builds go to the internal (in-cluster Zot) registry.
 	gitSource := openapi.NewGitSource(repoURL)
 	gitSource.SetBranch(BuildSourceBranch)
 	gitSource.SetBuildContext(BuildSourceContextPath)
 	gitSource.SetDockerfilePath(BuildSourceDockerfile)
-	gitSource.SetCredentials(*openapi.NewInlineCredentials(username, password))
+	_, _ = username, password
 	resource.SetSource(openapi.SourceSpec{Git: gitSource})
 
 	// Port 3000 exposed to public

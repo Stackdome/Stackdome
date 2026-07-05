@@ -11,7 +11,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/validator"
 	"github.com/Stackdome/stackdome/pkg/validator/secret"
-	"github.com/google/uuid"
 )
 
 type StackPreviewConfigService interface {
@@ -23,12 +22,11 @@ type StackPreviewConfigService interface {
 }
 
 type StackPreviewConfigServiceSpec struct {
-	Store                   stores.StackPreviewConfigStore
-	PreviewStackStore       stores.PreviewStackStore
-	SecretService           SecretService
-	CredentialResolver      CredentialResolver
-	SourceCredentialService SourceCredentialService
-	Permissions             auth.PermissionService
+	Store              stores.StackPreviewConfigStore
+	PreviewStackStore  stores.PreviewStackStore
+	SecretService      SecretService
+	CredentialResolver CredentialResolver
+	Permissions        auth.PermissionService
 }
 
 type stackPreviewConfigService struct {
@@ -36,7 +34,6 @@ type stackPreviewConfigService struct {
 	previewStackStore  stores.PreviewStackStore
 	secretService      SecretService
 	credentialResolver CredentialResolver
-	sourceCredentials  SourceCredentialService
 	secretValidator    validator.SecretValidator
 	permissions        auth.PermissionService
 }
@@ -47,7 +44,6 @@ func NewStackPreviewConfigService(spec StackPreviewConfigServiceSpec) StackPrevi
 		previewStackStore:  spec.PreviewStackStore,
 		secretService:      spec.SecretService,
 		credentialResolver: spec.CredentialResolver,
-		sourceCredentials:  spec.SourceCredentialService,
 		secretValidator:    secret.NewSecretValidator(),
 		permissions:        spec.Permissions,
 	}
@@ -64,37 +60,16 @@ func (s *stackPreviewConfigService) Create(ctx context.Context, config *models.S
 		config.GitRepository.BaseBranch = models.DefaultBaseBranch
 	}
 
-	// Pre-generate the config ID so managed secrets can reference their owner
-	// before the row exists.
-	if config.ID == "" {
-		config.ID = uuid.NewString()
-	}
-	// PreparePreviewConfig materializes managed secrets before validation, so
-	// keep a rollback handle and undo the credential rows if validation or the
-	// store write fails — otherwise they orphan under a config that never
-	// existed.
-	var sourceRollback SourceRollback
-	if s.sourceCredentials != nil {
-		rollback, err := s.sourceCredentials.PreparePreviewConfig(ctx, config)
-		if err != nil {
-			return nil, err
-		}
-		sourceRollback = rollback
-	}
-
 	if err := s.validate(ctx, config); err != nil {
-		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 
 	if err := s.validateGitRepo(ctx, config); err != nil {
-		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 
 	created, err := s.store.Create(ctx, config)
 	if err != nil {
-		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 	return created, nil
@@ -128,28 +103,16 @@ func (s *stackPreviewConfigService) Update(ctx context.Context, id string, updat
 	updated.UserID = existing.UserID
 	updated.Name = existing.Name
 
-	var sourceRollback SourceRollback
-	if s.sourceCredentials != nil {
-		rollback, err := s.sourceCredentials.PreparePreviewConfig(ctx, updated)
-		if err != nil {
-			return nil, err
-		}
-		sourceRollback = rollback
-	}
-
 	if err := s.validate(ctx, updated); err != nil {
-		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 
 	if err := s.validateGitRepo(ctx, updated); err != nil {
-		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 
 	result, err := s.store.Update(ctx, updated)
 	if err != nil {
-		rollbackSources(ctx, sourceRollback)
 		return nil, err
 	}
 	return result, nil
@@ -173,16 +136,6 @@ func (s *stackPreviewConfigService) Delete(ctx context.Context, id string) *erro
 		return errors.Conflict("cannot delete preview config with %d active preview stack(s)", activeCount)
 	}
 
-	// Clean up managed secrets before deleting the row. Cleanup is idempotent
-	// (a no-op once the secrets are gone), so a retry after a partial failure
-	// re-runs cleanup harmlessly and then deletes the row. Doing it in this
-	// order means a cleanup failure leaves the row intact for the retry rather
-	// than orphaning the secrets forever.
-	if s.sourceCredentials != nil {
-		if cleanupErr := s.sourceCredentials.CleanupPreviewConfig(ctx, id); cleanupErr != nil {
-			return cleanupErr
-		}
-	}
 	if err := s.store.Delete(ctx, id); err != nil {
 		return err
 	}

@@ -447,12 +447,6 @@ paths:
           schema:
             type: string
           description: Filter by secret name
-        - in: query
-          name: include_managed
-          schema:
-            type: boolean
-            default: false
-          description: Include system-managed secrets materialized from inline credentials
       responses:
         '200':
           description: Successful operation
@@ -2402,12 +2396,6 @@ paths:
           schema:
             type: string
           description: Filter by secret name
-        - in: query
-          name: include_managed
-          schema:
-            type: boolean
-            default: false
-          description: Include system-managed secrets materialized from inline credentials
       responses:
         '200':
           description: Successful operation
@@ -5566,12 +5554,6 @@ components:
         integration_id:
           type: string
           description: Org-level git integration override for clone auth
-        credentials:
-          $ref: '#/components/schemas/InlineCredentials'
-        credentials_configured:
-          type: boolean
-          readOnly: true
-          description: True when clone credentials are configured for this source
         push:
           $ref: '#/components/schemas/PushTarget'
           description: Omit to push to the internal cluster registry
@@ -5584,11 +5566,6 @@ components:
         repository:
           type: string
           description: Push repository as host/path, without a tag
-        credentials:
-          $ref: '#/components/schemas/InlineCredentials'
-        credentials_configured:
-          type: boolean
-          readOnly: true
         registry_credentials_id:
           type: string
           description: Org-level registry credential override for push auth
@@ -5600,11 +5577,6 @@ components:
       properties:
         ref:
           type: string
-        credentials:
-          $ref: '#/components/schemas/InlineCredentials'
-        credentials_configured:
-          type: boolean
-          readOnly: true
         registry_credentials_id:
           type: string
           description: Org-level registry credential override for pull auth
@@ -5626,24 +5598,6 @@ components:
         build_context:
           type: string
           default: "."
-    InlineCredentials:
-      type: object
-      additionalProperties: false
-      required:
-        - username
-        - password
-      properties:
-        username:
-          type: string
-          writeOnly: true
-        password:
-          type: string
-          format: password
-          writeOnly: true
-        save_to_org:
-          type: boolean
-          writeOnly: true
-          description: Also save these credentials as an org-level credential
     BuildSourceContext:
       type: object
       properties:
@@ -6882,11 +6836,6 @@ components:
         integration_id:
           type: string
           description: Org-level git integration override for clone auth
-        credentials:
-          $ref: '#/components/schemas/InlineCredentials'
-        credentials_configured:
-          type: boolean
-          readOnly: true
 
     StackPreviewConfig:
       type: object

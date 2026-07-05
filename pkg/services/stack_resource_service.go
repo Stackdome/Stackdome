@@ -35,17 +35,17 @@ type StackResourceService interface {
 }
 
 type StackResourceServiceSpec struct {
-	SessionFactory          db.SessionFactory
-	WorkspaceUserService    WorkspaceUserService
-	StorageService          StackStorageService
-	Logger                  logger.Logger
-	Permissions             auth.PermissionService
-	StackStore              stores.StackStore
-	StackResourceStore      stores.StackResourceStore
-	ClusterRegistryService  ImageRegistryService
-	StackDomainService      StackDomainsService
-	ReferenceService        ReferenceService
-	SourceCredentialService SourceCredentialService
+	SessionFactory         db.SessionFactory
+	WorkspaceUserService   WorkspaceUserService
+	StorageService         StackStorageService
+	Logger                 logger.Logger
+	Permissions            auth.PermissionService
+	StackStore             stores.StackStore
+	StackResourceStore     stores.StackResourceStore
+	ClusterRegistryService ImageRegistryService
+	StackDomainService     StackDomainsService
+	ReferenceService       ReferenceService
+	DefaultBranchResolver  DefaultBranchResolver
 }
 
 type stackResourceService struct {
@@ -60,7 +60,7 @@ type stackResourceService struct {
 	clusterRegistryService ImageRegistryService
 	domainNameService      StackDomainsService
 	referenceService       ReferenceService
-	sourceCredentials      SourceCredentialService
+	branchResolver         DefaultBranchResolver
 }
 
 func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService {
@@ -81,7 +81,7 @@ func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService
 		clusterRegistryService: spec.ClusterRegistryService,
 		domainNameService:      spec.StackDomainService,
 		referenceService:       spec.ReferenceService,
-		sourceCredentials:      spec.SourceCredentialService,
+		branchResolver:         spec.DefaultBranchResolver,
 	}
 }
 
@@ -98,8 +98,8 @@ func (s *stackResourceService) Create(ctx context.Context, resource *models.Stac
 		return nil, permErr
 	}
 
-	if s.sourceCredentials != nil {
-		if err := s.sourceCredentials.PrepareResourceSource(ctx, stack, resource); err != nil {
+	if s.branchResolver != nil {
+		if err := s.branchResolver.ResolveDefaultBranch(ctx, stack, resource); err != nil {
 			return nil, err
 		}
 	}
@@ -137,8 +137,8 @@ func (s *stackResourceService) Update(ctx context.Context, stackID, resourceName
 	resource.ID = existing.ID
 	resource.Name = resourceName
 
-	if s.sourceCredentials != nil {
-		if err := s.sourceCredentials.PrepareResourceSource(ctx, stack, resource); err != nil {
+	if s.branchResolver != nil {
+		if err := s.branchResolver.ResolveDefaultBranch(ctx, stack, resource); err != nil {
 			return nil, err
 		}
 	}
@@ -277,11 +277,6 @@ func (s *stackResourceService) Delete(ctx context.Context, stackID, resourceName
 		return err
 	}
 
-	if s.sourceCredentials != nil {
-		if cleanupErr := s.sourceCredentials.CleanupResourceSources(ctx, stackID, resourceName); cleanupErr != nil {
-			s.logger.Errorf("failed to clean up managed secrets for resource '%s': %v", resourceName, cleanupErr)
-		}
-	}
 	return nil
 }
 

@@ -22,10 +22,6 @@ type PreviewGitRepository struct {
 	// IntegrationID pins an org-level git integration for clone auth.
 	// Resolution lands with git integrations.
 	IntegrationID string `json:"integration_id,omitempty"`
-
-	// InlineCredentials carries inline clone credentials from the API to the
-	// managed-secret materializer; never persisted.
-	InlineCredentials *InlineCredentials `json:"-" gorm:"-"`
 }
 
 func (r PreviewGitRepository) Value() (driver.Value, error) {

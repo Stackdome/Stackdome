@@ -507,15 +507,6 @@ paths:
         schema:
           type: string
         style: form
-      - description: Include system-managed secrets materialized from inline credentials
-        explode: true
-        in: query
-        name: include_managed
-        required: false
-        schema:
-          default: false
-          type: boolean
-        style: form
       responses:
         "200":
           content:
@@ -3538,15 +3529,6 @@ paths:
         required: false
         schema:
           type: string
-        style: form
-      - description: Include system-managed secrets materialized from inline credentials
-        explode: true
-        in: query
-        name: include_managed
-        required: false
-        schema:
-          default: false
-          type: boolean
         style: form
       responses:
         "200":
@@ -6986,31 +6968,16 @@ components:
                 dockerfile_path: Dockerfile
               image:
                 ref: ref
-                credentials:
-                  password: password
-                  username: username
-                  save_to_org: true
-                credentials_configured: true
                 registry_credentials_id: registry_credentials_id
               git:
                 repo_url: repo_url
                 integration_id: integration_id
-                credentials:
-                  password: password
-                  username: username
-                  save_to_org: true
                 commit: commit
-                credentials_configured: true
                 build_context: "."
                 tag: tag
                 dockerfile_path: Dockerfile
                 branch: branch
                 push:
-                  credentials:
-                    password: password
-                    username: username
-                    save_to_org: true
-                  credentials_configured: true
                   registry_credentials_id: registry_credentials_id
                   repository: repository
             ports:
@@ -7142,31 +7109,16 @@ components:
                 dockerfile_path: Dockerfile
               image:
                 ref: ref
-                credentials:
-                  password: password
-                  username: username
-                  save_to_org: true
-                credentials_configured: true
                 registry_credentials_id: registry_credentials_id
               git:
                 repo_url: repo_url
                 integration_id: integration_id
-                credentials:
-                  password: password
-                  username: username
-                  save_to_org: true
                 commit: commit
-                credentials_configured: true
                 build_context: "."
                 tag: tag
                 dockerfile_path: Dockerfile
                 branch: branch
                 push:
-                  credentials:
-                    password: password
-                    username: username
-                    save_to_org: true
-                  credentials_configured: true
                   registry_credentials_id: registry_credentials_id
                   repository: repository
             ports:
@@ -7621,31 +7573,16 @@ components:
                   dockerfile_path: Dockerfile
                 image:
                   ref: ref
-                  credentials:
-                    password: password
-                    username: username
-                    save_to_org: true
-                  credentials_configured: true
                   registry_credentials_id: registry_credentials_id
                 git:
                   repo_url: repo_url
                   integration_id: integration_id
-                  credentials:
-                    password: password
-                    username: username
-                    save_to_org: true
                   commit: commit
-                  credentials_configured: true
                   build_context: "."
                   tag: tag
                   dockerfile_path: Dockerfile
                   branch: branch
                   push:
-                    credentials:
-                      password: password
-                      username: username
-                      save_to_org: true
-                    credentials_configured: true
                     registry_credentials_id: registry_credentials_id
                     repository: repository
               ports:
@@ -7777,31 +7714,16 @@ components:
                   dockerfile_path: Dockerfile
                 image:
                   ref: ref
-                  credentials:
-                    password: password
-                    username: username
-                    save_to_org: true
-                  credentials_configured: true
                   registry_credentials_id: registry_credentials_id
                 git:
                   repo_url: repo_url
                   integration_id: integration_id
-                  credentials:
-                    password: password
-                    username: username
-                    save_to_org: true
                   commit: commit
-                  credentials_configured: true
                   build_context: "."
                   tag: tag
                   dockerfile_path: Dockerfile
                   branch: branch
                   push:
-                    credentials:
-                      password: password
-                      username: username
-                      save_to_org: true
-                    credentials_configured: true
                     registry_credentials_id: registry_credentials_id
                     repository: repository
               ports:
@@ -8185,31 +8107,16 @@ components:
                   dockerfile_path: Dockerfile
                 image:
                   ref: ref
-                  credentials:
-                    password: password
-                    username: username
-                    save_to_org: true
-                  credentials_configured: true
                   registry_credentials_id: registry_credentials_id
                 git:
                   repo_url: repo_url
                   integration_id: integration_id
-                  credentials:
-                    password: password
-                    username: username
-                    save_to_org: true
                   commit: commit
-                  credentials_configured: true
                   build_context: "."
                   tag: tag
                   dockerfile_path: Dockerfile
                   branch: branch
                   push:
-                    credentials:
-                      password: password
-                      username: username
-                      save_to_org: true
-                    credentials_configured: true
                     registry_credentials_id: registry_credentials_id
                     repository: repository
               ports:
@@ -8341,31 +8248,16 @@ components:
                   dockerfile_path: Dockerfile
                 image:
                   ref: ref
-                  credentials:
-                    password: password
-                    username: username
-                    save_to_org: true
-                  credentials_configured: true
                   registry_credentials_id: registry_credentials_id
                 git:
                   repo_url: repo_url
                   integration_id: integration_id
-                  credentials:
-                    password: password
-                    username: username
-                    save_to_org: true
                   commit: commit
-                  credentials_configured: true
                   build_context: "."
                   tag: tag
                   dockerfile_path: Dockerfile
                   branch: branch
                   push:
-                    credentials:
-                      password: password
-                      username: username
-                      save_to_org: true
-                    credentials_configured: true
                     registry_credentials_id: registry_credentials_id
                     repository: repository
               ports:
@@ -8823,31 +8715,16 @@ components:
               dockerfile_path: Dockerfile
             image:
               ref: ref
-              credentials:
-                password: password
-                username: username
-                save_to_org: true
-              credentials_configured: true
               registry_credentials_id: registry_credentials_id
             git:
               repo_url: repo_url
               integration_id: integration_id
-              credentials:
-                password: password
-                username: username
-                save_to_org: true
               commit: commit
-              credentials_configured: true
               build_context: "."
               tag: tag
               dockerfile_path: Dockerfile
               branch: branch
               push:
-                credentials:
-                  password: password
-                  username: username
-                  save_to_org: true
-                credentials_configured: true
                 registry_credentials_id: registry_credentials_id
                 repository: repository
           ports:
@@ -8979,31 +8856,16 @@ components:
               dockerfile_path: Dockerfile
             image:
               ref: ref
-              credentials:
-                password: password
-                username: username
-                save_to_org: true
-              credentials_configured: true
               registry_credentials_id: registry_credentials_id
             git:
               repo_url: repo_url
               integration_id: integration_id
-              credentials:
-                password: password
-                username: username
-                save_to_org: true
               commit: commit
-              credentials_configured: true
               build_context: "."
               tag: tag
               dockerfile_path: Dockerfile
               branch: branch
               push:
-                credentials:
-                  password: password
-                  username: username
-                  save_to_org: true
-                credentials_configured: true
                 registry_credentials_id: registry_credentials_id
                 repository: repository
           ports:
@@ -9401,31 +9263,16 @@ components:
             dockerfile_path: Dockerfile
           image:
             ref: ref
-            credentials:
-              password: password
-              username: username
-              save_to_org: true
-            credentials_configured: true
             registry_credentials_id: registry_credentials_id
           git:
             repo_url: repo_url
             integration_id: integration_id
-            credentials:
-              password: password
-              username: username
-              save_to_org: true
             commit: commit
-            credentials_configured: true
             build_context: "."
             tag: tag
             dockerfile_path: Dockerfile
             branch: branch
             push:
-              credentials:
-                password: password
-                username: username
-                save_to_org: true
-              credentials_configured: true
               registry_credentials_id: registry_credentials_id
               repository: repository
         ports:
@@ -9626,31 +9473,16 @@ components:
               dockerfile_path: Dockerfile
             image:
               ref: ref
-              credentials:
-                password: password
-                username: username
-                save_to_org: true
-              credentials_configured: true
               registry_credentials_id: registry_credentials_id
             git:
               repo_url: repo_url
               integration_id: integration_id
-              credentials:
-                password: password
-                username: username
-                save_to_org: true
               commit: commit
-              credentials_configured: true
               build_context: "."
               tag: tag
               dockerfile_path: Dockerfile
               branch: branch
               push:
-                credentials:
-                  password: password
-                  username: username
-                  save_to_org: true
-                credentials_configured: true
                 registry_credentials_id: registry_credentials_id
                 repository: repository
           ports:
@@ -9782,31 +9614,16 @@ components:
               dockerfile_path: Dockerfile
             image:
               ref: ref
-              credentials:
-                password: password
-                username: username
-                save_to_org: true
-              credentials_configured: true
               registry_credentials_id: registry_credentials_id
             git:
               repo_url: repo_url
               integration_id: integration_id
-              credentials:
-                password: password
-                username: username
-                save_to_org: true
               commit: commit
-              credentials_configured: true
               build_context: "."
               tag: tag
               dockerfile_path: Dockerfile
               branch: branch
               push:
-                credentials:
-                  password: password
-                  username: username
-                  save_to_org: true
-                credentials_configured: true
                 registry_credentials_id: registry_credentials_id
                 repository: repository
           ports:
@@ -11564,31 +11381,16 @@ components:
           dockerfile_path: Dockerfile
         image:
           ref: ref
-          credentials:
-            password: password
-            username: username
-            save_to_org: true
-          credentials_configured: true
           registry_credentials_id: registry_credentials_id
         git:
           repo_url: repo_url
           integration_id: integration_id
-          credentials:
-            password: password
-            username: username
-            save_to_org: true
           commit: commit
-          credentials_configured: true
           build_context: "."
           tag: tag
           dockerfile_path: Dockerfile
           branch: branch
           push:
-            credentials:
-              password: password
-              username: username
-              save_to_org: true
-            credentials_configured: true
             registry_credentials_id: registry_credentials_id
             repository: repository
       properties:
@@ -11604,22 +11406,12 @@ components:
       example:
         repo_url: repo_url
         integration_id: integration_id
-        credentials:
-          password: password
-          username: username
-          save_to_org: true
         commit: commit
-        credentials_configured: true
         build_context: "."
         tag: tag
         dockerfile_path: Dockerfile
         branch: branch
         push:
-          credentials:
-            password: password
-            username: username
-            save_to_org: true
-          credentials_configured: true
           registry_credentials_id: registry_credentials_id
           repository: repository
       properties:
@@ -11644,12 +11436,6 @@ components:
         integration_id:
           description: Org-level git integration override for clone auth
           type: string
-        credentials:
-          $ref: '#/components/schemas/InlineCredentials'
-        credentials_configured:
-          description: True when clone credentials are configured for this source
-          readOnly: true
-          type: boolean
         push:
           $ref: '#/components/schemas/PushTarget'
       required:
@@ -11658,22 +11444,12 @@ components:
     PushTarget:
       additionalProperties: false
       example:
-        credentials:
-          password: password
-          username: username
-          save_to_org: true
-        credentials_configured: true
         registry_credentials_id: registry_credentials_id
         repository: repository
       properties:
         repository:
           description: "Push repository as host/path, without a tag"
           type: string
-        credentials:
-          $ref: '#/components/schemas/InlineCredentials'
-        credentials_configured:
-          readOnly: true
-          type: boolean
         registry_credentials_id:
           description: Org-level registry credential override for push auth
           type: string
@@ -11684,20 +11460,10 @@ components:
       additionalProperties: false
       example:
         ref: ref
-        credentials:
-          password: password
-          username: username
-          save_to_org: true
-        credentials_configured: true
         registry_credentials_id: registry_credentials_id
       properties:
         ref:
           type: string
-        credentials:
-          $ref: '#/components/schemas/InlineCredentials'
-        credentials_configured:
-          readOnly: true
-          type: boolean
         registry_credentials_id:
           description: Org-level registry credential override for pull auth
           type: string
@@ -11728,28 +11494,6 @@ components:
         build_context:
           default: "."
           type: string
-      type: object
-    InlineCredentials:
-      additionalProperties: false
-      example:
-        password: password
-        username: username
-        save_to_org: true
-      properties:
-        username:
-          type: string
-          writeOnly: true
-        password:
-          format: password
-          type: string
-          writeOnly: true
-        save_to_org:
-          description: Also save these credentials as an org-level credential
-          type: boolean
-          writeOnly: true
-      required:
-      - password
-      - username
       type: object
     BuildSourceContext:
       example:
@@ -13907,11 +13651,6 @@ components:
         repo_url: repo_url
         base_branch: base_branch
         integration_id: integration_id
-        credentials:
-          password: password
-          username: username
-          save_to_org: true
-        credentials_configured: true
       properties:
         repo_url:
           type: string
@@ -13920,11 +13659,6 @@ components:
         integration_id:
           description: Org-level git integration override for clone auth
           type: string
-        credentials:
-          $ref: '#/components/schemas/InlineCredentials'
-        credentials_configured:
-          readOnly: true
-          type: boolean
       required:
       - repo_url
       type: object
@@ -13941,11 +13675,6 @@ components:
           repo_url: repo_url
           base_branch: base_branch
           integration_id: integration_id
-          credentials:
-            password: password
-            username: username
-            save_to_org: true
-          credentials_configured: true
         team_id: team_id
         labels:
         - value: value
@@ -14012,11 +13741,6 @@ components:
           repo_url: repo_url
           base_branch: base_branch
           integration_id: integration_id
-          credentials:
-            password: password
-            username: username
-            save_to_org: true
-          credentials_configured: true
         stackfile_path: stackfile_path
         max_active_previews: 0
         labels:
@@ -14059,11 +13783,6 @@ components:
           repo_url: repo_url
           base_branch: base_branch
           integration_id: integration_id
-          credentials:
-            password: password
-            username: username
-            save_to_org: true
-          credentials_configured: true
         stackfile_path: stackfile_path
         max_active_previews: 0
         labels:
@@ -14106,11 +13825,6 @@ components:
             repo_url: repo_url
             base_branch: base_branch
             integration_id: integration_id
-            credentials:
-              password: password
-              username: username
-              save_to_org: true
-            credentials_configured: true
           team_id: team_id
           labels:
           - value: value
@@ -14135,11 +13849,6 @@ components:
             repo_url: repo_url
             base_branch: base_branch
             integration_id: integration_id
-            credentials:
-              password: password
-              username: username
-              save_to_org: true
-            credentials_configured: true
           team_id: team_id
           labels:
           - value: value

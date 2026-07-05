@@ -321,38 +321,15 @@ func resourcesByName(stack *models.Stack) map[string]*models.StackResource {
 
 // resourceNeedsSourceProbe reports whether the desired resource's registry/git
 // sources must be re-probed. A resource with no stored counterpart (new, or the
-// create path) is always probed. Re-submitted inline credentials force a probe
-// because the backing managed secret's data may have changed even when the ref
-// string did not. Otherwise the probe runs only when a source-relevant field
-// (image/repo ref, revision, push target, or credential selector) changed.
+// create path) is always probed. Otherwise the probe runs only when a
+// source-relevant field (image/repo ref, revision, push target, or credential
+// selector) changed.
 func resourceNeedsSourceProbe(existing, desired *models.StackResource) bool {
 	if existing == nil {
 		return true
 	}
-	if desiredHasInlineCredentials(desired) {
-		return true
-	}
 	return imageSourceOf(existing) != imageSourceOf(desired) ||
 		buildSourceOf(existing) != buildSourceOf(desired)
-}
-
-// desiredHasInlineCredentials reports whether the request carried inline
-// credentials on any source slot. These are transient (never persisted), so an
-// existing stored resource never has them; their presence on the desired spec
-// means credentials were (re-)submitted and the source must be re-probed.
-func desiredHasInlineCredentials(r *models.StackResource) bool {
-	if r.ImageConfig != nil && r.ImageConfig.InlineCredentials != nil {
-		return true
-	}
-	if r.BuildConfig != nil {
-		if r.BuildConfig.PushInlineCredentials != nil {
-			return true
-		}
-		if git := r.BuildConfig.SourceContext.Git; git != nil && git.InlineCredentials != nil {
-			return true
-		}
-	}
-	return false
 }
 
 // imageSourceView is a flat, comparable projection of the pull-probe-relevant

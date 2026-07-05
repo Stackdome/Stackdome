@@ -7,8 +7,6 @@ Name | Type | Description | Notes
 **RepoUrl** | **string** |  | 
 **BaseBranch** | Pointer to **string** |  | [optional] 
 **IntegrationId** | Pointer to **string** | Org-level git integration override for clone auth | [optional] 
-**Credentials** | Pointer to [**InlineCredentials**](InlineCredentials.md) |  | [optional] 
-**CredentialsConfigured** | Pointer to **bool** |  | [optional] [readonly] 
 
 ## Methods
 
@@ -98,56 +96,6 @@ SetIntegrationId sets IntegrationId field to given value.
 `func (o *PreviewGitRepository) HasIntegrationId() bool`
 
 HasIntegrationId returns a boolean if a field has been set.
-
-### GetCredentials
-
-`func (o *PreviewGitRepository) GetCredentials() InlineCredentials`
-
-GetCredentials returns the Credentials field if non-nil, zero value otherwise.
-
-### GetCredentialsOk
-
-`func (o *PreviewGitRepository) GetCredentialsOk() (*InlineCredentials, bool)`
-
-GetCredentialsOk returns a tuple with the Credentials field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetCredentials
-
-`func (o *PreviewGitRepository) SetCredentials(v InlineCredentials)`
-
-SetCredentials sets Credentials field to given value.
-
-### HasCredentials
-
-`func (o *PreviewGitRepository) HasCredentials() bool`
-
-HasCredentials returns a boolean if a field has been set.
-
-### GetCredentialsConfigured
-
-`func (o *PreviewGitRepository) GetCredentialsConfigured() bool`
-
-GetCredentialsConfigured returns the CredentialsConfigured field if non-nil, zero value otherwise.
-
-### GetCredentialsConfiguredOk
-
-`func (o *PreviewGitRepository) GetCredentialsConfiguredOk() (*bool, bool)`
-
-GetCredentialsConfiguredOk returns a tuple with the CredentialsConfigured field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetCredentialsConfigured
-
-`func (o *PreviewGitRepository) SetCredentialsConfigured(v bool)`
-
-SetCredentialsConfigured sets CredentialsConfigured field to given value.
-
-### HasCredentialsConfigured
-
-`func (o *PreviewGitRepository) HasCredentialsConfigured() bool`
-
-HasCredentialsConfigured returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

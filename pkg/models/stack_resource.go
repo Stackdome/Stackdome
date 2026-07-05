@@ -184,10 +184,6 @@ type ImageConfigSpec struct {
 	// RegistryCredentialID pins an org-level registry credential for image
 	// pulls, overriding host auto-attach.
 	RegistryCredentialID string `json:"registry_credential_id,omitempty"`
-
-	// InlineCredentials carries inline pull credentials from the API to the
-	// managed-secret materializer; never persisted.
-	InlineCredentials *InlineCredentials `json:"-" gorm:"-"`
 }
 
 func (i ImageConfigSpec) Validate() error {

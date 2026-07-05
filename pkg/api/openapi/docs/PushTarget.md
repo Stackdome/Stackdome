@@ -5,8 +5,6 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Repository** | **string** | Push repository as host/path, without a tag | 
-**Credentials** | Pointer to [**InlineCredentials**](InlineCredentials.md) |  | [optional] 
-**CredentialsConfigured** | Pointer to **bool** |  | [optional] [readonly] 
 **RegistryCredentialsId** | Pointer to **string** | Org-level registry credential override for push auth | [optional] 
 
 ## Methods
@@ -47,56 +45,6 @@ and a boolean to check if the value has been set.
 
 SetRepository sets Repository field to given value.
 
-
-### GetCredentials
-
-`func (o *PushTarget) GetCredentials() InlineCredentials`
-
-GetCredentials returns the Credentials field if non-nil, zero value otherwise.
-
-### GetCredentialsOk
-
-`func (o *PushTarget) GetCredentialsOk() (*InlineCredentials, bool)`
-
-GetCredentialsOk returns a tuple with the Credentials field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetCredentials
-
-`func (o *PushTarget) SetCredentials(v InlineCredentials)`
-
-SetCredentials sets Credentials field to given value.
-
-### HasCredentials
-
-`func (o *PushTarget) HasCredentials() bool`
-
-HasCredentials returns a boolean if a field has been set.
-
-### GetCredentialsConfigured
-
-`func (o *PushTarget) GetCredentialsConfigured() bool`
-
-GetCredentialsConfigured returns the CredentialsConfigured field if non-nil, zero value otherwise.
-
-### GetCredentialsConfiguredOk
-
-`func (o *PushTarget) GetCredentialsConfiguredOk() (*bool, bool)`
-
-GetCredentialsConfiguredOk returns a tuple with the CredentialsConfigured field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetCredentialsConfigured
-
-`func (o *PushTarget) SetCredentialsConfigured(v bool)`
-
-SetCredentialsConfigured sets CredentialsConfigured field to given value.
-
-### HasCredentialsConfigured
-
-`func (o *PushTarget) HasCredentialsConfigured() bool`
-
-HasCredentialsConfigured returns a boolean if a field has been set.
 
 ### GetRegistryCredentialsId
 

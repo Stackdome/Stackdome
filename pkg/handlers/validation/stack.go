@@ -127,21 +127,9 @@ func validateGitSource(in *openapi.GitSource) *errors.ServiceError {
 	if in.GetCommit() != "" && in.GetBranch() == "" && in.GetTag() == "" {
 		return errors.BadRequest("source.git: %s", "commit requires a branch or tag")
 	}
-	if err := validateInlineCredentials(in.Credentials, "source.git.credentials"); err != nil {
-		return err
-	}
-	if in.Credentials != nil && in.GetIntegrationId() != "" {
-		return errors.BadRequest("source.git: %s", "credentials and integration_id are mutually exclusive")
-	}
 	if in.Push != nil {
 		if in.Push.Repository == "" {
 			return errors.BadRequest("source.git.push.repository: %s", "source.git.push.repository is required")
-		}
-		if err := validateInlineCredentials(in.Push.Credentials, "source.git.push.credentials"); err != nil {
-			return err
-		}
-		if in.Push.Credentials != nil && in.Push.GetRegistryCredentialsId() != "" {
-			return errors.BadRequest("source.git.push: %s", "credentials and registry_credentials_id are mutually exclusive")
 		}
 	}
 	return nil
@@ -151,28 +139,12 @@ func validateImageSource(in *openapi.ImageSource) *errors.ServiceError {
 	if in.Ref == "" {
 		return errors.BadRequest("source.image.ref: %s", "source.image.ref is required")
 	}
-	if err := validateInlineCredentials(in.Credentials, "source.image.credentials"); err != nil {
-		return err
-	}
-	if in.Credentials != nil && in.GetRegistryCredentialsId() != "" {
-		return errors.BadRequest("source.image: %s", "credentials and registry_credentials_id are mutually exclusive")
-	}
 	return nil
 }
 
 func validateVolumeSource(in *openapi.VolumeBuildSource) *errors.ServiceError {
 	if in.GetVolumeId() == "" && in.GetVolumeName() == "" {
 		return errors.BadRequest("source.volume: %s", "volume_id or volume_name is required")
-	}
-	return nil
-}
-
-func validateInlineCredentials(in *openapi.InlineCredentials, field string) *errors.ServiceError {
-	if in == nil {
-		return nil
-	}
-	if in.Username == "" || in.Password == "" {
-		return errors.BadRequest("%s: %s", field, "username and password are required")
 	}
 	return nil
 }

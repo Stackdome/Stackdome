@@ -28,16 +28,6 @@ const (
 	SourceAnonymous Source = "anonymous"
 )
 
-// SourceRollback reverts the managed-secret mutations performed by a reversible
-// source-credential prepare. It is declared here (rather than in pkg/services)
-// so generated mocks of service interfaces that return it do not create an
-// import cycle back into pkg/services. Rollback is best-effort: it logs failures
-// with enough identifiers to find any orphan and never returns an error, so
-// callers always surface the original error. Rolling back twice is a no-op.
-type SourceRollback interface {
-	Rollback(ctx context.Context)
-}
-
 // RegistryPurpose distinguishes pull from push resolution for registries.
 type RegistryPurpose string
 

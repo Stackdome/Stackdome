@@ -928,8 +928,6 @@ export interface paths {
                 query?: {
                     /** @description Filter by secret name */
                     name?: string;
-                    /** @description Include system-managed secrets materialized from inline credentials */
-                    include_managed?: boolean;
                 };
                 header?: never;
                 path: {
@@ -5020,8 +5018,6 @@ export interface paths {
                 query?: {
                     /** @description Filter by secret name */
                     name?: string;
-                    /** @description Include system-managed secrets materialized from inline credentials */
-                    include_managed?: boolean;
                 };
                 header?: never;
                 path: {
@@ -8156,24 +8152,17 @@ export interface components {
             build_context: string;
             /** @description Org-level git integration override for clone auth */
             integration_id?: string;
-            credentials?: components["schemas"]["InlineCredentials"];
-            /** @description True when clone credentials are configured for this source */
-            readonly credentials_configured?: boolean;
             /** @description Omit to push to the internal cluster registry */
             push?: components["schemas"]["PushTarget"];
         };
         PushTarget: {
             /** @description Push repository as host/path, without a tag */
             repository: string;
-            credentials?: components["schemas"]["InlineCredentials"];
-            readonly credentials_configured?: boolean;
             /** @description Org-level registry credential override for push auth */
             registry_credentials_id?: string;
         };
         ImageSource: {
             ref: string;
-            credentials?: components["schemas"]["InlineCredentials"];
-            readonly credentials_configured?: boolean;
             /** @description Org-level registry credential override for pull auth */
             registry_credentials_id?: string;
         };
@@ -8187,13 +8176,6 @@ export interface components {
             dockerfile_path: string;
             /** @default . */
             build_context: string;
-        };
-        InlineCredentials: {
-            username: string;
-            /** Format: password */
-            password: string;
-            /** @description Also save these credentials as an org-level credential */
-            save_to_org?: boolean;
         };
         BuildSourceContext: {
             volume?: {
@@ -8832,8 +8814,6 @@ export interface components {
             base_branch?: string;
             /** @description Org-level git integration override for clone auth */
             integration_id?: string;
-            credentials?: components["schemas"]["InlineCredentials"];
-            readonly credentials_configured?: boolean;
         };
         StackPreviewConfig: {
             readonly id?: string;

@@ -75,7 +75,6 @@ docs/ImageBuildStatus.md
 docs/ImageSource.md
 docs/Ingress.md
 docs/InitSpec.md
-docs/InlineCredentials.md
 docs/InviteStatus.md
 docs/Label.md
 docs/LifecycleConfig.md
@@ -293,7 +292,6 @@ model_image_build_status.go
 model_image_source.go
 model_ingress.go
 model_init_spec.go
-model_inline_credentials.go
 model_invite_status.go
 model_label.go
 model_lifecycle_config.go

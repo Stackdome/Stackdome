@@ -360,15 +360,8 @@ const Label = z.object({ key: z.string(), value: z.string() });
 const Annotation = z
   .object({ key: z.string(), value: z.string() })
   .passthrough();
-const InlineCredentials = z.object({
-  username: z.string(),
-  password: z.string(),
-  save_to_org: z.boolean().optional(),
-});
 const PushTarget = z.object({
   repository: z.string(),
-  credentials: InlineCredentials.optional(),
-  credentials_configured: z.boolean().optional(),
   registry_credentials_id: z.string().optional(),
 });
 const GitSource = z.object({
@@ -379,14 +372,10 @@ const GitSource = z.object({
   dockerfile_path: z.string().optional().default("Dockerfile"),
   build_context: z.string().optional().default("."),
   integration_id: z.string().optional(),
-  credentials: InlineCredentials.optional(),
-  credentials_configured: z.boolean().optional(),
   push: PushTarget.optional(),
 });
 const ImageSource = z.object({
   ref: z.string(),
-  credentials: InlineCredentials.optional(),
-  credentials_configured: z.boolean().optional(),
   registry_credentials_id: z.string().optional(),
 });
 const VolumeBuildSource = z
@@ -1347,8 +1336,6 @@ const PreviewGitRepository = z.object({
   repo_url: z.string(),
   base_branch: z.string().optional(),
   integration_id: z.string().optional(),
-  credentials: InlineCredentials.optional(),
-  credentials_configured: z.boolean().optional(),
 });
 const StackPreviewConfigCreate = z
   .object({
@@ -1554,7 +1541,6 @@ export const schemas = {
   ObjectStoreList,
   Label,
   Annotation,
-  InlineCredentials,
   PushTarget,
   GitSource,
   ImageSource,
@@ -3472,11 +3458,6 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
-      {
-        name: "include_managed",
-        type: "Query",
-        schema: z.boolean().optional().default(false),
-      },
     ],
     response: SecretList,
     errors: [
@@ -4935,11 +4916,6 @@ const endpoints = makeApi([
         name: "name",
         type: "Query",
         schema: z.string().optional(),
-      },
-      {
-        name: "include_managed",
-        type: "Query",
-        schema: z.boolean().optional().default(false),
       },
     ],
     response: SecretList,

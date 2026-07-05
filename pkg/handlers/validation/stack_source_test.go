@@ -59,42 +59,6 @@ func TestValidateGitSourceCommitRequiresBranchOrTag(t *testing.T) {
 	}
 }
 
-func TestValidateGitSourceCredentialExclusivity(t *testing.T) {
-	spec := gitSourceSpec(func(g *openapi.GitSource) {
-		g.SetCredentials(*openapi.NewInlineCredentials("alice", "s3cret"))
-		g.SetIntegrationId("int-1")
-	})
-	if err := validateSource(spec); err == nil {
-		t.Fatal("expected credentials+integration_id to be rejected")
-	}
-
-	push := openapi.NewPushTarget("ghcr.io/acme/api")
-	push.SetCredentials(*openapi.NewInlineCredentials("alice", "s3cret"))
-	push.SetRegistryCredentialsId("rc-1")
-	spec = gitSourceSpec(func(g *openapi.GitSource) {
-		g.SetPush(*push)
-	})
-	if err := validateSource(spec); err == nil {
-		t.Fatal("expected push credentials+registry_credentials_id to be rejected")
-	}
-
-	img := openapi.NewImageSource("redis:7")
-	img.SetCredentials(*openapi.NewInlineCredentials("alice", "s3cret"))
-	img.SetRegistryCredentialsId("rc-1")
-	if err := validateSource(&openapi.SourceSpec{Image: img}); err == nil {
-		t.Fatal("expected image credentials+registry_credentials_id to be rejected")
-	}
-}
-
-func TestValidateInlineCredentialsRequireUsernameAndPassword(t *testing.T) {
-	spec := gitSourceSpec(func(g *openapi.GitSource) {
-		g.SetCredentials(openapi.InlineCredentials{Username: "alice"})
-	})
-	if err := validateSource(spec); err == nil {
-		t.Fatal("expected incomplete inline credentials to be rejected")
-	}
-}
-
 func TestValidateVolumeSourceRequiresIdentifier(t *testing.T) {
 	if err := validateSource(&openapi.SourceSpec{Volume: openapi.NewVolumeBuildSource()}); err == nil {
 		t.Fatal("expected volume source without id or name to be rejected")

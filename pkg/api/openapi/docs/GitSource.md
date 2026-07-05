@@ -11,8 +11,6 @@ Name | Type | Description | Notes
 **DockerfilePath** | Pointer to **string** |  | [optional] [default to "Dockerfile"]
 **BuildContext** | Pointer to **string** |  | [optional] [default to "."]
 **IntegrationId** | Pointer to **string** | Org-level git integration override for clone auth | [optional] 
-**Credentials** | Pointer to [**InlineCredentials**](InlineCredentials.md) |  | [optional] 
-**CredentialsConfigured** | Pointer to **bool** | True when clone credentials are configured for this source | [optional] [readonly] 
 **Push** | Pointer to [**PushTarget**](PushTarget.md) |  | [optional] 
 
 ## Methods
@@ -203,56 +201,6 @@ SetIntegrationId sets IntegrationId field to given value.
 `func (o *GitSource) HasIntegrationId() bool`
 
 HasIntegrationId returns a boolean if a field has been set.
-
-### GetCredentials
-
-`func (o *GitSource) GetCredentials() InlineCredentials`
-
-GetCredentials returns the Credentials field if non-nil, zero value otherwise.
-
-### GetCredentialsOk
-
-`func (o *GitSource) GetCredentialsOk() (*InlineCredentials, bool)`
-
-GetCredentialsOk returns a tuple with the Credentials field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetCredentials
-
-`func (o *GitSource) SetCredentials(v InlineCredentials)`
-
-SetCredentials sets Credentials field to given value.
-
-### HasCredentials
-
-`func (o *GitSource) HasCredentials() bool`
-
-HasCredentials returns a boolean if a field has been set.
-
-### GetCredentialsConfigured
-
-`func (o *GitSource) GetCredentialsConfigured() bool`
-
-GetCredentialsConfigured returns the CredentialsConfigured field if non-nil, zero value otherwise.
-
-### GetCredentialsConfiguredOk
-
-`func (o *GitSource) GetCredentialsConfiguredOk() (*bool, bool)`
-
-GetCredentialsConfiguredOk returns a tuple with the CredentialsConfigured field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetCredentialsConfigured
-
-`func (o *GitSource) SetCredentialsConfigured(v bool)`
-
-SetCredentialsConfigured sets CredentialsConfigured field to given value.
-
-### HasCredentialsConfigured
-
-`func (o *GitSource) HasCredentialsConfigured() bool`
-
-HasCredentialsConfigured returns a boolean if a field has been set.
 
 ### GetPush
 

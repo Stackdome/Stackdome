@@ -17,9 +17,7 @@ import (
 // PushTarget struct for PushTarget
 type PushTarget struct {
 	// Push repository as host/path, without a tag
-	Repository            string             `json:"repository"`
-	Credentials           *InlineCredentials `json:"credentials,omitempty"`
-	CredentialsConfigured *bool              `json:"credentials_configured,omitempty"`
+	Repository string `json:"repository"`
 	// Org-level registry credential override for push auth
 	RegistryCredentialsId *string `json:"registry_credentials_id,omitempty"`
 }
@@ -66,70 +64,6 @@ func (o *PushTarget) SetRepository(v string) {
 	o.Repository = v
 }
 
-// GetCredentials returns the Credentials field value if set, zero value otherwise.
-func (o *PushTarget) GetCredentials() InlineCredentials {
-	if o == nil || o.Credentials == nil {
-		var ret InlineCredentials
-		return ret
-	}
-	return *o.Credentials
-}
-
-// GetCredentialsOk returns a tuple with the Credentials field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *PushTarget) GetCredentialsOk() (*InlineCredentials, bool) {
-	if o == nil || o.Credentials == nil {
-		return nil, false
-	}
-	return o.Credentials, true
-}
-
-// HasCredentials returns a boolean if a field has been set.
-func (o *PushTarget) HasCredentials() bool {
-	if o != nil && o.Credentials != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetCredentials gets a reference to the given InlineCredentials and assigns it to the Credentials field.
-func (o *PushTarget) SetCredentials(v InlineCredentials) {
-	o.Credentials = &v
-}
-
-// GetCredentialsConfigured returns the CredentialsConfigured field value if set, zero value otherwise.
-func (o *PushTarget) GetCredentialsConfigured() bool {
-	if o == nil || o.CredentialsConfigured == nil {
-		var ret bool
-		return ret
-	}
-	return *o.CredentialsConfigured
-}
-
-// GetCredentialsConfiguredOk returns a tuple with the CredentialsConfigured field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *PushTarget) GetCredentialsConfiguredOk() (*bool, bool) {
-	if o == nil || o.CredentialsConfigured == nil {
-		return nil, false
-	}
-	return o.CredentialsConfigured, true
-}
-
-// HasCredentialsConfigured returns a boolean if a field has been set.
-func (o *PushTarget) HasCredentialsConfigured() bool {
-	if o != nil && o.CredentialsConfigured != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetCredentialsConfigured gets a reference to the given bool and assigns it to the CredentialsConfigured field.
-func (o *PushTarget) SetCredentialsConfigured(v bool) {
-	o.CredentialsConfigured = &v
-}
-
 // GetRegistryCredentialsId returns the RegistryCredentialsId field value if set, zero value otherwise.
 func (o *PushTarget) GetRegistryCredentialsId() string {
 	if o == nil || o.RegistryCredentialsId == nil {
@@ -166,12 +100,6 @@ func (o PushTarget) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
 		toSerialize["repository"] = o.Repository
-	}
-	if o.Credentials != nil {
-		toSerialize["credentials"] = o.Credentials
-	}
-	if o.CredentialsConfigured != nil {
-		toSerialize["credentials_configured"] = o.CredentialsConfigured
 	}
 	if o.RegistryCredentialsId != nil {
 		toSerialize["registry_credentials_id"] = o.RegistryCredentialsId

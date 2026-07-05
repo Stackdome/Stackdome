@@ -26,8 +26,7 @@ func PresentStackPreviewConfig(c *models.StackPreviewConfig) openapi.StackPrevie
 	return result
 }
 
-// presentPreviewGitRepository never echoes credential material; configured
-// clone auth surfaces as credentials_configured.
+// presentPreviewGitRepository never echoes credential material.
 func presentPreviewGitRepository(repo models.PreviewGitRepository) *openapi.PreviewGitRepository {
 	res := &openapi.PreviewGitRepository{
 		RepoUrl:    repo.RepoURL,
@@ -35,9 +34,6 @@ func presentPreviewGitRepository(repo models.PreviewGitRepository) *openapi.Prev
 	}
 	if repo.IntegrationID != "" {
 		res.SetIntegrationId(repo.IntegrationID)
-	}
-	if repo.GitSecretID != nil && *repo.GitSecretID != "" {
-		res.SetCredentialsConfigured(true)
 	}
 	return res
 }
@@ -47,10 +43,9 @@ func convertPreviewGitRepository(in *openapi.PreviewGitRepository) models.Previe
 		return models.PreviewGitRepository{}
 	}
 	return models.PreviewGitRepository{
-		RepoURL:           in.RepoUrl,
-		BaseBranch:        in.GetBaseBranch(),
-		IntegrationID:     in.GetIntegrationId(),
-		InlineCredentials: convertInlineCredentials(in.Credentials),
+		RepoURL:       in.RepoUrl,
+		BaseBranch:    in.GetBaseBranch(),
+		IntegrationID: in.GetIntegrationId(),
 	}
 }
 

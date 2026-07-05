@@ -112,15 +112,11 @@ func presentStackResources(resources []*models.StackResource) []openapi.StackRes
 }
 
 // presentSource reconstructs the intent-level source union from the internal
-// build/image specs. Credential material is never echoed; only
-// credentials_configured flags are set.
+// build/image specs. Credential material is never echoed.
 func presentSource(r *models.StackResource) *openapi.SourceSpec {
 	switch {
 	case r.ImageConfig != nil:
 		img := openapi.NewImageSource(r.ImageConfig.Image)
-		if r.ImageConfig.PullSecretRef != nil {
-			img.SetCredentialsConfigured(true)
-		}
 		if r.ImageConfig.RegistryCredentialID != "" {
 			img.SetRegistryCredentialsId(r.ImageConfig.RegistryCredentialID)
 		}
@@ -150,14 +146,8 @@ func presentSource(r *models.StackResource) *openapi.SourceSpec {
 			if bc.SourceContext.Git.IntegrationID != "" {
 				git.SetIntegrationId(bc.SourceContext.Git.IntegrationID)
 			}
-			if bc.SourceContext.Git.GitSecretRef != nil {
-				git.SetCredentialsConfigured(true)
-			}
 			if !bc.BuildImageRepository.UseInClusterRegistry && bc.BuildImageRepository.ExternalImageRef != "" {
 				push := openapi.NewPushTarget(bc.BuildImageRepository.ExternalImageRef)
-				if bc.RegistrySecretRef != nil {
-					push.SetCredentialsConfigured(true)
-				}
 				if bc.PushRegistryCredentialID != "" {
 					push.SetRegistryCredentialsId(bc.PushRegistryCredentialID)
 				}
@@ -510,8 +500,7 @@ func convertStackResource(r *openapi.StackResource) *models.StackResource {
 }
 
 // convertSource maps the intent-level source union onto the internal
-// build/image specs. Inline credentials ride along as transient fields for the
-// managed-secret materializer.
+// build/image specs.
 func convertSource(src *openapi.SourceSpec) (*models.BuildConfigSpec, *models.ImageConfigSpec) {
 	if src == nil {
 		return nil, nil
@@ -521,16 +510,14 @@ func convertSource(src *openapi.SourceSpec) (*models.BuildConfigSpec, *models.Im
 		return nil, &models.ImageConfigSpec{
 			Image:                src.Image.Ref,
 			RegistryCredentialID: src.Image.GetRegistryCredentialsId(),
-			InlineCredentials:    convertInlineCredentials(src.Image.Credentials),
 		}
 	case src.Git != nil:
 		git := src.Git
 		res := &models.BuildConfigSpec{
 			SourceContext: models.BuildContextSource{
 				Git: &models.GitBuildSource{
-					RepoURL:           git.RepoUrl,
-					IntegrationID:     git.GetIntegrationId(),
-					InlineCredentials: convertInlineCredentials(git.Credentials),
+					RepoURL:       git.RepoUrl,
+					IntegrationID: git.GetIntegrationId(),
 				},
 			},
 			SourceRevision: models.BuildSourceRevision{
@@ -551,7 +538,6 @@ func convertSource(src *openapi.SourceSpec) (*models.BuildConfigSpec, *models.Im
 		} else {
 			res.BuildImageRepository.ExternalImageRef = git.Push.Repository
 			res.PushRegistryCredentialID = git.Push.GetRegistryCredentialsId()
-			res.PushInlineCredentials = convertInlineCredentials(git.Push.Credentials)
 		}
 		return res, nil
 	case src.Volume != nil:
@@ -585,17 +571,6 @@ func buildPathOrDefault(value, fallback string) string {
 		return fallback
 	}
 	return value
-}
-
-func convertInlineCredentials(in *openapi.InlineCredentials) *models.InlineCredentials {
-	if in == nil {
-		return nil
-	}
-	return &models.InlineCredentials{
-		Username:  in.Username,
-		Password:  in.Password,
-		SaveToOrg: in.GetSaveToOrg(),
-	}
 }
 
 func convertInitConfig(config *openapi.InitSpec) *models.InitConfig {

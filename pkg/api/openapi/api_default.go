@@ -5380,22 +5380,15 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdRegistryCredentialsPostExecut
 }
 
 type ApiApiV1OrganizationsOrgIdSecretsGetRequest struct {
-	ctx            context.Context
-	ApiService     *DefaultApiService
-	orgId          string
-	name           *string
-	includeManaged *bool
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	name       *string
 }
 
 // Filter by secret name
 func (r ApiApiV1OrganizationsOrgIdSecretsGetRequest) Name(name string) ApiApiV1OrganizationsOrgIdSecretsGetRequest {
 	r.name = &name
-	return r
-}
-
-// Include system-managed secrets materialized from inline credentials
-func (r ApiApiV1OrganizationsOrgIdSecretsGetRequest) IncludeManaged(includeManaged bool) ApiApiV1OrganizationsOrgIdSecretsGetRequest {
-	r.includeManaged = &includeManaged
 	return r
 }
 
@@ -5445,9 +5438,6 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdSecretsGetExecute(r ApiApiV1O
 
 	if r.name != nil {
 		localVarQueryParams.Add("name", parameterToString(*r.name, ""))
-	}
-	if r.includeManaged != nil {
-		localVarQueryParams.Add("include_managed", parameterToString(*r.includeManaged, ""))
 	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
@@ -8708,23 +8698,16 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNamePutExecute(r Api
 }
 
 type ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest struct {
-	ctx            context.Context
-	ApiService     *DefaultApiService
-	orgId          string
-	teamName       string
-	name           *string
-	includeManaged *bool
+	ctx        context.Context
+	ApiService *DefaultApiService
+	orgId      string
+	teamName   string
+	name       *string
 }
 
 // Filter by secret name
 func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest) Name(name string) ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest {
 	r.name = &name
-	return r
-}
-
-// Include system-managed secrets materialized from inline credentials
-func (r ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest) IncludeManaged(includeManaged bool) ApiApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetRequest {
-	r.includeManaged = &includeManaged
 	return r
 }
 
@@ -8775,9 +8758,6 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdTeamsTeamNameSecretsGetExecut
 
 	if r.name != nil {
 		localVarQueryParams.Add("name", parameterToString(*r.name, ""))
-	}
-	if r.includeManaged != nil {
-		localVarQueryParams.Add("include_managed", parameterToString(*r.includeManaged, ""))
 	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}

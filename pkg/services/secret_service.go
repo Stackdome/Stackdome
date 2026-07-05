@@ -37,30 +37,6 @@ type SecretService interface {
 	ValidateSecretHasKeys(ctx context.Context, secretID string, requiredKeys []string) (bool, []string, *errors.ServiceError)
 	ValidateGitSecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError
 	ValidateImageRegistrySecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError
-
-	// Managed secrets: materialized from inline credentials, owned by another
-	// resource, hidden from default listings. No permission checks — callers
-	// have already authorized the owning resource operation.
-	CreateManaged(ctx context.Context, spec ManagedSecretSpec) (*models.Secret, *errors.ServiceError)
-	GetManagedFor(ctx context.Context, ownerKind, ownerID string, slot models.ManagedSecretSlot) (*models.Secret, *errors.ServiceError)
-	DeleteManagedFor(ctx context.Context, ownerKind, ownerID string, slots ...models.ManagedSecretSlot) *errors.ServiceError
-	// RestoreManaged puts a captured managed secret snapshot back exactly as it
-	// was; used only by source-credential rollback.
-	RestoreManaged(ctx context.Context, snapshot *models.Secret) *errors.ServiceError
-}
-
-// ManagedSecretSpec describes a managed secret to create or update in place
-// (upsert keyed by owner + slot).
-type ManagedSecretSpec struct {
-	OrganisationID string
-	TeamID         string
-	UserID         string
-	OwnerKind      string
-	OwnerID        string
-	Slot           models.ManagedSecretSlot
-	Name           string
-	Type           models.SecretType
-	Data           map[string]string
 }
 
 type ClusterClientGetter interface {
@@ -402,71 +378,4 @@ func (s *secretService) containsKey(keys []string, key string) bool {
 		}
 	}
 	return false
-}
-
-func (s *secretService) CreateManaged(ctx context.Context, spec ManagedSecretSpec) (*models.Secret, *errors.ServiceError) {
-	secret := &models.Secret{
-		OrganisationID: spec.OrganisationID,
-		TeamID:         spec.TeamID,
-		UserID:         spec.UserID,
-		Name:           spec.Name,
-		Type:           spec.Type,
-		Managed:        true,
-		ManagedByKind:  spec.OwnerKind,
-		ManagedByID:    spec.OwnerID,
-		ManagedSlot:    spec.Slot,
-		Data:           spec.Data,
-	}
-
-	if err := s.validator.ValidateSecretData(secret); err != nil {
-		return nil, err
-	}
-	keys := make([]string, 0, len(secret.Data))
-	for key := range secret.Data {
-		keys = append(keys, key)
-	}
-	secret.Keys = keys
-	if err := s.encryptSecretData(secret); err != nil {
-		return nil, err
-	}
-	secret.Data = nil
-
-	existing, err := s.secretStore.GetManagedByOwner(ctx, spec.OwnerKind, spec.OwnerID, spec.Slot)
-	if err != nil {
-		if err.Is404() {
-			return s.secretStore.Create(ctx, secret)
-		}
-		return nil, err
-	}
-
-	secret.ID = existing.ID
-	return s.secretStore.Update(ctx, secret)
-}
-
-func (s *secretService) GetManagedFor(ctx context.Context, ownerKind, ownerID string, slot models.ManagedSecretSlot) (*models.Secret, *errors.ServiceError) {
-	return s.secretStore.GetManagedByOwner(ctx, ownerKind, ownerID, slot)
-}
-
-func (s *secretService) DeleteManagedFor(ctx context.Context, ownerKind, ownerID string, slots ...models.ManagedSecretSlot) *errors.ServiceError {
-	return s.secretStore.DeleteManagedByOwner(ctx, ownerKind, ownerID, slots)
-}
-
-// RestoreManaged puts a previously captured managed secret snapshot back
-// exactly as it was — same ID and already-encrypted data. If the secret still
-// exists (an overwrite is being reverted) it is updated in place; if it was
-// deleted it is re-created with the original ID so existing references keep
-// resolving. Used only by rollback.
-func (s *secretService) RestoreManaged(ctx context.Context, snapshot *models.Secret) *errors.ServiceError {
-	if snapshot == nil {
-		return nil
-	}
-	if _, err := s.secretStore.GetByID(ctx, snapshot.ID); err != nil {
-		if err.Is404() {
-			_, createErr := s.secretStore.Create(ctx, snapshot)
-			return createErr
-		}
-		return err
-	}
-	_, updateErr := s.secretStore.Update(ctx, snapshot)
-	return updateErr
 }

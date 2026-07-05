@@ -318,12 +318,8 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		GitIntegrationService:     gitIntegrationService,
 	})
 
-	sourceCredentialService := services.NewSourceCredentialService(services.SourceCredentialServiceSpec{
-		SecretService:             secretService,
-		RegistryCredentialService: registryCredentialService,
-		GitIntegrationService:     gitIntegrationService,
-		CredentialResolver:        credentialResolver,
-		Logger:                    te.Logger,
+	defaultBranchResolver := services.NewDefaultBranchResolver(services.DefaultBranchResolverSpec{
+		CredentialResolver: credentialResolver,
 	})
 
 	te.RefreshTokenStore = pgstore.NewRefreshTokenStore(pgstore.RefreshTokenStoreSpec{
@@ -373,15 +369,15 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
-		SessionFactory:          te.DBSession,
-		Logger:                  te.Logger,
-		WorkspaceUserService:    workspaceUserService,
-		Permissions:             te.PermissionService,
-		StackStore:              stackStore,
-		ClusterRegistryService:  imageRegistryService,
-		StackDomainService:      stackDomainService,
-		ReferenceService:        referenceService,
-		SourceCredentialService: sourceCredentialService,
+		SessionFactory:         te.DBSession,
+		Logger:                 te.Logger,
+		WorkspaceUserService:   workspaceUserService,
+		Permissions:            te.PermissionService,
+		StackStore:             stackStore,
+		ClusterRegistryService: imageRegistryService,
+		StackDomainService:     stackDomainService,
+		ReferenceService:       referenceService,
+		DefaultBranchResolver:  defaultBranchResolver,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
@@ -432,20 +428,20 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	stackService := services.NewStackService(services.StackServiceSpec{
-		SessionFactory:          te.DBSession,
-		Logger:                  te.Logger,
-		VolumeService:           volumeService,
-		OrganisationService:     organisationService,
-		StackResourceService:    stackResourceService,
-		ClusterService:          clusterService,
-		NamespaceService:        namespaceService,
-		SecretService:           secretService,
-		PostgresAddonService:    postgresAddonService,
-		TeamService:             teamService,
-		Permissions:             te.PermissionService,
-		ReferenceService:        referenceService,
-		CredentialResolver:      credentialResolver,
-		SourceCredentialService: sourceCredentialService,
+		SessionFactory:        te.DBSession,
+		Logger:                te.Logger,
+		VolumeService:         volumeService,
+		OrganisationService:   organisationService,
+		StackResourceService:  stackResourceService,
+		ClusterService:        clusterService,
+		NamespaceService:      namespaceService,
+		SecretService:         secretService,
+		PostgresAddonService:  postgresAddonService,
+		TeamService:           teamService,
+		Permissions:           te.PermissionService,
+		ReferenceService:      referenceService,
+		CredentialResolver:    credentialResolver,
+		DefaultBranchResolver: defaultBranchResolver,
 	})
 
 	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
@@ -512,12 +508,11 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	stackPreviewConfigService := services.NewStackPreviewConfigService(services.StackPreviewConfigServiceSpec{
-		Store:                   stackPreviewConfigStore,
-		PreviewStackStore:       previewStackStore,
-		SecretService:           secretService,
-		CredentialResolver:      credentialResolver,
-		SourceCredentialService: sourceCredentialService,
-		Permissions:             te.PermissionService,
+		Store:              stackPreviewConfigStore,
+		PreviewStackStore:  previewStackStore,
+		SecretService:      secretService,
+		CredentialResolver: credentialResolver,
+		Permissions:        te.PermissionService,
 	})
 
 	previewStackService := services.NewPreviewStackService(services.PreviewStackServiceSpec{

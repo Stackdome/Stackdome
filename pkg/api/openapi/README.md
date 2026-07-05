@@ -276,7 +276,6 @@ Class | Method | HTTP request | Description
  - [ImageSource](docs/ImageSource.md)
  - [Ingress](docs/Ingress.md)
  - [InitSpec](docs/InitSpec.md)
- - [InlineCredentials](docs/InlineCredentials.md)
  - [InviteStatus](docs/InviteStatus.md)
  - [Label](docs/Label.md)
  - [LifecycleConfig](docs/LifecycleConfig.md)

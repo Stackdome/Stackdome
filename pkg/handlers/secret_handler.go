@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/auth"
@@ -54,7 +53,6 @@ func (h *secretHandler) ListByOrgID(w http.ResponseWriter, r *http.Request) {
 		Action: func() (interface{}, *errors.ServiceError) {
 			orgID := mux.Vars(r)["org_id"]
 			params := parseListParams(r, []string{"name"})
-			params.IncludeManaged = parseIncludeManaged(r)
 			objs, serr := h.secretService.ListSecretsForCurrentUser(r.Context(), orgID, params)
 			if serr != nil {
 				return nil, serr
@@ -77,7 +75,6 @@ func (h *secretHandler) ListByTeamID(w http.ResponseWriter, r *http.Request) {
 				return nil, serr
 			}
 			params := parseListParams(r, []string{"name"})
-			params.IncludeManaged = parseIncludeManaged(r)
 			objs, serr := h.secretService.ListByTeamID(ctx, teamID, params)
 			if serr != nil {
 				return nil, serr
@@ -159,11 +156,4 @@ func (h *secretHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	handleDelete(w, r, cfg, http.StatusNoContent)
-}
-
-// parseIncludeManaged reads the include_managed query parameter; managed
-// secrets are hidden from listings by default.
-func parseIncludeManaged(r *http.Request) bool {
-	include, err := strconv.ParseBool(r.URL.Query().Get("include_managed"))
-	return err == nil && include
 }

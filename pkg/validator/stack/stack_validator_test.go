@@ -1675,36 +1675,6 @@ func TestValidateForUpdateProbesOnlyChangedResource(t *testing.T) {
 	}
 }
 
-func TestValidateForUpdateProbesWhenInlineCredentialsResubmitted(t *testing.T) {
-	resolver, provider, registryClient, gitProvider, _ := updateProbeMocks(t)
-
-	existing := imageStack()
-	desired := imageStack()
-	// Same image ref, but inline credentials were re-submitted: the managed
-	// secret's data may have changed even though the ref string did not.
-	desired.StackResources[0].ImageConfig.InlineCredentials = &models.InlineCredentials{
-		Username: "alice",
-		Password: "s3cret",
-	}
-
-	resolved := &credentials.ResolvedRegistryCredential{Source: credentials.SourceAnonymous}
-	resolver.EXPECT().
-		RegistryCredentials(gomock.Any(), "org-1", "nginx:latest", credentials.RegistryPurposePull, gomock.Any()).
-		Return(resolved, nil)
-	provider.EXPECT().ClientFor(resolved).Return(registryClient, nil)
-	registryClient.EXPECT().CheckImage(gomock.Any(), "nginx:latest").Return(true, nil)
-
-	v := NewStackValidator(StackValidatorSpec{
-		CredentialResolver: resolver,
-		RegistryClients:    provider,
-		GitClients:         gitProvider,
-	})
-
-	if err := v.ValidateForUpdate(context.Background(), existing, desired); err != nil {
-		t.Fatalf("expected inline-credential re-submission to probe and validate, got %v", err)
-	}
-}
-
 func TestValidateForCreateAnonymousPrivateRepoReturnsCredentialsRequired(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)

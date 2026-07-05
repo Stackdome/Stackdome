@@ -438,12 +438,8 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		GitIntegrationService:     gitIntegrationService,
 	})
 
-	sourceCredentialService := services.NewSourceCredentialService(services.SourceCredentialServiceSpec{
-		SecretService:             secretService,
-		RegistryCredentialService: registryCredentialService,
-		GitIntegrationService:     gitIntegrationService,
-		CredentialResolver:        credentialResolver,
-		Logger:                    d.Logger,
+	defaultBranchResolver := services.NewDefaultBranchResolver(services.DefaultBranchResolverSpec{
+		CredentialResolver: credentialResolver,
 	})
 
 	d.RefreshTokenStore = pgstore.NewRefreshTokenStore(pgstore.RefreshTokenStoreSpec{
@@ -493,15 +489,15 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
-		SessionFactory:          d.DBSession,
-		Logger:                  d.Logger,
-		WorkspaceUserService:    workspaceUserService,
-		Permissions:             d.PermissionService,
-		StackStore:              stackStore,
-		ClusterRegistryService:  imageRegistryService,
-		StackDomainService:      stackDomainService,
-		ReferenceService:        referenceService,
-		SourceCredentialService: sourceCredentialService,
+		SessionFactory:         d.DBSession,
+		Logger:                 d.Logger,
+		WorkspaceUserService:   workspaceUserService,
+		Permissions:            d.PermissionService,
+		StackStore:             stackStore,
+		ClusterRegistryService: imageRegistryService,
+		StackDomainService:     stackDomainService,
+		ReferenceService:       referenceService,
+		DefaultBranchResolver:  defaultBranchResolver,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
@@ -551,20 +547,20 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	stackService := services.NewStackService(services.StackServiceSpec{
-		SessionFactory:          d.DBSession,
-		Logger:                  d.Logger,
-		VolumeService:           volumeService,
-		OrganisationService:     organisationService,
-		StackResourceService:    stackResourceService,
-		ClusterService:          clusterService,
-		NamespaceService:        namespaceService,
-		SecretService:           secretService,
-		PostgresAddonService:    postgresAddonService,
-		TeamService:             teamService,
-		Permissions:             d.PermissionService,
-		ReferenceService:        referenceService,
-		CredentialResolver:      credentialResolver,
-		SourceCredentialService: sourceCredentialService,
+		SessionFactory:        d.DBSession,
+		Logger:                d.Logger,
+		VolumeService:         volumeService,
+		OrganisationService:   organisationService,
+		StackResourceService:  stackResourceService,
+		ClusterService:        clusterService,
+		NamespaceService:      namespaceService,
+		SecretService:         secretService,
+		PostgresAddonService:  postgresAddonService,
+		TeamService:           teamService,
+		Permissions:           d.PermissionService,
+		ReferenceService:      referenceService,
+		CredentialResolver:    credentialResolver,
+		DefaultBranchResolver: defaultBranchResolver,
 	})
 
 	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
@@ -647,12 +643,11 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	stackPreviewConfigService := services.NewStackPreviewConfigService(services.StackPreviewConfigServiceSpec{
-		Store:                   stackPreviewConfigStore,
-		PreviewStackStore:       previewStackStore,
-		SecretService:           secretService,
-		CredentialResolver:      credentialResolver,
-		SourceCredentialService: sourceCredentialService,
-		Permissions:             d.PermissionService,
+		Store:              stackPreviewConfigStore,
+		PreviewStackStore:  previewStackStore,
+		SecretService:      secretService,
+		CredentialResolver: credentialResolver,
+		Permissions:        d.PermissionService,
 	})
 
 	previewStackService := services.NewPreviewStackService(services.PreviewStackServiceSpec{

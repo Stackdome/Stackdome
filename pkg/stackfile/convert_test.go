@@ -951,8 +951,8 @@ func TestToStack_BuildWithoutGitSecret(t *testing.T) {
 	if git == nil {
 		t.Fatal("expected git source")
 	}
-	if git.Credentials != nil {
-		t.Errorf("expected no credentials for public repo, got %v", git.Credentials)
+	if git.RepoUrl != "https://github.com/myorg/public-repo.git" {
+		t.Errorf("unexpected repo_url: %s", git.RepoUrl)
 	}
 }
 
