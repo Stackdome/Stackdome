@@ -782,7 +782,7 @@ export default function StackDetailPage() {
         syncStatus={isDraft ? SYNC_STATUS.idle : draftSync.status}
         deployBusy={deployBusy}
         canWrite={canWriteStack}
-        hasResources={draftResources.length > 0}
+        hasResources={(session.isActive ? session.draft.resources : draftResources).length > 0}
         onDraftDeploy={() => void performDraftDeploy()}
         draftDeploying={draftDeploying}
         onDeploy={onDeploy}
