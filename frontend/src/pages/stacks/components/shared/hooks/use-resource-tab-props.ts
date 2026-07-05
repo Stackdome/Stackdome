@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef } from "react";
 import type { z } from "zod";
 import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
-import { variantFromState } from "@/components/branded";
+import { statusVariant as toStatusVariant } from "@/components/branded/status-variant";
 import {
   dirtyTabsForResource,
   isResourceDirty,
@@ -112,7 +112,7 @@ export function useResourceTabProps(args: {
   }, []);
 
   const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
-  const statusVariant = variantFromState(statusObj.state);
+  const statusVariant = toStatusVariant("resource", statusObj.state);
   const statusDotColor =
     statusVariant === "ready"
       ? "bg-success"

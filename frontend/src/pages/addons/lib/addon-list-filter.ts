@@ -1,11 +1,11 @@
 import type { PostgresAddon } from "@/api/addons";
-import { variantFromState } from "@/components/branded";
+import { statusVariant } from "@/components/branded/status-variant";
 
 export type AddonStatusFilter = "all" | "ready" | "pending" | "error";
 export type AddonSortKey = "created" | "name";
 
 export function bucketAddonStatus(state?: string | null): AddonStatusFilter {
-  const v = variantFromState(state);
+  const v = statusVariant("addon", state);
   if (v === "ready") return "ready";
   if (v === "pending") return "pending";
   if (v === "error") return "error";

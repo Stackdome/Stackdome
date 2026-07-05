@@ -15,7 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { PageHeader, EmptyState, variantFromState, type StatusVariant } from "@/components/branded";
+import { PageHeader, EmptyState, type StatusVariant } from "@/components/branded";
+import { statusVariant } from "@/components/branded/status-variant";
 import { formatDistanceToNow } from "date-fns";
 import { StackCreateWizard } from "@/pages/stacks/components/wizard/stack-create-wizard";
 import type { Stack } from "@/pages/stacks/types";
@@ -48,7 +49,7 @@ function inferStackIcon(stack: Stack) {
 }
 
 function bucketStatus(state?: string | null): StatusFilter {
-  const v = variantFromState(state);
+  const v = statusVariant("stack", state);
   if (v === "ready") return "ready";
   if (v === "pending") return "pending";
   if (v === "error") return "error";
@@ -250,7 +251,7 @@ export default function StacksPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
                 {filtered.map((stack) => {
                   const Icon = inferStackIcon(stack);
-                  const variant = variantFromState(stack.status?.state);
+                  const variant = statusVariant("stack", stack.status?.state);
                   const resourceCount = stack.spec?.stack_resources?.length || 0;
                   const volumeCount = stack.spec?.volumes?.length || 0;
                   const updatedAt = stack.updated_at || stack.created_at;

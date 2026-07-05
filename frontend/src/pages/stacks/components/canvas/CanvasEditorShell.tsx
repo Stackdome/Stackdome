@@ -3,7 +3,8 @@ import { Activity, ChevronDown, ChevronRight, FileDiff, History, LayoutGrid, Loa
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { StatusPill, variantFromState } from "@/components/branded";
+import { StatusPill } from "@/components/branded";
+import { statusVariant } from "@/components/branded/status-variant";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -248,9 +249,9 @@ export function CanvasEditorShell({
               aria-label={`status ${statusState}`}
               className={cn(
                 "size-2 flex-none rounded-full",
-                variantFromState(statusState) === "ready"
+                statusVariant("stack", statusState) === "ready"
                   ? "bg-success"
-                  : variantFromState(statusState) === "error"
+                  : statusVariant("stack", statusState) === "error"
                     ? "bg-danger"
                     : "bg-warn",
               )}
@@ -310,7 +311,7 @@ export function CanvasEditorShell({
                 <h1 className="truncate text-[29px] font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
               )}
               {statusState && (
-                <StatusPill variant={variantFromState(statusState)} className="flex-none">
+                <StatusPill variant={statusVariant("stack", statusState)} className="flex-none">
                   {statusState}
                 </StatusPill>
               )}

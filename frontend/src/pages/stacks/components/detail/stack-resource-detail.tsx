@@ -13,7 +13,7 @@ import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { z } from "zod";
 import type { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
-import { variantFromState } from "@/components/branded";
+import { statusVariant as toStatusVariant } from "@/components/branded/status-variant";
 
 interface StackResourceDetailProps {
   resource: Partial<FormStackResourceData>;
@@ -43,7 +43,7 @@ export default function StackResourceDetail({
   const { toast } = useToast();
   const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
   const status = statusObj.state?.toLowerCase() || 'pending';
-  const statusVariant = variantFromState(statusObj.state);
+  const statusVariant = toStatusVariant("resource", statusObj.state);
   const statusDotColor =
     statusVariant === "ready" ? "bg-success"
       : statusVariant === "error" ? "bg-danger"
