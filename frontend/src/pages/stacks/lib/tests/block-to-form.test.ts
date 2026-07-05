@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { blockToResources, addBlockToStack, emptyStack } from "../block-to-form";
 import { blockCatalog, getBlockById, BlockId } from "@/pages/stacks/data/blocks/registry";
+import { DATA_BLOCK_CATEGORIES } from "@/pages/stacks/data/blocks/types";
 
 describe("block-to-form", () => {
   it("every catalog block converts to a resource named after the block, without throwing", () => {
@@ -38,7 +39,7 @@ describe("block-to-form", () => {
   });
 
   it("data-store ports are internal tcp, never public http", () => {
-    for (const block of blockCatalog.filter((b) => b.category === "data")) {
+    for (const block of blockCatalog.filter((b) => DATA_BLOCK_CATEGORIES.has(b.category))) {
       const { resources } = blockToResources(block);
       for (const r of resources) {
         for (const p of r.ports ?? []) {

@@ -1,5 +1,5 @@
 import type { BlockPreset } from "@/pages/stacks/data/blocks/types";
-import { BlockId } from "@/pages/stacks/data/blocks/types";
+import { BlockId, DATA_BLOCK_CATEGORIES } from "@/pages/stacks/data/blocks/types";
 import { parseAndValidateDockerCompose } from "@/lib/docker-compose-parser";
 import { convertDockerComposeToStackData } from "@/lib/docker-compose-converter";
 import type {
@@ -91,7 +91,7 @@ export function blockToResources(block: BlockPreset): {
     );
   }
   const resources = (result.data.spec.stack_resources ?? []).map((r) =>
-    block.category === "data" ? fillEmptyEnvValues(internalizePorts(r)) : r,
+    DATA_BLOCK_CATEGORIES.has(block.category) ? fillEmptyEnvValues(internalizePorts(r)) : r,
   );
   return {
     resources,

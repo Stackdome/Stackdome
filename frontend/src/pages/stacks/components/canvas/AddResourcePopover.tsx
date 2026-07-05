@@ -7,7 +7,7 @@ import { blockCatalog, BLOCK_CATEGORY_META } from "@/pages/stacks/data/blocks/re
 import { BlockPicker, blockMatchesQuery } from "@/pages/stacks/components/wizard/block-picker";
 
 const SERVICE_CATEGORIES = BLOCK_CATEGORY_META.filter((c) => c.id === "services");
-const DATA_CATEGORIES = BLOCK_CATEGORY_META.filter((c) => c.id === "data");
+const DATA_CATEGORIES = BLOCK_CATEGORY_META.filter((c) => c.id !== "services");
 import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
 
 interface AddResourcePopoverProps {
@@ -90,6 +90,8 @@ export function AddResourcePopover({
               <div className="mb-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
                 Storage
               </div>
+              {/* Same half-width card size as the block tiles. */}
+              <div className="grid grid-cols-2 gap-2.5">
               {!canAddVolume ? (
                 <Tooltip delayDuration={300}>
                   <TooltipTrigger asChild>
@@ -101,7 +103,7 @@ export function AddResourcePopover({
                           setOpen(false);
                           onAddVolume();
                         }}
-                        className="flex min-h-[60px] w-full items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex min-h-[60px] items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
                           <HardDrive className="size-[18px]" />
@@ -126,7 +128,7 @@ export function AddResourcePopover({
                     setOpen(false);
                     onAddVolume();
                   }}
-                  className="flex min-h-[60px] w-full items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex min-h-[60px] items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
                     <HardDrive className="size-[18px]" />
@@ -138,6 +140,7 @@ export function AddResourcePopover({
                   <Plus className="h-[17px] w-[17px] text-primary" />
                 </button>
               )}
+              </div>
             </div>
           ) : null}
           {visibleAddons.length > 0 && (
