@@ -1,6 +1,6 @@
 import { Layers, PlusCircle, Loader2, AlertTriangle, Search, Box, GitBranch, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { getStacksByOrg } from "@/api/stacks";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
@@ -17,12 +17,7 @@ import {
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { PageHeader, EmptyState, variantFromState, type StatusVariant } from "@/components/branded";
 import { formatDistanceToNow } from "date-fns";
-import { DockerComposeImportDropdown } from "@/pages/stacks/components/shared/import-dropdown";
-import DockerComposeImportDialog from "@/pages/stacks/components/shared/docker-compose-import-dialog";
-import TemplatesBrowserDialog from "@/pages/stacks/components/shared/templates-browser-dialog";
-import { useDockerComposeImport } from "@/pages/stacks/hooks/use-docker-compose-import";
-import { useTemplateImport } from "@/pages/stacks/hooks/use-template-import";
-import { templates } from "@/data/templates/registry";
+import { StackCreateWizard } from "@/pages/stacks/components/wizard/stack-create-wizard";
 import type { Stack } from "@/pages/stacks/types";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
@@ -67,25 +62,8 @@ export default function StacksPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated");
-  const navigate = useNavigate();
+  const [wizardOpen, setWizardOpen] = useState(false);
   const { canWriteAnyTeam } = useCurrentUser();
-
-  const {
-    isLoading: isImportLoading,
-    error: importError,
-    isDialogOpen: isImportDialogOpen,
-    openDialog: openImportDialog,
-    closeDialog: closeImportDialog,
-    handleImport,
-    clearError: clearImportError,
-  } = useDockerComposeImport();
-
-  const {
-    isDialogOpen: isTemplatesDialogOpen,
-    openDialog: openTemplatesDialog,
-    closeDialog: closeTemplatesDialog,
-    useTemplate,
-  } = useTemplateImport();
 
   useEffect(() => {
     const currentOrgId = getCurrentOrganizationId();
@@ -110,10 +88,6 @@ export default function StacksPage() {
       setIsLoading(false);
     }
   }, [setStacks]);
-
-  const handleCreateNewStack = () => {
-    navigate("/stacks/create");
-  };
 
   // Aggregate counts by status bucket — used for the subtitle and filter pill counts
   const counts = useMemo(() => {
@@ -178,17 +152,10 @@ export default function StacksPage() {
           subtitle="Provision and manage your application stacks"
           actions={
             canWriteAnyTeam ? (
-              <>
-                <DockerComposeImportDropdown
-                  onDockerComposeImport={openImportDialog}
-                  onTemplates={openTemplatesDialog}
-                  variant="outline"
-                />
-                <Button onClick={handleCreateNewStack}>
-                  <PlusCircle className="h-4 w-4" />
-                  New Stack
-                </Button>
-              </>
+              <Button onClick={() => setWizardOpen(true)}>
+                <PlusCircle className="h-4 w-4" />
+                New Stack
+              </Button>
             ) : undefined
           }
         />
@@ -200,7 +167,7 @@ export default function StacksPage() {
             description="Deploy your first stack to get started."
             action={
               canWriteAnyTeam ? (
-                <Button onClick={handleCreateNewStack}>
+                <Button onClick={() => setWizardOpen(true)}>
                   <PlusCircle className="h-4 w-4" />
                   Create New Stack
                 </Button>
@@ -353,25 +320,7 @@ export default function StacksPage() {
           </>
         )}
 
-        {/* Docker Compose Import Dialog */}
-        <DockerComposeImportDialog
-          open={isImportDialogOpen}
-          onOpenChange={closeImportDialog}
-          onImport={handleImport}
-          isLoading={isImportLoading}
-          error={importError}
-          onClearError={clearImportError}
-        />
-
-        {/* Templates Browser Dialog */}
-        <TemplatesBrowserDialog
-          open={isTemplatesDialogOpen}
-          onOpenChange={(open) =>
-            open ? openTemplatesDialog() : closeTemplatesDialog()
-          }
-          templates={templates}
-          onUse={useTemplate}
-        />
+        <StackCreateWizard open={wizardOpen} onOpenChange={setWizardOpen} />
       </div>
     </TooltipProvider>
   );

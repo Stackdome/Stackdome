@@ -1,0 +1,42 @@
+import { useCallback, useState } from "react";
+import type { Stack } from "@/api/stacks";
+import { getStackById, updateStack } from "@/api/stacks";
+import { deleteVolume } from "@/api/volumes";
+import type { StackReleaseSnapshot } from "@/api/releases";
+import { snapshotToUpdateRequest, volumesToDelete } from "@/pages/stacks/lib/draft-sync/snapshot-to-update";
+
+export interface UseStackRevertArgs {
+  ids: { orgId: string; teamName: string; stackId: string } | null;
+  stack: Stack | undefined;
+  liveSnapshot: StackReleaseSnapshot | undefined;
+  /** session.discard — the page's session auto-start effect re-seeds from the refreshed stack. */
+  onReverted: (fresh: Stack) => void;
+}
+
+/** Restore the authored stack to the last deployed snapshot. */
+export function useStackRevert({ ids, stack, liveSnapshot, onReverted }: UseStackRevertArgs) {
+  const [reverting, setReverting] = useState(false);
+
+  const revert = useCallback(async (): Promise<boolean> => {
+    if (!ids || !stack || !liveSnapshot) return false;
+    setReverting(true);
+    try {
+      const req = snapshotToUpdateRequest(liveSnapshot, { name: stack.name, labels: stack.labels });
+      await updateStack(ids.orgId, ids.teamName, ids.stackId, req);
+      // Draft-only volumes are unmounted after the PUT; remove them (destroys
+      // the cluster volume — the confirm dialog carries that warning).
+      for (const v of volumesToDelete(stack, liveSnapshot)) {
+        await deleteVolume(ids.orgId, ids.teamName, v.id);
+      }
+      const fresh = await getStackById(ids.orgId, ids.teamName, ids.stackId);
+      onReverted(fresh);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setReverting(false);
+    }
+  }, [ids, stack, liveSnapshot, onReverted]);
+
+  return { reverting, revert };
+}

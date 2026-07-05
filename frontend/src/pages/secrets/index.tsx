@@ -55,7 +55,7 @@ export default function SecretsPage() {
     const teamName = teamNameById(deletingSecret.team_id);
     if (!teamName) {
       console.error('Could not resolve the team for this secret');
-      toast({ title: "Error", description: "Could not resolve the team for this secret.", variant: "destructive" });
+      toast({ title: "Failed to delete secret", description: "Could not resolve the team for this secret.", variant: "destructive" });
       return;
     }
     setDeleteLoading(true);
@@ -65,12 +65,12 @@ export default function SecretsPage() {
       toast({
         title: "Secret deleted",
         description: "The secret has been deleted successfully.",
-        variant: "destructive",
+        variant: "success",
       });
     } catch (e) {
       console.error('Failed to delete secret:', e);
       toast({
-        title: "Error",
+        title: "Failed to delete secret",
         description: "Failed to delete secret. Please try again.",
         variant: "destructive",
       });
@@ -102,6 +102,7 @@ export default function SecretsPage() {
         toast({
           title: "Secret updated",
           description: "The secret has been updated successfully.",
+          variant: "success",
         });
       } else {
         // Create new secret in the user's default team.
@@ -113,6 +114,7 @@ export default function SecretsPage() {
         toast({
           title: "Secret created",
           description: "The secret has been created successfully.",
+          variant: "success",
         });
       }
       refetch();

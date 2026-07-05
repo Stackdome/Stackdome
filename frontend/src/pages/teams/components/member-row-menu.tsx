@@ -52,6 +52,7 @@ export function MemberRowMenu({
           description: memberName
             ? `${memberName} is now a ${nextRole}.`
             : `Role changed to ${nextRole}.`,
+          variant: "success",
         });
       } else {
         toast({
@@ -76,6 +77,7 @@ export function MemberRowMenu({
           description: memberName
             ? `${memberName} has been removed from the team.`
             : "Member removed from the team.",
+          variant: "success",
         });
       } else {
         toast({

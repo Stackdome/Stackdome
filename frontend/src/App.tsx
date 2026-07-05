@@ -3,7 +3,6 @@ import Login from "@/pages/login"
 import Signup from "@/pages/signup"
 import GithubCallbackPage from "@/pages/auth/github-callback"
 import StacksPage from "@/pages/stacks/components/list"
-import StackCreatePage from "@/pages/stacks/components/create"
 import StackDetailPage from "@/pages/stacks/components/detail"
 import ClustersPage from "@/pages/clusters"
 import ClusterDetailPage from "@/pages/clusters/components/detail"
@@ -45,7 +44,8 @@ const router = createBrowserRouter(
         <Route path="/" element={<StacksPage />} />
         <Route path="/dashboard" element={<StacksPage />} />
         <Route path="/stacks" element={<StacksPage />} />
-        <Route path="/stacks/create" element={<StackCreatePage />} />
+        <Route path="/stacks/new" element={<StackDetailPage />} />
+        <Route path="/stacks/create" element={<Navigate to="/stacks/new" replace />} />
         <Route path="/stacks/:id" element={<StackDetailPage />} />
         <Route path="/secrets" element={<SecretsPage />} />
         <Route path="/object-stores" element={<ObjectStoresPage />} />

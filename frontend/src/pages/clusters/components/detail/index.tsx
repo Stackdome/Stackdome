@@ -58,8 +58,8 @@ export default function ClusterDetailPage() {
     try {
       await deleteCluster(id);
       toast({
-        title: "Success",
-        description: "Cluster deleted successfully",
+        title: "Cluster deleted",
+        description: "The cluster has been deleted successfully.",
         variant: "success",
         duration: 3000,
       });

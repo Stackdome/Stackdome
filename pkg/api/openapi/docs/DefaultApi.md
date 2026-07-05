@@ -84,6 +84,7 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs | Get logs for a stack resource
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/metrics | Get metrics for a stack resource
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/topology | Get stack topology
+[**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdVolumesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdVolumesPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/volumes | Create a volume and associate it with the stack
 [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks | Create a new stack
 [**ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdDelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id} | Delete a volume
 [**ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdTeamsTeamNameVolumesIdGet) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id} | Get a specific volume
@@ -5868,6 +5869,82 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
 - **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdVolumesPost
+
+> Volume ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdVolumesPost(ctx, orgId, teamName, id).Volume(volume).Execute()
+
+Create a volume and associate it with the stack
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    volume := *openapiclient.NewVolume("Name_example", *openapiclient.NewVolumeSpec("Size_example", false, openapiclient.VolumeAccessMode("ReadWriteOnce"))) // Volume | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdVolumesPost(context.Background(), orgId, teamName, id).Volume(volume).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdVolumesPost``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdVolumesPost`: Volume
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdVolumesPost`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdTeamsTeamNameStacksIdVolumesPostRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **volume** | [**Volume**](Volume.md) |  | 
+
+### Return type
+
+[**Volume**](Volume.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)

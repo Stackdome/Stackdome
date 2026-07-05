@@ -142,3 +142,61 @@ export function buildDesiredConnections(
 ): StackConnection[] {
   return resources.flatMap((r) => splitEnvRows(r.name, r.rows).connections);
 }
+
+// ── Volume mount ↔ connection translation ────────────────────────────────────
+
+/**
+ * A loose form-side mount row. Required fields are optional here so that
+ * in-progress rows (user is still typing) are representable without casting.
+ */
+export type FormMountRow = {
+  source_volume_name?: string;
+  source_sub_path?: string;
+  target_path?: string;
+  read_only?: boolean;
+};
+
+type VolumeMountCfg = { mount_path?: string; sub_path?: string; read_only?: boolean };
+
+/**
+ * Convert form mount rows to volume_mount StackConnections.
+ * Skips in-progress rows — those missing source_volume_name OR target_path.
+ */
+export function mountsToConnections(resourceName: string, mounts: FormMountRow[]): StackConnection[] {
+  const conns: StackConnection[] = [];
+  for (const m of mounts) {
+    if (!m.source_volume_name || !m.target_path) continue; // skip in-progress rows
+    conns.push({
+      kind: "volume_mount",
+      from: { type: "volume", name: m.source_volume_name },
+      to: { type: "stack_resource", name: resourceName },
+      config: {
+        mount_path: m.target_path,
+        ...(m.source_sub_path ? { sub_path: m.source_sub_path } : {}),
+        ...(m.read_only !== undefined ? { read_only: m.read_only } : {}),
+      },
+    });
+  }
+  return conns;
+}
+
+/**
+ * Expand volume_mount connections for a resource back into form mount rows.
+ * Ignores non-volume_mount connections and connections to other resources.
+ */
+export function connectionsToMounts(resourceName: string, connections: StackConnection[]): FormMountRow[] {
+  const rows: FormMountRow[] = [];
+  for (const c of connections) {
+    if (c.kind !== "volume_mount") continue;
+    if (c.to?.type !== "stack_resource" || c.to?.name !== resourceName) continue;
+    const vmcfg = c.config as VolumeMountCfg | undefined;
+    if (!c.from?.name || !vmcfg?.mount_path) continue; // malformed — skip
+    rows.push({
+      source_volume_name: c.from.name,
+      source_sub_path: vmcfg.sub_path ?? "",
+      target_path: vmcfg.mount_path,
+      ...(vmcfg.read_only !== undefined ? { read_only: vmcfg.read_only } : {}),
+    });
+  }
+  return rows;
+}

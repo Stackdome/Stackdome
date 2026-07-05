@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cloneJson, getAddonLinkCount, isPathDirty } from "../stack-diff";
+import { alignBaselineToDraft, cloneJson, dirtyTabsForResource, getAddonLinkCount, isPathDirty, isResourceDirty, revertResource } from "../stack-diff";
 import type { ResourceArr } from "../stack-diff";
 
 describe("cloneJson", () => {
@@ -145,5 +145,87 @@ describe("getAddonLinkCount", () => {
   it("handles resources with no execution_config", () => {
     const resources: ResourceArr = [{ name: "svc-1" }, { name: "svc-2" }];
     expect(getAddonLinkCount(new Set(["pg-1"]), resources)).toBe(1);
+  });
+});
+
+describe("alignBaselineToDraft", () => {
+  it("reorders the baseline to the draft's name order", () => {
+    const baseline = [{ name: "redis" }, { name: "web" }, { name: "mail" }];
+    const draft = [{ name: "web" }, { name: "redis" }, { name: "mail" }];
+    expect(alignBaselineToDraft(baseline, draft).map((r) => r?.name)).toEqual(["web", "redis", "mail"]);
+  });
+
+  it("leaves holes for draft-only entries and appends baseline-only ones", () => {
+    const baseline = [{ name: "web" }, { name: "gone" }];
+    const draft = [{ name: "web" }, { name: "brand-new" }];
+    const aligned = alignBaselineToDraft(baseline, draft);
+    expect(aligned[0]?.name).toBe("web");
+    expect(aligned[1]).toBeUndefined();
+    // deleted-from-draft baseline entry survives past the draft length so
+    // positional diffing still flags the deletion
+    expect(aligned[2]?.name).toBe("gone");
+  });
+
+  it("is the identity when baseline and draft share order", () => {
+    const baseline = [{ name: "a" }, { name: "b" }];
+    expect(alignBaselineToDraft(baseline, baseline).map((r) => r?.name)).toEqual(["a", "b"]);
+  });
+});
+
+describe("status is server telemetry, never dirt", () => {
+  const deployed = { name: "web", image_spec: { image: "nginx:1" }, status: { state: "Pending" } };
+  const live = { name: "web", image_spec: { image: "nginx:1" }, status: { state: "Ready", public_ingress: [{}] } };
+
+  it("isResourceDirty ignores status drift", () => {
+    expect(isResourceDirty(live as never, deployed as never)).toBe(false);
+  });
+
+  it("dirtyTabsForResource does not light any tab for status drift", () => {
+    const tabs = dirtyTabsForResource(live as never, deployed as never);
+    expect(tabs).toEqual({ configuration: false, deployment: false, environment: false });
+  });
+
+  it("revertResource keeps the draft's live status", () => {
+    const draft = { resources: [{ ...live, image_spec: { image: "nginx:2" } }], volumes: [] };
+    const baseline = { resources: [deployed], volumes: [] };
+    const next = revertResource(draft as never, baseline as never, 0);
+    const r = next.resources[0] as typeof live;
+    expect(r.image_spec.image).toBe("nginx:1");
+    expect(r.status).toEqual(live.status);
+  });
+});
+
+describe("revertResource dangling-mount guard", () => {
+  it("drops restored mounts whose volume no longer exists in the draft", () => {
+    const baseline = {
+      resources: [
+        { name: "web", volume_mounts: [{ source_volume_name: "data", source_sub_path: "", target_path: "/data" }] },
+      ],
+      volumes: [{ name: "data" }],
+    };
+    // Draft deleted the volume (cascade already removed the mount) and edited the resource.
+    const draft = {
+      resources: [{ name: "web", image_spec: { image: "nginx:2" }, volume_mounts: [] }],
+      volumes: [],
+    };
+    const next = revertResource(draft as never, baseline as never, 0);
+    expect(next.resources[0].volume_mounts).toEqual([]);
+  });
+
+  it("keeps restored mounts whose volume still exists", () => {
+    const baseline = {
+      resources: [
+        { name: "web", volume_mounts: [{ source_volume_name: "data", source_sub_path: "", target_path: "/data" }] },
+      ],
+      volumes: [{ name: "data" }],
+    };
+    const draft = {
+      resources: [{ name: "web", volume_mounts: [] }],
+      volumes: [{ name: "data" }],
+    };
+    const next = revertResource(draft as never, baseline as never, 0);
+    expect(next.resources[0].volume_mounts).toEqual([
+      { source_volume_name: "data", source_sub_path: "", target_path: "/data" },
+    ]);
   });
 });

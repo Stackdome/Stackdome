@@ -179,13 +179,13 @@ export default function StackVolumeDetail({
                   </div>
                   <div className="mt-2 mb-1 text-sm font-medium">Repository Revision</div>
                   <div className="p-2 bg-muted/30 rounded-md">
-                    {volume.spec.source.git_repo_source.revision?.branch?.name &&
-                      `Branch: ${volume.spec.source.git_repo_source.revision.branch.name}`}
+                    {volume.spec.source.git_repo_source.revision?.branch &&
+                      `Branch: ${volume.spec.source.git_repo_source.revision.branch}`}
                     {volume.spec.source.git_repo_source.revision?.commit &&
                       `Commit: ${volume.spec.source.git_repo_source.revision.commit}`}
                     {volume.spec.source.git_repo_source.revision?.tag &&
                       `Tag: ${volume.spec.source.git_repo_source.revision.tag}`}
-                    {!volume.spec.source.git_repo_source.revision?.branch?.name &&
+                    {!volume.spec.source.git_repo_source.revision?.branch &&
                      !volume.spec.source.git_repo_source.revision?.commit &&
                      !volume.spec.source.git_repo_source.revision?.tag && "main"}
                   </div>

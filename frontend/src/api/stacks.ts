@@ -58,3 +58,6 @@ export async function updateStack(orgId: string, teamName: string, stackId: stri
   return response.data;
 }
 
+export async function deleteStack(orgId: string, teamName: string, stackId: string): Promise<void> {
+  await api.delete(`/organizations/${orgId}/teams/${teamName}/stacks/${stackId}`);
+}

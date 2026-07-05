@@ -71,7 +71,7 @@ export default function TeamDetailPage() {
   async function handleAddMember(userId: string, role: "Developer" | "Viewer") {
     const result = await addMember(userId, role);
     if (result.ok) {
-      toast({ title: "Member added", description: "The user has been added to the team." });
+      toast({ title: "Member added", description: "The user has been added to the team.", variant: "success" });
     } else {
       toast({ title: "Failed to add member", description: result.error, variant: "destructive" });
     }
@@ -303,6 +303,7 @@ export default function TeamDetailPage() {
             toast({
               title: "Team renamed",
               description: `"${oldName}" is now "${newName}".`,
+              variant: "success",
             });
             setRenameOpen(false);
             // The detail route is keyed by team name — move to the new slug.

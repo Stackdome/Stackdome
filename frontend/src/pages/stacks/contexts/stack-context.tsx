@@ -1,11 +1,14 @@
 import { createContext, useState, useContext } from 'react';
-import type { ReactNode } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { Stack } from '@/pages/stacks/types';
 
 // Context type definition
 interface StackContextType {
   stacks: Stack[];
-  setStacks: (stacks: Stack[]) => void;
+  // React's own setter type so consumers can use functional updates —
+  // required for write-through from async callbacks (avoids clobbering the
+  // list with a stale render-closure snapshot).
+  setStacks: Dispatch<SetStateAction<Stack[]>>;
   addStack: (stack: Omit<Stack, 'id' | 'created_at' | 'status'>) => void;
   removeStack: (id: string) => void;
 }

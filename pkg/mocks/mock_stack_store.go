@@ -239,6 +239,20 @@ func (mr *MockStackStoreMockRecorder) ListByUserID(ctx, userID any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByUserID", reflect.TypeOf((*MockStackStore)(nil).ListByUserID), ctx, userID)
 }
 
+// LockByID mocks base method.
+func (m *MockStackStore) LockByID(ctx context.Context, id string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockByID", ctx, id)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// LockByID indicates an expected call of LockByID.
+func (mr *MockStackStoreMockRecorder) LockByID(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockByID", reflect.TypeOf((*MockStackStore)(nil).LockByID), ctx, id)
+}
+
 // Update mocks base method.
 func (m *MockStackStore) Update(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
 	m.ctrl.T.Helper()

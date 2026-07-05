@@ -34,6 +34,10 @@ export interface EditSessionStartOpts {
   /** Addon ids already bound to the stack (from its saved connections), so the
    *  edit session starts with them linked rather than wiping to empty. */
   linkedAddonIds?: Set<string>;
+  /** Seed the working draft separately from the baseline. Used when the diff
+   *  baseline is pinned to the deployed release but the server already holds
+   *  autosaved edits on top of it — those edits must open as dirty. */
+  draft?: EditSessionDraft;
 }
 
 const EMPTY_DRAFT: EditSessionDraft = { resources: [], volumes: [] };
@@ -56,7 +60,6 @@ export interface UseStackEditSession {
   openTab: EditSessionTab | null;
   dirty: StackDiff;
   linkedAddonIds: Set<string>;
-  pendingDetach: Set<string>;
   start: (baseline: EditSessionDraft, opts?: EditSessionStartOpts) => void;
   discard: () => void;
   discardResource: (idx: number) => void;
@@ -74,19 +77,21 @@ export interface UseStackEditSession {
       | ((prev: VolumeArr) => VolumeArr),
   ) => void;
   setLinkedAddonIds: (next: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
-  setPendingDetach: (next: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+  /** Advance the baseline to a synced snapshot; the draft is untouched, so
+   *  edits made after the snapshot remain dirty. */
+  rebase: (baseline: EditSessionDraft) => void;
 }
 
 export function useStackEditSession(): UseStackEditSession {
   const [state, setState] = useState<EditSessionState>(INITIAL_STATE);
   const [linkedAddonIds, setLinkedAddonIdsState] = useState<Set<string>>(new Set());
-  const [pendingDetach, setPendingDetachState] = useState<Set<string>>(new Set());
 
   const start = useCallback(
     (baseline: EditSessionDraft, opts?: EditSessionStartOpts) => {
+      const draftSource = opts?.draft ?? baseline;
       const cloned: EditSessionDraft = {
-        resources: cloneJson(baseline.resources),
-        volumes: cloneJson(baseline.volumes),
+        resources: cloneJson(draftSource.resources),
+        volumes: cloneJson(draftSource.volumes),
       };
       const baselineSnap: EditSessionDraft = {
         resources: cloneJson(baseline.resources),
@@ -101,7 +106,6 @@ export function useStackEditSession(): UseStackEditSession {
         openTab: opts?.openTab ?? null,
       });
       setLinkedAddonIdsState(opts?.linkedAddonIds ? new Set(opts.linkedAddonIds) : new Set());
-      setPendingDetachState(new Set());
     },
     [],
   );
@@ -109,7 +113,6 @@ export function useStackEditSession(): UseStackEditSession {
   const discard = useCallback(() => {
     setState(INITIAL_STATE);
     setLinkedAddonIdsState(new Set());
-    setPendingDetachState(new Set());
   }, []);
 
   const discardResource = useCallback((idx: number) => {
@@ -177,14 +180,15 @@ export function useStackEditSession(): UseStackEditSession {
     [],
   );
 
-  const setPendingDetach = useCallback(
-    (next: Set<string> | ((prev: Set<string>) => Set<string>)) => {
-      setPendingDetachState((prev) =>
-        typeof next === "function" ? (next as (p: Set<string>) => Set<string>)(prev) : next,
-      );
-    },
-    [],
-  );
+  const rebase = useCallback((baseline: EditSessionDraft) => {
+    setState((prev) => {
+      if (!prev.isActive) return prev;
+      return {
+        ...prev,
+        baseline: { resources: cloneJson(baseline.resources), volumes: cloneJson(baseline.volumes) },
+      };
+    });
+  }, []);
 
   const dirty = useMemo<StackDiff>(
     () => diffStack(state.draft, state.baseline),
@@ -200,7 +204,6 @@ export function useStackEditSession(): UseStackEditSession {
     openTab: state.openTab,
     dirty,
     linkedAddonIds,
-    pendingDetach,
     start,
     discard,
     discardResource,
@@ -210,6 +213,6 @@ export function useStackEditSession(): UseStackEditSession {
     updateResources,
     updateVolumes,
     setLinkedAddonIds,
-    setPendingDetach,
+    rebase,
   };
 }

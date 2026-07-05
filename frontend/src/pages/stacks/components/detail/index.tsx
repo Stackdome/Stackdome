@@ -1,25 +1,48 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
-import { Loader2, MoreHorizontal, Pencil, Rocket, Save, Trash2 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { PageHeader, Panel, StatusPill, variantFromState } from "@/components/branded";
-import { useMemo, useState, useEffect, useCallback } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import StackResourcesForm, { getDefaultResource } from "@/pages/stacks/components/shared/stack-resources-form";
-import StackVolumesForm, { getDefaultVolume } from "@/pages/stacks/components/shared/stack-volumes-form";
-import StackResourcesDetail from "@/pages/stacks/components/detail/stack-resources-detail";
-import StackVolumesDetail from "@/pages/stacks/components/detail/stack-volumes-detail";
-import StickyActionBar, { type StickyActionBarSegment } from "@/pages/stacks/components/shared/sticky-action-bar";
-import AddonsInStackPanel from "@/pages/stacks/components/detail/addons-in-stack-panel";
+import { Loader2 } from "lucide-react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
-import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
+import { useStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
+import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
+import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
+import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
+import { StackCanvasTab } from "@/pages/stacks/components/canvas/StackCanvasTab";
+import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditorShell";
+import { ViewChangesModal } from "@/pages/stacks/components/canvas/ViewChangesModal";
+import { DraftTabPlaceholder } from "@/pages/stacks/components/canvas/DraftTabPlaceholder";
+import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
+import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
+import type { StackConnection } from "@/api/connections";
+import { alignBaselineToDraft } from "@/pages/stacks/lib/stack-diff";
+import { createStack, getStackById, deleteStack } from "@/api/stacks";
+import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
+import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
+import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
+import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
+import { ReleaseState } from "@/pages/stacks/components/detail/deployments/release-states";
+import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
+import {
+  connectionsToEnvRows,
+  connectionsToMounts,
+} from "@/pages/stacks/lib/connection-mapping";
+import { useBreadcrumb } from "@/hooks/use-breadcrumb";
+import { getCurrentOrganizationId } from "@/helpers/common";
+import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useOrgDomains } from "@/hooks/use-org-domains";
+import { pickBestIngress } from "@/pages/stacks/lib/public-endpoints";
+import type { z } from "zod";
+import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
+import { useToast } from "@/components/ui/use-toast";
+import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/schemas/api-schema";
+import { useDraftSync } from "@/pages/stacks/hooks/use-draft-sync";
+import { useStackRevert } from "@/pages/stacks/hooks/use-stack-revert";
+import { useVolumeDelete } from "@/pages/stacks/hooks/use-volume-delete";
+import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
+import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,28 +53,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { AddonGroupStateMap } from "@/pages/stacks/components/shared/stack-resource-item";
-import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
-import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
-import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
-import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
-import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
-import { getStackById, updateStack } from "@/api/stacks";
-import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
-import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
-import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
-import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
-import {
-  connectionsToEnvRows,
-} from "@/pages/stacks/lib/connection-mapping";
-import { useBreadcrumb } from "@/hooks/use-breadcrumb";
-import { getCurrentOrganizationId } from "@/helpers/common";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
-import { useCurrentUser } from "@/hooks/use-current-user";
-import type { z } from "zod";
-import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
-import { useToast } from "@/components/ui/use-toast";
-import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/schemas/api-schema";
 
 // Helper to map API build_spec to form schema shape
 
@@ -78,28 +79,62 @@ function mapVolumeToFormData(volume: Volume): VolumeFormData {
   return convertApiVolumeToFormVolume(writableVolume as z.infer<typeof ApiVolumeSchema> & { status?: unknown });
 }
 
+/** Map a resource+connection set (live stack spec OR release snapshot — both use
+ *  the same server shapes) into form data, folding connection-backed env rows
+ *  and volume mounts into each resource. */
+function formResourcesFromSpec(
+  resources: StackResource[] | undefined,
+  connectionsIn: StackConnection[] | undefined,
+): FormStackResourceData[] {
+  const connections = connectionsIn ?? [];
+  return (resources || []).map((r) => {
+    const form = mapStackResourceToFormData(r);
+    const connRows = connectionsToEnvRows(form.name ?? "", connections) as FormEnvVarData[];
+    // Populate volume_mounts from volume_mount connections — the server always
+    // returns resource.volume_mounts as [] since mounts are stored in connections.
+    const mountRows = connectionsToMounts(form.name ?? "", connections);
+    // connectionsToMounts only emits rows with all required fields present (it
+    // skips malformed connections), so the cast to the strict form type is safe.
+    const withMounts: FormStackResourceData = { ...form, volume_mounts: mountRows as FormStackResourceData["volume_mounts"] };
+    if (connRows.length === 0) return withMounts;
+    return {
+      ...withMounts,
+      execution_config: {
+        ...(withMounts.execution_config ?? {}),
+        environment_variables: [
+          ...((withMounts.execution_config?.environment_variables ?? []) as FormEnvVarData[]),
+          ...connRows,
+        ],
+      },
+    };
+  });
+}
+
 export default function StackDetailPage() {
   const { id } = useParams();
-  const { stacks } = useStacks();
+  const isDraft = !id;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const seed = useMemo<DraftSeed>(
+    () => ((location.state as { seed?: DraftSeed } | null)?.seed) ?? emptyDraftSeed(),
+    // read once from the entry navigation; later navigations replace state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  const [draftName, setDraftName] = useState(seed.name);
+  // Draft labels are seeded into the create payload; there is no in-canvas label
+  // editor, so the setter is intentionally dropped.
+  const [draftLabels] = useState<FormStackData["labels"]>(seed.labels);
+
+  const { stacks, setStacks } = useStacks();
   const [fetchedStack, setFetchedStack] = useState<Stack | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const session = useStackEditSession();
   const [activeTab, setActiveTab] = useState("configuration");
-  const [isSaving, setIsSaving] = useState(false);
-  const [editingBindingIds, setEditingBindingIds] = useState<Set<string>>(new Set());
-  // Per-addonId provenance for converted env rows after a successful detach
-  // save. Keyed by `${resourceIdx}::${envName}`. Page-state only — vanishes
-  // on reload by design (no API field for it).
-  const [detachedProvenance, setDetachedProvenance] = useState<Map<string, { addonName: string; credField?: string }>>(
-    new Map(),
-  );
-  const [detachConfirmOpen, setDetachConfirmOpen] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<{
-    resources: { [index: number]: { [field: string]: string | undefined } };
-    volumes: { [index: number]: { [field: string]: string | undefined } };
-  }>({ resources: {}, volumes: {} });
+  const [isCreating, setIsCreating] = useState(false);
+  const [nameError, setNameError] = useState<string | undefined>();
 
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const { toast } = useToast();
@@ -115,6 +150,7 @@ export default function StackDetailPage() {
 
   // Update breadcrumb with stack name
   useEffect(() => {
+    if (isDraft) return;
     const path = `/stacks/${id}`;
 
     if (currentStack) {
@@ -152,32 +188,113 @@ export default function StackDetailPage() {
           setPathLoading(path, false);
         });
     }
-  }, [currentStack, id, defaultTeamName, setCustomLabel, setPathLoading]);
+  }, [currentStack, id, defaultTeamName, setCustomLabel, setPathLoading, isDraft]);
 
   const stackToShow = currentStack || fetchedStack;
 
-  const baselineResources = useMemo<FormStackResourceData[]>(() => {
-    const connections = stackToShow?.spec?.connections ?? [];
-    return (stackToShow?.spec?.stack_resources || []).map((r) => {
-      const form = mapStackResourceToFormData(r);
-      const connRows = connectionsToEnvRows(form.name ?? "", connections) as FormEnvVarData[];
-      if (connRows.length === 0) return form;
-      return {
-        ...form,
-        execution_config: {
-          ...(form.execution_config ?? {}),
-          environment_variables: [
-            ...((form.execution_config?.environment_variables ?? []) as FormEnvVarData[]),
-            ...connRows,
-          ],
-        },
-      };
+  const draftStackView = useMemo(
+    () =>
+      isDraft
+        ? ({
+          name: draftName,
+          labels: draftLabels,
+          spec: { stack_resources: session.draft.resources, volumes: session.draft.volumes, connections: [] },
+        } as unknown as Stack)
+        : null,
+    [isDraft, draftName, draftLabels, session.draft.resources, session.draft.volumes],
+  );
+  const effectiveStack = draftStackView ?? stackToShow;
+
+  // Publicly exposed services → best live ingress URL, for the header's
+  // PUBLIC row. Drafts have no live ingress, so the row stays empty.
+  const orgDomains = useOrgDomains(effectiveStack?.organisation_id ?? getCurrentOrganizationId() ?? undefined);
+  const publicEndpoints = useMemo(() => {
+    if (isDraft) return [];
+    return (effectiveStack?.spec.stack_resources ?? []).flatMap((r) => {
+      const best = pickBestIngress(r.status?.public_ingress ?? [], orgDomains);
+      return best && r.name ? [{ service: r.name, url: best.url, port: best.target_port }] : [];
     });
-  }, [stackToShow]);
-  const baselineVolumes = useMemo<VolumeFormData[]>(
+  }, [isDraft, effectiveStack, orgDomains]);
+
+  // ── Release plumbing (needed this early: the diff baseline is pinned to the
+  // latest release's snapshot, not the autosaved server state) ──
+  const deployIds = useMemo(() => ({
+    orgId: stackToShow?.organisation_id || getCurrentOrganizationId() || "",
+    teamName: (stackToShow ? teamNameById(stackToShow.team_id) : "") || defaultTeamName || "",
+    stackId: stackToShow?.id || "",
+  }), [stackToShow, teamNameById, defaultTeamName]);
+  const releasesResult = useReleases({ ...deployIds, enabled: !!deployIds.stackId });
+  const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.teamName, deployIds.stackId);
+
+  // Diff anchor: the latest release (the config last shipped via Deploy), falling
+  // back to the converged release until the releases list loads.
+  const baselineReleaseId =
+    releasesResult.activeRelease?.id ?? stackToShow?.status?.last_converged?.release_id;
+  useEffect(() => {
+    if (baselineReleaseId) releaseDetail.ensure(baselineReleaseId);
+  }, [baselineReleaseId, releaseDetail]);
+  const deployedSnapshot = releaseDetail.peek(baselineReleaseId).data?.snapshot;
+
+  // Current server state as form data — what the canvas displays and the edit
+  // session's working draft seeds from.
+  const draftResources = useMemo<FormStackResourceData[]>(
+    () => formResourcesFromSpec(stackToShow?.spec?.stack_resources, stackToShow?.spec?.connections),
+    [stackToShow],
+  );
+  const draftVolumes = useMemo<VolumeFormData[]>(
     () => (stackToShow?.spec?.volumes || []).map(mapVolumeToFormData),
     [stackToShow],
   );
+
+  // Diff baseline: the deployed snapshot when one exists, so autosaved edits stay
+  // visibly dirty/revertable until deployed. Never-deployed stacks fall back to
+  // the server state (everything reads as staged for the first deploy).
+  const snapshotResources = useMemo<FormStackResourceData[] | null>(
+    () =>
+      deployedSnapshot
+        ? formResourcesFromSpec(
+          deployedSnapshot.resources as StackResource[] | undefined,
+          deployedSnapshot.connections as StackConnection[] | undefined,
+        )
+        : null,
+    [deployedSnapshot],
+  );
+  const snapshotVolumes = useMemo<VolumeFormData[] | null>(
+    () => (deployedSnapshot ? ((deployedSnapshot.volumes ?? []) as Volume[]).map(mapVolumeToFormData) : null),
+    [deployedSnapshot],
+  );
+
+  // All diffing downstream is positional, but the server returns resources in
+  // unstable order and the snapshot's order need not match — re-key the baseline
+  // onto the order of whatever the diffs actually run against: the live session
+  // draft when one is active, the server state otherwise.
+  const alignResources = session.isActive ? session.draft.resources : draftResources;
+  const alignVolumes = session.isActive ? session.draft.volumes : draftVolumes;
+  const baselineResources = useMemo<FormStackResourceData[]>(
+    () =>
+      (snapshotResources
+        ? alignBaselineToDraft(snapshotResources, alignResources)
+        : alignBaselineToDraft(draftResources, alignResources)) as FormStackResourceData[],
+    [snapshotResources, draftResources, alignResources],
+  );
+  const baselineVolumes = useMemo<VolumeFormData[]>(
+    () =>
+      (snapshotVolumes
+        ? alignBaselineToDraft(snapshotVolumes, alignVolumes)
+        : alignBaselineToDraft(draftVolumes, alignVolumes)) as VolumeFormData[],
+    [snapshotVolumes, draftVolumes, alignVolumes],
+  );
+
+  const draftSeeded = useRef(false);
+  useEffect(() => {
+    if (!isDraft || draftSeeded.current) return;
+    draftSeeded.current = true;
+    // Baseline empty so seeded resources/volumes read as "added" and Save is enabled.
+    session.start({ resources: [], volumes: [] }, { linkedAddonIds: new Set(seed.linkedAddonIds) });
+    if (seed.resources.length) session.updateResources(() => seed.resources);
+    if (seed.volumes.length) session.updateVolumes(() => seed.volumes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDraft]);
 
   // Addons bound to the saved stack come from its connections (from.type
   // "addon/postgres"), not from the env vars — so this is the source of truth
@@ -204,105 +321,155 @@ export default function StackDetailPage() {
     [stackToShow],
   );
 
-  // addonId → the resources it binds to (a connection's `to` stack resource).
-  const addonResourceNames = useMemo<Map<string, string[]>>(() => {
-    const map = new Map<string, string[]>();
-    for (const c of stackToShow?.spec?.connections ?? []) {
-      if (c.from?.type === "addon/postgres" && c.from?.id && c.to?.name) {
-        const arr = map.get(c.from.id) ?? [];
-        if (!arr.includes(c.to.name)) arr.push(c.to.name);
-        map.set(c.from.id, arr);
-      }
-    }
-    return map;
-  }, [stackToShow]);
-
-  const activateEdit = (opts?: { resourceIdx?: number; volumeIdx?: number; openTab?: EditSessionTab }) => {
+  // Autosave model: the canvas is always editable for writers. The session
+  // starts as soon as the stack is loaded and restarts after discard/revert.
+  // Baseline = deployed snapshot (when loaded), draft = current server state:
+  // they differ when the server already holds autosaved-but-undeployed edits.
+  useEffect(() => {
+    if (isDraft || !stackToShow || !canWriteStack || session.isActive) return;
     session.start(
       { resources: baselineResources, volumes: baselineVolumes },
       {
-        openResourceIdx: opts?.resourceIdx ?? null,
-        openVolumeIdx: opts?.volumeIdx ?? null,
-        openTab: opts?.openTab ?? null,
         linkedAddonIds: connectionAddonIds,
+        draft: { resources: draftResources, volumes: draftVolumes },
       },
     );
-    setEditingBindingIds(new Set());
-  };
+    // session.start is a stable useCallback; session.isActive is the only reactive
+    // field we need from the session object itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDraft, stackToShow, canWriteStack, session.isActive, baselineResources, baselineVolumes, draftResources, draftVolumes, connectionAddonIds]);
 
-  // Page-derived per-addonId state map. Detaching wins over editing.
-  const addonGroupState = useMemo<AddonGroupStateMap>(() => {
-    const m = new Map<string, "idle" | "editing-binding" | "detaching">();
-    for (const id of editingBindingIds) m.set(id, "editing-binding");
-    for (const id of session.pendingDetach) m.set(id, "detaching");
-    return m;
-  }, [editingBindingIds, session.pendingDetach]);
+  // When a release snapshot for a NEW anchor arrives — the lazy fetch landing, or
+  // a fresh deploy creating a new release — advance the session baseline to it so
+  // "dirty" always means "differs from the latest release". Guarded per release
+  // id: autosave stack refreshes must never move the baseline.
+  const rebasedReleaseRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!session.isActive || !deployedSnapshot || !baselineReleaseId) return;
+    if (rebasedReleaseRef.current === baselineReleaseId) return;
+    rebasedReleaseRef.current = baselineReleaseId;
+    session.rebase({ resources: baselineResources, volumes: baselineVolumes });
+    // session.rebase is a stable useCallback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.isActive, deployedSnapshot, baselineReleaseId, baselineResources, baselineVolumes]);
 
-  const handleEditAddonBinding = useCallback((addonId: string) => {
-    setEditingBindingIds((prev) => {
-      const next = new Set(prev);
-      next.add(addonId);
-      return next;
-    });
-  }, []);
+  // Bumped on every autosave refresh to trigger a topology refetch.
+  const [topologyRefreshKey, setTopologyRefreshKey] = useState(0);
 
-  const handleDetachAddon = useCallback((addonId: string) => {
-    setEditingBindingIds((prev) => {
-      const next = new Set(prev);
-      next.delete(addonId);
-      return next;
-    });
-    session.setPendingDetach((prev) => {
-      const next = new Set(prev);
-      next.add(addonId);
-      return next;
-    });
-  }, [session]);
+  // Volumes that exist server-side; their spec (PVC size) is immutable, so the
+  // drawer renders those fields read-only.
+  const persistedVolumeNames = useMemo(
+    () =>
+      new Set(
+        (stackToShow?.spec?.volumes ?? [])
+          .map((v) => v.name)
+          .filter((n): n is string => !!n),
+      ),
+    [stackToShow?.spec?.volumes],
+  );
 
-  const handleCancelDetachAddon = useCallback((addonId: string) => {
-    session.setPendingDetach((prev) => {
-      const next = new Set(prev);
-      next.delete(addonId);
-      return next;
-    });
-    setEditingBindingIds((prev) => {
-      const next = new Set(prev);
-      next.add(addonId);
-      return next;
-    });
-  }, [session]);
-
-  // Compute "linked but unbound" — addons in linkedAddonIds with zero env
-  // bindings across the draft. Env vars no longer carry addon-backed sources,
-  // so every linked addon is unbound.
-  const computeUnboundLinked = (): string[] => Array.from(session.linkedAddonIds);
-
-  // Env vars are no longer addon-backed, so there is nothing to convert on
-  // detach; resources pass through unchanged with empty provenance.
-  const applyPendingDetach = (): {
-    resources: Partial<FormStackResourceData>[];
-    provenance: Map<string, { addonName: string; credField?: string }>;
-  } => ({
-    resources: session.draft.resources,
-    provenance: new Map<string, { addonName: string; credField?: string }>(),
+  // Autosave engine: debounces draft changes and syncs thin per-resource ops to
+  // the server. Disabled for drafts (nothing exists server-side to sync yet).
+  const draftSync = useDraftSync({
+    enabled: !isDraft && canWriteStack,
+    stack: stackToShow ?? undefined,
+    session,
+    ids: deployIds.stackId ? deployIds : null,
+    onStackRefreshed: (fresh) => {
+      setFetchedStack(fresh);
+      // Context write-through: stale currentStack must not win after a remote refresh.
+      setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
+      setTopologyRefreshKey((k) => k + 1);
+    },
   });
 
-  // ── Deploy lifecycle (page-level: drives the status bar across all tabs) ──
-  const deployIds = useMemo(() => ({
-    orgId: stackToShow?.organisation_id || getCurrentOrganizationId() || "",
-    teamName: (stackToShow ? teamNameById(stackToShow.team_id) : "") || defaultTeamName || "",
-    stackId: stackToShow?.id || "",
-  }), [stackToShow, teamNameById, defaultTeamName]);
+  // Live drawer validation: compute desired state from draft and expose zod issues
+  // per resource index. Issue paths are relative to the resource root (no
+  // ["spec","stack_resources",idx] prefix — drop that prefix at this boundary).
+  const desiredState = useMemo(() => buildDesiredState(session.draft), [session.draft]);
 
-  const releasesResult = useReleases({ ...deployIds, enabled: !!deployIds.stackId });
-  const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.teamName, deployIds.stackId);
+  const validationErrors = useMemo(() => {
+    const resources: { [index: number]: { [field: string]: string | undefined } } = {};
+    desiredState.resourceIssues.forEach((issues, idx) => {
+      resources[idx] = {};
+      for (const issue of issues) {
+        const fieldKey = issue.path.join(".");
+        if (!resources[idx][fieldKey]) resources[idx][fieldKey] = issue.message;
+      }
+    });
+    return { resources, volumes: {} };
+  }, [desiredState.resourceIssues]);
+
   const lifecycle = useDeployLifecycle({
     stack: stackToShow ?? undefined,
-    dirty: session.dirty,
-    isActive: session.isActive,
+    // "Editing" = autosave hasn't landed yet (in flight or retrying). Saved-but-
+    // undeployed content is detected by the staged-phase content diff instead.
+    unsaved: draftSync.status === SYNC_STATUS.saving || draftSync.failureCount > 0,
     releases: releasesResult.releases,
     activeRelease: releasesResult.activeRelease,
     detail: releaseDetail,
+  });
+
+  // When a release converges, the server moves status.last_converged but the
+  // client's stack copy still points at the previous release, so the staged
+  // panel keeps diffing against the old snapshot until a manual page refresh.
+  // Refetch the stack once per newly-released release to pick up the pointer.
+  const convergedFetchRef = useRef<string | undefined>(undefined);
+  const activeRelease = releasesResult.activeRelease;
+  useEffect(() => {
+    if (!deployIds.stackId || !activeRelease) return;
+    if (activeRelease.state !== ReleaseState.Released) return;
+    if (stackToShow?.status?.last_converged?.release_id === activeRelease.id) return;
+    if (convergedFetchRef.current === activeRelease.id) return;
+    convergedFetchRef.current = activeRelease.id;
+    void getStackById(deployIds.orgId, deployIds.teamName, deployIds.stackId).then((fresh) => {
+      setFetchedStack(fresh);
+      setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
+      // Server topology may have changed with the new release; re-derive edges.
+      setTopologyRefreshKey((k) => k + 1);
+    }).catch(() => {
+      // Poll-driven refresh; the next release poll retries naturally.
+      convergedFetchRef.current = undefined;
+    });
+  }, [deployIds, activeRelease, stackToShow?.status?.last_converged?.release_id, setStacks]);
+
+  // Live snapshot: already lazily fetched by useDeployLifecycle via detail.ensure;
+  // peek here to gate canDiscardDraft and pass to the revert hook.
+  const liveReleaseId = stackToShow?.status?.last_converged?.release_id;
+  const liveSnapshot = releaseDetail.peek(liveReleaseId).data?.snapshot;
+
+  const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
+  const [viewChangesOpen, setViewChangesOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const stackRevert = useStackRevert({
+    ids: deployIds.stackId ? deployIds : null,
+    stack: stackToShow ?? undefined,
+    liveSnapshot,
+    onReverted: (fresh) => {
+      setFetchedStack(fresh);
+      setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
+      draftSync.notifyExternalUpdate(fresh);
+      session.discard(); // auto-start effect restarts the session on the reverted baseline
+      toast({ title: "Draft discarded", description: "Stack restored to the last deployment.", variant: "success" });
+    },
+  });
+
+  // Immediate, confirm-gated volume deletion (canvas). Only wired for saved
+  // stacks — the wizard (`/stacks/new`) has nothing server-side to delete yet.
+  const volumeDelete = useVolumeDelete({
+    ids: deployIds.stackId ? deployIds : null,
+    draftSync,
+    onServerRefresh: (fresh) => {
+      setFetchedStack(fresh);
+      setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
+      setTopologyRefreshKey((k) => k + 1);
+    },
+    onRestoreVolume: (vol) => {
+      session.updateVolumes((vs) => [...vs, mapVolumeToFormData(vol)]);
+    },
+    toast,
   });
 
   const [deployBusy, setDeployBusy] = useState(false);
@@ -311,7 +478,7 @@ export default function StackDetailPage() {
     setDeployBusy(true);
     try {
       await fn();
-      toast({ title: ok });
+      toast({ title: ok, variant: "success" });
       refetchReleases();
     } catch (e) {
       toast({ title: "Action failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
@@ -320,10 +487,19 @@ export default function StackDetailPage() {
     }
   }, [toast, refetchReleases]);
 
-  const onDeploy = useCallback(
-    () => runDeploy(() => createRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId), "Deploy started"),
-    [runDeploy, deployIds],
-  );
+  const onDeploy = useCallback(async () => {
+    if (!draftSync || !deployIds.stackId) return;
+    const flushed = await draftSync.flush();
+    if (!flushed) {
+      toast({
+        title: "Deploy blocked",
+        description: "Draft changes failed to save. Fix the save error and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    runDeploy(() => createRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId), "Deploy started");
+  }, [draftSync, deployIds, runDeploy, toast]);
   const onCancelDeploy = useCallback(
     (releaseId: string) => runDeploy(() => cancelRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId, releaseId), "Release cancelled"),
     [runDeploy, deployIds],
@@ -337,149 +513,129 @@ export default function StackDetailPage() {
     toast({ title: "Release ID copied" });
   }, [toast]);
 
-  const performSave = async () => {
-    if (!stackToShow || !session.isActive || !id) return;
-    setIsSaving(true);
-    setValidationErrors({ resources: {}, volumes: {} });
+  // Draft create: validates name, creates the stack, and navigates to the new page.
+  const performCreate = async () => {
+    if (!isDraft) return;
+    setIsCreating(true);
+    setNameError(undefined);
+
+    // A draft needs a name before it can be created. The stack name field is not
+    // min-length-constrained in the schema (empty passes zod and only fails at
+    // the API), so guard it here to surface the error inline on the title input.
+    if (!draftName.trim()) {
+      setNameError("Required");
+      setIsCreating(false);
+      toast({
+        title: "Name your stack",
+        description: "Give the stack a name before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const orgId = getCurrentOrganizationId();
       if (!orgId) throw new Error("Organization ID not found");
 
-      const detachResult = session.pendingDetach.size > 0 ? applyPendingDetach() : null;
-      const resources = (detachResult?.resources ?? session.draft.resources) as FormStackResourceData[];
-
-      const formStackData: FormStackData = {
-        name: stackToShow.name || '',
-        labels: stackToShow.labels || [],
-        spec: {
-          stack_resources: resources,
-          volumes: session.draft.volumes as VolumeFormData[],
-        }
-      };
+      const resources = session.draft.resources as FormStackResourceData[];
+      const formStackData: FormStackData = buildDraftFormData(
+        draftName.trim(),
+        draftLabels,
+        resources,
+        session.draft.volumes as VolumeFormData[],
+      );
 
       const validation = FormStackSchema.safeParse(formStackData);
       if (!validation.success) {
-        const nextErrors: typeof validationErrors = { resources: {}, volumes: {} };
+        const topLevelMessages: string[] = [];
+        let newNameError: string | undefined;
+
         for (const issue of validation.error.issues) {
-          const [scope0, scope1, idxRaw, ...rest] = issue.path;
-          if (scope0 !== "spec" || (scope1 !== "stack_resources" && scope1 !== "volumes")) continue;
-          const idx = typeof idxRaw === "number" ? idxRaw : Number(idxRaw);
-          if (Number.isNaN(idx)) continue;
-          const bucket = scope1 === "stack_resources" ? nextErrors.resources : nextErrors.volumes;
-          if (!bucket[idx]) bucket[idx] = {};
-          const fieldKey = rest.join(".");
-          if (!bucket[idx][fieldKey]) bucket[idx][fieldKey] = issue.message;
+          const [scope0] = issue.path;
+          if (scope0 === "name") {
+            newNameError = issue.message;
+          } else {
+            topLevelMessages.push(issue.message);
+          }
         }
-        setValidationErrors(nextErrors);
+
+        setNameError(newNameError);
         toast({
           title: "Validation error",
-          description: "Please fix the highlighted errors before deploying.",
+          description: topLevelMessages.length > 0
+            ? topLevelMessages.join("; ")
+            : "Please fix the highlighted errors before saving.",
           variant: "destructive",
         });
-        setIsSaving(false);
+        setIsCreating(false);
         return;
       }
 
-      const teamName = teamNameById(fetchedStack?.team_id ?? currentStack?.team_id);
+      const teamName = defaultTeamName;
       if (!teamName) {
         toast({
-          title: "Failed to update stack",
-          description: "Could not resolve the team for this stack.",
+          title: "No team available",
+          description: "Could not resolve a team to save into.",
           variant: "destructive",
         });
-        setIsSaving(false);
+        setIsCreating(false);
         return;
       }
 
-      // The stack PUT carries the full desired connection set in spec.connections;
-      // the backend replaces the connection set atomically (upsert-by-id) and
-      // returns the stack with its reconciled connections. No separate diff.
       const apiData = convertFormStackToApiStack(formStackData);
-      const updatedStack = await updateStack(orgId, teamName, id, apiData);
-      setFetchedStack(updatedStack);
-
-      if (detachResult) setDetachedProvenance(detachResult.provenance);
-      else setDetachedProvenance(new Map());
+      const created = await createStack(orgId, teamName, apiData);
       session.discard();
-      setEditingBindingIds(new Set());
-
-      toast({
-        title: "Stack updated successfully",
-        description: "Your stack configuration has been saved.",
-        variant: "default"
-      });
-
+      navigate(`/stacks/${created.id}`, { replace: true, state: null });
     } catch (err) {
-      console.error('Failed to update stack:', err);
+      console.error('Failed to create stack:', err);
       toast({
-        title: "Failed to update stack",
+        title: "Failed to create stack",
         description: err instanceof Error ? err.message : "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
     } finally {
-      setIsSaving(false);
+      setIsCreating(false);
     }
   };
 
-  const handleSave = () => {
-    if (!session.isActive) return;
-    if (session.pendingDetach.size > 0) {
-      setDetachConfirmOpen(true);
-      return;
+  const performDelete = useCallback(async () => {
+    if (!deployIds) return;
+    setDeleting(true);
+    try {
+      await deleteStack(deployIds.orgId, deployIds.teamName, deployIds.stackId);
+      setStacks((prev) => prev.filter((s) => s.id !== deployIds.stackId));
+      toast({ title: "Stack deleted", description: `"${stackToShow?.name}" was deleted.`, variant: "success" });
+      navigate("/stacks");
+    } catch {
+      toast({ title: "Delete failed", description: "The stack could not be deleted.", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+      setDeleteConfirmOpen(false);
     }
-    const unbound = computeUnboundLinked();
-    if (unbound.length > 0) {
-      // Silently drop phantom links — addons that were added to the stack
-      // but never referenced in any env var. They have no API representation
-      // anyway (links are derived from env vars), so this is just cleanup.
-      session.setLinkedAddonIds((prev) => {
-        const next = new Set(prev);
-        for (const id of unbound) next.delete(id);
-        return next;
-      });
-    }
-    void performSave();
-  };
+  }, [deployIds, setStacks, stackToShow?.name, toast, navigate]);
 
-  // NOTE: this used to be wrapped in useTransition, which improved
-  // typing throughput but broke caret position on controlled inputs —
-  // when React commits the deferred state, it re-applies the input's
-  // value prop and the browser moves the caret to the end. Mid-string
-  // edits became impossible. The win from Cycle 6 (per-tab memoization)
-  // gives us most of the throughput back without the side effect.
-  const handleResourcesChange = useCallback((updatedResources: Partial<FormStackResourceData>[]) => {
-    session.updateResources(updatedResources as FormStackResourceData[]);
-  }, [session]);
+  const handleNameChange = useCallback((name: string) => {
+    setDraftName(name);
+    setNameError(undefined);
+  }, []);
 
-  const handleVolumesChange = useCallback((updatedVolumes: Partial<VolumeFormData>[]) => {
-    session.updateVolumes(updatedVolumes as VolumeFormData[]);
-  }, [session]);
-
-  const handleDiscardEnvRow = useCallback(
-    (rIdx: number, eIdx: number) => session.discardEnvRow(rIdx, eIdx),
+  // Revert one resource/volume from the View-changes modal by name → session index.
+  const discardResourceByName = useCallback(
+    (name: string) => {
+      const idx = session.draft.resources.findIndex((r) => (r as { name?: string }).name === name);
+      if (idx >= 0) session.discardResource(idx);
+    },
     [session],
   );
-  const handleDiscardResource = useCallback(
-    (rIdx: number) => session.discardResource(rIdx),
-    [session],
-  );
-  const handleDiscardResourceField = useCallback(
-    (rIdx: number, path: string) => session.discardResourceField(rIdx, path),
+  const discardVolumeByName = useCallback(
+    (name: string) => {
+      const idx = session.draft.volumes.findIndex((v) => (v as { name?: string }).name === name);
+      if (idx >= 0) session.discardVolume(idx);
+    },
     [session],
   );
 
-  // Stable Set of every addonId explicitly linked to the stack. Env vars no
-  // longer carry addon-backed sources, so explicit links are the only source.
-  // Without useMemo this would be a fresh Set every render of detail/index.tsx,
-  // breaking memo on every StackResourceItem child via the addons →
-  // availableAddonIds → addons.filter chain.
-  const availableAddonIds = useMemo(
-    () => (session.isActive ? new Set(session.linkedAddonIds) : connectionAddonIds),
-    [session.isActive, session.linkedAddonIds, connectionAddonIds],
-  );
-
-  if (loading) {
+  if (!isDraft && loading) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -500,7 +656,7 @@ export default function StackDetailPage() {
     );
   }
 
-  if (!stackToShow) {
+  if (!isDraft && !stackToShow) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold mb-2">Stack not found</h2>
@@ -512,380 +668,201 @@ export default function StackDetailPage() {
     );
   }
 
-  const resourceCount = stackToShow.spec?.stack_resources?.length || 0;
-  const volumeCount = stackToShow.spec?.volumes?.length || 0;
-  const subtitleParts: React.ReactNode[] = [
-    `${resourceCount} ${resourceCount === 1 ? "service" : "services"}`,
+  const resourceCount = effectiveStack?.spec?.stack_resources?.length || 0;
+  const volumeCount = effectiveStack?.spec?.volumes?.length || 0;
+  const addonCount = connectionAddonIds.size;
+  const subtitleText = [
+    `${resourceCount} ${resourceCount === 1 ? "resource" : "resources"}`,
     `${volumeCount} ${volumeCount === 1 ? "volume" : "volumes"}`,
-  ];
+    ...(addonCount > 0 ? [`${addonCount} ${addonCount === 1 ? "addon" : "addons"}`] : []),
+  ].join(" · ");
 
-  // The actions menu only holds mutating items (Edit + Delete). Hide the whole
-  // trigger for users who can't write this stack.
-  const headerActions = canWriteStack ? (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Stack actions">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[160px]">
-        <DropdownMenuItem
-          onClick={() => activateEdit({})}
-          disabled={session.isActive}
-        >
-          <Pencil className="h-4 w-4" />
-          {session.isActive ? "Editing" : "Edit"}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="text-danger focus:text-danger"
-          onClick={() =>
-            toast({
-              title: "Not implemented",
-              description: "Delete stack will land in a follow-up.",
-            })
-          }
-        >
-          <Trash2 className="h-4 w-4 text-danger" />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  ) : undefined;
+  // Ops-view bodies — rendered inside the canvas shell; gated on isDraft so
+  // the user sees a placeholder until the stack is saved for the first time.
+  const deploymentsBody = isDraft ? <DraftTabPlaceholder label="Deployments" /> : effectiveStack?.id ? (
+    <DeploymentsTab
+      orgId={deployIds.orgId}
+      teamName={deployIds.teamName}
+      stackId={effectiveStack.id}
+      stack={effectiveStack}
+      onOpenLogs={() => setActiveTab("logs")}
+      releases={releasesResult.releases}
+      activeRelease={releasesResult.activeRelease}
+      loading={releasesResult.loading}
+      error={releasesResult.error}
+      lifecycle={lifecycle}
+      onRollback={onRollback}
+      onCancel={onCancelDeploy}
+      onCopyId={onCopyId}
+    />
+  ) : (
+    <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
+  );
 
-  // The bar is an ACTION affordance, not a status: it shows only when there's a staged draft to
-  // deploy. Live/in-flight state lives in the timeline + header pill, so a rollout and a draft can coexist.
-  const deployBar = (() => {
-    if (lifecycle.phase !== "staged") return null;
-    const d = lifecycle.stagedDiff;
-    // Per-type counts; a rename collapses to one resource entry in the diff.
-    const segments: StickyActionBarSegment[] = [];
-    const addSeg = (count: number, singular: string) => {
-      if (count > 0) segments.push({ num: count, label: count === 1 ? `${singular} changed` : `${singular}s changed` });
-    };
-    if (d) {
-      addSeg(d.resources.length, "resource");
-      addSeg(d.volumes.length, "volume");
-      addSeg(d.connections.length, "connection");
-    }
-    return (
-      <StickyActionBar
-        leadLabel="Draft saved"
-        segments={segments}
-        primary={{
-          label: "Deploy",
-          loadingLabel: "Deploying",
-          icon: <Rocket className="h-3.5 w-3.5" />,
-          isLoading: deployBusy,
-          onClick: onDeploy,
-        }}
-      />
-    );
-  })();
+  const logsBody = isDraft ? <DraftTabPlaceholder label="Logs" /> : effectiveStack?.id ? (
+    <StackLogsTab
+      stackId={effectiveStack.id}
+      organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
+      resources={effectiveStack.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
+    />
+  ) : (
+    <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
+  );
+
+  const metricsBody = isDraft ? <DraftTabPlaceholder label="Metrics" /> : effectiveStack?.id ? (
+    <StackMetricsTab
+      stackId={effectiveStack.id}
+      organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
+      resources={effectiveStack.spec.stack_resources || []}
+    />
+  ) : (
+    <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
+  );
+
+  const dirtyTotal =
+    session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size + session.dirty.addonLinkCount;
+
+  // "View changes" badge + modal count must agree with the modal's BODY, which
+  // renders lifecycle.stagedDiff (saved spec vs release). Session dirt can
+  // diverge from it — e.g. a mount added and disconnected after the deploy nets
+  // to zero staged changes while the session still reads dirty. Once a staged
+  // diff exists, count its rows; fall back to session dirt only while an edit
+  // is still syncing (stagedDiff undefined).
+  const stagedCount = lifecycle.stagedDiff
+    ? lifecycle.stagedDiff.resources.length +
+      lifecycle.stagedDiff.volumes.length +
+      lifecycle.stagedDiff.connections.length
+    : null;
+  const changeCount = stagedCount ?? dirtyTotal;
 
   return (
-    <div className="p-8 space-y-8">
-      {session.isActive ? (() => {
-        const resourceCount = session.dirty.dirtyResourceIdx.size;
-        const volumeCount = session.dirty.dirtyVolumeIdx.size;
-        const dirtyEntities = resourceCount + volumeCount;
-        const segments: StickyActionBarSegment[] = [];
-        if (resourceCount > 0) {
-          segments.push({ num: resourceCount, label: resourceCount === 1 ? "RESOURCE MODIFIED" : "RESOURCES MODIFIED" });
-        }
-        if (volumeCount > 0) {
-          segments.push({ num: volumeCount, label: volumeCount === 1 ? "VOLUME MODIFIED" : "VOLUMES MODIFIED" });
-        }
-        if (session.dirty.addonLinkCount > 0) {
-          segments.push({ num: session.dirty.addonLinkCount, label: session.dirty.addonLinkCount === 1 ? "ADDON" : "ADDONS" });
-        }
-        return (
-          <StickyActionBar
-            leadLabel="Draft"
-            segments={segments}
-            primary={{
-              label: "Save",
-              loadingLabel: "Saving",
-              icon: <Save className="h-3.5 w-3.5" />,
-              isLoading: isSaving,
-              onClick: handleSave,
-            }}
-            secondary={{
-              label: "Discard all",
-              onClick: () => session.discard(),
-              dirtyCount: dirtyEntities,
-              confirm: {
-                threshold: 2,
-                title: "Discard all changes?",
-                description: (
-                  <>
-                    You have unsaved edits across {dirtyEntities}{" "}
-                    {dirtyEntities === 1 ? "item" : "items"}. This will revert every
-                    change in this session.
-                  </>
-                ),
-                confirmLabel: "Discard all",
-                cancelLabel: "Keep editing",
-              },
-            }}
+    <>
+      <CanvasEditorShell
+        stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
+        stackId={effectiveStack?.id}
+        isDraft={isDraft}
+        nameEditable={isDraft}
+        onNameChange={handleNameChange}
+        nameError={nameError}
+        statusState={effectiveStack?.status?.state}
+        subtitle={subtitleText}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isActive={session.isActive}
+        dirtyResourceCount={session.dirty.dirtyResourceIdx.size}
+        dirtyTotal={changeCount}
+        isStaged={lifecycle.phase === "staged"}
+        onViewChanges={() => setViewChangesOpen(true)}
+        syncStatus={isDraft ? SYNC_STATUS.idle : draftSync.status}
+        deployBusy={deployBusy}
+        canWrite={canWriteStack}
+        onCreate={() => void performCreate()}
+        isCreating={isCreating}
+        onDeploy={onDeploy}
+        canDiscardDraft={lifecycle.phase === "staged" && !!liveSnapshot && canWriteStack}
+        onDiscardDraft={() => setRevertConfirmOpen(true)}
+        canDeleteStack={canWriteStack}
+        onDelete={() => setDeleteConfirmOpen(true)}
+        publicEndpoints={publicEndpoints}
+        configuration={
+          <StackCanvasTab
+            session={session}
+            baselineResources={baselineResources}
+            baselineVolumes={baselineVolumes}
+            draftResources={draftResources}
+            draftVolumes={draftVolumes}
+            connectionAddonIds={connectionAddonIds}
+            addonNameById={addonNameById}
+            errors={validationErrors.resources}
+            onViewLogs={() => setActiveTab("logs")}
+            topologyIds={!isDraft && deployIds.stackId ? deployIds : null}
+            topologyRefreshKey={topologyRefreshKey}
+            onDeleteVolume={deployIds.stackId ? volumeDelete.deleteVolume : undefined}
+            deletingVolume={volumeDelete.deleting}
+            persistedVolumeNames={persistedVolumeNames}
           />
-        );
-      })() : deployBar}
-
-      <PageHeader
-        title={stackToShow.name}
-        status={
-          <span className="flex items-center gap-2">
-            {stackToShow.status?.state && (
-              <StatusPill variant={variantFromState(stackToShow.status.state)}>
-                {stackToShow.status.state}
-              </StatusPill>
-            )}
-          </span>
         }
-        subtitle={subtitleParts.map((p, i) => (
-          <span key={i}>
-            {i > 0 && <span className="mx-2 text-muted-foreground/50">·</span>}
-            {p}
-          </span>
-        ))}
-        actions={headerActions}
+        deployments={deploymentsBody}
+        logs={logsBody}
+        metrics={metricsBody}
       />
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-6 w-full justify-start bg-transparent border-b border-border rounded-none p-0 h-auto gap-6">
-          <TabsTrigger
-            value="configuration"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
-          >
-            Configuration
-          </TabsTrigger>
-          <TabsTrigger
-            value="deployments"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
-          >
-            Deployments
-          </TabsTrigger>
-          <TabsTrigger
-            value="logs"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
-          >
-            Logs
-          </TabsTrigger>
-          <TabsTrigger
-            value="metrics"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3 -mb-px font-medium"
-          >
-            Metrics
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Configuration Tab: Stack Resources and Volumes */}
-        <TabsContent value="configuration" className="space-y-8">
-          <Panel
-            title="Stack Resources"
-            count={baselineResources.length}
-            bodyClassName="p-0"
-          >
-            {session.isActive ? (
-              <StackResourcesForm
-                resources={session.draft.resources}
-                onResourcesChange={handleResourcesChange}
-                errors={validationErrors.resources}
-                volumes={session.draft.volumes}
-                accordionDefaultOpen={false}
-                defaultOpenResourceIdx={session.openResourceIdx}
-                addonGroupState={addonGroupState}
-                onEditAddonBinding={handleEditAddonBinding}
-                onDetachAddon={handleDetachAddon}
-                onCancelDetachAddon={handleCancelDetachAddon}
-                baselineResources={session.baseline.resources}
-                onDiscardEnvRow={handleDiscardEnvRow}
-                onDiscardResource={handleDiscardResource}
-                onDiscardResourceField={handleDiscardResourceField}
-                availableAddonIds={availableAddonIds}
-              />
-            ) : (
-              <StackResourcesDetail
-                resources={baselineResources}
-                accordionDefaultOpen={false}
-                onEditResource={
-                  canWriteStack
-                    ? (idx) => activateEdit({ resourceIdx: idx, openTab: "environment" })
-                    : undefined
-                }
-                onAddResource={
-                  canWriteStack
-                    ? () => {
-                      const nextIdx = baselineResources.length;
-                      session.start(
-                        {
-                          resources: [...baselineResources, getDefaultResource() as FormStackResourceData],
-                          volumes: baselineVolumes,
-                        },
-                        { openResourceIdx: nextIdx, openTab: "configuration", linkedAddonIds: connectionAddonIds },
-                      );
-                      setEditingBindingIds(new Set());
-                    }
-                    : undefined
-                }
-                detachedProvenance={detachedProvenance}
-                addonNameById={addonNameById}
-              />
-            )}
-          </Panel>
-
-          <Panel
-            title="Stack Volumes"
-            count={baselineVolumes.length}
-            bodyClassName="p-0"
-          >
-            {session.isActive ? (
-              <StackVolumesForm
-                volumes={session.draft.volumes}
-                onVolumesChange={handleVolumesChange}
-                errors={validationErrors.volumes}
-                stackResources={session.draft.resources}
-                baselineVolumes={baselineVolumes}
-                accordionDefaultOpen={false}
-                defaultOpenVolumeIdx={session.openVolumeIdx}
-              />
-            ) : (
-              <StackVolumesDetail
-                volumes={baselineVolumes}
-                stackResources={baselineResources}
-                accordionDefaultOpen={false}
-                onEditVolume={canWriteStack ? (idx) => activateEdit({ volumeIdx: idx }) : undefined}
-                onAddVolume={
-                  canWriteStack
-                    ? () => {
-                      const nextIdx = baselineVolumes.length;
-                      session.start(
-                        {
-                          resources: baselineResources,
-                          volumes: [...baselineVolumes, getDefaultVolume() as VolumeFormData],
-                        },
-                        { openVolumeIdx: nextIdx, linkedAddonIds: connectionAddonIds },
-                      );
-                      setEditingBindingIds(new Set());
-                    }
-                    : undefined
-                }
-              />
-            )}
-          </Panel>
-
-          {(() => {
-            const baseline = { resources: baselineResources, volumes: baselineVolumes };
-            const ensureActive = () => {
-              if (!session.isActive) session.start(baseline, { linkedAddonIds: connectionAddonIds });
-            };
-            return (
-              <AddonsInStackPanel
-                readOnly={!canWriteStack}
-                resources={(session.isActive ? session.draft.resources : baselineResources) as Partial<FormStackResourceData>[]}
-                linkedAddonIds={session.isActive ? session.linkedAddonIds : connectionAddonIds}
-                addonResourceNames={addonResourceNames}
-                onLinkAddon={(addonId) => {
-                  ensureActive();
-                  session.setLinkedAddonIds((prev) => {
-                    const next = new Set(prev);
-                    next.add(addonId);
-                    return next;
-                  });
-                }}
-                onRemoveLinkedAddon={(addonId) => {
-                  session.setLinkedAddonIds((prev) => {
-                    const next = new Set(prev);
-                    next.delete(addonId);
-                    return next;
-                  });
-                }}
-              />
-            );
-          })()}
-        </TabsContent>
-
-        {/* Deployments Tab */}
-        <TabsContent value="deployments">
-          {stackToShow.id ? (
-            <DeploymentsTab
-              orgId={deployIds.orgId}
-              teamName={deployIds.teamName}
-              stackId={stackToShow.id}
-              stack={stackToShow}
-              onOpenLogs={() => setActiveTab("logs")}
-              releases={releasesResult.releases}
-              activeRelease={releasesResult.activeRelease}
-              loading={releasesResult.loading}
-              error={releasesResult.error}
-              lifecycle={lifecycle}
-              onRollback={onRollback}
-              onCancel={onCancelDeploy}
-              onCopyId={onCopyId}
-            />
-          ) : (
-            <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
-          )}
-        </TabsContent>
-
-        {/* Logs Tab */}
-        <TabsContent value="logs">
-          {stackToShow.id ? (
-            <StackLogsTab
-              stackId={stackToShow.id}
-              organizationId={stackToShow.organisation_id || getCurrentOrganizationId() || ''}
-              resources={stackToShow.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
-            />
-          ) : (
-            <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
-          )}
-        </TabsContent>
-
-        {/* Metrics Tab */}
-        <TabsContent value="metrics">
-          {stackToShow.id ? (
-            <StackMetricsTab
-              stackId={stackToShow.id}
-              organizationId={stackToShow.organisation_id || getCurrentOrganizationId() || ''}
-              resources={stackToShow.spec.stack_resources || []}
-            />
-          ) : (
-            <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      <AlertDialog open={detachConfirmOpen} onOpenChange={setDetachConfirmOpen}>
+      <ViewChangesModal
+        open={viewChangesOpen}
+        onOpenChange={setViewChangesOpen}
+        diff={lifecycle.stagedDiff}
+        count={changeCount}
+        stackName={effectiveStack?.name ?? ""}
+        onDiscardResource={discardResourceByName}
+        onDiscardVolume={discardVolumeByName}
+        onDiscardAll={() => {
+          setViewChangesOpen(false);
+          // Everything the modal lists is already autosaved server-side, so a
+          // local session reset discards nothing. Route through the revert
+          // flow (PUT of the release snapshot), which carries its own
+          // data-loss confirm. Without a deployed snapshot to restore there is
+          // nothing saved to roll back — clearing the local session is all
+          // "discard" can mean.
+          if (lifecycle.phase === "staged" && liveSnapshot) {
+            setRevertConfirmOpen(true);
+          } else {
+            session.discard();
+          }
+        }}
+        onDeploy={onDeploy}
+        deployBusy={deployBusy}
+        canWrite={canWriteStack}
+      />
+      <AlertDialog open={revertConfirmOpen} onOpenChange={setRevertConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Detach {session.pendingDetach.size} {session.pendingDetach.size === 1 ? "addon" : "addons"}?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Discard draft changes?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bound env keys will be converted to plain stack vars with their last-known values. Confirm to continue.
+            This restores the stack to its last deployment. Volumes added since the last deployment will be deleted, and previously deleted volumes will be recreated empty. Lost volume data cannot be recovered. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                void (async () => {
+                  // Flush any pending autosave before reverting (don't block on failure)
+                  await draftSync.flush();
+                  const ok = await stackRevert.revert();
+                  if (!ok) {
+                    toast({
+                      title: "Discard failed",
+                      description: "The stack may be partially reverted. Reload the page to see its current state.",
+                      variant: "destructive",
+                    });
+                  }
+                })();
+              }}
+              disabled={stackRevert.reverting}
+            >
+            Discard draft
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete stack?</AlertDialogTitle>
+            <AlertDialogDescription>
+            This permanently deletes "{stackToShow?.name}", its resources, volumes and deployments. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                setDetachConfirmOpen(false);
-                const unbound = computeUnboundLinked();
-                if (unbound.length > 0) {
-                  session.setLinkedAddonIds((prev) => {
-                    const next = new Set(prev);
-                    for (const id of unbound) next.delete(id);
-                    return next;
-                  });
-                }
-                void performSave();
-              }}
+              onClick={() => void performDelete()}
+              disabled={deleting}
             >
-              Confirm and detach
+            Delete stack
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

@@ -112,4 +112,16 @@ describe("diffSnapshots connections", () => {
       { name: "env · db → api", change: "added", rows: [{ key: "DATABASE_URL", to: "url", kind: "added" }] },
     ]);
   });
+
+  it("flags a disconnected volume mount as a removed connection", () => {
+    const mount = {
+      kind: "volume_mount",
+      from: { type: "volume", name: "data" },
+      to: { type: "stack_resource", name: "api" },
+    };
+    const out = diffSnapshots(mk({ resources: [], connections: [mount] }), mk({ resources: [], connections: [] }));
+    expect(out.connections).toHaveLength(1);
+    expect(out.connections[0]).toMatchObject({ name: "volume_mount · data → api", change: "removed" });
+    expect(out.connections[0].note).toMatch(/removed/i);
+  });
 });

@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import type { Stack } from "@/api/stacks";
 import type { StackRelease, StackReleaseSnapshot } from "@/api/releases";
-import type { StackDiff } from "@/pages/stacks/lib/stack-diff";
 import type { ReleaseDetail } from "./use-release-detail";
 import { diffSnapshots, type SnapshotDiff } from "./release-snapshot-diff";
 import { specToSnapshot } from "./spec-to-snapshot";
@@ -23,8 +22,10 @@ export interface DeployLifecycle {
 
 export interface DeriveDeployLifecycleArgs {
   stack: Stack | undefined;
-  dirty: StackDiff;
-  isActive: boolean;
+  /** Edits not yet persisted by the autosave engine (sync in flight or failing).
+   *  Session dirt vs the DEPLOYED baseline is intentionally not "editing" — with
+   *  autosave, saved-but-undeployed content is the "staged" phase's job. */
+  unsaved: boolean;
   /** The latest release attempt (releases[0]). */
   activeRelease?: StackRelease;
   /** The release currently serving traffic (stack.status.last_converged). */
@@ -33,10 +34,6 @@ export interface DeriveDeployLifecycleArgs {
   activeSnapshot?: StackReleaseSnapshot;
   /** Snapshot of the live release — what is actually running. */
   liveSnapshot?: StackReleaseSnapshot;
-}
-
-function dirtyCount(d: StackDiff): number {
-  return d.dirtyResourceIdx.size + d.dirtyVolumeIdx.size + d.addonLinkCount;
 }
 
 function diffIsEmpty(d: SnapshotDiff): boolean {
@@ -54,12 +51,12 @@ function diffIsEmpty(d: SnapshotDiff): boolean {
  * Driven by two comparisons: saved-vs-in-flight and saved-vs-live.
  */
 export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLifecycle {
-  const { stack, dirty, isActive, activeRelease, liveRelease, activeSnapshot, liveSnapshot } = args;
+  const { stack, unsaved, activeRelease, liveRelease, activeSnapshot, liveSnapshot } = args;
   const liveSeq = liveRelease?.sequence;
   const nextSeq = (activeRelease?.sequence ?? 0) + 1;
   if (!stack) return { phase: "clean", nextSeq };
 
-  if (isActive && dirtyCount(dirty) > 0) {
+  if (unsaved) {
     return { phase: "editing", nextSeq };
   }
 
@@ -104,8 +101,7 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
 
 export interface UseDeployLifecycleArgs {
   stack: Stack | undefined;
-  dirty: StackDiff;
-  isActive: boolean;
+  unsaved: boolean;
   releases: StackRelease[];
   activeRelease?: StackRelease;
   detail: ReleaseDetail;
@@ -115,7 +111,7 @@ export interface UseDeployLifecycleArgs {
  * React wrapper: resolves the live + latest-attempt releases, lazily loads both
  * snapshots, and derives the lifecycle phase.
  */
-export function useDeployLifecycle({ stack, dirty, isActive, releases, activeRelease, detail }: UseDeployLifecycleArgs): DeployLifecycle {
+export function useDeployLifecycle({ stack, unsaved, releases, activeRelease, detail }: UseDeployLifecycleArgs): DeployLifecycle {
   const liveReleaseId = stack?.status?.last_converged?.release_id;
   const liveRelease = liveReleaseId ? releases.find((r) => r.id === liveReleaseId) : undefined;
   const activeId = activeRelease?.id;
@@ -127,5 +123,5 @@ export function useDeployLifecycle({ stack, dirty, isActive, releases, activeRel
 
   const liveSnapshot = detail.peek(liveReleaseId).data?.snapshot;
   const activeSnapshot = detail.peek(activeId).data?.snapshot;
-  return deriveDeployLifecycle({ stack, dirty, isActive, activeRelease, liveRelease, activeSnapshot, liveSnapshot });
+  return deriveDeployLifecycle({ stack, unsaved, activeRelease, liveRelease, activeSnapshot, liveSnapshot });
 }

@@ -43,10 +43,10 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
     try {
       const result = await promote(row.id);
       if (result.ok) {
-        toast({ title: "User promoted", description: `${row.name} is now an OrgAdmin.` });
+        toast({ title: "User promoted", description: `${row.name} is now an OrgAdmin.`, variant: "success" });
         onChanged();
       } else {
-        toast({ title: "Error", description: result.error, variant: "destructive" });
+        toast({ title: "Failed to promote user", description: result.error, variant: "destructive" });
       }
     } finally {
       setBusy(false);
@@ -59,12 +59,12 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
     try {
       const result = await demote(row.id, demoteTeam, demoteRole);
       if (result.ok) {
-        toast({ title: "User demoted", description: `${row.name} has been demoted to OrgMember.` });
+        toast({ title: "User demoted", description: `${row.name} has been demoted to OrgMember.`, variant: "success" });
         setDemoteOpen(false);
         setDemoteTeam("");
         onChanged();
       } else {
-        toast({ title: "Error", description: result.error, variant: "destructive" });
+        toast({ title: "Failed to demote user", description: result.error, variant: "destructive" });
       }
     } finally {
       setBusy(false);

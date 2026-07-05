@@ -63,12 +63,12 @@ export default function ClustersPage() {
       toast({
         title: "Cluster unlinked",
         description: "The cluster has been unlinked successfully.",
-        variant: "destructive",
+        variant: "success",
       });
     } catch (e) {
       console.error('Failed to unlink cluster:', e);
       toast({
-        title: "Error",
+        title: "Failed to unlink cluster",
         description: "Failed to unlink cluster. Please try again.",
         variant: "destructive",
       });
@@ -95,6 +95,7 @@ export default function ClustersPage() {
       toast({
         title: "Cluster added",
         description: "The cluster has been added successfully.",
+        variant: "success",
       });
     } catch (e) {
       console.error('Failed to create cluster:', e);

@@ -35,6 +35,7 @@ export default function TeamsPage() {
       toast({
         title: "Team created",
         description: `"${name}" has been created successfully.`,
+        variant: "success",
       });
     }
     return result;
@@ -175,6 +176,7 @@ export default function TeamsPage() {
             toast({
               title: "Team renamed",
               description: `"${oldName}" is now "${newName}".`,
+              variant: "success",
             });
             setRenameTarget(null);
           }
@@ -194,6 +196,7 @@ export default function TeamsPage() {
             toast({
               title: "Team deleted",
               description: `"${name}" has been deleted.`,
+              variant: "success",
             });
             setDeleteTarget(null);
           } else {

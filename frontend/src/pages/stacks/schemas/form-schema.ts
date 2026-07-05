@@ -336,9 +336,9 @@ function convertApiResourceToFormResource(
     if (rev?.commit) {
       gitRevisionType = "commit";
       gitRevisionValue = rev.commit;
-    } else if (rev?.branch?.name) {
+    } else if (rev?.branch) {
       gitRevisionType = "branch";
-      gitRevisionValue = rev.branch.name;
+      gitRevisionValue = rev.branch;
     } else if (rev?.tag) {
       gitRevisionType = "tag";
       gitRevisionValue = rev.tag;
@@ -401,6 +401,32 @@ function convertApiVolumeToFormVolume(
 }
 
 // Convert a form stack to API stack for submission
+// Prepare one form resource for the API: normalize git source_revision, attach
+// selected secrets, then strip UI-only fields.
+function prepareFormResourceForApi(resource: FormStackResourceData): StackResourceUpdateRequest {
+  if (resource.build_spec) {
+    const gitRepoRev = resource.build_spec.source_revision?.git_repo_revision;
+    resource.build_spec.source_revision = {
+      volume_source_revision: undefined,
+      git_repo_revision: gitRepoRev,
+    };
+  }
+  const resourceWithSecrets = { ...resource };
+  if (resource.sourceType === 'image' && resource.useImageSecret && resource.selectedImageSecretId) {
+    resourceWithSecrets.image_spec = {
+      image: resourceWithSecrets.image_spec?.image || '',
+      ...resourceWithSecrets.image_spec,
+      pull_secret: { secret_id: resource.selectedImageSecretId },
+    };
+  }
+  if (resource.sourceType === 'git' && resource.useGitSecret && resource.selectedGitSecretId) {
+    if (resourceWithSecrets.build_spec?.source_context?.git_repo) {
+      resourceWithSecrets.build_spec.source_context.git_repo.git_secret = { secret_id: resource.selectedGitSecretId };
+    }
+  }
+  return convertFormResourceToApiResource(resourceWithSecrets);
+}
+
 function convertFormStackToApiStack(
   stackData: FormStackData
 ): StackUpdateRequest {
@@ -415,41 +441,7 @@ function convertFormStackToApiStack(
   });
 
   // Process all valid stack resources by removing UI-only fields
-  const apiStackResources = validResources.map(resource => {
-    // Always provide both keys for source_revision if build_spec is present
-    if (resource.build_spec) {
-      const gitRepoRev = resource.build_spec.source_revision?.git_repo_revision;
-      resource.build_spec.source_revision = {
-        volume_source_revision: undefined,
-        git_repo_revision: gitRepoRev,
-      };
-    }
-
-    // Add secret references before conversion
-    const resourceWithSecrets = { ...resource };
-
-    // Add image pull secret if selected
-    if (resource.sourceType === 'image' && resource.useImageSecret && resource.selectedImageSecretId) {
-      resourceWithSecrets.image_spec = {
-        image: resourceWithSecrets.image_spec?.image || '',
-        ...resourceWithSecrets.image_spec,
-        pull_secret: {
-          secret_id: resource.selectedImageSecretId
-        }
-      };
-    }
-
-    // Add git secret if selected
-    if (resource.sourceType === 'git' && resource.useGitSecret && resource.selectedGitSecretId) {
-      if (resourceWithSecrets.build_spec?.source_context?.git_repo) {
-        resourceWithSecrets.build_spec.source_context.git_repo.git_secret = {
-          secret_id: resource.selectedGitSecretId
-        };
-      }
-    }
-
-    return convertFormResourceToApiResource(resourceWithSecrets);
-  });
+  const apiStackResources = validResources.map(prepareFormResourceForApi);
 
   // Filter out empty or invalid volumes (volumes with empty names)
   const validVolumes = stackData.spec.volumes?.filter(volume => {
@@ -498,8 +490,11 @@ export {
   FormEnvVarSchema,
   FormVolumeExtendedSchema,
   FormStackSchema,
+  FormStackResourceSchema,
   convertApiResourceToFormResource,
   convertFormResourceToApiResource,
   convertApiVolumeToFormVolume,
+  convertFormVolumeToApiVolume,
   convertFormStackToApiStack,
+  prepareFormResourceForApi,
 };
