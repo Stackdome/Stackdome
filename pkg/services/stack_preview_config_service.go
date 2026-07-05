@@ -9,8 +9,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stores"
-	"github.com/Stackdome/stackdome/pkg/validator"
-	"github.com/Stackdome/stackdome/pkg/validator/secret"
 )
 
 type StackPreviewConfigService interface {
@@ -24,7 +22,6 @@ type StackPreviewConfigService interface {
 type StackPreviewConfigServiceSpec struct {
 	Store              stores.StackPreviewConfigStore
 	PreviewStackStore  stores.PreviewStackStore
-	SecretService      SecretService
 	CredentialResolver CredentialResolver
 	Permissions        auth.PermissionService
 }
@@ -32,9 +29,7 @@ type StackPreviewConfigServiceSpec struct {
 type stackPreviewConfigService struct {
 	store              stores.StackPreviewConfigStore
 	previewStackStore  stores.PreviewStackStore
-	secretService      SecretService
 	credentialResolver CredentialResolver
-	secretValidator    validator.SecretValidator
 	permissions        auth.PermissionService
 }
 
@@ -42,9 +37,7 @@ func NewStackPreviewConfigService(spec StackPreviewConfigServiceSpec) StackPrevi
 	return &stackPreviewConfigService{
 		store:              spec.Store,
 		previewStackStore:  spec.PreviewStackStore,
-		secretService:      spec.SecretService,
 		credentialResolver: spec.CredentialResolver,
-		secretValidator:    secret.NewSecretValidator(),
 		permissions:        spec.Permissions,
 	}
 }
@@ -170,19 +163,6 @@ func (s *stackPreviewConfigService) validate(ctx context.Context, config *models
 		config.StackfilePath = models.DefaultStackfilePath
 	}
 
-	if config.UsesGitSecret() {
-		secret, gErr := s.secretService.InternalGetByID(ctx, *config.GitSecretID())
-		if gErr != nil {
-			if gErr.Code == errors.ErrorNotFound {
-				return errors.Validation("referenced git secret with id '%s' not found", *config.GitSecretID())
-			}
-			return errors.InternalServerError("failed to get git secret: %v", gErr)
-		}
-		if err := s.secretValidator.ValidateSecretType(models.SecretTypeGitCredentials, secret); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -208,9 +188,6 @@ func (s *stackPreviewConfigService) validateGitRepo(ctx context.Context, config 
 func (s *stackPreviewConfigService) gitClientForConfig(ctx context.Context, config *models.StackPreviewConfig) (gitclient.GitClient, error) {
 	selector := credentials.GitAuthSelector{
 		IntegrationID: config.GitRepository.IntegrationID,
-	}
-	if config.UsesGitSecret() {
-		selector.SecretRef = &models.SecretReference{SecretID: *config.GitSecretID()}
 	}
 
 	resolved, sErr := s.credentialResolver.GitCredentials(ctx, config.OrganisationID, config.GitRepository.RepoURL, selector)

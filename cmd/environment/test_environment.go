@@ -510,7 +510,6 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	stackPreviewConfigService := services.NewStackPreviewConfigService(services.StackPreviewConfigServiceSpec{
 		Store:              stackPreviewConfigStore,
 		PreviewStackStore:  previewStackStore,
-		SecretService:      secretService,
 		CredentialResolver: credentialResolver,
 		Permissions:        te.PermissionService,
 	})

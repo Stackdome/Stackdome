@@ -289,9 +289,6 @@ func (s *previewStackService) gitClientForConfig(ctx context.Context, config *mo
 	selector := credentials.GitAuthSelector{
 		IntegrationID: config.GitRepository.IntegrationID,
 	}
-	if config.UsesGitSecret() {
-		selector.SecretRef = &models.SecretReference{SecretID: *config.GitSecretID()}
-	}
 
 	resolved, sErr := s.credentialResolver.GitCredentials(ctx, config.OrganisationID, config.GitRepository.RepoURL, selector)
 	if sErr != nil {
@@ -362,7 +359,7 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 	s.applyDomainPrefix(&stack, preview.PRNumber)
 
 	model := presenters.ConvertStack(&stack)
-	s.applyGitSecretFromConfig(model, config)
+	s.applyIntegrationFromConfig(model, config)
 	model.Name = preview.Name
 	model.OrganisationID = config.OrganisationID
 	model.TeamID = config.TeamID
@@ -425,15 +422,15 @@ func (s *previewStackService) applyDomainPrefix(stack *openapi.Stack, prNumber s
 	}
 }
 
-// applyGitSecretFromConfig injects the preview config's git secret into build
-// configs that match the config's repo URL and don't already have clone auth.
-// This runs on the converted model since explicit secret refs are no longer
-// part of the API shape.
-func (s *previewStackService) applyGitSecretFromConfig(stack *models.Stack, config *models.StackPreviewConfig) {
-	if !config.UsesGitSecret() {
+// applyIntegrationFromConfig pins the preview config's git integration onto
+// build configs that match the config's repo URL and don't already have clone
+// auth. This runs on the converted model so preview builds follow the same
+// credential ladder as the config: integration id, then host auto-match, then
+// anonymous.
+func (s *previewStackService) applyIntegrationFromConfig(stack *models.Stack, config *models.StackPreviewConfig) {
+	if config.GitRepository.IntegrationID == "" {
 		return
 	}
-	secretID := *config.GitSecretID()
 	for _, res := range stack.StackResources {
 		if res.BuildConfig == nil || res.BuildConfig.SourceContext.Git == nil {
 			continue
@@ -445,7 +442,7 @@ func (s *previewStackService) applyGitSecretFromConfig(stack *models.Stack, conf
 		if normalizeRepoURL(git.RepoURL) != normalizeRepoURL(config.GitRepository.RepoURL) {
 			continue
 		}
-		git.GitSecretRef = &models.SecretReference{SecretID: secretID}
+		git.IntegrationID = config.GitRepository.IntegrationID
 	}
 }
 

@@ -1,14 +1,11 @@
 package presenters_test
 
 import (
-	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/presenters"
-	"k8s.io/utils/ptr"
 )
 
 func convertSingleResource(t *testing.T, source *openapi.SourceSpec) *models.StackResource {
@@ -136,25 +133,24 @@ func TestConvertSourceVolumeRoundTrip(t *testing.T) {
 	}
 }
 
-func TestPresentPreviewGitRepositoryNeverEchoesCredentials(t *testing.T) {
+func TestPresentPreviewGitRepositoryMapsPublicFields(t *testing.T) {
 	config := &models.StackPreviewConfig{
 		ID:   "cfg-1",
 		Name: "previews",
 		GitRepository: models.PreviewGitRepository{
-			RepoURL:     "https://github.com/acme/api",
-			BaseBranch:  "main",
-			GitSecretID: ptr.To("managed-1"),
+			RepoURL:       "https://github.com/acme/api",
+			BaseBranch:    "main",
+			IntegrationID: "int-1",
 		},
 	}
 	presented := presenters.PresentStackPreviewConfig(config)
 	if presented.GitRepository == nil {
 		t.Fatal("expected presented git repository")
 	}
-	raw, err := json.Marshal(presented)
-	if err != nil {
-		t.Fatalf("marshal failed: %v", err)
+	if presented.GitRepository.RepoUrl != "https://github.com/acme/api" {
+		t.Fatalf("unexpected repo url %q", presented.GitRepository.RepoUrl)
 	}
-	if strings.Contains(string(raw), "managed-1") {
-		t.Fatalf("presented preview config leaks the secret id: %s", raw)
+	if presented.GitRepository.GetIntegrationId() != "int-1" {
+		t.Fatalf("expected integration id to round-trip, got %q", presented.GitRepository.GetIntegrationId())
 	}
 }

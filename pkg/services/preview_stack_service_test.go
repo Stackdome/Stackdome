@@ -9,10 +9,9 @@ import (
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
-	"k8s.io/utils/ptr"
 )
 
-func TestPreviewGitClientForConfigResolvesExplicitSecretRef(t *testing.T) {
+func TestPreviewGitClientForConfigResolvesExplicitIntegration(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
@@ -22,17 +21,17 @@ func TestPreviewGitClientForConfigResolvesExplicitSecretRef(t *testing.T) {
 	config := &models.StackPreviewConfig{
 		OrganisationID: "org-1",
 		GitRepository: models.PreviewGitRepository{
-			RepoURL:     "https://github.com/acme/api",
-			GitSecretID: ptr.To("sec-1"),
+			RepoURL:       "https://github.com/acme/api",
+			IntegrationID: "int-1",
 		},
 	}
 
 	resolver.EXPECT().
 		GitCredentials(gomock.Any(), "org-1", "https://github.com/acme/api", credentials.GitAuthSelector{
-			SecretRef: &models.SecretReference{SecretID: "sec-1"},
+			IntegrationID: "int-1",
 		}).
 		Return(&credentials.ResolvedGitCredential{
-			Source:      credentials.SourceSecretRef,
+			Source:      credentials.SourceIntegration,
 			Credentials: gitclient.GitCredentials{Token: "tok"},
 		}, nil)
 
