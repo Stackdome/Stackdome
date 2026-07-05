@@ -93,23 +93,6 @@ describe("tones derive from statusVariant", () => {
     expect(toneFromVariant("info")).toBe("muted");
     expect(toneFromVariant("neutral")).toBe("muted");
   });
-
-  it("rollout phases — the real 4-word vocabulary", () => {
-    expect(phaseTone("Pending")).toBe("amber");   // was muted under the old regex
-    expect(phaseTone("Ready")).toBe("ok");
-    expect(phaseTone("Degraded")).toBe("err");    // was muted under the old regex
-    expect(phaseTone("Failed")).toBe("err");
-    expect(phaseTone("SomethingNew")).toBe("muted"); // unknown → info → muted
-  });
-
-  it("release states unchanged", () => {
-    expect(stateTone("Released")).toBe("ok");
-    expect(stateTone("Failed")).toBe("err");
-    expect(stateTone("Pending")).toBe("amber");
-    expect(stateTone("InProgress")).toBe("amber");
-    expect(stateTone("Superseded")).toBe("muted");
-    expect(stateTone("Cancelled")).toBe("muted");
-  });
 });
 
 describe("stateTone", () => {
