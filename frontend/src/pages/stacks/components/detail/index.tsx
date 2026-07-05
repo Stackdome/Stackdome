@@ -1,4 +1,5 @@
 import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
+import { getErrorMessage } from "@/api/client";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -596,9 +597,7 @@ export default function StackDetailPage() {
       } catch (releaseErr) {
         toast({
           title: "Stack created, but deploy failed",
-          description: releaseErr instanceof Error
-            ? releaseErr.message
-            : "Fix the issue and deploy again from the stack page.",
+          description: getErrorMessage(releaseErr),
           variant: "destructive",
         });
       }
@@ -607,7 +606,7 @@ export default function StackDetailPage() {
       console.error('Failed to create stack:', err);
       toast({
         title: "Failed to create stack",
-        description: err instanceof Error ? err.message : "An unexpected error occurred. Please try again.",
+        description: getErrorMessage(err),
         variant: "destructive"
       });
     } finally {
