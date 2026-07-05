@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 )
 
 type SSLMode string
@@ -49,7 +50,19 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 	if val, ok := EnvGitHubAPIBaseURL.Lookup(); ok {
 		c.GitHubAPIBaseURL = val
 	}
+
+	// The GitHub OAuth redirect is just the hub base plus a fixed callback path,
+	// so derive it from SERVER_EXTERNAL_URL when GITHUB_REDIRECT_URI is unset.
+	// The explicit env var stays as an override for unusual deployments.
+	if c.GitHubOAuth.RedirectURI == "" && c.ServerExternalURL != "" {
+		c.GitHubOAuth.RedirectURI = strings.TrimSuffix(c.ServerExternalURL, "/") + gitHubOAuthCallbackPath
+	}
 }
+
+// gitHubOAuthCallbackPath is the route the GitHub OAuth handler is mounted on;
+// it must match the "/github/callback" route under /api/v1/auth in
+// cmd/server/routes.go.
+const gitHubOAuthCallbackPath = "/api/v1/auth/github/callback"
 
 func (c *ApplicationConfig) Validate() error {
 	validateFuncs := []func() error{
