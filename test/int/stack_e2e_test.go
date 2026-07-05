@@ -627,6 +627,13 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			// For now print first 20 characters to verify it's being picked up without exposing the full token in logs
 			testenv := GetEnvironment()
 			testenv.Logger().Info("GITHUB_TOKEN set", "token", githubToken[:20]+"...")
+
+			// Register an org git integration for the repo host so private clones
+			// authenticate via host auto-match (inline source credentials are gone).
+			integration := shared.CreateGitCredentialsIntegration(client, orgID, shared.BuildSourceGitHost, shared.BuildSourceGitUsername, githubToken)
+			DeferCleanup(func() {
+				shared.DeleteGitIntegration(client, orgID, integration.GetId())
+			})
 		})
 
 		It("should build from a private git repo and expose to public", func() {
@@ -637,7 +644,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			ctx := context.Background()
 
 			By("Creating a stack with build source and exposed port, then deploying")
-			stack := shared.CreateStackWithBuildSource("test-build-source", shared.BuildSourceRepoURL, "git", githubToken)
+			stack := shared.CreateStackWithBuildSource("test-build-source", shared.BuildSourceRepoURL)
 			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()
@@ -726,7 +733,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			ctx := context.Background()
 
 			By("Creating a stack with a build source pointing to a branch with a broken Dockerfile and deploying")
-			stack := shared.CreateStackWithBrokenBuildSource("test-build-fail", shared.BuildSourceRepoURL, "git", githubToken)
+			stack := shared.CreateStackWithBrokenBuildSource("test-build-fail", shared.BuildSourceRepoURL)
 			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()

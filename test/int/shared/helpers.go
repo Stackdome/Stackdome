@@ -59,6 +59,33 @@ func DeletePostgresAddon(client *openapi.APIClient, orgID, teamName, addonID str
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 }
 
+// CreateGitCredentialsIntegration registers an org-level git_credentials
+// integration (basic username/password). The credential resolver auto-attaches
+// it to clones whose host matches, so private-repo builds authenticate without
+// any per-source credential input.
+func CreateGitCredentialsIntegration(client *openapi.APIClient, orgID, host, username, password string) *openapi.GitIntegration {
+	ctx := context.Background()
+	gi := openapi.NewGitIntegration(host)
+	gi.SetType(openapi.GIT_INTEGRATION_TYPE_CREDENTIALS)
+	auth := openapi.NewGitIntegrationAuth()
+	auth.SetBasic(*openapi.NewGitIntegrationBasicAuth(username, password))
+	gi.SetAuth(*auth)
+
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsPost(ctx, orgID).GitIntegration(*gi).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to create git integration")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected git integration response")
+
+	return resp
+}
+
+func DeleteGitIntegration(client *openapi.APIClient, orgID, integrationID string) {
+	ctx := context.Background()
+	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdDelete(ctx, orgID, integrationID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to delete git integration")
+	Expect(httpResp.StatusCode).To(BeElementOf(http.StatusOK, http.StatusNoContent), "unexpected status code")
+}
+
 // Error testing helpers for Ginkgo
 func CreatePostgresAddonExpectError(client *openapi.APIClient, orgID, teamName string, addon *openapi.PostgresAddon, expectedStatus int) *openapi.GenericOpenAPIError {
 	ctx := context.Background()

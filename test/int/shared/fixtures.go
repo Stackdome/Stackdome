@@ -84,6 +84,12 @@ const (
 	BuildSourceResourceName = "todo-app"
 	BuildSourceSecretName   = "test-git-creds"
 
+	// BuildSourceGitHost is the git host the build-source fixtures clone from;
+	// an org git integration for this host provides private-clone auth.
+	BuildSourceGitHost = "github.com"
+	// BuildSourceGitUsername is the basic-auth username paired with a GitHub PAT.
+	BuildSourceGitUsername = "git"
+
 	// BrokenBuildResourceName is the resource name for the broken-build fixture.
 	// It points to a branch that contains a Dockerfile with an invalid command so the build fails.
 	BrokenBuildResourceName     = "broken-app"
@@ -619,14 +625,13 @@ func resourceToResourceEnvConnection(sourceResource, targetResource string) open
 
 // CreateStackWithBrokenBuildSource creates a stack pointing at a branch with a broken
 // Dockerfile so the kaniko build fails, triggering last_build_failure_detail.
-func CreateStackWithBrokenBuildSource(name string, repoURL string, username, password string) *openapi.Stack {
+func CreateStackWithBrokenBuildSource(name string, repoURL string) *openapi.Stack {
 	resource := openapi.NewStackResource(BrokenBuildResourceName)
 
 	gitSource := openapi.NewGitSource(repoURL)
 	gitSource.SetBranch(BrokenBuildSourceBranch)
 	gitSource.SetBuildContext(BuildSourceContextPath)
 	gitSource.SetDockerfilePath(BrokenBuildSourceDockerfile)
-	_, _ = username, password
 	// push omitted: builds go to the internal cluster registry
 	resource.SetSource(openapi.SourceSpec{Git: gitSource})
 
@@ -788,7 +793,7 @@ func HostMapping() openapi.ConnectionMapping {
 	return *openapi.NewConnectionMapping(*target, *value)
 }
 
-func CreateStackWithBuildSource(name string, repoURL string, username, password string) *openapi.Stack {
+func CreateStackWithBuildSource(name string, repoURL string) *openapi.Stack {
 	resource := openapi.NewStackResource(BuildSourceResourceName)
 
 	// push omitted so builds go to the internal (in-cluster Zot) registry.
@@ -796,7 +801,6 @@ func CreateStackWithBuildSource(name string, repoURL string, username, password 
 	gitSource.SetBranch(BuildSourceBranch)
 	gitSource.SetBuildContext(BuildSourceContextPath)
 	gitSource.SetDockerfilePath(BuildSourceDockerfile)
-	_, _ = username, password
 	resource.SetSource(openapi.SourceSpec{Git: gitSource})
 
 	// Port 3000 exposed to public
