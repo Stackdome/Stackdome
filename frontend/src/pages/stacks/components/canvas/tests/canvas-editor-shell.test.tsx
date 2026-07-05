@@ -14,7 +14,7 @@ const base = {
   onViewChanges: () => {},
   syncStatus: SYNC_STATUS.idle,
   deployBusy: false, canWrite: true,
-  onCreate: () => {}, isCreating: false,
+  onDraftDeploy: () => {}, draftDeploying: false,
   onDeploy: () => {}, onDelete: () => {},
   canDiscardDraft: false, canDeleteStack: true,
   configuration: <div />, deployments: <div />, logs: <div />, metrics: <div />,
@@ -43,17 +43,23 @@ describe("CanvasEditorShell header", () => {
 });
 
 describe("CanvasEditorShell primary button matrix", () => {
-  it("draft mode shows 'Create stack' and no Deploy / View changes / actions menu", () => {
-    render(<CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" isStaged dirtyTotal={3} />);
-    expect(screen.getByRole("button", { name: /create stack/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Deploy" })).toBeNull();
+  it("draft mode shows Deploy and no View changes / actions menu", () => {
+    const onDraftDeploy = vi.fn();
+    render(
+      <CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" isStaged dirtyTotal={3} onDraftDeploy={onDraftDeploy} />,
+    );
+    const btn = screen.getByRole("button", { name: "Deploy" });
+    expect(btn).not.toBeDisabled();
+    fireEvent.click(btn);
+    expect(onDraftDeploy).toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /create stack/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /view changes/i })).toBeNull();
     expect(screen.queryByLabelText("Stack actions")).toBeNull();
   });
 
-  it("draft mode shows 'Creating' while creating", () => {
-    render(<CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" isCreating />);
-    expect(screen.getByRole("button", { name: /creating/i })).toBeInTheDocument();
+  it("draft mode shows 'Deploying' while the draft deploy runs", () => {
+    render(<CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" draftDeploying />);
+    expect(screen.getByRole("button", { name: /deploying/i })).toBeDisabled();
   });
 
   it("existing stack with isStaged shows enabled Deploy", () => {

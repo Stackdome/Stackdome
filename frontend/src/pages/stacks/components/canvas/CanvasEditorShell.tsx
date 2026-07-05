@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode } from "react";
-import { Activity, ChevronDown, ChevronRight, FileDiff, History, LayoutGrid, Loader2, MoreHorizontal, Rocket, Save, ScrollText, Trash2, Undo2 } from "lucide-react";
+import { Activity, ChevronDown, ChevronRight, FileDiff, History, LayoutGrid, Loader2, MoreHorizontal, Rocket, ScrollText, Trash2, Undo2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -59,8 +59,8 @@ export interface CanvasEditorShellProps {
   deployBusy: boolean;
   canWrite: boolean;
   /** Draft-mode create action. */
-  onCreate?: () => void;
-  isCreating?: boolean;
+  onDraftDeploy?: () => void;
+  draftDeploying?: boolean;
   onDeploy: () => void;
   /** Session-scope discard of server-persisted draft changes. */
   onDiscardDraft?: () => void;
@@ -108,8 +108,8 @@ export function CanvasEditorShell({
   syncStatus,
   deployBusy,
   canWrite,
-  onCreate,
-  isCreating,
+  onDraftDeploy,
+  draftDeploying,
   onDeploy,
   onDiscardDraft,
   canDiscardDraft,
@@ -166,12 +166,12 @@ export function CanvasEditorShell({
   const opsBody =
     activeTab === "deployments" ? deployments : activeTab === "logs" ? logs : activeTab === "metrics" ? metrics : null;
 
-  // Draft mode keeps ONE explicit action (nothing exists server-side until it
-  // runs); existing stacks autosave, so the primary is always Deploy.
+  // The primary action is always Deploy. On a draft it creates the stack and
+  // starts the first release in one go — nothing exists server-side until then.
   const primaryButton = isDraft ? (
-    <Button type="button" variant="default" size="sm" onClick={onCreate} disabled={isCreating}>
-      {isCreating ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-      {isCreating ? "Creating" : "Create stack"}
+    <Button type="button" variant="default" size="sm" onClick={onDraftDeploy} disabled={draftDeploying}>
+      {draftDeploying ? <Loader2 className="size-3.5 animate-spin" /> : <Rocket className="size-3.5" />}
+      {draftDeploying ? "Deploying" : "Deploy"}
     </Button>
   ) : (
     <Button

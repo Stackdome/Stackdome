@@ -133,7 +133,7 @@ export default function StackDetailPage() {
 
   const session = useStackEditSession();
   const [activeTab, setActiveTab] = useState("configuration");
-  const [isCreating, setIsCreating] = useState(false);
+  const [draftDeploying, setDraftDeploying] = useState(false);
   const [nameError, setNameError] = useState<string | undefined>();
 
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
@@ -513,10 +513,12 @@ export default function StackDetailPage() {
     toast({ title: "Release ID copied" });
   }, [toast]);
 
-  // Draft create: validates name, creates the stack, and navigates to the new page.
-  const performCreate = async () => {
+  // Draft deploy: validates name, creates the stack, starts the first release,
+  // and navigates to the new page. There is no separate "create" step — the
+  // draft stays local until the user deploys.
+  const performDraftDeploy = async () => {
     if (!isDraft) return;
-    setIsCreating(true);
+    setDraftDeploying(true);
     setNameError(undefined);
 
     // A draft needs a name before it can be created. The stack name field is not
@@ -524,10 +526,10 @@ export default function StackDetailPage() {
     // the API), so guard it here to surface the error inline on the title input.
     if (!draftName.trim()) {
       setNameError("Required");
-      setIsCreating(false);
+      setDraftDeploying(false);
       toast({
         title: "Name your stack",
-        description: "Give the stack a name before saving.",
+        description: "Give the stack a name before deploying.",
         variant: "destructive",
       });
       return;
@@ -564,10 +566,10 @@ export default function StackDetailPage() {
           title: "Validation error",
           description: topLevelMessages.length > 0
             ? topLevelMessages.join("; ")
-            : "Please fix the highlighted errors before saving.",
+            : "Please fix the highlighted errors before deploying.",
           variant: "destructive",
         });
-        setIsCreating(false);
+        setDraftDeploying(false);
         return;
       }
 
@@ -578,13 +580,28 @@ export default function StackDetailPage() {
           description: "Could not resolve a team to save into.",
           variant: "destructive",
         });
-        setIsCreating(false);
+        setDraftDeploying(false);
         return;
       }
 
       const apiData = convertFormStackToApiStack(formStackData);
       const created = await createStack(orgId, teamName, apiData);
+      if (!created.id) throw new Error("The server did not return an id for the created stack.");
       session.discard();
+      // The stack exists from here on — the show page is the source of truth,
+      // so navigate regardless of whether the first release starts cleanly.
+      try {
+        await createRelease(orgId, teamName, created.id);
+        toast({ title: "Deploy started", variant: "success" });
+      } catch (releaseErr) {
+        toast({
+          title: "Stack created, but deploy failed",
+          description: releaseErr instanceof Error
+            ? releaseErr.message
+            : "Fix the issue and deploy again from the stack page.",
+          variant: "destructive",
+        });
+      }
       navigate(`/stacks/${created.id}`, { replace: true, state: null });
     } catch (err) {
       console.error('Failed to create stack:', err);
@@ -594,7 +611,7 @@ export default function StackDetailPage() {
         variant: "destructive"
       });
     } finally {
-      setIsCreating(false);
+      setDraftDeploying(false);
     }
   };
 
@@ -756,8 +773,8 @@ export default function StackDetailPage() {
         syncStatus={isDraft ? SYNC_STATUS.idle : draftSync.status}
         deployBusy={deployBusy}
         canWrite={canWriteStack}
-        onCreate={() => void performCreate()}
-        isCreating={isCreating}
+        onDraftDeploy={() => void performDraftDeploy()}
+        draftDeploying={draftDeploying}
         onDeploy={onDeploy}
         canDiscardDraft={lifecycle.phase === "staged" && !!liveSnapshot && canWriteStack}
         onDiscardDraft={() => setRevertConfirmOpen(true)}
