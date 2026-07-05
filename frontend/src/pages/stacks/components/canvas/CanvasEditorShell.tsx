@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode } from "react";
-import { Activity, ChevronDown, ChevronRight, FileDiff, History, LayoutGrid, Loader2, MoreHorizontal, Rocket, ScrollText, Trash2, Undo2 } from "lucide-react";
+import { Activity, ChevronDown, ChevronRight, FileDiff, History, LayoutGrid, Loader2, MoreHorizontal, Pencil, Rocket, ScrollText, Trash2, Undo2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -288,17 +288,24 @@ export function CanvasEditorShell({
                 the subtitle + endpoints below it (no collapse-toggle indent). */}
             <div className="flex items-center gap-3.5">
               {nameEditable ? (
-                <Input
-                  aria-label="Stack name"
-                  aria-invalid={!!nameError}
-                  value={stackName}
-                  onChange={(e) => onNameChange?.(e.target.value)}
-                  placeholder="name-your-stack"
-                  className={cn(
-                    "h-auto w-[22ch] bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none focus-visible:ring-0",
-                    nameError ? "border border-danger ring-1 ring-danger" : "border-0",
-                  )}
-                />
+                // Same type metrics as the post-create h1; the dashed underline +
+                // pencil signal that the name is still editable (it freezes at deploy).
+                <div className="group flex min-w-0 items-center gap-2.5">
+                  <Input
+                    aria-label="Stack name"
+                    aria-invalid={!!nameError}
+                    value={stackName}
+                    onChange={(e) => onNameChange?.(e.target.value)}
+                    placeholder="name-your-stack"
+                    className={cn(
+                      "h-auto w-[22ch] rounded-none border-0 border-b border-dashed bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none focus-visible:ring-0 md:text-[29px]",
+                      nameError
+                        ? "border-danger"
+                        : "border-border/60 hover:border-border focus-visible:border-brand",
+                    )}
+                  />
+                  <Pencil className="size-4 flex-none text-muted-foreground/60 transition-opacity group-focus-within:opacity-0" />
+                </div>
               ) : (
                 <h1 className="truncate text-[29px] font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
               )}
