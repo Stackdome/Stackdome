@@ -286,11 +286,17 @@ function StackCanvasFlow({
   );
 
   const onNodeClick = useCallback<NodeMouseHandler<CanvasFlowNode>>(
-    (_event, node) => {
+    (event, node) => {
       if (node.type === "attachment") {
         const data = node.data as AttachmentNodeData;
         if (data.kind === NODE_KIND.volume) openVolumeFromCanvas(data.name);
         return; // secret/object-store attachments stay display-only
+      }
+      // A click on the attached-volume chip targets the volume, not the resource.
+      const chipEl = (event.target as HTMLElement).closest("[data-volume-chip]");
+      if (chipEl) {
+        openVolumeFromCanvas(chipEl.getAttribute("data-volume-chip")!);
+        return;
       }
       const idx = (node.data as ResourceNodeData).resourceIdx;
       if (idx == null) return; // addon node — managed via the Environment tab, no drawer in v1

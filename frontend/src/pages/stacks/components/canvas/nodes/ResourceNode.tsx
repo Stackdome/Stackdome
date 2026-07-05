@@ -62,7 +62,7 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
           key={v.name}
           title={v.mountPath}
           data-volume-chip={v.name}
-          className="flex items-center gap-2 border-t border-border bg-background px-[13px] py-2"
+          className="flex cursor-pointer items-center gap-2 border-t border-border bg-background px-[13px] py-2 transition-colors hover:bg-card"
         >
           <HardDrive className="size-[13px] shrink-0 text-fg-muted" aria-hidden />
           <span className="truncate font-mono text-[10.5px] text-fg-2">{v.name}</span>
