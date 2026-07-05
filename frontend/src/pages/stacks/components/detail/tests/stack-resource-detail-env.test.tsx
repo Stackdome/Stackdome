@@ -37,7 +37,7 @@ const envVars: FormEnvVarData[] = [
 const resource: Partial<FormStackResourceData> = {
   name: "web",
   sourceType: "image",
-  image_spec: { image: "nginx" },
+  source: { image: { ref: "nginx" } },
   execution_config: { environment_variables: envVars },
 } as unknown as Partial<FormStackResourceData>;
 

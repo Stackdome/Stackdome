@@ -20,7 +20,7 @@ function genericResource(block: BlockPreset): FormStackResourceData {
   const base = {
     name: block.id,
     sourceType: "image" as const,
-    image_spec: { image: "" },
+    source: { image: { ref: "" } },
     ports: block.id === BlockId.Web ? [{ container_port: 8080, protocol: "TCP" }] : [],
   };
   return base as unknown as FormStackResourceData;

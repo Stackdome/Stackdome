@@ -156,8 +156,8 @@ function envVarsOf(resource: Partial<FormStackResourceData>): FormEnvVarData[] {
 function servicePresentation(resource: Partial<FormStackResourceData>) {
   return nodePresentation({
     isAddon: false,
-    image: resource.image_spec?.image,
-    hasBuild: !!resource.build_spec,
+    image: resource.source?.image?.ref,
+    hasBuild: !!resource.source?.git,
     ports: (resource.ports ?? []).map((p) => ({
       number: p.number,
       protocol: p.protocol,

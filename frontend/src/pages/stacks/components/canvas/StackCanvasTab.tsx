@@ -493,8 +493,8 @@ function StackCanvasFlow({
           const r = resources[entry.index] ?? {};
           const pres = nodePresentation({
             isAddon: false,
-            image: r.image_spec?.image,
-            hasBuild: !!r.build_spec,
+            image: r.source?.image?.ref,
+            hasBuild: !!r.source?.git,
             ports: (r.ports ?? []).map((p) => ({
               number: p.number,
               protocol: p.protocol,

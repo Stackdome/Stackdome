@@ -15,7 +15,7 @@ describe("emptyDraftSeed", () => {
 
 describe("buildDraftFormData", () => {
   it("assembles FormStackData from draft name/labels/resources/volumes", () => {
-    const resources = [{ name: "api", sourceType: "image", image_spec: { image: "nginx:1" } }] as never;
+    const resources = [{ name: "api", sourceType: "image", source: { image: { ref: "nginx:1" } } }] as never;
     const out = buildDraftFormData("my-app", [{ key: "k", value: "v" }], resources, []);
     expect(out).toEqual({
       name: "my-app",

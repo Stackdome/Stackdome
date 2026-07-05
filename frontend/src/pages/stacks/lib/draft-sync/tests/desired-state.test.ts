@@ -5,7 +5,7 @@ import type { EditSessionDraft } from "@/pages/stacks/hooks/use-stack-edit-sessi
 const validResource = {
   name: "web",
   sourceType: "image" as const,
-  image_spec: { image: "nginx:1" },
+  source: { image: { ref: "nginx:1" } },
   execution_config: {
     environment_variables: [
       { from: "stack" as const, name: "MODE", value: "prod" },
@@ -28,7 +28,7 @@ describe("buildDesiredState", () => {
   });
 
   it("holds an invalid named resource instead of dropping it", () => {
-    const invalid = { name: "api", sourceType: "image" as const, image_spec: { image: "" } };
+    const invalid = { name: "api", sourceType: "image" as const, source: { image: { ref: "" } } };
     const d = buildDesiredState({ resources: [invalid], volumes: [] } as unknown as EditSessionDraft);
     expect(d.resources.has("api")).toBe(false);
     expect(d.held.has("api")).toBe(true);
@@ -102,7 +102,7 @@ describe("buildDesiredState", () => {
       resources: [
         {
           name: "web",
-          image_spec: { image: "nginx" },
+          source: { image: { ref: "nginx" } },
           volume_mounts: [
             { source_volume_name: "ghost", source_sub_path: "", target_path: "/g" },
             { source_volume_name: "data", source_sub_path: "", target_path: "/d" },

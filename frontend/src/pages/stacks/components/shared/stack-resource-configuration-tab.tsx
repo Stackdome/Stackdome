@@ -19,7 +19,6 @@ import { DirtyField } from "@/pages/stacks/components/shared/dirty-field";
 import { FieldShell } from "@/components/branded";
 
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
-import type { UseSecretsReturn } from "../../hooks/use-secrets";
 
 type Resource = Partial<FormStackResourceData>;
 type VolumeMount = NonNullable<FormStackResourceData["volume_mounts"]>[number];
@@ -34,7 +33,6 @@ interface StackResourceConfigurationTabProps {
   errors: { [field: string]: string | undefined };
   volumes: Partial<VolumeFormData>[];
   allResources?: { name: string; index: number }[];
-  secrets: UseSecretsReturn;
   /** Per-field reset by dot-path. */
   onDiscardField?: (path: string) => void;
   /** Patch any subset of resource fields. Identity must be stable across renders. */
@@ -55,12 +53,7 @@ export interface ConfigurationDraft {
   name?: Resource["name"];
   depends_on?: Resource["depends_on"];
   sourceType?: Resource["sourceType"];
-  image_spec?: Resource["image_spec"];
-  build_spec?: Resource["build_spec"];
-  useImageSecret?: Resource["useImageSecret"];
-  selectedImageSecretId?: Resource["selectedImageSecretId"];
-  useGitSecret?: Resource["useGitSecret"];
-  selectedGitSecretId?: Resource["selectedGitSecretId"];
+  source?: Resource["source"];
   gitRevisionType?: Resource["gitRevisionType"];
   gitRevisionValue?: Resource["gitRevisionValue"];
   volume_mounts?: Resource["volume_mounts"];
@@ -73,12 +66,7 @@ export function pickConfigurationDraft(resource: Resource): ConfigurationDraft {
     name: resource.name,
     depends_on: resource.depends_on,
     sourceType: resource.sourceType,
-    image_spec: resource.image_spec,
-    build_spec: resource.build_spec,
-    useImageSecret: resource.useImageSecret,
-    selectedImageSecretId: resource.selectedImageSecretId,
-    useGitSecret: resource.useGitSecret,
-    selectedGitSecretId: resource.selectedGitSecretId,
+    source: resource.source,
     gitRevisionType: resource.gitRevisionType,
     gitRevisionValue: resource.gitRevisionValue,
     volume_mounts: resource.volume_mounts,
@@ -102,7 +90,6 @@ function StackResourceConfigurationTabImpl({
   errors,
   volumes,
   allResources,
-  secrets,
   onDiscardField,
   onPatchResource,
   onCreateVolume,
@@ -111,35 +98,40 @@ function StackResourceConfigurationTabImpl({
 }: StackResourceConfigurationTabProps) {
   const update = onPatchResource;
 
-  // Helper for updating nested build_spec
-  const updateBuildSpec = (patch: Partial<NonNullable<FormStackResourceData["build_spec"]>>) => {
-    const currentBuildSpec = draft.build_spec || {
-      source_context: { git_repo: { repo_url: '' } },
-      context_path_within_source: './',
-      dockerfile_path: 'Dockerfile',
-      image_repository: { external_image_ref: '' },
-      insecure_registry: false,
-      source_revision: { volume_source_revision: undefined, git_repo_revision: undefined },
-    };
-    const mergedSourceRevision = {
-      volume_source_revision: patch.source_revision?.volume_source_revision ?? currentBuildSpec.source_revision?.volume_source_revision,
-      git_repo_revision: patch.source_revision?.git_repo_revision ?? currentBuildSpec.source_revision?.git_repo_revision,
-    };
+  type GitSource = NonNullable<NonNullable<FormStackResourceData["source"]>["git"]>;
+  type ImageSource = NonNullable<NonNullable<FormStackResourceData["source"]>["image"]>;
+
+  // Merge a patch into source.git. dockerfile_path/build_context carry the
+  // API defaults (they are required on the resolved GitSource type).
+  const updateGitSource = (patch: Partial<GitSource>) => {
+    const current = draft.source?.git;
     update({
-      build_spec: {
-        ...currentBuildSpec,
-        ...patch,
-        insecure_registry: patch.insecure_registry === undefined ? false : patch.insecure_registry,
-        source_revision: mergedSourceRevision,
+      source: {
+        git: {
+          repo_url: current?.repo_url ?? '',
+          dockerfile_path: current?.dockerfile_path ?? 'Dockerfile',
+          build_context: current?.build_context ?? '.',
+          branch: current?.branch,
+          tag: current?.tag,
+          commit: current?.commit,
+          push: current?.push,
+          integration_id: current?.integration_id,
+          ...patch,
+        },
       },
-      image_spec: undefined,
     });
   };
 
-  const updateImageSpec = (patch: Partial<NonNullable<FormStackResourceData["image_spec"]>>) => {
+  const updateImageSource = (patch: Partial<ImageSource>) => {
+    const current = draft.source?.image;
     update({
-      image_spec: { ...(draft.image_spec || { image: '' }), ...patch },
-      build_spec: undefined,
+      source: {
+        image: {
+          ref: current?.ref ?? '',
+          registry_credentials_id: current?.registry_credentials_id,
+          ...patch,
+        },
+      },
     });
   };
 
@@ -285,7 +277,15 @@ function StackResourceConfigurationTabImpl({
             >
               <Select
                 value={draft.sourceType || "image"}
-                onValueChange={(val) => update({ sourceType: val as "image" | "git" })}
+                onValueChange={(val) => {
+                  const sourceType = val as "image" | "git";
+                  update({
+                    sourceType,
+                    source: sourceType === "git"
+                      ? { git: { repo_url: "", dockerfile_path: "Dockerfile", build_context: "." } }
+                      : { image: { ref: "" } },
+                  });
+                }}
               >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Select source type" />
@@ -314,81 +314,25 @@ function StackResourceConfigurationTabImpl({
                 htmlFor={`container-image-${index}`}
                 required
                 hint="Docker image reference, e.g., nginx:latest or ghcr.io/org/app:1.2.3."
-                error={getError(errors, "image_spec.image")}
+                error={getError(errors, "source.image.ref")}
               >
                 <DirtyField
                   draft={draft}
                   baseline={baseline}
-                  path="image_spec.image"
-                  onReset={onDiscardField ? () => onDiscardField("image_spec.image") : undefined}
+                  path="source.image.ref"
+                  onReset={onDiscardField ? () => onDiscardField("source.image.ref") : undefined}
                 >
                   <Input
                     id={`container-image-${index}`}
                     placeholder="e.g., nginx:latest, redis:7"
-                    value={draft.image_spec?.image || ""}
-                    onChange={(e) => updateImageSpec({ image: e.target.value })}
-                    className={`max-w-xl ${getError(errors, "image_spec.image") ? "border-danger" : ""}`}
+                    value={draft.source?.image?.ref || ""}
+                    onChange={(e) => updateImageSource({ ref: e.target.value })}
+                    className={`max-w-xl ${getError(errors, "source.image.ref") ? "border-danger" : ""}`}
                     required={draft.sourceType === "image"}
-                    aria-invalid={!!getError(errors, "image_spec.image")}
+                    aria-invalid={!!getError(errors, "source.image.ref")}
                   />
                 </DirtyField>
               </FieldShell>
-
-              {/* Docker Registry Secret — sub-option of Container Image */}
-              <div className="pl-3 border-l border-border space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id={`use-image-secret-${index}`}
-                    checked={draft.useImageSecret || false}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        update({ useImageSecret: checked });
-                      } else {
-                        update({
-                          useImageSecret: false,
-                          selectedImageSecretId: undefined,
-                        });
-                      }
-                    }}
-                    disabled={secrets.isLoading}
-                  />
-                  <Label htmlFor={`use-image-secret-${index}`} className="text-[12.5px] font-medium text-muted-foreground">
-                    Use secret to pull this image
-                  </Label>
-                </div>
-
-                {draft.useImageSecret && (
-                  <FieldShell label="Select secret">
-                    <Select
-                      value={draft.selectedImageSecretId || ""}
-                      onValueChange={(value) => update({ selectedImageSecretId: value })}
-                      disabled={secrets.isLoading || secrets.dockerRegistrySecrets.length === 0}
-                    >
-                      <SelectTrigger className="w-full max-w-xl">
-                        <SelectValue
-                          placeholder={
-                            secrets.dockerRegistrySecrets.length === 0
-                              ? "No docker registry secrets available"
-                              : "Select Docker registry secret"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {secrets.dockerRegistrySecrets.map((secret) => (
-                          <SelectItem key={secret.id} value={secret.id!}>
-                            {secret.name}
-                            {secret.description && (
-                              <span className="text-muted-foreground ml-2">
-                                - {secret.description}
-                              </span>
-                            )}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FieldShell>
-                )}
-              </div>
             </div>
           ) : (
             <div className="grid gap-5 max-w-3xl">
@@ -397,103 +341,46 @@ function StackResourceConfigurationTabImpl({
                 htmlFor={`git-repo-${index}`}
                 required
                 hint="HTTPS or SSH URL of the source repository."
-                error={getError(errors, "build_spec.source_context.git_repo.repo_url")}
+                error={getError(errors, "source.git.repo_url")}
               >
                 <DirtyField
                   draft={draft}
                   baseline={baseline}
-                  path="build_spec.source_context.git_repo.repo_url"
-                  onReset={onDiscardField ? () => onDiscardField("build_spec.source_context.git_repo.repo_url") : undefined}
+                  path="source.git.repo_url"
+                  onReset={onDiscardField ? () => onDiscardField("source.git.repo_url") : undefined}
                 >
                   <Input
                     id={`git-repo-${index}`}
-                    value={draft.build_spec?.source_context?.git_repo?.repo_url || ""}
-                    onChange={(e) => updateBuildSpec({ source_context: { git_repo: { repo_url: e.target.value } } })}
+                    value={draft.source?.git?.repo_url || ""}
+                    onChange={(e) => updateGitSource({ repo_url: e.target.value })}
                     placeholder="https://github.com/username/repository.git"
-                    className={`max-w-xl ${getError(errors, "build_spec.source_context.git_repo.repo_url") ? "border-danger" : ""}`}
+                    className={`max-w-xl ${getError(errors, "source.git.repo_url") ? "border-danger" : ""}`}
                     required={draft.sourceType === "git"}
-                    aria-invalid={!!getError(errors, "build_spec.source_context.git_repo.repo_url")}
+                    aria-invalid={!!getError(errors, "source.git.repo_url")}
                   />
                 </DirtyField>
               </FieldShell>
 
-              {/* Git Credentials — sub-option of Git Repository URL */}
-              <div className="pl-3 border-l border-border space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id={`use-git-secret-${index}`}
-                    checked={draft.useGitSecret || false}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        update({ useGitSecret: checked });
-                      } else {
-                        update({
-                          useGitSecret: false,
-                          selectedGitSecretId: undefined,
-                        });
-                      }
-                    }}
-                    disabled={secrets.isLoading}
-                  />
-                  <Label htmlFor={`use-git-secret-${index}`} className="text-[12.5px] font-medium text-muted-foreground">
-                    Use Git credentials secret
-                  </Label>
-                </div>
-
-                {draft.useGitSecret && (
-                  <FieldShell label="Select secret">
-                    <Select
-                      value={draft.selectedGitSecretId || ""}
-                      onValueChange={(value) => update({ selectedGitSecretId: value })}
-                      disabled={secrets.isLoading || secrets.gitSecrets.length === 0}
-                    >
-                      <SelectTrigger className="w-full max-w-xl">
-                        <SelectValue
-                          placeholder={
-                            secrets.gitSecrets.length === 0
-                              ? "No Git credentials secrets available"
-                              : "Select Git credentials"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {secrets.gitSecrets.map((secret) => (
-                          <SelectItem key={secret.id} value={secret.id!}>
-                            {secret.name}
-                            {secret.description && (
-                              <span className="text-muted-foreground ml-2">
-                                - {secret.description}
-                              </span>
-                            )}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FieldShell>
-                )}
-              </div>
-
               <FieldShell
-                label="Image Repository URL"
-                htmlFor={`external-image-repo-url-${index}`}
-                required
-                hint="External registry where built images are pushed, e.g., ghcr.io/your-org/your-image."
-                error={getError(errors, "build_spec.image_repository.external_image_ref")}
+                label="Push Repository"
+                htmlFor={`push-repo-${index}`}
+                hint="Optional. External registry to push built images to, e.g., ghcr.io/your-org/your-image. Leave blank to use the internal cluster registry."
+                error={getError(errors, "source.git.push.repository")}
               >
                 <DirtyField
                   draft={draft}
                   baseline={baseline}
-                  path="build_spec.image_repository.external_image_ref"
-                  onReset={onDiscardField ? () => onDiscardField("build_spec.image_repository.external_image_ref") : undefined}
+                  path="source.git.push.repository"
+                  onReset={onDiscardField ? () => onDiscardField("source.git.push.repository") : undefined}
                 >
                   <Input
-                    id={`external-image-repo-url-${index}`}
-                    value={draft.build_spec?.image_repository?.external_image_ref || ""}
-                    onChange={(e) => updateBuildSpec({ image_repository: { external_image_ref: e.target.value } })}
+                    id={`push-repo-${index}`}
+                    value={draft.source?.git?.push?.repository || ""}
+                    onChange={(e) =>
+                      updateGitSource({ push: e.target.value ? { repository: e.target.value } : undefined })
+                    }
                     placeholder="e.g., ghcr.io/your-org/your-image"
-                    className={`max-w-xl ${getError(errors, "build_spec.image_repository.external_image_ref") ? "border-danger" : ""}`}
-                    required={draft.sourceType === "git"}
-                    aria-invalid={!!getError(errors, "build_spec.image_repository.external_image_ref")}
+                    className="max-w-xl"
                   />
                 </DirtyField>
               </FieldShell>
@@ -501,8 +388,7 @@ function StackResourceConfigurationTabImpl({
               <FieldShell
                 label="Git Revision Type"
                 htmlFor={`git-revision-type-${index}`}
-                required
-                hint="Pin builds to a branch, a specific commit, or a tag."
+                hint="Optional. Pin builds to a branch, commit, or tag. Defaults to the repository's default branch."
                 error={getError(errors, "gitRevisionType")}
               >
                 <DirtyField
@@ -512,16 +398,21 @@ function StackResourceConfigurationTabImpl({
                   onReset={onDiscardField ? () => onDiscardField("gitRevisionType") : undefined}
                 >
                   <Select
-                    value={draft.gitRevisionType}
-                    onValueChange={(val) => update({ gitRevisionType: val as "branch" | "commit" | "tag" })}
+                    value={draft.gitRevisionType ?? "default"}
+                    onValueChange={(val) =>
+                      val === "default"
+                        ? update({ gitRevisionType: undefined, gitRevisionValue: undefined })
+                        : update({ gitRevisionType: val as "branch" | "commit" | "tag" })
+                    }
                   >
                     <SelectTrigger
                       id={`git-revision-type-${index}`}
                       className={`max-w-xl ${getError(errors, "gitRevisionType") ? "border-danger" : ""}`}
                     >
-                      <SelectValue placeholder="Select revision type" />
+                      <SelectValue placeholder="Default branch" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="default">Default branch</SelectItem>
                       <SelectItem value="branch">Branch</SelectItem>
                       <SelectItem value="commit">Commit</SelectItem>
                       <SelectItem value="tag">Tag</SelectItem>

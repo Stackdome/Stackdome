@@ -116,15 +116,15 @@ export function ResourceDrawer({
     () =>
       nodePresentation({
         isAddon: false,
-        image: resource.image_spec?.image,
-        hasBuild: !!resource.build_spec,
+        image: resource.source?.image?.ref,
+        hasBuild: !!resource.source?.git,
         ports: (resource.ports ?? []).map((p) => ({
           number: p.number,
           protocol: p.protocol,
           exposedToPublic: p.exposed_to_public,
         })),
       }),
-    [resource.image_spec?.image, resource.build_spec, resource.ports],
+    [resource.source?.image?.ref, resource.source?.git, resource.ports],
   );
 
   // "N changes" counts the dirty sub-tabs (config / deployment / environment).

@@ -19,7 +19,7 @@ const ctx: ResourceTabContext = {
 
 describe("useResourceTabProps", () => {
   it("projects the resource into configuration props", () => {
-    const resource: Partial<FormStackResourceData> = { name: "web", sourceType: "image", image_spec: { image: "nginx" } };
+    const resource: Partial<FormStackResourceData> = { name: "web", sourceType: "image", source: { image: { ref: "nginx" } } };
     const { result } = renderHook(() => useResourceTabProps({ resource, index: 0, onChange: vi.fn(), context: ctx }));
     expect(result.current.configurationProps.draft.name).toBe("web");
     expect(result.current.environmentProps.index).toBe(0);
@@ -33,15 +33,15 @@ describe("useResourceTabProps", () => {
 
   it("onPatchResource forwards a shallow-merged resource to onChange", () => {
     const onChange = vi.fn();
-    const resource: Partial<FormStackResourceData> = { name: "web", image_spec: { image: "nginx" } };
+    const resource: Partial<FormStackResourceData> = { name: "web", source: { image: { ref: "nginx" } } };
     const { result } = renderHook(() => useResourceTabProps({ resource, index: 2, onChange, context: ctx }));
-    act(() => result.current.configurationProps.onPatchResource({ image_spec: { image: "redis" } }));
-    expect(onChange).toHaveBeenCalledWith(2, expect.objectContaining({ name: "web", image_spec: { image: "redis" } }));
+    act(() => result.current.configurationProps.onPatchResource({ source: { image: { ref: "redis" } } }));
+    expect(onChange).toHaveBeenCalledWith(2, expect.objectContaining({ name: "web", source: { image: { ref: "redis" } } }));
   });
 
   it("reports dirty tabs against a baseline", () => {
-    const resource: Partial<FormStackResourceData> = { name: "web", image_spec: { image: "redis" } };
-    const baselineResource: Partial<FormStackResourceData> = { name: "web", image_spec: { image: "nginx" } };
+    const resource: Partial<FormStackResourceData> = { name: "web", source: { image: { ref: "redis" } } };
+    const baselineResource: Partial<FormStackResourceData> = { name: "web", source: { image: { ref: "nginx" } } };
     const { result } = renderHook(() =>
       useResourceTabProps({ resource, index: 0, baselineResource, onChange: vi.fn(), context: ctx }),
     );

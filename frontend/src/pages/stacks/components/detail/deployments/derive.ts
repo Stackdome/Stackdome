@@ -25,11 +25,11 @@ export function replicaLabel(ready?: number, desired?: number): string | undefin
 // image resources → image ref; git resources → repo url. mirrors config page sourceType.
 export function resourceSource(r?: StackResource): ResourceSource | undefined {
   if (!r) return undefined;
-  if (r.build_spec) {
-    const url = r.build_spec.source_context?.git_repo?.repo_url;
+  if (r.source?.git) {
+    const url = r.source.git.repo_url;
     return url ? { kind: "git", label: url } : undefined;
   }
-  const image = r.image_spec?.image;
+  const image = r.source?.image?.ref;
   return image ? { kind: "image", label: image } : undefined;
 }
 
